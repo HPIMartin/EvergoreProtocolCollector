@@ -1,7 +1,7 @@
 package protocolParser.entry;
 
 public class Item {
-	public final int quantity;
+	public int quantity;
 	public final String name;
 	public final int quality;
 
