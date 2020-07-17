@@ -1,15 +1,15 @@
-package protocolParser.helper.resourceFiles;
+package dev.schoenberg.evergore.protocolParser.helper.resourceFiles;
 
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 import static java.nio.file.Files.*;
 import static java.nio.file.Paths.*;
-import static protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 
-import protocolParser.Main;
+import dev.schoenberg.evergore.protocolParser.Main;
 
 public class ResourceFileLoader {
 	private Path tempFolder;
@@ -21,7 +21,7 @@ public class ResourceFileLoader {
 
 	private void initTempFolder() {
 		if (tempFolder == null) {
-			tempFolder = silentThrow(() -> createTempDirectory("merchantSimulator"));
+			tempFolder = silentThrow(() -> createTempDirectory("evergore"));
 			tempFolder.toFile().deleteOnExit();
 		}
 	}

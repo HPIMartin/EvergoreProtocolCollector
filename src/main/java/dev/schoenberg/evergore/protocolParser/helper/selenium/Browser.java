@@ -1,9 +1,9 @@
-package protocolParser.helper.selenium;
+package dev.schoenberg.evergore.protocolParser.helper.selenium;
 
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 import static java.lang.System.*;
 import static java.nio.file.Files.*;
 import static org.openqa.selenium.firefox.FirefoxDriver.SystemProperty.*;
-import static protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -15,7 +15,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 
-import protocolParser.helper.config.Configuration;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 public enum Browser {
 	FIREFOX("gecko", Browser::firefox), CHROME("chrome", Browser::chrome);

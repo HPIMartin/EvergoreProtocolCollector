@@ -1,4 +1,4 @@
-package protocolParser.entry;
+package dev.schoenberg.evergore.protocolParser.entry;
 
 public class Item {
 	public int quantity;

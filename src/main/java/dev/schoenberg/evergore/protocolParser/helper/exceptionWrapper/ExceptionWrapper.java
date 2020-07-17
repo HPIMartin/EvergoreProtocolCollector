@@ -1,4 +1,4 @@
-package protocolParser.helper.exceptionWrapper;
+package dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper;
 
 public class ExceptionWrapper {
 	public static void silentThrow(ThrowingRunnable runnable) {

@@ -1,4 +1,4 @@
-package protocolParser.helper.config;
+package dev.schoenberg.evergore.protocolParser.helper.config;
 
 public class Configuration {
 	public static final String ZYRTHANIA = "zyrthania";

@@ -1,4 +1,4 @@
-package protocolParser.entry;
+package dev.schoenberg.evergore.protocolParser.entry;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import protocolParser.Main;
+import dev.schoenberg.evergore.protocolParser.Main;
 
 public class EntryFactory {
 	public static Entry parseContent(List<String> rawContent) {

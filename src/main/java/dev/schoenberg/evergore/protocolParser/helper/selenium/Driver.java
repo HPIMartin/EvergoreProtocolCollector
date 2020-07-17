@@ -1,8 +1,8 @@
-package protocolParser.helper.selenium;
+package dev.schoenberg.evergore.protocolParser.helper.selenium;
 
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
+import static dev.schoenberg.evergore.protocolParser.helper.selenium.Browser.*;
 import static java.nio.file.attribute.PosixFilePermission.*;
-import static protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static protocolParser.helper.selenium.Browser.*;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -12,8 +12,8 @@ import java.util.Set;
 
 import org.openqa.selenium.WebDriver;
 
-import protocolParser.helper.config.Configuration;
-import protocolParser.helper.resourceFiles.ResourceFileLoader;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
+import dev.schoenberg.evergore.protocolParser.helper.resourceFiles.ResourceFileLoader;
 
 public class Driver {
 	private static final String WEB_DRIVER_FOLDER = "webdrivers/";
