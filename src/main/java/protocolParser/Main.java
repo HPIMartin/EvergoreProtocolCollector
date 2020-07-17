@@ -74,7 +74,7 @@ public class Main {
 		if (config.parseStorage) {
 			protocol = "town_protocol&selection=3"; // Lager
 		}
-		String url = SERVER + "/zyrthania?page=" + protocol + "&pos=" + page;
+		String url = SERVER + "/" + config.server + "?page=" + protocol + "&pos=" + page;
 		driver.navigate().to(url);
 		wait(driver, url);
 		return driver.findElement(By.tagName("body")).getText();
@@ -82,7 +82,7 @@ public class Main {
 
 	private static void loadEvergore(WebDriver driver) {
 		driver.navigate().to(SERVER + "/login");
-		wait(driver, SERVER + "/zyrthania");
+		wait(driver, SERVER + "/" + config.server);
 	}
 
 	private static void wait(WebDriver driver, String url) {
