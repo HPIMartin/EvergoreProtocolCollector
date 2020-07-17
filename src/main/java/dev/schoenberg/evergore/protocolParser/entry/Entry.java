@@ -1,4 +1,4 @@
-package protocolParser.entry;
+package dev.schoenberg.evergore.protocolParser.entry;
 
 import java.time.Instant;
 import java.time.ZoneId;

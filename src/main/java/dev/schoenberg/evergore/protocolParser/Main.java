@@ -1,4 +1,4 @@
-package protocolParser;
+package dev.schoenberg.evergore.protocolParser;
 
 import static java.util.Arrays.*;
 import static org.openqa.selenium.support.ui.ExpectedConditions.*;
@@ -16,11 +16,11 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
-import protocolParser.entry.Entry;
-import protocolParser.entry.EntryFactory;
-import protocolParser.helper.config.Configuration;
-import protocolParser.helper.resourceFiles.ResourceFileLoader;
-import protocolParser.helper.selenium.Driver;
+import dev.schoenberg.evergore.protocolParser.entry.Entry;
+import dev.schoenberg.evergore.protocolParser.entry.EntryFactory;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
+import dev.schoenberg.evergore.protocolParser.helper.resourceFiles.ResourceFileLoader;
+import dev.schoenberg.evergore.protocolParser.helper.selenium.Driver;
 
 public class Main {
 	public static final String GROUP_NAME_TYPE = "type";
