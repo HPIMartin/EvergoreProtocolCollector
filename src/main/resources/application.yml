@@ -1,0 +1,7 @@
+micronaut:
+  application:
+    name: Evergore Protocol Parser
+netty:
+  default:
+    allocator:
+      max-order: 3
