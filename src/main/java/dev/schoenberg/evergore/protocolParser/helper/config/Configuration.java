@@ -1,12 +1,24 @@
 package dev.schoenberg.evergore.protocolParser.helper.config;
 
-public class Configuration {
-	public static final String ZYRTHANIA = "zyrthania";
-	public static final String IKANDUR = "ikandur";
+import static java.nio.file.Path.*;
+import static java.nio.file.Paths.*;
 
-	public String browser = "chrome";
-	public int numberOfPages = 8;
-	public boolean parseStorage = false; // parses Bank if false
-	public boolean devMode = false;
-	public String server = ZYRTHANIA;
+import java.nio.file.*;
+
+public class Configuration {
+	private static final String ZYRTHANIA = "zyrthania";
+
+	public final String browser = "docker";
+	public final String server = ZYRTHANIA;
+	public final Path evergoreFolder = get("c:", "evergore");
+	public final Path credentials = of("zugang.txt");
+//	public final Path credentials = of("c:", "evergore", "zugang.txt");
+
+	public final boolean useInMemory = true;
+
+	public final boolean initializeDatabase = true;
+
+	public String getDatabasePath() {
+		return useInMemory ? ":memory:" : "temp.sqlite";
+	}
 }
