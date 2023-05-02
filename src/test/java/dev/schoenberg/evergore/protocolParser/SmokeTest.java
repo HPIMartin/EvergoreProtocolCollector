@@ -7,22 +7,31 @@ import org.junit.jupiter.api.*;
 
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 import io.micronaut.runtime.server.*;
+import io.micronaut.test.annotation.*;
 import io.micronaut.test.extensions.junit5.annotation.*;
 import jakarta.inject.*;
 import kong.unirest.*;
 
 @MicronautTest
 public class SmokeTest {
-	private @Inject Configuration config;
 	private @Inject EmbeddedServer server;
 
 	@BeforeEach
 	public void setup() {
 		config().verifySsl(false);
 		config().defaultBaseUrl("http://localhost:" + server.getPort());
+	}
 
-		config.useInMemory = false;
-		config.DATABASE_TEMP_SQLITE = "testdata.sqlite";
+	public static class TestConfiguration extends Configuration {
+		@Override
+		public String getDatabasePath() {
+			return "src/test/resources/testdata.sqlite";
+		}
+	}
+
+	@MockBean(Configuration.class)
+	Configuration configDto() {
+		return new TestConfiguration();
 	}
 
 	@Test
