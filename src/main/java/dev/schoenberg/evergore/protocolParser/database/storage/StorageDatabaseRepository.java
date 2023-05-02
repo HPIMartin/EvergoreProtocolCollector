@@ -16,6 +16,7 @@ import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
+import dev.schoenberg.evergore.protocolParser.exceptions.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 
 public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> implements StorageRepository {
@@ -32,8 +33,14 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	}
 
 	public List<StorageEntry> getAllFor(String avatar) {
-		return convert(silentThrow(() -> storage.queryBuilder().orderBy(TIMESTAMP_COLUMN, false).where()
-				.eq(AVATAR_COLUMN, avatar).query()));
+		List<StorageDatabaseEntry> result = silentThrow(() -> storage.queryBuilder().orderBy(TIMESTAMP_COLUMN, false)
+				.where().eq(AVATAR_COLUMN, avatar).query());
+
+		if (result.isEmpty()) {
+			throw new NoElementFound(avatar);
+		}
+
+		return convert(result);
 	}
 
 	@Override
