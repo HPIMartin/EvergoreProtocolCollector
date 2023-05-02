@@ -25,9 +25,9 @@ public class EntryFactory {
 		Instant date = FMT.parse(matcher.group(GROUP_NAME_DATE), Instant::from);
 
 		if (matcher.group(GROUP_NAME_TYPE).equals("Entnahme")) {
-			return new Withdrawal(avatar, date, items);
+			return new Withdrawal(avatar.trim(), date, items);
 		} else {
-			return new Storage(avatar, date, items);
+			return new Storage(avatar.trim(), date, items);
 		}
 	}
 
@@ -54,7 +54,7 @@ public class EntryFactory {
 			if (!matcher.find()) {
 				continue;
 			}
-			items.add(new Item(Integer.valueOf(matcher.group(amount)), matcher.group(itemName),
+			items.add(new Item(Integer.valueOf(matcher.group(amount)), matcher.group(itemName).trim(),
 					parseQuality(matcher.group(itemQuality))));
 		}
 

@@ -8,17 +8,35 @@ import com.j256.ormlite.dao.*;
 import com.j256.ormlite.jdbc.*;
 import com.j256.ormlite.support.*;
 
+import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 
-public abstract class Repository {
-	protected static <T> Dao<T, String> getDao(Configuration config, Class<T> type) {
-		ConnectionSource con = silentThrow(() -> new JdbcConnectionSource("jdbc:sqlite:" + config.getDatabasePath()));
+public abstract class Repository<T> {
+	private final ConnectionSource con;
+	private final Class<T> type;
+	protected final Logger logger;
 
-		if (config.initializeDatabase) {
-			silentThrow(() -> dropTable(con, type, true));
-			silentThrow(() -> createTable(con, type));
-		}
+	public Repository(ConnectionSource con, Logger logger, Class<T> type) {
+		this.con = con;
+		this.logger = logger;
+		this.type = type;
+	}
 
+	protected static ConnectionSource getCon(Configuration config) {
+		return silentThrow(() -> new JdbcConnectionSource("jdbc:sqlite:" + config.getDatabasePath()));
+	}
+
+	protected static <T> Dao<T, String> getDao(ConnectionSource con, Class<T> type) {
 		return silentThrow(() -> createDao(con, type));
+	}
+
+	public void init() {
+		silentThrow(() -> {
+			if (createTableIfNotExists(con, type) != 0) {
+				logger.info("Created table for " + type.getSimpleName());
+			} else {
+				logger.info("Table already exists for: " + type.getSimpleName());
+			}
+		});
 	}
 }

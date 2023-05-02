@@ -16,7 +16,9 @@ import org.openqa.selenium.support.ui.*;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 import dev.schoenberg.evergore.protocolParser.helper.selenium.*;
+import jakarta.inject.*;
 
+@Singleton
 public class PageContentExtractor {
 
 	private final Configuration config;

@@ -6,6 +6,7 @@ FROM maven:3.8.7-openjdk-18-slim AS build
 # Install container dependencies
 RUN apt-get update
 RUN apt-get install dos2unix
+RUN apt-get install firefox-esr -y
 
 # Copy Sources
 ENV HOME=/home/app

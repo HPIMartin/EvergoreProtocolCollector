@@ -7,27 +7,40 @@ import static java.util.stream.Collectors.*;
 
 import java.sql.*;
 import java.util.*;
+import java.util.Date;
 
 import com.j256.ormlite.dao.*;
+import com.j256.ormlite.support.*;
 
+import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.entity.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
+import dev.schoenberg.evergore.protocolParser.exceptions.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 
-public class BankDatabaseRepository extends Repository implements BankRepository {
+public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implements BankRepository {
 	private final Dao<BankDatabaseEntry, String> bank;
 
-	public static BankDatabaseRepository get(Configuration config) {
-		return new BankDatabaseRepository(getDao(config, BankDatabaseEntry.class));
+	public static BankDatabaseRepository get(Configuration config, Logger logger) {
+		ConnectionSource con = getCon(config);
+		return new BankDatabaseRepository(con, logger, getDao(con, BankDatabaseEntry.class));
 	}
 
-	private BankDatabaseRepository(Dao<BankDatabaseEntry, String> bank) {
+	private BankDatabaseRepository(ConnectionSource con, Logger logger, Dao<BankDatabaseEntry, String> bank) {
+		super(con, logger, BankDatabaseEntry.class);
 		this.bank = bank;
 	}
 
 	public List<BankEntry> getAllFor(String avatar) {
-		return convert(silentThrow(() -> bank.queryBuilder().where().eq(AVATAR_COLUMN, avatar).query()));
+		List<BankDatabaseEntry> result = silentThrow(
+				() -> bank.queryBuilder().where().eq(AVATAR_COLUMN, avatar).query());
+
+		if (result.isEmpty()) {
+			throw new NoElementFound(avatar);
+		}
+
+		return convert(result);
 	}
 
 	@Override
@@ -39,9 +52,43 @@ public class BankDatabaseRepository extends Repository implements BankRepository
 	public BankEntry getNewest() {
 		return convert(silentThrow(() -> {
 			GenericRawResults<String[]> raw = bank.queryRaw("SELECT max(" + TIMESTAMP_COLUMN + ") FROM " + TABLE);
-			Timestamp maxValue = valueOf(raw.getFirstResult()[0]);
-			return bank.queryBuilder().where().eq(BankDatabaseEntry.TIMESTAMP_COLUMN, maxValue).queryForFirst();
+
+			List<String[]> results = raw.getResults();
+
+			log(results);
+
+			if (results.isEmpty() || results.get(0) == null || results.get(0)[0] == null) {
+				return new BankDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, convert(TransferType.Einlagerung));
+			}
+
+			Timestamp highestTimeStamp = valueOf(results.get(0)[0]);
+			return bank.queryBuilder().where().eq(BankDatabaseEntry.TIMESTAMP_COLUMN, highestTimeStamp).queryForFirst();
 		}));
+	}
+
+	private void log(List<String[]> results) {
+		boolean first_x = true;
+		StringBuilder sb = new StringBuilder();
+		sb.append("[");
+		for (String[] x : results) {
+			if (!first_x) {
+				sb.append(",");
+			}
+			first_x = false;
+			boolean first_y = true;
+			sb.append("[");
+			for (String y : x) {
+				if (!first_y) {
+					sb.append(",");
+				}
+				sb.append(y);
+				first_y = false;
+			}
+			sb.append("]");
+		}
+		sb.append("]");
+
+		logger.debug(sb.toString());
 	}
 
 	private List<BankEntry> convert(List<BankDatabaseEntry> dbEntries) {

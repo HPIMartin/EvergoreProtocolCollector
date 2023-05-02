@@ -2,7 +2,7 @@ package dev.schoenberg.evergore.protocolParser.businessLogic.banking;
 
 import java.time.*;
 
-import dev.schoenberg.evergore.protocolParser.businessLogic.entity.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
 
 public class BankEntry {
 	public final Instant timeStamp;
