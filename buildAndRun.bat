@@ -13,7 +13,7 @@ REM Stop old
 docker rm -f %container%
 
 REM RUN
-docker run -d -p 8080:8080 --name %container% test
+docker run -d -p 8080:8080 --name %container% -v "H:/OneDrive/workspace/EvergoreProtocolCollector/database:/database" test
 
 REM Show logs
 docker logs -f %container%
