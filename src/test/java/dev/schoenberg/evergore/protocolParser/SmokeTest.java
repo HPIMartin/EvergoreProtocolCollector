@@ -22,7 +22,7 @@ public class SmokeTest {
 		config().defaultBaseUrl("http://localhost:" + server.getPort());
 
 		config.useInMemory = false;
-		config.DATABASE_TEMP_SQLITE = "test.sqlite";
+		config.DATABASE_TEMP_SQLITE = "testdata.sqlite";
 	}
 
 	@Test
@@ -32,7 +32,7 @@ public class SmokeTest {
 
 	@Test
 	public void retrieveDataViaBankEndpoint() {
-		HttpResponse<String> response = get("/avatars/Alessia/bank");
+		HttpResponse<String> response = get("/avatars/Name/bank");
 
 		assertTrue(response.getStatus() >= 200 && response.getStatus() < 300,
 				"Status code was: " + response.getStatus());
@@ -40,12 +40,12 @@ public class SmokeTest {
 		assertTrue(
 				content.contains("TimeStamp                     Avatar              Amount              TransferType"));
 		assertTrue(
-				content.contains("2023-02-19T16:17:00Z          Alessia             14131               Einlagerung"));
+				content.contains("2023-02-19T16:17:00Z          Name                14131               Einlagerung"));
 	}
 
 	@Test
 	public void retrieveDataViaStorageEndpoint() {
-		HttpResponse<String> response = get("/avatars/Alessia/storage");
+		HttpResponse<String> response = get("/avatars/Name/storage");
 
 		assertTrue(response.getStatus() >= 200 && response.getStatus() < 300,
 				"Status code was: " + response.getStatus());
@@ -54,7 +54,7 @@ public class SmokeTest {
 		assertTrue(content.contains(
 				"TimeStamp                     Avatar              Quantity            Name                           Quality             TransferType"));
 		assertTrue(content.contains(
-				"2023-02-12T12:12:00Z          Alessia             8                   Mondstaub                      100                 Einlagerung"));
+				"2023-02-12T12:12:00Z          Name                8                   Mondstaub                      100                 Einlagerung"));
 	}
 
 	@Test
