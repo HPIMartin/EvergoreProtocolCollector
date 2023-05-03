@@ -24,12 +24,20 @@ public class ApplicationExceptionHandler implements ExceptionHandler<ProtocolPar
 	@Override
 	public HttpResponse<?> handle(@SuppressWarnings("rawtypes") HttpRequest request,
 			ProtocolParserException exception) {
-		logger.error("Exception while requesting: " + request.getPath(), exception);
+		String reason = "Exception while requesting: " + request.getPath();
 
+		if (exception instanceof AccessNotAllowed || exception instanceof TooManyRequests) {
+			exception.setStackTrace(new StackTraceElement[0]);
+		}
+		logger.error(reason, exception);
+
+		// TODO: Visitor-Pattern
 		if (exception instanceof AccessNotAllowed) {
 			return status(UNAUTHORIZED);
 		} else if (exception instanceof NoElementFound) {
 			return status(NOT_FOUND, ((NoElementFound) exception).requestedValue);
+		} else if (exception instanceof TooManyRequests) {
+			return status(TOO_MANY_REQUESTS);
 		} else {
 			return status(INTERNAL_SERVER_ERROR);
 		}

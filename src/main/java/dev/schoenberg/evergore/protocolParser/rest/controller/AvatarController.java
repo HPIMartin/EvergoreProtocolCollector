@@ -41,7 +41,7 @@ public class AvatarController {
 			@QueryValue(value = QUERY_VAR_SIZE, defaultValue = QUERY_VAR_SIZE_DEFAULT) int size) {
 
 		logger.info("Looking for entries for " + avatar);
-		List<BankEntry> all = bankRepo.getAllFor(avatar);
+		List<BankEntry> all = bankRepo.getAllFor(avatar, page, size);
 		logger.info("Found " + all.size() + " entries.");
 
 		List<Column<BankEntry>> columns = new ArrayList<>();
@@ -58,7 +58,7 @@ public class AvatarController {
 			@QueryValue(value = QUERY_VAR_PAGE, defaultValue = QUERY_VAR_PAGE_DEFAULT) int page,
 			@QueryValue(value = QUERY_VAR_SIZE, defaultValue = QUERY_VAR_SIZE_DEFAULT) int size) {
 		logger.info("Looking for entries for " + avatar);
-		List<StorageEntry> all = storageRepo.getAllFor(avatar);
+		List<StorageEntry> all = storageRepo.getAllFor(avatar, page, size);
 		logger.info("Found " + all.size() + " entries.");
 
 		List<Column<StorageEntry>> columns = new ArrayList<>();

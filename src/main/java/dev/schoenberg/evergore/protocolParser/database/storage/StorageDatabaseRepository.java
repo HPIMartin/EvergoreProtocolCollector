@@ -32,9 +32,10 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 		this.storage = bank;
 	}
 
-	public List<StorageEntry> getAllFor(String avatar) {
-		List<StorageDatabaseEntry> result = silentThrow(() -> storage.queryBuilder().orderBy(TIMESTAMP_COLUMN, false)
-				.where().eq(AVATAR_COLUMN, avatar).query());
+	@Override
+	public List<StorageEntry> getAllFor(String avatar, long page, long size) {
+		List<StorageDatabaseEntry> result = silentThrow(() -> storage.queryBuilder().limit(size).offset(page * size)
+				.orderBy(TIMESTAMP_COLUMN, false).where().eq(AVATAR_COLUMN, avatar).query());
 
 		if (result.isEmpty()) {
 			throw new NoElementFound(avatar);

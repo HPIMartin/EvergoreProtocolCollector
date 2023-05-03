@@ -5,7 +5,7 @@ import java.util.*;
 public interface StorageRepository {
 	void add(List<StorageEntry> newEntries);
 
-	List<StorageEntry> getAllFor(String avatar);
+	List<StorageEntry> getAllFor(String avatar, long page, long size);
 
 	StorageEntry getNewest();
 }
