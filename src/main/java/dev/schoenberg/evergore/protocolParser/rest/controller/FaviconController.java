@@ -9,7 +9,9 @@ import io.micronaut.http.server.types.files.*;
 
 @Controller
 public class FaviconController {
-	@Get("/favicon.ico")
+	public static final String PATH = "/favicon.ico";
+
+	@Get(PATH)
 	@Produces(APPLICATION_OCTET_STREAM)
 	public StreamedFile getFavicon() {
 		InputStream faviconStream = getClass().getResourceAsStream("/static/favicon.ico");

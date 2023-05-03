@@ -50,7 +50,7 @@ public class Main {
 		repo.add(asList(entry, entry2));
 
 		BankEntry newest = repo.getNewest();
-		List<BankEntry> alessias = repo.getAllFor("Alessia");
+		List<BankEntry> alessias = repo.getAllFor("Alessia", 0l, 100l);
 
 		System.out.println("Newest: " + newest.equals(entry));
 		System.out.println("Alessias: " + (alessias.size() == 1 && alessias.get(0).equals(entry)));

@@ -1,6 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.database.bank;
 
-import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.*;
+import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.AVATAR_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.TABLE;
+import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 import static java.sql.Timestamp.*;
 import static java.util.stream.Collectors.*;
@@ -32,9 +34,10 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 		this.bank = bank;
 	}
 
-	public List<BankEntry> getAllFor(String avatar) {
-		List<BankDatabaseEntry> result = silentThrow(
-				() -> bank.queryBuilder().where().eq(AVATAR_COLUMN, avatar).query());
+	@Override
+	public List<BankEntry> getAllFor(String avatar, long page, long size) {
+		List<BankDatabaseEntry> result = silentThrow(() -> bank.queryBuilder().orderBy(TIMESTAMP_COLUMN, false)
+				.limit(size).offset(page * size).where().eq(AVATAR_COLUMN, avatar).query());
 
 		if (result.isEmpty()) {
 			throw new NoElementFound(avatar);
