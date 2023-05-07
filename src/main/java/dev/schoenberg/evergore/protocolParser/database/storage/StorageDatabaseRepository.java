@@ -23,19 +23,19 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	private final Dao<StorageDatabaseEntry, String> storage;
 
 	public static StorageDatabaseRepository get(Configuration config, Logger logger) {
-		ConnectionSource con = getCon(config);
+		ConnectionSource con = getCon(config, logger);
 		return new StorageDatabaseRepository(con, logger, getDao(con, StorageDatabaseEntry.class));
 	}
 
 	private StorageDatabaseRepository(ConnectionSource con, Logger logger, Dao<StorageDatabaseEntry, String> bank) {
 		super(con, logger, StorageDatabaseEntry.class);
-		this.storage = bank;
+		storage = bank;
 	}
 
 	@Override
 	public List<StorageEntry> getAllFor(String avatar, long page, long size) {
-		List<StorageDatabaseEntry> result = silentThrow(() -> storage.queryBuilder().limit(size).offset(page * size)
-				.orderBy(TIMESTAMP_COLUMN, false).where().eq(AVATAR_COLUMN, avatar).query());
+		List<StorageDatabaseEntry> result = silentThrow(
+				() -> storage.queryBuilder().limit(size).offset(page * size).orderBy(TIMESTAMP_COLUMN, false).where().eq(AVATAR_COLUMN, avatar).query());
 
 		if (result.isEmpty()) {
 			throw new NoElementFound(avatar);
@@ -59,14 +59,18 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 			log(results);
 
 			if (results.isEmpty() || results.get(0) == null || results.get(0)[0] == null) {
-				return new StorageDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, "", 0,
-						convert(TransferType.Einlagerung));
+				return new StorageDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, "", 0, convert(TransferType.Einlagerung));
 			}
 
 			Timestamp highestTimeStamp = valueOf(results.get(0)[0]);
-			return storage.queryBuilder().where().eq(StorageDatabaseEntry.TIMESTAMP_COLUMN, highestTimeStamp)
-					.queryForFirst();
+			return storage.queryBuilder().where().eq(StorageDatabaseEntry.TIMESTAMP_COLUMN, highestTimeStamp).queryForFirst();
 		}));
+	}
+
+	@Override
+	public List<String> getAllDifferentAvatars() {
+		List<StorageDatabaseEntry> avatars = silentThrow(() -> storage.queryBuilder().distinct().selectColumns(AVATAR_COLUMN).query());
+		return avatars.stream().map(bde -> bde.avatar).collect(toList());
 	}
 
 	private void log(List<String[]> results) {
@@ -99,13 +103,11 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	}
 
 	private StorageEntry convert(StorageDatabaseEntry dbEntry) {
-		return new StorageEntry(dbEntry.timeStamp.toInstant(), dbEntry.avatar, dbEntry.quantity, dbEntry.name,
-				dbEntry.quality, convert(dbEntry.type));
+		return new StorageEntry(dbEntry.timeStamp.toInstant(), dbEntry.avatar, dbEntry.quantity, dbEntry.name, dbEntry.quality, convert(dbEntry.type));
 	}
 
 	private StorageDatabaseEntry convert(StorageEntry entry) {
-		return new StorageDatabaseEntry(from(entry.timeStamp), entry.avatar, entry.quantity, entry.name, entry.quality,
-				convert(entry.type));
+		return new StorageDatabaseEntry(from(entry.timeStamp), entry.avatar, entry.quantity, entry.name, entry.quality, convert(entry.type));
 	}
 
 	// TODO: Visitor?

@@ -15,17 +15,15 @@ import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.exceptions.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 
-public class MetaInformationDatabaseRepository extends Repository<MetaInformationEntry>
-		implements MetaInformationRepository {
+public class MetaInformationDatabaseRepository extends Repository<MetaInformationEntry> implements MetaInformationRepository {
 	private final Dao<MetaInformationEntry, String> bank;
 
 	public static MetaInformationDatabaseRepository get(Configuration config, Logger logger) {
-		ConnectionSource con = getCon(config);
+		ConnectionSource con = getCon(config, logger);
 		return new MetaInformationDatabaseRepository(con, logger, getDao(con, MetaInformationEntry.class));
 	}
 
-	private MetaInformationDatabaseRepository(ConnectionSource con, Logger logger,
-			Dao<MetaInformationEntry, String> bank) {
+	private MetaInformationDatabaseRepository(ConnectionSource con, Logger logger, Dao<MetaInformationEntry, String> bank) {
 		super(con, logger, MetaInformationEntry.class);
 		this.bank = bank;
 	}

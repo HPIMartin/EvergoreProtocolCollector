@@ -17,8 +17,7 @@ public class DatabaseStartupInitialization implements ApplicationEventListener<S
 	private final StorageDatabaseRepository storage;
 	private final BankDatabaseRepository bank;
 
-	public DatabaseStartupInitialization(Configuration config, StorageDatabaseRepository storage,
-			BankDatabaseRepository bank) {
+	public DatabaseStartupInitialization(Configuration config, StorageDatabaseRepository storage, BankDatabaseRepository bank) {
 		this.config = config;
 		this.storage = storage;
 		this.bank = bank;

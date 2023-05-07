@@ -22,8 +22,12 @@ public abstract class Repository<T> {
 		this.type = type;
 	}
 
-	protected static ConnectionSource getCon(Configuration config) {
-		return silentThrow(() -> new JdbcConnectionSource("jdbc:sqlite:" + config.getDatabasePath()));
+	protected static ConnectionSource getCon(Configuration config, Logger logger) {
+		return silentThrow(() -> {
+			String url = "jdbc:sqlite:" + config.getDatabasePath();
+			logger.info("Connecting to: " + url);
+			return new JdbcConnectionSource(url);
+		});
 	}
 
 	protected static <T> Dao<T, String> getDao(ConnectionSource con, Class<T> type) {

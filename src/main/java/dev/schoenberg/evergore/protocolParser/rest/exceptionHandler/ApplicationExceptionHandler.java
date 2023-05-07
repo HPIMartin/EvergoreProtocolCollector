@@ -22,8 +22,7 @@ public class ApplicationExceptionHandler implements ExceptionHandler<ProtocolPar
 	}
 
 	@Override
-	public HttpResponse<?> handle(@SuppressWarnings("rawtypes") HttpRequest request,
-			ProtocolParserException exception) {
+	public HttpResponse<?> handle(@SuppressWarnings("rawtypes") HttpRequest request, ProtocolParserException exception) {
 		String reason = "Exception while requesting: " + request.getPath();
 
 		if (exception instanceof AccessNotAllowed || exception instanceof TooManyRequests) {

@@ -8,4 +8,6 @@ public interface StorageRepository {
 	List<StorageEntry> getAllFor(String avatar, long page, long size);
 
 	StorageEntry getNewest();
+
+	List<String> getAllDifferentAvatars();
 }

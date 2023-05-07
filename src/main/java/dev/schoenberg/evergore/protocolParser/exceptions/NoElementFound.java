@@ -8,4 +8,9 @@ public class NoElementFound extends ProtocolParserException {
 	public NoElementFound(String requestedValue) {
 		this.requestedValue = requestedValue;
 	}
+
+	@Override
+	public String getMessage() {
+		return requestedValue;
+	}
 }

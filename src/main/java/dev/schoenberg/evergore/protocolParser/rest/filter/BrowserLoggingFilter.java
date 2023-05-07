@@ -51,9 +51,8 @@ public class BrowserLoggingFilter implements HttpServerFilter {
 		}
 
 		if (counter.isBlocked()) {
-			throw new TooManyRequests();
+			throw new TooManyRequests(clientIp);
 		}
-
 
 		return chain.proceed(request);
 	}
