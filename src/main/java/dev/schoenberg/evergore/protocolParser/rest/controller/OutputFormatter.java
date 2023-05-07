@@ -1,8 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller;
 
-import static java.lang.Math.*;
-import static java.lang.String.*;
-import static java.util.stream.Collectors.*;
+import static java.lang.System.*;
+import static org.apache.commons.text.StringEscapeUtils.*;
 
 import java.util.*;
 import java.util.function.*;
@@ -11,33 +10,30 @@ import jakarta.inject.*;
 
 @Singleton
 public class OutputFormatter {
-	public <T> String generateOutput(List<T> data, List<Column<T>> columns) {
+	public static final String NEWLINE = lineSeparator();
 
+	public <T> String createTable(List<T> elements, List<Column<T>> columns) {
 		StringBuilder sb = new StringBuilder();
-		List<ColumnConfig<T>> sizes = getSizes(data, columns);
 
-		for (OutputFormatter.ColumnConfig<T> conf : sizes) {
-			sb.append(format("%-" + conf.length + "s", conf.column.headline));
-		}
-		sb.append("\n");
+		addRow(columns, sb, column -> column.headline);
 
-		for (T dto : data) {
-			for (OutputFormatter.ColumnConfig<T> conf : sizes) {
-				sb.append(format("%-" + conf.length + "s", conf.column.extractor.apply(dto)));
-			}
-			sb.append("\n");
-		}
+		elements.forEach(e -> addRow(columns, sb, column -> column.extractor.apply(e)));
+
 		return sb.toString();
 	}
 
-	private <T> List<ColumnConfig<T>> getSizes(List<T> data, List<Column<T>> columns) {
-		return columns.stream().map(c -> new ColumnConfig<>(c, getMaxLength(data, c))).collect(toList());
+	private <T> void addRow(List<Column<T>> columns, StringBuilder sb, Function<Column<T>, String> columnValue) {
+		sb.append(NEWLINE).append("<tr>").append(NEWLINE);
+		for (Column<T> column : columns) {
+			addColumn(sb, columnValue.apply(column));
+		}
+		sb.append(NEWLINE).append("</tr>").append(NEWLINE);
 	}
 
-	public static <T> int getMaxLength(List<T> dtos, Column<T> column) {
-		int longestValue = dtos.stream().map(column.extractor).mapToInt(String::length).max().orElse(0);
-		int headerLength = column.headline.length();
-		return max(max(longestValue, headerLength) + 10, 20);
+	private void addColumn(StringBuilder sb, String columnContent) {
+		sb.append("<th>");
+		sb.append(escapeHtml4(columnContent));
+		sb.append("</th>");
 	}
 
 	public static class Column<T> {
@@ -47,16 +43,6 @@ public class OutputFormatter {
 		public Column(String headline, Function<T, String> extractor) {
 			this.headline = headline;
 			this.extractor = extractor;
-		}
-	}
-
-	private static class ColumnConfig<T> {
-		public final Column<T> column;
-		public final int length;
-
-		public ColumnConfig(Column<T> column, int length) {
-			this.column = column;
-			this.length = length;
 		}
 	}
 }

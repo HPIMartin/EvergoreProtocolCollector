@@ -20,23 +20,20 @@ public class EntryFactory {
 		Matcher matcher = pattern.matcher(headline);
 		matcher.find();
 		String avatar = matcher.group(GROUP_NAME_AVATAR);
-		DateTimeFormatter FMT = new DateTimeFormatterBuilder().appendPattern("dd.MM.yyyy HH:mm").toFormatter()
-				.withZone(ZoneId.of("Europe/Berlin"));
+		DateTimeFormatter FMT = new DateTimeFormatterBuilder().appendPattern("dd.MM.yyyy HH:mm").toFormatter().withZone(APP_ZONE);
 		Instant date = FMT.parse(matcher.group(GROUP_NAME_DATE), Instant::from);
 
-		if (matcher.group(GROUP_NAME_TYPE).equals("Entnahme")) {
+		if ("Entnahme".equals(matcher.group(GROUP_NAME_TYPE))) {
 			return new Withdrawal(avatar.trim(), date, items);
-		} else {
-			return new Storage(avatar.trim(), date, items);
 		}
+		return new Storage(avatar.trim(), date, items);
 	}
 
 	private static List<Item> parseItems(List<String> rawItems) {
 		String amount = "amount";
 		String itemName = "name";
 		String itemQuality = "quality";
-		String itemRegex = "^(?<" + amount + ">\\d*) (?<" + itemName + ">[^\\(+]*)(\\((?<" + itemQuality
-				+ ">\\d*)\\))?\\s?(\\+1)?";
+		String itemRegex = "^(?<" + amount + ">\\d*) (?<" + itemName + ">[^\\(+]*)(\\((?<" + itemQuality + ">\\d*)\\))?\\s?(\\+1)?";
 
 		// Matching entries:
 		// 200 Heilsamer Seidenverband +1
@@ -54,20 +51,16 @@ public class EntryFactory {
 			if (!matcher.find()) {
 				continue;
 			}
-			items.add(new Item(Integer.valueOf(matcher.group(amount)), matcher.group(itemName).trim(),
-					parseQuality(matcher.group(itemQuality))));
+			items.add(new Item(Integer.parseInt(matcher.group(amount)), matcher.group(itemName).trim(), parseQuality(matcher.group(itemQuality))));
 		}
 
-		items = deduplicate(items);
-
-		return items;
+		return deduplicate(items);
 	}
 
 	private static List<Item> deduplicate(List<Item> items) {
 		List<Item> filtered = new ArrayList<>();
 		for (Item item : items) {
-			Optional<Item> any = filtered.stream().filter(x -> x.name.equals(item.name) && x.quality == item.quality)
-					.findAny();
+			Optional<Item> any = filtered.stream().filter(x -> x.name.equals(item.name) && x.quality == item.quality).findAny();
 			if (any.isPresent()) {
 				Item found = any.get();
 				found.quantity = found.quantity + item.quantity;
@@ -81,8 +74,7 @@ public class EntryFactory {
 	private static int parseQuality(String quality) {
 		if (quality == null || quality.isEmpty()) {
 			return 100;
-		} else {
-			return Integer.valueOf(quality);
 		}
+		return Integer.parseInt(quality);
 	}
 }

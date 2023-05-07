@@ -17,7 +17,6 @@ import dev.schoenberg.evergore.protocolParser.dataExtraction.website.*;
 import dev.schoenberg.evergore.protocolParser.database.bank.*;
 import dev.schoenberg.evergore.protocolParser.database.storage.*;
 import dev.schoenberg.evergore.protocolParser.domain.*;
-import io.micronaut.scheduling.annotation.*;
 import jakarta.inject.*;
 
 @Singleton
@@ -27,15 +26,14 @@ public class EvergoreDataCollectorJob {
 	private final BankDatabaseRepository bankRepo;
 	private final StorageDatabaseRepository storageRepo;
 
-	public EvergoreDataCollectorJob(Logger logger, PageContentExtractor extractor, BankDatabaseRepository bankRepo,
-			StorageDatabaseRepository storageRepo) {
+	public EvergoreDataCollectorJob(Logger logger, PageContentExtractor extractor, BankDatabaseRepository bankRepo, StorageDatabaseRepository storageRepo) {
 		this.logger = logger;
 		this.extractor = extractor;
 		this.bankRepo = bankRepo;
 		this.storageRepo = storageRepo;
 	}
 
-	@Scheduled(fixedDelay = "24h", initialDelay = "30s")
+	// @Scheduled(fixedDelay = "24h", initialDelay = "30s")
 	void scheduleEvery24Hours() {
 		logger.info("Scheduled extraction started...");
 		loadData();
@@ -53,9 +51,8 @@ public class EvergoreDataCollectorJob {
 		logger.debug("Latest element from: " + latest.timeStamp);
 		AtomicInteger beforeFilter = new AtomicInteger(0);
 		AtomicInteger afterFilter = new AtomicInteger(0);
-		storageRepo.add(
-				lager.stream().map(this::mapStorage).flatMap(List::stream).peek(x -> beforeFilter.incrementAndGet())
-						.filter(e -> isNewer(latest, e)).peek(x -> afterFilter.incrementAndGet()).collect(toList()));
+		storageRepo.add(lager.stream().map(this::mapStorage).flatMap(List::stream).peek(x -> beforeFilter.incrementAndGet()).filter(e -> isNewer(latest, e))
+				.peek(x -> afterFilter.incrementAndGet()).collect(toList()));
 		logger.debug("before filter: " + beforeFilter.get());
 		logger.debug("after filter: " + afterFilter.get());
 	}
@@ -65,8 +62,8 @@ public class EvergoreDataCollectorJob {
 		logger.debug("Latest element from: " + latest.timeStamp);
 		AtomicInteger beforeFilter = new AtomicInteger(0);
 		AtomicInteger afterFilter = new AtomicInteger(0);
-		bankRepo.add(bank.stream().map(this::mapBank).flatMap(List::stream).peek(x -> beforeFilter.incrementAndGet())
-				.filter(e -> isNewer(latest, e)).peek(x -> afterFilter.incrementAndGet()).collect(toList()));
+		bankRepo.add(bank.stream().map(this::mapBank).flatMap(List::stream).peek(x -> beforeFilter.incrementAndGet()).filter(e -> isNewer(latest, e))
+				.peek(x -> afterFilter.incrementAndGet()).collect(toList()));
 		logger.debug("before filter: " + beforeFilter.get());
 		logger.debug("after filter: " + afterFilter.get());
 	}
@@ -82,15 +79,14 @@ public class EvergoreDataCollectorJob {
 	private List<BankEntry> mapBank(Entry e) {
 		Instant time = e.date;
 		String avatar = e.avatar;
-		TransferType type = e.getType().equals(ENTNAHME) ? Entnahme : Einlagerung;
+		TransferType type = ENTNAHME.equals(e.getType()) ? Entnahme : Einlagerung;
 		return e.items.stream().map(i -> new BankEntry(time, avatar, i.quantity, type)).collect(toList());
 	}
 
 	private List<StorageEntry> mapStorage(Entry e) {
 		Instant time = e.date;
 		String avatar = e.avatar;
-		TransferType type = e.getType().equals(ENTNAHME) ? Entnahme : Einlagerung;
-		return e.items.stream().map(i -> new StorageEntry(time, avatar, i.quantity, i.name, i.quality, type))
-				.collect(toList());
+		TransferType type = ENTNAHME.equals(e.getType()) ? Entnahme : Einlagerung;
+		return e.items.stream().map(i -> new StorageEntry(time, avatar, i.quantity, i.name, i.quality, type)).collect(toList());
 	}
 }

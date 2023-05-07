@@ -8,4 +8,6 @@ public interface BankRepository {
 	List<BankEntry> getAllFor(String avatar, long page, long size);
 
 	BankEntry getNewest();
+
+	List<String> getAllDifferentAvatars();
 }

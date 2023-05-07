@@ -18,8 +18,7 @@ public abstract class Entry {
 	public abstract String getType();
 
 	public String print(String delimiter) {
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-				.withZone(ZoneId.of("Europe/Berlin"));
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of("Europe/Berlin"));
 		String prefix = getType() + delimiter + formatter.format(date) + delimiter + avatar + delimiter;
 		List<String> result = new ArrayList<>();
 		for (Item item : items) {

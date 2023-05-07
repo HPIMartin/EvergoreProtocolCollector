@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Evergore Protocol Parser</title>
+    <script>
+	    function decodeHtml(htmlString) {
+	  		const parser = new DOMParser();
+	  		return parser.parseFromString(htmlString, 'text/html').body.textContent;
+		}
+
+        function updateURL() {
+            var dropdown = document.getElementById("dropdown");
+            var selectedValue = dropdown.options[dropdown.selectedIndex].value;
+            var numberFieldValue = document.getElementById("numberField").value;
+            
+            var url = "/avatars/" + selectedValue + "/"
+            
+            var currentURL = window.location.href;
+        	if (currentURL.includes("storage")) {
+            	url += "storage";
+        	}
+        	if (currentURL.includes("bank")) {
+            	url += "bank";
+        	}
+            
+            url += "?token=secret_token&page=" + numberFieldValue;
+            window.location.href = url;
+        }
+        
+    	function preSelectDropdownValue() {
+	        var dropdown = document.getElementById("dropdown");
+	        var currentURL = window.location.href;
+	
+	        for (var i = 0; i < dropdown.options.length; i++) {
+	            var optionValue = decodeHtml(dropdown.options[i].value);
+	
+	            if (currentURL.includes(optionValue)) {
+	                dropdown.selectedIndex = i;
+	                break;
+	            }
+            }
+	    }
+    </script>
+    <style>
+	    table {
+	      width: 100%;
+	      border-collapse: collapse;
+	    }
+	
+	    th, td {
+	      text-align: left;
+	      padding: 8px;
+	      border: 1px solid black;
+	    }
+  	</style>
+</head>
+<body onload="preSelectDropdownValue();">
+    <header>
+    	Avatar:
+        <select id="dropdown">
+        	###AVATARS_PLACEHOLDER###
+        </select>
+        Page:
+        <input type="number" id="numberField" value="###PAGE_PLACEHOLDER###">
+        <button onclick="updateURL()">Laden</button>
+    </header>
+    <div id="body">
+	    <table>
+        	###PAGE_CONTENT_PLACEHOLDER###
+		</table>
+    </div>
+</body>
+</html>

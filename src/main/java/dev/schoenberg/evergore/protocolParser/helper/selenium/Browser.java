@@ -17,8 +17,8 @@ import org.openqa.selenium.firefox.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 
 public enum Browser {
-	FIREFOX("gecko", Browser::firefox, true), CHROME("chrome", Browser::chrome, true),
-	EDGE("edge", Browser::edge, true), DOCKER("docker", Browser::firefoxDocker, false);
+	FIREFOX("gecko", Browser::firefox, true), CHROME("chrome", Browser::chrome, true), EDGE("edge", Browser::edge, true),
+	DOCKER("docker", Browser::firefoxDocker, false);
 
 	public final String name;
 	private final boolean localDriverRequired;
@@ -41,8 +41,7 @@ public enum Browser {
 				return browser;
 			}
 		}
-		throw new RuntimeException(
-				"Invalid driver name passed as 'browser' property. Possible values: " + Arrays.toString(values()));
+		throw new RuntimeException("Invalid driver name passed as 'browser' property. Possible values: " + Arrays.toString(values()));
 	}
 
 	private static WebDriver chrome(Configuration config) {

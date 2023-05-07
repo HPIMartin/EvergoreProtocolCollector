@@ -25,7 +25,7 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 	private final Dao<BankDatabaseEntry, String> bank;
 
 	public static BankDatabaseRepository get(Configuration config, Logger logger) {
-		ConnectionSource con = getCon(config);
+		ConnectionSource con = getCon(config, logger);
 		return new BankDatabaseRepository(con, logger, getDao(con, BankDatabaseEntry.class));
 	}
 
@@ -36,8 +36,8 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 
 	@Override
 	public List<BankEntry> getAllFor(String avatar, long page, long size) {
-		List<BankDatabaseEntry> result = silentThrow(() -> bank.queryBuilder().orderBy(TIMESTAMP_COLUMN, false)
-				.limit(size).offset(page * size).where().eq(AVATAR_COLUMN, avatar).query());
+		List<BankDatabaseEntry> result = silentThrow(
+				() -> bank.queryBuilder().orderBy(TIMESTAMP_COLUMN, false).limit(size).offset(page * size).where().eq(AVATAR_COLUMN, avatar).query());
 
 		if (result.isEmpty()) {
 			throw new NoElementFound(avatar);
@@ -67,6 +67,12 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 			Timestamp highestTimeStamp = valueOf(results.get(0)[0]);
 			return bank.queryBuilder().where().eq(BankDatabaseEntry.TIMESTAMP_COLUMN, highestTimeStamp).queryForFirst();
 		}));
+	}
+
+	@Override
+	public List<String> getAllDifferentAvatars() {
+		List<BankDatabaseEntry> avatars = silentThrow(() -> bank.queryBuilder().distinct().selectColumns(AVATAR_COLUMN).query());
+		return avatars.stream().map(bde -> bde.avatar).collect(toList());
 	}
 
 	private void log(List<String[]> results) {

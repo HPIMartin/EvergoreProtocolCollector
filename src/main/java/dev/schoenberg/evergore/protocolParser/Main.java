@@ -16,6 +16,7 @@ import dev.schoenberg.evergore.protocolParser.database.bank.*;
 import dev.schoenberg.evergore.protocolParser.domain.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 import dev.schoenberg.evergore.protocolParser.helper.logger.*;
+import dev.schoenberg.evergore.protocolParser.rest.controller.*;
 
 public class Main {
 	private static Configuration config;
@@ -23,25 +24,35 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 		config = new Configuration();
 
-		test();
+		test2();
 
-//		FileLoader fileLoader = new AlternativeFileLoaderWrapper(new DiscFileLoader(config), new ResourceFileLoader());
-//
-//		System.out.println("Loading page content...");
-//		PageContents pageContents = new PageContentExtractor(config, fileLoader).load();
-//
-//		System.out.println("Interpreting content...");
-//		String bankContent = parse(pageContents.bank);
-//		String lagerContent = parse(pageContents.lager);
-//
-//		System.out.println("Write content to disk: " + config.evergoreFolder);
-//		FileWriter writer = new DiskFileWriter(config);
-//		writer.write(bankContent, "bank.csv");
-//		writer.write(lagerContent, "lager.csv");
+		// test();
+
+		// FileLoader fileLoader = new AlternativeFileLoaderWrapper(new DiscFileLoader(config), new ResourceFileLoader());
+		//
+		// System.out.println("Loading page content...");
+		// PageContents pageContents = new PageContentExtractor(config, fileLoader).load();
+		//
+		// System.out.println("Interpreting content...");
+		// String bankContent = parse(pageContents.bank);
+		// String lagerContent = parse(pageContents.lager);
+		//
+		// System.out.println("Write content to disk: " + config.evergoreFolder);
+		// FileWriter writer = new DiskFileWriter(config);
+		// writer.write(bankContent, "bank.csv");
+		// writer.write(lagerContent, "lager.csv");
 
 		System.out.println("Done!");
 	}
 
+	private static void test2() throws Exception {
+		Logger logger = new Slf4jLogger();
+		AvatarController controller = new AvatarController(BankDatabaseRepository.get(config, logger), null, new OutputFormatter(), logger);
+		String content = controller.bankInformation("Gorim", 0);
+		System.out.println(content);
+	}
+
+	@SuppressWarnings("unused")
 	private static void test() throws SQLException, Exception {
 		BankEntry entry = new BankEntry(of(1990, 4, 10, 13, 37).toInstant(UTC), "Alessia", 42, Einlagerung);
 		BankEntry entry2 = new BankEntry(of(1990, 1, 1, 0, 0).toInstant(UTC), "not(Alessia)", 42, Einlagerung);
@@ -50,7 +61,7 @@ public class Main {
 		repo.add(asList(entry, entry2));
 
 		BankEntry newest = repo.getNewest();
-		List<BankEntry> alessias = repo.getAllFor("Alessia", 0l, 100l);
+		List<BankEntry> alessias = repo.getAllFor("Alessia", 0L, 100L);
 
 		System.out.println("Newest: " + newest.equals(entry));
 		System.out.println("Alessias: " + (alessias.size() == 1 && alessias.get(0).equals(entry)));
@@ -83,13 +94,11 @@ public class Main {
 		List<Entry> result = new ArrayList<>();
 		Integer oldBegining = null;
 		for (int beginning : entryBeginnings) {
-			if (oldBegining == null) {
-				oldBegining = beginning;
-			} else {
+			if (oldBegining != null) {
 				List<String> entryContent = lines.subList(oldBegining, beginning);
 				result.add(parseContent(entryContent));
-				oldBegining = beginning;
 			}
+			oldBegining = beginning;
 		}
 		if (oldBegining != null) {
 			result.add(parseContent(lines.subList(oldBegining, lines.size())));
