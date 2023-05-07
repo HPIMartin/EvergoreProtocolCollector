@@ -17,6 +17,7 @@ import dev.schoenberg.evergore.protocolParser.dataExtraction.website.*;
 import dev.schoenberg.evergore.protocolParser.database.bank.*;
 import dev.schoenberg.evergore.protocolParser.database.storage.*;
 import dev.schoenberg.evergore.protocolParser.domain.*;
+import io.micronaut.scheduling.annotation.*;
 import jakarta.inject.*;
 
 @Singleton
@@ -33,7 +34,7 @@ public class EvergoreDataCollectorJob {
 		this.storageRepo = storageRepo;
 	}
 
-	// @Scheduled(fixedDelay = "24h", initialDelay = "30s")
+	@Scheduled(fixedDelay = "24h", initialDelay = "30s")
 	void scheduleEvery24Hours() {
 		logger.info("Scheduled extraction started...");
 		loadData();
