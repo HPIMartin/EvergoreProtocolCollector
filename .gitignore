@@ -8,3 +8,4 @@ memory
 .factorypath
 /.apt_generated/
 /.apt_generated_tests/
+src/test/resources/smokeTest.sqlite

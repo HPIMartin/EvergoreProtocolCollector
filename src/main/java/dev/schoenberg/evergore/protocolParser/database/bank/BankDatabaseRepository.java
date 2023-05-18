@@ -24,8 +24,8 @@ import dev.schoenberg.evergore.protocolParser.helper.config.*;
 public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implements BankRepository {
 	private final Dao<BankDatabaseEntry, String> bank;
 
-	public static BankDatabaseRepository get(Configuration config, Logger logger) {
-		ConnectionSource con = getCon(config, logger);
+	public static BankDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
+		ConnectionSource con = getCon(config, logger, hook);
 		return new BankDatabaseRepository(con, logger, getDao(con, BankDatabaseEntry.class));
 	}
 

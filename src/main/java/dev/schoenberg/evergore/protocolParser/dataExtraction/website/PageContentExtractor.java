@@ -40,8 +40,7 @@ public class PageContentExtractor {
 
 		try {
 			driver.close();
-		} catch (Exception e) {
-		}
+		} catch (Exception e) {}
 
 		return result;
 	}
@@ -97,8 +96,7 @@ public class PageContentExtractor {
 
 				wait(driver, SERVER + "/" + "portal");
 				driver.findElement(xpath("//button[@type=\"submit\"]")).click();
-			} catch (Exception e) {
-			}
+			} catch (Exception e) {}
 		}
 	}
 
