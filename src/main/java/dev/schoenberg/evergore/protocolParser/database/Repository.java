@@ -22,8 +22,9 @@ public abstract class Repository<T> {
 		this.type = type;
 	}
 
-	protected static ConnectionSource getCon(Configuration config, Logger logger) {
+	protected static ConnectionSource getCon(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
 		return silentThrow(() -> {
+			hook.run();
 			String url = "jdbc:sqlite:" + config.getDatabasePath();
 			logger.info("Connecting to: " + url);
 			return new JdbcConnectionSource(url);

@@ -22,8 +22,8 @@ import dev.schoenberg.evergore.protocolParser.helper.config.*;
 public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> implements StorageRepository {
 	private final Dao<StorageDatabaseEntry, String> storage;
 
-	public static StorageDatabaseRepository get(Configuration config, Logger logger) {
-		ConnectionSource con = getCon(config, logger);
+	public static StorageDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
+		ConnectionSource con = getCon(config, logger, hook);
 		return new StorageDatabaseRepository(con, logger, getDao(con, StorageDatabaseEntry.class));
 	}
 

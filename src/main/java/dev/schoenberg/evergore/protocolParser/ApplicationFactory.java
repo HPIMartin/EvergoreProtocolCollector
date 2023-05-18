@@ -1,6 +1,9 @@
 package dev.schoenberg.evergore.protocolParser;
 
+import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
+import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.database.bank.*;
+import dev.schoenberg.evergore.protocolParser.database.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.database.storage.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import dev.schoenberg.evergore.protocolParser.helper.fileLoader.*;
@@ -16,12 +19,27 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public BankDatabaseRepository bankDatabaseRepository(Configuration config, Logger logger) {
-		return BankDatabaseRepository.get(config, logger);
+	public BankDatabaseRepository bankDatabaseRepository(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
+		return BankDatabaseRepository.get(config, logger, hook);
 	}
 
 	@Singleton
-	public StorageDatabaseRepository storageDatabaseRepository(Configuration config, Logger logger) {
-		return StorageDatabaseRepository.get(config, logger);
+	public StorageDatabaseRepository storageDatabaseRepository(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
+		return StorageDatabaseRepository.get(config, logger, hook);
+	}
+
+	@Singleton
+	public MetaInformationDatabaseRepository metaInformationDatabaseRepository(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
+		return MetaInformationDatabaseRepository.get(config, logger, hook);
+	}
+
+	@Singleton
+	public PreDatabaseConnectionHook preDatabaseConnectionHook() {
+		return () -> {};
+	}
+
+	@Singleton
+	public PostCollectionHook postCollectionHook() {
+		return () -> {};
 	}
 }

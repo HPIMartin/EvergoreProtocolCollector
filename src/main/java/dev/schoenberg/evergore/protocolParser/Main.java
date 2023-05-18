@@ -47,7 +47,7 @@ public class Main {
 
 	private static void test2() throws Exception {
 		Logger logger = new Slf4jLogger();
-		AvatarController controller = new AvatarController(BankDatabaseRepository.get(config, logger), null, new OutputFormatter(), logger);
+		AvatarController controller = new AvatarController(BankDatabaseRepository.get(config, logger, () -> {}), null, new OutputFormatter(), logger);
 		String content = controller.bankInformation("Gorim", 0);
 		System.out.println(content);
 	}
@@ -57,7 +57,7 @@ public class Main {
 		BankEntry entry = new BankEntry(of(1990, 4, 10, 13, 37).toInstant(UTC), "Alessia", 42, Einlagerung);
 		BankEntry entry2 = new BankEntry(of(1990, 1, 1, 0, 0).toInstant(UTC), "not(Alessia)", 42, Einlagerung);
 
-		BankDatabaseRepository repo = BankDatabaseRepository.get(config, new Slf4jLogger());
+		BankDatabaseRepository repo = BankDatabaseRepository.get(config, new Slf4jLogger(), () -> {});
 		repo.add(asList(entry, entry2));
 
 		BankEntry newest = repo.getNewest();

@@ -5,6 +5,7 @@ import static java.nio.file.Files.*;
 import static java.nio.file.Path.*;
 
 import dev.schoenberg.evergore.protocolParser.database.bank.*;
+import dev.schoenberg.evergore.protocolParser.database.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.database.storage.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 import io.micronaut.context.event.*;
@@ -16,11 +17,14 @@ public class DatabaseStartupInitialization implements ApplicationEventListener<S
 	private final Configuration config;
 	private final StorageDatabaseRepository storage;
 	private final BankDatabaseRepository bank;
+	private final MetaInformationDatabaseRepository meta;
 
-	public DatabaseStartupInitialization(Configuration config, StorageDatabaseRepository storage, BankDatabaseRepository bank) {
+	public DatabaseStartupInitialization(Configuration config, StorageDatabaseRepository storage, BankDatabaseRepository bank,
+			MetaInformationDatabaseRepository meta) {
 		this.config = config;
 		this.storage = storage;
 		this.bank = bank;
+		this.meta = meta;
 	}
 
 	@Override
@@ -29,5 +33,6 @@ public class DatabaseStartupInitialization implements ApplicationEventListener<S
 
 		storage.init();
 		bank.init();
+		meta.init();
 	}
 }

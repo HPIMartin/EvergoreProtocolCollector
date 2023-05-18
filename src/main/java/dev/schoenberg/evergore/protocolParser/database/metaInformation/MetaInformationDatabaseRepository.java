@@ -1,8 +1,9 @@
 package dev.schoenberg.evergore.protocolParser.database.metaInformation;
 
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation.*;
 import static dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationEntry.*;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static java.util.stream.Collectors.*;
+import static java.util.Optional.*;
 
 import java.util.*;
 
@@ -12,14 +13,13 @@ import com.j256.ormlite.support.*;
 import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
-import dev.schoenberg.evergore.protocolParser.exceptions.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 
 public class MetaInformationDatabaseRepository extends Repository<MetaInformationEntry> implements MetaInformationRepository {
 	private final Dao<MetaInformationEntry, String> bank;
 
-	public static MetaInformationDatabaseRepository get(Configuration config, Logger logger) {
-		ConnectionSource con = getCon(config, logger);
+	public static MetaInformationDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
+		ConnectionSource con = getCon(config, logger, hook);
 		return new MetaInformationDatabaseRepository(con, logger, getDao(con, MetaInformationEntry.class));
 	}
 
@@ -29,30 +29,39 @@ public class MetaInformationDatabaseRepository extends Repository<MetaInformatio
 	}
 
 	@Override
-	public List<MetaInformation> get(String key) {
-		List<MetaInformationEntry> result = silentThrow(() -> bank.queryBuilder().where().eq(KEY_COLUMN, key).query());
+	public <T> Optional<MetaInformation<T>> get(MetaInformationKey<T> mik) {
+		List<MetaInformationEntry> result = getAllFor(mik.id);
 
 		if (result.isEmpty()) {
-			throw new NoElementFound(key);
+			return empty();
 		}
 
-		return convert(result);
+		return of(convert(mik, result.get(0)));
 	}
 
 	@Override
-	public void add(List<MetaInformation> meta) {
-		silentThrow(() -> bank.create(meta.stream().map(this::convert).collect(toList())));
+	public <T> void add(List<MetaInformation<T>> meta) {
+		meta.forEach(this::storeInformation);
 	}
 
-	private List<MetaInformation> convert(List<MetaInformationEntry> dbEntries) {
-		return dbEntries.stream().map(this::convert).collect(toList());
+	private List<MetaInformationEntry> getAllFor(String key) {
+		return silentThrow(() -> bank.queryBuilder().limit(1L).where().eq(KEY_COLUMN, key).query());
 	}
 
-	private MetaInformation convert(MetaInformationEntry dbEntry) {
-		return new MetaInformation(dbEntry.key, dbEntry.value);
+	private <T> void storeInformation(MetaInformation<T> metainformation) {
+		List<MetaInformationEntry> existing = getAllFor(metainformation.key.id);
+		if (existing.isEmpty()) {
+			silentThrow(() -> bank.create(convert(metainformation)));
+		} else {
+			silentThrow(() -> bank.update(existing.get(0).changeValue(metainformation.getSerializedValue())));
+		}
 	}
 
-	private MetaInformationEntry convert(MetaInformation entry) {
-		return new MetaInformationEntry(entry.key, entry.value);
+	private <T> MetaInformation<T> convert(MetaInformationKey<T> key, MetaInformationEntry dbEntry) {
+		return fromSerializedValue(key, dbEntry.value);
+	}
+
+	private <T> MetaInformationEntry convert(MetaInformation<T> entry) {
+		return new MetaInformationEntry(entry.key.id, entry.getSerializedValue());
 	}
 }

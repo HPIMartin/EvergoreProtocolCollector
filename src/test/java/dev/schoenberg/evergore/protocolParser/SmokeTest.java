@@ -5,8 +5,10 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.*;
-import static java.nio.file.Files.*;
+import static java.time.Duration.*;
+import static java.time.Instant.*;
 import static java.util.Arrays.*;
+import static java.util.concurrent.TimeUnit.*;
 import static kong.unirest.Unirest.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -18,10 +20,13 @@ import org.junit.jupiter.api.*;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
+import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.database.bank.*;
 import dev.schoenberg.evergore.protocolParser.database.storage.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 import io.micronaut.runtime.server.*;
+import io.micronaut.scheduling.*;
 import io.micronaut.test.annotation.*;
 import io.micronaut.test.extensions.junit5.annotation.*;
 import jakarta.inject.*;
@@ -35,38 +40,46 @@ public class SmokeTest {
 	private @Inject Configuration config;
 	private @Inject Logger logger;
 
+	private static boolean exceptionFound;
+	private boolean collectionFinished;
+	private static boolean dataIsLoaded;
+
 	@BeforeEach
 	public void setup() {
 		config().verifySsl(false);
 		config().defaultBaseUrl("http://localhost:" + server.getPort());
-	}
+		exceptionFound = false;
+		collectionFinished = false;
+		dataIsLoaded = false;
 
-	@BeforeAll
-	public static void deleteTestDatabase() {
-		silentThrow(() -> deleteIfExists(Paths.get(TEST_DATABASE_PATH)));
-	}
-
-	public static class TestConfiguration extends Configuration {
-		@Override
-		public String getDatabasePath() {
-			return "src/test/resources/testdata.sqlite";
-		}
-	}
-
-	@MockBean(Configuration.class)
-	Configuration configDto() {
-		return new TestConfiguration();
+		EvergoreDataCollectorJob.DELAY_IN_SEC = 0;
 	}
 
 	@Test
 	public void applicationIsStarting() {
 		assertTrue(server.isRunning());
+
+		awaitCollectionFinished();
+
+		assertFalse(exceptionFound);
+		assertTrue(dataIsLoaded);
+	}
+
+	private void awaitCollectionFinished() {
+		Duration MAX_WAITING_TIME = ofMinutes(1);
+		Instant stopAwaiting = now().plus(MAX_WAITING_TIME);
+		while (!collectionFinished) {
+			if (now().isAfter(stopAwaiting)) {
+				throw new RuntimeException("Awaiting timed out after: " + MAX_WAITING_TIME + "!");
+			}
+			silentThrow(() -> MILLISECONDS.sleep(50));
+		}
 	}
 
 	@Test
 	public void retrieveDataViaBankEndpoint() {
 		Instant time = LocalDateTime.of(1900, Month.MAY, 4, 13, 37).atZone(APP_ZONE).toInstant();
-		BankDatabaseRepository.get(config, logger).add(asList(new BankEntry(time, "TestAvatar", 42, Einlagerung)));
+		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(time, "TestAvatar", 42, Einlagerung)));
 
 		HttpResponse<String> response = get("/avatars/TestAvatar/bank");
 
@@ -79,7 +92,7 @@ public class SmokeTest {
 	@Test
 	public void retrieveDataViaStorageEndpoint() {
 		Instant time = LocalDateTime.of(1900, Month.MAY, 4, 13, 37).atZone(APP_ZONE).toInstant();
-		StorageDatabaseRepository.get(config, logger).add(asList(new StorageEntry(time, "TestAvatar", 1, "TestItem", 42, Einlagerung)));
+		StorageDatabaseRepository.get(config, logger, () -> {}).add(asList(new StorageEntry(time, "TestAvatar", 1, "TestItem", 42, Einlagerung)));
 
 		HttpResponse<String> response = get("/avatars/TestAvatar/storage");
 
@@ -90,6 +103,13 @@ public class SmokeTest {
 		assertClosest(content, "<th>04.05.1900 13:37</th><th>TestAvatar</th><th>1</th><th>TestItem</th><th>42</th><th>Einlagerung</th>");
 	}
 
+	@Test
+	void requestNotExisitingEndpoint() {
+		int statusCode = get("/thatEndpointDoesNotExist").getStatus();
+
+		assertTrue(statusCode >= 400 && statusCode < 500);
+	}
+
 	private void assertClosest(String content, String expected) {
 		if (!content.contains(expected)) {
 			List<String> contenLines = asList(content.split(NEWLINE));
@@ -98,18 +118,71 @@ public class SmokeTest {
 		}
 	}
 
-	@Test
-	void requestNotExisitingEndpoint() {
-		int statusCode = get("/thatEndpointDoesNotExist").getStatus();
+	@MockBean(PreDatabaseConnectionHook.class)
+	PreDatabaseConnectionHook databaseHook() {
+		return this::deleteTestDatabase;
+	}
 
-		assertTrue(statusCode >= 400 && statusCode < 500);
+	private void deleteTestDatabase() {
+		silentThrow(() -> Files.deleteIfExists(Paths.get(TEST_DATABASE_PATH)));
+	}
+
+	@MockBean(PostCollectionHook.class)
+	PostCollectionHook collectionHook() {
+		return this::collectionFinished;
+	}
+
+	private void collectionFinished() {
+		collectionFinished = true;
+	}
+
+	@MockBean(DefaultTaskExceptionHandler.class)
+	DefaultTaskExceptionHandler exceptionHandler() {
+		return new TestTaskExceptionHandler();
+	}
+
+	public static class TestTaskExceptionHandler extends DefaultTaskExceptionHandler {
+		@Override
+		public void handle(Object bean, Throwable throwable) {
+			exceptionFound = true;
+			throwable.printStackTrace();
+		}
+	}
+
+	@MockBean(Configuration.class)
+	Configuration configDto() {
+		return new TestConfiguration();
+	}
+
+	public static class TestConfiguration extends Configuration {
+		@Override
+		public String getDatabasePath() {
+			return TEST_DATABASE_PATH;
+			// return "src/test/resources/testdata.sqlite";
+		}
+	}
+
+	@MockBean(EvergoreDataExtractor.class)
+	TestEvergoreDataExtractor testEvergoreDataExtractor() {
+		return new TestEvergoreDataExtractor();
+	}
+
+	public static class TestEvergoreDataExtractor extends EvergoreDataExtractor {
+		public TestEvergoreDataExtractor() {
+			super(null, null, null, null);
+		}
+
+		@Override
+		public void loadData() {
+			dataIsLoaded = true;
+		}
 	}
 
 	private HttpResponse<String> get(String endpoint) {
 		return Unirest.get(endpoint + "?token=secret_token").asString();
 	}
 
-	private static String findClosestString(List<String> strings, String target) {
+	private String findClosestString(List<String> strings, String target) {
 		int minDistance = Integer.MAX_VALUE;
 		String closestString = null;
 

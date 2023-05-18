@@ -22,8 +22,7 @@ public class AlternativeFileLoaderWrapper implements FileLoader {
 				System.out.println("Found file in primary source.");
 				return result;
 			}
-		} catch (Exception e) {
-		}
+		} catch (Exception e) {}
 
 		System.out.println("Trying to fetch file from backup...");
 		return backupLoader.fetchFile(path);
