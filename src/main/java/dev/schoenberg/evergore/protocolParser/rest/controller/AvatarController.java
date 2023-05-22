@@ -82,7 +82,7 @@ public class AvatarController {
 	}
 
 	private String getPageTemplateWithMetaData(int page, List<String> avatars) {
-		String pageTemplate = new String(silentThrow(() -> getClass().getResourceAsStream("/static/htmlTemplate.txt").readAllBytes()), UTF_8);
+		String pageTemplate = new String(silentThrow(() -> getClass().getResourceAsStream("/static/detailHtmlTemplate.txt").readAllBytes()), UTF_8);
 
 		String avatarsSet = pageTemplate.replace("###AVATARS_PLACEHOLDER###", generateDropDownOptions(avatars));
 		return avatarsSet.replace("###PAGE_PLACEHOLDER###", valueOf(page));
@@ -98,9 +98,6 @@ public class AvatarController {
 	}
 
 	private String getLocalDateTimeString(Instant toBeConverted) {
-		if (toBeConverted.toString().contains("2023-02-19") && toBeConverted.toString().contains(":17")) {
-			System.out.println("Halt STOP!");
-		}
 		return toBeConverted.atZone(APP_ZONE).toLocalDateTime().format(DATE_TIME_PATTERN);
 	}
 }

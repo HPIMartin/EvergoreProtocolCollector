@@ -3,6 +3,7 @@ package dev.schoenberg.evergore.protocolParser;
 import static dev.schoenberg.evergore.protocolParser.TestHelper.*;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.*;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.*;
 import static java.time.Duration.*;
@@ -19,10 +20,12 @@ import java.util.*;
 import org.junit.jupiter.api.*;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.database.bank.*;
+import dev.schoenberg.evergore.protocolParser.database.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.database.storage.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 import io.micronaut.runtime.server.*;
@@ -59,21 +62,11 @@ public class SmokeTest {
 	public void applicationIsStarting() {
 		assertTrue(server.isRunning());
 
-		awaitCollectionFinished();
+		boolean finishedInTime = awaitCollectionFinished();
 
 		assertFalse(exceptionFound);
 		assertTrue(dataIsLoaded);
-	}
-
-	private void awaitCollectionFinished() {
-		Duration MAX_WAITING_TIME = ofMinutes(1);
-		Instant stopAwaiting = now().plus(MAX_WAITING_TIME);
-		while (!collectionFinished) {
-			if (now().isAfter(stopAwaiting)) {
-				throw new RuntimeException("Awaiting timed out after: " + MAX_WAITING_TIME + "!");
-			}
-			silentThrow(() -> MILLISECONDS.sleep(50));
-		}
+		assertTrue(finishedInTime);
 	}
 
 	@Test
@@ -104,10 +97,38 @@ public class SmokeTest {
 	}
 
 	@Test
+	public void retrieveDataViaOverviewEndpoint() {
+		String avatar = "TestAvatar";
+		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(MIN, avatar, 0, Einlagerung)));
+		MetaInformation<Long> placement = new MetaInformation<>(getBankPlacement(avatar), 1337L);
+		MetaInformation<Long> withdrawl = new MetaInformation<>(getBankWithdrawl(avatar), 42L);
+		MetaInformationDatabaseRepository.get(config, logger, () -> {}).add(asList(placement, withdrawl));
+
+		HttpResponse<String> response = get("/overview");
+
+		assertTrue(response.getStatus() >= 200 && response.getStatus() < 300, "Status code was: " + response.getStatus());
+		String content = response.getBody();
+		assertClosest(content, "<th>Avatar</th><th>Entnommen</th><th>Eingelagert</th>");
+		assertClosest(content, "<th>TestAvatar</th><th>42</th><th>1337</th>");
+	}
+
+	@Test
 	void requestNotExisitingEndpoint() {
 		int statusCode = get("/thatEndpointDoesNotExist").getStatus();
 
 		assertTrue(statusCode >= 400 && statusCode < 500);
+	}
+
+	private boolean awaitCollectionFinished() {
+		Duration MAX_WAITING_TIME = ofMinutes(1);
+		Instant stopAwaiting = now().plus(MAX_WAITING_TIME);
+		while (!collectionFinished) {
+			if (now().isAfter(stopAwaiting)) {
+				return false;
+			}
+			silentThrow(() -> MILLISECONDS.sleep(50));
+		}
+		return true;
 	}
 
 	private void assertClosest(String content, String expected) {

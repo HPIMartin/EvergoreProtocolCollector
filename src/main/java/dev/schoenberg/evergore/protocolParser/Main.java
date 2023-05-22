@@ -3,11 +3,11 @@ package dev.schoenberg.evergore.protocolParser;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
 import static dev.schoenberg.evergore.protocolParser.dataExtraction.parser.EntryFactory.*;
-import static java.time.LocalDateTime.of;
-import static java.time.ZoneOffset.*;
+import static java.time.LocalDateTime.*;
 import static java.util.Arrays.*;
 
 import java.sql.*;
+import java.time.*;
 import java.util.*;
 import java.util.ArrayList;
 
@@ -24,9 +24,9 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 		config = new Configuration();
 
-		test2();
+		// test2();
 
-		// test();
+		test();
 
 		// FileLoader fileLoader = new AlternativeFileLoaderWrapper(new DiscFileLoader(config), new ResourceFileLoader());
 		//
@@ -45,6 +45,7 @@ public class Main {
 		System.out.println("Done!");
 	}
 
+	@SuppressWarnings("unused")
 	private static void test2() throws Exception {
 		Logger logger = new Slf4jLogger();
 		AvatarController controller = new AvatarController(BankDatabaseRepository.get(config, logger, () -> {}), null, new OutputFormatter(), logger);
@@ -52,10 +53,9 @@ public class Main {
 		System.out.println(content);
 	}
 
-	@SuppressWarnings("unused")
 	private static void test() throws SQLException, Exception {
-		BankEntry entry = new BankEntry(of(1990, 4, 10, 13, 37).toInstant(UTC), "Alessia", 42, Einlagerung);
-		BankEntry entry2 = new BankEntry(of(1990, 1, 1, 0, 0).toInstant(UTC), "not(Alessia)", 42, Einlagerung);
+		BankEntry entry = new BankEntry(of(2101, 4, 10, 13, 37).atZone(APP_ZONE).toInstant(), "Alessia", 42, Einlagerung);
+		BankEntry entry2 = new BankEntry(of(1990, 1, 1, 0, 0).atZone(APP_ZONE).toInstant(), "not(Alessia)", 42, Einlagerung);
 
 		BankDatabaseRepository repo = BankDatabaseRepository.get(config, new Slf4jLogger(), () -> {});
 		repo.add(asList(entry, entry2));
@@ -65,6 +65,10 @@ public class Main {
 
 		System.out.println("Newest: " + newest.equals(entry));
 		System.out.println("Alessias: " + (alessias.size() == 1 && alessias.get(0).equals(entry)));
+
+		List<BankEntry> allAfter = repo.getAllFor("Alessia", LocalDateTime.of(2101, 4, 10, 13, 37, 00));
+		System.out.println("Size: " + allAfter.size());
+		System.out.println(allAfter.get(0).stupidMerge());
 	}
 
 	@SuppressWarnings("unused")
