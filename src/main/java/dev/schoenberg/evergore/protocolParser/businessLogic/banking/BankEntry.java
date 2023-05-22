@@ -27,7 +27,7 @@ public class BankEntry {
 		return stupidMerge().hashCode();
 	}
 
-	private String stupidMerge() {
+	public String stupidMerge() {
 		return timeStamp + ":" + avatar + ":" + amount + ":" + type;
 	}
 }

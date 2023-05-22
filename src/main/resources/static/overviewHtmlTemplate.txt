@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Evergore Protocol Parser</title>
+    <script>
+	    
+    </script>
+    <style>
+	    table {
+	      width: 100%;
+	      border-collapse: collapse;
+	    }
+	
+	    th, td {
+	      text-align: left;
+	      padding: 8px;
+	      border: 1px solid black;
+	    }
+  	</style>
+</head>
+<body>
+    <header>
+    	Last Updated: ###LAST_UPDATED_PLACEHOLDER###
+    </header>
+    <div id="body">
+	    <table>
+        	###PAGE_CONTENT_PLACEHOLDER###
+		</table>
+    </div>
+</body>
+</html>

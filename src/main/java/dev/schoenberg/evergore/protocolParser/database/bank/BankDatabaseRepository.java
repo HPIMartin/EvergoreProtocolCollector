@@ -5,9 +5,11 @@ import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseE
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 import static java.sql.Timestamp.*;
+import static java.util.Arrays.*;
 import static java.util.stream.Collectors.*;
 
 import java.sql.*;
+import java.time.*;
 import java.util.*;
 import java.util.Date;
 
@@ -15,8 +17,10 @@ import com.j256.ormlite.dao.*;
 import com.j256.ormlite.support.*;
 
 import dev.schoenberg.evergore.protocolParser.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.exceptions.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
@@ -42,6 +46,16 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 		if (result.isEmpty()) {
 			throw new NoElementFound(avatar);
 		}
+
+		return convert(result);
+	}
+
+	@Override
+	public List<BankEntry> getAllFor(String avatar, LocalDateTime after) {
+		Timestamp afterTimestamp = Timestamp.from(after.atZone(Constants.APP_ZONE).toInstant());
+
+		List<BankDatabaseEntry> result = silentThrow(
+				() -> bank.queryBuilder().where().eq(AVATAR_COLUMN, avatar).and().gt(TIMESTAMP_COLUMN, afterTimestamp).query());
 
 		return convert(result);
 	}
@@ -112,26 +126,26 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 		return new BankDatabaseEntry(from(entry.timeStamp), entry.avatar, entry.amount, convert(entry.type));
 	}
 
-	// TODO: Visitor?
 	private TransferType convert(String type) {
-		if ("Entnahme".equals(type)) {
-			return TransferType.Entnahme;
-		}
-		if ("Einlagerung".equals(type)) {
-			return TransferType.Einlagerung;
-		}
-
-		throw new RuntimeException("Lazy basdard...");
+		return stream(TransferType.values()).filter(x -> x.accept(visitor).equals(type)).findFirst()
+				.orElseThrow(() -> new RuntimeException("Unknown TransferType: " + type));
 	}
 
 	private String convert(TransferType type) {
-		if (TransferType.Entnahme.equals(type)) {
-			return "Entnahme";
-		}
-		if (TransferType.Einlagerung.equals(type)) {
+		return type.accept(visitor);
+	}
+
+	private final TransferTypeDatabaseVisitor visitor = new TransferTypeDatabaseVisitor();
+
+	private static class TransferTypeDatabaseVisitor implements TransfertTypeVisitor<String> {
+		@Override
+		public String place() {
 			return "Einlagerung";
 		}
 
-		throw new RuntimeException("Lazy basdard...");
+		@Override
+		public String withdrawl() {
+			return "Entnahme";
+		}
 	}
 }

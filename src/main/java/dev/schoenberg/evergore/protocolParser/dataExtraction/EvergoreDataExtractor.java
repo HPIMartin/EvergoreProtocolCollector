@@ -14,19 +14,17 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.parser.*;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.website.*;
-import dev.schoenberg.evergore.protocolParser.database.bank.*;
-import dev.schoenberg.evergore.protocolParser.database.storage.*;
 import dev.schoenberg.evergore.protocolParser.domain.*;
 import jakarta.inject.*;
 
 @Singleton
 public class EvergoreDataExtractor {
 	private final PageContentExtractor extractor;
-	private final BankDatabaseRepository bankRepo;
-	private final StorageDatabaseRepository storageRepo;
+	private final BankRepository bankRepo;
+	private final StorageRepository storageRepo;
 	private final Logger logger;
 
-	public EvergoreDataExtractor(PageContentExtractor extractor, BankDatabaseRepository bankRepo, StorageDatabaseRepository storageRepo, Logger logger) {
+	public EvergoreDataExtractor(PageContentExtractor extractor, BankRepository bankRepo, StorageRepository storageRepo, Logger logger) {
 		this.extractor = extractor;
 		this.bankRepo = bankRepo;
 		this.storageRepo = storageRepo;
