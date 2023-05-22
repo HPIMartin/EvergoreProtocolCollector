@@ -17,7 +17,9 @@ import org.openqa.selenium.firefox.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 
 public enum Browser {
-	FIREFOX("gecko", Browser::firefox, true), CHROME("chrome", Browser::chrome, true), EDGE("edge", Browser::edge, true),
+	FIREFOX("gecko", Browser::firefox, true),
+	CHROME("chrome", Browser::chrome, true),
+	EDGE("edge", Browser::edge, true),
 	DOCKER("docker", Browser::firefoxDocker, false);
 
 	public final String name;

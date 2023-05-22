@@ -6,11 +6,14 @@ import static dev.schoenberg.evergore.protocolParser.dataExtraction.parser.Entry
 import static java.time.LocalDateTime.*;
 import static java.util.Arrays.*;
 
+import java.io.*;
+import java.nio.file.*;
 import java.sql.*;
 import java.time.*;
 import java.util.*;
 import java.util.ArrayList;
 
+import dev.schoenberg.evergore.protocolParser.CsvParser.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.database.bank.*;
 import dev.schoenberg.evergore.protocolParser.domain.*;
@@ -24,9 +27,11 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 		config = new Configuration();
 
+		// parseCSV();
+
 		// test2();
 
-		test();
+		// test();
 
 		// FileLoader fileLoader = new AlternativeFileLoaderWrapper(new DiscFileLoader(config), new ResourceFileLoader());
 		//
@@ -46,6 +51,80 @@ public class Main {
 	}
 
 	@SuppressWarnings("unused")
+	private static void parseCSV() throws IOException {
+		List<ItemDto> parseCsv = new CsvParser().parseCsv("H:\\OneDrive\\Dokumente\\test.csv");
+
+		Comparator<ItemDto> comparator = Comparator.comparingInt(ItemDto::getIntegerValue).thenComparing(Comparator.comparing(ItemDto::getStringValue));
+
+		comparator = Comparator.comparing((ItemDto obj) -> {
+			if ("HANDWERKSMATERIAL".equalsIgnoreCase(obj.getFirstString())) {
+				return "0";
+			}
+			if ("Jagdbeuten".equalsIgnoreCase(obj.getFirstString())) {
+				return "1";
+			}
+			if ("Rohstoffe".equalsIgnoreCase(obj.getFirstString())) {
+				return "2";
+			}
+			if ("verarbeitete Rohstoffe".equalsIgnoreCase(obj.getFirstString())) {
+				return "3";
+			}
+			if ("Edelsteine".equalsIgnoreCase(obj.getFirstString())) {
+				return "4";
+			}
+			return obj.getFirstString();
+		}).thenComparing(ItemDto::getSecondString);
+
+		parseCsv.sort(comparator);
+
+		boolean first = true;
+		StringBuilder sb = new StringBuilder();
+		for (ItemDto item : parseCsv) {
+			sb.append(makeEnumValue(item.itemName));
+			sb.append("(\"");
+			sb.append(item.itemName);
+			sb.append("\", ");
+			sb.append(item.price);
+			sb.append(", Category.");
+			sb.append(item.category.replace(" ", "_").replace("\t", "_").replace("(", "").replace(")", "").replace("[", "").replace("]", "").replace("-", "_")
+					.toUpperCase());
+			sb.append(", ");
+
+			if (item.amount == 0) {
+				sb.append("Recipe.NOT_CRAFTABLE");
+			} else {
+				sb.append("new Recipe(");
+				sb.append(item.amount);
+
+				first = true;
+				for (IngredientDto ing : item.ingredients) {
+					if (first) {
+						first = false;
+					}
+					sb.append(", ");
+					sb.append("new Ingredient(");
+					sb.append(ing.amount);
+					sb.append(", EvergoreItem.");
+					sb.append(makeEnumValue(ing.item));
+					sb.append(")");
+				}
+
+				sb.append(")");
+			}
+
+			sb.append("),\n");
+		}
+
+		System.out.println(sb.toString());
+		Files.writeString(Path.of("H:\\OneDrive\\Dokumente\\test.txt"), sb.toString());
+	}
+
+	private static String makeEnumValue(String itemName) {
+		return itemName.toUpperCase().replace("Ä", "AE").replace("Ü", "UE").replace("Ö", "OE").replace("ß", "SS").replace("[", "").replace("]", "")
+				.replace(' ', '_').replace("-", "_");
+	}
+
+	@SuppressWarnings("unused")
 	private static void test2() throws Exception {
 		Logger logger = new Slf4jLogger();
 		AvatarController controller = new AvatarController(BankDatabaseRepository.get(config, logger, () -> {}), null, new OutputFormatter(), logger);
@@ -53,6 +132,7 @@ public class Main {
 		System.out.println(content);
 	}
 
+	@SuppressWarnings("unused")
 	private static void test() throws SQLException, Exception {
 		BankEntry entry = new BankEntry(of(2101, 4, 10, 13, 37).atZone(APP_ZONE).toInstant(), "Alessia", 42, Einlagerung);
 		BankEntry entry2 = new BankEntry(of(1990, 1, 1, 0, 0).atZone(APP_ZONE).toInstant(), "not(Alessia)", 42, Einlagerung);
