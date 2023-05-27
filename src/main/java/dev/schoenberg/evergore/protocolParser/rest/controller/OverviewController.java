@@ -6,7 +6,6 @@ import static io.micronaut.http.MediaType.*;
 import static java.lang.String.*;
 import static java.nio.charset.StandardCharsets.*;
 import static java.time.format.DateTimeFormatter.*;
-import static java.util.stream.Collectors.*;
 
 import java.time.*;
 import java.time.format.*;
@@ -52,7 +51,7 @@ public class OverviewController {
 	}
 
 	private List<BankInformation> getBankingInformation() {
-		return bankRepo.getAllDifferentAvatars().stream().sorted().map(this::getBankingInformation).collect(toList());
+		return bankRepo.getAllDifferentAvatars().stream().sorted().map(this::getBankingInformation).toList();
 	}
 
 	private BankInformation getBankingInformation(String avatar) {
