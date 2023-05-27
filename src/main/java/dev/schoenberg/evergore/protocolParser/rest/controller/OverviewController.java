@@ -21,7 +21,6 @@ import io.micronaut.http.annotation.*;
 @Controller("/overview")
 public class OverviewController {
 	private static final DateTimeFormatter DATE_TIME_PATTERN = ofPattern("dd.MM.yyyy HH:mm");
-
 	private final MetaInformationRepository metaRepo;
 	private final BankRepository bankRepo;
 	private final OutputFormatter formatter;
@@ -59,25 +58,13 @@ public class OverviewController {
 	private BankInformation getBankingInformation(String avatar) {
 		long withdrawl = metaRepo.get(getBankWithdrawl(avatar)).orElse(0L);
 		long placement = metaRepo.get(getBankPlacement(avatar)).orElse(0L);
-
 		return new BankInformation(avatar, withdrawl, placement);
-	}
-
-	private static class BankInformation {
-		public final String avatar;
-		public final long withdrawl;
-		public final long placement;
-
-		public BankInformation(String avatar, long withdrawl, long placement) {
-			this.avatar = avatar;
-			this.withdrawl = withdrawl;
-			this.placement = placement;
-		}
 	}
 
 	private String getPageTemplateWithMetaData(LocalDateTime lastUpdated) {
 		String pageTemplate = new String(silentThrow(() -> getClass().getResourceAsStream("/static/overviewHtmlTemplate.txt").readAllBytes()), UTF_8);
-
 		return pageTemplate.replace("###LAST_UPDATED_PLACEHOLDER###", lastUpdated.format(DATE_TIME_PATTERN));
 	}
+
+	private static record BankInformation(String avatar, long withdrawl, long placement) {}
 }

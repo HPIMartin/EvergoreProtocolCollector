@@ -36,8 +36,7 @@ public class OutputFormatter {
 		sb.append("</" + type.markup + ">");
 	}
 
-	public record Column<T>(String headline, Function<T, String> extractor) {
-	}
+	public record Column<T>(String headline, Function<T, String> extractor) {}
 
 	private enum RowType {
 		HEADLINE("th"), DATA("td");
