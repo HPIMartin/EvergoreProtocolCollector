@@ -673,35 +673,43 @@ public enum EvergoreItem {
 	}
 
 	public static enum Category {
-		ARMBRÜSTE,
-		ÄXTE,
-		ÄXTE_2H,
-		BANDAGEN,
-		BAUTEILE,
-		BÖGEN,
-		DOLCHE,
-		EDELSTEINE,
-		ERDSTÄBE,
-		FEUERSTÄBE,
-		HANDWERKSMATERIAL,
-		JAGDBEUTEN,
-		KEULEN,
-		KEULEN_2H,
-		LEICHTE_RÜSTUNG_LEDER,
-		LEICHTE_RÜSTUNG_STOFF,
-		LEICHTE_SCHILDE,
-		LUFTSTÄBE,
-		MUNITION_ARMBRÜSTE,
-		MUNITION_BÖGEN,
-		MUNITION_MAGIESTÄBE,
-		ROHSTOFFE,
-		SCHWERTER,
-		SCHWERTER_2H,
-		SCHWERER_SCHILDE,
-		SCHWERE_RÜSTUNG_METALL,
-		STANGENWAFFEN_2H,
-		VERARBEITETE_ROHSTOFFE,
-		WASSERSTÄBE
+		ARMBRÜSTE(0.6d, 0.6d),
+		ÄXTE(0.6d, 0.6d),
+		ÄXTE_2H(0.6d, 0.6d),
+		BANDAGEN(0.6d, 0.6d),
+		BAUTEILE(0.6d, 0.6d),
+		BÖGEN(0.6d, 0.6d),
+		DOLCHE(0.6d, 0.6d),
+		EDELSTEINE(0, 0.6d),
+		ERDSTÄBE(0.6d, 0.6d),
+		FEUERSTÄBE(0.6d, 0.6d),
+		HANDWERKSMATERIAL(0.6d, 0.6d),
+		JAGDBEUTEN(0d, 0.6d),
+		KEULEN(0.6d, 0.6d),
+		KEULEN_2H(0.6d, 0.6d),
+		LEICHTE_RÜSTUNG_LEDER(0.6d, 0.6d),
+		LEICHTE_RÜSTUNG_STOFF(0.6d, 0.6d),
+		LEICHTE_SCHILDE(0.6d, 0.6d),
+		LUFTSTÄBE(0.6d, 0.6d),
+		MUNITION_ARMBRÜSTE(0.6d, 0.6d),
+		MUNITION_BÖGEN(0.6d, 0.6d),
+		MUNITION_MAGIESTÄBE(0.6d, 0.6d),
+		ROHSTOFFE(0.6d, 0.6d),
+		SCHWERTER(0.6d, 0.6d),
+		SCHWERTER_2H(0.6d, 0.6d),
+		SCHWERER_SCHILDE(0.6d, 0.6d),
+		SCHWERE_RÜSTUNG_METALL(0.6d, 0.6d),
+		STANGENWAFFEN_2H(0.6d, 0.6d),
+		VERARBEITETE_ROHSTOFFE(0.6d, 0.6d),
+		WASSERSTÄBE(0.6d, 0.6d);
+
+		public final double storage;
+		public final double withdrawl;
+
+		Category(double storage, double withdrawl) {
+			this.storage = storage;
+			this.withdrawl = withdrawl;
+		}
 	}
 
 	public static class Recipe {
