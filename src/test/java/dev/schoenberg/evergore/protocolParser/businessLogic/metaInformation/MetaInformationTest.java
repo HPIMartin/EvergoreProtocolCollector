@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.*;
 
-public class MetaInformationTest {
+class MetaInformationTest {
 
 	private TestMetaInformationKey testKey;
 
@@ -14,7 +14,7 @@ public class MetaInformationTest {
 	}
 
 	@Test
-	public void usesSerializationMethodFromKey() {
+	void usesSerializationMethodFromKey() {
 		MetaInformation<Integer> tested = new MetaInformation<>(testKey, 42);
 		testKey.serialized = "hello";
 
@@ -25,7 +25,7 @@ public class MetaInformationTest {
 	}
 
 	@Test
-	public void usesDeserializationMethodFromKey() {
+	void usesDeserializationMethodFromKey() {
 		testKey.value = 1337;
 
 		MetaInformation<Integer> result = MetaInformation.fromSerializedValue(testKey, "world");

@@ -19,6 +19,7 @@ import java.util.*;
 
 import org.junit.jupiter.api.*;
 
+import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
@@ -36,7 +37,7 @@ import jakarta.inject.*;
 import kong.unirest.*;
 
 @MicronautTest
-public class SmokeTest {
+class SmokeTest {
 	private static final String TEST_DATABASE_PATH = "src/test/resources/smokeTest.sqlite";
 
 	private @Inject EmbeddedServer server;
@@ -59,7 +60,7 @@ public class SmokeTest {
 	}
 
 	@Test
-	public void applicationIsStarting() {
+	void applicationIsStarting() {
 		assertTrue(server.isRunning());
 
 		boolean finishedInTime = awaitCollectionFinished();
@@ -70,7 +71,7 @@ public class SmokeTest {
 	}
 
 	@Test
-	public void retrieveDataViaBankEndpoint() {
+	void retrieveDataViaBankEndpoint() {
 		Instant time = LocalDateTime.of(1900, Month.MAY, 4, 13, 37).atZone(APP_ZONE).toInstant();
 		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(time, "TestAvatar", 42, Einlagerung)));
 
@@ -79,11 +80,11 @@ public class SmokeTest {
 		assertTrue(response.getStatus() >= 200 && response.getStatus() < 300, "Status code was: " + response.getStatus());
 		String content = response.getBody();
 		assertClosest(content, "<th>TimeStamp</th><th>Avatar</th><th>Amount</th><th>TransferType</th>");
-		assertClosest(content, "<th>04.05.1900 13:37</th><th>TestAvatar</th><th>42</th><th>Einlagerung</th>");
+		assertClosest(content, "<td>04.05.1900 13:37</td><td>TestAvatar</td><td>42</td><td>Einlagerung</td>");
 	}
 
 	@Test
-	public void retrieveDataViaStorageEndpoint() {
+	void retrieveDataViaStorageEndpoint() {
 		Instant time = LocalDateTime.of(1900, Month.MAY, 4, 13, 37).atZone(APP_ZONE).toInstant();
 		StorageDatabaseRepository.get(config, logger, () -> {}).add(asList(new StorageEntry(time, "TestAvatar", 1, "TestItem", 42, Einlagerung)));
 
@@ -93,11 +94,11 @@ public class SmokeTest {
 		String content = response.getBody();
 
 		assertClosest(content, "<th>TimeStamp</th><th>Avatar</th><th>Quantity</th><th>Name</th><th>Quality</th><th>TransferType</th>");
-		assertClosest(content, "<th>04.05.1900 13:37</th><th>TestAvatar</th><th>1</th><th>TestItem</th><th>42</th><th>Einlagerung</th>");
+		assertClosest(content, "<td>04.05.1900 13:37</td><td>TestAvatar</td><td>1</td><td>TestItem</td><td>42</td><td>Einlagerung</td>");
 	}
 
 	@Test
-	public void retrieveDataViaOverviewEndpoint() {
+	void retrieveDataViaOverviewEndpoint() {
 		String avatar = "TestAvatar";
 		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(MIN, avatar, 0, Einlagerung)));
 		MetaInformation<Long> placement = new MetaInformation<>(getBankPlacement(avatar), 1337L);
@@ -109,7 +110,7 @@ public class SmokeTest {
 		assertTrue(response.getStatus() >= 200 && response.getStatus() < 300, "Status code was: " + response.getStatus());
 		String content = response.getBody();
 		assertClosest(content, "<th>Avatar</th><th>Entnommen</th><th>Eingelagert</th>");
-		assertClosest(content, "<th>TestAvatar</th><th>42</th><th>1337</th>");
+		assertClosest(content, "<td>TestAvatar</td><td>42</td><td>1337</td>");
 	}
 
 	@Test
