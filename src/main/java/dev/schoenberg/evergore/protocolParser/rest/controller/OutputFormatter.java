@@ -15,34 +15,37 @@ public class OutputFormatter {
 	public <T> String createTable(List<T> elements, List<Column<T>> columns) {
 		StringBuilder sb = new StringBuilder();
 
-		addRow(columns, sb, column -> column.headline);
+		addRow(columns, sb, column -> column.headline, RowType.HEADLINE);
 
-		elements.forEach(e -> addRow(columns, sb, column -> column.extractor.apply(e)));
+		elements.forEach(e -> addRow(columns, sb, column -> column.extractor.apply(e), RowType.DATA));
 
 		return sb.toString();
 	}
 
-	private <T> void addRow(List<Column<T>> columns, StringBuilder sb, Function<Column<T>, String> columnValue) {
+	private <T> void addRow(List<Column<T>> columns, StringBuilder sb, Function<Column<T>, String> columnValue, RowType type) {
 		sb.append(NEWLINE).append("<tr>").append(NEWLINE);
 		for (Column<T> column : columns) {
-			addColumn(sb, columnValue.apply(column));
+			addColumn(sb, columnValue.apply(column), type);
 		}
 		sb.append(NEWLINE).append("</tr>").append(NEWLINE);
 	}
 
-	private void addColumn(StringBuilder sb, String columnContent) {
-		sb.append("<th>");
+	private void addColumn(StringBuilder sb, String columnContent, RowType type) {
+		sb.append("<" + type.markup + ">");
 		sb.append(escapeHtml4(columnContent));
-		sb.append("</th>");
+		sb.append("</" + type.markup + ">");
 	}
 
-	public static class Column<T> {
-		public final String headline;
-		public final Function<T, String> extractor;
+	public record Column<T>(String headline, Function<T, String> extractor) {
+	}
 
-		public Column(String headline, Function<T, String> extractor) {
-			this.headline = headline;
-			this.extractor = extractor;
+	private enum RowType {
+		HEADLINE("th"), DATA("td");
+
+		public final String markup;
+
+		RowType(String markup) {
+			this.markup = markup;
 		}
 	}
 }
