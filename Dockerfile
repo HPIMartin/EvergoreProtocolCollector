@@ -33,6 +33,9 @@ RUN mvn -f /home/app/pom.xml package -Dpackaging=jar
 FROM selenium/standalone-firefox:109.0
 #FROM selenium/standalone-chrome:108.0
 
+RUN sudo apt update && sudo apt upgrade -y
+RUN sudo apt install -y openjdk-17-jre
+
 #Copy App
 COPY --from=build /home/app/target/protocolParser-0.0.1-SNAPSHOT.jar /app.jar
 ADD zugang.txt /
