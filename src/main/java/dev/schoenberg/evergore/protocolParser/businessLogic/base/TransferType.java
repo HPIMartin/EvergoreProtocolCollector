@@ -1,13 +1,13 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.base;
 
 public enum TransferType {
-	Einlagerung {
+	EINLAGERUNG {
 		@Override
 		public <T> T accept(TransfertTypeVisitor<T> visitor) {
 			return visitor.place();
 		}
 	},
-	Entnahme {
+	ENTNAHME {
 		@Override
 		public <T> T accept(TransfertTypeVisitor<T> visitor) {
 			return visitor.withdrawl();

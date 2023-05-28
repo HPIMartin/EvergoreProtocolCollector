@@ -72,7 +72,7 @@ class SmokeTest {
 	@Test
 	void retrieveDataViaBankEndpoint() {
 		Instant time = LocalDateTime.of(1900, Month.MAY, 4, 13, 37).atZone(APP_ZONE).toInstant();
-		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(time, "TestAvatar", 42, Einlagerung)));
+		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(time, "TestAvatar", 42, EINLAGERUNG)));
 
 		HttpResponse<String> response = get("/avatars/TestAvatar/bank");
 
@@ -85,7 +85,7 @@ class SmokeTest {
 	@Test
 	void retrieveDataViaStorageEndpoint() {
 		Instant time = LocalDateTime.of(1900, Month.MAY, 4, 13, 37).atZone(APP_ZONE).toInstant();
-		StorageDatabaseRepository.get(config, logger, () -> {}).add(asList(new StorageEntry(time, "TestAvatar", 1, "TestItem", 42, Einlagerung)));
+		StorageDatabaseRepository.get(config, logger, () -> {}).add(asList(new StorageEntry(time, "TestAvatar", 1, "TestItem", 42, EINLAGERUNG)));
 
 		HttpResponse<String> response = get("/avatars/TestAvatar/storage");
 
@@ -99,7 +99,7 @@ class SmokeTest {
 	@Test
 	void retrieveDataViaOverviewEndpoint() {
 		String avatar = "TestAvatar";
-		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(MIN, avatar, 0, Einlagerung)));
+		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(MIN, avatar, 0, EINLAGERUNG)));
 		MetaInformation<Long> placement = new MetaInformation<>(getBankPlacement(avatar), 1337L);
 		MetaInformation<Long> withdrawl = new MetaInformation<>(getBankWithdrawl(avatar), 42L);
 		MetaInformationDatabaseRepository.get(config, logger, () -> {}).add(asList(placement, withdrawl));

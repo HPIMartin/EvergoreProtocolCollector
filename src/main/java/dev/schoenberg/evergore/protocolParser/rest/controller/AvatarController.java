@@ -28,6 +28,8 @@ public class AvatarController {
 
 	private static final DateTimeFormatter DATE_TIME_PATTERN = ofPattern("dd.MM.yyyy HH:mm");
 
+	private final TransferTypeControllerVisitor transferTypeVisitor = new TransferTypeControllerVisitor();
+
 	private final BankRepository bankRepo;
 	private final StorageRepository storageRepo;
 	private final OutputFormatter formatter;
@@ -54,7 +56,7 @@ public class AvatarController {
 		columns.add(new Column<>("TimeStamp", b -> getLocalDateTimeString(b.timeStamp)));
 		columns.add(new Column<>("Avatar", b -> b.avatar));
 		columns.add(new Column<>("Amount", b -> valueOf(b.amount)));
-		columns.add(new Column<>("TransferType", b -> b.type.toString()));
+		columns.add(new Column<>("TransferType", b -> b.type.accept(transferTypeVisitor)));
 
 		return pageWithMeta.replace("###PAGE_CONTENT_PLACEHOLDER###", formatter.createTable(all, columns));
 	}
@@ -76,7 +78,7 @@ public class AvatarController {
 		columns.add(new Column<>("Quantity", d -> valueOf(d.quantity)));
 		columns.add(new Column<>("Name", d -> d.name));
 		columns.add(new Column<>("Quality", d -> valueOf(d.quality)));
-		columns.add(new Column<>("TransferType", d -> d.type.toString()));
+		columns.add(new Column<>("TransferType", d -> d.type.accept(transferTypeVisitor)));
 
 		return pageWithMeta.replace("###PAGE_CONTENT_PLACEHOLDER###", formatter.createTable(all, columns));
 	}

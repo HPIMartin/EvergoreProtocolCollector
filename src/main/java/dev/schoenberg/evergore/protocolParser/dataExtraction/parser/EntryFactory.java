@@ -7,6 +7,7 @@ import java.time.format.*;
 import java.util.*;
 import java.util.regex.*;
 
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
 import dev.schoenberg.evergore.protocolParser.domain.*;
 
 public class EntryFactory {
@@ -26,9 +27,9 @@ public class EntryFactory {
 		Instant date = formatter.parse(matcher.group(GROUP_NAME_DATE), Instant::from);
 
 		if ("Entnahme".equals(matcher.group(GROUP_NAME_TYPE))) {
-			return new Withdrawal(avatar.trim(), date, items);
+			return new Entry(avatar.trim(), date, items, TransferType.ENTNAHME);
 		}
-		return new Storage(avatar.trim(), date, items);
+		return new Entry(avatar.trim(), date, items, TransferType.EINLAGERUNG);
 	}
 
 	private static List<Item> parseItems(List<String> rawItems) {
