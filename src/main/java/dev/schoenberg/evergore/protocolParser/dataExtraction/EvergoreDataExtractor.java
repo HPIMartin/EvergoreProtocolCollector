@@ -2,7 +2,6 @@ package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
 import static dev.schoenberg.evergore.protocolParser.domain.Withdrawal.*;
-import static java.util.stream.Collectors.*;
 
 import java.time.*;
 import java.util.*;
@@ -42,8 +41,8 @@ public class EvergoreDataExtractor {
 		logger.debug("Latest element from: " + latest.timeStamp);
 		AtomicInteger beforeFilter = new AtomicInteger(0);
 		AtomicInteger afterFilter = new AtomicInteger(0);
-		storageRepo.add(lager.stream().map(this::mapStorage).flatMap(List::stream).peek(x -> beforeFilter.incrementAndGet()).filter(e -> isNewer(latest, e))
-				.peek(x -> afterFilter.incrementAndGet()).collect(toList()));
+		storageRepo.add(lager.stream().map(this::mapStorage).flatMap(List::stream).map(x -> count(x, beforeFilter)).filter(e -> isNewer(latest, e))
+				.map(x -> count(x, afterFilter)).toList());
 		logger.debug("before filter: " + beforeFilter.get());
 		logger.debug("after filter: " + afterFilter.get());
 	}
@@ -53,10 +52,15 @@ public class EvergoreDataExtractor {
 		logger.debug("Latest element from: " + latest.timeStamp);
 		AtomicInteger beforeFilter = new AtomicInteger(0);
 		AtomicInteger afterFilter = new AtomicInteger(0);
-		bankRepo.add(bank.stream().map(this::mapBank).flatMap(List::stream).peek(x -> beforeFilter.incrementAndGet()).filter(e -> isNewer(latest, e))
-				.peek(x -> afterFilter.incrementAndGet()).collect(toList()));
+		bankRepo.add(bank.stream().map(this::mapBank).flatMap(List::stream).map(x -> count(x, beforeFilter)).filter(e -> isNewer(latest, e))
+				.map(x -> count(x, afterFilter)).toList());
 		logger.debug("before filter: " + beforeFilter.get());
 		logger.debug("after filter: " + afterFilter.get());
+	}
+
+	private <T> T count(T toBeCounted, AtomicInteger counter) {
+		counter.incrementAndGet();
+		return toBeCounted;
 	}
 
 	private boolean isNewer(BankEntry latest, BankEntry toCheck) {
@@ -71,13 +75,13 @@ public class EvergoreDataExtractor {
 		Instant time = e.date;
 		String avatar = e.avatar;
 		TransferType type = ENTNAHME.equals(e.getType()) ? Entnahme : Einlagerung;
-		return e.items.stream().map(i -> new BankEntry(time, avatar, i.quantity, type)).collect(toList());
+		return e.items.stream().map(i -> new BankEntry(time, avatar, i.quantity(), type)).toList();
 	}
 
 	private List<StorageEntry> mapStorage(Entry e) {
 		Instant time = e.date;
 		String avatar = e.avatar;
 		TransferType type = ENTNAHME.equals(e.getType()) ? Entnahme : Einlagerung;
-		return e.items.stream().map(i -> new StorageEntry(time, avatar, i.quantity, i.name, i.quality, type)).collect(toList());
+		return e.items.stream().map(i -> new StorageEntry(time, avatar, i.quantity(), i.name(), i.quality(), type)).toList();
 	}
 }

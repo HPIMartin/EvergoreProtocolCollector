@@ -3,6 +3,8 @@ package dev.schoenberg.evergore.protocolParser.businessLogic;
 import java.time.*;
 
 public class Constants {
+	private Constants() {}
+
 	public static final String GROUP_NAME_TYPE = "type";
 	public static final String GROUP_NAME_AVATAR = "avatar";
 	public static final String GROUP_NAME_DATE = "date";
