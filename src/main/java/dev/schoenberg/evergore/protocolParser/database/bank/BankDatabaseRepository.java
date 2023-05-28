@@ -5,7 +5,6 @@ import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseE
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 import static java.sql.Timestamp.*;
-import static java.util.Arrays.*;
 import static java.util.stream.Collectors.*;
 
 import java.sql.*;
@@ -20,13 +19,14 @@ import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.exceptions.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 
 public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implements BankRepository {
 	private final Dao<BankDatabaseEntry, String> bank;
+
+	private final TransferTypeDatabaseVisitor transferTypeVisitor = new TransferTypeDatabaseVisitor();
 
 	public static BankDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
 		ConnectionSource con = getCon(config, logger, hook);
@@ -75,7 +75,7 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 			log(results);
 
 			if (results.isEmpty() || results.get(0) == null || results.get(0)[0] == null) {
-				return new BankDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, convert(TransferType.Einlagerung));
+				return new BankDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, transferTypeVisitor.convert(TransferType.Einlagerung));
 			}
 
 			Timestamp highestTimeStamp = valueOf(results.get(0)[0]);
@@ -119,33 +119,10 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 	}
 
 	private BankEntry convert(BankDatabaseEntry dbEntry) {
-		return new BankEntry(dbEntry.timeStamp.toInstant(), dbEntry.avatar, dbEntry.amount, convert(dbEntry.type));
+		return new BankEntry(dbEntry.timeStamp.toInstant(), dbEntry.avatar, dbEntry.amount, transferTypeVisitor.convert(dbEntry.type));
 	}
 
 	private BankDatabaseEntry convert(BankEntry entry) {
-		return new BankDatabaseEntry(from(entry.timeStamp), entry.avatar, entry.amount, convert(entry.type));
-	}
-
-	private TransferType convert(String type) {
-		return stream(TransferType.values()).filter(x -> x.accept(visitor).equals(type)).findFirst()
-				.orElseThrow(() -> new RuntimeException("Unknown TransferType: " + type));
-	}
-
-	private String convert(TransferType type) {
-		return type.accept(visitor);
-	}
-
-	private final TransferTypeDatabaseVisitor visitor = new TransferTypeDatabaseVisitor();
-
-	private static class TransferTypeDatabaseVisitor implements TransfertTypeVisitor<String> {
-		@Override
-		public String place() {
-			return "Einlagerung";
-		}
-
-		@Override
-		public String withdrawl() {
-			return "Entnahme";
-		}
+		return new BankDatabaseEntry(from(entry.timeStamp), entry.avatar, entry.amount, transferTypeVisitor.convert(entry.type));
 	}
 }
