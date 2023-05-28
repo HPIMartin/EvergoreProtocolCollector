@@ -21,6 +21,7 @@ import dev.schoenberg.evergore.protocolParser.helper.config.*;
 
 public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> implements StorageRepository {
 	private final Dao<StorageDatabaseEntry, String> storage;
+	private final TransferTypeDatabaseVisitor transferTypeVisitor = new TransferTypeDatabaseVisitor();
 
 	public static StorageDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
 		ConnectionSource con = getCon(config, logger, hook);
@@ -59,7 +60,7 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 			log(results);
 
 			if (results.isEmpty() || results.get(0) == null || results.get(0)[0] == null) {
-				return new StorageDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, "", 0, convert(TransferType.Einlagerung));
+				return new StorageDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, "", 0, transferTypeVisitor.convert(TransferType.Einlagerung));
 			}
 
 			Timestamp highestTimeStamp = valueOf(results.get(0)[0]);
@@ -103,33 +104,12 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	}
 
 	private StorageEntry convert(StorageDatabaseEntry dbEntry) {
-		return new StorageEntry(dbEntry.timeStamp.toInstant(), dbEntry.avatar, dbEntry.quantity, dbEntry.name, dbEntry.quality, convert(dbEntry.type));
+		return new StorageEntry(dbEntry.timeStamp.toInstant(), dbEntry.avatar, dbEntry.quantity, dbEntry.name, dbEntry.quality,
+				transferTypeVisitor.convert(dbEntry.type));
 	}
 
 	private StorageDatabaseEntry convert(StorageEntry entry) {
-		return new StorageDatabaseEntry(from(entry.timeStamp), entry.avatar, entry.quantity, entry.name, entry.quality, convert(entry.type));
-	}
-
-	// TODO: Visitor?
-	private TransferType convert(String type) {
-		if ("Entnahme".equals(type)) {
-			return TransferType.Entnahme;
-		}
-		if ("Einlagerung".equals(type)) {
-			return TransferType.Einlagerung;
-		}
-
-		throw new RuntimeException("Lazy basdard...");
-	}
-
-	private String convert(TransferType type) {
-		if (TransferType.Entnahme.equals(type)) {
-			return "Entnahme";
-		}
-		if (TransferType.Einlagerung.equals(type)) {
-			return "Einlagerung";
-		}
-
-		throw new RuntimeException("Lazy basdard...");
+		return new StorageDatabaseEntry(from(entry.timeStamp), entry.avatar, entry.quantity, entry.name, entry.quality,
+				transferTypeVisitor.convert(entry.type));
 	}
 }
