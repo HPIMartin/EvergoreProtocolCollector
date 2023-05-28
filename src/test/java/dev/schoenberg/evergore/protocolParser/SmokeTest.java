@@ -19,7 +19,6 @@ import java.util.*;
 
 import org.junit.jupiter.api.*;
 
-import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;

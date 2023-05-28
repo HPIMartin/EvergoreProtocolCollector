@@ -10,6 +10,8 @@ import java.util.regex.*;
 import dev.schoenberg.evergore.protocolParser.domain.*;
 
 public class EntryFactory {
+	private EntryFactory() {}
+
 	public static Entry parseContent(List<String> rawContent) {
 		List<Item> items = parseItems(rawContent.subList(1, rawContent.size()));
 		return generateEntry(rawContent.get(0), items);
@@ -20,8 +22,8 @@ public class EntryFactory {
 		Matcher matcher = pattern.matcher(headline);
 		matcher.find();
 		String avatar = matcher.group(GROUP_NAME_AVATAR);
-		DateTimeFormatter FMT = new DateTimeFormatterBuilder().appendPattern("dd.MM.yyyy HH:mm").toFormatter().withZone(APP_ZONE);
-		Instant date = FMT.parse(matcher.group(GROUP_NAME_DATE), Instant::from);
+		DateTimeFormatter formatter = new DateTimeFormatterBuilder().appendPattern("dd.MM.yyyy HH:mm").toFormatter().withZone(APP_ZONE);
+		Instant date = formatter.parse(matcher.group(GROUP_NAME_DATE), Instant::from);
 
 		if ("Entnahme".equals(matcher.group(GROUP_NAME_TYPE))) {
 			return new Withdrawal(avatar.trim(), date, items);
@@ -48,10 +50,9 @@ public class EntryFactory {
 				break;
 			}
 			Matcher matcher = pattern.matcher(item);
-			if (!matcher.find()) {
-				continue;
+			if (matcher.find()) {
+				items.add(new Item(Integer.parseInt(matcher.group(amount)), matcher.group(itemName).trim(), parseQuality(matcher.group(itemQuality))));
 			}
-			items.add(new Item(Integer.parseInt(matcher.group(amount)), matcher.group(itemName).trim(), parseQuality(matcher.group(itemQuality))));
 		}
 
 		return deduplicate(items);
@@ -60,13 +61,16 @@ public class EntryFactory {
 	private static List<Item> deduplicate(List<Item> items) {
 		List<Item> filtered = new ArrayList<>();
 		for (Item item : items) {
-			Optional<Item> any = filtered.stream().filter(x -> x.name.equals(item.name) && x.quality == item.quality).findAny();
+			Optional<Item> any = filtered.stream().filter(x -> x.name().equals(item.name()) && x.quality() == item.quality()).findAny();
+			Item toAdd;
 			if (any.isPresent()) {
 				Item found = any.get();
-				found.quantity = found.quantity + item.quantity;
+				toAdd = new Item(found.quantity() + item.quantity(), found.name(), found.quality());
+				filtered.remove(found);
 			} else {
-				filtered.add(item);
+				toAdd = item;
 			}
+			filtered.add(toAdd);
 		}
 		return filtered;
 	}
