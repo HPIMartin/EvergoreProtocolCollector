@@ -134,8 +134,8 @@ public class Main {
 
 	@SuppressWarnings("unused")
 	private static void test() throws SQLException, Exception {
-		BankEntry entry = new BankEntry(of(2101, 4, 10, 13, 37).atZone(APP_ZONE).toInstant(), "Alessia", 42, Einlagerung);
-		BankEntry entry2 = new BankEntry(of(1990, 1, 1, 0, 0).atZone(APP_ZONE).toInstant(), "not(Alessia)", 42, Einlagerung);
+		BankEntry entry = new BankEntry(of(2101, 4, 10, 13, 37).atZone(APP_ZONE).toInstant(), "Alessia", 42, EINLAGERUNG);
+		BankEntry entry2 = new BankEntry(of(1990, 1, 1, 0, 0).atZone(APP_ZONE).toInstant(), "not(Alessia)", 42, EINLAGERUNG);
 
 		BankDatabaseRepository repo = BankDatabaseRepository.get(config, new Slf4jLogger(), () -> {});
 		repo.add(asList(entry, entry2));

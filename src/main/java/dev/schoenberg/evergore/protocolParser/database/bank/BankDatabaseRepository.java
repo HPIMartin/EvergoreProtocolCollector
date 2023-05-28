@@ -4,8 +4,9 @@ import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseE
 import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.TABLE;
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
+import static java.lang.String.*;
 import static java.sql.Timestamp.*;
-import static java.util.stream.Collectors.*;
+import static java.sql.Timestamp.valueOf;
 
 import java.sql.*;
 import java.time.*;
@@ -62,7 +63,7 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 
 	@Override
 	public void add(List<BankEntry> newEntries) {
-		silentThrow(() -> bank.create(newEntries.stream().map(this::convert).collect(toList())));
+		silentThrow(() -> bank.create(newEntries.stream().map(this::convert).toList()));
 	}
 
 	@Override
@@ -75,7 +76,7 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 			log(results);
 
 			if (results.isEmpty() || results.get(0) == null || results.get(0)[0] == null) {
-				return new BankDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, transferTypeVisitor.convert(TransferType.Einlagerung));
+				return new BankDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, transferTypeVisitor.convert(TransferType.EINLAGERUNG));
 			}
 
 			Timestamp highestTimeStamp = valueOf(results.get(0)[0]);
@@ -86,36 +87,15 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 	@Override
 	public List<String> getAllDifferentAvatars() {
 		List<BankDatabaseEntry> avatars = silentThrow(() -> bank.queryBuilder().distinct().selectColumns(AVATAR_COLUMN).query());
-		return avatars.stream().map(bde -> bde.avatar).collect(toList());
+		return avatars.stream().map(bde -> bde.avatar).toList();
 	}
 
 	private void log(List<String[]> results) {
-		boolean first_x = true;
-		StringBuilder sb = new StringBuilder();
-		sb.append("[");
-		for (String[] x : results) {
-			if (!first_x) {
-				sb.append(",");
-			}
-			first_x = false;
-			boolean first_y = true;
-			sb.append("[");
-			for (String y : x) {
-				if (!first_y) {
-					sb.append(",");
-				}
-				sb.append(y);
-				first_y = false;
-			}
-			sb.append("]");
-		}
-		sb.append("]");
-
-		logger.debug(sb.toString());
+		logger.debug("[" + join(",", results.stream().map(x -> "[" + join(",", x) + "]").toList()) + "]");
 	}
 
 	private List<BankEntry> convert(List<BankDatabaseEntry> dbEntries) {
-		return dbEntries.stream().map(this::convert).collect(toList());
+		return dbEntries.stream().map(this::convert).toList();
 	}
 
 	private BankEntry convert(BankDatabaseEntry dbEntry) {

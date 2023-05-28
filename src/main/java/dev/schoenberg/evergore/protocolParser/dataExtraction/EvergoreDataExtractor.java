@@ -1,8 +1,5 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
-import static dev.schoenberg.evergore.protocolParser.domain.Withdrawal.*;
-
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
@@ -72,16 +69,16 @@ public class EvergoreDataExtractor {
 	}
 
 	private List<BankEntry> mapBank(Entry e) {
-		Instant time = e.date;
-		String avatar = e.avatar;
-		TransferType type = ENTNAHME.equals(e.getType()) ? Entnahme : Einlagerung;
-		return e.items.stream().map(i -> new BankEntry(time, avatar, i.quantity(), type)).toList();
+		Instant time = e.date();
+		String avatar = e.avatar();
+		TransferType type = e.type();
+		return e.items().stream().map(i -> new BankEntry(time, avatar, i.quantity(), type)).toList();
 	}
 
 	private List<StorageEntry> mapStorage(Entry e) {
-		Instant time = e.date;
-		String avatar = e.avatar;
-		TransferType type = ENTNAHME.equals(e.getType()) ? Entnahme : Einlagerung;
-		return e.items.stream().map(i -> new StorageEntry(time, avatar, i.quantity(), i.name(), i.quality(), type)).toList();
+		Instant time = e.date();
+		String avatar = e.avatar();
+		TransferType type = e.type();
+		return e.items().stream().map(i -> new StorageEntry(time, avatar, i.quantity(), i.name(), i.quality(), type)).toList();
 	}
 }

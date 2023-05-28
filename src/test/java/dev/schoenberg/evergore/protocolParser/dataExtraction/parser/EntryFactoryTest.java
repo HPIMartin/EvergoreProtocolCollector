@@ -25,6 +25,6 @@ class EntryFactoryTest {
 
 		Entry e = EntryFactory.parseContent(input);
 
-		assertThat(e.items).hasSize(1);
+		assertThat(e.items()).hasSize(1);
 	}
 }

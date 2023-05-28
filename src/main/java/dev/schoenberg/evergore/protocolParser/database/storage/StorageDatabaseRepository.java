@@ -3,7 +3,6 @@ package dev.schoenberg.evergore.protocolParser.database.storage;
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.*;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 import static java.sql.Timestamp.*;
-import static java.util.stream.Collectors.*;
 
 import java.sql.*;
 import java.util.*;
@@ -47,7 +46,7 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 
 	@Override
 	public void add(List<StorageEntry> newEntries) {
-		silentThrow(() -> storage.create(newEntries.stream().map(this::convert).collect(toList())));
+		silentThrow(() -> storage.create(newEntries.stream().map(this::convert).toList()));
 	}
 
 	@Override
@@ -60,7 +59,7 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 			log(results);
 
 			if (results.isEmpty() || results.get(0) == null || results.get(0)[0] == null) {
-				return new StorageDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, "", 0, transferTypeVisitor.convert(TransferType.Einlagerung));
+				return new StorageDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, "", 0, transferTypeVisitor.convert(TransferType.EINLAGERUNG));
 			}
 
 			Timestamp highestTimeStamp = valueOf(results.get(0)[0]);
@@ -71,7 +70,7 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	@Override
 	public List<String> getAllDifferentAvatars() {
 		List<StorageDatabaseEntry> avatars = silentThrow(() -> storage.queryBuilder().distinct().selectColumns(AVATAR_COLUMN).query());
-		return avatars.stream().map(bde -> bde.avatar).collect(toList());
+		return avatars.stream().map(bde -> bde.avatar).toList();
 	}
 
 	private void log(List<String[]> results) {
@@ -100,7 +99,7 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	}
 
 	private List<StorageEntry> convert(List<StorageDatabaseEntry> dbEntries) {
-		return dbEntries.stream().map(this::convert).collect(toList());
+		return dbEntries.stream().map(this::convert).toList();
 	}
 
 	private StorageEntry convert(StorageDatabaseEntry dbEntry) {
