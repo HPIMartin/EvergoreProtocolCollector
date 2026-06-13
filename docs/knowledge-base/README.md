@@ -24,7 +24,7 @@ officer used to maintain by hand.
 | 04 | [architecture.md](architecture.md) | Layers, data-flow pipeline, ports & adapters, hexagonal gap analysis |
 | 05 | [build-run-deploy.md](build-run-deploy.md) | Docker build, config, secrets, endpoints, the scheduled job |
 | 06 | [testing.md](testing.md) | Test inventory, coverage map, biggest gaps |
-| 07 | [git-state.md](git-state.md) | Git history narrative, the `Rebuild` branch, the uncommitted-diff truth |
+| 07 | [git-state.md](git-state.md) | Git conventions & the rule that **git is the source of truth** for history (docs don't duplicate it) |
 | 08 | [glossary.md](glossary.md) | German ↔ English domain glossary (the domain is German) |
 | 09 | [engineering-handbook.md](engineering-handbook.md) | **How the code should look & how we develop** — clean code, SOLID, hexagonal rules, TDD, BDD, commits, Definition of Done |
 | 10 | [working-with-claude.md](working-with-claude.md) | The **AI-assisted workflow showcase** — memory layers, session playbook, sub-agents, asking style |
@@ -44,3 +44,5 @@ officer used to maintain by hand.
 - Keep each doc focused on its topic; cross-link rather than duplicate.
 - When you change behavior in the code, update the relevant KB doc in the same change.
 - Record *why* decisions were made in `../open-questions.md`, not in code comments only.
+- **Don't duplicate git:** no changelogs, no commit-history narration, no diff snapshots in docs —
+  use `git log`/`git diff`. Docs hold durable knowledge, not history.

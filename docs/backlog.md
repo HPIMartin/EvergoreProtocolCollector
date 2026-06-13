@@ -8,8 +8,9 @@
 
 ## ▶ Current status / next action (2026-06-13)
 
-**Done:** knowledge base, engineering standards, the agent team, and the fixed devcontainer are
-written and being committed on the host (the setup commits). Nothing pushed.
+**Done:** the knowledge base, engineering standards, the agent team, the fixed devcontainer, and the
+project README are committed on `Rebuild` (not pushed). For the actual commits, see `git log` — we
+don't mirror history here.
 
 **Next:** switch to VS Code → **Reopen in Container** → start Claude Code there, then:
 1. **B1** — `EvergoreDataEvaluator` TDD (first real feature through the agent pipeline)

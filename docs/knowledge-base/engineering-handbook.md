@@ -92,6 +92,8 @@ template** demonstrating the practice. Scenarios are written in **product langua
   Whitespace/format changes go in their **own** commit, never mixed with logic.
 - One logical change per commit. Keep `master` releasable; feature work on branches; CI
   (`mvn -B verify`) green to merge.
+- **The commit log is the changelog.** Don't keep a separate `CHANGELOG`, and don't mirror git
+  history or diffs in the docs — `git log` / `git diff` are the source of truth for *what changed*.
 
 ## 8. Definition of Done (checklist)
 
