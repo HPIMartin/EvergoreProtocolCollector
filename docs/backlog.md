@@ -119,6 +119,7 @@ The project doubles as an example of clean, AI-assisted development — so the "
 | **G3** | Keep KB in lockstep with code (baked into Definition of Done) | Docs rot otherwise | Behavior-changing commits touch the matching KB doc | S (ongoing) |
 | **G4** | Decide BDD tooling: plain JUnit given/when/then vs Cucumber `.feature` (open question D-9) | Shapes how scenarios are written & shared | Decision logged; first scenario follows it | S |
 | **G5** | Optional: short "case study" of the rebuild for the showcase | The meta-goal is demonstrating AI-assisted dev | A narrative others can learn from | M |
+| **G6** | *(future)* Static code-analysis / metrics gate — complexity, duplication, coverage thresholds (SonarQube/Sonar; SonarLint already in the devcontainer) | Objective quality guardrail beyond agent review | CI fails on threshold breach | M |
 
 ## Epic H — Dev environment & virtualization `P0→P2`
 
