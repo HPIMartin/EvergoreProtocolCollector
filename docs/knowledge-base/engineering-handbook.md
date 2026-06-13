@@ -36,6 +36,9 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
 - Intention-revealing names; no abbreviations that aren't domain terms. Avoid joke/placeholder names
   (e.g. the existing `stupidMerge()` / debug `"shit"` strings get cleaned up, not copied).
 - Small methods, early returns, no deep nesting. No commented-out code in commits.
+- **Avoid comments — make the code say it.** No comments in code, config, or infrastructure unless
+  intent genuinely can't be expressed in names/structure (rare; then explain *why*, not *what*).
+  Self-documenting names + small functions replace comments. The reviewer flags unnecessary comments.
 - **No dead code & no undeclared dependencies** (the dead `CsvParser` imports Guava, which isn't in
   `pom.xml` — delete such code).
 - Prefer `record`s / immutability for value objects. Return `Optional` instead of sentinels

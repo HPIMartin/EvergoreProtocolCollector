@@ -20,7 +20,8 @@ commits/diff for this feature, and the **falsifier's report**.
 - Relevant **KB doc updated** in the same change? Decisions/assumptions logged if any were made?
 
 ## Code criteria
-- Clean code: intention-revealing names, small methods, no dead/commented code, no secrets, no undeclared deps.
+- Clean code: intention-revealing names, small methods, no dead code, no secrets, no undeclared deps.
+- **Flag unnecessary comments** — code, config, and infra should be self-explanatory; comments only where intent genuinely can't be expressed in code.
 - **SOLID** and **hexagonal**: `domain` + `businessLogic` import no framework/adapter; dependencies point inward; new outbound deps go through ports.
 - Tests: meaningful (not tautological), one behavior each, cover the falsifier's valid findings.
 - **Definition of Done** (handbook §8) satisfied.
