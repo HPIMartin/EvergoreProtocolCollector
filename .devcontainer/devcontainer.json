@@ -1,27 +1,19 @@
 {
 	"name": "Evergore Protocol Collector (Java 17 / Maven)",
-	"image": "mcr.microsoft.com/devcontainers/java:1-17-bookworm",
+	"image": "mcr.microsoft.com/devcontainers/base:bookworm",
 	"features": {
 		"ghcr.io/devcontainers/features/java:1": {
-			"version": "none",
+			"version": "17",
 			"installMaven": "true",
 			"installGradle": "false"
-		},
-		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-			"moby": "false"
-		},
-		"ghcr.io/gvatsal60/dev-container-features/sonarlint:1": {}
+		}
 	},
-	"mounts": [
-		"source=evergore-m2,target=/home/vscode/.m2,type=volume"
-	],
 	"postCreateCommand": "mvn -B -q dependency:go-offline --fail-never || true",
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"Anthropic.claude-code",
-				"vscjava.vscode-java-pack",
-				"SonarSource.sonarlint-vscode"
+				"vscjava.vscode-java-pack"
 			],
 			"settings": {
 				"java.configuration.updateBuildConfiguration": "automatic",

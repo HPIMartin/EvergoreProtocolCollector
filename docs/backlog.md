@@ -131,7 +131,7 @@ The project doubles as an example of clean, AI-assisted development — so the "
 | **G3** | Keep KB in lockstep with code (baked into Definition of Done) | Docs rot otherwise | Behavior-changing commits touch the matching KB doc | S (ongoing) |
 | **G4** | Decide BDD tooling: plain JUnit given/when/then vs Cucumber `.feature` (open question D-9) | Shapes how scenarios are written & shared | Decision logged; first scenario follows it | S |
 | **G5** | Optional: short "case study" of the rebuild for the showcase | The meta-goal is demonstrating AI-assisted dev | A narrative others can learn from | M |
-| **G6** | *(future)* Static code-analysis / metrics gate — complexity, duplication, coverage thresholds (SonarQube/Sonar; SonarLint already in the devcontainer) | Objective quality guardrail beyond agent review | CI fails on threshold breach | M |
+| **G6** | *(future)* Static code-analysis / metrics gate — complexity, duplication, coverage thresholds (SonarQube/Sonar). **Re-add the `sonarlint` devcontainer feature** (removed because its `node`→yarn-repo dependency broke apt with a GPG error — troubleshoot the key) | Objective quality guardrail beyond agent review | CI fails on threshold breach | M |
 
 ## Epic H — Dev environment & virtualization `P0→P2`
 
@@ -142,9 +142,10 @@ See [knowledge-base/dev-environment.md](knowledge-base/dev-environment.md).
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
 | **H1** | ✅ **Done 2026-06-13** — fix devcontainer to match the project: **Maven** (not Gradle), **JDK 17** pinned, `~/.m2` cache, dependency warm-up | The template devcontainer installed Gradle for a Maven project & JDK 25 vs 17 — wouldn't build | `Reopen in Container` → working `mvn verify` | S |
-| **H2** | docker-compose: add a `selenium/standalone-firefox` service; tests use `RemoteWebDriver`; retire bundled `gecko-*-win.exe` | Browser-in-container ⇒ scraping/integration tests run anywhere, no host Firefox | An integration test scrapes via the service | M |
+| **H2** | docker-compose: add a `selenium/standalone-firefox` service; tests use `RemoteWebDriver`; retire bundled `gecko-*-win.exe`. **Re-add the `docker-outside-of-docker` devcontainer feature** (removed to get a building container) | Browser-in-container ⇒ scraping/integration tests run anywhere, no host Firefox | An integration test scrapes via the service | M |
 | **H3** | De-hack the `Dockerfile`: drop `dos2unix` (after A1/LF), parameterize the jar name, stop baking `zugang.txt`, add `.dockerignore`, fix `apt-get … -y` | Current image is fragile & bakes secrets | Clean reproducible build; no secret in image (ties to C3) | M |
 | **H4** | Single-source the JDK version (devcontainer = Dockerfile bases = pom `jdk.version`) + documented upgrade procedure | One-touch upgrades without host installs | Bumping one set of pins upgrades everything | S |
+| **H5** | Re-add a cross-rebuild Maven cache (named volume at `~/.m2`) with correct ownership for the `vscode` user | Faster rebuilds; the first attempt's root-owned volume broke `~/.m2` | Deps cached across rebuilds; container builds clean | S |
 
 ---
 

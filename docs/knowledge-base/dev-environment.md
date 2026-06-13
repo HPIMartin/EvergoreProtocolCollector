@@ -7,17 +7,26 @@ Java bump) a one-line image change instead of a host installation.
 
 ## The devcontainer (`.devcontainer/devcontainer.json`)
 
-- Base image `mcr.microsoft.com/devcontainers/java:1-17-bookworm` → **JDK 17** (matches the project).
-- Java feature with **Maven** enabled, **Gradle disabled** (this is a Maven project — the old
-  template had it backwards).
-- `docker-outside-of-docker` → the container can reach the host Docker daemon (for the planned
-  selenium-firefox service and for building the production image).
-- `~/.m2` mounted as a named volume `evergore-m2` → dependency cache survives rebuilds.
-- `postCreateCommand` warms the dependency cache (offline-tolerant).
-- VS Code extensions: Claude Code, Java pack, SonarLint. Editor forces LF (`files.eol`).
+- Base image `mcr.microsoft.com/devcontainers/base:bookworm` (a stable, always-available base) with
+  **JDK 17 + Maven installed via the `java` feature** (`version: 17`, Maven on, Gradle off — this is
+  a Maven project). The JDK version is single-sourced here (the feature `version`).
+- `postCreateCommand` pre-downloads dependencies (`mvn dependency:go-offline`, offline-tolerant).
+- VS Code extensions: Claude Code + Java pack (the Java pack is the *editor* language server /
+  IntelliSense — distinct from the JDK; optional for the mvn/agent-driven flow).
+- **Deferred** (removed to get a building container; re-add when needed):
+  `docker-outside-of-docker` → selenium-firefox compose service (backlog **H2**);
+  `sonarlint` → static analysis (backlog **G6**);
+  a cross-rebuild **Maven cache** → a named volume at `~/.m2` was root-owned and broke the `vscode`
+  user's `~/.m2` (re-add with correct ownership, backlog **H5**).
 
-> The previous devcontainer was a generic template (installed **Gradle** for a **Maven** project,
-> JDK **25** base vs the project's **17**) and would not have built the project. Fixed 2026-06-13.
+> Lessons (2026-06-13): the original template installed **Gradle** for a **Maven** project on a JDK
+> **25** base. A first fix pinned `java:1-17-bookworm`, but **that image tag doesn't exist**
+> (`No manifest found`). Separately, the **`sonarlint` feature pulls `node` → the yarn apt repo,
+> whose GPG key failed**, breaking `apt-get update` and making `docker-outside-of-docker` fail to
+> install. Resolution: a generic `base` image + the `java` feature, with the two failure-prone
+> features deferred. A named-volume Maven cache then failed too (root-owned volume vs the `vscode`
+> user → `Could not create local repository at /home/vscode/.m2`), so it was removed pending a
+> correctly-owned cache (H5).
 
 ## How to work in it (recommended)
 
@@ -40,7 +49,7 @@ agent definition under `.claude/agents/`.
 
 The Java version is pinned in **three** places that must stay in sync:
 
-1. `.devcontainer/devcontainer.json` → base image tag (`…/java:1-17-bookworm`).
+1. `.devcontainer/devcontainer.json` → the `java` feature `version` (currently `17`).
 2. `Dockerfile` → build stage base (`maven:…-openjdk-18-slim`) and runtime JRE (`openjdk-17-jre`).
    *(These are currently inconsistent — 18 build / 17 runtime — and are cleaned up in backlog H3/H4.)*
 3. `pom.xml` → `<jdk.version>17</jdk.version>`.
@@ -60,7 +69,8 @@ Cleanup is backlog **H3** (and secret handling ties to **C3**).
 Scraping needs a browser. Plan: a **docker-compose** dev setup with a `selenium/standalone-firefox`
 service; tests connect via `RemoteWebDriver` to it. This retires the bundled Windows
 `gecko-*-win.exe` drivers and lets scraping/integration tests run anywhere. **Near-term unit/TDD
-work (evaluator, parser) needs no browser**, so this isn't blocking.
+work (evaluator, parser) needs no browser**, so this isn't blocking. (Re-adding the
+`docker-outside-of-docker` feature is part of H2.)
 
 See backlog **Epic H** for the open items, and [build-run-deploy.md](build-run-deploy.md) for the
 production runtime details.
