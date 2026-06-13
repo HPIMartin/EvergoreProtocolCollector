@@ -6,7 +6,17 @@
 			"Write(CLAUDE.md)",
 			"Edit(CLAUDE.md)",
 			"Write(.claude/agents/**)",
-			"Edit(.claude/agents/**)"
+			"Edit(.claude/agents/**)",
+			"Bash(git add:*)",
+			"Bash(git commit:*)",
+			"Bash(git status:*)",
+			"Bash(git log:*)",
+			"Bash(git diff:*)",
+			"Bash(git reset:*)",
+			"Bash(git config:*)"
+		],
+		"deny": [
+			"Bash(git push:*)"
 		]
 	}
 }
