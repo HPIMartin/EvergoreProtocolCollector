@@ -9,3 +9,12 @@ memory
 /.apt_generated/
 /.apt_generated_tests/
 src/test/resources/smokeTest.sqlite
+
+# local Claude Code state (user-specific permissions)
+.claude/settings.local.json
+# runtime / scratch artifacts
+/logs.txt
+/database/
+/diag.txt
+/.agentscan*.txt
+/gs_temp.txt
