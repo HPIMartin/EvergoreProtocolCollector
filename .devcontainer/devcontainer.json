@@ -1,0 +1,44 @@
+{
+	// Fully virtualized dev environment for this Java 17 / Maven project.
+	// Goal: nothing (JDK/Maven/Firefox) is installed or run on the host — see
+	// docs/knowledge-base/dev-environment.md. To upgrade the JDK later, change the
+	// image tag below (and the Dockerfile bases + pom jdk.version) — never the host.
+	"name": "Evergore Protocol Collector (Java 17 / Maven)",
+	"image": "mcr.microsoft.com/devcontainers/java:1-17-bookworm",
+
+	"features": {
+		// Use the JDK from the base image; add Maven (NOT Gradle — this is a Maven project).
+		"ghcr.io/devcontainers/features/java:1": {
+			"version": "none",
+			"installMaven": "true",
+			"installGradle": "false"
+		},
+		// Talk to the host Docker daemon (for the future selenium-firefox compose service and image builds).
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+			"moby": "false"
+		},
+		"ghcr.io/gvatsal60/dev-container-features/sonarlint:1": {}
+	},
+
+	// Cache Maven dependencies across container rebuilds.
+	"mounts": [
+		"source=evergore-m2,target=/home/vscode/.m2,type=volume"
+	],
+
+	// Warm the dependency cache once; tolerate offline so container creation never fails.
+	"postCreateCommand": "mvn -B -q dependency:go-offline --fail-never || true",
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"Anthropic.claude-code",
+				"vscjava.vscode-java-pack",
+				"SonarSource.sonarlint-vscode"
+			],
+			"settings": {
+				"java.configuration.updateBuildConfiguration": "automatic",
+				"files.eol": "\n"
+			}
+		}
+	}
+}
