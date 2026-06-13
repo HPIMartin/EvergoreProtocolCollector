@@ -17,6 +17,8 @@ move it to **Decisions** with the date and rationale. Agents: read this before c
 | 2026-06-13 | **TDD/BDD cycle:** red→green→refactor→commit. BDD is doc/showcase-only: write Gherkin `@Ignore`-first → commit, then activate & drive green via TDD → commit. | Author's process; see handbook §4/§5. |
 | 2026-06-13 | **Multi-agent team:** Planner = hat (you+me, Opus); subagents `implementer` (Sonnet), `falsifier` (Sonnet, single, feature-end), `reviewer`/gate (Opus, **per feature-commit**). Implementer makes pre-approved micro-commits; agents never push. | Q-round 2026-06-13. Built in `.claude/agents/` + `knowledge-base/multi-agent-playbook.md`. |
 | 2026-06-13 | **Dev environment:** fully virtualized via devcontainer — **nothing native on the host**; agents run in-container. Devcontainer fixed now (Maven, JDK 17 pinned, m2 cache); Selenium-compose + Dockerfile de-hack deferred (Epic H). Sequence: fix+commit on host, then `Reopen in Container` for coding. | Author wants future JDK upgrades (e.g. Java 25) without local installs. |
+| 2026-06-13 | **In-flight WIP:** resolve the entangled storage-calc WIP **in the container, verified** (split via `git add -p`; fix the dup-avatars bug, the `clickCookieShit` name, and the hard-coded Firefox path), **not** blind-committed on the host. Plan in `backlog.md` → Current status. | The WIP mixes concerns in one file and the build can't be verified on the host. |
+| 2026-06-13 | **Git permissions:** `git add`/`commit` (and read-only git) allowed without prompts; **`git push` hard-denied** in `.claude/settings.json`. | Author's request; pushing stays a manual, deliberate act. |
 
 ## Strategic questions — ANSWERED 2026-06-13
 

@@ -8,14 +8,25 @@
 
 ## ▶ Current status / next action (2026-06-13)
 
-**Done:** the knowledge base, engineering standards, the agent team, the fixed devcontainer, and the
-project README are committed on `Rebuild` (not pushed). For the actual commits, see `git log` — we
-don't mirror history here.
+**Done:** the knowledge base, standards, agent team, devcontainer, README, and git permissions are
+committed on `Rebuild` (not pushed; see `git log` — we don't mirror history here).
 
-**Next:** switch to VS Code → **Reopen in Container** → start Claude Code there, then:
-1. **B1** — `EvergoreDataEvaluator` TDD (first real feature through the agent pipeline)
-2. **A2** — commit the storage feature (with B1's tests)
-3. `Normalize line endings to LF` — `git add --renormalize .` (one clean EOL commit)
+**Uncommitted — RESOLVE FIRST, in the container, verified. Do NOT blind-commit it.** An in-flight
+"storage value calculation" WIP that is *entangled across files* (storage-calc **+** a
+`TransfertType→TransferType` typo-rename **+** a bank refactor, all inside `EvergoreDataEvaluator`)
+and not standards-clean. First container tasks:
+1. `mvn -B verify` for a green baseline.
+2. Untangle with `git add -p` into focused commits, fixing en route:
+   - the duplicate `bankRepo.getAllDifferentAvatars()` call (**B2**),
+   - rename `clickCookieShit` in `PageContentExtractor` (**B6**),
+   - remove the hard-coded `C:\…\firefox.exe` path in `Browser.java` (**C1** — use config/container),
+   - keep as-is: `Main.java` removal (+ the required `ResourceFileLoader` `Main.class→this.getClass()` fix),
+     the pom dependency bumps, the `micronaut-cli.yml` move, the geckodriver update.
+   - decide on untracked `.github/` (dependabot vs the modernize tooling) and `docs/claude-code-enterprise-setup.md`.
+3. Write the `EvergoreDataEvaluatorTest` storage math (**B1**) via the agent pipeline.
+4. Finally `Normalize line endings to LF` (`git add --renormalize .`).
+
+**Then:** new features / refactorings per the epics below.
 
 **Orient (any new session):** `CLAUDE.md` → `docs/knowledge-base/README.md` → this backlog → `docs/open-questions.md`.
 
@@ -67,12 +78,13 @@ Standards docs (**G1**) and `CLAUDE.md` are **done** — they govern everything 
 | **B3** | Expand `EntryFactory`/`EntityParser` tests: date/avatar/type/quality parsing, merged quantity (3+5+7→1 item, qty 15), `Entnahme`, `Impressum` terminator | Parser is barely tested; it's the ingest contract | Table-driven tests over representative raw protocol snippets | M |
 | **B4** | Repository tests against in-memory SQLite: `getNewest`, paging, `getAllFor(avatar, after)` | Only incidental smoke coverage | Fast tests using `:memory:` | M |
 | **B5** | Resolve the `Category.storage` vs recipe-based `getStorageValue()` question; pin behavior with tests | `Category.storage` is defined but unused — possible bug ([03-domain-model](knowledge-base/domain-model.md)) | Documented decision + test locking the chosen rule | S |
+| **B6** | Rename `clickCookieShit` in `PageContentExtractor` (cookie-consent click) | Joke name violates clean-naming; found in the in-flight WIP | Intention-revealing name (e.g. `dismissCookieBanner`) | S |
 
 ## Epic C — Configuration & security `P1`  *(good-practice showcase; not urgent while learning/fun)*
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **C1** | Make `Configuration` real via `@ConfigurationProperties` bound from `application.yml`/env (browser, server, db path, credentials path, in-memory toggle) | Hard-coded fields defeat config & deployability | No domain settings hard-coded in `.java`; overridable by env | M |
+| **C1** | Make `Configuration` real via `@ConfigurationProperties` bound from `application.yml`/env (browser, server, db path, credentials path, in-memory toggle, **+ the hard-coded Firefox binary path in `Browser.java`**) | Hard-coded fields defeat config & deployability | No domain settings hard-coded in `.java`; overridable by env | M |
 | **C2** | Move the API token out of `TokenValidationFilter` into config/secret; rotate off `"secret_token"` | Hard-coded secret in source + test | Token read from config; absent token fails closed | S |
 | **C3** | Stop baking `zugang.txt` into the image; inject credentials via env/secret/mount; read via `FileLoader` port | Credentials in the image is a leak | Image has no credentials; documented secret-injection path | M |
 | **C4** | Lower `logback` root from `verbose`; ensure credentials/tokens never logged | Chatty logs may leak secrets | Sensible levels; a log-scrub check | S |
