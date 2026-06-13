@@ -1,7 +1,4 @@
-# Normalize all text files to LF in the repository (and in working trees on checkout).
 * text=auto eol=lf
-
-# Binary files: never normalize line endings.
 *.exe binary
 *.sqlite binary
 *.ico binary
