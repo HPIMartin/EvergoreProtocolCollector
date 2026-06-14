@@ -62,11 +62,7 @@ public class PageContentExtractor {
 	}
 
 	private boolean checkForContent(List<String> lines) {
-		for (String line : lines)
-			if (line.matches(LAGER_EINTRAG_START)) {
-				return true;
-			}
-		return false;
+		return lines.stream().anyMatch(line -> line.matches(LAGER_EINTRAG_START));
 	}
 
 	private String loadStoragePage(WebDriver driver, int page, String protocol) {
@@ -78,8 +74,18 @@ public class PageContentExtractor {
 
 	private void loadEvergore(WebDriver driver) {
 		driver.navigate().to(SERVER + "/login");
+		dismissCookieBanner(driver);
 		tryToLogin(driver);
 		wait(driver, SERVER + "/" + config.server);
+	}
+
+	private void dismissCookieBanner(WebDriver driver) {
+		try {
+			driver.findElement(xpath("//button[@class='fc-button fc-cta-consent fc-primary-button' and p[@class='fc-button-label' and text()='Einwilligen']]"))
+					.click();
+		} catch (Exception e) {
+			// NOOP
+		}
 	}
 
 	private void tryToLogin(WebDriver driver) {
