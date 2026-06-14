@@ -89,7 +89,7 @@ public class EvergoreDataEvaluator {
 
 	private final TransferTypeDataEvaluatorVisitor visitor = new TransferTypeDataEvaluatorVisitor();
 
-	private static class TransferTypeDataEvaluatorVisitor implements TransfertTypeVisitor<BiConsumer<BankStatus, Integer>> {
+	private static class TransferTypeDataEvaluatorVisitor implements TransferTypeVisitor<BiConsumer<BankStatus, Integer>> {
 		@Override
 		public BiConsumer<BankStatus, Integer> place() {
 			return BankStatus::addPlacement;

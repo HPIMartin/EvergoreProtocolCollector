@@ -5,7 +5,7 @@ import static java.util.Arrays.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
 
-public class TransferTypeDatabaseVisitor implements TransfertTypeVisitor<String> {
+public class TransferTypeDatabaseVisitor implements TransferTypeVisitor<String> {
 	@Override
 	public String place() {
 		return "Einlagerung";

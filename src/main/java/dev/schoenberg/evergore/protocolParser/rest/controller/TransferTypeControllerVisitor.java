@@ -2,7 +2,7 @@ package dev.schoenberg.evergore.protocolParser.rest.controller;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
 
-public class TransferTypeControllerVisitor implements TransfertTypeVisitor<String> {
+public class TransferTypeControllerVisitor implements TransferTypeVisitor<String> {
 	@Override
 	public String place() {
 		return "Einlagerung";
