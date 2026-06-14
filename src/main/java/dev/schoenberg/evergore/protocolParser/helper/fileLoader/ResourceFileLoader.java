@@ -7,12 +7,12 @@ import static java.nio.file.Paths.*;
 import java.io.*;
 import java.nio.file.*;
 
-import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.helper.selenium.*;
 
 public class ResourceFileLoader implements FileLoader {
 	private Path tempFolder;
 
+	@Override
 	public File fetchFile(String path) {
 		initTempFolder();
 		return fetchFileFromResources(path);
@@ -49,7 +49,7 @@ public class ResourceFileLoader implements FileLoader {
 	}
 
 	private InputStream load(String resourcePath) {
-		InputStream resource = Main.class.getClassLoader().getResourceAsStream(resourcePath);
+		InputStream resource = this.getClass().getClassLoader().getResourceAsStream(resourcePath);
 
 		if (resource == null) {
 			throw new RuntimeException("Resource not found");
