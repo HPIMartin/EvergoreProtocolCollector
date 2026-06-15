@@ -34,10 +34,29 @@ author's decision (see [engineering-handbook.md](engineering-handbook.md) §7).
 4. REVIEW GATE (spawn `reviewer`, Opus, fresh) — once per FEATURE commit
    - process adherence (real red→green→refactor? whitespace separate? KB updated? commit-msg rules?)
    - code criteria (clean code, SOLID, hexagonal); integrates falsifier findings
-   - PASS → proceed;  FAIL → feedback + I loop back to step 2; logs a process-learning if a rule slipped
+   - PASS → proceed;  FAIL → fix and re-gate under the loop rules below; logs a process-learning if a rule slipped
 5. PUSH DECISION (YOU)
    - only the author pushes, when satisfied
 ```
+
+### FAIL-loop rules (when the falsifier or reviewer rejects)
+
+A FAIL sends the work back to step 2, then re-runs a **fresh** falsifier and a **fresh** reviewer.
+Two rules keep that loop bounded and the history clean:
+
+- **Cap at 2 re-implement rounds, then re-plan.** A feature gets at most two FAIL→fix rounds
+  (three implement attempts total). On hitting the cap, **stop the agent loop and escalate to the
+  author** with the falsifier+reviewer findings — repeated FAILs usually mean the *plan/spec* is
+  wrong, not the code, so we go back to step 1 (PLAN) rather than re-implement again. **Early
+  escalate** if two consecutive rounds raise the *same* finding (same signal — re-plan now).
+  **Process-only FAILs** (whitespace not separated, KB not updated, commit-message format) are cheap
+  mechanical fixes and **do not consume a round**.
+- **Fold fixes into the commit they belong to — never append "fix review" commits.** The branch is
+  unpushed, so rewriting local history is safe and expected (clean up before the author pushes). The
+  fix amends the original micro-commit: `git commit --amend` for the tip, or
+  `git reset --soft <feature-base>` + rebuild for an earlier one, so the pushed history reads as if
+  the work were done right the first time. (`git rebase -i` is unavailable in this harness; for a fix
+  to a deep non-tip commit, hand the author an exact recipe to run.)
 
 **Cadence (cost vs rigor, decided 2026-06-13):** micro-steps run lightweight; the **Opus reviewer
 gates at the feature commit**, not every micro-commit. A **single** Sonnet falsifier runs at the
