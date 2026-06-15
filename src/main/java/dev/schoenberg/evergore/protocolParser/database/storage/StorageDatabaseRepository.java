@@ -5,6 +5,7 @@ import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.Exc
 import static java.sql.Timestamp.*;
 
 import java.sql.*;
+import java.time.*;
 import java.util.*;
 import java.util.Date;
 
@@ -12,6 +13,7 @@ import com.j256.ormlite.dao.*;
 import com.j256.ormlite.support.*;
 
 import dev.schoenberg.evergore.protocolParser.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
@@ -40,6 +42,16 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 		if (result.isEmpty()) {
 			throw new NoElementFound(avatar);
 		}
+
+		return convert(result);
+	}
+
+	@Override
+	public List<StorageEntry> getAllFor(String avatar, LocalDateTime after) {
+		Timestamp afterTimestamp = Timestamp.from(after.atZone(Constants.APP_ZONE).toInstant());
+
+		List<StorageDatabaseEntry> result = silentThrow(
+				() -> storage.queryBuilder().where().eq(AVATAR_COLUMN, avatar).and().gt(TIMESTAMP_COLUMN, afterTimestamp).query());
 
 		return convert(result);
 	}

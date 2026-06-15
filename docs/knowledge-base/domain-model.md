@@ -81,10 +81,6 @@ This maps directly to the Google Sheet's columns 1–4 (see [02-google-sheet.md]
 The net **erzeugter Gildenmehrwert** (col 5) is `placement − withdrawl` summed across bank + storage
 — derivable but not yet stored as a single metric.
 
-> 🐞 **Known small bug:** `EvergoreDataEvaluator.updateAvatarInformation` calls
-> `bankRepo.getAllDifferentAvatars()` **twice** (and `storageRepo` once). The dedup `Set` makes it
-> harmless, but the duplicate call is dead and confusing.
-
 ## Identity / equality quirks
 
 - `BankEntry` equality is implemented via a `stupidMerge()` string concatenation (self-described).

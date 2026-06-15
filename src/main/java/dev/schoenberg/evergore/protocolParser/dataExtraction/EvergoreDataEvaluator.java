@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.*;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.*;
 import static java.util.Arrays.*;
 
 import java.time.*;
@@ -12,6 +13,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
+import dev.schoenberg.evergore.protocolParser.domain.*;
 import jakarta.inject.*;
 
 @Singleton
@@ -55,6 +57,11 @@ public class EvergoreDataEvaluator {
 	}
 
 	private void updateInformation(String avatar, LocalDateTime lastUpdated) {
+		updateBankInformation(avatar, lastUpdated);
+		updateStorageInformation(avatar, lastUpdated);
+	}
+
+	private void updateBankInformation(String avatar, LocalDateTime lastUpdated) {
 		MetaInformationKey<Long> bankPlacementKey = getBankPlacement(avatar);
 		MetaInformationKey<Long> bankWithdrawlKey = getBankWithdrawl(avatar);
 
@@ -62,12 +69,75 @@ public class EvergoreDataEvaluator {
 		long bankWithdrawl = getStoredValue(bankWithdrawlKey, 0L);
 
 		BankStatus bank = new BankStatus(bankPlacement, bankWithdrawl);
-		bankRepo.getAllFor(avatar, lastUpdated).forEach(e -> e.type.accept(visitor).accept(bank, e.amount));
+		bankRepo.getAllFor(avatar, lastUpdated).forEach(e -> e.type.accept(bankVisitor).accept(bank, e));
 
 		MetaInformation<Long> updatedBankPlacement = new MetaInformation<>(bankPlacementKey, bank.placement);
 		MetaInformation<Long> updatedBankWithdrawl = new MetaInformation<>(bankWithdrawlKey, bank.withdrawl);
 		metaRepo.add(asList(updatedBankPlacement, updatedBankWithdrawl));
 	}
+
+	private void updateStorageInformation(String avatar, LocalDateTime lastUpdated) {
+		MetaInformationKey<Double> storagePlacementKey = getStoragePlacement(avatar);
+		MetaInformationKey<Double> storageWithdrawlKey = getStorageWithdrawl(avatar);
+
+		double storagePlacement = getStoredValue(storagePlacementKey, 0D);
+		double storageWithdrawl = getStoredValue(storageWithdrawlKey, 0D);
+
+		StorageStatus storage = new StorageStatus(storagePlacement, storageWithdrawl);
+		storageRepo.getAllFor(avatar, lastUpdated).stream().map(e -> new StorageEntryItem(e, findItem(e)))
+				.forEach(e -> e.entry.type.accept(storageEntryVisitor).accept(storage, e));
+
+		MetaInformation<Double> updatedStoragePlacement = new MetaInformation<>(storagePlacementKey, storage.placement);
+		MetaInformation<Double> updatedStorageWithdrawl = new MetaInformation<>(storageWithdrawlKey, storage.withdrawl);
+		metaRepo.add(asList(updatedStoragePlacement, updatedStorageWithdrawl));
+	}
+
+	private static class StorageStatus {
+		private double placement;
+		private double withdrawl;
+
+		public StorageStatus(double storagePlacement, double storageWithdrawl) {
+			placement = storagePlacement;
+			withdrawl = storageWithdrawl;
+		}
+
+		public void addPlacement(double value) {
+			placement += value;
+		}
+
+		public void addWithdrawl(double value) {
+			withdrawl += value;
+		}
+	}
+
+	private final TransferTypeStorageEntryVisitor storageEntryVisitor = new TransferTypeStorageEntryVisitor();
+
+	private class TransferTypeStorageEntryVisitor implements TransferTypeVisitor<BiConsumer<StorageStatus, StorageEntryItem>> {
+		@Override
+		public BiConsumer<StorageStatus, StorageEntryItem> place() {
+			return operation(s -> s::addPlacement, EvergoreItem::getStorageValue);
+		}
+
+		@Override
+		public BiConsumer<StorageStatus, StorageEntryItem> withdrawl() {
+			return operation(s -> s::addWithdrawl, EvergoreItem::getWithdrawlValue);
+		}
+
+		private BiConsumer<StorageStatus, StorageEntryItem> operation(Function<StorageStatus, Consumer<Double>> statusFunction,
+				ToDoubleFunction<EvergoreItem> valueFunction) {
+			return (status, value) -> statusFunction.apply(status)
+					.accept(valueFunction.applyAsDouble(value.item) * value.entry.quantity * (value.entry.quality / 100D));
+		}
+	}
+
+	private EvergoreItem findItem(StorageEntry entry) {
+		return Arrays.stream(EvergoreItem.values()).filter(e -> e.ingameName.equals(entry.name)).findAny().orElseGet(() -> {
+			logger.info("Unable to find item: " + entry.name);
+			return UNDEFINED;
+		});
+	}
+
+	private record StorageEntryItem(StorageEntry entry, EvergoreItem item) {}
 
 	private static class BankStatus {
 		private long placement;
@@ -78,26 +148,30 @@ public class EvergoreDataEvaluator {
 			withdrawl = bankWithdrawl;
 		}
 
-		public void addPlacement(int value) {
+		public void addPlacement(long value) {
 			placement += value;
 		}
 
-		public void addWithdarwl(int value) {
+		public void addWithdrawl(long value) {
 			withdrawl += value;
 		}
 	}
 
-	private final TransferTypeDataEvaluatorVisitor visitor = new TransferTypeDataEvaluatorVisitor();
+	private final TransferTypeBankEntryVisitor bankVisitor = new TransferTypeBankEntryVisitor();
 
-	private static class TransferTypeDataEvaluatorVisitor implements TransferTypeVisitor<BiConsumer<BankStatus, Integer>> {
+	private static class TransferTypeBankEntryVisitor implements TransferTypeVisitor<BiConsumer<BankStatus, BankEntry>> {
 		@Override
-		public BiConsumer<BankStatus, Integer> place() {
-			return BankStatus::addPlacement;
+		public BiConsumer<BankStatus, BankEntry> place() {
+			return operation(s -> s::addPlacement);
 		}
 
 		@Override
-		public BiConsumer<BankStatus, Integer> withdrawl() {
-			return BankStatus::addWithdarwl;
+		public BiConsumer<BankStatus, BankEntry> withdrawl() {
+			return operation(s -> s::addWithdrawl);
+		}
+
+		private BiConsumer<BankStatus, BankEntry> operation(Function<BankStatus, Consumer<Integer>> statusFunction) {
+			return (status, value) -> statusFunction.apply(status).accept(value.amount);
 		}
 	}
 

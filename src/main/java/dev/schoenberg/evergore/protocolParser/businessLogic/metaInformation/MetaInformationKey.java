@@ -1,5 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation;
 
+import static java.lang.Double.*;
 import static java.lang.Long.*;
 import static java.lang.String.valueOf;
 import static java.time.LocalDateTime.*;
@@ -33,6 +34,14 @@ public abstract class MetaInformationKey<T> {
 		return new LongKey("bank_withdrawl_" + avatar);
 	}
 
+	public static MetaInformationKey<Double> getStoragePlacement(String avatar) {
+		return new DoubleKey("storage_placement_" + avatar);
+	}
+
+	public static MetaInformationKey<Double> getStorageWithdrawl(String avatar) {
+		return new DoubleKey("storage_withdrawl_" + avatar);
+	}
+
 	private static class DateTimeKey extends MetaInformationKey<LocalDateTime> {
 		private static final DateTimeFormatter DATE_TIME_PATTERN = ofPattern("dd.MM.yyyy HH:mm");
 
@@ -64,6 +73,22 @@ public abstract class MetaInformationKey<T> {
 		@Override
 		public Long deserialize(String raw) {
 			return parseLong(raw);
+		}
+	}
+
+	private static class DoubleKey extends MetaInformationKey<Double> {
+		private DoubleKey(String id) {
+			super(id);
+		}
+
+		@Override
+		public String serialize(Double value) {
+			return valueOf(value);
+		}
+
+		@Override
+		public Double deserialize(String raw) {
+			return parseDouble(raw);
 		}
 	}
 }
