@@ -10,7 +10,7 @@ Root package `dev.schoenberg.evergore.protocolParser` (`…` below).
         │
         ▼
    EvergoreDataExtractor.loadData()
-        │  1. PageSource (port) → PageContentExtractor (Selenium adapter)  ──Selenium──▶  evergore.de (login, paginate bank + Lager protocols)
+        │  1. PageSource (port) → SeleniumPageSource (Selenium adapter)  ──Selenium──▶  evergore.de (login, paginate bank + Lager protocols)
         │  2. EntityParser.parse → EntryFactory   (raw text ▶ domain Entry list, regex, dedup)
         │  3. map Entry ▶ BankEntry / StorageEntry
         │  4. keep only entries newer than repo.getNewest()
@@ -32,8 +32,8 @@ Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ OverviewControl
   the **composition root** — builds the un-annotated repositories + `FileLoader` + no-op hooks) ·
   `EvergoreDataCollectorJob` (`@Scheduled`) · `DatabaseStartupInitialization` (creates tables on startup).
 - **Extraction pipeline:** `helper/selenium/{Browser,Driver,FileLoader}` ·
-  `dataExtraction/website/PageContentExtractor` (the Selenium adapter: login, cookie banner,
-  pagination) · `PageContents` (DTO) · `EvergoreDataExtractor` (coordinator + delta filter) ·
+  `dataExtraction/website/SeleniumPageSource` (the Selenium adapter: login, cookie banner,
+  pagination; implements `PageSource`) · `PageContents` (DTO) · `EvergoreDataExtractor` (coordinator + delta filter) ·
   `parser/{EntityParser,EntryFactory}` (text ▶ `Entry`, regex from `Constants`).
 - **Persistence:** `database/Repository` (ORMLite base) · `database/{bank,storage,metaInformation}/*`
   (the adapters that implement the businessLogic ports) · `database/TransferTypeDatabaseVisitor`
@@ -69,12 +69,12 @@ Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ OverviewControl
 | Persistence (bank / storage / meta) | ✅ Exists, done right |
 | File / driver access (`FileLoader`) | ✅ Exists, done right |
 | Logging (`Logger`) | ✅ Exists, done right |
-| **Page source (scrape raw protocol)** | ✅ `PageSource` interface exists in `dataExtraction`; `EvergoreDataExtractor` depends on it; `PageContentExtractor` implements it. `Driver` still self-`new`ed inside `PageContentExtractor` (see backlog D1 step 2). |
+| **Page source (scrape raw protocol)** | ✅ `PageSource` interface in `dataExtraction`; `EvergoreDataExtractor` depends on it; `SeleniumPageSource` implements it with injected `Driver`. |
 | Output / presentation | 🟡 Partial (`OutputFormatter`), emits HTML directly. |
 
 ### Top violations to fix (detail in [../backlog.md](../backlog.md))
 
-1. **`Driver` still self-constructed inside `PageContentExtractor`** → should be injected (backlog D1 step 2).
+1. **`Configuration` is config in name only** — values are hard-coded Java fields (browser, server, paths, in-memory toggle); ignores `application.yml`/env.
 2. **`Configuration` is config in name only** — values are hard-coded Java fields (browser, server,
    paths, in-memory toggle); ignores `application.yml`/env.
 3. **Secrets in source/image** — `TokenValidationFilter` hard-codes `"secret_token"`; Evergore

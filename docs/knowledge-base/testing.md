@@ -24,7 +24,7 @@ and *indirectly* via `SmokeTest`: controllers, filters, repositories, visitors, 
 1. **`EvergoreDataExtractor` delta filter** — the "only entries newer than newest stored" branch (test uses `Instant.MIN` sentinel so all entries pass through).
 2. **`EntryFactory` / `EntityParser`** — date/avatar/type/quality regex parsing, `Entnahme` branch,
    merged-quantity value, `Impressum` terminator. Only dedup-size is asserted.
-3. **`PageContentExtractor`** — Selenium scraping/pagination/login (inherently hard; needs the page-source port to fake).
+3. **`SeleniumPageSource`** — Selenium scraping/pagination/login (inherently hard; page-source port now exists, but the Selenium path itself is not unit-tested).
 4. **Repositories** — `getNewest()` SQL, paging, `getAllFor(avatar, after)`. Only incidental smoke coverage.
 
 ## Testing direction for the rebuild (TDD/BDD)

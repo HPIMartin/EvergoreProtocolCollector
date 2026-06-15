@@ -19,12 +19,12 @@ import dev.schoenberg.evergore.protocolParser.helper.selenium.Driver;
 import jakarta.inject.*;
 
 @Singleton
-public class PageContentExtractor implements PageSource {
+public class SeleniumPageSource implements PageSource {
 
 	private final Configuration config;
 	private final Driver driver;
 
-	public PageContentExtractor(Configuration config, Driver driver) {
+	public SeleniumPageSource(Configuration config, Driver driver) {
 		this.config = config;
 		this.driver = driver;
 	}
