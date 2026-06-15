@@ -22,16 +22,16 @@
 - **A3 — DONE**: deleted dead `CsvParser`/`FileWriter`/`DiskFileWriter` (unwired; `CsvParser` imported undeclared
   Guava); `mvn verify` green. KB (architecture/handbook) updated in the same commit.
 - **D1 — DONE** (full variant): `PageSource` port; `EvergoreDataExtractor` depends on it; `Driver` is now an
-  injected `@Singleton` (no self-`new`); `SeleniumPageSource` renamed `SeleniumPageSource`. Fake-`PageSource`
+  injected `@Singleton` (no self-`new`); the Selenium adapter renamed to `SeleniumPageSource`. Fake-`PageSource`
   unit test + delta-filter lock + a SmokeTest bean-wiring assertion. Gated falsifier→reviewer.
 - **Enterprise-setup review** absorbed → new items **D6**(done)/**G7**/**G8**/**A7**/**A8**/**B7**/**H6**/G6+ with a
   rejected-list, in the *"Derived from the enterprise-setup review"* section below.
 
-**Next (A4/CI deprioritized 2026-06-15 — local-only Docker→home-server deploy):** pick among —
-**D2** (BDD acceptance test now unblocked by the `PageSource` port: collect→evaluate→overview with a fake page
-source + `:memory:` DB), **G7/G7-fix** (deterministic *local* hooks + clean the live `System.out`/`printStackTrace`/`// TODO`),
-Epic **C + H3** (stop baking `zugang.txt` into the image, real config/secrets — *deploy-relevant*: the image
-ships to the home server), or **E1** (compute & store `erzeugter Gildenmehrwert` — first product-parity metric).
+**SINGLE next action:** **D2** — BDD acceptance test, now unblocked by the `PageSource` port: drive
+collect→evaluate→overview with a **fake `PageSource`** (canned protocol text) + in-memory (`:memory:`) DB and
+assert the overview numbers — no browser, no SQLite file. Per handbook §5: write the given/when/then scenario
+`@Ignore`-first → commit, then drive it green. *(A4/CI stays deprioritized — local-only deploy. Alternatives:
+**G7/G7-fix** local hooks + swallow/comment cleanup · **E1** Gildenmehrwert · **C+H3** deploy-hardening.)*
 
 **Resume gotchas:**
 - The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit (committed diffs stay
