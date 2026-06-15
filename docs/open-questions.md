@@ -44,7 +44,10 @@ The four strategic questions were answered by the author (see the Decisions tabl
   storage-valuation multiplier? (B5)
 - **D-6 — Output preference:** keep server-rendered HTML, or move to a JSON API + small frontend for
   the dashboard? (shapes E5)
-- **D-7 — Deployment target:** stays Docker-on-a-home-server, or somewhere else? Affects C3 secret strategy.
+- ~~**D-7 — Deployment target**~~ ✅ DECIDED 2026-06-15: built as a **Docker image locally** and run on the
+  author's **home server** ("im Keller"); **no CI/CD for now** (optionally a *local* build gate later, low prio).
+  → **A4 deprioritized**; the deploy-relevant items are **C3** (inject credentials, don't bake `zugang.txt` into
+  the image) and **H3** (Dockerfile de-hack).
 - ~~**D-8 — Language**~~ ✅ DECIDED 2026-06-13: conversation German; code/comments/docs English with German domain terms.
 - **D-9 — BDD tooling:** plain JUnit given/when/then, or a framework (Cucumber)? Assumed plain unless asked.
 - **D-10 — Formatter engine (gates A7):** if Spotless is adopted, which engine? The repo is uniformly

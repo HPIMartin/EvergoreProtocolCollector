@@ -24,9 +24,11 @@
 - **Enterprise-setup review** absorbed → new items **D6**(done)/**G7**/**G8**/**A7**/**A8**/**B7**/**H6**/G6+ with a
   rejected-list, in the *"Derived from the enterprise-setup review"* section below.
 
-**SINGLE next action:** **A4** — CI (GitHub Actions `mvn -B verify` on push/PR, Java 17) + README badge, so **D6**
-and the test suite actually gate every change. Then **G7** (secret-scan + `System.out`/`TODO` hooks; **G7-fix** still
-has live `System.out` in `PageContentExtractor`/`AlternativeFileLoaderWrapper` + `printStackTrace` in `SmokeTest`).
+**Next (A4/CI deprioritized 2026-06-15 — local-only Docker→home-server deploy):** pick among —
+**G7/G7-fix** (deterministic *local* hooks + clean the live `System.out`/`printStackTrace`/`// TODO`),
+Epic **C + H3** (stop baking `zugang.txt` into the image, real config/secrets — *deploy-relevant*: the image
+ships to the home server), **D1/D2** (PageSource port + BDD acceptance — testability), or **E1**
+(compute & store `erzeugter Gildenmehrwert` — first product-parity metric).
 
 **Then:** **G7** (secret-scan + System.out/TODO hooks), Epic **C** (secrets; **C1** hard-coded `firefox.exe` path —
 *not* part of the WIP, still open), **D1/D2** (PageSource port + BDD) → Epic **E** parity.
@@ -75,7 +77,7 @@ Standards docs (**G1**) and `CLAUDE.md` are **done** — they govern everything 
 | **A1** | Add `.gitattributes` (`* text=auto eol=lf`; `*.exe`/drivers/`*.sqlite` binary), set `core.autocrlf`, renormalize, commit whitespace **alone** | 95% of the scary diff is CRLF churn ([07-git-state](knowledge-base/git-state.md)) | After commit, `git diff HEAD --ignore-all-space` ≈ the real 15-file change; future diffs aren't whitespace-polluted | S |
 | **A2** | Commit the in-progress **storage value calc** as one focused feature commit (+ its test from B1); finalize `Main.java` deletion & `micronaut-cli.yml` move | The real change is small & coherent; get it landed | One reviewable commit; build green | S |
 | **A3** | ✅ **Done 2026-06-15** — deleted `CsvParser` (imported undeclared Guava), `FileWriter`, `helper/fileWriter/DiskFileWriter` | They weren't wired; they blurred the surface | Classes gone; `mvn verify` green | — |
-| **A4** | Add **CI** (GitHub Actions: `mvn -B verify` on push/PR, Java 17) | No automated guard today | PRs run build+tests; badge in README | S |
+| **A4** | ~~CI (GitHub Actions)~~ **Deprioritized 2026-06-15** (local-only deploy, no CI). *Optional later, low prio:* a **local** gate — git `pre-commit` running `mvn -B verify` | Solo + local Docker→home-server deploy; no shared PRs to guard | revisit if the repo ever goes shared/CI | S |
 | **A5** | Decide & apply gitignore for `logs.txt`, scratch `.agentscan*.txt`/`diag.txt`, local `database/`; move **personal** scratch patterns (`agentscan`/`gs_temp`/`diag`) out of the *committed* `.gitignore` into `.git/info/exclude`; broaden per **A8** | Keep the committed tree clean & showcase-appropriate | Committed `.gitignore` holds only project-relevant ignores; no stray artifacts | S |
 | **A6** | Write a top-level `README.md` (what/why/run) linking the KB | Onboarding | A newcomer can build & run from the README | S |
 
