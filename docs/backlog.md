@@ -8,30 +8,33 @@
 
 ## ▶ Current status / next action (2026-06-15)
 
-**Done & committed on `Rebuild`** (not pushed; `git log` is the source of truth — we don't mirror it
-here): the knowledge base, standards, agent team, devcontainer, README, git permissions, **and the
-formerly-entangled storage WIP**, now landed as focused commits via the falsifier→reviewer gate:
-- **A2 + B1 + B2** — storage value calculation (`value×qty×quality/100`) in `EvergoreDataEvaluator`,
-  a `getAllFor(avatar, after)` storage port, `MetaInformationKey` double keys, and
-  `EvergoreDataEvaluatorTest` (6 unit tests) with hand-written fakes; the duplicate-avatars call (**B2**) is fixed.
-- **A1** — `.gitattributes` enforces LF.
-- **B6** — `clickCookieShit` renamed to dismiss-cookie-banner.
-- partial **C4** — fixed the invalid `logback` root level (`verbose`→`info`) and added a test-only
-  `logback-test.xml` (root `warn`) so test runs aren't flooded with Micronaut DEBUG.
-- tooling: Dependabot config + the `continue` slash command.
+**Done & committed on `Rebuild`** (not pushed; `git log` is the source of truth):
+- **A2 + B1 + B2** — storage value calc (`value×qty×quality/100`) in `EvergoreDataEvaluator`, a
+  `getAllFor(avatar, after)` storage port, `MetaInformationKey` double keys, `EvergoreDataEvaluatorTest`
+  (6 unit tests, hand-written fakes); duplicate-avatars call (**B2**) fixed. Landed via falsifier→reviewer gate.
+- **A1** `.gitattributes` LF · **B6** cookie-banner rename · partial **C4** (logback `verbose`→`info` +
+  test-only `logback-test.xml` root `warn`, ends the Micronaut DEBUG flood) · tooling: Dependabot + `continue`.
+- **D6 — DONE** (this session): `HexagonalArchitectureTest` (ArchUnit) fails the build if `domain`/`businessLogic`
+  import any framework (Micronaut/jakarta/Selenium/ORMLite/SQLite/Jackson/RxJava/commons/logback/SLF4J/Netty);
+  verified non-vacuous (forbidding `java.time` flags 22 core usages); reviewer **PASS**.
+- **Permissions** (this session): safe dev commands (mvn, `src/**` edits, read-only inspectors) promoted to the
+  committed `settings.json`; deny hardened (`rm -rf`, `git reset --hard`); `settings.local.json` slimmed (gitignored).
+- **Enterprise-setup review** absorbed → new items **D6**(done)/**G7**/**G8**/**A7**/**A8**/**B7**/**H6**/G6+ with a
+  rejected-list, in the *"Derived from the enterprise-setup review"* section below.
 
-**Next (smallest valuable):** **A3** (delete dead `CsvParser`/`FileWriter`/`DiskFileWriter`), then
-**A4** (CI: GitHub Actions `mvn -B verify`, Java 17), then Epic **C** (config/secrets, incl. the
-hard-coded `C:\…\firefox.exe` in `Browser.java` — **C1**) and **D1/D2** (PageSource port + BDD
-acceptance) before Epic **E** (dashboard parity). **C1** is still open — it was *not* part of the WIP.
+**SINGLE next action:** **A3** — delete dead `CsvParser` (imports Guava, not a dependency) + `FileWriter` +
+`helper/fileWriter/DiskFileWriter`; build stays green. Bonus: removes ~half the `System.out` violations **G7** will
+later enforce. Then **A4** (CI: GitHub Actions `mvn -B verify`, Java 17) so D6/tests actually gate.
 
-**High-leverage new picks** (from the enterprise-setup review below): **D6** (ArchUnit framework-import
-gate — ~1h, lands green today, makes the hexagonal rule a build failure) and **G7** (deterministic
-enforcement hooks) are the strongest showcase additions; **D6** is an excellent next pick alongside A3/A4.
+**Then:** **G7** (secret-scan + System.out/TODO hooks), Epic **C** (secrets; **C1** hard-coded `firefox.exe` path —
+*not* part of the WIP, still open), **D1/D2** (PageSource port + BDD) → Epic **E** parity.
 
-**Open housekeeping:** `.github/modernize/` deleted (done). `docs/claude-code-enterprise-setup.md` is
-absorbed into the *"Derived from the enterprise-setup review"* section below → the untracked file is
-safe to delete (not to be committed).
+**Resume gotchas:**
+- The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit (committed diffs stay
+  clean). Ignore the CRLF warning on `git add`; run `git diff --check` if unsure.
+- `rm` is **denied** for the agent — manual author cleanup pending: `rm -f .agentscan*.txt diag.txt gs_temp.txt
+  logs.txt` (pure scratch) and `rm -f docs/claude-code-enterprise-setup.md` (absorbed). **Keep `zugang.txt`** (creds).
+- Untracked `.claude/commands/pause.md` is the `/pause` command (harness) — leave it.
 
 **Orient (any new session):** `CLAUDE.md` → `docs/knowledge-base/README.md` → this backlog → `docs/open-questions.md`.
 
