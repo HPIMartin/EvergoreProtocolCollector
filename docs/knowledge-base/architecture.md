@@ -10,7 +10,7 @@ Root package `dev.schoenberg.evergore.protocolParser` (`…` below).
         │
         ▼
    EvergoreDataExtractor.loadData()
-        │  1. PageContentExtractor  ──Selenium──▶  evergore.de (login, paginate bank + Lager protocols)
+        │  1. PageSource (port) → PageContentExtractor (Selenium adapter)  ──Selenium──▶  evergore.de (login, paginate bank + Lager protocols)
         │  2. EntityParser.parse → EntryFactory   (raw text ▶ domain Entry list, regex, dedup)
         │  3. map Entry ▶ BankEntry / StorageEntry
         │  4. keep only entries newer than repo.getNewest()
@@ -69,13 +69,12 @@ Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ OverviewControl
 | Persistence (bank / storage / meta) | ✅ Exists, done right |
 | File / driver access (`FileLoader`) | ✅ Exists, done right |
 | Logging (`Logger`) | ✅ Exists, done right |
-| **Page source (scrape raw protocol)** | ❌ **MISSING** — `PageContentExtractor` *is* the Selenium adapter with no interface in front of it; `EvergoreDataExtractor` depends on the concrete class, which self-`new`s `Driver`/`WebDriver`. |
+| **Page source (scrape raw protocol)** | ✅ `PageSource` interface exists in `dataExtraction`; `EvergoreDataExtractor` depends on it; `PageContentExtractor` implements it. `Driver` still self-`new`ed inside `PageContentExtractor` (see backlog D1 step 2). |
 | Output / presentation | 🟡 Partial (`OutputFormatter`), emits HTML directly. |
 
 ### Top violations to fix (detail in [../backlog.md](../backlog.md))
 
-1. **No page-source port** → the whole scrape→store use case can only run against a real browser
-   and the live site. Biggest structural problem.
+1. **`Driver` still self-constructed inside `PageContentExtractor`** → should be injected (backlog D1 step 2).
 2. **`Configuration` is config in name only** — values are hard-coded Java fields (browser, server,
    paths, in-memory toggle); ignores `application.yml`/env.
 3. **Secrets in source/image** — `TokenValidationFilter` hard-codes `"secret_token"`; Evergore

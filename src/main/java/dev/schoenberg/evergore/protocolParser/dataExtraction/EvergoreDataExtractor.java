@@ -9,26 +9,25 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.parser.*;
-import dev.schoenberg.evergore.protocolParser.dataExtraction.website.*;
 import dev.schoenberg.evergore.protocolParser.domain.*;
 import jakarta.inject.*;
 
 @Singleton
 public class EvergoreDataExtractor {
-	private final PageContentExtractor extractor;
+	private final PageSource pageSource;
 	private final BankRepository bankRepo;
 	private final StorageRepository storageRepo;
 	private final Logger logger;
 
-	public EvergoreDataExtractor(PageContentExtractor extractor, BankRepository bankRepo, StorageRepository storageRepo, Logger logger) {
-		this.extractor = extractor;
+	public EvergoreDataExtractor(PageSource pageSource, BankRepository bankRepo, StorageRepository storageRepo, Logger logger) {
+		this.pageSource = pageSource;
 		this.bankRepo = bankRepo;
 		this.storageRepo = storageRepo;
 		this.logger = logger;
 	}
 
 	public void loadData() {
-		PageContents load = extractor.load();
+		PageContents load = pageSource.load();
 		updateBankEntries(EntityParser.parse(load.bank));
 		updateLagerEntries(EntityParser.parse(load.lager));
 	}

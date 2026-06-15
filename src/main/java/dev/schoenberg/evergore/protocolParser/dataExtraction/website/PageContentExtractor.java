@@ -19,7 +19,7 @@ import dev.schoenberg.evergore.protocolParser.helper.selenium.*;
 import jakarta.inject.*;
 
 @Singleton
-public class PageContentExtractor {
+public class PageContentExtractor implements PageSource {
 
 	private final Configuration config;
 	private final FileLoader fileLoader;
