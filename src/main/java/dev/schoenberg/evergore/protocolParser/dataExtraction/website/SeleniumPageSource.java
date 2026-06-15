@@ -29,6 +29,7 @@ public class SeleniumPageSource implements PageSource {
 		this.driver = driver;
 	}
 
+	@Override
 	public PageContents load() {
 		WebDriver webDriver = driver.createWebDriver();
 		loadEvergore(webDriver);

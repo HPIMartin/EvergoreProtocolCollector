@@ -23,6 +23,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.website.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.database.bank.*;
 import dev.schoenberg.evergore.protocolParser.database.metaInformation.*;
@@ -117,6 +118,13 @@ class SmokeTest {
 		int statusCode = get("/thatEndpointDoesNotExist").getStatus();
 
 		assertTrue(statusCode >= 400 && statusCode < 500);
+	}
+
+	@Test
+	void pageSourceResolvesToTheSeleniumAdapter() {
+		PageSource pageSource = server.getApplicationContext().getBean(PageSource.class);
+
+		assertTrue(pageSource instanceof SeleniumPageSource, "Expected SeleniumPageSource but was " + pageSource.getClass());
 	}
 
 	private boolean awaitCollectionFinished() {

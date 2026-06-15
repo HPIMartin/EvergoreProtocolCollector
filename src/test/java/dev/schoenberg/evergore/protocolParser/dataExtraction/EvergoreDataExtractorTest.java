@@ -52,6 +52,18 @@ class EvergoreDataExtractorTest {
 		assertThat(storageRepo.added.get(0).type).isEqualTo(EINLAGERUNG);
 	}
 
+	@Test
+	void entriesNotNewerThanTheStoredWatermarkAreNotPersisted() {
+		Instant afterAllEntries = Instant.parse("2099-01-01T00:00:00Z");
+		bankRepo.newest = afterAllEntries;
+		storageRepo.newest = afterAllEntries;
+
+		tested.loadData();
+
+		assertThat(bankRepo.added).isEmpty();
+		assertThat(storageRepo.added).isEmpty();
+	}
+
 	private static class FakePageSource implements PageSource {
 		@Override
 		public PageContents load() {
@@ -61,6 +73,7 @@ class EvergoreDataExtractorTest {
 
 	private static class CapturingBankRepository extends BankRepositoryStub {
 		final List<BankEntry> added = new ArrayList<>();
+		Instant newest = Instant.MIN;
 
 		@Override
 		public void add(List<BankEntry> newEntries) {
@@ -69,12 +82,13 @@ class EvergoreDataExtractorTest {
 
 		@Override
 		public BankEntry getNewest() {
-			return new BankEntry(Instant.MIN, "", 0, EINLAGERUNG);
+			return new BankEntry(newest, "", 0, EINLAGERUNG);
 		}
 	}
 
 	private static class CapturingStorageRepository extends StorageRepositoryStub {
 		final List<StorageEntry> added = new ArrayList<>();
+		Instant newest = Instant.MIN;
 
 		@Override
 		public void add(List<StorageEntry> newEntries) {
@@ -83,7 +97,7 @@ class EvergoreDataExtractorTest {
 
 		@Override
 		public StorageEntry getNewest() {
-			return new StorageEntry(Instant.MIN, "", 0, "", 0, EINLAGERUNG);
+			return new StorageEntry(newest, "", 0, "", 0, EINLAGERUNG);
 		}
 	}
 }
