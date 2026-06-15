@@ -71,7 +71,7 @@ Standards docs (**G1**) and `CLAUDE.md` are **done** — they govern everything 
 | **A2** | Commit the in-progress **storage value calc** as one focused feature commit (+ its test from B1); finalize `Main.java` deletion & `micronaut-cli.yml` move | The real change is small & coherent; get it landed | One reviewable commit; build green | S |
 | **A3** | Delete dead code: `CsvParser` (imports Guava — not a dependency), `FileWriter`, `helper/fileWriter/DiskFileWriter` | They don't compile / aren't wired; they blur the surface | Classes gone; build still green | S |
 | **A4** | Add **CI** (GitHub Actions: `mvn -B verify` on push/PR, Java 17) | No automated guard today | PRs run build+tests; badge in README | S |
-| **A5** | Decide & apply gitignore for `logs.txt`, scratch `.agentscan*.txt`/`diag.txt`, local `database/` | Keep the tree clean | Tree has no stray artifacts | S |
+| **A5** | Decide & apply gitignore for `logs.txt`, scratch `.agentscan*.txt`/`diag.txt`, local `database/`; move **personal** scratch patterns (`agentscan`/`gs_temp`/`diag`) out of the *committed* `.gitignore` into `.git/info/exclude`; broaden per **A8** | Keep the committed tree clean & showcase-appropriate | Committed `.gitignore` holds only project-relevant ignores; no stray artifacts | S |
 | **A6** | Write a top-level `README.md` (what/why/run) linking the KB | Onboarding | A newcomer can build & run from the README | S |
 
 ## Epic B — Lock the core with tests `P0→P1`
