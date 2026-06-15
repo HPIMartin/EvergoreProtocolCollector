@@ -123,7 +123,7 @@ public class EvergoreDataEvaluator {
 			return operation(s -> s::addWithdrawl, EvergoreItem::getWithdrawlValue);
 		}
 
-		private BiConsumer<StorageStatus, StorageEntryItem> operation(Function<StorageStatus, Consumer<Double>> statusFunction,
+		private BiConsumer<StorageStatus, StorageEntryItem> operation(Function<StorageStatus, DoubleConsumer> statusFunction,
 				ToDoubleFunction<EvergoreItem> valueFunction) {
 			return (status, value) -> statusFunction.apply(status)
 					.accept(valueFunction.applyAsDouble(value.item) * value.entry.quantity * (value.entry.quality / 100D));
@@ -170,7 +170,7 @@ public class EvergoreDataEvaluator {
 			return operation(s -> s::addWithdrawl);
 		}
 
-		private BiConsumer<BankStatus, BankEntry> operation(Function<BankStatus, Consumer<Integer>> statusFunction) {
+		private BiConsumer<BankStatus, BankEntry> operation(Function<BankStatus, LongConsumer> statusFunction) {
 			return (status, value) -> statusFunction.apply(status).accept(value.amount);
 		}
 	}
