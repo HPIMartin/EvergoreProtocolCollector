@@ -26,19 +26,29 @@
   unit test + delta-filter lock + a SmokeTest bean-wiring assertion. Gated falsifier→reviewer.
 - **Enterprise-setup review** absorbed → new items **D6**(done)/**G7**/**G8**/**A7**/**A8**/**B7**/**H6**/G6+ with a
   rejected-list, in the *"Derived from the enterprise-setup review"* section below.
+- **Session 2026-06-15 (grooming):** primitive-consumer evaluator refactor; `/pause` command tracked; the playbook
+  **FAIL-loop hardened** (cap 2 re-implement rounds → re-plan; fixes fold into their commit, not appended);
+  **warnings-as-errors** + **no-local-setup** standards added (CLAUDE.md/handbook); `settings.json` restored to a
+  portable baseline (scoped `cd` moved to gitignored `settings.local.json`); decisions logged in open-questions.
+- **Enterprise-setup audit (re-verified, 7-agent adversarial):** the source doc is now **fully absorbed** — only
+  two applicable gaps survived (**G9** WebFetch niche-lib docs, **G10** SessionStart orient hook) + a PII/ToS note
+  (**D-11**); all captured below, so `docs/claude-code-enterprise-setup.md` is ready to delete.
 
-**SINGLE next action:** **D2** — BDD acceptance test, now unblocked by the `PageSource` port: drive
-collect→evaluate→overview with a **fake `PageSource`** (canned protocol text) + in-memory (`:memory:`) DB and
-assert the overview numbers — no browser, no SQLite file. Per handbook §5: write the given/when/then scenario
-`@Ignore`-first → commit, then drive it green. *(A4/CI stays deprioritized — local-only deploy. Alternatives:
-**G7/G7-fix** local hooks + swallow/comment cleanup · **E1** Gildenmehrwert · **C+H3** deploy-hardening.)*
+**SINGLE next action:** **H7 — migrate the build Maven → Gradle** (decided 2026-06-15; reverses the Maven
+stance). Do it before D2 and feature work, keeping the tooling surface minimal: the deferred **A7** (Spotless),
+**G6+** (JaCoCo), **H6** (failsafe) and the **warnings `failOnWarning` flip (H8)** land *in Gradle*, not as new
+Maven plugins. Plan it via the agent pipeline (planner → implementer → falsifier → reviewer). **D2** (the
+port-unblocked BDD acceptance test) is **deferred behind H7**. *(A4/CI stays deprioritized — local-only deploy.)*
 
 **Resume gotchas:**
 - The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit (committed diffs stay
   clean). Ignore the CRLF warning on `git add`; run `git diff --check` if unsure.
 - `rm` is **denied** for the agent — manual author cleanup pending: `rm -f .agentscan*.txt diag.txt gs_temp.txt
-  logs.txt` (pure scratch) and `rm -f docs/claude-code-enterprise-setup.md` (absorbed). **Keep `zugang.txt`** (creds).
-- Untracked `.claude/commands/pause.md` is the `/pause` command (harness) — leave it.
+  logs.txt` (pure scratch) and **`rm -f docs/claude-code-enterprise-setup.md`** (now fully absorbed — gaps G9/G10/D-11
+  captured, safe to delete). **Keep `zugang.txt`** (creds).
+- A scoped `cd` permission lives in gitignored `settings.local.json`; the committed `settings.json` stays portable
+  (no-local-setup rule). Approving Claude "always allow" on path-bearing commands can re-pollute committed
+  `settings.json` — use bare git (no `cd`/`git -C`) and diff `settings.json` against HEAD if unsure.
 
 **Orient (any new session):** `CLAUDE.md` → `docs/knowledge-base/README.md` → this backlog → `docs/open-questions.md`.
 
@@ -100,13 +110,14 @@ Standards docs (**G1**) and `CLAUDE.md` are **done** — they govern everything 
 | **C2** | Move the API token out of `TokenValidationFilter` into config/secret; rotate off `"secret_token"` | Hard-coded secret in source + test | Token read from config; absent token fails closed | S |
 | **C3** | Stop baking `zugang.txt` into the image; inject credentials via env/secret/mount; read via `FileLoader` port | Credentials in the image is a leak | Image has no credentials; documented secret-injection path | M |
 | **C4** | Lower `logback` root from `verbose`; ensure credentials/tokens never logged | Chatty logs may leak secrets | Sensible levels; a log-scrub check | S |
+| **C5** | **Simple dependency vulnerability scan** wired into the build (OWASP dependency-check or the Gradle-native equivalent) | Catch known-vulnerable deps; good-practice for the showcase | Build surfaces known CVEs in deps. Gated on **H7** (land in Gradle); *Dependabot already covers basic dependency alerts* | S |
 
 ## Epic D — Hexagonal completion `P1→P2`
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
 | **D1** | Introduce a **`PageSource` port** (e.g. `PageContents fetch()`); make Selenium an adapter implementing it; inject `Driver`/`WebDriver` | Biggest structural gap — core is welded to Selenium ([04-architecture](knowledge-base/architecture.md)) | `EvergoreDataExtractor` depends on the port; a fake page-source drives a test | M |
-| **D2** | Acceptance (BDD) test of collect→evaluate→overview using in-memory fakes (page-source + `:memory:` DB) | Proves the whole use case without a browser | Green scenario asserting overview numbers from canned protocol text | M |
+| **D2** | Acceptance (BDD) test of collect→evaluate→overview using in-memory fakes (page-source + `:memory:` DB) — **deferred behind H7 (Gradle migration), 2026-06-15** | Proves the whole use case without a browser | Green scenario asserting overview numbers from canned protocol text | M |
 | **D3** | Restructure packages to `domain / application / adapters{in,out} / config`; keep core framework-free | Make the boundaries explicit & enforceable | Micronaut/Selenium/ORMLite imports only under `adapters`+`config` | L |
 | **D4** | Unify the two `TransferType→String` visitors; replace `ApplicationExceptionHandler` `instanceof` chain with a visitor (its own TODO) | Remove duplication & the pattern the project is eliminating | One mapping source; handler has no `instanceof` | S |
 | **D5** | Return `Optional` from `getNewest()` instead of `MIN_VALUE` sentinel | Stop leaking fake domain objects | Callers handle empty explicitly; test covers empty repo | S |
@@ -158,6 +169,8 @@ See [knowledge-base/dev-environment.md](knowledge-base/dev-environment.md).
 | **H3** | De-hack the `Dockerfile`: drop `dos2unix` (after A1/LF), parameterize the jar name, stop baking `zugang.txt`, add `.dockerignore`, fix `apt-get … -y` | Current image is fragile & bakes secrets | Clean reproducible build; no secret in image (ties to C3) | M |
 | **H4** | Single-source the JDK version (devcontainer = Dockerfile bases = pom `jdk.version`) + documented upgrade procedure | One-touch upgrades without host installs | Bumping one set of pins upgrades everything | S |
 | **H5** | Re-add a cross-rebuild Maven cache (named volume at `~/.m2`) with correct ownership for the `vscode` user | Faster rebuilds; the first attempt's root-owned volume broke `~/.m2` | Deps cached across rebuilds; container builds clean | S |
+| **H7** | **Migrate the build Maven → Gradle** (DSL choice — Kotlin vs Groovy — decided during planning): port `pom.xml` deps/plugins, the `mvn -B verify` lifecycle, devcontainer + Dockerfile build steps; retire `mvn` references in docs/KB | Author prefers Gradle (decided 2026-06-15); the **next** major item, before D2/feature work | `./gradlew build` + tests green in-container; devcontainer/Dockerfile build via Gradle; KB/CLAUDE.md commands updated | L |
+| **H8** | **Warnings-as-errors:** enable `-Xlint:all` + `failOnWarning` in the Gradle build; clean existing warnings (ask the author per-warning; exclude obsolete lint like `-serial`) | Mechanically enforces the warnings-as-errors standard (CLAUDE.md/handbook) | Build fails on any warning; existing warnings fixed or deliberately excluded | M |
 
 ---
 
@@ -175,12 +188,14 @@ doc is intentionally **not** committed — its value lives here.
 | **D6** | **ArchUnit** test forbidding `io.micronaut`/`jakarta`/`org.openqa.selenium`/`com.j256.ormlite` imports in `domain`+`businessLogic` | Turns the defining hexagonal rule (CLAUDE.md, Epic D) from convention into a build failure; core is already clean so it lands green | P2 | Independent of D3 (keys off imports, not layout); only truly *gates* once A4/CI exists. ~1h, one test-scope dep. **Highest-leverage new item.** |
 | **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%) — the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`), sequence with/after **C2** so it doesn't block the secret cleanup. System.out check: sequence after **A3** (deletes `CsvParser` = ~half the hits); whitelist `@Ignore` Gherkin once D2/G4 land; fold any CI-grep into A4. |
 | **G7-fix** | Clean existing violations: `System.out` in `SeleniumPageSource`/`AlternativeFileLoaderWrapper`, `printStackTrace` in `SmokeTest`, `// TODO: Visitor-Pattern` in `ApplicationExceptionHandler`, the empty `catch (Exception e) {}` swallow + `// NOOP` comment in `SeleniumPageSource`, and the commented-out line in `SmokeTest` | The "no comments / logger-only / self-explanatory" rules are currently violated | P2 | `CsvParser` System.out sites are covered by **A3** (dead-code deletion). |
-| **A7** | **Spotless** (`spotless-maven-plugin`) bound to `verify`; `check` in CI, `apply` locally | Ends the CRLF/import-order diff churn (A1/this session); one style, no review nits | P2 | **MUST** use a tab-preserving engine (Eclipse JDT profile), **NOT** google-java-format/palantir (2-space → massive reformat churn). Decide engine first (open-question **D-10**). `check` non-blocking until A4/CI. |
+| **A7** | **Spotless** (`spotless-maven-plugin`) bound to `verify`; `check` in CI, `apply` locally | Ends the CRLF/import-order diff churn (A1/this session); one style, no review nits | P2 | **MUST** use a tab-preserving engine (Eclipse JDT profile), **NOT** google-java-format/palantir (2-space → massive reformat churn). Decide engine first (open-question **D-10**). `check` non-blocking until A4/CI. **2026-06-15: deferred — land in Gradle post-H7, not as a Maven plugin.** |
 | **G8** | **`/commit`** slash command encoding the strict one-line/no-footer/never-push protocol | Repo's strictest, most-violated-by-default rule (footers slip in); reproducible showcase artifact | P3 | `/review`,`/tdd` rejected (duplicate reviewer/implementer agents). `/spec` deferred → gate on **G4**; keep MCP-free + JUnit-`@Ignore`-first (not Cucumber/Jira). |
 | **A8** | Broaden `.gitignore`: add `CLAUDE.local.md`, `.claude/cache/`, `.claude/.tmp/` | Pre-empts committing personal overrides/cache | P3 | Scope to those paths; **avoid** a blanket `**/*.local.*` (would swallow legit `*.local.properties` fixtures). Folds into **A5**. |
 | **B7** | Migrate remaining JUnit `Assertions` → **AssertJ** (`SmokeTest`, `MetaInformationTest`) | Single assertion idiom (documented preference) | P3 | Opportunistic. `MetaInformationTest` = clean win; defer `SmokeTest` to its planned Levenshtein-rework. |
-| **H6** | `maven-failsafe-plugin` + rename boot/integration tests to `*IT` (separate integration phase) | Keeps the fast TDD loop fast; isolates server-booting tests | P3 | Gate on **H2** (real Selenium IT), **not** D2 (D2 is an in-memory *fast* acceptance test). Update testing.md same change. |
-| **G6+** | **JaCoCo** report-only (no enforced threshold) wired into `mvn verify` | Visible coverage to guide B3/B4 test work; low-ceremony first step toward G6 | P3 | Report-only — don't gate a young suite. Promote to a threshold under **G6** later; "into CI" half needs A4. |
+| **H6** | `maven-failsafe-plugin` + rename boot/integration tests to `*IT` (separate integration phase) | Keeps the fast TDD loop fast; isolates server-booting tests | P3 | Gate on **H2** (real Selenium IT), **not** D2 (D2 is an in-memory *fast* acceptance test). Update testing.md same change. **2026-06-15: land in Gradle post-H7 (failsafe → Gradle integration test set).** |
+| **G6+** | **JaCoCo** report-only (no enforced threshold) wired into `mvn verify` | Visible coverage to guide B3/B4 test work; low-ceremony first step toward G6 | P3 | Report-only — don't gate a young suite. Promote to a threshold under **G6** later; "into CI" half needs A4. **2026-06-15: land in Gradle post-H7.** |
+| **G9** | **Point Claude at official docs (WebFetch) for less-trafficked libraries** — a `working-with-claude.md` convention: for **Micronaut / ORMLite / Selenium / RxJava** (thin in LLM training data), fetch the official docs before writing against an unfamiliar API; prefer doc-grounded code over confabulation | Enterprise-audit Pitfall #5, the most stack-relevant gap: a solo dev has no reviewer to catch a hallucinated API, and ArchUnit/tests catch structure, not invented method signatures. MCP-free (WebFetch is available) | P2 | Flagged independently by two audit reviewers. Doc-only; fits the Epic-G showcase. |
+| **G10** | **SessionStart orient/lessons hook** in `.claude/settings.json`: deterministically inject the orient pointer (CLAUDE.md → KB README → backlog "Current status" → open-questions → `process-learnings.md`) so every fresh session reads the lessons first | The 100%-fires complement to the advisory `/continue` + CLAUDE.md "Start here"; completes the self-improvement loop and is the most on-thesis hooks-over-rules showcase artifact (sibling to **G7**) | P3 | Enterprise-audit gap. The lessons file already exists (`process-learnings.md`); only the deterministic hook is missing. |
 
 ### Considered and rejected (do not re-propose without a new reason)
 
