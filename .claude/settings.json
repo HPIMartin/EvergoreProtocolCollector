@@ -7,16 +7,35 @@
 			"Edit(CLAUDE.md)",
 			"Write(.claude/agents/**)",
 			"Edit(.claude/agents/**)",
+			"Write(src/**)",
+			"Edit(src/**)",
 			"Bash(git add:*)",
 			"Bash(git commit:*)",
 			"Bash(git status:*)",
 			"Bash(git log:*)",
 			"Bash(git diff:*)",
+			"Bash(git show:*)",
 			"Bash(git reset:*)",
-			"Bash(git config:*)"
+			"Bash(git config:*)",
+			"Bash(git check-attr:*)",
+			"Bash(git check-ignore:*)",
+			"Bash(git ls-files:*)",
+			"Bash(mvn:*)",
+			"Bash(ls:*)",
+			"Bash(cat:*)",
+			"Bash(grep:*)",
+			"Bash(rg:*)",
+			"Bash(find:*)",
+			"Bash(wc:*)",
+			"Bash(head:*)",
+			"Bash(tail:*)",
+			"Bash(echo:*)",
+			"Bash(awk:*)"
 		],
 		"deny": [
-			"Bash(git push:*)"
+			"Bash(git push:*)",
+			"Bash(rm -rf:*)",
+			"Bash(git reset --hard:*)"
 		]
 	}
 }
