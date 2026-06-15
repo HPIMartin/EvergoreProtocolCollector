@@ -44,6 +44,11 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
 - Prefer `record`s / immutability for value objects. Return `Optional` instead of sentinels
   (replace `getNewest()`'s `MIN_VALUE` object).
 - Constants/config over magic values; **no secrets in source** (token, credentials → config).
+- **Warnings are errors.** Compiler and lint warnings are treated as build failures (`-Xlint:all` +
+  `failOnWarning`). The default is to **fix** them, not suppress; genuinely obsolete lint may be
+  excluded deliberately (e.g. `-serial` for missing `serialVersionUID`, irrelevant on modern Java).
+  When unsure whether a warning should be fixed or excluded, **ask the author**. The compiler flip
+  itself rides with the Gradle migration (build config); until it lands the rule is upheld by author/agents.
 
 ## 4. TDD workflow (red → green → refactor → commit)
 
@@ -95,14 +100,20 @@ template** demonstrating the practice. Scenarios are written in **product langua
   Whitespace/format changes go in their **own** commit, never mixed with logic.
 - One logical change per commit. Keep `master` releasable; feature work on branches; CI
   (`mvn -B verify`) green to merge.
+- **No local setup in committed files.** Machine-specific details (absolute paths, usernames, host
+  layout) never go in the repo — they live in gitignored `*.local.*` files (e.g. an absolute-path
+  `cd` permission belongs in `.claude/settings.local.json`, not the committed `settings.json`). Watch
+  the Claude Code "always allow" flow: it can write path-bearing rules into the committed
+  `settings.json` — prefer bare commands that match the existing portable `Bash(<cmd>:*)` rules.
 - **The commit log is the changelog.** Don't keep a separate `CHANGELOG`, and don't mirror git
   history or diffs in the docs — `git log` / `git diff` are the source of truth for *what changed*.
 
 ## 8. Definition of Done (checklist)
 
 - [ ] Compiles, `mvn verify` green locally
+- [ ] No compiler/lint warnings (build is warning-clean once `failOnWarning` lands)
 - [ ] Unit tests for new logic (`@Ignore`-first Gherkin if user-facing)
-- [ ] No new hard-coded secrets / env assumptions
+- [ ] No new hard-coded secrets, env assumptions, or local setup details (absolute paths/usernames) in committed files
 - [ ] Relevant `docs/knowledge-base/` doc updated
 - [ ] Commit message proposed (one line, present-tense verb) **and confirmed** before committing; **never pushed**
 - [ ] Whitespace/format separate from logic; LF endings
