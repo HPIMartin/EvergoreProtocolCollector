@@ -25,8 +25,13 @@ formerly-entangled storage WIP**, now landed as focused commits via the falsifie
 hard-coded `C:\…\firefox.exe` in `Browser.java` — **C1**) and **D1/D2** (PageSource port + BDD
 acceptance) before Epic **E** (dashboard parity). **C1** is still open — it was *not* part of the WIP.
 
-**Open housekeeping:** `docs/claude-code-enterprise-setup.md` is untracked (decide: commit or drop);
-`.github/modernize/` is self-gitignored Claude tooling (delete locally if undesired).
+**High-leverage new picks** (from the enterprise-setup review below): **D6** (ArchUnit framework-import
+gate — ~1h, lands green today, makes the hexagonal rule a build failure) and **G7** (deterministic
+enforcement hooks) are the strongest showcase additions; **D6** is an excellent next pick alongside A3/A4.
+
+**Open housekeeping:** `.github/modernize/` deleted (done). `docs/claude-code-enterprise-setup.md` is
+absorbed into the *"Derived from the enterprise-setup review"* section below → the untracked file is
+safe to delete (not to be committed).
 
 **Orient (any new session):** `CLAUDE.md` → `docs/knowledge-base/README.md` → this backlog → `docs/open-questions.md`.
 
@@ -146,6 +151,40 @@ See [knowledge-base/dev-environment.md](knowledge-base/dev-environment.md).
 | **H3** | De-hack the `Dockerfile`: drop `dos2unix` (after A1/LF), parameterize the jar name, stop baking `zugang.txt`, add `.dockerignore`, fix `apt-get … -y` | Current image is fragile & bakes secrets | Clean reproducible build; no secret in image (ties to C3) | M |
 | **H4** | Single-source the JDK version (devcontainer = Dockerfile bases = pom `jdk.version`) + documented upgrade procedure | One-touch upgrades without host installs | Bumping one set of pins upgrades everything | S |
 | **H5** | Re-add a cross-rebuild Maven cache (named volume at `~/.m2`) with correct ownership for the `vscode` user | Faster rebuilds; the first attempt's root-owned volume broke `~/.m2` | Deps cached across rebuilds; container builds clean | S |
+
+---
+
+## Derived from the enterprise-setup review (2026-06-15)
+
+A workflow gap-analysis compared an external *"enterprise Java shop"* Claude Code guide against this
+repo and **adversarially verified** every derived item (genuinely missing? worth it for a *solo*
+Micronaut showcase?). The guide is Spring/Gradle/team-scale; only the items below survived. The source
+doc is intentionally **not** committed — its value lives here.
+
+### New items (verified worth doing)
+
+| ID | Item | Why | Priority | Sequencing / caveat |
+|----|------|-----|----------|---------------------|
+| **D6** | **ArchUnit** test forbidding `io.micronaut`/`jakarta`/`org.openqa.selenium`/`com.j256.ormlite` imports in `domain`+`businessLogic` | Turns the defining hexagonal rule (CLAUDE.md, Epic D) from convention into a build failure; core is already clean so it lands green | P2 | Independent of D3 (keys off imports, not layout); only truly *gates* once A4/CI exists. ~1h, one test-scope dep. **Highest-leverage new item.** |
+| **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%) — the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`), sequence with/after **C2** so it doesn't block the secret cleanup. System.out check: sequence after **A3** (deletes `CsvParser` = ~half the hits); whitelist `@Ignore` Gherkin once D2/G4 land; fold any CI-grep into A4. |
+| **G7-fix** | Clean existing violations: `System.out` in `PageContentExtractor`/`AlternativeFileLoaderWrapper`, `printStackTrace` in `SmokeTest`, `// TODO: Visitor-Pattern` in `ApplicationExceptionHandler` | The "no comments / logger-only / self-explanatory" rules are currently violated | P2 | `CsvParser` System.out sites are covered by **A3** (dead-code deletion). |
+| **A7** | **Spotless** (`spotless-maven-plugin`) bound to `verify`; `check` in CI, `apply` locally | Ends the CRLF/import-order diff churn (A1/this session); one style, no review nits | P2 | **MUST** use a tab-preserving engine (Eclipse JDT profile), **NOT** google-java-format/palantir (2-space → massive reformat churn). Decide engine first (open-question **D-10**). `check` non-blocking until A4/CI. |
+| **G8** | **`/commit`** slash command encoding the strict one-line/no-footer/never-push protocol | Repo's strictest, most-violated-by-default rule (footers slip in); reproducible showcase artifact | P3 | `/review`,`/tdd` rejected (duplicate reviewer/implementer agents). `/spec` deferred → gate on **G4**; keep MCP-free + JUnit-`@Ignore`-first (not Cucumber/Jira). |
+| **A8** | Broaden `.gitignore`: add `CLAUDE.local.md`, `.claude/cache/`, `.claude/.tmp/` | Pre-empts committing personal overrides/cache | P3 | Scope to those paths; **avoid** a blanket `**/*.local.*` (would swallow legit `*.local.properties` fixtures). Folds into **A5**. |
+| **B7** | Migrate remaining JUnit `Assertions` → **AssertJ** (`SmokeTest`, `MetaInformationTest`) | Single assertion idiom (documented preference) | P3 | Opportunistic. `MetaInformationTest` = clean win; defer `SmokeTest` to its planned Levenshtein-rework. |
+| **H6** | `maven-failsafe-plugin` + rename boot/integration tests to `*IT` (separate integration phase) | Keeps the fast TDD loop fast; isolates server-booting tests | P3 | Gate on **H2** (real Selenium IT), **not** D2 (D2 is an in-memory *fast* acceptance test). Update testing.md same change. |
+| **G6+** | **JaCoCo** report-only (no enforced threshold) wired into `mvn verify` | Visible coverage to guide B3/B4 test work; low-ceremony first step toward G6 | P3 | Report-only — don't gate a young suite. Promote to a threshold under **G6** later; "into CI" half needs A4. |
+
+### Considered and rejected (do not re-propose without a new reason)
+
+- **Checkstyle** — duplicates **G6** + the reviewer agent; fold into G6 if anything.
+- **maven-enforcer** — fabricated origin, BOM-managed deps, in-container fixed JDK → low value.
+- **commit-message *skill*** — rule already in CLAUDE.md + reviewer gate + the `git push` deny; a skill adds context cost, not enforcement (use **G8** `/commit`, or a git `commit-msg` hook).
+- **security-auditor *subagent*** — redundant with the reviewer's `security` category; OWASP ceremony for a no-prod-pressure scraper. Keep only "extend reviewer + secret-scan hook" under C2/C3.
+- **ADRs (`docs/adr/`)** — duplicate the `open-questions.md` Decisions table ("git is history; docs are knowledge").
+- **format-on-save hook** — premature; folded into **A7** (needs a formatter + CI first).
+- **block-dangerous-bash hook** — now largely covered by the hardened permission **deny** (`git push`, `rm -rf`, `git reset --hard`, added 2026-06-15); revisit only for force-push/rebase nuance.
+- **N/A / enterprise-only:** Spring Modulith (not Spring), CLAUDE.md <200-line guard (it's 76), `.mcp.json`/Jira/GitHub MCP (solo, no tracker), `output-styles/`, path-scoped `rules/`, directory-level `CLAUDE.md`, a `docs-writer`/`tdd-runner` agent (tdd = existing `implementer`), quarterly surface audit, English-in-repo (already decided).
 
 ---
 

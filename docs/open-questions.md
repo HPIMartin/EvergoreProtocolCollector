@@ -47,6 +47,9 @@ The four strategic questions were answered by the author (see the Decisions tabl
 - **D-7 — Deployment target:** stays Docker-on-a-home-server, or somewhere else? Affects C3 secret strategy.
 - ~~**D-8 — Language**~~ ✅ DECIDED 2026-06-13: conversation German; code/comments/docs English with German domain terms.
 - **D-9 — BDD tooling:** plain JUnit given/when/then, or a framework (Cucumber)? Assumed plain unless asked.
+- **D-10 — Formatter engine (gates A7):** if Spotless is adopted, which engine? The repo is uniformly
+  **TAB**-indented, so it must be a tab-preserving Eclipse JDT profile — **not** google-java-format/palantir
+  (2-space, would force a repo-wide reformat-churn commit). Recommended: Eclipse JDT (tabs). Author's call before A7.
 
 ## Assumptions currently baked into the plan (challenge if wrong)
 
