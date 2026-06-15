@@ -19,6 +19,9 @@ move it to **Decisions** with the date and rationale. Agents: read this before c
 | 2026-06-13 | **Dev environment:** fully virtualized via devcontainer — **nothing native on the host**; agents run in-container. Devcontainer fixed now (Maven, JDK 17 pinned, m2 cache); Selenium-compose + Dockerfile de-hack deferred (Epic H). Sequence: fix+commit on host, then `Reopen in Container` for coding. | Author wants future JDK upgrades (e.g. Java 25) without local installs. |
 | 2026-06-13 | **In-flight WIP:** resolve the entangled storage-calc WIP **in the container, verified** (split via `git add -p`; fix the dup-avatars bug, the `clickCookieShit` name, and the hard-coded Firefox path), **not** blind-committed on the host. Plan in `backlog.md` → Current status. | The WIP mixes concerns in one file and the build can't be verified on the host. |
 | 2026-06-13 | **Git permissions:** `git add`/`commit` (and read-only git) allowed without prompts; **`git push` hard-denied** in `.claude/settings.json`. | Author's request; pushing stays a manual, deliberate act. |
+| 2026-06-15 | **Migrate the build Maven → Gradle** as the next major item (before D2 and feature work). Reverses the 2026-06-13 "devcontainer fixed to Maven" stance. Keep the tooling surface minimal to ease the move: **defer** A7 (Spotless), G6+ (JaCoCo), H6 (failsafe) and the `failOnWarning` flip and **land them in Gradle**, not as new Maven plugins. | Author is no longer happy with Maven; a low plugin count eases the migration. |
+| 2026-06-15 | **Warnings-as-errors:** compiler/lint warnings are build failures (`-Xlint:all` + `failOnWarning`); default is to **fix**, not suppress; obsolete lint excluded deliberately (e.g. `-serial`); ask the author per-warning when unsure. The flip rides with the Gradle migration (build config). | Author's rule — surfaces quality issues early; keeps the showcase build clean. Codified in CLAUDE.md golden rules + handbook §3/§8. |
+| 2026-06-15 | **No local setup details in committed files:** no absolute paths, usernames, or host layout in the repo; machine-specific config (e.g. an absolute-path-scoped `cd` permission) lives in gitignored `*.local.*` files. | Author's **core rule** — the repo is a public showcase; keep committed config portable and free of personal environment details. Codified in CLAUDE.md + handbook §7. |
 
 ## Strategic questions — ANSWERED 2026-06-13
 
@@ -53,6 +56,12 @@ The four strategic questions were answered by the author (see the Decisions tabl
 - **D-10 — Formatter engine (gates A7):** if Spotless is adopted, which engine? The repo is uniformly
   **TAB**-indented, so it must be a tab-preserving Eclipse JDT profile — **not** google-java-format/palantir
   (2-space, would force a repo-wide reformat-churn commit). Recommended: Eclipse JDT (tabs). Author's call before A7.
+  *Update 2026-06-15:* with the Gradle migration decided, A7/Spotless re-homes to **Gradle** (still
+  tab-preserving, not google-java-format); pick the Gradle Spotless engine during the migration.
+- **D-11 — ToS / PII (enterprise-audit Pitfall #7):** the tool scrapes evergore.de and stores *other*
+  guild members' bank/storage activity. No production pressure (Q2), but worth a deliberate stance:
+  is the scraping within the site's ToS, and is storing other members' activity acceptable for the
+  guild's use? Low priority; logged so it isn't silently ignored.
 
 ## Assumptions currently baked into the plan (challenge if wrong)
 
