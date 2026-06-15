@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser.database.storage;
 
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.*;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
+import static java.lang.String.*;
 import static java.sql.Timestamp.*;
 
 import java.sql.*;
@@ -86,28 +87,7 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	}
 
 	private void log(List<String[]> results) {
-		boolean first_x = true;
-		StringBuilder sb = new StringBuilder();
-		sb.append("[");
-		for (String[] x : results) {
-			if (!first_x) {
-				sb.append(",");
-			}
-			first_x = false;
-			boolean first_y = true;
-			sb.append("[");
-			for (String y : x) {
-				if (!first_y) {
-					sb.append(",");
-				}
-				sb.append(y);
-				first_y = false;
-			}
-			sb.append("]");
-		}
-		sb.append("]");
-
-		logger.debug(sb.toString());
+		logger.debug("[" + join(",", results.stream().map(x -> "[" + join(",", x) + "]").toList()) + "]");
 	}
 
 	private List<StorageEntry> convert(List<StorageDatabaseEntry> dbEntries) {
