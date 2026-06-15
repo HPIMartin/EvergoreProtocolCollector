@@ -6,27 +6,27 @@
 > urgent. Architecture: targeted fixes now, full repackaging (D3) deferred until tested. Decisions
 > in [open-questions.md](open-questions.md); knowledge base in [knowledge-base/README.md](knowledge-base/README.md).
 
-## ▶ Current status / next action (2026-06-13)
+## ▶ Current status / next action (2026-06-15)
 
-**Done:** the knowledge base, standards, agent team, devcontainer, README, and git permissions are
-committed on `Rebuild` (not pushed; see `git log` — we don't mirror history here).
+**Done & committed on `Rebuild`** (not pushed; `git log` is the source of truth — we don't mirror it
+here): the knowledge base, standards, agent team, devcontainer, README, git permissions, **and the
+formerly-entangled storage WIP**, now landed as focused commits via the falsifier→reviewer gate:
+- **A2 + B1 + B2** — storage value calculation (`value×qty×quality/100`) in `EvergoreDataEvaluator`,
+  a `getAllFor(avatar, after)` storage port, `MetaInformationKey` double keys, and
+  `EvergoreDataEvaluatorTest` (6 unit tests) with hand-written fakes; the duplicate-avatars call (**B2**) is fixed.
+- **A1** — `.gitattributes` enforces LF.
+- **B6** — `clickCookieShit` renamed to dismiss-cookie-banner.
+- partial **C4** — fixed the invalid `logback` root level (`verbose`→`info`) and added a test-only
+  `logback-test.xml` (root `warn`) so test runs aren't flooded with Micronaut DEBUG.
+- tooling: Dependabot config + the `continue` slash command.
 
-**Uncommitted — RESOLVE FIRST, in the container, verified. Do NOT blind-commit it.** An in-flight
-"storage value calculation" WIP that is *entangled across files* (storage-calc **+** a
-`TransfertType→TransferType` typo-rename **+** a bank refactor, all inside `EvergoreDataEvaluator`)
-and not standards-clean. First container tasks:
-1. `mvn -B verify` for a green baseline.
-2. Untangle with `git add -p` into focused commits, fixing en route:
-   - the duplicate `bankRepo.getAllDifferentAvatars()` call (**B2**),
-   - rename `clickCookieShit` in `PageContentExtractor` (**B6**),
-   - remove the hard-coded `C:\…\firefox.exe` path in `Browser.java` (**C1** — use config/container),
-   - keep as-is: `Main.java` removal (+ the required `ResourceFileLoader` `Main.class→this.getClass()` fix),
-     the pom dependency bumps, the `micronaut-cli.yml` move, the geckodriver update.
-   - decide on untracked `.github/` (dependabot vs the modernize tooling) and `docs/claude-code-enterprise-setup.md`.
-3. Write the `EvergoreDataEvaluatorTest` storage math (**B1**) via the agent pipeline.
-4. Finally `Normalize line endings to LF` (`git add --renormalize .`).
+**Next (smallest valuable):** **A3** (delete dead `CsvParser`/`FileWriter`/`DiskFileWriter`), then
+**A4** (CI: GitHub Actions `mvn -B verify`, Java 17), then Epic **C** (config/secrets, incl. the
+hard-coded `C:\…\firefox.exe` in `Browser.java` — **C1**) and **D1/D2** (PageSource port + BDD
+acceptance) before Epic **E** (dashboard parity). **C1** is still open — it was *not* part of the WIP.
 
-**Then:** new features / refactorings per the epics below.
+**Open housekeeping:** `docs/claude-code-enterprise-setup.md` is untracked (decide: commit or drop);
+`.github/modernize/` is self-gitignored Claude tooling (delete locally if undesired).
 
 **Orient (any new session):** `CLAUDE.md` → `docs/knowledge-base/README.md` → this backlog → `docs/open-questions.md`.
 
