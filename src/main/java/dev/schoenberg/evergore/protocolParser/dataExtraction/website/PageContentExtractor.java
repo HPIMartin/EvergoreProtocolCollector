@@ -15,31 +15,31 @@ import org.openqa.selenium.support.ui.*;
 
 import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
-import dev.schoenberg.evergore.protocolParser.helper.selenium.*;
+import dev.schoenberg.evergore.protocolParser.helper.selenium.Driver;
 import jakarta.inject.*;
 
 @Singleton
 public class PageContentExtractor implements PageSource {
 
 	private final Configuration config;
-	private final FileLoader fileLoader;
+	private final Driver driver;
 
-	public PageContentExtractor(Configuration config, FileLoader fileLoader) {
+	public PageContentExtractor(Configuration config, Driver driver) {
 		this.config = config;
-		this.fileLoader = fileLoader;
+		this.driver = driver;
 	}
 
 	public PageContents load() {
-		WebDriver driver = new Driver(fileLoader, config).createWebDriver();
-		loadEvergore(driver);
+		WebDriver webDriver = driver.createWebDriver();
+		loadEvergore(webDriver);
 
-		List<String> bank = loadContent(driver, "guild_protocol&selection=2"); // Bank
-		List<String> lager = loadContent(driver, "town_protocol&selection=3"); // Lager
+		List<String> bank = loadContent(webDriver, "guild_protocol&selection=2");
+		List<String> lager = loadContent(webDriver, "town_protocol&selection=3");
 
 		PageContents result = new PageContents(lager, bank);
 
 		try {
-			driver.close();
+			webDriver.close();
 		} catch (Exception e) {}
 
 		return result;

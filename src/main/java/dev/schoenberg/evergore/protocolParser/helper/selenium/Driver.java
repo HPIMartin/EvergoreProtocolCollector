@@ -12,7 +12,9 @@ import java.util.*;
 import org.openqa.selenium.*;
 
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
+import jakarta.inject.*;
 
+@Singleton
 public class Driver {
 	private static final String WEB_DRIVER_FOLDER = "webdrivers/";
 
