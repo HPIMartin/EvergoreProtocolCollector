@@ -52,8 +52,10 @@ Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ OverviewControl
 
 ## What's GOOD (keep this)
 
-- **Domain & businessLogic are framework-free.** The `domain` package imports nothing from
-  `database`, `micronaut`, `selenium`, or `ormlite`. Only ~16 files touch the framework, all at the edges.
+- **Domain & businessLogic are framework-free — now mechanically enforced.** The `domain` and
+  `businessLogic` packages import nothing from `micronaut`, `selenium`, `ormlite`, `jakarta`, or
+  `netty`; only ~16 files touch the framework, all at the edges. `HexagonalArchitectureTest`
+  (ArchUnit) fails the build on any violation, so this invariant is a build gate, not just a convention.
 - **Persistence is correctly inverted.** `businessLogic` defines the repository *interfaces*;
   `database/*` implements them; application/REST code depends only on the interfaces. The
   `ApplicationFactory` binds interface→impl. This is a genuine Dependency-Inversion seam.
