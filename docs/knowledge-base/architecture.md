@@ -74,14 +74,13 @@ Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ OverviewControl
 
 ### Top violations to fix (detail in [../backlog.md](../backlog.md))
 
-1. **`Configuration` is config in name only** — values are hard-coded Java fields (browser, server, paths, in-memory toggle); ignores `application.yml`/env.
-2. **`Configuration` is config in name only** — values are hard-coded Java fields (browser, server,
+1. **`Configuration` is config in name only** — values are hard-coded Java fields (browser, server,
    paths, in-memory toggle); ignores `application.yml`/env.
-3. **Secrets in source/image** — `TokenValidationFilter` hard-codes `"secret_token"`; Evergore
+2. **Secrets in source/image** — `TokenValidationFilter` hard-codes `"secret_token"`; Evergore
    credentials live in `zugang.txt` baked into the Docker image.
-4. **Duplicated mapping** — `TransferType`→German-string exists in *two* visitors (DB + controller);
+3. **Duplicated mapping** — `TransferType`→German-string exists in *two* visitors (DB + controller);
    `ApplicationExceptionHandler` uses an `instanceof` chain (its own `// TODO: Visitor-Pattern`).
-5. **Sentinel returns** — `getNewest()` fabricates a `…DatabaseEntry(MIN_VALUE)` instead of `Optional`.
+4. **Sentinel returns** — `getNewest()` fabricates a `…DatabaseEntry(MIN_VALUE)` instead of `Optional`.
 
 ## Target structure (proposed, hexagonal)
 

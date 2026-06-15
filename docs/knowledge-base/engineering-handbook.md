@@ -25,7 +25,7 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
 
 ## 2. SOLID, applied here
 
-- **S** — one reason to change per class (e.g. parsing ≠ valuing ≠ persisting). Split `PageContentExtractor`'s
+- **S** — one reason to change per class (e.g. parsing ≠ valuing ≠ persisting). Split `SeleniumPageSource`'s
   scraping from driver lifecycle.
 - **O/L** — extend via the `TransferTypeVisitor` and similar, not by editing `switch`/`instanceof`.
 - **I** — small, role-specific ports (`BankRepository`, `StorageRepository`, … not one fat repo).

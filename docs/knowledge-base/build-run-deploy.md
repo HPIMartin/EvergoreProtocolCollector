@@ -27,7 +27,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 |---------|---------------|-------|
 | `browser` | `"docker"` | Selenium driver selection (`Browser` enum: FIREFOX/CHROME/EDGE/DOCKER). |
 | `server` | `"zyrthania"` | **Target game world.** Scrape URL = `https://evergore.de/<server>?page=…` (`Constants.SERVER`). Switching worlds = change this. |
-| `credentials` | `"zugang.txt"` | **Evergore login** — line 1 = username, line 2 = password. Read by `PageContentExtractor.tryToLogin`. Not in the repo; supplied at image build. |
+| `credentials` | `"zugang.txt"` | **Evergore login** — line 1 = username, line 2 = password. Read by `SeleniumPageSource.tryToLogin`. Not in the repo; supplied at image build. |
 | `evergoreFolder` | `c:\evergore` | Windows path; unused on the Linux container scrape path. |
 | DB path | `database/temp.sqlite` (or `:memory:` if `useInMemory`) | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
 | Auth token | `"secret_token"` (hard-coded in `TokenValidationFilter`) | Every request needs `?token=secret_token` except `/favicon.ico`. |

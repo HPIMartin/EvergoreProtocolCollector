@@ -21,17 +21,17 @@
   committed `settings.json`; deny hardened (`rm -rf`, `git reset --hard`); `settings.local.json` slimmed (gitignored).
 - **A3 — DONE**: deleted dead `CsvParser`/`FileWriter`/`DiskFileWriter` (unwired; `CsvParser` imported undeclared
   Guava); `mvn verify` green. KB (architecture/handbook) updated in the same commit.
+- **D1 — DONE** (full variant): `PageSource` port; `EvergoreDataExtractor` depends on it; `Driver` is now an
+  injected `@Singleton` (no self-`new`); `SeleniumPageSource` renamed `SeleniumPageSource`. Fake-`PageSource`
+  unit test + delta-filter lock + a SmokeTest bean-wiring assertion. Gated falsifier→reviewer.
 - **Enterprise-setup review** absorbed → new items **D6**(done)/**G7**/**G8**/**A7**/**A8**/**B7**/**H6**/G6+ with a
   rejected-list, in the *"Derived from the enterprise-setup review"* section below.
 
 **Next (A4/CI deprioritized 2026-06-15 — local-only Docker→home-server deploy):** pick among —
-**G7/G7-fix** (deterministic *local* hooks + clean the live `System.out`/`printStackTrace`/`// TODO`),
+**D2** (BDD acceptance test now unblocked by the `PageSource` port: collect→evaluate→overview with a fake page
+source + `:memory:` DB), **G7/G7-fix** (deterministic *local* hooks + clean the live `System.out`/`printStackTrace`/`// TODO`),
 Epic **C + H3** (stop baking `zugang.txt` into the image, real config/secrets — *deploy-relevant*: the image
-ships to the home server), **D1/D2** (PageSource port + BDD acceptance — testability), or **E1**
-(compute & store `erzeugter Gildenmehrwert` — first product-parity metric).
-
-**Then:** **G7** (secret-scan + System.out/TODO hooks), Epic **C** (secrets; **C1** hard-coded `firefox.exe` path —
-*not* part of the WIP, still open), **D1/D2** (PageSource port + BDD) → Epic **E** parity.
+ships to the home server), or **E1** (compute & store `erzeugter Gildenmehrwert` — first product-parity metric).
 
 **Resume gotchas:**
 - The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit (committed diffs stay
@@ -90,7 +90,7 @@ Standards docs (**G1**) and `CLAUDE.md` are **done** — they govern everything 
 | **B3** | Expand `EntryFactory`/`EntityParser` tests: date/avatar/type/quality parsing, merged quantity (3+5+7→1 item, qty 15), `Entnahme`, `Impressum` terminator | Parser is barely tested; it's the ingest contract | Table-driven tests over representative raw protocol snippets | M |
 | **B4** | Repository tests against in-memory SQLite: `getNewest`, paging, `getAllFor(avatar, after)` | Only incidental smoke coverage | Fast tests using `:memory:` | M |
 | **B5** | Resolve the `Category.storage` vs recipe-based `getStorageValue()` question; pin behavior with tests | `Category.storage` is defined but unused — possible bug ([03-domain-model](knowledge-base/domain-model.md)) | Documented decision + test locking the chosen rule | S |
-| **B6** | Rename `clickCookieShit` in `PageContentExtractor` (cookie-consent click) | Joke name violates clean-naming; found in the in-flight WIP | Intention-revealing name (e.g. `dismissCookieBanner`) | S |
+| **B6** | Rename `clickCookieShit` in `SeleniumPageSource` (cookie-consent click) | Joke name violates clean-naming; found in the in-flight WIP | Intention-revealing name (e.g. `dismissCookieBanner`) | S |
 
 ## Epic C — Configuration & security `P1`  *(good-practice showcase; not urgent while learning/fun)*
 
@@ -174,7 +174,7 @@ doc is intentionally **not** committed — its value lives here.
 |----|------|-----|----------|---------------------|
 | **D6** | **ArchUnit** test forbidding `io.micronaut`/`jakarta`/`org.openqa.selenium`/`com.j256.ormlite` imports in `domain`+`businessLogic` | Turns the defining hexagonal rule (CLAUDE.md, Epic D) from convention into a build failure; core is already clean so it lands green | P2 | Independent of D3 (keys off imports, not layout); only truly *gates* once A4/CI exists. ~1h, one test-scope dep. **Highest-leverage new item.** |
 | **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%) — the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`), sequence with/after **C2** so it doesn't block the secret cleanup. System.out check: sequence after **A3** (deletes `CsvParser` = ~half the hits); whitelist `@Ignore` Gherkin once D2/G4 land; fold any CI-grep into A4. |
-| **G7-fix** | Clean existing violations: `System.out` in `PageContentExtractor`/`AlternativeFileLoaderWrapper`, `printStackTrace` in `SmokeTest`, `// TODO: Visitor-Pattern` in `ApplicationExceptionHandler` | The "no comments / logger-only / self-explanatory" rules are currently violated | P2 | `CsvParser` System.out sites are covered by **A3** (dead-code deletion). |
+| **G7-fix** | Clean existing violations: `System.out` in `SeleniumPageSource`/`AlternativeFileLoaderWrapper`, `printStackTrace` in `SmokeTest`, `// TODO: Visitor-Pattern` in `ApplicationExceptionHandler` | The "no comments / logger-only / self-explanatory" rules are currently violated | P2 | `CsvParser` System.out sites are covered by **A3** (dead-code deletion). |
 | **A7** | **Spotless** (`spotless-maven-plugin`) bound to `verify`; `check` in CI, `apply` locally | Ends the CRLF/import-order diff churn (A1/this session); one style, no review nits | P2 | **MUST** use a tab-preserving engine (Eclipse JDT profile), **NOT** google-java-format/palantir (2-space → massive reformat churn). Decide engine first (open-question **D-10**). `check` non-blocking until A4/CI. |
 | **G8** | **`/commit`** slash command encoding the strict one-line/no-footer/never-push protocol | Repo's strictest, most-violated-by-default rule (footers slip in); reproducible showcase artifact | P3 | `/review`,`/tdd` rejected (duplicate reviewer/implementer agents). `/spec` deferred → gate on **G4**; keep MCP-free + JUnit-`@Ignore`-first (not Cucumber/Jira). |
 | **A8** | Broaden `.gitignore`: add `CLAUDE.local.md`, `.claude/cache/`, `.claude/.tmp/` | Pre-empts committing personal overrides/cache | P3 | Scope to those paths; **avoid** a blanket `**/*.local.*` (would swallow legit `*.local.properties` fixtures). Folds into **A5**. |
