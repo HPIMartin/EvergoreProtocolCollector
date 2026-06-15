@@ -70,7 +70,7 @@ Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ OverviewControl
 | File / driver access (`FileLoader`) | ✅ Exists, done right |
 | Logging (`Logger`) | ✅ Exists, done right |
 | **Page source (scrape raw protocol)** | ❌ **MISSING** — `PageContentExtractor` *is* the Selenium adapter with no interface in front of it; `EvergoreDataExtractor` depends on the concrete class, which self-`new`s `Driver`/`WebDriver`. |
-| Output / presentation | 🟡 Partial (`OutputFormatter`), emits HTML directly; a `FileWriter` port exists but is dead. |
+| Output / presentation | 🟡 Partial (`OutputFormatter`), emits HTML directly. |
 
 ### Top violations to fix (detail in [../backlog.md](../backlog.md))
 
@@ -82,9 +82,7 @@ Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ OverviewControl
    credentials live in `zugang.txt` baked into the Docker image.
 4. **Duplicated mapping** — `TransferType`→German-string exists in *two* visitors (DB + controller);
    `ApplicationExceptionHandler` uses an `instanceof` chain (its own `// TODO: Visitor-Pattern`).
-5. **Dead code at the root** — `CsvParser` (imports Guava, which is **not** a declared dependency, so
-   it would not compile if referenced), `FileWriter`, `helper/fileWriter/DiskFileWriter`. No inbound refs.
-6. **Sentinel returns** — `getNewest()` fabricates a `…DatabaseEntry(MIN_VALUE)` instead of `Optional`.
+5. **Sentinel returns** — `getNewest()` fabricates a `…DatabaseEntry(MIN_VALUE)` instead of `Optional`.
 
 ## Target structure (proposed, hexagonal)
 

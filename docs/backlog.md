@@ -19,12 +19,14 @@
   verified non-vacuous (forbidding `java.time` flags 22 core usages); reviewer **PASS**.
 - **Permissions** (this session): safe dev commands (mvn, `src/**` edits, read-only inspectors) promoted to the
   committed `settings.json`; deny hardened (`rm -rf`, `git reset --hard`); `settings.local.json` slimmed (gitignored).
+- **A3 — DONE**: deleted dead `CsvParser`/`FileWriter`/`DiskFileWriter` (unwired; `CsvParser` imported undeclared
+  Guava); `mvn verify` green. KB (architecture/handbook) updated in the same commit.
 - **Enterprise-setup review** absorbed → new items **D6**(done)/**G7**/**G8**/**A7**/**A8**/**B7**/**H6**/G6+ with a
   rejected-list, in the *"Derived from the enterprise-setup review"* section below.
 
-**SINGLE next action:** **A3** — delete dead `CsvParser` (imports Guava, not a dependency) + `FileWriter` +
-`helper/fileWriter/DiskFileWriter`; build stays green. Bonus: removes ~half the `System.out` violations **G7** will
-later enforce. Then **A4** (CI: GitHub Actions `mvn -B verify`, Java 17) so D6/tests actually gate.
+**SINGLE next action:** **A4** — CI (GitHub Actions `mvn -B verify` on push/PR, Java 17) + README badge, so **D6**
+and the test suite actually gate every change. Then **G7** (secret-scan + `System.out`/`TODO` hooks; **G7-fix** still
+has live `System.out` in `PageContentExtractor`/`AlternativeFileLoaderWrapper` + `printStackTrace` in `SmokeTest`).
 
 **Then:** **G7** (secret-scan + System.out/TODO hooks), Epic **C** (secrets; **C1** hard-coded `firefox.exe` path —
 *not* part of the WIP, still open), **D1/D2** (PageSource port + BDD) → Epic **E** parity.
@@ -72,7 +74,7 @@ Standards docs (**G1**) and `CLAUDE.md` are **done** — they govern everything 
 |----|------|-----|------------|--------|
 | **A1** | Add `.gitattributes` (`* text=auto eol=lf`; `*.exe`/drivers/`*.sqlite` binary), set `core.autocrlf`, renormalize, commit whitespace **alone** | 95% of the scary diff is CRLF churn ([07-git-state](knowledge-base/git-state.md)) | After commit, `git diff HEAD --ignore-all-space` ≈ the real 15-file change; future diffs aren't whitespace-polluted | S |
 | **A2** | Commit the in-progress **storage value calc** as one focused feature commit (+ its test from B1); finalize `Main.java` deletion & `micronaut-cli.yml` move | The real change is small & coherent; get it landed | One reviewable commit; build green | S |
-| **A3** | Delete dead code: `CsvParser` (imports Guava — not a dependency), `FileWriter`, `helper/fileWriter/DiskFileWriter` | They don't compile / aren't wired; they blur the surface | Classes gone; build still green | S |
+| **A3** | ✅ **Done 2026-06-15** — deleted `CsvParser` (imported undeclared Guava), `FileWriter`, `helper/fileWriter/DiskFileWriter` | They weren't wired; they blurred the surface | Classes gone; `mvn verify` green | — |
 | **A4** | Add **CI** (GitHub Actions: `mvn -B verify` on push/PR, Java 17) | No automated guard today | PRs run build+tests; badge in README | S |
 | **A5** | Decide & apply gitignore for `logs.txt`, scratch `.agentscan*.txt`/`diag.txt`, local `database/`; move **personal** scratch patterns (`agentscan`/`gs_temp`/`diag`) out of the *committed* `.gitignore` into `.git/info/exclude`; broaden per **A8** | Keep the committed tree clean & showcase-appropriate | Committed `.gitignore` holds only project-relevant ignores; no stray artifacts | S |
 | **A6** | Write a top-level `README.md` (what/why/run) linking the KB | Onboarding | A newcomer can build & run from the README | S |

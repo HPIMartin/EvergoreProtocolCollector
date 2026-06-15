@@ -39,8 +39,8 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
 - **Avoid comments — make the code say it.** No comments in code, config, or infrastructure unless
   intent genuinely can't be expressed in names/structure (rare; then explain *why*, not *what*).
   Self-documenting names + small functions replace comments. The reviewer flags unnecessary comments.
-- **No dead code & no undeclared dependencies** (the dead `CsvParser` imports Guava, which isn't in
-  `pom.xml` — delete such code).
+- **No dead code & no undeclared dependencies** (e.g. an unused class importing a library absent from
+  `pom.xml` — delete it).
 - Prefer `record`s / immutability for value objects. Return `Optional` instead of sentinels
   (replace `getNewest()`'s `MIN_VALUE` object).
 - Constants/config over magic values; **no secrets in source** (token, credentials → config).
