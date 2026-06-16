@@ -32,9 +32,18 @@
   portable baseline (scoped `cd` moved to gitignored `settings.local.json`); decisions logged in open-questions.
 - **Enterprise-setup audit (re-verified, 7-agent adversarial):** the source doc is now **fully absorbed** — only
   two applicable gaps survived (**G9** WebFetch niche-lib docs, **G10** SessionStart orient hook) + a PII/ToS note
-  (**D-11**); all captured below, so `docs/claude-code-enterprise-setup.md` is ready to delete.
+  (**D-11**); all captured below; `docs/claude-code-enterprise-setup.md` was deleted.
+- **Security cleanup (2026-06-16):** a secrets sweep of the 49 unpushed commits found them essentially clean (one
+  redacted Google-Sheet link); the real leaks predate them and are **already pushed to public GitHub**. Untracked
+  `server.pfx` (orphaned PKCS#12 **with a private key**, wired into nothing), `serverCommand`/`buildAndRun.bat`
+  (host paths) and dead `testdata.sqlite` (possible member PII); gitignored secret/keystore patterns; added the
+  **no-secrets hard rule** (CLAUDE.md + handbook). See **C0**.
 
-**SINGLE next action:** **H7 — migrate the build Maven → Gradle** (decided 2026-06-15; reverses the Maven
+**🔴 SECURITY-CRITICAL pending (author, manual — I cannot push):** finish **C0** — purge the leaked blobs and the
+legacy work-email from **all** history (`git filter-repo`), force-push `master` + `Rebuild`, then **rotate** the
+`server.pfx` keystore and the `secret_token` (**C2**). They are public; deletion alone does not un-leak them.
+
+**SINGLE next dev action:** **H7 — migrate the build Maven → Gradle** (decided 2026-06-15; reverses the Maven
 stance). Do it before D2 and feature work, keeping the tooling surface minimal: the deferred **A7** (Spotless),
 **G6+** (JaCoCo), **H6** (failsafe) and the **warnings `failOnWarning` flip (H8)** land *in Gradle*, not as new
 Maven plugins. Plan it via the agent pipeline (planner → implementer → falsifier → reviewer). **D2** (the
@@ -44,8 +53,9 @@ port-unblocked BDD acceptance test) is **deferred behind H7**. *(A4/CI stays dep
 - The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit (committed diffs stay
   clean). Ignore the CRLF warning on `git add`; run `git diff --check` if unsure.
 - `rm` is **denied** for the agent — manual author cleanup pending: `rm -f .agentscan*.txt diag.txt gs_temp.txt
-  logs.txt` (pure scratch) and **`rm -f docs/claude-code-enterprise-setup.md`** (now fully absorbed — gaps G9/G10/D-11
-  captured, safe to delete). **Keep `zugang.txt`** (creds).
+  logs.txt` (pure scratch); the absorbed `docs/claude-code-enterprise-setup.md` was already deleted. **Keep
+  `zugang.txt`** (creds). The now-untracked `server.pfx`/`serverCommand`/`buildAndRun.bat`/`testdata.sqlite` local
+  copies remain on disk (gitignored) — delete or relocate at will; the keystore needs rotation regardless (**C0**).
 - A scoped `cd` permission lives in gitignored `settings.local.json`; the committed `settings.json` stays portable
   (no-local-setup rule). Approving Claude "always allow" on path-bearing commands can re-pollute committed
   `settings.json` — use bare git (no `cd`/`git -C`) and diff `settings.json` against HEAD if unsure.
@@ -106,6 +116,7 @@ Standards docs (**G1**) and `CLAUDE.md` are **done** — they govern everything 
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
+| **C0 🔴** | **Remediate the public secret leak** (2026-06-16). Tree already cleaned (files untracked + gitignored, link redacted). **Remaining = author-only:** purge `server.pfx`, `serverCommand`, `buildAndRun.bat`, `testdata.sqlite` **and the legacy work-email in old commit author metadata** from all history (`git filter-repo`), force-push `master`+`Rebuild`, then **rotate** the `server.pfx` keystore and the `secret_token` (**C2**) | On public GitHub; deletion alone doesn't un-leak — history purge + rotation is the only real fix | `git log --all -- <file>` empty; mailmap clean; keystore + token rotated | M |
 | **C1** | Make `Configuration` real via `@ConfigurationProperties` bound from `application.yml`/env (browser, server, db path, credentials path, in-memory toggle, **+ the hard-coded Firefox binary path in `Browser.java`**) | Hard-coded fields defeat config & deployability | No domain settings hard-coded in `.java`; overridable by env | M |
 | **C2** | Move the API token out of `TokenValidationFilter` into config/secret; rotate off `"secret_token"` | Hard-coded secret in source + test | Token read from config; absent token fails closed | S |
 | **C3** | Stop baking `zugang.txt` into the image; inject credentials via env/secret/mount; read via `FileLoader` port | Credentials in the image is a leak | Image has no credentials; documented secret-injection path | M |
