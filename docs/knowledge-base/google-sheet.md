@@ -1,7 +1,7 @@
 # 02 — The Google Sheet (the thing being replaced)
 
-Source: <https://docs.google.com/spreadsheets/d/REDACTED-SHEET-ID>
-(tab `gid=937183112`). The sheet is publicly readable; it was reverse-engineered via the
+Source: the guild's Google Sheet — the document ID is intentionally kept out of the repo
+(it lives in local notes alongside the Evergore credentials). It was reverse-engineered via the
 CSV export (`/gviz/tq?tqx=out:csv&gid=...`). Data snapshot is from **July 2022**.
 
 ## What the sheet is

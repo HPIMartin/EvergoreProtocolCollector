@@ -16,3 +16,14 @@ src/test/resources/smokeTest.sqlite
 /diag.txt
 /.agentscan*.txt
 /gs_temp.txt
+
+# Secrets, keystores, and machine-specific helper scripts (never commit — CLAUDE.md hard rule)
+*.local.*
+*.pfx
+*.p12
+*.jks
+*.pem
+*.key
+/serverCommand
+/buildAndRun.bat
+/src/test/resources/testdata.sqlite
