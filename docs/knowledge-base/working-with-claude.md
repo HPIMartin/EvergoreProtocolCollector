@@ -47,6 +47,21 @@ For **implementation**, we use a dedicated agent team — Planner (you+me, Opus)
 **[multi-agent-playbook.md](multi-agent-playbook.md)**. The author approves the commit plan and is
 the only one who pushes.
 
+## Context & token hygiene
+
+Long sessions dominate cost — every turn re-sends the whole accumulated context, so a sprawling
+session is paid for repeatedly. Keep the working context lean:
+
+- **Search via sub-agents, not the main context.** Use `Explore` / sub-agents for broad reading;
+  they return conclusions and keep large file dumps out of the main session. Read specific line
+  ranges rather than whole large files.
+- **`/clear` at task boundaries.** Start a fresh context between unrelated backlog items. The agent
+  flags good `/clear` points; the author triggers it (the agent can't clear its own context).
+- **Reserve the Workflow / fan-out tooling for occasional large parallel audits** (explicit opt-in) —
+  never the interactive, human-gated commit loop (see [multi-agent-playbook.md](multi-agent-playbook.md)).
+  Routine TDD runs lean: plan → implementer → falsifier → reviewer.
+- **Terse by default** — bullets and the outcome first; expand on request.
+
 ## How to ask questions (the author's preference)
 
 - Always offer **multiple-choice** options; the author will free-type only if none fit.
