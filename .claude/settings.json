@@ -47,7 +47,12 @@
 			"Bash(diff:*)",
 			"Bash(od:*)",
 			"Bash(mkdir:*)",
-			"Bash(cp:*)"
+			"Bash(cp:*)",
+			"Bash(git worktree:*)",
+			"Bash(python3:*)",
+			"Bash(java -version)",
+			"Skill(claude-api)",
+			"Skill(claude-api:*)"
 		],
 		"deny": [
 			"Bash(git push:*)",
