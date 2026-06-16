@@ -40,8 +40,9 @@
   **no-secrets hard rule** (CLAUDE.md + handbook). See **C0**.
 
 **🔴 SECURITY-CRITICAL pending (author, manual — I cannot push):** finish **C0** — purge the leaked blobs and the
-legacy work-email from **all** history (`git filter-repo`), force-push `master` + `Rebuild`, then **rotate** the
-`server.pfx` keystore and the `secret_token` (**C2**). They are public; deletion alone does not un-leak them.
+legacy work-email from **all** history (`git filter-repo`), force-push `master` + `Rebuild`, then **rotate the
+`server.pfx` keystore now** (the `secret_token` rotation rides with **C2**, deferred to after the Gradle
+migration — author's call 2026-06-16). They are public; deletion alone does not un-leak them.
 
 **SINGLE next dev action:** **H7 — migrate the build Maven → Gradle** (decided 2026-06-15; reverses the Maven
 stance). Do it before D2 and feature work, keeping the tooling surface minimal: the deferred **A7** (Spotless),
@@ -116,9 +117,9 @@ Standards docs (**G1**) and `CLAUDE.md` are **done** — they govern everything 
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **C0 🔴** | **Remediate the public secret leak** (2026-06-16). Tree already cleaned (files untracked + gitignored, link redacted). **Remaining = author-only:** purge `server.pfx`, `serverCommand`, `buildAndRun.bat`, `testdata.sqlite` **and the legacy work-email in old commit author metadata** from all history (`git filter-repo`), force-push `master`+`Rebuild`, then **rotate** the `server.pfx` keystore and the `secret_token` (**C2**) | On public GitHub; deletion alone doesn't un-leak — history purge + rotation is the only real fix | `git log --all -- <file>` empty; mailmap clean; keystore + token rotated | M |
+| **C0 🔴** | **Remediate the public secret leak** (2026-06-16). Tree already cleaned (files untracked + gitignored, link redacted). **Remaining = author-only:** purge `server.pfx`, `serverCommand`, `buildAndRun.bat`, `testdata.sqlite` **and the legacy work-email in old commit author metadata** from all history (`git filter-repo`), force-push `master`+`Rebuild`, then **rotate the `server.pfx` keystore now** (`secret_token` rotation deferred to **C2**, post-Gradle) | On public GitHub; deletion alone doesn't un-leak — history purge + rotation is the only real fix | `git log --all -- <file>` empty; mailmap clean; keystore rotated now (token with C2) | M |
 | **C1** | Make `Configuration` real via `@ConfigurationProperties` bound from `application.yml`/env (browser, server, db path, credentials path, in-memory toggle, **+ the hard-coded Firefox binary path in `Browser.java`**) | Hard-coded fields defeat config & deployability | No domain settings hard-coded in `.java`; overridable by env | M |
-| **C2** | Move the API token out of `TokenValidationFilter` into config/secret; rotate off `"secret_token"` | Hard-coded secret in source + test | Token read from config; absent token fails closed | S |
+| **C2** | Move the API token out of `TokenValidationFilter` into config/secret; rotate off `"secret_token"` — **deferred to after H7 (Gradle/config work), author's call 2026-06-16** | Hard-coded secret in source + test | Token read from config; absent token fails closed | S |
 | **C3** | Stop baking `zugang.txt` into the image; inject credentials via env/secret/mount; read via `FileLoader` port | Credentials in the image is a leak | Image has no credentials; documented secret-injection path | M |
 | **C4** | Lower `logback` root from `verbose`; ensure credentials/tokens never logged | Chatty logs may leak secrets | Sensible levels; a log-scrub check | S |
 | **C5** | **Simple dependency vulnerability scan** wired into the build (OWASP dependency-check or the Gradle-native equivalent) | Catch known-vulnerable deps; good-practice for the showcase | Build surfaces known CVEs in deps. Gated on **H7** (land in Gradle); *Dependabot already covers basic dependency alerts* | S |
