@@ -92,13 +92,20 @@ template** demonstrating the practice. Scenarios are written in **product langua
 ## 7. Git & commits (author's rules — strict)
 
 - **Propose exactly one commit message, get the author's confirmation, THEN commit. Never `git push`.**
-- Message = **single line**, **starts with a present-tense verb**, briefly states what the commit
-  actively changes. **No body. No `Co-Authored-By` or tool footer.** English.
-  - ✅ `Add storage value calculation to data evaluator` · `Normalize line endings to LF` · `Remove dead CsvParser`
-  - ❌ `feat: …` (no prefixes) · multi-line bodies · `Co-Authored-By:` lines
+- Message = **single line**, **starts with a present-tense verb** (after an optional `[doc]` tag),
+  briefly states what the commit actively changes. **No body. No `Co-Authored-By` or tool footer.** English.
+  - ✅ `Add storage value calculation to data evaluator` · `Remove dead CsvParser` · `[doc] Groom backlog: pin H7`
+  - ❌ `feat:`/`fix:`/other conventional-commit prefixes · multi-line bodies · `Co-Authored-By:` lines
+- **`[doc]` prefix for pure documentation/process/meta commits** — touching only `docs/`, `.claude/`, or
+  top-level `*.md`, with no product-code/build change. Code & build commits stay **bare** (verb-first).
+  `[doc]` is the *only* permitted prefix; it keeps `git log` two-tier and scannable.
+- **Docs that describe a code change ride in that commit** — never a standalone `Refresh/Update docs
+  after X` follow-up (it can't stand alone for revert/cherry-pick).
 - **LF line endings** enforced via `.gitattributes` (`* text=auto eol=lf`; binaries marked).
   Whitespace/format changes go in their **own** commit, never mixed with logic.
-- One logical change per commit. Keep `master` releasable; feature work on branches; CI
+- One logical change per commit; **cohesion test** — group parts together only when they can't stand
+  alone (would reverting or cherry-picking one without the others break the build or leave the tree
+  inconsistent?); otherwise keep them separate. Keep `master` releasable; feature work on branches; CI
   (`mvn -B verify`) green to merge.
 - **No secrets, no personal/host data — ever (hard rule).** Never commit sensitive information of any
   kind: passwords, tokens, API keys, private keys/keystores (`*.pfx`/`*.p12`/`*.jks`/`*.pem`/`*.key`),

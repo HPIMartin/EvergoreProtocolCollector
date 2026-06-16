@@ -63,10 +63,15 @@ in this project. Flow for a user-facing capability: write the **Gherkin scenario
 ## Commit protocol (strict — author's rules)
 
 1. **Propose exactly one commit message and wait for confirmation; only then commit. Never `git push`.**
-2. Message = **one line**, **starts with a present-tense verb**, briefly states what the commit
-   actively changes. **No body, no `Co-Authored-By` / tool footer.** English.
-   - e.g. `Normalize line endings to LF` · `Add storage value calculation to data evaluator` · `Remove dead CsvParser`
-3. One logical change per commit; keep whitespace/format churn out of feature commits.
+2. Message = **one line**, **starts with a present-tense verb** (after an optional `[doc]` tag),
+   briefly states what the commit actively changes. **No body, no `Co-Authored-By` / tool footer.** English.
+   - e.g. `Add storage value calculation to data evaluator` · `Remove dead CsvParser` · `[doc] Groom backlog: pin H7`
+3. **`[doc]` prefix for pure doc/process/meta commits** (touching only `docs/`, `.claude/`, or top-level
+   `*.md`, with no product-code/build change); code & build commits stay **bare** (verb-first). `[doc]`
+   is the only allowed prefix, so `git log` stays two-tier and scannable.
+4. One logical change per commit; keep whitespace/format churn out of feature commits. A doc change that
+   **describes a code change rides in that commit** — never a standalone `Refresh docs after X`. Group
+   parts into one commit only when they can't stand alone (the revert/cherry-pick test).
 
 ## Definition of Done
 
