@@ -100,11 +100,15 @@ template** demonstrating the practice. Scenarios are written in **product langua
   Whitespace/format changes go in their **own** commit, never mixed with logic.
 - One logical change per commit. Keep `master` releasable; feature work on branches; CI
   (`mvn -B verify`) green to merge.
-- **No local setup in committed files.** Machine-specific details (absolute paths, usernames, host
-  layout) never go in the repo — they live in gitignored `*.local.*` files (e.g. an absolute-path
-  `cd` permission belongs in `.claude/settings.local.json`, not the committed `settings.json`). Watch
-  the Claude Code "always allow" flow: it can write path-bearing rules into the committed
-  `settings.json` — prefer bare commands that match the existing portable `Bash(<cmd>:*)` rules.
+- **No secrets, no personal/host data — ever (hard rule).** Never commit sensitive information of any
+  kind: passwords, tokens, API keys, private keys/keystores (`*.pfx`/`*.p12`/`*.jks`/`*.pem`/`*.key`),
+  credentials, real personal/work emails or usernames, or machine/host/workspace details (absolute
+  paths, host layout, infra). The repo is a public showcase. Such data lives in gitignored `*.local.*`
+  files or a secret store and is injected at runtime — never the repo. If a secret ever reaches
+  history, purge it with a history rewrite **and rotate it** (deletion alone doesn't un-leak it).
+  Watch the Claude Code "always allow" flow: it can write path-bearing rules into the committed
+  `settings.json` — prefer bare commands that match the existing portable `Bash(<cmd>:*)` rules, and
+  keep machine-specific permissions (e.g. an absolute-path `cd`) in `.claude/settings.local.json`.
 - **The commit log is the changelog.** Don't keep a separate `CHANGELOG`, and don't mirror git
   history or diffs in the docs — `git log` / `git diff` are the source of truth for *what changed*.
 
@@ -113,7 +117,7 @@ template** demonstrating the practice. Scenarios are written in **product langua
 - [ ] Compiles, `mvn verify` green locally
 - [ ] No compiler/lint warnings (build is warning-clean once `failOnWarning` lands)
 - [ ] Unit tests for new logic (`@Ignore`-first Gherkin if user-facing)
-- [ ] No new hard-coded secrets, env assumptions, or local setup details (absolute paths/usernames) in committed files
+- [ ] No secrets or personal/host data (passwords, tokens, keys/keystores, credentials, real emails/usernames, absolute paths, infra) in committed files
 - [ ] Relevant `docs/knowledge-base/` doc updated
 - [ ] Commit message proposed (one line, present-tense verb) **and confirmed** before committing; **never pushed**
 - [ ] Whitespace/format separate from logic; LF endings

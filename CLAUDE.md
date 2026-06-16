@@ -34,8 +34,12 @@ test-driven, AI-assisted development**.
   names/structure) — avoid comments; the reviewer flags unnecessary ones. (Markdown docs aren't code comments.)
 - **Warnings are errors:** compiler/lint warnings fail the build (`failOnWarning`, `-Xlint:all`);
   fix, don't suppress — genuinely obsolete lint excluded deliberately (e.g. `-serial`); ask when unsure.
-- **No local setup in the repo:** committed files carry no machine-specific details (absolute paths,
-  usernames, host layout); such config goes in gitignored `*.local.*` files.
+- **No secrets, no personal/host data — ever (hard rule):** never commit sensitive information of
+  any kind — passwords, tokens, API keys, private keys/keystores (`*.pfx`/`*.p12`/`*.jks`/`*.pem`/
+  `*.key`), credentials, real personal/work emails or usernames, or machine/host/workspace details
+  (absolute paths, host layout, infra). The repo is a public showcase. Such data lives in gitignored
+  `*.local.*` files or a secret store, injected at runtime — never the repo. If it ever lands in
+  history, purge it (history rewrite) **and rotate the secret** — deletion alone doesn't un-leak it.
 - **TDD:** new logic starts with a failing test. The `domain` + `businessLogic` packages stay
   framework-free and fast to unit-test.
 - **BDD (PO view):** user-facing capabilities get plain given/when/then scenarios in product language.
