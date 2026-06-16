@@ -6,60 +6,28 @@
 > urgent. Architecture: targeted fixes now, full repackaging (D3) deferred until tested. Decisions
 > in [open-questions.md](open-questions.md); knowledge base in [knowledge-base/README.md](knowledge-base/README.md).
 
-## ▶ Current status / next action (2026-06-15)
+## ▶ Current status / next action
 
-**Done & committed on `Rebuild`** (not pushed; `git log` is the source of truth):
-- **A2 + B1 + B2** — storage value calc (`value×qty×quality/100`) in `EvergoreDataEvaluator`, a
-  `getAllFor(avatar, after)` storage port, `MetaInformationKey` double keys, `EvergoreDataEvaluatorTest`
-  (6 unit tests, hand-written fakes); duplicate-avatars call (**B2**) fixed. Landed via falsifier→reviewer gate.
-- **A1** `.gitattributes` LF · **B6** cookie-banner rename · partial **C4** (logback `verbose`→`info` +
-  test-only `logback-test.xml` root `warn`, ends the Micronaut DEBUG flood) · tooling: Dependabot + `continue`.
-- **D6 — DONE** (this session): `HexagonalArchitectureTest` (ArchUnit) fails the build if `domain`/`businessLogic`
-  import any framework (Micronaut/jakarta/Selenium/ORMLite/SQLite/Jackson/RxJava/commons/logback/SLF4J/Netty);
-  verified non-vacuous (forbidding `java.time` flags 22 core usages); reviewer **PASS**.
-- **Permissions** (this session): safe dev commands (mvn, `src/**` edits, read-only inspectors) promoted to the
-  committed `settings.json`; deny hardened (`rm -rf`, `git reset --hard`); `settings.local.json` slimmed (gitignored).
-- **A3 — DONE**: deleted dead `CsvParser`/`FileWriter`/`DiskFileWriter` (unwired; `CsvParser` imported undeclared
-  Guava); `mvn verify` green. KB (architecture/handbook) updated in the same commit.
-- **D1 — DONE** (full variant): `PageSource` port; `EvergoreDataExtractor` depends on it; `Driver` is now an
-  injected `@Singleton` (no self-`new`); the Selenium adapter renamed to `SeleniumPageSource`. Fake-`PageSource`
-  unit test + delta-filter lock + a SmokeTest bean-wiring assertion. Gated falsifier→reviewer.
-- **Enterprise-setup review** absorbed → new items **D6**(done)/**G7**/**G8**/**A7**/**A8**/**B7**/**H6**/G6+ with a
-  rejected-list, in the *"Derived from the enterprise-setup review"* section below.
-- **Session 2026-06-15 (grooming):** primitive-consumer evaluator refactor; `/pause` command tracked; the playbook
-  **FAIL-loop hardened** (cap 2 re-implement rounds → re-plan; fixes fold into their commit, not appended);
-  **warnings-as-errors** + **no-local-setup** standards added (CLAUDE.md/handbook); `settings.json` restored to a
-  portable baseline (scoped `cd` moved to gitignored `settings.local.json`); decisions logged in open-questions.
-- **Enterprise-setup audit (re-verified, 7-agent adversarial):** the source doc is now **fully absorbed** — only
-  two applicable gaps survived (**G9** WebFetch niche-lib docs, **G10** SessionStart orient hook) + a PII/ToS note
-  (**D-11**); all captured below; `docs/claude-code-enterprise-setup.md` was deleted.
-- **Security cleanup (2026-06-16):** a secrets sweep of the 49 unpushed commits found them essentially clean (one
-  redacted Google-Sheet link); the real leaks predate them and are **already pushed to public GitHub**. Untracked
-  `server.pfx` (orphaned PKCS#12 **with a private key**, wired into nothing), `serverCommand`/`buildAndRun.bat`
-  (host paths) and dead `testdata.sqlite` (possible member PII); gitignored secret/keystore patterns; added the
-  **no-secrets hard rule** (CLAUDE.md + handbook). See **C0**.
+`git log` is the record of what landed; this section tracks only **where we are and what's next**.
 
-**🔴 SECURITY-CRITICAL pending (author, manual — I cannot push):** finish **C0** — purge the leaked blobs and the
-legacy work-email from **all** history (`git filter-repo`), force-push `master` + `Rebuild`, then **rotate the
-`server.pfx` keystore now** (the `secret_token` rotation rides with **C2**, deferred to after the Gradle
-migration — author's call 2026-06-16). They are public; deletion alone does not un-leak them.
+**Where we are:** the rebuild's core is in place — the storage-value feature, a hexagonal `PageSource`
+port for scraping, and an ArchUnit guard keeping `domain`/`businessLogic` framework-free. The repo is a
+clean public showcase on a single `main` branch (history was purged of an old leaked keystore, host-path
+helper scripts and a work-email, then consolidated from `master`/`Rebuild`).
 
-**SINGLE next dev action:** **H7 — migrate the build Maven → Gradle** (decided 2026-06-15; reverses the Maven
-stance). Do it before D2 and feature work, keeping the tooling surface minimal: the deferred **A7** (Spotless),
-**G6+** (JaCoCo), **H6** (failsafe) and the **warnings `failOnWarning` flip (H8)** land *in Gradle*, not as new
-Maven plugins. Plan it via the agent pipeline (planner → implementer → falsifier → reviewer). **D2** (the
-port-unblocked BDD acceptance test) is **deferred behind H7**. *(A4/CI stays deprioritized — local-only deploy.)*
+**SINGLE next dev action: H7 — migrate the build Maven → Gradle** (Kotlin `build.gradle.kts`, decided
+2026-06-15). Land the deferred **A7** (Spotless), **G6+** (JaCoCo), **H6** (failsafe) and the **H8**
+`failOnWarning` flip *in Gradle*, not as new Maven plugins. H7 then unblocks **C2** (move the `secret_token`
+out of source) and **C5** (vuln scan). **D2** (port-unblocked BDD acceptance test) is parked behind H7.
+Plan via the agent pipeline (planner → implementer → falsifier → reviewer). *(A4/CI stays deprioritized —
+local-only Docker → home-server deploy.)*
 
-**Resume gotchas:**
-- The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit (committed diffs stay
-  clean). Ignore the CRLF warning on `git add`; run `git diff --check` if unsure.
-- `rm` is **denied** for the agent — manual author cleanup pending: `rm -f .agentscan*.txt diag.txt gs_temp.txt
-  logs.txt` (pure scratch); the absorbed `docs/claude-code-enterprise-setup.md` was already deleted. **Keep
-  `zugang.txt`** (creds). The now-untracked `server.pfx`/`serverCommand`/`buildAndRun.bat`/`testdata.sqlite` local
-  copies remain on disk (gitignored) — delete or relocate at will; the keystore needs rotation regardless (**C0**).
-- A scoped `cd` permission lives in gitignored `settings.local.json`; the committed `settings.json` stays portable
-  (no-local-setup rule). Approving Claude "always allow" on path-bearing commands can re-pollute committed
-  `settings.json` — use bare git (no `cd`/`git -C`) and diff `settings.json` against HEAD if unsure.
+**Gotchas worth keeping:**
+- The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit — ignore the
+  warning, `git diff --check` if unsure.
+- The Claude "always allow" flow can re-pollute the committed `settings.json` (path-bearing rules +
+  tabs→spaces). Prefer bare commands matching the portable `Bash(<cmd>:*)` rules; diff against HEAD if unsure.
+- Keep `zugang.txt` (creds, gitignored); machine-specific config stays in gitignored `*.local.*` files.
 
 **Orient (any new session):** `CLAUDE.md` → `docs/knowledge-base/README.md` → this backlog → `docs/open-questions.md`.
 
@@ -67,15 +35,6 @@ port-unblocked BDD acceptance test) is **deferred behind H7**. *(A4/CI stays dep
 
 `P0` unblock everything · `P1` correctness & safety · `P2` architecture & parity · `P3` product/ops growth.
 Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable references.
-
-## Recommended sequence (post-decisions, 2026-06-13)
-
-Standards docs (**G1**) and `CLAUDE.md` are **done** — they govern everything below. Then:
-
-1. **A1** — enforce **LF** line endings (`.gitattributes`) and commit the whitespace normalization alone.
-2. **B1** — write the `EvergoreDataEvaluator` tests (TDD) to lock the core math (also gives A2 its test).
-3. **A2** — commit the in-progress storage feature cleanly (now test-backed).
-4. Then **A3** (dead code), **A4** (CI), and into Epic **C** (config/secrets) + **D1/D2** (PageSource port + BDD acceptance) as the showcase pieces, before Epic **E** (dashboard parity).
 
 ---
 
@@ -95,29 +54,21 @@ Standards docs (**G1**) and `CLAUDE.md` are **done** — they govern everything 
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **A1** | Add `.gitattributes` (`* text=auto eol=lf`; `*.exe`/drivers/`*.sqlite` binary), set `core.autocrlf`, renormalize, commit whitespace **alone** | 95% of the scary diff is CRLF churn ([07-git-state](knowledge-base/git-state.md)) | After commit, `git diff HEAD --ignore-all-space` ≈ the real 15-file change; future diffs aren't whitespace-polluted | S |
-| **A2** | Commit the in-progress **storage value calc** as one focused feature commit (+ its test from B1); finalize `Main.java` deletion & `micronaut-cli.yml` move | The real change is small & coherent; get it landed | One reviewable commit; build green | S |
-| **A3** | ✅ **Done 2026-06-15** — deleted `CsvParser` (imported undeclared Guava), `FileWriter`, `helper/fileWriter/DiskFileWriter` | They weren't wired; they blurred the surface | Classes gone; `mvn verify` green | — |
 | **A4** | ~~CI (GitHub Actions)~~ **Deprioritized 2026-06-15** (local-only deploy, no CI). *Optional later, low prio:* a **local** gate — git `pre-commit` running `mvn -B verify` | Solo + local Docker→home-server deploy; no shared PRs to guard | revisit if the repo ever goes shared/CI | S |
 | **A5** | Decide & apply gitignore for `logs.txt`, scratch `.agentscan*.txt`/`diag.txt`, local `database/`; move **personal** scratch patterns (`agentscan`/`gs_temp`/`diag`) out of the *committed* `.gitignore` into `.git/info/exclude`; broaden per **A8** | Keep the committed tree clean & showcase-appropriate | Committed `.gitignore` holds only project-relevant ignores; no stray artifacts | S |
-| **A6** | Write a top-level `README.md` (what/why/run) linking the KB | Onboarding | A newcomer can build & run from the README | S |
 
 ## Epic B — Lock the core with tests `P0→P1`
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **B1** | Flesh out `EvergoreDataEvaluatorTest` with fake repositories: bank sums, storage value (`value×qty×quality/100`), `UNDEFINED` fallback, `last_updated` watermark | The core aggregation has **zero** real tests ([06-testing](knowledge-base/testing.md)) | Tests fail-first then pass; cover place & withdraw for bank + storage | M |
-| **B2** | Fix evaluator bug: duplicate `bankRepo.getAllDifferentAvatars()` call | Dead/confusing call | Single call; test asserts storage-only avatars are included | S |
 | **B3** | Expand `EntryFactory`/`EntityParser` tests: date/avatar/type/quality parsing, merged quantity (3+5+7→1 item, qty 15), `Entnahme`, `Impressum` terminator | Parser is barely tested; it's the ingest contract | Table-driven tests over representative raw protocol snippets | M |
 | **B4** | Repository tests against in-memory SQLite: `getNewest`, paging, `getAllFor(avatar, after)` | Only incidental smoke coverage | Fast tests using `:memory:` | M |
 | **B5** | Resolve the `Category.storage` vs recipe-based `getStorageValue()` question; pin behavior with tests | `Category.storage` is defined but unused — possible bug ([03-domain-model](knowledge-base/domain-model.md)) | Documented decision + test locking the chosen rule | S |
-| **B6** | Rename `clickCookieShit` in `SeleniumPageSource` (cookie-consent click) | Joke name violates clean-naming; found in the in-flight WIP | Intention-revealing name (e.g. `dismissCookieBanner`) | S |
 
 ## Epic C — Configuration & security `P1`  *(good-practice showcase; not urgent while learning/fun)*
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **C0 🔴** | **Remediate the public secret leak** (2026-06-16). Tree already cleaned (files untracked + gitignored, link redacted). **Remaining = author-only:** purge `server.pfx`, `serverCommand`, `buildAndRun.bat`, `testdata.sqlite` **and the legacy work-email in old commit author metadata** from all history (`git filter-repo`), force-push `master`+`Rebuild`, then **rotate the `server.pfx` keystore now** (`secret_token` rotation deferred to **C2**, post-Gradle) | On public GitHub; deletion alone doesn't un-leak — history purge + rotation is the only real fix | `git log --all -- <file>` empty; mailmap clean; keystore rotated now (token with C2) | M |
 | **C1** | Make `Configuration` real via `@ConfigurationProperties` bound from `application.yml`/env (browser, server, db path, credentials path, in-memory toggle, **+ the hard-coded Firefox binary path in `Browser.java`**) | Hard-coded fields defeat config & deployability | No domain settings hard-coded in `.java`; overridable by env | M |
 | **C2** | Move the API token out of `TokenValidationFilter` into config/secret; rotate off `"secret_token"` — **deferred to after H7 (Gradle/config work), author's call 2026-06-16** | Hard-coded secret in source + test | Token read from config; absent token fails closed | S |
 | **C3** | Stop baking `zugang.txt` into the image; inject credentials via env/secret/mount; read via `FileLoader` port | Credentials in the image is a leak | Image has no credentials; documented secret-injection path | M |
@@ -128,7 +79,6 @@ Standards docs (**G1**) and `CLAUDE.md` are **done** — they govern everything 
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **D1** | Introduce a **`PageSource` port** (e.g. `PageContents fetch()`); make Selenium an adapter implementing it; inject `Driver`/`WebDriver` | Biggest structural gap — core is welded to Selenium ([04-architecture](knowledge-base/architecture.md)) | `EvergoreDataExtractor` depends on the port; a fake page-source drives a test | M |
 | **D2** | Acceptance (BDD) test of collect→evaluate→overview using in-memory fakes (page-source + `:memory:` DB) — **deferred behind H7 (Gradle migration), 2026-06-15** | Proves the whole use case without a browser | Green scenario asserting overview numbers from canned protocol text | M |
 | **D3** | Restructure packages to `domain / application / adapters{in,out} / config`; keep core framework-free | Make the boundaries explicit & enforceable | Micronaut/Selenium/ORMLite imports only under `adapters`+`config` | L |
 | **D4** | Unify the two `TransferType→String` visitors; replace `ApplicationExceptionHandler` `instanceof` chain with a visitor (its own TODO) | Remove duplication & the pattern the project is eliminating | One mapping source; handler has no `instanceof` | S |
@@ -161,8 +111,6 @@ The project doubles as an example of clean, AI-assisted development — so the "
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **G1** | ✅ **Done 2026-06-13** — `knowledge-base/engineering-handbook.md`, `knowledge-base/working-with-claude.md`, root `CLAUDE.md` | Define how code should look & how we develop; bootstrap every Claude session | Files exist & are linked from the KB index | — |
-| **G2** | Top-level `README.md` (what/why/run + links to KB & `CLAUDE.md`) — *same as A6* | Onboarding front door | A newcomer builds, runs, and finds the KB from the README | S |
 | **G3** | Keep KB in lockstep with code (baked into Definition of Done) | Docs rot otherwise | Behavior-changing commits touch the matching KB doc | S (ongoing) |
 | **G4** | Decide BDD tooling: plain JUnit given/when/then vs Cucumber `.feature` (open question D-9) | Shapes how scenarios are written & shared | Decision logged; first scenario follows it | S |
 | **G5** | Optional: short "case study" of the rebuild for the showcase | The meta-goal is demonstrating AI-assisted dev | A narrative others can learn from | M |
@@ -176,9 +124,8 @@ See [knowledge-base/dev-environment.md](knowledge-base/dev-environment.md).
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **H1** | ✅ **Done 2026-06-13** — fix devcontainer to match the project: **Maven** (not Gradle), **JDK 17** pinned, `~/.m2` cache, dependency warm-up | The template devcontainer installed Gradle for a Maven project & JDK 25 vs 17 — wouldn't build | `Reopen in Container` → working `mvn verify` | S |
 | **H2** | docker-compose: add a `selenium/standalone-firefox` service; tests use `RemoteWebDriver`; retire bundled `gecko-*-win.exe`. **Re-add the `docker-outside-of-docker` devcontainer feature** (removed to get a building container) | Browser-in-container ⇒ scraping/integration tests run anywhere, no host Firefox | An integration test scrapes via the service | M |
-| **H3** | De-hack the `Dockerfile`: drop `dos2unix` (after A1/LF), parameterize the jar name, stop baking `zugang.txt`, add `.dockerignore`, fix `apt-get … -y` | Current image is fragile & bakes secrets | Clean reproducible build; no secret in image (ties to C3) | M |
+| **H3** | De-hack the `Dockerfile`: drop `dos2unix` (after the LF normalization), parameterize the jar name, stop baking `zugang.txt`, add `.dockerignore`, fix `apt-get … -y` | Current image is fragile & bakes secrets | Clean reproducible build; no secret in image (ties to C3) | M |
 | **H4** | Single-source the JDK version (devcontainer = Dockerfile bases = pom `jdk.version`) + documented upgrade procedure | One-touch upgrades without host installs | Bumping one set of pins upgrades everything | S |
 | **H5** | Re-add a cross-rebuild Maven cache (named volume at `~/.m2`) with correct ownership for the `vscode` user | Faster rebuilds; the first attempt's root-owned volume broke `~/.m2` | Deps cached across rebuilds; container builds clean | S |
 | **H7** | **Migrate the build Maven → Gradle** (DSL: **Kotlin `build.gradle.kts`**, decided 2026-06-15): port `pom.xml` deps/plugins, the `mvn -B verify` lifecycle, devcontainer + Dockerfile build steps; retire `mvn` references in docs/KB | Author prefers Gradle (decided 2026-06-15); the **next** major item, before D2/feature work | `./gradlew build` + tests green in-container; devcontainer/Dockerfile build via Gradle; KB/CLAUDE.md commands updated | L |
@@ -197,10 +144,9 @@ doc is intentionally **not** committed — its value lives here.
 
 | ID | Item | Why | Priority | Sequencing / caveat |
 |----|------|-----|----------|---------------------|
-| **D6** | **ArchUnit** test forbidding `io.micronaut`/`jakarta`/`org.openqa.selenium`/`com.j256.ormlite` imports in `domain`+`businessLogic` | Turns the defining hexagonal rule (CLAUDE.md, Epic D) from convention into a build failure; core is already clean so it lands green | P2 | Independent of D3 (keys off imports, not layout); only truly *gates* once A4/CI exists. ~1h, one test-scope dep. **Highest-leverage new item.** |
-| **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%) — the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`), sequence with/after **C2** so it doesn't block the secret cleanup. System.out check: sequence after **A3** (deletes `CsvParser` = ~half the hits); whitelist `@Ignore` Gherkin once D2/G4 land; fold any CI-grep into A4. |
-| **G7-fix** | Clean existing violations: `System.out` in `SeleniumPageSource`/`AlternativeFileLoaderWrapper`, `printStackTrace` in `SmokeTest`, `// TODO: Visitor-Pattern` in `ApplicationExceptionHandler`, the empty `catch (Exception e) {}` swallow + `// NOOP` comment in `SeleniumPageSource`, and the commented-out line in `SmokeTest` | The "no comments / logger-only / self-explanatory" rules are currently violated | P2 | `CsvParser` System.out sites are covered by **A3** (dead-code deletion). |
-| **A7** | **Spotless** (`spotless-maven-plugin`) bound to `verify`; `check` in CI, `apply` locally | Ends the CRLF/import-order diff churn (A1/this session); one style, no review nits | P2 | **MUST** use a tab-preserving engine (Eclipse JDT profile), **NOT** google-java-format/palantir (2-space → massive reformat churn). Decide engine first (open-question **D-10**). `check` non-blocking until A4/CI. **2026-06-15: deferred — land in Gradle post-H7, not as a Maven plugin.** |
+| **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%) — the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`), sequence with/after **C2** so it doesn't block the secret cleanup. System.out check: the dead-code deletion already removed ~half the hits (`CsvParser`); whitelist `@Ignore` Gherkin once D2/G4 land. |
+| **G7-fix** | Clean existing violations: `System.out` in `SeleniumPageSource`/`AlternativeFileLoaderWrapper`, `printStackTrace` in `SmokeTest`, `// TODO: Visitor-Pattern` in `ApplicationExceptionHandler`, the empty `catch (Exception e) {}` swallow + `// NOOP` comment in `SeleniumPageSource`, and the commented-out line in `SmokeTest` | The "no comments / logger-only / self-explanatory" rules are currently violated | P2 | `CsvParser` System.out sites are covered by the earlier dead-code deletion. |
+| **A7** | **Spotless** (`spotless-maven-plugin`) bound to `verify`; `check` in CI, `apply` locally | Ends the CRLF/import-order diff churn (the LF normalization); one style, no review nits | P2 | **MUST** use a tab-preserving engine (Eclipse JDT profile), **NOT** google-java-format/palantir (2-space → massive reformat churn). Decide engine first (open-question **D-10**). `check` non-blocking until A4/CI. **2026-06-15: deferred — land in Gradle post-H7, not as a Maven plugin.** |
 | **G8** | **`/commit`** slash command encoding the strict one-line/no-footer/never-push protocol | Repo's strictest, most-violated-by-default rule (footers slip in); reproducible showcase artifact | P3 | `/review`,`/tdd` rejected (duplicate reviewer/implementer agents). `/spec` deferred → gate on **G4**; keep MCP-free + JUnit-`@Ignore`-first (not Cucumber/Jira). |
 | **A8** | Broaden `.gitignore`: add `CLAUDE.local.md`, `.claude/cache/`, `.claude/.tmp/` | Pre-empts committing personal overrides/cache | P3 | Scope to those paths; **avoid** a blanket `**/*.local.*` (would swallow legit `*.local.properties` fixtures). Folds into **A5**. |
 | **B7** | Migrate remaining JUnit `Assertions` → **AssertJ** (`SmokeTest`, `MetaInformationTest`) | Single assertion idiom (documented preference) | P3 | Opportunistic. `MetaInformationTest` = clean win; defer `SmokeTest` to its planned Levenshtein-rework. |
@@ -208,6 +154,7 @@ doc is intentionally **not** committed — its value lives here.
 | **G6+** | **JaCoCo** report-only (no enforced threshold) wired into `mvn verify` | Visible coverage to guide B3/B4 test work; low-ceremony first step toward G6 | P3 | Report-only — don't gate a young suite. Promote to a threshold under **G6** later; "into CI" half needs A4. **2026-06-15: land in Gradle post-H7.** |
 | **G9** | **Point Claude at official docs (WebFetch) for less-trafficked libraries** — a `working-with-claude.md` convention: for **Micronaut / ORMLite / Selenium / RxJava** (thin in LLM training data), fetch the official docs before writing against an unfamiliar API; prefer doc-grounded code over confabulation | Enterprise-audit Pitfall #5, the most stack-relevant gap: a solo dev has no reviewer to catch a hallucinated API, and ArchUnit/tests catch structure, not invented method signatures. MCP-free (WebFetch is available) | P2 | Flagged independently by two audit reviewers. Doc-only; fits the Epic-G showcase. |
 | **G10** | **SessionStart orient/lessons hook** in `.claude/settings.json`: deterministically inject the orient pointer (CLAUDE.md → KB README → backlog "Current status" → open-questions → `process-learnings.md`) so every fresh session reads the lessons first | The 100%-fires complement to the advisory `/continue` + CLAUDE.md "Start here"; completes the self-improvement loop and is the most on-thesis hooks-over-rules showcase artifact (sibling to **G7**) | P3 | Enterprise-audit gap. The lessons file already exists (`process-learnings.md`); only the deterministic hook is missing. |
+| **G11** | **Improve the AI/agent working environment in the devcontainer** (low prio): pre-install tools used every session (`git-filter-repo`, `sqlite3`, `jq`), pre-allow common read-only commands in the committed `settings.json` (portable forms only), and add conventions/hooks that cut token use (scratch-file hygiene, scoped reads over blind re-scans) | Recurring friction: missing `git-filter-repo`/`docker`, repeated permission prompts, the "always allow" flow re-polluting `settings.json`, broad re-reads burning tokens | P3 | Author request 2026-06-16. Sits with **G7**/**G10** (the hooks/showcase items). |
 
 ### Considered and rejected (do not re-propose without a new reason)
 
@@ -224,7 +171,6 @@ doc is intentionally **not** committed — its value lives here.
 
 ## Dependency notes
 
-- A1 → A2 (normalize before the clean commit). B1 supports A2.
-- D1 → D2 (port enables the acceptance test) → most of E (date-range, dashboard build on a testable core).
+- D2 (the acceptance test) enables most of E (date-range, dashboard build on a testable core).
 - C-epic is independent and can run in parallel; do C2/C3 before any real deployment.
 - B5 & Q3 gate E3 (hunt-loot valuation).

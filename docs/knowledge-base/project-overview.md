@@ -41,7 +41,7 @@ Tedious, error-prone, and always out of date.
 ## Project intent (per the author)
 
 - The codebase was written across several restarts with admittedly loose discipline.
-- The current effort (branch `Rebuild`) is a **clean-up / rebuild** aiming for:
+- The current effort (on `main`) is a **clean-up / rebuild** aiming for:
   **clean code, TDD, BDD (from a product-owner perspective), SOLID, and hexagonal architecture.**
 - This knowledge base + backlog were created to give that rebuild a durable, shared plan.
 

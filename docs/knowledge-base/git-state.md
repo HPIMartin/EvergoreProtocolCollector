@@ -7,7 +7,7 @@ plans — not history.
 
 ## Conventions
 
-- Active branch: **`Rebuild`** (main is `master`). Fine-grained, focused commits — one logical change each.
+- Active branch: **`main`** — the single mainline (the old `master`/`Rebuild` were consolidated). Fine-grained, focused commits — one logical change each.
 - Commit messages: **single line, present-tense verb first, no body, no footers** (see
   [engineering-handbook.md](engineering-handbook.md) §7). **The commit log *is* the changelog.**
 - The author confirms each commit message; **only the author pushes** (agents never `git push`).

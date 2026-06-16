@@ -4,7 +4,7 @@ This folder is the persistent knowledge base for the project. It exists so that 
 human or AI agent can get up to speed **without re-scanning the whole codebase**.
 
 > Status: created 2026-06-13 by an analysis pass. Facts in docs 01–08 are derived from
-> the working tree as it stood on branch `Rebuild`. Docs 09–10 capture how we work.
+> the working tree as it stood during the rebuild (branch `main`). Docs 09–10 capture how we work.
 > The backlog and open questions (`../backlog.md`, `../open-questions.md`) are living documents.
 
 ## What this project is, in one sentence
