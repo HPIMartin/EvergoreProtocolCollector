@@ -14,6 +14,10 @@
 			"Bash(git add:*)",
 			"Bash(git commit:*)",
 			"Bash(git mv:*)",
+			"Bash(git rm:*)",
+			"Bash(git branch:*)",
+			"Bash(git remote:*)",
+			"Bash(git ls-remote:*)",
 			"Bash(git rev-list:*)",
 			"Bash(git status:*)",
 			"Bash(git log:*)",
@@ -34,7 +38,16 @@
 			"Bash(head:*)",
 			"Bash(tail:*)",
 			"Bash(echo:*)",
-			"Bash(awk:*)"
+			"Bash(awk:*)",
+			"Bash(sed:*)",
+			"Bash(sort:*)",
+			"Bash(tr:*)",
+			"Bash(nl:*)",
+			"Bash(du:*)",
+			"Bash(diff:*)",
+			"Bash(od:*)",
+			"Bash(mkdir:*)",
+			"Bash(cp:*)"
 		],
 		"deny": [
 			"Bash(git push:*)",
