@@ -27,6 +27,28 @@ and *indirectly* via `SmokeTest`: controllers, filters, repositories, visitors, 
 3. **`SeleniumPageSource`** — Selenium scraping/pagination/login (inherently hard; page-source port now exists, but the Selenium path itself is not unit-tested).
 4. **Repositories** — `getNewest()` SQL, paging, `getAllFor(avatar, after)`. Only incidental smoke coverage.
 
+## Migration verification — Gradle / Java 25 / Micronaut 4.10 (2026-06-16)
+
+The build migration (Maven→Gradle, Java 17→25, Micronaut 3.8.4→4.10.3) was held to **identical
+observable behaviour**:
+
+- **Unit/integration suite** reproduces the pre-migration baseline exactly: **22 tests, 7 classes, 0
+  failures** on the new stack.
+- **1:1 against production data:** the migrated distribution was run against a snapshot of the
+  production SQLite DB and its `/overview`, `/avatars/{avatar}/bank` and `/avatars/{avatar}/storage`
+  responses were **byte-identical (after LF normalisation)** to the live production instance.
+- **JDK 25 behaviour change found & fixed:** `java.sql.Timestamp.from(Instant)` now uses
+  `Math.multiplyExact` and **throws** on extreme instants where JDK 17 silently wrapped. The empty
+  watermark `LocalDateTime.MIN` hit this in `EvergoreDataEvaluator` (first-run / empty-meta path); it
+  was replaced with an earliest-representable sentinel (`BEGINNING_OF_TIME`) that preserves the
+  include-everything semantics. `SmokeTest`'s throwaway `Instant.MIN` timestamp was likewise made a
+  valid instant. `ArchUnit` was bumped to 1.4.1 so it parses Java 25 bytecode (1.3.0 silently
+  imported zero classes, making the hexagonal guard a false green).
+
+An automated, offline version of the 1:1 check (boot the app against a stored prod snapshot, assert
+the rendered pages) is the natural form of backlog **D2** — its fixtures are guild members' data
+(PII) and must stay **gitignored**, never committed.
+
 ## Testing direction for the rebuild (TDD/BDD)
 
 - **BDD (PO perspective):** capture the use cases as scenarios — e.g. *"Given a member deposited

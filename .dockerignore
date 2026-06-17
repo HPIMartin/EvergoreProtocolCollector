@@ -1,0 +1,11 @@
+.git
+.gradle
+build
+target
+database
+*.sqlite
+src/test/resources/benchmark
+.devcontainer
+.claude
+docs
+*.md

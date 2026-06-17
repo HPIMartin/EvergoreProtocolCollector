@@ -100,7 +100,7 @@ class SmokeTest {
 	@Test
 	void retrieveDataViaOverviewEndpoint() {
 		String avatar = "TestAvatar";
-		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(MIN, avatar, 0, EINLAGERUNG)));
+		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(EPOCH, avatar, 0, EINLAGERUNG)));
 		MetaInformation<Long> placement = new MetaInformation<>(getBankPlacement(avatar), 1337L);
 		MetaInformation<Long> withdrawl = new MetaInformation<>(getBankWithdrawl(avatar), 42L);
 		MetaInformationDatabaseRepository.get(config, logger, () -> {}).add(asList(placement, withdrawl));

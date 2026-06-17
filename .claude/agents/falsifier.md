@@ -28,7 +28,7 @@ Read `docs/knowledge-base/engineering-handbook.md`, the relevant KB docs, and th
 
 ## Environment
 **Run everything inside the devcontainer / via Docker — never natively on the host.** Bash stdout
-may not surface (host quirk): `mvn -Dtest=... test > target/f.txt 2>&1` then Read. Do not modify
+may not surface (host quirk): `./gradlew test --tests ... > f.txt 2>&1` then Read. Do not modify
 production code, do not commit, do not push.
 
 ## Return (your final message = data for the orchestrator)

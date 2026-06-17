@@ -1,14 +1,14 @@
 {
-	"name": "Evergore Protocol Collector (Java 17 / Maven)",
+	"name": "Evergore Protocol Collector (Java 25 / Gradle)",
 	"image": "mcr.microsoft.com/devcontainers/base:bookworm",
 	"features": {
 		"ghcr.io/devcontainers/features/java:1": {
-			"version": "17",
-			"installMaven": "true",
+			"version": "25",
+			"installMaven": "false",
 			"installGradle": "false"
 		}
 	},
-	"postCreateCommand": "mvn -B -q dependency:go-offline --fail-never || true",
+	"postCreateCommand": "./gradlew --no-daemon build -x test || true",
 	"customizations": {
 		"vscode": {
 			"extensions": [

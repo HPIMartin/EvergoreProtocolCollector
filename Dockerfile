@@ -1,44 +1,29 @@
 #
-# Build stage
+# Build stage — compile, test and assemble the runnable distribution with JDK 25.
 #
-FROM maven:3.8.7-openjdk-18-slim AS build
+FROM eclipse-temurin:25-jdk AS build
 
-# Install container dependencies
-RUN apt-get update
-RUN apt-get install dos2unix
-RUN apt-get install firefox-esr -y
+ENV APP_HOME=/home/app
+WORKDIR $APP_HOME
 
-# Copy Sources
-ENV HOME=/home/app
-RUN mkdir -p $HOME
-WORKDIR $HOME
-ADD pom.xml $HOME
-RUN chmod -R 777 /home/app
-RUN find /home/app -type f -print0 | xargs -0 dos2unix --
+COPY gradlew settings.gradle.kts build.gradle.kts ./
+COPY gradle ./gradle
+COPY src ./src
 
-# Download dependencies
-RUN mvn verify --fail-never
-
-ADD src $HOME/src
-RUN chmod -R 777 /home/app
-RUN find /home/app -type f -print0 | xargs -0 dos2unix --
-
-#Build App
-#RUN mvn -f /home/app/pom.xml clean package
-RUN mvn -f /home/app/pom.xml package -Dpackaging=jar
+RUN ./gradlew --no-daemon clean test installDist
 
 #
-# Package stage
+# Runtime stage — Firefox + geckodriver for scraping, plus the JDK 25 copied from the build stage
+# (the selenium image is Ubuntu-based and has no openjdk-25 package).
 #
 FROM selenium/standalone-firefox:109.0
-#FROM selenium/standalone-chrome:108.0
 
-RUN sudo apt update && sudo apt upgrade -y
-RUN sudo apt install -y openjdk-17-jre
+COPY --from=build /opt/java/openjdk /opt/java/openjdk
+ENV JAVA_HOME=/opt/java/openjdk
+ENV PATH="$JAVA_HOME/bin:$PATH"
 
-#Copy App
-COPY --from=build /home/app/target/protocolParser-0.0.1-SNAPSHOT.jar /app.jar
-ADD zugang.txt /
+COPY --from=build /home/app/build/install/protocolParser /opt/protocolParser
+COPY zugang.txt /zugang.txt
 
-#Run App by default
-ENTRYPOINT ["java","-jar","/app.jar"]
+WORKDIR /
+ENTRYPOINT ["/opt/protocolParser/bin/protocolParser"]

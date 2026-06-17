@@ -33,12 +33,12 @@ messages. If a message no longer fits, stop and report instead of guessing.)
 - Stay inside the approved plan. Surface — don't silently resolve — any ambiguity or needed deviation.
 
 ## Environment
-**Run everything inside the devcontainer / via Docker — never install or run JDK/Maven/Firefox
+**Run everything inside the devcontainer / via Docker — never install or run JDK/Gradle/Firefox
 natively on the host.** The Bash tool may not surface stdout (host quirk): redirect to a file and
-Read it (`mvn -Dtest=ClassName test > target/o.txt 2>&1` for focused; `mvn -B verify > target/o.txt 2>&1`
-before hand-off). `rm` may be blocked. Prefer Read/Grep/Glob. See `docs/knowledge-base/dev-environment.md`.
+Read it (`./gradlew test --tests ClassName > o.txt 2>&1` for focused; `./gradlew build > o.txt 2>&1`
+before hand-off). `rm -rf` is blocked. Prefer Read/Grep/Glob. See `docs/knowledge-base/dev-environment.md`.
 
 ## Return (your final message = data for the orchestrator)
 For each step: phase outcomes (red proven? green? refactor?), the focused-test result, the commit
-message used. Then the full-suite (`mvn verify`) result before hand-off, and **any deviation from
+message used. Then the full-suite (`./gradlew build`) result before hand-off, and **any deviation from
 the plan with its reason**. Be concise and factual.

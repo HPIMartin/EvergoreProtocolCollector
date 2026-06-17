@@ -18,6 +18,8 @@ import jakarta.inject.*;
 
 @Singleton
 public class EvergoreDataEvaluator {
+	private static final LocalDateTime BEGINNING_OF_TIME = LocalDateTime.of(1, 1, 1, 0, 0);
+
 	private final MetaInformationRepository metaRepo;
 	private final BankRepository bankRepo;
 	private final StorageRepository storageRepo;
@@ -43,7 +45,7 @@ public class EvergoreDataEvaluator {
 	}
 
 	private LocalDateTime updatedUpdatedDate() {
-		LocalDateTime lastUpdated = getStoredValue(getLastUpdatedKey(), LocalDateTime.MIN);
+		LocalDateTime lastUpdated = getStoredValue(getLastUpdatedKey(), BEGINNING_OF_TIME);
 
 		logger.info("Old value: " + lastUpdated);
 
@@ -51,7 +53,7 @@ public class EvergoreDataEvaluator {
 		MetaInformation<LocalDateTime> newUpdatedInformation = new MetaInformation<>(getLastUpdatedKey(), now);
 		metaRepo.add(asList(newUpdatedInformation));
 
-		logger.info("New value: " + getStoredValue(getLastUpdatedKey(), LocalDateTime.MIN));
+		logger.info("New value: " + getStoredValue(getLastUpdatedKey(), BEGINNING_OF_TIME));
 
 		return lastUpdated;
 	}

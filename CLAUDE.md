@@ -81,7 +81,7 @@ no new hard-coded secrets · commit message proposed & confirmed (not pushed) ·
 ## Environment notes
 
 - **In-container only:** all builds/tests/run happen in the **devcontainer** or via Docker — **never
-  install or run toolchains (JDK/Maven/Firefox) natively on the host.** This applies to you **and every
+  install or run toolchains (JDK/Gradle/Firefox) natively on the host.** This applies to you **and every
   spawned agent.** See [`docs/knowledge-base/dev-environment.md`](docs/knowledge-base/dev-environment.md).
 - Branch: **`main`** (the consolidated mainline). Domain language is German (see the glossary).
 - **Bash tool quirk (host only):** a Claude session started on the Windows host may not surface Bash

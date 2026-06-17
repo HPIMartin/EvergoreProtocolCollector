@@ -1,6 +1,6 @@
 # 12 — Dev Environment & Virtualization
 
-**Principle: the dev environment is fully virtualized. Nothing — JDK, Maven, Firefox — is installed
+**Principle: the dev environment is fully virtualized. Nothing — JDK, Gradle, Firefox — is installed
 or run on the host.** All work (builds, tests, the app, and the AI agents) runs inside the
 **devcontainer** or via Docker. This keeps the host clean and makes toolchain upgrades (e.g. a future
 Java bump) a one-line image change instead of a host installation.
@@ -8,11 +8,11 @@ Java bump) a one-line image change instead of a host installation.
 ## The devcontainer (`.devcontainer/devcontainer.json`)
 
 - Base image `mcr.microsoft.com/devcontainers/base:bookworm` (a stable, always-available base) with
-  **JDK 17 + Maven installed via the `java` feature** (`version: 17`, Maven on, Gradle off — this is
-  a Maven project). The JDK version is single-sourced here (the feature `version`).
-- `postCreateCommand` pre-downloads dependencies (`mvn dependency:go-offline`, offline-tolerant).
+  **JDK 25 via the `java` feature** (`version: 25`, Maven off, Gradle off). The build runs through the
+  committed **Gradle wrapper** (`./gradlew`), which needs only a JDK; the `postCreateCommand` warms up
+  with `./gradlew build -x test`. The JDK version is single-sourced here (the feature `version`).
 - VS Code extensions: Claude Code + Java pack (the Java pack is the *editor* language server /
-  IntelliSense — distinct from the JDK; optional for the mvn/agent-driven flow).
+  IntelliSense — distinct from the JDK; optional for the Gradle/agent-driven flow).
 - **Deferred** (removed to get a building container; re-add when needed):
   `docker-outside-of-docker` → selenium-firefox compose service (backlog **H2**);
   `sonarlint` → static analysis (backlog **G6**);
@@ -31,7 +31,7 @@ Java bump) a one-line image change instead of a host installation.
 ## How to work in it (recommended)
 
 1. Open the repo in **VS Code** with the **Dev Containers** extension.
-2. **Reopen in Container** (`F1 → Dev Containers: Reopen in Container`). First build provisions JDK 17 + Maven.
+2. **Reopen in Container** (`F1 → Dev Containers: Reopen in Container`). First build provisions JDK 25; the Gradle wrapper fetches Gradle on first use.
 3. Run **Claude Code from the container's integrated terminal** → all agents then execute **inside the
    container**, never on the host. Builds/tests run there too.
 
@@ -41,28 +41,34 @@ Java bump) a one-line image change instead of a host installation.
 
 ## Rule for all agents
 
-**Never install or run toolchains (JDK/Maven/Firefox) natively on the host.** Run `mvn …`, the app,
-and the scraper only inside the devcontainer or via Docker. This rule is in `CLAUDE.md` and in each
+**Never install or run toolchains (JDK/Gradle/Firefox) natively on the host.** Run `./gradlew …`, the
+app, and the scraper only inside the devcontainer or via Docker. This rule is in `CLAUDE.md` and in each
 agent definition under `.claude/agents/`.
 
 ## JDK version is single-sourced (upgrade procedure)
 
-The Java version is pinned in **three** places that must stay in sync:
+The Java version is pinned in places that must stay in sync (**currently `25`**):
 
-1. `.devcontainer/devcontainer.json` → the `java` feature `version` (currently `17`).
-2. `Dockerfile` → build stage base (`maven:…-openjdk-18-slim`) and runtime JRE (`openjdk-17-jre`).
-   *(These are currently inconsistent — 18 build / 17 runtime — and are cleaned up in backlog H3/H4.)*
-3. `pom.xml` → `<jdk.version>17</jdk.version>`.
+1. `build.gradle.kts` → `java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }`.
+2. `.devcontainer/devcontainer.json` → the `java` feature `version`.
+3. `Dockerfile` → build stage base (`eclipse-temurin:25-jdk`) and the JDK copied into the runtime stage.
 
-**To upgrade (e.g. to Java 25):** bump all three together, rebuild the container, run `mvn verify`.
-Nothing is installed on the host. Tracked as backlog **H4** (make this a single, documented switch).
+The **Gradle** distribution version is pinned separately in `gradle/wrapper/gradle-wrapper.properties`
+(currently `9.5.1`; Java 25 needs Gradle ≥ 9.1). The build toolchain JDK is auto-provisioned by the
+foojay resolver if not already present, so a host/devcontainer JDK mismatch self-heals.
+
+**To upgrade (e.g. to a future Java):** bump the toolchain in `build.gradle.kts` plus the devcontainer
+and Dockerfile bases together, rebuild the container, run `./gradlew build`. Nothing is installed on
+the host. Tracked as backlog **H4** (make it a single, documented switch).
 
 ## Production image (`Dockerfile`)
 
-Multi-stage: Maven build → `selenium/standalone-firefox` runtime + JRE. It works but is fragile and
-**bakes `zugang.txt` (secrets) into the image**, hardcodes the jar name, and uses `dos2unix`
-workarounds (only needed because of CRLF — removable once LF is enforced via `.gitattributes`).
-Cleanup is backlog **H3** (and secret handling ties to **C3**).
+Multi-stage: `eclipse-temurin:25-jdk` build (`./gradlew clean test installDist`) → `selenium/
+standalone-firefox` runtime with the JDK 25 copied in and the application distribution at
+`/opt/protocolParser`. The `dos2unix`/jar-name hacks are gone (LF enforced via `.gitattributes`; the
+distribution dir name is version-independent), and a `.dockerignore` keeps the context lean. It still
+**bakes `zugang.txt` (secrets) into the image** — secret injection is backlog **C3**. The image is not
+built inside the devcontainer (no docker-in-docker — backlog **H2**); build/validate it on the Docker host.
 
 ## Selenium in-container (deferred — backlog H2)
 

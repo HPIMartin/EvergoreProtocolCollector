@@ -11,20 +11,31 @@
 `git log` is the record of what landed; this section tracks only **where we are and what's next**.
 
 **Where we are:** the rebuild's core is in place — the storage-value feature, a hexagonal `PageSource`
-port for scraping, and an ArchUnit guard keeping `domain`/`businessLogic` framework-free. The repo is a
-clean public showcase on a single `main` branch (history was purged of an old leaked keystore, host-path
-helper scripts and a work-email, then consolidated from `master`/`Rebuild`).
+port for scraping, and an ArchUnit guard keeping `domain`/`businessLogic` framework-free. **The build
+is now Gradle on an up-to-date stack** (2026-06-16): Maven→Gradle (Kotlin `build.gradle.kts`, wrapper
+9.5.1), **Java 17→25** (Gradle toolchain, foojay-provisioned), **Micronaut 3.8.4→4.10.3**; the
+devcontainer (JDK 25) and `Dockerfile` (temurin-25 build → selenium-firefox runtime, `installDist`)
+were rebuilt to match. `./gradlew build` is green (22 tests) and the migrated stack was verified **1:1**
+against the production DB (`/overview`, `/avatars/{a}/bank|storage` byte-identical after LF
+normalisation). The repo is a clean public showcase on a single `main` branch.
 
-**SINGLE next dev action: H7 — migrate the build Maven → Gradle** (Kotlin `build.gradle.kts`, decided
-2026-06-15). Land the deferred **A7** (Spotless), **G6+** (JaCoCo), **H6** (failsafe) and the **H8**
-`failOnWarning` flip *in Gradle*, not as new Maven plugins. H7 then unblocks **C2** (move the `secret_token`
-out of source) and **C5** (vuln scan). **D2** (port-unblocked BDD acceptance test) is parked behind H7.
-Plan via the agent pipeline (planner → implementer → falsifier → reviewer). *(A4/CI stays deprioritized —
-local-only Docker → home-server deploy.)*
+**Next dev action — pick from the items H7 unblocked** (all now land *in Gradle*): **H8** (warnings-as-
+errors `failOnWarning`/`-Werror` flip; the Java-25 native-access warnings need handling), **A7**
+(Spotless, tab-preserving), **G6+** (JaCoCo), **H6** (failsafe → Gradle integration-test set), **C2**
+(move `secret_token` out of source), **C5** (vuln scan), **D2** (automated 1:1 acceptance test — boot
+against a **gitignored** prod snapshot; PII never committed). **H9** (jump to Micronaut 5) only *after*
+1:1 is re-proven. Plan via the agent pipeline (planner → implementer → falsifier → reviewer).
+*(A4/CI stays deprioritized — local-only Docker → home-server deploy.)*
 
 **Gotchas worth keeping:**
 - The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit — ignore the
-  warning, `git diff --check` if unsure.
+  warning, `git diff --check` if unsure. (The new build serves CRLF if the working-tree templates are
+  CRLF; a clean LF checkout serves LF — the 1:1 check normalises line endings.)
+- **Java 25 made `java.sql.Timestamp.from` strict** (`Math.multiplyExact` throws where JDK 17 wrapped);
+  the empty watermark `LocalDateTime.MIN` was replaced by `BEGINNING_OF_TIME` in `EvergoreDataEvaluator`.
+  **ArchUnit must be ≥ 1.4.1** to read Java 25 bytecode (older silently checks zero classes = false green).
+- The **devcontainer/`Dockerfile` are not built inside the devcontainer** (no docker-in-docker — H2);
+  validate them on the Docker host / next container rebuild.
 - The Claude "always allow" flow can re-pollute the committed `settings.json` (path-bearing rules +
   tabs→spaces). Prefer bare commands matching the portable `Bash(<cmd>:*)` rules; diff against HEAD if unsure.
 - Keep `zugang.txt` (creds, gitignored); machine-specific config stays in gitignored `*.local.*` files.
@@ -70,7 +81,7 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
 | **C1** | Make `Configuration` real via `@ConfigurationProperties` bound from `application.yml`/env (browser, server, db path, credentials path, in-memory toggle, **+ the hard-coded Firefox binary path in `Browser.java`**) | Hard-coded fields defeat config & deployability | No domain settings hard-coded in `.java`; overridable by env | M |
-| **C2** | Move the API token out of `TokenValidationFilter` into config/secret; rotate off `"secret_token"` — **deferred to after H7 (Gradle/config work), author's call 2026-06-16** | Hard-coded secret in source + test | Token read from config; absent token fails closed | S |
+| **C2** | Move the API token out of `TokenValidationFilter` into config/secret; rotate off `"secret_token"` — **H7 done (2026-06-16); now actionable** | Hard-coded secret in source + test | Token read from config; absent token fails closed | S |
 | **C3** | Stop baking `zugang.txt` into the image; inject credentials via env/secret/mount; read via `FileLoader` port | Credentials in the image is a leak | Image has no credentials; documented secret-injection path | M |
 | **C4** | Lower `logback` root from `verbose`; ensure credentials/tokens never logged | Chatty logs may leak secrets | Sensible levels; a log-scrub check | S |
 | **C5** | **Simple dependency vulnerability scan** wired into the build (OWASP dependency-check or the Gradle-native equivalent) | Catch known-vulnerable deps; good-practice for the showcase | Build surfaces known CVEs in deps. Gated on **H7** (land in Gradle); *Dependabot already covers basic dependency alerts* | S |
@@ -79,7 +90,7 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **D2** | Acceptance (BDD) test of collect→evaluate→overview using in-memory fakes (page-source + `:memory:` DB) — **deferred behind H7 (Gradle migration), 2026-06-15** | Proves the whole use case without a browser | Green scenario asserting overview numbers from canned protocol text | M |
+| **D2** | Acceptance test of collect→evaluate→overview — **H7 done (2026-06-16); now actionable.** Two flavours: (a) in-memory fakes (page-source + `:memory:` DB) for a fast canned-text scenario; (b) the **offline 1:1 benchmark** — boot against a **gitignored** prod-DB snapshot and assert the rendered pages match stored (PII) expecteds, never committed | Proves the whole use case without a browser | Green scenario asserting overview numbers; benchmark reproduces the manual 1:1 check | M |
 | **D3** | Restructure packages to `domain / application / adapters{in,out} / config`; keep core framework-free | Make the boundaries explicit & enforceable | Micronaut/Selenium/ORMLite imports only under `adapters`+`config` | L |
 | **D4** | Unify the two `TransferType→String` visitors; replace `ApplicationExceptionHandler` `instanceof` chain with a visitor (its own TODO) | Remove duplication & the pattern the project is eliminating | One mapping source; handler has no `instanceof` | S |
 | **D5** | Return `Optional` from `getNewest()` instead of `MIN_VALUE` sentinel | Stop leaking fake domain objects | Callers handle empty explicitly; test covers empty repo | S |
@@ -125,11 +136,10 @@ See [knowledge-base/dev-environment.md](knowledge-base/dev-environment.md).
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
 | **H2** | docker-compose: add a `selenium/standalone-firefox` service; tests use `RemoteWebDriver`; retire bundled `gecko-*-win.exe`. **Re-add the `docker-outside-of-docker` devcontainer feature** (removed to get a building container) | Browser-in-container ⇒ scraping/integration tests run anywhere, no host Firefox | An integration test scrapes via the service | M |
-| **H3** | De-hack the `Dockerfile`: drop `dos2unix` (after the LF normalization), parameterize the jar name, stop baking `zugang.txt`, add `.dockerignore`, fix `apt-get … -y` | Current image is fragile & bakes secrets | Clean reproducible build; no secret in image (ties to C3) | M |
-| **H4** | Single-source the JDK version (devcontainer = Dockerfile bases = pom `jdk.version`) + documented upgrade procedure | One-touch upgrades without host installs | Bumping one set of pins upgrades everything | S |
-| **H5** | Re-add a cross-rebuild Maven cache (named volume at `~/.m2`) with correct ownership for the `vscode` user | Faster rebuilds; the first attempt's root-owned volume broke `~/.m2` | Deps cached across rebuilds; container builds clean | S |
-| **H7** | **Migrate the build Maven → Gradle** (DSL: **Kotlin `build.gradle.kts`**, decided 2026-06-15): port `pom.xml` deps/plugins, the `mvn -B verify` lifecycle, devcontainer + Dockerfile build steps; retire `mvn` references in docs/KB | Author prefers Gradle (decided 2026-06-15); the **next** major item, before D2/feature work | `./gradlew build` + tests green in-container; devcontainer/Dockerfile build via Gradle; KB/CLAUDE.md commands updated | L |
-| **H8** | **Warnings-as-errors:** enable `-Xlint:all` + `failOnWarning` in the Gradle build; clean existing warnings (ask the author per-warning; exclude obsolete lint like `-serial`) | Mechanically enforces the warnings-as-errors standard (CLAUDE.md/handbook) | Build fails on any warning; existing warnings fixed or deliberately excluded | M |
+| **H3** | *Mostly done 2026-06-16 with the Gradle migration:* `dos2unix` dropped (LF enforced), jar-name hack gone (version-independent `installDist` dir), `.dockerignore` added, `apt` cleaned. **Remaining: stop baking `zugang.txt`** → folds into **C3** | Image was fragile & bakes secrets | Clean reproducible build; **no-secret-in-image still open (C3)** | S |
+| **H5** | *(was: cross-rebuild Maven cache — obsolete, Maven gone)* Optional: persist the Gradle caches (`~/.gradle`, build cache) across rebuilds with correct `vscode` ownership | Faster rebuilds | Gradle deps/build cached across container rebuilds | S |
+| **H8** | **Warnings-as-errors:** enable `-Werror` + `-Xlint:all` in the Gradle build; clean existing warnings (ask the author per-warning; exclude obsolete lint like `-serial`). **Now actionable in Gradle**; the **Java-25 native-access warnings** (io.netty `sun.misc.Unsafe`/`loadLibrary`) need a decision (`--enable-native-access` vs suppress) | Mechanically enforces the warnings-as-errors standard (CLAUDE.md/handbook) | Build fails on any warning; existing warnings fixed or deliberately excluded | M |
+| **H9** | **Jump Micronaut 4.10 → 5.0** (Java-25 baseline, Apr 2026) and re-verify 1:1. **Only after** the current migration's 1:1 is locked (ideally via the **D2** automated benchmark) | Stay on the newest line; deferred deliberately — one framework risk at a time | `./gradlew build` green on MN5 + endpoints still 1:1 vs the prod snapshot | M |
 
 ---
 

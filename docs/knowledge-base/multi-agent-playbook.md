@@ -79,9 +79,9 @@ Planner phase and every commit-plan approval and push happen with **you** in the
 
 ## Environment gotchas (tell every agent)
 
-- **Bash stdout** isn't surfaced on this machine: redirect to a file (`mvn -B verify > target/out.txt 2>&1`)
-  and `Read` it. `rm` may be permission-blocked. Prefer Read/Grep/Glob.
-- Run **focused** tests during micro-steps (`mvn -Dtest=ClassName test`), full `mvn -B verify` before the gate.
+- **Bash stdout** isn't surfaced on this machine: redirect to a file (`./gradlew build > out.txt 2>&1`)
+  and `Read` it. `rm -rf` is permission-blocked. Prefer Read/Grep/Glob.
+- Run **focused** tests during micro-steps (`./gradlew test --tests ClassName`), full `./gradlew build` before the gate.
 
 ## Worked example (the storage feature, backlog B1 → A2)
 

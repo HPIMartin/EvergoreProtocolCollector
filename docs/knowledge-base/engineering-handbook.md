@@ -40,7 +40,7 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
   intent genuinely can't be expressed in names/structure (rare; then explain *why*, not *what*).
   Self-documenting names + small functions replace comments. The reviewer flags unnecessary comments.
 - **No dead code & no undeclared dependencies** (e.g. an unused class importing a library absent from
-  `pom.xml` — delete it).
+  `build.gradle.kts` — delete it).
 - Prefer `record`s / immutability for value objects. Return `Optional` instead of sentinels
   (replace `getNewest()`'s `MIN_VALUE` object).
 - Constants/config over magic values; **no secrets in source** (token, credentials → config).
@@ -105,8 +105,8 @@ template** demonstrating the practice. Scenarios are written in **product langua
   Whitespace/format changes go in their **own** commit, never mixed with logic.
 - One logical change per commit; **cohesion test** — group parts together only when they can't stand
   alone (would reverting or cherry-picking one without the others break the build or leave the tree
-  inconsistent?); otherwise keep them separate. Keep `master` releasable; feature work on branches; CI
-  (`mvn -B verify`) green to merge.
+  inconsistent?); otherwise keep them separate. Keep `main` releasable; a local
+  `./gradlew build` green before committing.
 - **No secrets, no personal/host data — ever (hard rule).** Never commit sensitive information of any
   kind: passwords, tokens, API keys, private keys/keystores (`*.pfx`/`*.p12`/`*.jks`/`*.pem`/`*.key`),
   credentials, real personal/work emails or usernames, or machine/host/workspace details (absolute
@@ -121,7 +121,7 @@ template** demonstrating the practice. Scenarios are written in **product langua
 
 ## 8. Definition of Done (checklist)
 
-- [ ] Compiles, `mvn verify` green locally
+- [ ] Compiles, `./gradlew build` green locally
 - [ ] No compiler/lint warnings (build is warning-clean once `failOnWarning` lands)
 - [ ] Unit tests for new logic (`@Ignore`-first Gherkin if user-facing)
 - [ ] No secrets or personal/host data (passwords, tokens, keys/keystores, credentials, real emails/usernames, absolute paths, infra) in committed files

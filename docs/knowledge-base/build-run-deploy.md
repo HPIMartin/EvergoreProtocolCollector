@@ -2,22 +2,34 @@
 
 ## Build
 
-- **Maven**, parent `io.micronaut:micronaut-parent:3.8.4`, Java 17, runtime Netty.
-  Main class `…​.Application`.
+- **Gradle** (Kotlin DSL, `build.gradle.kts`) via the `io.micronaut.application` plugin; Micronaut
+  platform `4.10.3`, **Java 25** (Gradle toolchain, auto-provisioned via the foojay resolver),
+  runtime Netty. Main class `…​.Application`. Build & test: `./gradlew build`.
 - Key deps: Selenium 4.7.2, ORMLite-JDBC 6.1, sqlite-jdbc 3.41.2.2, commons-text 1.10,
-  micronaut-openapi (Swagger/RapiDoc/ReDoc). Test: micronaut-test-junit5, JUnit 5,
-  unirest-java 3.11.11 (used by `SmokeTest`), AssertJ 3.27.7.
-- A `mvnw` exists but there is **no `mvnw.cmd`**; the real build path is Docker (below).
-  On Windows, build via local Maven or the container.
+  micronaut-openapi (Swagger/RapiDoc/ReDoc), snakeyaml (Micronaut 4 no longer bundles it). Test:
+  micronaut-test-junit5, JUnit 5 (+ `junit-platform-launcher`), unirest-java 3.11.11 (used by
+  `SmokeTest`), AssertJ 3.27.7, ArchUnit 1.4.1 (reads Java 25 bytecode).
+- The **Gradle wrapper** (`./gradlew`, distribution pinned in `gradle/wrapper/`) is the single build
+  entry point — no host toolchain needed beyond a JDK. The deployable is the **application
+  distribution** (`./gradlew installDist` → `build/install/protocolParser/bin/protocolParser` + `lib/`),
+  not a fat jar.
 
 ## Run via Docker (primary path)
 
 - **`Dockerfile`** is multi-stage:
-  - *build stage* `maven:3.8.7-openjdk-18-slim` + `firefox-esr` + `dos2unix`, runs `mvn … package`.
-  - *runtime stage* `selenium/standalone-firefox:109.0` + `openjdk-17-jre`, copies the jar to
-    `/app.jar`, **`ADD zugang.txt /`** (bakes credentials into the image), `ENTRYPOINT java -jar /app.jar`.
-- **`buildAndRun.bat`**: `docker build -t test .` → prune → `docker run -p 8080:8080 -v "<host>/database:/database" test`.
-  So the container serves on **8080** and persists SQLite to a mounted host `database/` dir.
+  - *build stage* `eclipse-temurin:25-jdk`, runs `./gradlew clean test installDist`.
+  - *runtime stage* `selenium/standalone-firefox:109.0` (Firefox + geckodriver for the `DOCKER`
+    browser mode) with the **JDK 25 copied from the build stage** (Ubuntu base has no openjdk-25),
+    the distribution copied to `/opt/protocolParser`, **`COPY zugang.txt /`** (still bakes credentials
+    into the image — C3/C3-deferred), `ENTRYPOINT /opt/protocolParser/bin/protocolParser`, `WORKDIR /`
+    so the SQLite path `database/temp.sqlite` and `zugang.txt` resolve as before. `.dockerignore`
+    keeps the build context lean and excludes DBs / the gitignored benchmark.
+- **`buildAndRun.bat`** (gitignored, machine-specific): `docker build` → `docker run -p 8080:8080 -v
+  "<host>/database:/database"`. The container serves on **8080** and persists SQLite to a mounted host
+  `database/` dir.
+- *Note:* the Docker image and devcontainer are **not built/validated in the devcontainer** (no
+  docker-in-docker yet — backlog H2); validate them on the Docker host. The new-stack **app behaviour
+  is verified 1:1** by running the distribution against the production DB (see testing.md).
 
 ## Runtime configuration & secrets
 
@@ -57,8 +69,8 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 - **No real CI.** No `.github/workflows/`. `.github/` has only `dependabot.yml` (devcontainers
   ecosystem) and `.github/modernize/java-upgrade/` (local Copilot/VS Code "Java upgrade" agent
   instrumentation — hook scripts that log tool use; not a pipeline).
-- `.devcontainer/devcontainer.json` — Java dev container (Java 25 image, Gradle feature,
-  docker-outside-of-docker, SonarLint, Claude Code). Dev only.
+- `.devcontainer/devcontainer.json` — Java dev container (base + `java` feature, **JDK 25**, Maven
+  off, Gradle via the wrapper); see [dev-environment.md](dev-environment.md). Dev only.
 
 ## Notable runtime risks
 

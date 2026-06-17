@@ -28,7 +28,7 @@ commits/diff for this feature, and the **falsifier's report**.
 
 ## Environment
 **Everything runs inside the devcontainer / via Docker — never natively on the host;** flag it as a
-finding if any step assumes host tooling. Run `mvn -B verify > target/r.txt 2>&1` and Read it to
+finding if any step assumes host tooling. Run `./gradlew build > r.txt 2>&1` and Read it to
 confirm green. Bash stdout may not surface (host quirk); always redirect + Read. Do not modify code,
 commit, or push.
 

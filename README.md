@@ -22,10 +22,10 @@ Per-session bootstrap for AI agents: [CLAUDE.md](CLAUDE.md).
 
 ## Develop & run (fully virtualized — nothing installed on the host)
 
-Open the repo in **VS Code → Dev Containers: Reopen in Container** (provisions JDK 17 + Maven), then:
+Open the repo in **VS Code → Dev Containers: Reopen in Container** (provisions the JDK), then:
 
 ```bash
-mvn -B verify      # build & test, inside the container
+./gradlew build    # build & test, inside the container
 ```
 
 Dev-environment details and the JDK-upgrade procedure: [dev-environment.md](docs/knowledge-base/dev-environment.md).
