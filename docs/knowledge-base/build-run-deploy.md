@@ -22,15 +22,17 @@
   JVM and baked into the distribution's start script (`applicationDefaultJvmArgs`), so both tests and the
   Docker runtime start clean and stay forward-compatible.
 - **Formatting (A7):** a **single shared Eclipse JDT profile**, `config/eclipse/formatter.xml` (tabs,
-  `lineSplit=180`, empty bodies compact, enum constants one-per-line), is the one source of truth — consumed
+  `lineSplit=180`, empty bodies compact, enum constants one-per-line, **method chains wrap one-per-`.`
+  when >180**, **no blank before a method's closing `}`**), is the one source of truth — consumed
   by **VS Code** (`java.format.settings.url` + `…profile`), **Eclipse**, **IntelliJ** (Eclipse-formatter
   adapter) and the **Gradle build**. Spotless applies it (`eclipse().configFile(...)`) plus `removeUnusedImports`
   + `importOrder` (java → external → `dev.schoenberg` → static last) + `trimTrailingWhitespace` +
   `endWithNewline`, wired into `check` — so `./gradlew build` fails on any deviation; `./gradlew spotlessApply`
   fixes. VS Code does **format + organize-imports on save** (`.vscode/settings.json`), with **star imports
   forbidden** (`java.sources.organizeImports.starThreshold: 999999` → always explicit; the codebase is now
-  wildcard-free). Universal whitespace basics (trim, final newline) are native VS Code `files.*` settings (no
-  `.editorconfig`). See open-question D-10.
+  wildcard-free). The formatter wraps `if`-bodies but cannot *insert* `{ }`; always-braces is enforced
+  separately by the Checkstyle `NeedBraces` gate (see below). Universal whitespace basics (trim, final newline)
+  are native VS Code `files.*` settings (no `.editorconfig`). See open-question D-10.
 
 ## Run via Docker (primary path)
 

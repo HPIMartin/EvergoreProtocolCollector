@@ -101,7 +101,10 @@ public class EvergoreDataEvaluator {
 		double storageWithdrawl = getStoredValue(storageWithdrawlKey, 0D);
 
 		StorageStatus storage = new StorageStatus(storagePlacement, storageWithdrawl);
-		storageRepo.getAllFor(avatar, lastUpdated).stream().map(e -> new StorageEntryItem(e, findItem(e)))
+		storageRepo
+				.getAllFor(avatar, lastUpdated)
+				.stream()
+				.map(e -> new StorageEntryItem(e, findItem(e)))
 				.forEach(e -> e.entry.type.accept(storageEntryVisitor).accept(storage, e));
 
 		MetaInformation<Double> updatedStoragePlacement = new MetaInformation<>(storagePlacementKey, storage.placement);

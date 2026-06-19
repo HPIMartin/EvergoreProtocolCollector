@@ -27,9 +27,19 @@ VS Code, Eclipse, IntelliJ *and* the Gradle build (Spotless `eclipse()` + `impor
 Code formats + organizes imports on save; **star imports forbidden** (`starThreshold 999999`). Codebase
 reflowed to the standard (38 files, max line 180) **and all wildcard imports expanded to explicit** (IDE
 organize-imports; Spotless `removeUnusedImports` added) — wildcard-free, build green. Author chose *uniform
-+ enforced* over hand-tuned wrapping; `.editorconfig` dropped (VS-Code-only). **Next on the formatter:**
-fine-tuning (chain-wrap per `.`, fewer blank lines, wrap `if`-bodies). New item **D6**: **refactor**
-`EvergoreItem` in-place — keep the enum hard-links, **not** externalize.
++ enforced* over hand-tuned wrapping; `.editorconfig` dropped (VS-Code-only).
+
+**Formatter fine-tuning landed (2026-06-19).** Empirically reduced to the two settings that are *real*
+deviations: `alignment_for_selector_in_method_invocation=48` (method chains wrap **one per `.`** only when
+they exceed `lineSplit=180`; 3 files reflowed) and `number_of_blank_lines_at_end_of_method_body=0` (no blank
+before a method's closing `}`). The other handoff candidates proved to be **JDT defaults already** — `if`
+one-liners are broken (braceless) and multiple blanks collapse to one without any setting — so they were
+**not** added (the profile stays deviations-only). Removing the blank after `class X {` / at method-body
+start is **not possible** in JDT without also dropping the wanted inter-method blanks (`number_of_empty_lines_to_preserve`
+governs all three), so it was dropped. **Braces** are a separate concern: the formatter wraps `if`-bodies but
+cannot *insert* `{ }`, so always-braces enforcement is handled outside the formatter (see the Checkstyle
+`NeedBraces` gate). New item **D6**: **refactor** `EvergoreItem` in-place — keep the enum hard-links, **not**
+externalize.
 
 **Next dev action — pick from the remaining items H7 unblocked** (all land *in Gradle*): **G6+**
 (JaCoCo), **H6** (failsafe → Gradle integration-test set), **C2** (move `secret_token` out of source),
