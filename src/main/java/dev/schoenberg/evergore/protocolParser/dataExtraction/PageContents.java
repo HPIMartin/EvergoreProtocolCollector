@@ -1,6 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
-import java.util.*;
+import java.util.List;
 
 public class PageContents {
 	public final List<String> lager;

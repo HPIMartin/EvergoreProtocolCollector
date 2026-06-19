@@ -1,41 +1,54 @@
 package dev.schoenberg.evergore.protocolParser;
 
-import java.nio.file.*;
-import java.time.*;
-import java.util.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.Month;
+import java.util.List;
 
-import jakarta.inject.*;
+import jakarta.inject.Inject;
 
-import io.micronaut.runtime.server.*;
-import io.micronaut.scheduling.*;
-import io.micronaut.test.annotation.*;
-import io.micronaut.test.extensions.junit5.annotation.*;
-import kong.unirest.*;
-import org.junit.jupiter.api.*;
+import io.micronaut.runtime.server.EmbeddedServer;
+import io.micronaut.scheduling.DefaultTaskExceptionHandler;
+import io.micronaut.test.annotation.MockBean;
+import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import kong.unirest.HttpResponse;
+import kong.unirest.Unirest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
-import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
-import dev.schoenberg.evergore.protocolParser.dataExtraction.website.*;
-import dev.schoenberg.evergore.protocolParser.database.*;
-import dev.schoenberg.evergore.protocolParser.database.bank.*;
-import dev.schoenberg.evergore.protocolParser.database.metaInformation.*;
-import dev.schoenberg.evergore.protocolParser.database.storage.*;
-import dev.schoenberg.evergore.protocolParser.helper.config.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.EvergoreDataCollectorJob;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.EvergoreDataExtractor;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.website.SeleniumPageSource;
+import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
+import dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
-import static dev.schoenberg.evergore.protocolParser.TestHelper.*;
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
-import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
-import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.*;
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.*;
-import static java.time.Duration.*;
-import static java.time.Instant.*;
-import static java.util.Arrays.*;
-import static java.util.concurrent.TimeUnit.*;
-import static kong.unirest.Unirest.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static dev.schoenberg.evergore.protocolParser.TestHelper.calculateLevenshteinDistance;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.EINLAGERUNG;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.NEWLINE;
+import static java.time.Duration.ofMinutes;
+import static java.time.Instant.EPOCH;
+import static java.time.Instant.now;
+import static java.util.Arrays.asList;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static kong.unirest.Unirest.config;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @MicronautTest
 class SmokeTest {

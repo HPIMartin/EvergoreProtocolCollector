@@ -1,12 +1,12 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller;
 
-import java.util.*;
-import java.util.function.*;
+import java.util.List;
+import java.util.function.Function;
 
-import jakarta.inject.*;
+import jakarta.inject.Singleton;
 
-import static java.lang.System.*;
-import static org.apache.commons.text.StringEscapeUtils.*;
+import static java.lang.System.lineSeparator;
+import static org.apache.commons.text.StringEscapeUtils.escapeHtml4;
 
 @Singleton
 public class OutputFormatter {

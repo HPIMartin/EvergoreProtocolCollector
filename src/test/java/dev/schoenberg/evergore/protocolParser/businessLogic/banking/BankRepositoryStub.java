@@ -1,7 +1,10 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.banking;
 
-import java.time.*;
-import java.util.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class BankRepositoryStub implements BankRepository {
 	private final Map<String, List<BankEntry>> entriesByAvatar = new HashMap<>();

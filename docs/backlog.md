@@ -25,10 +25,11 @@ future-proofed via `--enable-native-access=ALL-UNNAMED` (test JVM + dist start s
 **shared Eclipse formatter** — one central `config/eclipse/formatter.xml` (tabs, `lineSplit=180`) used by
 VS Code, Eclipse, IntelliJ *and* the Gradle build (Spotless `eclipse()` + `importOrder` + whitespace); VS
 Code formats + organizes imports on save; **star imports forbidden** (`starThreshold 999999`). Codebase
-reflowed to the standard (38 files, max line 180); build green. Author chose *uniform + enforced* over
-hand-tuned wrapping; `.editorconfig` dropped (VS-Code-only). **Finishing-step still open:** one-time
-wildcard→explicit expansion (IDE) + a no-wildcard build gate. New item **D6**: externalize the
-`EvergoreItem` catalog to YAML (answers D-3).
+reflowed to the standard (38 files, max line 180) **and all wildcard imports expanded to explicit** (IDE
+organize-imports; Spotless `removeUnusedImports` added) — wildcard-free, build green. Author chose *uniform
++ enforced* over hand-tuned wrapping; `.editorconfig` dropped (VS-Code-only). **Next on the formatter:**
+fine-tuning (chain-wrap per `.`, fewer blank lines, wrap `if`-bodies). New item **D6**: **refactor**
+`EvergoreItem` in-place — keep the enum hard-links, **not** externalize.
 
 **Next dev action — pick from the remaining items H7 unblocked** (all land *in Gradle*): **G6+**
 (JaCoCo), **H6** (failsafe → Gradle integration-test set), **C2** (move `secret_token` out of source),
@@ -104,7 +105,7 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 | **D3** | Restructure packages to `domain / application / adapters{in,out} / config`; keep core framework-free | Make the boundaries explicit & enforceable | Micronaut/Selenium/ORMLite imports only under `adapters`+`config` | L |
 | **D4** | Unify the two `TransferType→String` visitors; replace `ApplicationExceptionHandler` `instanceof` chain with a visitor (its own TODO) | Remove duplication & the pattern the project is eliminating | One mapping source; handler has no `instanceof` | S |
 | **D5** | Return `Optional` from `getNewest()` instead of `MIN_VALUE` sentinel | Stop leaking fake domain objects | Callers handle empty explicitly; test covers empty repo | S |
-| **D6** | **Externalize the `EvergoreItem` catalog to a YAML resource** (snakeyaml already bundled) + a loader, replacing the ~660-constant inline enum. Surfaced 2026-06-19 (the catalog is the project's biggest file & a formatter pain-point). **Key risk:** recipes cross-reference other items as *compile-checked* enum constants — externalizing trades that for runtime refs, so it **needs** (a) a fail-fast startup validator that every ingredient resolves and (b) a **golden-master test** asserting the loaded data reproduces today's computed `getStorageValue`/`getWithdrawlValue` for all items. Decide whether `EvergoreItem` stays an enum (data-only move, file barely shrinks) or becomes a loaded registry (real refactor; tests referencing constants by name change). Answers **D-3** | Decouples hand-maintained data from code; eases value maintenance | P3 | Gate the migration on the golden-master test (must be 1:1). Independent of A7. |
+| **D6** | **Refactor the `EvergoreItem` catalog in-place** — the ~660-constant enum (752 lines) is the project's biggest file. **Decision 2026-06-19: keep it an enum** (the compile-checked recipe hard-links are valued) and **do NOT externalize** to a config/YAML file. Refactor for readability/maintainability instead, e.g.: pull the nested `Category`/`Recipe`/`Ingredient` types into their own files; add concise recipe/ingredient factory helpers to shorten each constant; group constants. Approach TBD with the author. Any change **must** keep a **golden-master test** asserting `getStorageValue`/`getWithdrawlValue` are unchanged for all items | Tame the biggest file without losing the type-safe cross-references; eases value maintenance (relates to **D-3**) | P3 | Golden-master test gates it (1:1). Independent of A7. |
 
 ## Epic E — Product: replace the Google Sheet `P2→P3`  *(in scope — full parity; no time pressure)*
 

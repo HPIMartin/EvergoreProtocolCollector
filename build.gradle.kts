@@ -79,6 +79,7 @@ tasks.withType<Test> {
 spotless {
 	java {
 		target("src/**/*.java")
+		removeUnusedImports()
 		importOrder("java", "javax", "jakarta", "", "dev.schoenberg", "\\#")
 		eclipse().configFile("config/eclipse/formatter.xml")
 		trimTrailingWhitespace()

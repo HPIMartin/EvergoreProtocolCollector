@@ -1,6 +1,8 @@
 package dev.schoenberg.evergore.protocolParser;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class LoggerSpy implements Logger {
 	private final List<String> infoMessages = new ArrayList<>();

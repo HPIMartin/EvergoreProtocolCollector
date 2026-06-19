@@ -1,18 +1,18 @@
 package dev.schoenberg.evergore.protocolParser.database;
 
-import jakarta.inject.*;
+import jakarta.inject.Singleton;
 
-import io.micronaut.context.event.*;
-import io.micronaut.runtime.server.event.*;
+import io.micronaut.context.event.ApplicationEventListener;
+import io.micronaut.runtime.server.event.ServerStartupEvent;
 
-import dev.schoenberg.evergore.protocolParser.database.bank.*;
-import dev.schoenberg.evergore.protocolParser.database.metaInformation.*;
-import dev.schoenberg.evergore.protocolParser.database.storage.*;
-import dev.schoenberg.evergore.protocolParser.helper.config.*;
+import dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static java.nio.file.Files.*;
-import static java.nio.file.Path.*;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static java.nio.file.Files.createDirectories;
+import static java.nio.file.Path.of;
 
 @Singleton
 public class DatabaseStartupInitialization implements ApplicationEventListener<ServerStartupEvent> {

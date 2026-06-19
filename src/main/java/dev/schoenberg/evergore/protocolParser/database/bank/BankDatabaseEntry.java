@@ -1,9 +1,11 @@
 package dev.schoenberg.evergore.protocolParser.database.bank;
 
-import java.util.*;
+import java.util.Date;
+import java.util.UUID;
 
-import com.j256.ormlite.field.*;
-import com.j256.ormlite.table.*;
+import com.j256.ormlite.field.DataType;
+import com.j256.ormlite.field.DatabaseField;
+import com.j256.ormlite.table.DatabaseTable;
 
 @DatabaseTable(tableName = BankDatabaseEntry.TABLE)
 public class BankDatabaseEntry {

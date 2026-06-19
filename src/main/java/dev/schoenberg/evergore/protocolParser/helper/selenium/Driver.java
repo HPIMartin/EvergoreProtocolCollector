@@ -1,19 +1,22 @@
 package dev.schoenberg.evergore.protocolParser.helper.selenium;
 
-import java.io.*;
-import java.nio.file.*;
-import java.nio.file.attribute.*;
-import java.util.*;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.HashSet;
+import java.util.Set;
 
-import jakarta.inject.*;
+import jakarta.inject.Singleton;
 
-import org.openqa.selenium.*;
+import org.openqa.selenium.WebDriver;
 
-import dev.schoenberg.evergore.protocolParser.helper.config.*;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static dev.schoenberg.evergore.protocolParser.helper.selenium.Browser.*;
-import static java.nio.file.attribute.PosixFilePermission.*;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static dev.schoenberg.evergore.protocolParser.helper.selenium.Browser.fromString;
+import static java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE;
+import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
+import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
 
 @Singleton
 public class Driver {

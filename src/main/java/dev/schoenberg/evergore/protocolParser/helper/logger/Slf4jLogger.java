@@ -1,8 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.helper.logger;
 
-import jakarta.inject.*;
+import jakarta.inject.Singleton;
 
-import org.slf4j.*;
+import org.slf4j.LoggerFactory;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
 

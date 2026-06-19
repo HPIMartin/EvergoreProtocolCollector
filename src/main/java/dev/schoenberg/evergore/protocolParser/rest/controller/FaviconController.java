@@ -1,11 +1,14 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller;
 
-import java.io.*;
+import java.io.InputStream;
 
-import io.micronaut.http.annotation.*;
-import io.micronaut.http.server.types.files.*;
+import io.micronaut.http.annotation.Controller;
+import io.micronaut.http.annotation.Get;
+import io.micronaut.http.annotation.Produces;
+import io.micronaut.http.server.types.files.StreamedFile;
 
-import static io.micronaut.http.MediaType.*;
+import static io.micronaut.http.MediaType.APPLICATION_OCTET_STREAM;
+import static io.micronaut.http.MediaType.APPLICATION_OCTET_STREAM_TYPE;
 
 @Controller
 public class FaviconController {

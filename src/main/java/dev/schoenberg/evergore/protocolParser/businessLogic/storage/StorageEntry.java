@@ -1,8 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.storage;
 
-import java.time.*;
+import java.time.Instant;
 
-import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 
 public class StorageEntry {
 	public final Instant timeStamp;

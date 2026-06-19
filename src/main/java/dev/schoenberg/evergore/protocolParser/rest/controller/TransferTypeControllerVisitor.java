@@ -1,6 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller;
 
-import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.TransferTypeVisitor;
 
 public class TransferTypeControllerVisitor implements TransferTypeVisitor<String> {
 	@Override

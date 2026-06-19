@@ -1,20 +1,23 @@
 package dev.schoenberg.evergore.protocolParser.helper.selenium;
 
-import java.nio.file.*;
-import java.util.*;
-import java.util.function.*;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.function.Function;
 
-import org.openqa.selenium.*;
-import org.openqa.selenium.chrome.*;
-import org.openqa.selenium.edge.*;
-import org.openqa.selenium.firefox.*;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.edge.EdgeDriver;
+import org.openqa.selenium.edge.EdgeOptions;
+import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.firefox.FirefoxOptions;
 
-import dev.schoenberg.evergore.protocolParser.helper.config.*;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static java.lang.System.*;
-import static java.nio.file.Files.*;
-import static org.openqa.selenium.firefox.FirefoxDriver.SystemProperty.*;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static java.lang.System.setProperty;
+import static java.nio.file.Files.createTempFile;
+import static org.openqa.selenium.firefox.FirefoxDriver.SystemProperty.BROWSER_LOGFILE;
 
 public enum Browser {
 	FIREFOX("gecko", Browser::firefox, true),

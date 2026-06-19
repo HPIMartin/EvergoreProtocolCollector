@@ -1,11 +1,12 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction.parser;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
-import dev.schoenberg.evergore.protocolParser.domain.*;
+import dev.schoenberg.evergore.protocolParser.domain.Entry;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
-import static dev.schoenberg.evergore.protocolParser.dataExtraction.parser.EntryFactory.*;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.LAGER_EINTRAG_START;
+import static dev.schoenberg.evergore.protocolParser.dataExtraction.parser.EntryFactory.parseContent;
 
 public class EntityParser {
 

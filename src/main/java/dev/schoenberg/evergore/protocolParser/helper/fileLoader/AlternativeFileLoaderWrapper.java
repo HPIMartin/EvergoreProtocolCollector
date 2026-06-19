@@ -1,8 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.helper.fileLoader;
 
-import java.io.*;
+import java.io.File;
 
-import dev.schoenberg.evergore.protocolParser.helper.selenium.*;
+import dev.schoenberg.evergore.protocolParser.helper.selenium.FileLoader;
 
 public class AlternativeFileLoaderWrapper implements FileLoader {
 

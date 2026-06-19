@@ -1,16 +1,20 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
-import java.time.*;
-import java.util.*;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import dev.schoenberg.evergore.protocolParser.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
+import dev.schoenberg.evergore.protocolParser.LoggerSpy;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
-import static org.assertj.core.api.Assertions.*;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.EINLAGERUNG;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class EvergoreDataExtractorTest {
 

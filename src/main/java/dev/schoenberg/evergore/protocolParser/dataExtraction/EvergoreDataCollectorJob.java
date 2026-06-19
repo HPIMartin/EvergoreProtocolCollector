@@ -1,13 +1,13 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
-import jakarta.inject.*;
+import jakarta.inject.Singleton;
 
-import io.micronaut.scheduling.annotation.*;
+import io.micronaut.scheduling.annotation.Scheduled;
 
-import dev.schoenberg.evergore.protocolParser.*;
+import dev.schoenberg.evergore.protocolParser.Logger;
 
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static java.util.concurrent.TimeUnit.*;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Singleton
 public class EvergoreDataCollectorJob {

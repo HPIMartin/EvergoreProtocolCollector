@@ -1,22 +1,27 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller;
 
-import java.time.*;
-import java.time.format.*;
-import java.util.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
-import io.micronaut.http.annotation.*;
+import io.micronaut.http.annotation.Controller;
+import io.micronaut.http.annotation.Get;
+import io.micronaut.http.annotation.Produces;
 
-import dev.schoenberg.evergore.protocolParser.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
-import dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.*;
+import dev.schoenberg.evergore.protocolParser.Logger;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationRepository;
+import dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.Column;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.*;
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static io.micronaut.http.MediaType.*;
-import static java.lang.String.*;
-import static java.nio.charset.StandardCharsets.*;
-import static java.time.format.DateTimeFormatter.*;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static io.micronaut.http.MediaType.TEXT_HTML;
+import static java.lang.String.valueOf;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.time.format.DateTimeFormatter.ofPattern;
 
 @Controller("/overview")
 public class OverviewController {

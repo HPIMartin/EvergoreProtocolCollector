@@ -1,17 +1,24 @@
 package dev.schoenberg.evergore.protocolParser.rest.exceptionHandler;
 
-import jakarta.inject.*;
+import jakarta.inject.Singleton;
 
-import io.micronaut.context.annotation.*;
-import io.micronaut.http.*;
-import io.micronaut.http.annotation.*;
-import io.micronaut.http.server.exceptions.*;
+import io.micronaut.context.annotation.Requires;
+import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpResponse;
+import io.micronaut.http.annotation.Produces;
+import io.micronaut.http.server.exceptions.ExceptionHandler;
 
-import dev.schoenberg.evergore.protocolParser.*;
-import dev.schoenberg.evergore.protocolParser.exceptions.*;
+import dev.schoenberg.evergore.protocolParser.Logger;
+import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
+import dev.schoenberg.evergore.protocolParser.exceptions.NoElementFound;
+import dev.schoenberg.evergore.protocolParser.exceptions.ProtocolParserException;
+import dev.schoenberg.evergore.protocolParser.exceptions.TooManyRequests;
 
-import static io.micronaut.http.HttpResponse.*;
-import static io.micronaut.http.HttpStatus.*;
+import static io.micronaut.http.HttpResponse.status;
+import static io.micronaut.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static io.micronaut.http.HttpStatus.NOT_FOUND;
+import static io.micronaut.http.HttpStatus.TOO_MANY_REQUESTS;
+import static io.micronaut.http.HttpStatus.UNAUTHORIZED;
 
 @Produces
 @Singleton

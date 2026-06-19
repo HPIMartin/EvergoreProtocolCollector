@@ -1,13 +1,13 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation;
 
-import java.time.*;
-import java.time.format.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
-import static java.lang.Double.*;
-import static java.lang.Long.*;
+import static java.lang.Double.parseDouble;
+import static java.lang.Long.parseLong;
 import static java.lang.String.valueOf;
-import static java.time.LocalDateTime.*;
-import static java.time.format.DateTimeFormatter.*;
+import static java.time.LocalDateTime.parse;
+import static java.time.format.DateTimeFormatter.ofPattern;
 
 public abstract class MetaInformationKey<T> {
 	private static final DateTimeKey LAST_UPDATED = new DateTimeKey("last_updated");

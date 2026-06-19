@@ -1,23 +1,30 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller;
 
-import java.time.*;
-import java.time.format.*;
-import java.util.*;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
-import io.micronaut.http.annotation.*;
+import io.micronaut.http.annotation.Controller;
+import io.micronaut.http.annotation.Get;
+import io.micronaut.http.annotation.PathVariable;
+import io.micronaut.http.annotation.Produces;
+import io.micronaut.http.annotation.QueryValue;
 
-import dev.schoenberg.evergore.protocolParser.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
-import dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.*;
+import dev.schoenberg.evergore.protocolParser.Logger;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
+import dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.Column;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static io.micronaut.http.MediaType.*;
-import static java.lang.String.*;
-import static java.nio.charset.StandardCharsets.*;
-import static java.time.format.DateTimeFormatter.*;
-import static org.apache.commons.text.StringEscapeUtils.*;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static io.micronaut.http.MediaType.TEXT_HTML;
+import static java.lang.String.valueOf;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.time.format.DateTimeFormatter.ofPattern;
+import static org.apache.commons.text.StringEscapeUtils.escapeHtml4;
 
 @Controller("/avatars/{" + AvatarController.PATH_VAR_AVATAR + "}")
 public class AvatarController {

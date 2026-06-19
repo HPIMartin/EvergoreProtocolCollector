@@ -1,12 +1,14 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction.parser;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import dev.schoenberg.evergore.protocolParser.domain.*;
+import dev.schoenberg.evergore.protocolParser.domain.Entry;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class EntryFactoryTest {
 

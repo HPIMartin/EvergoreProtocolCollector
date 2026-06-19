@@ -1,25 +1,32 @@
 package dev.schoenberg.evergore.protocolParser.database.storage;
 
-import java.sql.*;
-import java.time.*;
-import java.util.*;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 
-import com.j256.ormlite.dao.*;
-import com.j256.ormlite.support.*;
+import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.dao.GenericRawResults;
+import com.j256.ormlite.support.ConnectionSource;
 
-import dev.schoenberg.evergore.protocolParser.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
-import dev.schoenberg.evergore.protocolParser.database.*;
-import dev.schoenberg.evergore.protocolParser.exceptions.*;
-import dev.schoenberg.evergore.protocolParser.helper.config.*;
+import dev.schoenberg.evergore.protocolParser.Logger;
+import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
+import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
+import dev.schoenberg.evergore.protocolParser.database.Repository;
+import dev.schoenberg.evergore.protocolParser.database.TransferTypeDatabaseVisitor;
+import dev.schoenberg.evergore.protocolParser.exceptions.NoElementFound;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
-import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.*;
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static java.lang.String.*;
-import static java.sql.Timestamp.*;
+import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.AVATAR_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TABLE;
+import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static java.lang.String.join;
+import static java.sql.Timestamp.from;
+import static java.sql.Timestamp.valueOf;
 
 public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> implements StorageRepository {
 	private final Dao<StorageDatabaseEntry, String> storage;

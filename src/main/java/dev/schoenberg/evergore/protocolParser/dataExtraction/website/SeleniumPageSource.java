@@ -1,23 +1,28 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction.website;
 
-import java.util.*;
 import java.util.ArrayList;
+import java.util.List;
 
-import jakarta.inject.*;
+import jakarta.inject.Singleton;
 
-import org.openqa.selenium.*;
-import org.openqa.selenium.support.ui.*;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
-import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
-import dev.schoenberg.evergore.protocolParser.helper.config.*;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.PageContents;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import dev.schoenberg.evergore.protocolParser.helper.selenium.Driver;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
-import static java.nio.file.Files.*;
-import static java.time.Duration.*;
-import static java.util.Arrays.*;
-import static org.openqa.selenium.By.*;
-import static org.openqa.selenium.support.ui.ExpectedConditions.*;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.LAGER_EINTRAG_START;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.SERVER;
+import static java.nio.file.Files.exists;
+import static java.nio.file.Files.readAllLines;
+import static java.time.Duration.ofMinutes;
+import static java.util.Arrays.asList;
+import static org.openqa.selenium.By.id;
+import static org.openqa.selenium.By.xpath;
+import static org.openqa.selenium.support.ui.ExpectedConditions.urlToBe;
 
 @Singleton
 public class SeleniumPageSource implements PageSource {

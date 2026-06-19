@@ -1,17 +1,19 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
-import java.time.*;
-import java.util.*;
-import java.util.concurrent.atomic.*;
+import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import jakarta.inject.*;
+import jakarta.inject.Singleton;
 
-import dev.schoenberg.evergore.protocolParser.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
-import dev.schoenberg.evergore.protocolParser.dataExtraction.parser.*;
-import dev.schoenberg.evergore.protocolParser.domain.*;
+import dev.schoenberg.evergore.protocolParser.Logger;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.parser.EntityParser;
+import dev.schoenberg.evergore.protocolParser.domain.Entry;
 
 @Singleton
 public class EvergoreDataExtractor {

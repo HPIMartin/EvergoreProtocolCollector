@@ -1,6 +1,9 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 public class FakeMetaInformationRepository implements MetaInformationRepository {
 	private final Map<String, Object> store = new HashMap<>();

@@ -1,11 +1,11 @@
 package dev.schoenberg.evergore.protocolParser.helper.config;
 
-import java.nio.file.*;
+import java.nio.file.Path;
 
-import jakarta.inject.*;
+import jakarta.inject.Singleton;
 
-import static java.nio.file.Path.*;
-import static java.nio.file.Paths.*;
+import static java.nio.file.Path.of;
+import static java.nio.file.Paths.get;
 
 @Singleton
 public class Configuration {

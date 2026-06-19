@@ -1,6 +1,6 @@
 package dev.schoenberg.evergore.protocolParser;
 
-import static java.lang.Math.*;
+import static java.lang.Math.min;
 
 public class TestHelper {
 	public static int calculateLevenshteinDistance(String str1, String str2) {

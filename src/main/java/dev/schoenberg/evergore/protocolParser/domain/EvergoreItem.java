@@ -1,10 +1,38 @@
 package dev.schoenberg.evergore.protocolParser.domain;
 
-import java.util.*;
+import java.util.List;
 
-import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.*;
-import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.*;
-import static java.util.Arrays.*;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.AEXTE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.AEXTE_2H;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.ARMBRUESTE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.BANDAGEN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.BAUTEILE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.BOEGEN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.DOLCHE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.EDELSTEINE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.ERDSTAEBE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.FEUERSTAEBE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.HANDWERKSMATERIAL;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.JAGDBEUTEN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.KEULEN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.KEULEN_2H;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.LEICHTE_RUESTUNG_LEDER;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.LEICHTE_RUESTUNG_STOFF;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.LEICHTE_SCHILDE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.LUFTSTAEBE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.MUNITION_ARMBRUESTE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.MUNITION_BOEGEN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.MUNITION_MAGIESTAEBE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.ROHSTOFFE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.SCHWERER_SCHILDE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.SCHWERE_RUESTUNG_METALL;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.SCHWERTER;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.SCHWERTER_2H;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.STANGENWAFFEN_2H;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.VERARBEITETE_ROHSTOFFE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.WASSERSTAEBE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.NOT_CRAFTABLE;
+import static java.util.Arrays.asList;
 
 public enum EvergoreItem {
 	UNDEFINED("undefined", 0, HANDWERKSMATERIAL, NOT_CRAFTABLE),

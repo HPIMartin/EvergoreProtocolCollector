@@ -1,14 +1,23 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction.parser;
 
-import java.time.*;
-import java.time.format.*;
-import java.util.*;
-import java.util.regex.*;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
-import dev.schoenberg.evergore.protocolParser.domain.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
+import dev.schoenberg.evergore.protocolParser.domain.Entry;
+import dev.schoenberg.evergore.protocolParser.domain.Item;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.GROUP_NAME_AVATAR;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.GROUP_NAME_DATE;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.GROUP_NAME_TYPE;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.LAGER_EINTRAG_START;
 
 public class EntryFactory {
 	private EntryFactory() {}

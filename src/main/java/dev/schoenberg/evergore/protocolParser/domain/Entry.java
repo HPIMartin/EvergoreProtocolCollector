@@ -1,12 +1,13 @@
 package dev.schoenberg.evergore.protocolParser.domain;
 
-import java.time.*;
-import java.time.format.*;
-import java.util.*;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
-import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
 
 public record Entry(String avatar, Instant date, List<Item> items, TransferType type) {
 	public String print(String delimiter) {

@@ -1,9 +1,9 @@
 package dev.schoenberg.evergore.protocolParser.database;
 
-import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.TransferTypeVisitor;
 
-import static java.util.Arrays.*;
+import static java.util.Arrays.stream;
 
 public class TransferTypeDatabaseVisitor implements TransferTypeVisitor<String> {
 	@Override

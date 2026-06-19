@@ -1,7 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.database.metaInformation;
 
-import com.j256.ormlite.field.*;
-import com.j256.ormlite.table.*;
+import com.j256.ormlite.field.DatabaseField;
+import com.j256.ormlite.table.DatabaseTable;
 
 @DatabaseTable(tableName = MetaInformationEntry.TABLE)
 public class MetaInformationEntry {
