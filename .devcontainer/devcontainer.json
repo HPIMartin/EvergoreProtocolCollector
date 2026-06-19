@@ -13,7 +13,8 @@
 		"vscode": {
 			"extensions": [
 				"Anthropic.claude-code",
-				"vscjava.vscode-java-pack"
+				"vscjava.vscode-java-pack",
+				"shengchen.vscode-checkstyle"
 			],
 			"settings": {
 				"java.configuration.updateBuildConfiguration": "automatic",

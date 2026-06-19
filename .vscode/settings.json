@@ -4,6 +4,7 @@
     "java.dependency.packagePresentation": "hierarchical",
     "java.format.settings.url": "config/eclipse/formatter.xml",
     "java.format.settings.profile": "evergore",
+    "java.checkstyle.configuration": "${workspaceFolder}/config/checkstyle/checkstyle.xml",
     "java.completion.importOrder": ["java", "javax", "jakarta", "", "dev.schoenberg", "#"],
     "java.sources.organizeImports.starThreshold": 999999,
     "java.sources.organizeImports.staticStarThreshold": 999999,

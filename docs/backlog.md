@@ -37,9 +37,17 @@ one-liners are broken (braceless) and multiple blanks collapse to one without an
 **not** added (the profile stays deviations-only). Removing the blank after `class X {` / at method-body
 start is **not possible** in JDT without also dropping the wanted inter-method blanks (`number_of_empty_lines_to_preserve`
 governs all three), so it was dropped. **Braces** are a separate concern: the formatter wraps `if`-bodies but
-cannot *insert* `{ }`, so always-braces enforcement is handled outside the formatter (see the Checkstyle
-`NeedBraces` gate). New item **D6**: **refactor** `EvergoreItem` in-place — keep the enum hard-links, **not**
-externalize.
+cannot *insert* `{ }`, so always-braces is enforced outside the formatter.
+
+**Checkstyle landed (2026-06-19, single-purpose).** A minimal `config/checkstyle/checkstyle.xml` (the
+Gradle-default path) with **exactly one rule, `NeedBraces`** — disjoint from the formatter (layout stays in
+`formatter.xml`; no rule lives in both, so no parallel upkeep). Gradle `checkstyle` plugin → `check`, gate
+proven by a deliberate braceless `if`; same config drives the IDE (vscode-checkstyle, recommended +
+devcontainer-installed). The earlier rejection still holds for Checkstyle *as a general linter* (overlap with
+reviewer/Sonar G6); this is the narrow brace gap only. **Note:** Checkstyle only *reports* (no auto-fix — the
+intended VS Code `addBraces` cleanup turned out **not to exist** in redhat.java); braces are added via the
+"Add braces" quick-fix. New item **D6**: **refactor** `EvergoreItem` in-place — keep the enum hard-links,
+**not** externalize.
 
 **Next dev action — pick from the remaining items H7 unblocked** (all land *in Gradle*): **G6+**
 (JaCoCo), **H6** (failsafe → Gradle integration-test set), **C2** (move `secret_token` out of source),
@@ -190,7 +198,9 @@ doc is intentionally **not** committed — its value lives here.
 
 ### Considered and rejected (do not re-propose without a new reason)
 
-- **Checkstyle** — duplicates **G6** + the reviewer agent; fold into G6 if anything.
+- **Checkstyle *as a general linter*** — duplicates **G6** + the reviewer agent; fold into G6 if anything.
+  *(Introduced 2026-06-19 in a single-purpose, disjoint scope: one rule, `NeedBraces`, for the brace gap the
+  formatter cannot fill — see build-run-deploy.md. The "general linter" rejection still stands.)*
 - **maven-enforcer** — fabricated origin, BOM-managed deps, in-container fixed JDK → low value.
 - **commit-message *skill*** — rule already in CLAUDE.md + reviewer gate + the `git push` deny; a skill adds context cost, not enforcement (use **G8** `/commit`, or a git `commit-msg` hook).
 - **security-auditor *subagent*** — redundant with the reviewer's `security` category; OWASP ceremony for a no-prod-pressure scraper. Keep only "extend reviewer + secret-scan hook" under C2/C3.

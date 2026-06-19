@@ -31,8 +31,21 @@
   fixes. VS Code does **format + organize-imports on save** (`.vscode/settings.json`), with **star imports
   forbidden** (`java.sources.organizeImports.starThreshold: 999999` → always explicit; the codebase is now
   wildcard-free). The formatter wraps `if`-bodies but cannot *insert* `{ }`; always-braces is enforced
-  separately by the Checkstyle `NeedBraces` gate (see below). Universal whitespace basics (trim, final newline)
+  separately by the Checkstyle `NeedBraces` gate (next bullet). Universal whitespace basics (trim, final newline)
   are native VS Code `files.*` settings (no `.editorconfig`). See open-question D-10.
+- **Linting — Checkstyle (single-purpose):** a deliberately minimal `config/checkstyle/checkstyle.xml`
+  (the Gradle/Checkstyle default path) holds **exactly one rule, `NeedBraces`** — it enforces *only* what the
+  formatter cannot express (the formatter wraps `if`/`for`/`while` bodies but cannot *insert* `{ }`). Layout
+  stays solely with the formatter; the two tools are **disjoint** (no rule lives in both — avoids parallel
+  upkeep). Wired via the Gradle `checkstyle` plugin (toolVersion `10.21.0`, `severity=error`) into `check`, so
+  `./gradlew build` fails on any braceless control statement (gate proven by a deliberate braceless `if`). The
+  same config drives the IDE: the **vscode-checkstyle** extension (`shengchen.vscode-checkstyle`, recommended via
+  `.vscode/extensions.json` + auto-installed in the devcontainer) points at it (`java.checkstyle.configuration`)
+  for live inline squiggles; the engine version there is the extension's own bundle (the single rule is
+  version-stable, so build and IDE need not pin the same engine). Checkstyle only *reports* — it has no
+  auto-fix; add braces via the redhat.java "Add braces" quick-fix. Checkstyle stays scoped to this one gap and
+  is **not** a general linter (that overlap with the reviewer agent / future Sonar G6 was why it was earlier
+  declined).
 
 ## Run via Docker (primary path)
 

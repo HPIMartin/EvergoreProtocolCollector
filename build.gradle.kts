@@ -1,6 +1,7 @@
 plugins {
 	id("io.micronaut.application") version "4.6.2"
 	id("com.diffplug.spotless") version "7.0.4"
+	checkstyle
 }
 
 group = "dev.schoenberg.evergore"
@@ -74,6 +75,11 @@ tasks.named<JavaCompile>("compileJava") {
 tasks.withType<Test> {
 	useJUnitPlatform()
 	jvmArgs("--enable-native-access=ALL-UNNAMED")
+}
+
+checkstyle {
+	toolVersion = "10.21.0"
+	configFile = file("config/checkstyle/checkstyle.xml")
 }
 
 spotless {
