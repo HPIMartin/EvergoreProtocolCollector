@@ -1,4 +1,21 @@
 {
     "java.compile.nullAnalysis.mode": "automatic",
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.dependency.packagePresentation": "hierarchical",
+    "java.format.settings.url": "config/eclipse/formatter.xml",
+    "java.format.settings.profile": "evergore",
+    "java.completion.importOrder": ["java", "javax", "jakarta", "", "dev.schoenberg", "#"],
+    "java.sources.organizeImports.starThreshold": 999999,
+    "java.sources.organizeImports.staticStarThreshold": 999999,
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+    "[markdown]": {
+        "files.trimTrailingWhitespace": false
+    },
+    "[java]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    }
 }

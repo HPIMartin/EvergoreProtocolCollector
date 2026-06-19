@@ -11,12 +11,10 @@ public class LoggerSpy implements Logger {
 	}
 
 	@Override
-	public void error(String reason, Throwable error) {
-	}
+	public void error(String reason, Throwable error) {}
 
 	@Override
-	public void debug(String toLog) {
-	}
+	public void debug(String toLog) {}
 
 	public List<String> infoMessages() {
 		return Collections.unmodifiableList(infoMessages);

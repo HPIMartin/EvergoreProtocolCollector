@@ -1,10 +1,5 @@
 package dev.schoenberg.evergore.protocolParser.database.metaInformation;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation.*;
-import static dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationEntry.*;
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static java.util.Optional.*;
-
 import java.util.*;
 
 import com.j256.ormlite.dao.*;
@@ -14,6 +9,11 @@ import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
+
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation.*;
+import static dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationEntry.*;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
+import static java.util.Optional.*;
 
 public class MetaInformationDatabaseRepository extends Repository<MetaInformationEntry> implements MetaInformationRepository {
 	private final Dao<MetaInformationEntry, String> meta;

@@ -1,5 +1,16 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller;
 
+import java.time.*;
+import java.time.format.*;
+import java.util.*;
+
+import io.micronaut.http.annotation.*;
+
+import dev.schoenberg.evergore.protocolParser.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
+import dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.*;
+
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 import static io.micronaut.http.MediaType.*;
@@ -7,16 +18,6 @@ import static java.lang.String.*;
 import static java.nio.charset.StandardCharsets.*;
 import static java.time.format.DateTimeFormatter.*;
 import static org.apache.commons.text.StringEscapeUtils.*;
-
-import java.time.*;
-import java.time.format.*;
-import java.util.*;
-
-import dev.schoenberg.evergore.protocolParser.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
-import dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.*;
-import io.micronaut.http.annotation.*;
 
 @Controller("/avatars/{" + AvatarController.PATH_VAR_AVATAR + "}")
 public class AvatarController {
@@ -44,8 +45,7 @@ public class AvatarController {
 
 	@Get("/bank")
 	@Produces(TEXT_HTML)
-	public String bankInformation(@PathVariable(value = PATH_VAR_AVATAR) String avatar,
-			@QueryValue(value = QUERY_VAR_PAGE, defaultValue = QUERY_VAR_PAGE_DEFAULT) int page) {
+	public String bankInformation(@PathVariable(value = PATH_VAR_AVATAR) String avatar, @QueryValue(value = QUERY_VAR_PAGE, defaultValue = QUERY_VAR_PAGE_DEFAULT) int page) {
 		String pageWithMeta = getPageTemplateWithMetaData(page, bankRepo.getAllDifferentAvatars());
 
 		logger.info("Looking for entries for " + avatar);
@@ -63,8 +63,7 @@ public class AvatarController {
 
 	@Get("/storage")
 	@Produces(TEXT_HTML)
-	public String storageInformation(@PathVariable(value = PATH_VAR_AVATAR) String avatar,
-			@QueryValue(value = QUERY_VAR_PAGE, defaultValue = QUERY_VAR_PAGE_DEFAULT) int page) {
+	public String storageInformation(@PathVariable(value = PATH_VAR_AVATAR) String avatar, @QueryValue(value = QUERY_VAR_PAGE, defaultValue = QUERY_VAR_PAGE_DEFAULT) int page) {
 
 		String pageWithMeta = getPageTemplateWithMetaData(page, storageRepo.getAllDifferentAvatars());
 

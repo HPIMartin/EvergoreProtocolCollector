@@ -1,16 +1,18 @@
 package dev.schoenberg.evergore.protocolParser.database;
 
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static java.nio.file.Files.*;
-import static java.nio.file.Path.*;
+import jakarta.inject.*;
+
+import io.micronaut.context.event.*;
+import io.micronaut.runtime.server.event.*;
 
 import dev.schoenberg.evergore.protocolParser.database.bank.*;
 import dev.schoenberg.evergore.protocolParser.database.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.database.storage.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
-import io.micronaut.context.event.*;
-import io.micronaut.runtime.server.event.*;
-import jakarta.inject.*;
+
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
+import static java.nio.file.Files.*;
+import static java.nio.file.Path.*;
 
 @Singleton
 public class DatabaseStartupInitialization implements ApplicationEventListener<ServerStartupEvent> {
@@ -19,8 +21,7 @@ public class DatabaseStartupInitialization implements ApplicationEventListener<S
 	private final BankDatabaseRepository bank;
 	private final MetaInformationDatabaseRepository meta;
 
-	public DatabaseStartupInitialization(Configuration config, StorageDatabaseRepository storage, BankDatabaseRepository bank,
-			MetaInformationDatabaseRepository meta) {
+	public DatabaseStartupInitialization(Configuration config, StorageDatabaseRepository storage, BankDatabaseRepository bank, MetaInformationDatabaseRepository meta) {
 		this.config = config;
 		this.storage = storage;
 		this.bank = bank;

@@ -1,10 +1,5 @@
 package dev.schoenberg.evergore.protocolParser.helper.selenium;
 
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static java.lang.System.*;
-import static java.nio.file.Files.*;
-import static org.openqa.selenium.firefox.FirefoxDriver.SystemProperty.*;
-
 import java.nio.file.*;
 import java.util.*;
 import java.util.function.*;
@@ -15,6 +10,11 @@ import org.openqa.selenium.edge.*;
 import org.openqa.selenium.firefox.*;
 
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
+
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
+import static java.lang.System.*;
+import static java.nio.file.Files.*;
+import static org.openqa.selenium.firefox.FirefoxDriver.SystemProperty.*;
 
 public enum Browser {
 	FIREFOX("gecko", Browser::firefox, true),

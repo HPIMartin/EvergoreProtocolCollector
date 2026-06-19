@@ -19,16 +19,22 @@ were rebuilt to match. `./gradlew build` is green (22 tests) and the migrated st
 against the production DB (`/overview`, `/avatars/{a}/bank|storage` byte-identical after LF
 normalisation). The repo is a clean public showcase on a single `main` branch.
 
-**H8 landed (2026-06-19):** warnings-as-errors is enforced — `-Xlint:all` + `-Werror` on every
-`JavaCompile`, with `-serial`/`-processing` deliberately excluded; the gate was proven real. The Java-25
-Netty native-access warning is silenced + future-proofed with `--enable-native-access=ALL-UNNAMED` (test
-JVM + distribution start script). Build green; code was already warning-clean.
+**H8 + A7 landed (2026-06-19).** **H8:** warnings-as-errors enforced — `-Xlint:all` + `-Werror` on every
+`JavaCompile`, `-serial`/`-processing` excluded, gate proven real; Java-25 Netty native-access silenced +
+future-proofed via `--enable-native-access=ALL-UNNAMED` (test JVM + dist start script). **A7:** adopted a
+**shared Eclipse formatter** — one central `config/eclipse/formatter.xml` (tabs, `lineSplit=180`) used by
+VS Code, Eclipse, IntelliJ *and* the Gradle build (Spotless `eclipse()` + `importOrder` + whitespace); VS
+Code formats + organizes imports on save; **star imports forbidden** (`starThreshold 999999`). Codebase
+reflowed to the standard (38 files, max line 180); build green. Author chose *uniform + enforced* over
+hand-tuned wrapping; `.editorconfig` dropped (VS-Code-only). **Finishing-step still open:** one-time
+wildcard→explicit expansion (IDE) + a no-wildcard build gate. New item **D6**: externalize the
+`EvergoreItem` catalog to YAML (answers D-3).
 
-**Next dev action — pick from the remaining items H7 unblocked** (all land *in Gradle*): **A7**
-(Spotless, tab-preserving), **G6+** (JaCoCo), **H6** (failsafe → Gradle integration-test set), **C2**
-(move `secret_token` out of source), **C5** (vuln scan), **D2** (automated 1:1 acceptance test — boot
-against a **gitignored** prod snapshot; PII never committed). **H9** (jump to Micronaut 5) only *after*
-1:1 is re-proven. Plan via the agent pipeline (planner → implementer → falsifier → reviewer).
+**Next dev action — pick from the remaining items H7 unblocked** (all land *in Gradle*): **G6+**
+(JaCoCo), **H6** (failsafe → Gradle integration-test set), **C2** (move `secret_token` out of source),
+**C5** (vuln scan), **D2** (automated 1:1 acceptance test — boot against a **gitignored** prod snapshot;
+PII never committed). **H9** (jump to Micronaut 5) only *after* 1:1 is re-proven. Plan via the agent
+pipeline (planner → implementer → falsifier → reviewer).
 *(A4/CI stays deprioritized — local-only Docker → home-server deploy.)*
 
 **Gotchas worth keeping:**
@@ -98,6 +104,7 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 | **D3** | Restructure packages to `domain / application / adapters{in,out} / config`; keep core framework-free | Make the boundaries explicit & enforceable | Micronaut/Selenium/ORMLite imports only under `adapters`+`config` | L |
 | **D4** | Unify the two `TransferType→String` visitors; replace `ApplicationExceptionHandler` `instanceof` chain with a visitor (its own TODO) | Remove duplication & the pattern the project is eliminating | One mapping source; handler has no `instanceof` | S |
 | **D5** | Return `Optional` from `getNewest()` instead of `MIN_VALUE` sentinel | Stop leaking fake domain objects | Callers handle empty explicitly; test covers empty repo | S |
+| **D6** | **Externalize the `EvergoreItem` catalog to a YAML resource** (snakeyaml already bundled) + a loader, replacing the ~660-constant inline enum. Surfaced 2026-06-19 (the catalog is the project's biggest file & a formatter pain-point). **Key risk:** recipes cross-reference other items as *compile-checked* enum constants — externalizing trades that for runtime refs, so it **needs** (a) a fail-fast startup validator that every ingredient resolves and (b) a **golden-master test** asserting the loaded data reproduces today's computed `getStorageValue`/`getWithdrawlValue` for all items. Decide whether `EvergoreItem` stays an enum (data-only move, file barely shrinks) or becomes a loaded registry (real refactor; tests referencing constants by name change). Answers **D-3** | Decouples hand-maintained data from code; eases value maintenance | P3 | Gate the migration on the golden-master test (must be 1:1). Independent of A7. |
 
 ## Epic E — Product: replace the Google Sheet `P2→P3`  *(in scope — full parity; no time pressure)*
 
@@ -160,7 +167,7 @@ doc is intentionally **not** committed — its value lives here.
 |----|------|-----|----------|---------------------|
 | **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%) — the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`), sequence with/after **C2** so it doesn't block the secret cleanup. System.out check: the dead-code deletion already removed ~half the hits (`CsvParser`); whitelist `@Ignore` Gherkin once D2/G4 land. |
 | **G7-fix** | Clean existing violations: `System.out` in `SeleniumPageSource`/`AlternativeFileLoaderWrapper`, `printStackTrace` in `SmokeTest`, `// TODO: Visitor-Pattern` in `ApplicationExceptionHandler`, the empty `catch (Exception e) {}` swallow + `// NOOP` comment in `SeleniumPageSource`, and the commented-out line in `SmokeTest` | The "no comments / logger-only / self-explanatory" rules are currently violated | P2 | `CsvParser` System.out sites are covered by the earlier dead-code deletion. |
-| **A7** | **Spotless** (`spotless-maven-plugin`) bound to `verify`; `check` in CI, `apply` locally | Ends the CRLF/import-order diff churn (the LF normalization); one style, no review nits | P2 | **MUST** use a tab-preserving engine (Eclipse JDT profile), **NOT** google-java-format/palantir (2-space → massive reformat churn). Decide engine first (open-question **D-10**). `check` non-blocking until A4/CI. **2026-06-15: deferred — land in Gradle post-H7, not as a Maven plugin.** |
+| **A7** | ~~**Spotless** bound to the build~~ **DONE 2026-06-19 (shared Eclipse formatter).** One central `config/eclipse/formatter.xml` (tabs, `lineSplit=180`, empty bodies compact, enum one-per-line) consumed by VS Code + Eclipse + IntelliJ + Gradle/Spotless (`eclipse().configFile` + `importOrder` java→extern→`dev.schoenberg`→static-last + `trimTrailingWhitespace` + `endWithNewline`). VS Code formats + organizes imports on save; **star imports forbidden** (`starThreshold 999999`). Codebase reflowed (38 files, max 180). **Finishing-step open:** one-time wildcard→explicit expansion (IDE) + no-wildcard build gate | One enforced style across IDEs + build from a single file; ends diff churn & review nits | P2 | D-10 resolved. Reflow accepted for uniformity. `.editorconfig` dropped (VS-Code-only); universal basics → native VS Code `files.*`. |
 | **G8** | **`/commit`** slash command encoding the strict one-line/no-footer/never-push protocol | Repo's strictest, most-violated-by-default rule (footers slip in); reproducible showcase artifact | P3 | `/review`,`/tdd` rejected (duplicate reviewer/implementer agents). `/spec` deferred → gate on **G4**; keep MCP-free + JUnit-`@Ignore`-first (not Cucumber/Jira). |
 | **A8** | Broaden `.gitignore`: add `CLAUDE.local.md`, `.claude/cache/`, `.claude/.tmp/` | Pre-empts committing personal overrides/cache | P3 | Scope to those paths; **avoid** a blanket `**/*.local.*` (would swallow legit `*.local.properties` fixtures). Folds into **A5**. |
 | **B7** | Migrate remaining JUnit `Assertions` → **AssertJ** (`SmokeTest`, `MetaInformationTest`) | Single assertion idiom (documented preference) | P3 | Opportunistic. `MetaInformationTest` = clean win; defer `SmokeTest` to its planned Levenshtein-rework. |

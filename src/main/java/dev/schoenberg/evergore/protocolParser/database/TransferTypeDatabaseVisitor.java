@@ -1,9 +1,9 @@
 package dev.schoenberg.evergore.protocolParser.database;
 
-import static java.util.Arrays.*;
-
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
+
+import static java.util.Arrays.*;
 
 public class TransferTypeDatabaseVisitor implements TransferTypeVisitor<String> {
 	@Override
@@ -17,8 +17,7 @@ public class TransferTypeDatabaseVisitor implements TransferTypeVisitor<String> 
 	}
 
 	public TransferType convert(String type) {
-		return stream(TransferType.values()).filter(x -> x.accept(this).equals(type)).findFirst()
-				.orElseThrow(() -> new RuntimeException("Unknown TransferType: " + type));
+		return stream(TransferType.values()).filter(x -> x.accept(this).equals(type)).findFirst().orElseThrow(() -> new RuntimeException("Unknown TransferType: " + type));
 	}
 
 	public String convert(TransferType type) {

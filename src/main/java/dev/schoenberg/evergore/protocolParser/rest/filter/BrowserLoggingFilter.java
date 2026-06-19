@@ -1,20 +1,21 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
-import static java.time.Duration.*;
-import static java.time.Instant.*;
-
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
+import jakarta.inject.*;
+
+import io.micronaut.http.*;
+import io.micronaut.http.annotation.*;
+import io.micronaut.http.filter.*;
 import org.reactivestreams.*;
 
 import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.exceptions.*;
-import io.micronaut.http.*;
-import io.micronaut.http.annotation.*;
-import io.micronaut.http.filter.*;
-import jakarta.inject.*;
+
+import static java.time.Duration.*;
+import static java.time.Instant.*;
 
 @Singleton
 @Filter("/**")

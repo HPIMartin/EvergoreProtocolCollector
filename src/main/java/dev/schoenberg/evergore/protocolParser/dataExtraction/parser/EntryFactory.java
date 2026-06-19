@@ -1,7 +1,5 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction.parser;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
-
 import java.time.*;
 import java.time.format.*;
 import java.util.*;
@@ -9,6 +7,8 @@ import java.util.regex.*;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
 import dev.schoenberg.evergore.protocolParser.domain.*;
+
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
 
 public class EntryFactory {
 	private EntryFactory() {}

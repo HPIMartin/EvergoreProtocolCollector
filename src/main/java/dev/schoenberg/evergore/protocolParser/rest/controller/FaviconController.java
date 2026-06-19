@@ -1,11 +1,11 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller;
 
-import static io.micronaut.http.MediaType.*;
-
 import java.io.*;
 
 import io.micronaut.http.annotation.*;
 import io.micronaut.http.server.types.files.*;
+
+import static io.micronaut.http.MediaType.*;
 
 @Controller
 public class FaviconController {

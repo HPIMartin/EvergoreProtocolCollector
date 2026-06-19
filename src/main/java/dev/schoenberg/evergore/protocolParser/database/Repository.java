@@ -1,15 +1,15 @@
 package dev.schoenberg.evergore.protocolParser.database;
 
-import static com.j256.ormlite.dao.DaoManager.*;
-import static com.j256.ormlite.table.TableUtils.*;
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-
 import com.j256.ormlite.dao.*;
 import com.j256.ormlite.jdbc.*;
 import com.j256.ormlite.support.*;
 
 import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
+
+import static com.j256.ormlite.dao.DaoManager.*;
+import static com.j256.ormlite.table.TableUtils.*;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 
 public abstract class Repository<T> {
 	private final ConnectionSource con;

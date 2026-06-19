@@ -1,13 +1,13 @@
 package dev.schoenberg.evergore.protocolParser.helper.fileLoader;
 
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static java.nio.file.Files.*;
-import static java.nio.file.Paths.*;
-
 import java.io.*;
 import java.nio.file.*;
 
 import dev.schoenberg.evergore.protocolParser.helper.selenium.*;
+
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
+import static java.nio.file.Files.*;
+import static java.nio.file.Paths.*;
 
 public class ResourceFileLoader implements FileLoader {
 	private Path tempFolder;

@@ -1,14 +1,15 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
+import jakarta.inject.*;
+
+import io.micronaut.http.*;
+import io.micronaut.http.annotation.*;
+import io.micronaut.http.filter.*;
 import org.reactivestreams.*;
 
 import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.exceptions.*;
 import dev.schoenberg.evergore.protocolParser.rest.controller.*;
-import io.micronaut.http.*;
-import io.micronaut.http.annotation.*;
-import io.micronaut.http.filter.*;
-import jakarta.inject.*;
 
 @Singleton
 @Filter("/**")

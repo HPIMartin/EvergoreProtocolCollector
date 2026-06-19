@@ -1,12 +1,12 @@
 package dev.schoenberg.evergore.protocolParser.domain;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
-
 import java.time.*;
 import java.time.format.*;
 import java.util.*;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
+
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
 
 public record Entry(String avatar, Instant date, List<Item> items, TransferType type) {
 	public String print(String delimiter) {

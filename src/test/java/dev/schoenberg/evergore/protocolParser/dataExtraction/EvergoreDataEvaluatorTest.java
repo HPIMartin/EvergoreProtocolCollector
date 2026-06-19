@@ -1,10 +1,5 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
-import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.*;
-import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.*;
-import static org.assertj.core.api.Assertions.*;
-
 import java.time.*;
 import java.util.*;
 
@@ -14,6 +9,11 @@ import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
+
+import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.*;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.*;
+import static org.assertj.core.api.Assertions.*;
 
 class EvergoreDataEvaluatorTest {
 
@@ -38,10 +38,7 @@ class EvergoreDataEvaluatorTest {
 
 	@Test
 	void aggregatesBankPlacementAndWithdrawlForOneAvatar() {
-		bankRepo.seedEntries(AVATAR, List.of(
-				bankPlacement(100),
-				bankPlacement(200),
-				bankWithdrawl(50)));
+		bankRepo.seedEntries(AVATAR, List.of(bankPlacement(100), bankPlacement(200), bankWithdrawl(50)));
 		bankRepo.seedAvatars(List.of(AVATAR));
 		storageRepo.seedAvatars(List.of());
 
@@ -55,9 +52,7 @@ class EvergoreDataEvaluatorTest {
 	void valuatesStoragePlacementAndWithdrawlForCraftableItemWithPartialQuality() {
 		int quantity = 3;
 		int quality = 50;
-		storageRepo.seedEntries(AVATAR, List.of(
-				storagePlacement(LEINENTUCH.ingameName, quantity, quality),
-				storageWithdrawl(LEINENTUCH.ingameName, quantity, quality)));
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(LEINENTUCH.ingameName, quantity, quality), storageWithdrawl(LEINENTUCH.ingameName, quantity, quality)));
 		storageRepo.seedAvatars(List.of(AVATAR));
 		bankRepo.seedAvatars(List.of());
 
@@ -72,8 +67,7 @@ class EvergoreDataEvaluatorTest {
 	@Test
 	void unknownItemFallsBackToZeroValueAndLogsMessage() {
 		String unknownItemName = "Unobtainium";
-		storageRepo.seedEntries(AVATAR, List.of(
-				storagePlacement(unknownItemName, 1, 100)));
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(unknownItemName, 1, 100)));
 		storageRepo.seedAvatars(List.of(AVATAR));
 		bankRepo.seedAvatars(List.of());
 
@@ -108,8 +102,7 @@ class EvergoreDataEvaluatorTest {
 
 		assertThat(metaRepo.<Long>get(getBankPlacement(BANK_ONLY_AVATAR))).contains(10L);
 		assertThat(metaRepo.<Double>get(getStoragePlacement(BANK_ONLY_AVATAR))).contains(0.0);
-		assertThat(metaRepo.<Double>get(getStoragePlacement(STORAGE_ONLY_AVATAR)))
-				.contains(LEINENTUCH.getStorageValue() * 1 * 1.0);
+		assertThat(metaRepo.<Double>get(getStoragePlacement(STORAGE_ONLY_AVATAR))).contains(LEINENTUCH.getStorageValue() * 1 * 1.0);
 		assertThat(metaRepo.<Long>get(getBankPlacement(STORAGE_ONLY_AVATAR))).contains(0L);
 	}
 
@@ -124,9 +117,7 @@ class EvergoreDataEvaluatorTest {
 
 		assertThat(bankRepo.capturedAfter()).isEqualTo(priorWatermark);
 		assertThat(storageRepo.capturedAfter()).isEqualTo(priorWatermark);
-		assertThat(metaRepo.<LocalDateTime>get(getLastUpdatedKey()))
-				.isPresent()
-				.hasValueSatisfying(v -> assertThat(v).isAfter(priorWatermark));
+		assertThat(metaRepo.<LocalDateTime>get(getLastUpdatedKey())).isPresent().hasValueSatisfying(v -> assertThat(v).isAfter(priorWatermark));
 	}
 
 	// --- Test DSL helpers ---

@@ -1,11 +1,11 @@
 package dev.schoenberg.evergore.protocolParser.helper.fileLoader;
 
-import static java.nio.file.Paths.*;
-
 import java.io.*;
 
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 import dev.schoenberg.evergore.protocolParser.helper.selenium.*;
+
+import static java.nio.file.Paths.*;
 
 public class DiscFileLoader implements FileLoader {
 	private final Configuration config;

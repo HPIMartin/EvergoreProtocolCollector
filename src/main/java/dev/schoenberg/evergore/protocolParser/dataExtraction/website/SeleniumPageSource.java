@@ -1,14 +1,9 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction.website;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
-import static java.nio.file.Files.*;
-import static java.time.Duration.*;
-import static java.util.Arrays.*;
-import static org.openqa.selenium.By.*;
-import static org.openqa.selenium.support.ui.ExpectedConditions.*;
-
 import java.util.*;
 import java.util.ArrayList;
+
+import jakarta.inject.*;
 
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.*;
@@ -16,7 +11,13 @@ import org.openqa.selenium.support.ui.*;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 import dev.schoenberg.evergore.protocolParser.helper.selenium.Driver;
-import jakarta.inject.*;
+
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
+import static java.nio.file.Files.*;
+import static java.time.Duration.*;
+import static java.util.Arrays.*;
+import static org.openqa.selenium.By.*;
+import static org.openqa.selenium.support.ui.ExpectedConditions.*;
 
 @Singleton
 public class SeleniumPageSource implements PageSource {
@@ -82,8 +83,7 @@ public class SeleniumPageSource implements PageSource {
 
 	private void dismissCookieBanner(WebDriver driver) {
 		try {
-			driver.findElement(xpath("//button[@class='fc-button fc-cta-consent fc-primary-button' and p[@class='fc-button-label' and text()='Einwilligen']]"))
-					.click();
+			driver.findElement(xpath("//button[@class='fc-button fc-cta-consent fc-primary-button' and p[@class='fc-button-label' and text()='Einwilligen']]")).click();
 		} catch (Exception e) {
 			// NOOP
 		}

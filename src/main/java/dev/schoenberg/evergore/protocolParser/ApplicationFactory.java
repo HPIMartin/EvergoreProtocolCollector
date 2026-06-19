@@ -1,5 +1,9 @@
 package dev.schoenberg.evergore.protocolParser;
 
+import jakarta.inject.*;
+
+import io.micronaut.context.annotation.*;
+
 import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.database.bank.*;
@@ -8,8 +12,6 @@ import dev.schoenberg.evergore.protocolParser.database.storage.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import dev.schoenberg.evergore.protocolParser.helper.fileLoader.*;
 import dev.schoenberg.evergore.protocolParser.helper.selenium.*;
-import io.micronaut.context.annotation.*;
-import jakarta.inject.*;
 
 @Factory
 public class ApplicationFactory {

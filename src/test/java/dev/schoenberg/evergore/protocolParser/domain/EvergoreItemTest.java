@@ -1,8 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.domain;
 
-import static org.assertj.core.api.Assertions.*;
-
 import org.junit.jupiter.api.*;
+
+import static org.assertj.core.api.Assertions.*;
 
 class EvergoreItemTest {
 	@Test

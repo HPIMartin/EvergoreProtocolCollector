@@ -1,21 +1,22 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller;
 
+import java.time.*;
+import java.time.format.*;
+import java.util.*;
+
+import io.micronaut.http.annotation.*;
+
+import dev.schoenberg.evergore.protocolParser.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
+import dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.*;
+
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.*;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 import static io.micronaut.http.MediaType.*;
 import static java.lang.String.*;
 import static java.nio.charset.StandardCharsets.*;
 import static java.time.format.DateTimeFormatter.*;
-
-import java.time.*;
-import java.time.format.*;
-import java.util.*;
-
-import dev.schoenberg.evergore.protocolParser.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
-import dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.*;
-import io.micronaut.http.annotation.*;
 
 @Controller("/overview")
 public class OverviewController {

@@ -1,5 +1,6 @@
 plugins {
 	id("io.micronaut.application") version "4.6.2"
+	id("com.diffplug.spotless") version "7.0.4"
 }
 
 group = "dev.schoenberg.evergore"
@@ -73,4 +74,14 @@ tasks.named<JavaCompile>("compileJava") {
 tasks.withType<Test> {
 	useJUnitPlatform()
 	jvmArgs("--enable-native-access=ALL-UNNAMED")
+}
+
+spotless {
+	java {
+		target("src/**/*.java")
+		importOrder("java", "javax", "jakarta", "", "dev.schoenberg", "\\#")
+		eclipse().configFile("config/eclipse/formatter.xml")
+		trimTrailingWhitespace()
+		endWithNewline()
+	}
 }

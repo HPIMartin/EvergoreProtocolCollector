@@ -1,12 +1,12 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction.parser;
 
-import static org.assertj.core.api.Assertions.*;
-
 import java.util.*;
 
 import org.junit.jupiter.api.*;
 
 import dev.schoenberg.evergore.protocolParser.domain.*;
+
+import static org.assertj.core.api.Assertions.*;
 
 class EntryFactoryTest {
 

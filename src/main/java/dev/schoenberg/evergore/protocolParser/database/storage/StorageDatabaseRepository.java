@@ -1,10 +1,5 @@
 package dev.schoenberg.evergore.protocolParser.database.storage;
 
-import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.*;
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static java.lang.String.*;
-import static java.sql.Timestamp.*;
-
 import java.sql.*;
 import java.time.*;
 import java.util.*;
@@ -20,6 +15,11 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.exceptions.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
+
+import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.*;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
+import static java.lang.String.*;
+import static java.sql.Timestamp.*;
 
 public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> implements StorageRepository {
 	private final Dao<StorageDatabaseEntry, String> storage;
@@ -51,8 +51,7 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	public List<StorageEntry> getAllFor(String avatar, LocalDateTime after) {
 		Timestamp afterTimestamp = Timestamp.from(after.atZone(Constants.APP_ZONE).toInstant());
 
-		List<StorageDatabaseEntry> result = silentThrow(
-				() -> storage.queryBuilder().where().eq(AVATAR_COLUMN, avatar).and().gt(TIMESTAMP_COLUMN, afterTimestamp).query());
+		List<StorageDatabaseEntry> result = silentThrow(() -> storage.queryBuilder().where().eq(AVATAR_COLUMN, avatar).and().gt(TIMESTAMP_COLUMN, afterTimestamp).query());
 
 		return convert(result);
 	}
@@ -95,12 +94,10 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	}
 
 	private StorageEntry convert(StorageDatabaseEntry dbEntry) {
-		return new StorageEntry(dbEntry.timeStamp.toInstant(), dbEntry.avatar, dbEntry.quantity, dbEntry.name, dbEntry.quality,
-				transferTypeVisitor.convert(dbEntry.type));
+		return new StorageEntry(dbEntry.timeStamp.toInstant(), dbEntry.avatar, dbEntry.quantity, dbEntry.name, dbEntry.quality, transferTypeVisitor.convert(dbEntry.type));
 	}
 
 	private StorageDatabaseEntry convert(StorageEntry entry) {
-		return new StorageDatabaseEntry(from(entry.timeStamp), entry.avatar, entry.quantity, entry.name, entry.quality,
-				transferTypeVisitor.convert(entry.type));
+		return new StorageDatabaseEntry(from(entry.timeStamp), entry.avatar, entry.quantity, entry.name, entry.quality, transferTypeVisitor.convert(entry.type));
 	}
 }

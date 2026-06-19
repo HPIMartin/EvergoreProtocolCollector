@@ -21,6 +21,17 @@
   boot (and will *block* in a future release). `--enable-native-access=ALL-UNNAMED` is set for the test
   JVM and baked into the distribution's start script (`applicationDefaultJvmArgs`), so both tests and the
   Docker runtime start clean and stay forward-compatible.
+- **Formatting (A7):** a **single shared Eclipse JDT profile**, `config/eclipse/formatter.xml` (tabs,
+  `lineSplit=180`, empty bodies compact, enum constants one-per-line), is the one source of truth — consumed
+  by **VS Code** (`java.format.settings.url` + `…profile`), **Eclipse**, **IntelliJ** (Eclipse-formatter
+  adapter) and the **Gradle build**. Spotless applies it (`eclipse().configFile(...)`) plus `importOrder`
+  (java → external → `dev.schoenberg` → static last) + `trimTrailingWhitespace` + `endWithNewline`, wired
+  into `check` — so `./gradlew build` fails on any deviation; `./gradlew spotlessApply` fixes. VS Code does
+  **format + organize-imports on save** (`.vscode/settings.json`), with **star imports forbidden**
+  (`java.sources.organizeImports.starThreshold: 999999` → always explicit). Universal whitespace basics
+  (trim, final newline) are native VS Code `files.*` settings (no `.editorconfig`). See open-question D-10.
+  *Finishing-step still open: the one-time wildcard→explicit expansion (an IDE action — Gradle can't resolve
+  types) and a build gate forbidding new wildcards.*
 
 ## Run via Docker (primary path)
 

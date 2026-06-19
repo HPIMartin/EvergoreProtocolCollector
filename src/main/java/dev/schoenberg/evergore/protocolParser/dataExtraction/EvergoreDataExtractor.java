@@ -4,13 +4,14 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 
+import jakarta.inject.*;
+
 import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.parser.*;
 import dev.schoenberg.evergore.protocolParser.domain.*;
-import jakarta.inject.*;
 
 @Singleton
 public class EvergoreDataExtractor {
@@ -37,8 +38,8 @@ public class EvergoreDataExtractor {
 		logger.debug("Latest element from: " + latest.timeStamp);
 		AtomicInteger beforeFilter = new AtomicInteger(0);
 		AtomicInteger afterFilter = new AtomicInteger(0);
-		storageRepo.add(lager.stream().map(this::mapStorage).flatMap(List::stream).map(x -> count(x, beforeFilter)).filter(e -> isNewer(latest, e))
-				.map(x -> count(x, afterFilter)).toList());
+		storageRepo.add(lager.stream().map(this::mapStorage).flatMap(List::stream).map(x -> count(x, beforeFilter)).filter(e -> isNewer(latest, e)).map(x -> count(x, afterFilter))
+				.toList());
 		logger.debug("before filter: " + beforeFilter.get());
 		logger.debug("after filter: " + afterFilter.get());
 	}
@@ -48,8 +49,8 @@ public class EvergoreDataExtractor {
 		logger.debug("Latest element from: " + latest.timeStamp);
 		AtomicInteger beforeFilter = new AtomicInteger(0);
 		AtomicInteger afterFilter = new AtomicInteger(0);
-		bankRepo.add(bank.stream().map(this::mapBank).flatMap(List::stream).map(x -> count(x, beforeFilter)).filter(e -> isNewer(latest, e))
-				.map(x -> count(x, afterFilter)).toList());
+		bankRepo.add(
+				bank.stream().map(this::mapBank).flatMap(List::stream).map(x -> count(x, beforeFilter)).filter(e -> isNewer(latest, e)).map(x -> count(x, afterFilter)).toList());
 		logger.debug("before filter: " + beforeFilter.get());
 		logger.debug("after filter: " + afterFilter.get());
 	}

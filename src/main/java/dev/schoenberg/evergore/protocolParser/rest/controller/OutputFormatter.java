@@ -1,12 +1,12 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller;
 
-import static java.lang.System.*;
-import static org.apache.commons.text.StringEscapeUtils.*;
-
 import java.util.*;
 import java.util.function.*;
 
 import jakarta.inject.*;
+
+import static java.lang.System.*;
+import static org.apache.commons.text.StringEscapeUtils.*;
 
 @Singleton
 public class OutputFormatter {
@@ -39,7 +39,8 @@ public class OutputFormatter {
 	public record Column<T>(String headline, Function<T, String> extractor) {}
 
 	private enum RowType {
-		HEADLINE("th"), DATA("td");
+		HEADLINE("th"),
+		DATA("td");
 
 		public final String markup;
 

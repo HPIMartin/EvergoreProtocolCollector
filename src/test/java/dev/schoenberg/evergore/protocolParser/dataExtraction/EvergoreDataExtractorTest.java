@@ -1,8 +1,5 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
-import static org.assertj.core.api.Assertions.*;
-
 import java.time.*;
 import java.util.*;
 
@@ -12,15 +9,14 @@ import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 
+import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
+import static org.assertj.core.api.Assertions.*;
+
 class EvergoreDataExtractorTest {
 
-	private static final List<String> BANK_LINES = List.of(
-			"11.12.2001 13:37 TestAvatar Einlagerung",
-			"100 Gold");
+	private static final List<String> BANK_LINES = List.of("11.12.2001 13:37 TestAvatar Einlagerung", "100 Gold");
 
-	private static final List<String> LAGER_LINES = List.of(
-			"11.12.2001 13:37 TestAvatar Einlagerung",
-			"5 Drachenhaut");
+	private static final List<String> LAGER_LINES = List.of("11.12.2001 13:37 TestAvatar Einlagerung", "5 Drachenhaut");
 
 	private CapturingBankRepository bankRepo;
 	private CapturingStorageRepository storageRepo;

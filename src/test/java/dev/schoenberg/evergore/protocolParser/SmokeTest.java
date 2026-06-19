@@ -1,22 +1,16 @@
 package dev.schoenberg.evergore.protocolParser;
 
-import static dev.schoenberg.evergore.protocolParser.TestHelper.*;
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
-import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
-import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.*;
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.*;
-import static java.time.Duration.*;
-import static java.time.Instant.*;
-import static java.util.Arrays.*;
-import static java.util.concurrent.TimeUnit.*;
-import static kong.unirest.Unirest.*;
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.nio.file.*;
 import java.time.*;
 import java.util.*;
 
+import jakarta.inject.*;
+
+import io.micronaut.runtime.server.*;
+import io.micronaut.scheduling.*;
+import io.micronaut.test.annotation.*;
+import io.micronaut.test.extensions.junit5.annotation.*;
+import kong.unirest.*;
 import org.junit.jupiter.api.*;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
@@ -29,12 +23,19 @@ import dev.schoenberg.evergore.protocolParser.database.bank.*;
 import dev.schoenberg.evergore.protocolParser.database.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.database.storage.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
-import io.micronaut.runtime.server.*;
-import io.micronaut.scheduling.*;
-import io.micronaut.test.annotation.*;
-import io.micronaut.test.extensions.junit5.annotation.*;
-import jakarta.inject.*;
-import kong.unirest.*;
+
+import static dev.schoenberg.evergore.protocolParser.TestHelper.*;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.*;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.*;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
+import static dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.*;
+import static java.time.Duration.*;
+import static java.time.Instant.*;
+import static java.util.Arrays.*;
+import static java.util.concurrent.TimeUnit.*;
+import static kong.unirest.Unirest.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @MicronautTest
 class SmokeTest {

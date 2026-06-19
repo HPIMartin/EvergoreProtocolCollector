@@ -1,12 +1,10 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.*;
-import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.*;
-import static java.util.Arrays.*;
-
 import java.time.*;
 import java.util.*;
 import java.util.function.*;
+
+import jakarta.inject.*;
 
 import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
@@ -14,7 +12,10 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 import dev.schoenberg.evergore.protocolParser.domain.*;
-import jakarta.inject.*;
+
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.*;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.*;
+import static java.util.Arrays.*;
 
 @Singleton
 public class EvergoreDataEvaluator {
@@ -125,10 +126,8 @@ public class EvergoreDataEvaluator {
 			return operation(s -> s::addWithdrawl, EvergoreItem::getWithdrawlValue);
 		}
 
-		private BiConsumer<StorageStatus, StorageEntryItem> operation(Function<StorageStatus, DoubleConsumer> statusFunction,
-				ToDoubleFunction<EvergoreItem> valueFunction) {
-			return (status, value) -> statusFunction.apply(status)
-					.accept(valueFunction.applyAsDouble(value.item) * value.entry.quantity * (value.entry.quality / 100D));
+		private BiConsumer<StorageStatus, StorageEntryItem> operation(Function<StorageStatus, DoubleConsumer> statusFunction, ToDoubleFunction<EvergoreItem> valueFunction) {
+			return (status, value) -> statusFunction.apply(status).accept(valueFunction.applyAsDouble(value.item) * value.entry.quantity * (value.entry.quality / 100D));
 		}
 	}
 

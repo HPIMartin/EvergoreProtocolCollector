@@ -1,9 +1,10 @@
 package dev.schoenberg.evergore.protocolParser.helper.logger;
 
+import jakarta.inject.*;
+
 import org.slf4j.*;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
-import jakarta.inject.*;
 
 @Singleton
 public class Slf4jLogger implements Logger {

@@ -1,19 +1,21 @@
 package dev.schoenberg.evergore.protocolParser.rest.exceptionHandler;
 
-import static io.micronaut.http.HttpResponse.*;
-import static io.micronaut.http.HttpStatus.*;
+import jakarta.inject.*;
 
-import dev.schoenberg.evergore.protocolParser.*;
-import dev.schoenberg.evergore.protocolParser.exceptions.*;
 import io.micronaut.context.annotation.*;
 import io.micronaut.http.*;
 import io.micronaut.http.annotation.*;
 import io.micronaut.http.server.exceptions.*;
-import jakarta.inject.*;
+
+import dev.schoenberg.evergore.protocolParser.*;
+import dev.schoenberg.evergore.protocolParser.exceptions.*;
+
+import static io.micronaut.http.HttpResponse.*;
+import static io.micronaut.http.HttpStatus.*;
 
 @Produces
 @Singleton
-@Requires(classes = { ProtocolParserException.class })
+@Requires(classes = {ProtocolParserException.class})
 public class ApplicationExceptionHandler implements ExceptionHandler<ProtocolParserException, HttpResponse<?>> {
 	private Logger logger;
 

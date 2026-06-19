@@ -1,13 +1,5 @@
 package dev.schoenberg.evergore.protocolParser.database.bank;
 
-import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.AVATAR_COLUMN;
-import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.TABLE;
-import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static java.lang.String.*;
-import static java.sql.Timestamp.*;
-import static java.sql.Timestamp.valueOf;
-
 import java.sql.*;
 import java.time.*;
 import java.util.*;
@@ -23,6 +15,14 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.base.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.exceptions.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
+
+import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.AVATAR_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.TABLE;
+import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
+import static java.lang.String.*;
+import static java.sql.Timestamp.*;
+import static java.sql.Timestamp.valueOf;
 
 public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implements BankRepository {
 	private final Dao<BankDatabaseEntry, String> bank;
@@ -55,8 +55,7 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 	public List<BankEntry> getAllFor(String avatar, LocalDateTime after) {
 		Timestamp afterTimestamp = Timestamp.from(after.atZone(Constants.APP_ZONE).toInstant());
 
-		List<BankDatabaseEntry> result = silentThrow(
-				() -> bank.queryBuilder().where().eq(AVATAR_COLUMN, avatar).and().gt(TIMESTAMP_COLUMN, afterTimestamp).query());
+		List<BankDatabaseEntry> result = silentThrow(() -> bank.queryBuilder().where().eq(AVATAR_COLUMN, avatar).and().gt(TIMESTAMP_COLUMN, afterTimestamp).query());
 
 		return convert(result);
 	}
