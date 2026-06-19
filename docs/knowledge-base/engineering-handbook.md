@@ -44,11 +44,12 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
 - Prefer `record`s / immutability for value objects. Return `Optional` instead of sentinels
   (replace `getNewest()`'s `MIN_VALUE` object).
 - Constants/config over magic values; **no secrets in source** (token, credentials → config).
-- **Warnings are errors.** Compiler and lint warnings are treated as build failures (`-Xlint:all` +
-  `failOnWarning`). The default is to **fix** them, not suppress; genuinely obsolete lint may be
-  excluded deliberately (e.g. `-serial` for missing `serialVersionUID`, irrelevant on modern Java).
-  When unsure whether a warning should be fixed or excluded, **ask the author**. The compiler flip
-  itself rides with the Gradle migration (build config); until it lands the rule is upheld by author/agents.
+- **Warnings are errors.** Compiler and lint warnings are build failures — enforced in
+  `build.gradle.kts` via `-Xlint:all` + `-Werror` on every `JavaCompile`. The default is to **fix**
+  them, not suppress; genuinely obsolete lint is excluded deliberately: `-serial` (missing
+  `serialVersionUID`, irrelevant on modern Java) and `-processing` (Micronaut/JUnit annotations no
+  processor claims — inherent to the stack, not our code). When unsure whether a warning should be
+  fixed or excluded, **ask the author**.
 
 ## 4. TDD workflow (red → green → refactor → commit)
 
@@ -122,7 +123,7 @@ template** demonstrating the practice. Scenarios are written in **product langua
 ## 8. Definition of Done (checklist)
 
 - [ ] Compiles, `./gradlew build` green locally
-- [ ] No compiler/lint warnings (build is warning-clean once `failOnWarning` lands)
+- [ ] No compiler/lint warnings (`-Werror` fails the build on any; the suite is warning-clean)
 - [ ] Unit tests for new logic (`@Ignore`-first Gherkin if user-facing)
 - [ ] No secrets or personal/host data (passwords, tokens, keys/keystores, credentials, real emails/usernames, absolute paths, infra) in committed files
 - [ ] Relevant `docs/knowledge-base/` doc updated

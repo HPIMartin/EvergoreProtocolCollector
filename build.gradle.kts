@@ -40,6 +40,7 @@ dependencies {
 
 application {
 	mainClass.set("dev.schoenberg.evergore.protocolParser.Application")
+	applicationDefaultJvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
 }
 
 java {
@@ -59,6 +60,7 @@ micronaut {
 
 tasks.withType<JavaCompile> {
 	options.encoding = "UTF-8"
+	options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-processing", "-Xlint:-serial", "-Werror"))
 }
 
 tasks.named<JavaCompile>("compileJava") {
@@ -70,4 +72,5 @@ tasks.named<JavaCompile>("compileJava") {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	jvmArgs("--enable-native-access=ALL-UNNAMED")
 }

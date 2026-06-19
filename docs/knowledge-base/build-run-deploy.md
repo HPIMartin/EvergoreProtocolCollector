@@ -13,6 +13,14 @@
   entry point — no host toolchain needed beyond a JDK. The deployable is the **application
   distribution** (`./gradlew installDist` → `build/install/protocolParser/bin/protocolParser` + `lib/`),
   not a fat jar.
+- **Warnings are errors** (H8): every `JavaCompile` runs `-Xlint:all` + `-Werror`, so any compiler/lint
+  warning fails the build. Two categories are excluded deliberately — `-serial` (obsolete
+  `serialVersionUID` ceremony) and `-processing` (Micronaut/ORMLite/JUnit/ArchUnit annotations that no
+  processor claims — inherent to the stack, not our code). The code is otherwise warning-clean.
+- **Java 25 native access:** Netty calls restricted `System::loadLibrary`, which the JVM warns about at
+  boot (and will *block* in a future release). `--enable-native-access=ALL-UNNAMED` is set for the test
+  JVM and baked into the distribution's start script (`applicationDefaultJvmArgs`), so both tests and the
+  Docker runtime start clean and stay forward-compatible.
 
 ## Run via Docker (primary path)
 

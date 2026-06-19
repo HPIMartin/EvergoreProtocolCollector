@@ -19,8 +19,12 @@ were rebuilt to match. `./gradlew build` is green (22 tests) and the migrated st
 against the production DB (`/overview`, `/avatars/{a}/bank|storage` byte-identical after LF
 normalisation). The repo is a clean public showcase on a single `main` branch.
 
-**Next dev action — pick from the items H7 unblocked** (all now land *in Gradle*): **H8** (warnings-as-
-errors `failOnWarning`/`-Werror` flip; the Java-25 native-access warnings need handling), **A7**
+**H8 landed (2026-06-19):** warnings-as-errors is enforced — `-Xlint:all` + `-Werror` on every
+`JavaCompile`, with `-serial`/`-processing` deliberately excluded; the gate was proven real. The Java-25
+Netty native-access warning is silenced + future-proofed with `--enable-native-access=ALL-UNNAMED` (test
+JVM + distribution start script). Build green; code was already warning-clean.
+
+**Next dev action — pick from the remaining items H7 unblocked** (all land *in Gradle*): **A7**
 (Spotless, tab-preserving), **G6+** (JaCoCo), **H6** (failsafe → Gradle integration-test set), **C2**
 (move `secret_token` out of source), **C5** (vuln scan), **D2** (automated 1:1 acceptance test — boot
 against a **gitignored** prod snapshot; PII never committed). **H9** (jump to Micronaut 5) only *after*
@@ -138,7 +142,7 @@ See [knowledge-base/dev-environment.md](knowledge-base/dev-environment.md).
 | **H2** | docker-compose: add a `selenium/standalone-firefox` service; tests use `RemoteWebDriver`; retire bundled `gecko-*-win.exe`. **Re-add the `docker-outside-of-docker` devcontainer feature** (removed to get a building container) | Browser-in-container ⇒ scraping/integration tests run anywhere, no host Firefox | An integration test scrapes via the service | M |
 | **H3** | *Mostly done 2026-06-16 with the Gradle migration:* `dos2unix` dropped (LF enforced), jar-name hack gone (version-independent `installDist` dir), `.dockerignore` added, `apt` cleaned. **Remaining: stop baking `zugang.txt`** → folds into **C3** | Image was fragile & bakes secrets | Clean reproducible build; **no-secret-in-image still open (C3)** | S |
 | **H5** | *(was: cross-rebuild Maven cache — obsolete, Maven gone)* Optional: persist the Gradle caches (`~/.gradle`, build cache) across rebuilds with correct `vscode` ownership | Faster rebuilds | Gradle deps/build cached across container rebuilds | S |
-| **H8** | **Warnings-as-errors:** enable `-Werror` + `-Xlint:all` in the Gradle build; clean existing warnings (ask the author per-warning; exclude obsolete lint like `-serial`). **Now actionable in Gradle**; the **Java-25 native-access warnings** (io.netty `sun.misc.Unsafe`/`loadLibrary`) need a decision (`--enable-native-access` vs suppress) | Mechanically enforces the warnings-as-errors standard (CLAUDE.md/handbook) | Build fails on any warning; existing warnings fixed or deliberately excluded | M |
+| **H8** | ~~**Warnings-as-errors:** `-Werror` + `-Xlint:all` in the Gradle build~~ **DONE 2026-06-19.** `-serial`/`-processing` excluded deliberately; code was already warning-clean; gate proven real (a deliberate `[cast]` warning fails the build). Java-25 Netty native-access **enabled** (`--enable-native-access=ALL-UNNAMED`, test JVM + start script), not suppressed | Mechanically enforces the warnings-as-errors standard (CLAUDE.md/handbook) | Build fails on any warning; existing warnings fixed or deliberately excluded | M |
 | **H9** | **Jump Micronaut 4.10 → 5.0** (Java-25 baseline, Apr 2026) and re-verify 1:1. **Only after** the current migration's 1:1 is locked (ideally via the **D2** automated benchmark) | Stay on the newest line; deferred deliberately — one framework risk at a time | `./gradlew build` green on MN5 + endpoints still 1:1 vs the prod snapshot | M |
 
 ---
