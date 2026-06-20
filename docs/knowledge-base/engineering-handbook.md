@@ -41,6 +41,10 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
   A corollary: names must never reference tracker/backlog IDs (`D2`, `H8`, ticket numbers) or the task
   that produced them — e.g. `ProtocolEvaluationAcceptanceTest`, not `D2AcceptanceTest`.
 - Small methods, early returns, no deep nesting. No commented-out code in commits.
+- **No logic in constructors — field assignment only.** Constructors must not run logic or side
+  effects (no IO, no `init()`/`ensureTable()`-style calls). Put "construct + initialize" in a static
+  **factory method** (e.g. the `Repository` subclass `get(...)` methods — Effective Java Item 1) or a
+  lifecycle hook. Logic in a constructor breaks testability and violates SRP.
 - **Avoid comments — make the code say it.** No comments in code, config, or infrastructure unless
   intent genuinely can't be expressed in names/structure (rare; then explain *why*, not *what*).
   Self-documenting names + small functions replace comments. The reviewer flags unnecessary comments.
@@ -124,6 +128,39 @@ template** demonstrating the practice. Scenarios are written in **product langua
   keep machine-specific permissions (e.g. an absolute-path `cd`) in `.claude/settings.local.json`.
 - **The commit log is the changelog.** Don't keep a separate `CHANGELOG`, and don't mirror git
   history or diffs in the docs — `git log` / `git diff` are the source of truth for *what changed*.
+
+### Branching, merge & the review gateway (decided 2026-06-20)
+
+Work runs on one of two tracks, chosen **up-front by the planner** and announced before starting (so
+the author can veto). Size isn't always knowable in advance — if a "small" item balloons mid-flight,
+move the *uncommitted* WIP onto a branch (`git switch -c`) **before** it grows, keeping `main` clean.
+
+- **Small / single TDD cycle** (≈ effort S, one logical change, no new BDD scenarios): work **directly
+  on `main`**, land **one** commit via the protocol above (propose message → confirm → commit).
+- **Large / multiple cycles or new BDD scenarios** (≈ M/L): the planner creates a **feature branch**;
+  the implementer runs the full TDD loop and **commits each red→green→refactor step itself** with
+  protocol-conform messages (no per-commit pre-approval on the branch — best effort to the rules);
+  the falsifier and reviewer review the **branch diff**; then the **author + planner review the
+  branch's `git log` together as the final gateway** before it lands.
+
+- **Merge strategy (hard rule): rebase + fast-forward only.** No merge commits, no squashing (rare
+  exceptions only). `git rebase main && git switch main && git merge --ff-only <branch>` keeps history
+  **linear** *and* preserves the small commits.
+- **Every commit that lands on `main` is verified-good — not merely green.** "Broken" is broader than
+  a red build: a commit is defective if it builds red, **OR** the falsifier exposes it as *fake-green*
+  (tests pass but assert nothing real / are tautological), **OR** the reviewer rejects it because it
+  doesn't implement what it claims. None of those may land. Red states are never committed in the first
+  place (TDD's red is a transient working-tree step; the commit comes after green, and `@Ignore`-first
+  Gherkin keeps the build green). A defect found at the gateway is **repaired by rebase into the commit
+  it belongs to, before the merge** — never left on `main`, never papered over with a follow-up "fix"
+  commit.
+- **Reword at the gateway when needed:** the agent has **no interactive TTY** (`git rebase -i` can't be
+  driven by hand), but rewording still works **non-interactively** via scripted `GIT_SEQUENCE_EDITOR` /
+  `GIT_EDITOR`. Unsatisfactory messages get cleaned up at the gateway before the fast-forward.
+  **`git push` stays the author's alone.**
+- **Parallel development / process benchmarking:** branches + **git worktrees** let independent work —
+  or two competing implementations of the same task, for benchmarking — run without collision (the
+  `Agent` tool can isolate a subagent in its own worktree).
 
 ## 8. Definition of Done (checklist)
 

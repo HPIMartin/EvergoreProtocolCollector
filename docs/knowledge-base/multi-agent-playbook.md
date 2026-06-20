@@ -55,12 +55,32 @@ Two rules keep that loop bounded and the history clean:
   unpushed, so rewriting local history is safe and expected (clean up before the author pushes). The
   fix amends the original micro-commit: `git commit --amend` for the tip, or
   `git reset --soft <feature-base>` + rebuild for an earlier one, so the pushed history reads as if
-  the work were done right the first time. (`git rebase -i` is unavailable in this harness; for a fix
-  to a deep non-tip commit, hand the author an exact recipe to run.)
+  the work were done right the first time. (`git rebase -i` can't be driven by hand in this harness —
+  no interactive TTY — but a **scripted** rebase works: drive it non-interactively via
+  `GIT_SEQUENCE_EDITOR`/`GIT_EDITOR` to reword or reorder a deep non-tip commit.)
 
 **Cadence (cost vs rigor, decided 2026-06-13):** micro-steps run lightweight; the **Opus reviewer
 gates at the feature commit**, not every micro-commit. A **single** Sonnet falsifier runs at the
 feature end (scale to a 2–3 panel later if we want more rigor).
+
+## Two tracks: direct-on-main vs. feature branch (decided 2026-06-20)
+
+The planner picks the track **up-front** and announces it (the author can veto). See
+[engineering-handbook.md](engineering-handbook.md) §7 for the full rule; the operational gist:
+
+- **Small / single TDD cycle** → **directly on `main`**, one commit via the propose→confirm→commit
+  protocol. (This is the classic loop above.)
+- **Large / multi-cycle or new BDD scenarios** → a **feature branch**. The implementer commits each
+  red→green→refactor step **itself** with protocol-conform messages — **no per-commit pre-approval on
+  the branch** (that's the point: real TDD cadence without N round-trips). Falsifier + reviewer review
+  the **branch diff**; then **step 5 becomes the gateway**: the **author + planner review the branch's
+  `git log` together**, reword messages if needed (scripted rebase), and the branch lands by **rebase +
+  fast-forward only — no merge commit, no squash**. **Every commit on `main` builds green**, so a
+  broken branch commit is repaired by rebase before the merge. Only the author pushes.
+
+If a "small" item balloons mid-flight, the planner moves the *uncommitted* WIP onto a branch
+(`git switch -c`) before it grows — `main` stays clean. **Parallel/benchmark runs** use git worktrees
+(`Agent` tool `isolation: "worktree"`).
 
 ## How to invoke
 
