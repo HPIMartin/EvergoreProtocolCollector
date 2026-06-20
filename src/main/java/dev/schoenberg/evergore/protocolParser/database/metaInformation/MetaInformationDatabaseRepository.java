@@ -25,7 +25,9 @@ public class MetaInformationDatabaseRepository extends Repository<MetaInformatio
 
 	public static MetaInformationDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
 		ConnectionSource con = getCon(config, logger, hook);
-		return new MetaInformationDatabaseRepository(con, logger, getDao(con, MetaInformationEntry.class));
+		MetaInformationDatabaseRepository repository = new MetaInformationDatabaseRepository(con, logger, getDao(con, MetaInformationEntry.class));
+		repository.ensureTable();
+		return repository;
 	}
 
 	private MetaInformationDatabaseRepository(ConnectionSource con, Logger logger, Dao<MetaInformationEntry, String> meta) {

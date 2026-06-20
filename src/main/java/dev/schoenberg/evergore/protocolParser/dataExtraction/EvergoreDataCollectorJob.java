@@ -5,20 +5,21 @@ import jakarta.inject.Singleton;
 import io.micronaut.scheduling.annotation.Scheduled;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Singleton
 public class EvergoreDataCollectorJob {
-	public static int DELAY_IN_SEC = 30;
-
+	private final Configuration config;
 	private final Logger logger;
 	private final EvergoreDataExtractor dataExtractor;
 	private final EvergoreDataEvaluator evaluation;
 	private final PostCollectionHook hook;
 
-	public EvergoreDataCollectorJob(Logger logger, EvergoreDataExtractor dataExtractor, EvergoreDataEvaluator evaluation, PostCollectionHook hook) {
+	public EvergoreDataCollectorJob(Configuration config, Logger logger, EvergoreDataExtractor dataExtractor, EvergoreDataEvaluator evaluation, PostCollectionHook hook) {
+		this.config = config;
 		this.logger = logger;
 		this.dataExtractor = dataExtractor;
 		this.evaluation = evaluation;
@@ -38,6 +39,6 @@ public class EvergoreDataCollectorJob {
 	}
 
 	private void initialDelay() {
-		silentThrow(() -> SECONDS.sleep(DELAY_IN_SEC));
+		silentThrow(() -> SECONDS.sleep(config.getCollectorInitialDelaySeconds()));
 	}
 }

@@ -30,13 +30,11 @@ public class TestDataGenerator {
 		Configuration config = new FixtureConfiguration();
 
 		BankDatabaseRepository bank = BankDatabaseRepository.get(config, logger, () -> {});
-		bank.init();
 		bank.add(auroraBankEntries());
 		bank.add(boreasBankEntries());
 		bank.add(calixBankEntries());
 
 		StorageDatabaseRepository storage = StorageDatabaseRepository.get(config, logger, () -> {});
-		storage.init();
 		storage.add(auroraStorageEntries());
 		storage.add(boreasStorageEntries());
 	}

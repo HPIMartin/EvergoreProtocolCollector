@@ -35,7 +35,9 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 
 	public static BankDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
 		ConnectionSource con = getCon(config, logger, hook);
-		return new BankDatabaseRepository(con, logger, getDao(con, BankDatabaseEntry.class));
+		BankDatabaseRepository repository = new BankDatabaseRepository(con, logger, getDao(con, BankDatabaseEntry.class));
+		repository.ensureTable();
+		return repository;
 	}
 
 	private BankDatabaseRepository(ConnectionSource con, Logger logger, Dao<BankDatabaseEntry, String> bank) {

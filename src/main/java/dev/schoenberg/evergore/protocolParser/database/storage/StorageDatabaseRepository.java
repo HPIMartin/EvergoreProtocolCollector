@@ -34,7 +34,9 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 
 	public static StorageDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
 		ConnectionSource con = getCon(config, logger, hook);
-		return new StorageDatabaseRepository(con, logger, getDao(con, StorageDatabaseEntry.class));
+		StorageDatabaseRepository repository = new StorageDatabaseRepository(con, logger, getDao(con, StorageDatabaseEntry.class));
+		repository.ensureTable();
+		return repository;
 	}
 
 	private StorageDatabaseRepository(ConnectionSource con, Logger logger, Dao<StorageDatabaseEntry, String> bank) {

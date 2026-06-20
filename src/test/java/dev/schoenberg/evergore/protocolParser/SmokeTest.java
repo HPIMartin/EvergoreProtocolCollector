@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
-import dev.schoenberg.evergore.protocolParser.dataExtraction.EvergoreDataCollectorJob;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
@@ -54,23 +53,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SmokeTest {
 	private static final String TEST_DATABASE_PATH = "src/test/resources/smokeTest.sqlite";
 
+	static {
+		silentThrow(() -> Files.deleteIfExists(Paths.get(TEST_DATABASE_PATH)));
+	}
+
 	private @Inject EmbeddedServer server;
 	private @Inject Configuration config;
 	private @Inject Logger logger;
 
 	private static boolean exceptionFound;
-	private boolean collectionFinished;
+	private static boolean collectionFinished;
 	private static boolean dataIsLoaded;
 
 	@BeforeEach
 	public void setup() {
 		config().verifySsl(false);
 		config().defaultBaseUrl("http://localhost:" + server.getPort());
-		exceptionFound = false;
-		collectionFinished = false;
-		dataIsLoaded = false;
-
-		EvergoreDataCollectorJob.DELAY_IN_SEC = 0;
 	}
 
 	@Test
@@ -163,11 +161,7 @@ class SmokeTest {
 
 	@MockBean(PreDatabaseConnectionHook.class)
 	PreDatabaseConnectionHook databaseHook() {
-		return this::deleteTestDatabase;
-	}
-
-	private void deleteTestDatabase() {
-		silentThrow(() -> Files.deleteIfExists(Paths.get(TEST_DATABASE_PATH)));
+		return () -> {};
 	}
 
 	@MockBean(PostCollectionHook.class)
@@ -201,7 +195,11 @@ class SmokeTest {
 		@Override
 		public String getDatabasePath() {
 			return TEST_DATABASE_PATH;
-			// return "src/test/resources/testdata.sqlite";
+		}
+
+		@Override
+		public int getCollectorInitialDelaySeconds() {
+			return 0;
 		}
 	}
 

@@ -20,7 +20,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationRepository;
-import dev.schoenberg.evergore.protocolParser.dataExtraction.EvergoreDataCollectorJob;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
@@ -58,10 +57,6 @@ class ProtocolEvaluationAcceptanceTest {
 	void setup() {
 		Unirest.config().verifySsl(false);
 		Unirest.config().defaultBaseUrl("http://localhost:" + server.getPort());
-		exceptionFound = false;
-		collectionFinished = false;
-
-		EvergoreDataCollectorJob.DELAY_IN_SEC = 0;
 	}
 
 	@Test
@@ -155,6 +150,11 @@ class ProtocolEvaluationAcceptanceTest {
 		@Override
 		public String getDatabasePath() {
 			return WORKING_DB.toString();
+		}
+
+		@Override
+		public int getCollectorInitialDelaySeconds() {
+			return 0;
 		}
 	}
 

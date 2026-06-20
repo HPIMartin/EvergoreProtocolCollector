@@ -23,4 +23,8 @@ public class Configuration {
 	public String getDatabasePath() {
 		return useInMemory ? ":memory:" : DATABASE_TEMP_SQLITE;
 	}
+
+	public int getCollectorInitialDelaySeconds() {
+		return 30;
+	}
 }
