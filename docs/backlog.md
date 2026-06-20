@@ -49,11 +49,20 @@ intended VS Code `addBraces` cleanup turned out **not to exist** in redhat.java)
 "Add braces" quick-fix. New item **D6**: **refactor** `EvergoreItem` in-place — keep the enum hard-links,
 **not** externalize.
 
+**D2 landed (2026-06-20).** An offline acceptance test of the evaluate→overview pipeline
+(`ProtocolEvaluationAcceptanceTest`) now boots the real server against a **synthetic** committed fixture
+DB (`TestDataGenerator` → `src/test/resources/testdata.sqlite`: 3 avatars, bank both ways, storage with
+quality scaling + a zero-value item) — no prod data, no PII, fully reproducible. The scraper is stubbed;
+the **real** `EvergoreDataEvaluator` runs; assertions go through a restyle-proof `RenderedTable` HTML
+helper (overview + avatar pages) plus the meta repo for storage valuation. Adding a second
+server-booting test exposed a **latent startup race in `SmokeTest`** (the `@Scheduled` job could
+evaluate before the tables existed); fixed by per-class JVM isolation (`setForkEvery(1)`). The deeper
+production startup-ordering assumption (job vs table-init) is logged as **D7**.
+
 **Next dev action — pick from the remaining items H7 unblocked** (all land *in Gradle*): **G6+**
 (JaCoCo), **H6** (failsafe → Gradle integration-test set), **C2** (move `secret_token` out of source),
-**C5** (vuln scan), **D2** (automated 1:1 acceptance test — boot against a **gitignored** prod snapshot;
-PII never committed). **H9** (jump to Micronaut 5) only *after* 1:1 is re-proven. Plan via the agent
-pipeline (planner → implementer → falsifier → reviewer).
+**C5** (vuln scan), **D7** (startup ordering). **H9** (jump to Micronaut 5) only *after* 1:1 is re-proven.
+Plan via the agent pipeline (planner → implementer → falsifier → reviewer).
 *(A4/CI stays deprioritized — local-only Docker → home-server deploy.)*
 
 **Gotchas worth keeping:**
@@ -119,7 +128,8 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **D2** | Acceptance test of collect→evaluate→overview — **H7 done (2026-06-16); now actionable.** Two flavours: (a) in-memory fakes (page-source + `:memory:` DB) for a fast canned-text scenario; (b) the **offline 1:1 benchmark** — boot against a **gitignored** prod-DB snapshot and assert the rendered pages match stored (PII) expecteds, never committed | Proves the whole use case without a browser | Green scenario asserting overview numbers; benchmark reproduces the manual 1:1 check | M |
+| **D2** | ~~Acceptance test of collect→evaluate→overview~~ **DONE 2026-06-20.** Realized as `ProtocolEvaluationAcceptanceTest`: boots the real server against a **synthetic committed** fixture (`TestDataGenerator` → `testdata.sqlite`; no PII, reproducible), stubs the scraper, runs the real evaluator, asserts overview + avatar pages via the restyle-proof `RenderedTable` helper and storage valuation via the meta repo. The optional real-prod-snapshot benchmark stays **gitignored** if ever added. | Proves the whole use case without a browser | ✅ Green e2e asserting overview numbers + storage valuation | M |
+| **D7** | **Make startup ordering deterministic: tables exist before the `@Scheduled` collector job can evaluate.** Surfaced by D2 — in tests the job (`initialDelay` 0) raced `DatabaseStartupInitialization` and hit `no such table` (`SmokeTest`); masked in prod only by the 30 s initial delay. Test-side mitigated via per-class JVM isolation (`setForkEvery(1)`); the production assumption is still implicit. Options: create tables in repo construction, or order init before scheduling. | Remove an implicit, timing-dependent ordering assumption | Job cannot run before tables exist; a test proves the ordering | S |
 | **D3** | Restructure packages to `domain / application / adapters{in,out} / config`; keep core framework-free | Make the boundaries explicit & enforceable | Micronaut/Selenium/ORMLite imports only under `adapters`+`config` | L |
 | **D4** | Unify the two `TransferType→String` visitors; replace `ApplicationExceptionHandler` `instanceof` chain with a visitor (its own TODO) | Remove duplication & the pattern the project is eliminating | One mapping source; handler has no `instanceof` | S |
 | **D5** | Return `Optional` from `getNewest()` instead of `MIN_VALUE` sentinel | Stop leaking fake domain objects | Callers handle empty explicitly; test covers empty repo | S |
