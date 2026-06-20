@@ -92,3 +92,11 @@ spotless {
 		endWithNewline()
 	}
 }
+
+tasks.register<JavaExec>("generateAcceptanceDb") {
+	group = "verification"
+	description = "Generates src/test/resources/testdata.sqlite from the synthetic fixture dataset."
+	classpath = sourceSets["test"].runtimeClasspath
+	mainClass.set("dev.schoenberg.evergore.protocolParser.TestDataGenerator")
+	jvmArgs("--enable-native-access=ALL-UNNAMED")
+}
