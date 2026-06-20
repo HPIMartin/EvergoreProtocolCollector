@@ -12,54 +12,12 @@
 **Backlog convention:** completed items are **removed** (the commits show them — no `DONE` tombstones);
 only **rejected/deferred** items stay, with their decision + rationale (knowledge git doesn't hold).
 
-**Where we are:** the rebuild's core is in place — the storage-value feature, a hexagonal `PageSource`
-port for scraping, and an ArchUnit guard keeping `domain`/`businessLogic` framework-free. **The build
-is now Gradle on an up-to-date stack** (2026-06-16): Maven→Gradle (Kotlin `build.gradle.kts`, wrapper
-9.5.1), **Java 17→25** (Gradle toolchain, foojay-provisioned), **Micronaut 3.8.4→4.10.3**; the
-devcontainer (JDK 25) and `Dockerfile` (temurin-25 build → selenium-firefox runtime, `installDist`)
-were rebuilt to match. `./gradlew build` is green (22 tests) and the migrated stack was verified **1:1**
-against the production DB (`/overview`, `/avatars/{a}/bank|storage` byte-identical after LF
-normalisation). The repo is a clean public showcase on a single `main` branch.
-
-**H8 + A7 landed (2026-06-19).** **H8:** warnings-as-errors enforced — `-Xlint:all` + `-Werror` on every
-`JavaCompile`, `-serial`/`-processing` excluded, gate proven real; Java-25 Netty native-access silenced +
-future-proofed via `--enable-native-access=ALL-UNNAMED` (test JVM + dist start script). **A7:** adopted a
-**shared Eclipse formatter** — one central `config/eclipse/formatter.xml` (tabs, `lineSplit=180`) used by
-VS Code, Eclipse, IntelliJ *and* the Gradle build (Spotless `eclipse()` + `importOrder` + whitespace); VS
-Code formats + organizes imports on save; **star imports forbidden** (`starThreshold 999999`). Codebase
-reflowed to the standard (38 files, max line 180) **and all wildcard imports expanded to explicit** (IDE
-organize-imports; Spotless `removeUnusedImports` added) — wildcard-free, build green. Author chose *uniform
-+ enforced* over hand-tuned wrapping; `.editorconfig` dropped (VS-Code-only).
-
-**Formatter fine-tuning landed (2026-06-19).** Empirically reduced to the two settings that are *real*
-deviations: `alignment_for_selector_in_method_invocation=48` (method chains wrap **one per `.`** only when
-they exceed `lineSplit=180`; 3 files reflowed) and `number_of_blank_lines_at_end_of_method_body=0` (no blank
-before a method's closing `}`). The other handoff candidates proved to be **JDT defaults already** — `if`
-one-liners are broken (braceless) and multiple blanks collapse to one without any setting — so they were
-**not** added (the profile stays deviations-only). Removing the blank after `class X {` / at method-body
-start is **not possible** in JDT without also dropping the wanted inter-method blanks (`number_of_empty_lines_to_preserve`
-governs all three), so it was dropped. **Braces** are a separate concern: the formatter wraps `if`-bodies but
-cannot *insert* `{ }`, so always-braces is enforced outside the formatter.
-
-**Checkstyle landed (2026-06-19, single-purpose).** A minimal `config/checkstyle/checkstyle.xml` (the
-Gradle-default path) with **exactly one rule, `NeedBraces`** — disjoint from the formatter (layout stays in
-`formatter.xml`; no rule lives in both, so no parallel upkeep). Gradle `checkstyle` plugin → `check`, gate
-proven by a deliberate braceless `if`; same config drives the IDE (vscode-checkstyle, recommended +
-devcontainer-installed). The earlier rejection still holds for Checkstyle *as a general linter* (overlap with
-reviewer/Sonar G6); this is the narrow brace gap only. **Note:** Checkstyle only *reports* (no auto-fix — the
-intended VS Code `addBraces` cleanup turned out **not to exist** in redhat.java); braces are added via the
-"Add braces" quick-fix. New item **D6**: **refactor** `EvergoreItem` in-place — keep the enum hard-links,
-**not** externalize.
-
-**D2 landed (2026-06-20).** An offline acceptance test of the evaluate→overview pipeline
-(`ProtocolEvaluationAcceptanceTest`) now boots the real server against a **synthetic** committed fixture
-DB (`TestDataGenerator` → `src/test/resources/testdata.sqlite`: 3 avatars, bank both ways, storage with
-quality scaling + a zero-value item) — no prod data, no PII, fully reproducible. The scraper is stubbed;
-the **real** `EvergoreDataEvaluator` runs; assertions go through a restyle-proof `RenderedTable` HTML
-helper (overview + avatar pages) plus the meta repo for storage valuation. Adding a second
-server-booting test exposed a **latent startup race in `SmokeTest`** (the `@Scheduled` job could
-evaluate before the tables existed); fixed by per-class JVM isolation (`setForkEvery(1)`). The deeper
-production startup-ordering assumption (job vs table-init) is logged as **D7**.
+**Where we are:** the rebuild's core is in place on an up-to-date stack (Gradle / Java 25 / Micronaut
+4.10), verified **1:1** against the production DB. `domain`/`businessLogic` stay framework-free
+(ArchUnit-guarded); the style is enforced from one place (shared Eclipse formatter + Spotless,
+warnings-as-errors, a one-rule Checkstyle brace gate); an offline acceptance test covers
+evaluate→overview against a synthetic committed fixture; DB startup ordering is deterministic. Single
+public `main` branch. (Decisions + rationale: [open-questions.md](open-questions.md).)
 
 **Next dev action — pick from the remaining items H7 unblocked** (all land *in Gradle*): **E1**
 (erzeugter Gildenmehrwert — the headline metric, now easy to TDD on this harness and would surface
@@ -131,11 +89,10 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **D2** | ~~Acceptance test of collect→evaluate→overview~~ **DONE 2026-06-20.** Realized as `ProtocolEvaluationAcceptanceTest`: boots the real server against a **synthetic committed** fixture (`TestDataGenerator` → `testdata.sqlite`; no PII, reproducible), stubs the scraper, runs the real evaluator, asserts overview + avatar pages via the restyle-proof `RenderedTable` helper and storage valuation via the meta repo. The optional real-prod-snapshot benchmark stays **gitignored** if ever added. | Proves the whole use case without a browser | ✅ Green e2e asserting overview numbers + storage valuation | M |
 | **D3** | Restructure packages to `domain / application / adapters{in,out} / config`; keep core framework-free | Make the boundaries explicit & enforceable | Micronaut/Selenium/ORMLite imports only under `adapters`+`config` | L |
 | **D4** | Unify the two `TransferType→String` visitors; replace `ApplicationExceptionHandler` `instanceof` chain with a visitor (its own TODO) | Remove duplication & the pattern the project is eliminating | One mapping source; handler has no `instanceof` | S |
 | **D5** | Return `Optional` from `getNewest()` instead of `MIN_VALUE` sentinel | Stop leaking fake domain objects | Callers handle empty explicitly; test covers empty repo | S |
-| **D6** | **Refactor the `EvergoreItem` catalog in-place** — the ~660-constant enum (752 lines) is the project's biggest file. **Decision 2026-06-19: keep it an enum** (the compile-checked recipe hard-links are valued) and **do NOT externalize** to a config/YAML file. Refactor for readability/maintainability instead, e.g.: pull the nested `Category`/`Recipe`/`Ingredient` types into their own files; add concise recipe/ingredient factory helpers to shorten each constant; group constants. Approach TBD with the author. Any change **must** keep a **golden-master test** asserting `getStorageValue`/`getWithdrawlValue` are unchanged for all items | Tame the biggest file without losing the type-safe cross-references; eases value maintenance (relates to **D-3**) | P3 | Golden-master test gates it (1:1). Independent of A7. |
+| **D6** | **Refactor the `EvergoreItem` catalog in-place** — the ~660-constant enum (752 lines) is the project's biggest file. **Decision 2026-06-19: keep it an enum** (the compile-checked recipe hard-links are valued) and **do NOT externalize** to a config/YAML file. Refactor for readability/maintainability instead, e.g.: pull the nested `Category`/`Recipe`/`Ingredient` types into their own files; add concise recipe/ingredient factory helpers to shorten each constant; group constants. Approach TBD with the author. Any change **must** keep a **golden-master test** asserting `getStorageValue`/`getWithdrawlValue` are unchanged for all items | Tame the biggest file without losing the type-safe cross-references; eases value maintenance (relates to **D-3**) | P3 | Golden-master test gates it (1:1). |
 
 ## Epic E — Product: replace the Google Sheet `P2→P3`  *(in scope — full parity; no time pressure)*
 
@@ -178,10 +135,8 @@ See [knowledge-base/dev-environment.md](knowledge-base/dev-environment.md).
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
 | **H2** | docker-compose: add a `selenium/standalone-firefox` service; tests use `RemoteWebDriver`; retire bundled `gecko-*-win.exe`. **Re-add the `docker-outside-of-docker` devcontainer feature** (removed to get a building container) | Browser-in-container ⇒ scraping/integration tests run anywhere, no host Firefox | An integration test scrapes via the service | M |
-| **H3** | *Mostly done 2026-06-16 with the Gradle migration:* `dos2unix` dropped (LF enforced), jar-name hack gone (version-independent `installDist` dir), `.dockerignore` added, `apt` cleaned. **Remaining: stop baking `zugang.txt`** → folds into **C3** | Image was fragile & bakes secrets | Clean reproducible build; **no-secret-in-image still open (C3)** | S |
 | **H5** | *(was: cross-rebuild Maven cache — obsolete, Maven gone)* Optional: persist the Gradle caches (`~/.gradle`, build cache) across rebuilds with correct `vscode` ownership | Faster rebuilds | Gradle deps/build cached across container rebuilds | S |
-| **H8** | ~~**Warnings-as-errors:** `-Werror` + `-Xlint:all` in the Gradle build~~ **DONE 2026-06-19.** `-serial`/`-processing` excluded deliberately; code was already warning-clean; gate proven real (a deliberate `[cast]` warning fails the build). Java-25 Netty native-access **enabled** (`--enable-native-access=ALL-UNNAMED`, test JVM + start script), not suppressed | Mechanically enforces the warnings-as-errors standard (CLAUDE.md/handbook) | Build fails on any warning; existing warnings fixed or deliberately excluded | M |
-| **H9** | **Jump Micronaut 4.10 → 5.0** (Java-25 baseline, Apr 2026) and re-verify 1:1. **Only after** the current migration's 1:1 is locked (ideally via the **D2** automated benchmark) | Stay on the newest line; deferred deliberately — one framework risk at a time | `./gradlew build` green on MN5 + endpoints still 1:1 vs the prod snapshot | M |
+| **H9** | **Jump Micronaut 4.10 → 5.0** (Java-25 baseline, Apr 2026) and re-verify 1:1. **Only after** the current migration's 1:1 is locked (ideally via the automated acceptance test `ProtocolEvaluationAcceptanceTest`) | Stay on the newest line; deferred deliberately — one framework risk at a time | `./gradlew build` green on MN5 + endpoints still 1:1 vs the prod snapshot | M |
 
 ---
 
@@ -196,14 +151,13 @@ doc is intentionally **not** committed — its value lives here.
 
 | ID | Item | Why | Priority | Sequencing / caveat |
 |----|------|-----|----------|---------------------|
-| **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%) — the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`), sequence with/after **C2** so it doesn't block the secret cleanup. System.out check: the dead-code deletion already removed ~half the hits (`CsvParser`); whitelist `@Ignore` Gherkin once D2/G4 land. |
+| **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%) — the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`), sequence with/after **C2** so it doesn't block the secret cleanup. System.out check: the dead-code deletion already removed ~half the hits (`CsvParser`); whitelist `@Ignore` Gherkin once G4 lands. |
 | **G7-fix** | Clean existing violations: `System.out` in `SeleniumPageSource`/`AlternativeFileLoaderWrapper`, `printStackTrace` in `SmokeTest`, `// TODO: Visitor-Pattern` in `ApplicationExceptionHandler`, the empty `catch (Exception e) {}` swallow + `// NOOP` comment in `SeleniumPageSource`, and the commented-out line in `SmokeTest` | The "no comments / logger-only / self-explanatory" rules are currently violated | P2 | `CsvParser` System.out sites are covered by the earlier dead-code deletion. |
-| **A7** | ~~**Spotless** bound to the build~~ **DONE 2026-06-19 (shared Eclipse formatter).** One central `config/eclipse/formatter.xml` (tabs, `lineSplit=180`, empty bodies compact, enum one-per-line) consumed by VS Code + Eclipse + IntelliJ + Gradle/Spotless (`eclipse().configFile` + `importOrder` java→extern→`dev.schoenberg`→static-last + `trimTrailingWhitespace` + `endWithNewline`). VS Code formats + organizes imports on save; **star imports forbidden** (`starThreshold 999999`). Codebase reflowed (38 files, max 180). **Finishing-step open:** one-time wildcard→explicit expansion (IDE) + no-wildcard build gate | One enforced style across IDEs + build from a single file; ends diff churn & review nits | P2 | D-10 resolved. Reflow accepted for uniformity. `.editorconfig` dropped (VS-Code-only); universal basics → native VS Code `files.*`. |
 | **G8** | **`/commit`** slash command encoding the strict one-line/no-footer/never-push protocol | Repo's strictest, most-violated-by-default rule (footers slip in); reproducible showcase artifact | P3 | `/review`,`/tdd` rejected (duplicate reviewer/implementer agents). `/spec` deferred → gate on **G4**; keep MCP-free + JUnit-`@Ignore`-first (not Cucumber/Jira). |
 | **A8** | Broaden `.gitignore`: add `CLAUDE.local.md`, `.claude/cache/`, `.claude/.tmp/` | Pre-empts committing personal overrides/cache | P3 | Scope to those paths; **avoid** a blanket `**/*.local.*` (would swallow legit `*.local.properties` fixtures). Folds into **A5**. |
 | **B7** | Migrate remaining JUnit `Assertions` → **AssertJ** (`SmokeTest`, `MetaInformationTest`) | Single assertion idiom (documented preference) | P3 | Opportunistic. `MetaInformationTest` = clean win; defer `SmokeTest` to its planned Levenshtein-rework. |
 | **B8** | **Remove the `static` signal-flags from the boot tests** (`SmokeTest`, `ProtocolEvaluationAcceptanceTest`): replace the cross-test `static` `collectionFinished`/`dataIsLoaded`/`exceptionFound` with a static-free design — an injected recorder singleton, or `@TestInstance(PER_CLASS)` + instance fields | Per the avoid-`static` rule (handbook §3); the flags exist only to bridge the `@MockBean`↔test-instance lifecycle (set by a bean at startup, read by the test) | P3 | A naive `@TestInstance(PER_CLASS)` + instance-fields swap passed `ProtocolEvaluationAcceptanceTest` but **broke `SmokeTest.applicationIsStarting`** (the scheduled-job signals went unobserved → 60s timeout, `dataIsLoaded` false). Needs a verified static-free design (injected recorder bean looks most robust). Keep the pre-context static *initializer* (the accepted test exception). |
-| **H6** | `maven-failsafe-plugin` + rename boot/integration tests to `*IT` (separate integration phase) | Keeps the fast TDD loop fast; isolates server-booting tests | P3 | Gate on **H2** (real Selenium IT), **not** D2 (D2 is an in-memory *fast* acceptance test). Update testing.md same change. **2026-06-15: land in Gradle post-H7 (failsafe → Gradle integration test set).** |
+| **H6** | `maven-failsafe-plugin` + rename boot/integration tests to `*IT` (separate integration phase) | Keeps the fast TDD loop fast; isolates server-booting tests | P3 | Gate on **H2** (real Selenium IT), **not** the in-memory *fast* acceptance test (`ProtocolEvaluationAcceptanceTest`). Update testing.md same change. **2026-06-15: land in Gradle post-H7 (failsafe → Gradle integration test set).** |
 | **G6+** | **JaCoCo** report-only (no enforced threshold) wired into `mvn verify` | Visible coverage to guide B3/B4 test work; low-ceremony first step toward G6 | P3 | Report-only — don't gate a young suite. Promote to a threshold under **G6** later; "into CI" half needs A4. **2026-06-15: land in Gradle post-H7.** |
 | **G9** | **Point Claude at official docs (WebFetch) for less-trafficked libraries** — a `working-with-claude.md` convention: for **Micronaut / ORMLite / Selenium / RxJava** (thin in LLM training data), fetch the official docs before writing against an unfamiliar API; prefer doc-grounded code over confabulation | Enterprise-audit Pitfall #5, the most stack-relevant gap: a solo dev has no reviewer to catch a hallucinated API, and ArchUnit/tests catch structure, not invented method signatures. MCP-free (WebFetch is available) | P2 | Flagged independently by two audit reviewers. Doc-only; fits the Epic-G showcase. |
 | **G10** | **SessionStart orient/lessons hook** in `.claude/settings.json`: deterministically inject the orient pointer (CLAUDE.md → KB README → backlog "Current status" → open-questions → `process-learnings.md`) so every fresh session reads the lessons first | The 100%-fires complement to the advisory `/continue` + CLAUDE.md "Start here"; completes the self-improvement loop and is the most on-thesis hooks-over-rules showcase artifact (sibling to **G7**) | P3 | Enterprise-audit gap. The lessons file already exists (`process-learnings.md`); only the deterministic hook is missing. |
@@ -218,7 +172,7 @@ doc is intentionally **not** committed — its value lives here.
 - **commit-message *skill*** — rule already in CLAUDE.md + reviewer gate + the `git push` deny; a skill adds context cost, not enforcement (use **G8** `/commit`, or a git `commit-msg` hook).
 - **security-auditor *subagent*** — redundant with the reviewer's `security` category; OWASP ceremony for a no-prod-pressure scraper. Keep only "extend reviewer + secret-scan hook" under C2/C3.
 - **ADRs (`docs/adr/`)** — duplicate the `open-questions.md` Decisions table ("git is history; docs are knowledge").
-- **format-on-save hook** — premature; folded into **A7** (needs a formatter + CI first).
+- **format-on-save hook** — premature; folded into the shared-formatter adoption (needs a formatter + CI first).
 - **block-dangerous-bash hook** — now largely covered by the hardened permission **deny** (`git push`, `rm -rf`, `git reset --hard`, added 2026-06-15); revisit only for force-push/rebase nuance.
 - **N/A / enterprise-only:** Spring Modulith (not Spring), CLAUDE.md <200-line guard (it's 76), `.mcp.json`/Jira/GitHub MCP (solo, no tracker), `output-styles/`, path-scoped `rules/`, directory-level `CLAUDE.md`, a `docs-writer`/`tdd-runner` agent (tdd = existing `implementer`), quarterly surface audit, English-in-repo (already decided).
 
@@ -226,6 +180,6 @@ doc is intentionally **not** committed — its value lives here.
 
 ## Dependency notes
 
-- D2 (the acceptance test) enables most of E (date-range, dashboard build on a testable core).
+- The acceptance test (`ProtocolEvaluationAcceptanceTest`) enables most of E (date-range, dashboard build on a testable core).
 - C-epic is independent and can run in parallel; do C2/C3 before any real deployment.
 - B5 & Q3 gate E3 (hunt-loot valuation).
