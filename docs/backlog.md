@@ -19,7 +19,13 @@ warnings-as-errors, a one-rule Checkstyle brace gate); an offline acceptance tes
 evaluate→overview against a synthetic committed fixture; DB startup ordering is deterministic. Single
 public `main` branch. (Decisions + rationale: [open-questions.md](open-questions.md).)
 
-**Next dev action — pick from the remaining items H7 unblocked** (all land *in Gradle*): **E1**
+**Next action (author-pinned): B8** — remove the `static` signal-flags from the boot tests
+(`SmokeTest` + `ProtocolEvaluationAcceptanceTest`) via an **injected recorder singleton** (the robust
+static-free design; a naive `@TestInstance(PER_CLASS)` swap passed the acceptance test but broke
+`SmokeTest.applicationIsStarting` — scheduled-job signals went unobserved → 60s timeout). Run on a
+feature branch per the workflow; verify with a clean build (twice) when the machine is free of load.
+
+**Then — pick from the remaining items H7 unblocked** (all land *in Gradle*): **E1**
 (erzeugter Gildenmehrwert — the headline metric, now easy to TDD on this harness and would surface
 storage valuation via an endpoint), **G6+** (JaCoCo), **H6** (failsafe → Gradle integration-test set),
 **C2** (move `secret_token` out of source), **C5** (vuln scan). **H9** (jump to Micronaut 5) only *after*
