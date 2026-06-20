@@ -9,6 +9,8 @@
 ## ▶ Current status / next action
 
 `git log` is the record of what landed; this section tracks only **where we are and what's next**.
+**Backlog convention:** completed items are **removed** (the commits show them — no `DONE` tombstones);
+only **rejected/deferred** items stay, with their decision + rationale (knowledge git doesn't hold).
 
 **Where we are:** the rebuild's core is in place — the storage-value feature, a hexagonal `PageSource`
 port for scraping, and an ArchUnit guard keeping `domain`/`businessLogic` framework-free. **The build
@@ -59,10 +61,11 @@ server-booting test exposed a **latent startup race in `SmokeTest`** (the `@Sche
 evaluate before the tables existed); fixed by per-class JVM isolation (`setForkEvery(1)`). The deeper
 production startup-ordering assumption (job vs table-init) is logged as **D7**.
 
-**Next dev action — pick from the remaining items H7 unblocked** (all land *in Gradle*): **G6+**
-(JaCoCo), **H6** (failsafe → Gradle integration-test set), **C2** (move `secret_token` out of source),
-**C5** (vuln scan), **D7** (startup ordering). **H9** (jump to Micronaut 5) only *after* 1:1 is re-proven.
-Plan via the agent pipeline (planner → implementer → falsifier → reviewer).
+**Next dev action — pick from the remaining items H7 unblocked** (all land *in Gradle*): **E1**
+(erzeugter Gildenmehrwert — the headline metric, now easy to TDD on this harness and would surface
+storage valuation via an endpoint), **G6+** (JaCoCo), **H6** (failsafe → Gradle integration-test set),
+**C2** (move `secret_token` out of source), **C5** (vuln scan). **H9** (jump to Micronaut 5) only *after*
+1:1 is re-proven. Plan via the agent pipeline (planner → implementer → falsifier → reviewer).
 *(A4/CI stays deprioritized — local-only Docker → home-server deploy.)*
 
 **Gotchas worth keeping:**
@@ -129,7 +132,6 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
 | **D2** | ~~Acceptance test of collect→evaluate→overview~~ **DONE 2026-06-20.** Realized as `ProtocolEvaluationAcceptanceTest`: boots the real server against a **synthetic committed** fixture (`TestDataGenerator` → `testdata.sqlite`; no PII, reproducible), stubs the scraper, runs the real evaluator, asserts overview + avatar pages via the restyle-proof `RenderedTable` helper and storage valuation via the meta repo. The optional real-prod-snapshot benchmark stays **gitignored** if ever added. | Proves the whole use case without a browser | ✅ Green e2e asserting overview numbers + storage valuation | M |
-| **D7** | **Make startup ordering deterministic: tables exist before the `@Scheduled` collector job can evaluate.** Surfaced by D2 — in tests the job (`initialDelay` 0) raced `DatabaseStartupInitialization` and hit `no such table` (`SmokeTest`); masked in prod only by the 30 s initial delay. Test-side mitigated via per-class JVM isolation (`setForkEvery(1)`); the production assumption is still implicit. Options: create tables in repo construction, or order init before scheduling. | Remove an implicit, timing-dependent ordering assumption | Job cannot run before tables exist; a test proves the ordering | S |
 | **D3** | Restructure packages to `domain / application / adapters{in,out} / config`; keep core framework-free | Make the boundaries explicit & enforceable | Micronaut/Selenium/ORMLite imports only under `adapters`+`config` | L |
 | **D4** | Unify the two `TransferType→String` visitors; replace `ApplicationExceptionHandler` `instanceof` chain with a visitor (its own TODO) | Remove duplication & the pattern the project is eliminating | One mapping source; handler has no `instanceof` | S |
 | **D5** | Return `Optional` from `getNewest()` instead of `MIN_VALUE` sentinel | Stop leaking fake domain objects | Callers handle empty explicitly; test covers empty repo | S |
@@ -200,6 +202,7 @@ doc is intentionally **not** committed — its value lives here.
 | **G8** | **`/commit`** slash command encoding the strict one-line/no-footer/never-push protocol | Repo's strictest, most-violated-by-default rule (footers slip in); reproducible showcase artifact | P3 | `/review`,`/tdd` rejected (duplicate reviewer/implementer agents). `/spec` deferred → gate on **G4**; keep MCP-free + JUnit-`@Ignore`-first (not Cucumber/Jira). |
 | **A8** | Broaden `.gitignore`: add `CLAUDE.local.md`, `.claude/cache/`, `.claude/.tmp/` | Pre-empts committing personal overrides/cache | P3 | Scope to those paths; **avoid** a blanket `**/*.local.*` (would swallow legit `*.local.properties` fixtures). Folds into **A5**. |
 | **B7** | Migrate remaining JUnit `Assertions` → **AssertJ** (`SmokeTest`, `MetaInformationTest`) | Single assertion idiom (documented preference) | P3 | Opportunistic. `MetaInformationTest` = clean win; defer `SmokeTest` to its planned Levenshtein-rework. |
+| **B8** | **Remove the `static` signal-flags from the boot tests** (`SmokeTest`, `ProtocolEvaluationAcceptanceTest`): replace the cross-test `static` `collectionFinished`/`dataIsLoaded`/`exceptionFound` with a static-free design — an injected recorder singleton, or `@TestInstance(PER_CLASS)` + instance fields | Per the avoid-`static` rule (handbook §3); the flags exist only to bridge the `@MockBean`↔test-instance lifecycle (set by a bean at startup, read by the test) | P3 | A naive `@TestInstance(PER_CLASS)` + instance-fields swap passed `ProtocolEvaluationAcceptanceTest` but **broke `SmokeTest.applicationIsStarting`** (the scheduled-job signals went unobserved → 60s timeout, `dataIsLoaded` false). Needs a verified static-free design (injected recorder bean looks most robust). Keep the pre-context static *initializer* (the accepted test exception). |
 | **H6** | `maven-failsafe-plugin` + rename boot/integration tests to `*IT` (separate integration phase) | Keeps the fast TDD loop fast; isolates server-booting tests | P3 | Gate on **H2** (real Selenium IT), **not** D2 (D2 is an in-memory *fast* acceptance test). Update testing.md same change. **2026-06-15: land in Gradle post-H7 (failsafe → Gradle integration test set).** |
 | **G6+** | **JaCoCo** report-only (no enforced threshold) wired into `mvn verify` | Visible coverage to guide B3/B4 test work; low-ceremony first step toward G6 | P3 | Report-only — don't gate a young suite. Promote to a threshold under **G6** later; "into CI" half needs A4. **2026-06-15: land in Gradle post-H7.** |
 | **G9** | **Point Claude at official docs (WebFetch) for less-trafficked libraries** — a `working-with-claude.md` convention: for **Micronaut / ORMLite / Selenium / RxJava** (thin in LLM training data), fetch the official docs before writing against an unfamiliar API; prefer doc-grounded code over confabulation | Enterprise-audit Pitfall #5, the most stack-relevant gap: a solo dev has no reviewer to catch a hallucinated API, and ArchUnit/tests catch structure, not invented method signatures. MCP-free (WebFetch is available) | P2 | Flagged independently by two audit reviewers. Doc-only; fits the Epic-G showcase. |

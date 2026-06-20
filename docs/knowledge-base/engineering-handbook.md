@@ -45,6 +45,16 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
   effects (no IO, no `init()`/`ensureTable()`-style calls). Put "construct + initialize" in a static
   **factory method** (e.g. the `Repository` subclass `get(...)` methods — Effective Java Item 1) or a
   lifecycle hook. Logic in a constructor breaks testability and violates SRP.
+- **Avoid the `static` keyword — treat it as a smell, above all mutable static state.** It creates
+  hidden cross-instance / cross-test coupling and breaks testability & isolation (the D7 bug: a
+  `public static int DELAY_IN_SEC` stomped between two boot-test contexts). Prefer dependency
+  injection, instance state, or a proper seam. Boot tests that need state written by a bean and read
+  by the test should use an **injected recorder singleton** (or `@TestInstance(PER_CLASS)` + instance
+  fields), **not** static flags — note a naive PER_CLASS swap can misbehave with `@MockBean`+`@Scheduled`,
+  so verify it. The rare defensible
+  case is a static *initializer* doing one-time setup that genuinely must run **before** the framework
+  context boots (e.g. seeding/deleting a test DB before repositories connect) — accepted in **test**
+  code; in production code, justify it hard.
 - **Avoid comments — make the code say it.** No comments in code, config, or infrastructure unless
   intent genuinely can't be expressed in names/structure (rare; then explain *why*, not *what*).
   Self-documenting names + small functions replace comments. The reviewer flags unnecessary comments.

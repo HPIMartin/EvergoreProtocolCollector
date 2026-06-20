@@ -30,6 +30,8 @@ test-driven, AI-assisted development**.
 - **KB-first, KB-current:** when you change behavior, update the relevant KB doc *in the same change*.
 - **Git is history; docs are knowledge:** never duplicate git in docs (no changelog, no
   commit-history narration, no diff snapshots) — answer history questions with `git log`/`git diff`.
+  **Backlog:** **remove completed items entirely** (no `DONE` tombstones — the commits show it);
+  keep only **rejected/deferred** items, *with* their decision + rationale (that's knowledge git lacks).
 - **Minimize comments:** code, config, and infrastructure should be self-explanatory (clear
   names/structure) — avoid comments; the reviewer flags unnecessary ones. (Markdown docs aren't code comments.)
 - **Warnings are errors:** compiler/lint warnings fail the build (`failOnWarning`, `-Xlint:all`);
