@@ -35,6 +35,11 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
 
 - Intention-revealing names; no abbreviations that aren't domain terms. Avoid joke/placeholder names
   (e.g. the existing `stupidMerge()` / debug `"shit"` strings get cleaned up, not copied).
+- **Code must be self-explanatory and stand on its own — understandable without any external document**
+  (backlog, tickets, chat history, design notes). Names carry the meaning: name things by what they
+  *are or do* (their domain/capability role), so a reader with only the source can understand them.
+  A corollary: names must never reference tracker/backlog IDs (`D2`, `H8`, ticket numbers) or the task
+  that produced them — e.g. `ProtocolEvaluationAcceptanceTest`, not `D2AcceptanceTest`.
 - Small methods, early returns, no deep nesting. No commented-out code in commits.
 - **Avoid comments — make the code say it.** No comments in code, config, or infrastructure unless
   intent genuinely can't be expressed in names/structure (rare; then explain *why*, not *what*).
