@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class BankRepositoryStub implements BankRepository {
 	private final Map<String, List<BankEntry>> entriesByAvatar = new HashMap<>();
@@ -45,7 +46,7 @@ public class BankRepositoryStub implements BankRepository {
 	}
 
 	@Override
-	public BankEntry getNewest() {
+	public Optional<BankEntry> getNewest() {
 		throw new UnsupportedOperationException();
 	}
 }

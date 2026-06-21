@@ -2,8 +2,8 @@ package dev.schoenberg.evergore.protocolParser.database.storage;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.dao.GenericRawResults;
@@ -11,7 +11,6 @@ import com.j256.ormlite.support.ConnectionSource;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
-import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
@@ -71,8 +70,8 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	}
 
 	@Override
-	public StorageEntry getNewest() {
-		return convert(silentThrow(() -> {
+	public Optional<StorageEntry> getNewest() {
+		return silentThrow(() -> {
 			GenericRawResults<String[]> raw = storage.queryRaw("SELECT max(" + TIMESTAMP_COLUMN + ") FROM " + TABLE);
 
 			List<String[]> results = raw.getResults();
@@ -80,12 +79,12 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 			log(results);
 
 			if (results.isEmpty() || results.get(0) == null || results.get(0)[0] == null) {
-				return new StorageDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, "", 0, transferTypeVisitor.convert(TransferType.EINLAGERUNG));
+				return Optional.empty();
 			}
 
 			Timestamp highestTimeStamp = valueOf(results.get(0)[0]);
-			return storage.queryBuilder().where().eq(StorageDatabaseEntry.TIMESTAMP_COLUMN, highestTimeStamp).queryForFirst();
-		}));
+			return Optional.of(convert(storage.queryBuilder().where().eq(StorageDatabaseEntry.TIMESTAMP_COLUMN, highestTimeStamp).queryForFirst()));
+		});
 	}
 
 	@Override

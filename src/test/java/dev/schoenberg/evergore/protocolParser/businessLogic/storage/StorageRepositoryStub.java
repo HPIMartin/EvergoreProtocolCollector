@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class StorageRepositoryStub implements StorageRepository {
 	private final Map<String, List<StorageEntry>> entriesByAvatar = new HashMap<>();
@@ -45,7 +46,7 @@ public class StorageRepositoryStub implements StorageRepository {
 	}
 
 	@Override
-	public StorageEntry getNewest() {
+	public Optional<StorageEntry> getNewest() {
 		throw new UnsupportedOperationException();
 	}
 }

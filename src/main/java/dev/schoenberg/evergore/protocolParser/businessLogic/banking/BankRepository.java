@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser.businessLogic.banking;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface BankRepository {
 	void add(List<BankEntry> newEntries);
@@ -10,7 +11,7 @@ public interface BankRepository {
 
 	List<BankEntry> getAllFor(String avatar, LocalDateTime after);
 
-	BankEntry getNewest();
+	Optional<BankEntry> getNewest();
 
 	List<String> getAllDifferentAvatars();
 }

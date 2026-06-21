@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser.businessLogic.storage;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface StorageRepository {
 	void add(List<StorageEntry> newEntries);
@@ -10,7 +11,7 @@ public interface StorageRepository {
 
 	List<StorageEntry> getAllFor(String avatar, LocalDateTime after);
 
-	StorageEntry getNewest();
+	Optional<StorageEntry> getNewest();
 
 	List<String> getAllDifferentAvatars();
 }

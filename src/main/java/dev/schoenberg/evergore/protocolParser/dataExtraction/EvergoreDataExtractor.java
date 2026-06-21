@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jakarta.inject.Singleton;
@@ -36,8 +37,8 @@ public class EvergoreDataExtractor {
 	}
 
 	private void updateLagerEntries(List<Entry> lager) {
-		StorageEntry latest = storageRepo.getNewest();
-		logger.debug("Latest element from: " + latest.timeStamp);
+		Optional<StorageEntry> latest = storageRepo.getNewest();
+		latest.ifPresent(e -> logger.debug("Latest element from: " + e.timeStamp));
 		AtomicInteger beforeFilter = new AtomicInteger(0);
 		AtomicInteger afterFilter = new AtomicInteger(0);
 		storageRepo
@@ -46,7 +47,7 @@ public class EvergoreDataExtractor {
 						.map(this::mapStorage)
 						.flatMap(List::stream)
 						.map(x -> count(x, beforeFilter))
-						.filter(e -> isNewer(latest, e))
+						.filter(e -> latest.map(l -> isNewer(l, e)).orElse(true))
 						.map(x -> count(x, afterFilter))
 						.toList());
 		logger.debug("before filter: " + beforeFilter.get());
@@ -54,8 +55,8 @@ public class EvergoreDataExtractor {
 	}
 
 	private void updateBankEntries(List<Entry> bank) {
-		BankEntry latest = bankRepo.getNewest();
-		logger.debug("Latest element from: " + latest.timeStamp);
+		Optional<BankEntry> latest = bankRepo.getNewest();
+		latest.ifPresent(e -> logger.debug("Latest element from: " + e.timeStamp));
 		AtomicInteger beforeFilter = new AtomicInteger(0);
 		AtomicInteger afterFilter = new AtomicInteger(0);
 		bankRepo
@@ -64,7 +65,7 @@ public class EvergoreDataExtractor {
 						.map(this::mapBank)
 						.flatMap(List::stream)
 						.map(x -> count(x, beforeFilter))
-						.filter(e -> isNewer(latest, e))
+						.filter(e -> latest.map(l -> isNewer(l, e)).orElse(true))
 						.map(x -> count(x, afterFilter))
 						.toList());
 		logger.debug("before filter: " + beforeFilter.get());

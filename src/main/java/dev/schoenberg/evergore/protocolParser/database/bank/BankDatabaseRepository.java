@@ -2,8 +2,8 @@ package dev.schoenberg.evergore.protocolParser.database.bank;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.dao.GenericRawResults;
@@ -13,7 +13,6 @@ import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
-import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
 import dev.schoenberg.evergore.protocolParser.database.Repository;
 import dev.schoenberg.evergore.protocolParser.database.TransferTypeDatabaseVisitor;
@@ -72,8 +71,8 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 	}
 
 	@Override
-	public BankEntry getNewest() {
-		return convert(silentThrow(() -> {
+	public Optional<BankEntry> getNewest() {
+		return silentThrow(() -> {
 			GenericRawResults<String[]> raw = bank.queryRaw("SELECT max(" + TIMESTAMP_COLUMN + ") FROM " + TABLE);
 
 			List<String[]> results = raw.getResults();
@@ -81,12 +80,12 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 			log(results);
 
 			if (results.isEmpty() || results.get(0) == null || results.get(0)[0] == null) {
-				return new BankDatabaseEntry(new Date(Long.MIN_VALUE), "", 0, transferTypeVisitor.convert(TransferType.EINLAGERUNG));
+				return Optional.empty();
 			}
 
 			Timestamp highestTimeStamp = valueOf(results.get(0)[0]);
-			return bank.queryBuilder().where().eq(BankDatabaseEntry.TIMESTAMP_COLUMN, highestTimeStamp).queryForFirst();
-		}));
+			return Optional.of(convert(bank.queryBuilder().where().eq(BankDatabaseEntry.TIMESTAMP_COLUMN, highestTimeStamp).queryForFirst()));
+		});
 	}
 
 	@Override
