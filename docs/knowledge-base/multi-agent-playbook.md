@@ -52,12 +52,14 @@ Two rules keep that loop bounded and the history clean:
   **Process-only FAILs** (whitespace not separated, KB not updated, commit-message format) are cheap
   mechanical fixes and **do not consume a round**.
 - **Fold fixes into the commit they belong to — never append "fix review" commits.** The branch is
-  unpushed, so rewriting local history is safe and expected (clean up before the author pushes). The
-  fix amends the original micro-commit: `git commit --amend` for the tip, or
-  `git reset --soft <feature-base>` + rebuild for an earlier one, so the pushed history reads as if
-  the work were done right the first time. (`git rebase -i` can't be driven by hand in this harness —
-  no interactive TTY — but a **scripted** rebase works: drive it non-interactively via
-  `GIT_SEQUENCE_EDITOR`/`GIT_EDITOR` to reword or reorder a deep non-tip commit.)
+  unpushed, so rewriting local history is safe and expected (clean up before the author pushes), so the
+  history reads as if the work were done right the first time. **In this harness `git reset`, `rm`, and
+  `git branch -D` are permission-blocked** (alongside `git push`) — the reset/rebase recipes don't run.
+  Reset-free method that folds a fix into any commit, even a deep one: save the corrected tree on a WIP
+  commit, branch off the feature base afresh, then for each logical group
+  `git checkout <wip-tip> -- <files>` to stage it and commit, and swap names with `git branch -m`
+  (the stale WIP branch can't be force-deleted here — rename it aside). A tip-only fix still takes
+  `git commit --amend`; `git rebase -i` has no interactive TTY here.
 
 **Cadence (cost vs rigor, decided 2026-06-13):** micro-steps run lightweight; the **Opus reviewer
 gates at the feature commit**, not every micro-commit. A **single** Sonnet falsifier runs at the
@@ -100,7 +102,12 @@ Planner phase and every commit-plan approval and push happen with **you** in the
 ## Environment gotchas (tell every agent)
 
 - **Bash stdout** isn't surfaced on this machine: redirect to a file (`./gradlew build > out.txt 2>&1`)
-  and `Read` it. `rm -rf` is permission-blocked. Prefer Read/Grep/Glob.
+  and `Read` it. `git reset`, `rm`, and `git branch -D` are permission-blocked (see §FAIL-loop for the
+  reset-free history rewrite). Prefer Read/Grep/Glob.
+- **Never overlap a tree-mutating agent with another agent's build.** The falsifier rewrites source to
+  run its counter-tests; a reviewer (or any build) hitting the same working tree at the same time builds
+  the mutated tree and reports phantom failures. Run falsify → review **sequentially**, or isolate each
+  in its own worktree (`Agent` `isolation: "worktree"`).
 - Run **focused** tests during micro-steps (`./gradlew test --tests ClassName`), full `./gradlew build` before the gate.
 
 ## Worked example (the storage feature, backlog B1 → A2)
