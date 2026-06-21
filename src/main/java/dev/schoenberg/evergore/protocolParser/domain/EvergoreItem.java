@@ -635,41 +635,39 @@ public enum EvergoreItem {
 	}
 
 	public enum Category {
-		ARMBRUESTE(0.6d, 0.6d),
-		AEXTE(0.6d, 0.6d),
-		AEXTE_2H(0.6d, 0.6d),
-		BANDAGEN(0.6d, 0.6d),
-		BAUTEILE(0.6d, 0.6d),
-		BOEGEN(0.6d, 0.6d),
-		DOLCHE(0.6d, 0.6d),
-		EDELSTEINE(0, 0.6d),
-		ERDSTAEBE(0.6d, 0.6d),
-		FEUERSTAEBE(0.6d, 0.6d),
-		HANDWERKSMATERIAL(0.6d, 0.6d),
-		JAGDBEUTEN(0d, 0.6d),
-		KEULEN(0.6d, 0.6d),
-		KEULEN_2H(0.6d, 0.6d),
-		LEICHTE_RUESTUNG_LEDER(0.6d, 0.6d),
-		LEICHTE_RUESTUNG_STOFF(0.6d, 0.6d),
-		LEICHTE_SCHILDE(0.6d, 0.6d),
-		LUFTSTAEBE(0.6d, 0.6d),
-		MUNITION_ARMBRUESTE(0.6d, 0.6d),
-		MUNITION_BOEGEN(0.6d, 0.6d),
-		MUNITION_MAGIESTAEBE(0.6d, 0.6d),
-		ROHSTOFFE(0d, 0.6d),
-		SCHWERTER(0.6d, 0.6d),
-		SCHWERTER_2H(0.6d, 0.6d),
-		SCHWERER_SCHILDE(0.6d, 0.6d),
-		SCHWERE_RUESTUNG_METALL(0.6d, 0.6d),
-		STANGENWAFFEN_2H(0.6d, 0.6d),
-		VERARBEITETE_ROHSTOFFE(0.6d, 0.6d),
-		WASSERSTAEBE(0.6d, 0.6d);
+		ARMBRUESTE(0.6d),
+		AEXTE(0.6d),
+		AEXTE_2H(0.6d),
+		BANDAGEN(0.6d),
+		BAUTEILE(0.6d),
+		BOEGEN(0.6d),
+		DOLCHE(0.6d),
+		EDELSTEINE(0.6d),
+		ERDSTAEBE(0.6d),
+		FEUERSTAEBE(0.6d),
+		HANDWERKSMATERIAL(0.6d),
+		JAGDBEUTEN(0.6d),
+		KEULEN(0.6d),
+		KEULEN_2H(0.6d),
+		LEICHTE_RUESTUNG_LEDER(0.6d),
+		LEICHTE_RUESTUNG_STOFF(0.6d),
+		LEICHTE_SCHILDE(0.6d),
+		LUFTSTAEBE(0.6d),
+		MUNITION_ARMBRUESTE(0.6d),
+		MUNITION_BOEGEN(0.6d),
+		MUNITION_MAGIESTAEBE(0.6d),
+		ROHSTOFFE(0.6d),
+		SCHWERTER(0.6d),
+		SCHWERTER_2H(0.6d),
+		SCHWERER_SCHILDE(0.6d),
+		SCHWERE_RUESTUNG_METALL(0.6d),
+		STANGENWAFFEN_2H(0.6d),
+		VERARBEITETE_ROHSTOFFE(0.6d),
+		WASSERSTAEBE(0.6d);
 
-		public final double storage;
 		public final double withdrawl;
 
-		Category(double storage, double withdrawl) {
-			this.storage = storage;
+		Category(double withdrawl) {
 			this.withdrawl = withdrawl;
 		}
 	}

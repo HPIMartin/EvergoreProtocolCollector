@@ -29,7 +29,7 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
 - **`marketValue`** — base gold value (Goldwert).
 - **`category`** — one of ~29 `Category` values (weapon/armor families, `ROHSTOFFE`,
   `JAGDBEUTEN` (hunt loot), `EDELSTEINE` (gems), `HANDWERKSMATERIAL`, …). Each category carries
-  two multipliers: `storage` and `withdrawl`.
+  one multiplier: `withdrawl`.
 - **`recipe`** — either `Recipe.NOT_CRAFTABLE` (gathered raw item) or a `Recipe(amount, Ingredient…)`
   where each `Ingredient(amount, EvergoreItem)` references other catalog items, and `amount` is
   how many units the recipe yields.
@@ -38,7 +38,7 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
 
 **Withdrawal value** — what *taking an item out* is worth:
 ```
-getWithdrawlValue() = marketValue × category.withdrawl      // withdrawl multiplier is 0.6 for ~all categories
+getWithdrawlValue() = marketValue × category.withdrawl      // withdrawl multiplier is 0.6 for all categories
 ```
 - `KUPFERERZ`: 20 × 0.6 = **12** ✓
 - `KRISTALL` (gem): 500 × 0.6 = **300** ✓
@@ -54,12 +54,10 @@ getRecipeStorageValue() = 0                          if NOT_CRAFTABLE
 - `MAGISCHE_AETHERBINDE` (recipe yields 100; ingredients 14·Äthertuch + 7·Drachenleder +
   37·Nähgarn + 17·Phasenkraut + 3·Erdenblut): (3024+1512+1776+2040+900)/100 = **92.52** ✓
 
-> ⚠️ **Observation / likely artifact:** `Category.storage` (0.6 for most, `0` for `EDELSTEINE`,
-> `JAGDBEUTEN`, `ROHSTOFFE`) is **defined but never read** — `getStorageValue()` uses the
-> recipe-based calc instead. Either the field is dead (remove it) or the intended rule changed.
-> Confirm with the author. Related: hunt loot (`JAGDBEUTEN`) deposits compute to storage value 0
-> here, yet the Google Sheet has a "geschätzte Jagdeinlagerungen" (estimated hunt-deposit value)
-> column — so the sheet values hunt loot differently. This is a real semantic gap to resolve.
+> **Note on hunt loot (`JAGDBEUTEN`):** all `JAGDBEUTEN` items are `NOT_CRAFTABLE`, so their
+> storage value is 0 — depositing them counts as zero contribution. The Google Sheet has a
+> "geschätzte Jagdeinlagerungen" (estimated hunt-deposit value) column that values hunt loot
+> differently; that is a semantic gap between this service and the sheet, tracked separately.
 
 ## How the metrics are computed — `EvergoreDataEvaluator`
 
