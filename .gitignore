@@ -13,6 +13,7 @@ memory
 src/test/resources/smokeTest.sqlite
 
 .claude/settings.local.json
+/.claude/worktrees/
 /logs.txt
 /database/
 /diag.txt
