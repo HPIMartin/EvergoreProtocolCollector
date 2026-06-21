@@ -18,7 +18,10 @@ only **rejected/deferred** items stay, with their decision + rationale (knowledg
 warnings-as-errors, a one-rule Checkstyle brace gate); an offline acceptance test covers
 evaluate→overview against a synthetic committed fixture; DB startup ordering is deterministic; the boot
 tests carry no `static` signal flags (an injected `BootSignalRecorder` bridges the bean↔test lifecycle).
-Single public `main` branch. (Decisions + rationale: [open-questions.md](open-questions.md).)
+Single public `main` branch. (Decisions + rationale: [open-questions.md](open-questions.md).) Item value
+math is pinned by an all-items golden master with the dead `Category.storage` multiplier removed, and
+`getNewest()` returns `Optional` instead of a `MIN_VALUE` placeholder. **In flight:** F2 observability
+(`/health` + last-successful-run) on a feature branch, pending its review gate.
 
 **Next action — pick from the H7-unblocked set** (all land *in Gradle*): **E1** (erzeugter
 Gildenmehrwert — the headline metric, now easy to TDD on this harness and would surface storage
@@ -74,7 +77,6 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 |----|------|-----|------------|--------|
 | **B3** | Expand `EntryFactory`/`EntityParser` tests: date/avatar/type/quality parsing, merged quantity (3+5+7→1 item, qty 15), `Entnahme`, `Impressum` terminator | Parser is barely tested; it's the ingest contract | Table-driven tests over representative raw protocol snippets | M |
 | **B4** | Repository tests against in-memory SQLite: `getNewest`, paging, `getAllFor(avatar, after)` | Only incidental smoke coverage | Fast tests using `:memory:` | M |
-| **B5** | Resolve the `Category.storage` vs recipe-based `getStorageValue()` question; pin behavior with tests | `Category.storage` is defined but unused — possible bug ([03-domain-model](knowledge-base/domain-model.md)) | Documented decision + test locking the chosen rule | S |
 
 ## Epic C — Configuration & security `P1`  *(good-practice showcase; not urgent while learning/fun)*
 
@@ -92,7 +94,6 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 |----|------|-----|------------|--------|
 | **D3** | Restructure packages to `domain / application / adapters{in,out} / config`; keep core framework-free | Make the boundaries explicit & enforceable | Micronaut/Selenium/ORMLite imports only under `adapters`+`config` | L |
 | **D4** | Unify the two `TransferType→String` visitors; replace `ApplicationExceptionHandler` `instanceof` chain with a visitor (its own TODO) | Remove duplication & the pattern the project is eliminating | One mapping source; handler has no `instanceof` | S |
-| **D5** | Return `Optional` from `getNewest()` instead of `MIN_VALUE` sentinel | Stop leaking fake domain objects | Callers handle empty explicitly; test covers empty repo | S |
 | **D6** | **Refactor the `EvergoreItem` catalog in-place** — the ~660-constant enum (752 lines) is the project's biggest file. **Decision 2026-06-19: keep it an enum** (the compile-checked recipe hard-links are valued) and **do NOT externalize** to a config/YAML file. Refactor for readability/maintainability instead, e.g.: pull the nested `Category`/`Recipe`/`Ingredient` types into their own files; add concise recipe/ingredient factory helpers to shorten each constant; group constants. Approach TBD with the author. Any change **must** keep a **golden-master test** asserting `getStorageValue`/`getWithdrawlValue` are unchanged for all items | Tame the biggest file without losing the type-safe cross-references; eases value maintenance (relates to **D-3**) | P3 | Golden-master test gates it (1:1). |
 
 ## Epic E — Product: replace the Google Sheet `P2→P3`  *(in scope — full parity; no time pressure)*
@@ -182,4 +183,4 @@ doc is intentionally **not** committed — its value lives here.
 
 - The acceptance test (`ProtocolEvaluationAcceptanceTest`) enables most of E (date-range, dashboard build on a testable core).
 - C-epic is independent and can run in parallel; do C2/C3 before any real deployment.
-- B5 & Q3 gate E3 (hunt-loot valuation).
+- **D-4**/Q3 (hunt-loot valuation rule) gates E3 — **B5 is resolved** (`Category.storage` removed; see open-questions Decisions D-5).
