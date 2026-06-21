@@ -2,7 +2,6 @@ package dev.schoenberg.evergore.protocolParser;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -41,9 +40,7 @@ import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.Exc
 import static dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.NEWLINE;
 import static java.time.Duration.ofMinutes;
 import static java.time.Instant.EPOCH;
-import static java.time.Instant.now;
 import static java.util.Arrays.asList;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static kong.unirest.Unirest.config;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -60,10 +57,7 @@ class SmokeTest {
 	private @Inject EmbeddedServer server;
 	private @Inject Configuration config;
 	private @Inject Logger logger;
-
-	private static boolean exceptionFound;
-	private static boolean collectionFinished;
-	private static boolean dataIsLoaded;
+	private @Inject BootSignalRecorder signals;
 
 	@BeforeEach
 	public void setup() {
@@ -75,10 +69,10 @@ class SmokeTest {
 	void applicationIsStarting() {
 		assertTrue(server.isRunning());
 
-		boolean finishedInTime = awaitCollectionFinished();
+		boolean finishedInTime = signals.awaitCollection(ofMinutes(1));
 
-		assertFalse(exceptionFound);
-		assertTrue(dataIsLoaded);
+		assertFalse(signals.exceptionOccurred());
+		assertTrue(signals.dataLoaded());
 		assertTrue(finishedInTime);
 	}
 
@@ -139,18 +133,6 @@ class SmokeTest {
 		assertTrue(pageSource instanceof SeleniumPageSource, "Expected SeleniumPageSource but was " + pageSource.getClass());
 	}
 
-	private boolean awaitCollectionFinished() {
-		Duration MAX_WAITING_TIME = ofMinutes(1);
-		Instant stopAwaiting = now().plus(MAX_WAITING_TIME);
-		while (!collectionFinished) {
-			if (now().isAfter(stopAwaiting)) {
-				return false;
-			}
-			silentThrow(() -> MILLISECONDS.sleep(50));
-		}
-		return true;
-	}
-
 	private void assertClosest(String content, String expected) {
 		if (!content.contains(expected)) {
 			List<String> contenLines = asList(content.split(NEWLINE));
@@ -165,23 +147,25 @@ class SmokeTest {
 	}
 
 	@MockBean(PostCollectionHook.class)
-	PostCollectionHook collectionHook() {
-		return this::collectionFinished;
-	}
-
-	private void collectionFinished() {
-		collectionFinished = true;
+	PostCollectionHook collectionHook(BootSignalRecorder recorder) {
+		return recorder::recordCollectionFinished;
 	}
 
 	@MockBean(DefaultTaskExceptionHandler.class)
-	DefaultTaskExceptionHandler exceptionHandler() {
-		return new TestTaskExceptionHandler();
+	DefaultTaskExceptionHandler exceptionHandler(BootSignalRecorder recorder) {
+		return new TestTaskExceptionHandler(recorder);
 	}
 
 	public static class TestTaskExceptionHandler extends DefaultTaskExceptionHandler {
+		private final BootSignalRecorder signals;
+
+		public TestTaskExceptionHandler(BootSignalRecorder signals) {
+			this.signals = signals;
+		}
+
 		@Override
 		public void handle(Object bean, Throwable throwable) {
-			exceptionFound = true;
+			signals.recordException();
 			throwable.printStackTrace();
 		}
 	}
@@ -204,18 +188,21 @@ class SmokeTest {
 	}
 
 	@MockBean(EvergoreDataExtractor.class)
-	TestEvergoreDataExtractor testEvergoreDataExtractor() {
-		return new TestEvergoreDataExtractor();
+	TestEvergoreDataExtractor testEvergoreDataExtractor(BootSignalRecorder recorder) {
+		return new TestEvergoreDataExtractor(recorder);
 	}
 
 	public static class TestEvergoreDataExtractor extends EvergoreDataExtractor {
-		public TestEvergoreDataExtractor() {
+		private final BootSignalRecorder signals;
+
+		public TestEvergoreDataExtractor(BootSignalRecorder signals) {
 			super(null, null, null, null);
+			this.signals = signals;
 		}
 
 		@Override
 		public void loadData() {
-			dataIsLoaded = true;
+			signals.recordDataLoaded();
 		}
 	}
 
