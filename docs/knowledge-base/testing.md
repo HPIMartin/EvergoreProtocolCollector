@@ -16,6 +16,18 @@
 | `RenderedTable` | Parses rendered HTML tables into a header + rows of cell text, tolerant to attributes/styling/wrapper tags, so UI restyling never breaks assertions. The robust successor to `TestHelper`'s Levenshtein matching; **all** markup coupling lives here alone. | helper (no `@Test`) |
 | `TestDataGenerator` | Run-on-demand writer (`./gradlew generateAcceptanceDb`) of the committed synthetic fixture `testdata.sqlite` — 3 avatars; bank in both directions; storage with quality scaling and a zero-value item. Item names reference `EvergoreItem.*.ingameName`, so values stay derived, not invented. | fixture generator (`main`) |
 
+## Boot-signal seam
+
+`SmokeTest` and `ProtocolEvaluationAcceptanceTest` need state written by a context bean at startup —
+the `@Scheduled` collector finished, data was loaded, an exception fired — and read back in the test
+body. They observe it through an injected, DI-shared **`BootSignalRecorder`** (`@Singleton` scope via a
+test `@Factory`), **not** `static` flags. This bridges the `@MockBean`/context lifecycle and the JUnit
+test-instance lifecycle without global mutable state: the mock-bean helpers get the recorder by
+constructor injection and write to it; the test injects the same instance and reads it. A
+`@TestInstance(PER_CLASS)` + instance-fields alternative was tried and broke `SmokeTest` (the startup
+signal went unobserved → timeout). The recorder also owns the `awaitCollection(timeout)` poll,
+deduplicated from both tests; a `false` return now fails the test loudly instead of silently proceeding.
+
 ## Coverage map
 
 **Has tests:** `EvergoreItem` (value math, 3 of ~600 entries) · `MetaInformation` (serialization) ·

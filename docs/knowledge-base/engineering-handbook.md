@@ -48,10 +48,12 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
 - **Avoid the `static` keyword — treat it as a smell, above all mutable static state.** It creates
   hidden cross-instance / cross-test coupling and breaks testability & isolation (the D7 bug: a
   `public static int DELAY_IN_SEC` stomped between two boot-test contexts). Prefer dependency
-  injection, instance state, or a proper seam. Boot tests that need state written by a bean and read
-  by the test should use an **injected recorder singleton** (or `@TestInstance(PER_CLASS)` + instance
-  fields), **not** static flags — note a naive PER_CLASS swap can misbehave with `@MockBean`+`@Scheduled`,
-  so verify it. The rare defensible
+  injection, instance state, or a proper seam. Boot tests that need state written by a bean at startup
+  and read by the test use an **injected, DI-shared recorder** — a `@Singleton`-scoped bean provided by
+  a test `@Factory` (DI scope, **not** the GoF static-`getInstance` Singleton antipattern), **not** static
+  flags. A `@TestInstance(PER_CLASS)` + instance-fields alternative was tried and **broke `SmokeTest`**
+  (the `@MockBean`+`@Scheduled` startup signal went unobserved → 60s timeout), so the DI-shared recorder
+  is the proven seam (see [testing.md](testing.md), `BootSignalRecorder`). The rare defensible
   case is a static *initializer* doing one-time setup that genuinely must run **before** the framework
   context boots (e.g. seeding/deleting a test DB before repositories connect) — accepted in **test**
   code; in production code, justify it hard.
