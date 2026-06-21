@@ -4,6 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,11 +41,42 @@ class BankDatabaseRepositoryTest {
 		assertThat(found.get(0).amount).isEqualTo(1000);
 	}
 
+	@Test
+	void getNewestReturnsEmptyOnEmptyRepository() {
+		BankDatabaseRepository repo = BankDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
+
+		Optional<BankEntry> result = repo.getNewest();
+
+		assertThat(result).isEmpty();
+	}
+
+	@Test
+	void getNewestReturnsEntryWithLatestTimestampAfterInserts() {
+		BankDatabaseRepository repo = BankDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
+		Instant earlier = Instant.parse("2024-01-01T00:00:00Z");
+		Instant later = Instant.parse("2024-06-01T00:00:00Z");
+		repo.add(List.of(new BankEntry(earlier, "Aurora", 100, TransferType.EINLAGERUNG), new BankEntry(later, "Aurora", 200, TransferType.EINLAGERUNG)));
+
+		Optional<BankEntry> result = repo.getNewest();
+
+		assertThat(result).isPresent();
+		assertThat(result.get().timeStamp).isEqualTo(later);
+	}
+
 	private static Configuration testConfiguration() {
 		return new Configuration() {
 			@Override
 			public String getDatabasePath() {
 				return FRESH_DB_PATH;
+			}
+		};
+	}
+
+	private static Configuration inMemoryConfiguration() {
+		return new Configuration() {
+			@Override
+			public String getDatabasePath() {
+				return ":memory:";
 			}
 		};
 	}

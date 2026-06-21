@@ -62,8 +62,7 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
   Self-documenting names + small functions replace comments. The reviewer flags unnecessary comments.
 - **No dead code & no undeclared dependencies** (e.g. an unused class importing a library absent from
   `build.gradle.kts` — delete it).
-- Prefer `record`s / immutability for value objects. Return `Optional` instead of sentinels
-  (replace `getNewest()`'s `MIN_VALUE` object).
+- Prefer `record`s / immutability for value objects. Return `Optional` instead of sentinels.
 - Constants/config over magic values; **no secrets in source** (token, credentials → config).
 - **Warnings are errors.** Compiler and lint warnings are build failures — enforced in
   `build.gradle.kts` via `-Xlint:all` + `-Werror` on every `JavaCompile`. The default is to **fix**

@@ -80,7 +80,6 @@ Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ OverviewControl
    credentials live in `zugang.txt` baked into the Docker image.
 3. **Duplicated mapping** — `TransferType`→German-string exists in *two* visitors (DB + controller);
    `ApplicationExceptionHandler` uses an `instanceof` chain (its own `// TODO: Visitor-Pattern`).
-4. **Sentinel returns** — `getNewest()` fabricates a `…DatabaseEntry(MIN_VALUE)` instead of `Optional`.
 
 ## Target structure (proposed, hexagonal)
 

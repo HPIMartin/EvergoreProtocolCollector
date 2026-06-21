@@ -83,8 +83,8 @@ The net **erzeugter Gildenmehrwert** (col 5) is `placement − withdrawl` summed
 
 - `BankEntry` equality is implemented via a `stupidMerge()` string concatenation (self-described).
   This is a smell; a value-based `equals`/record would be cleaner.
-- Repositories' `getNewest()` return a **sentinel** entry with `date = Long.MIN_VALUE` when empty
-  instead of `Optional` — a persistence concern leaking a fake domain object upward.
+- Repositories' `getNewest()` returns `Optional<BankEntry>` / `Optional<StorageEntry>` — empty when
+  the table has no rows. Callers treat `Optional.empty()` as "no watermark; keep every parsed entry".
 
 See [04-architecture.md](architecture.md) for how these types flow through the system, and
 [08-glossary.md](glossary.md) for the German terms.
