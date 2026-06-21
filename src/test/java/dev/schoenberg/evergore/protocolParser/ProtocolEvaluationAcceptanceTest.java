@@ -4,8 +4,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 
 import jakarta.inject.Inject;
@@ -29,17 +27,12 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformati
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static java.time.Duration.ofMinutes;
-import static java.time.Instant.now;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 @MicronautTest
 class ProtocolEvaluationAcceptanceTest {
 	private static final Path WORKING_DB = Paths.get("build/tmp/acceptance/protocolEvaluation.sqlite");
-
-	private static volatile boolean collectionFinished;
-	private static volatile boolean exceptionFound;
 
 	static {
 		silentThrow(() -> {
@@ -52,6 +45,7 @@ class ProtocolEvaluationAcceptanceTest {
 	}
 
 	private @Inject EmbeddedServer server;
+	private @Inject BootSignalRecorder signals;
 
 	@BeforeEach
 	void setup() {
@@ -61,7 +55,7 @@ class ProtocolEvaluationAcceptanceTest {
 
 	@Test
 	void overviewShowsCorrectBankTotalsForAllThreeAvatars() {
-		awaitCollectionFinished();
+		assertThat(signals.awaitCollection(ofMinutes(1))).isTrue();
 
 		HttpResponse<String> response = get("/overview");
 
@@ -81,7 +75,7 @@ class ProtocolEvaluationAcceptanceTest {
 
 	@Test
 	void aurorasBankEndpointShowsExpectedEntry() {
-		awaitCollectionFinished();
+		assertThat(signals.awaitCollection(ofMinutes(1))).isTrue();
 
 		HttpResponse<String> response = get("/avatars/Aurora/bank");
 
@@ -95,7 +89,7 @@ class ProtocolEvaluationAcceptanceTest {
 
 	@Test
 	void aurorasStorageEndpointShowsExpectedEntry() {
-		awaitCollectionFinished();
+		assertThat(signals.awaitCollection(ofMinutes(1))).isTrue();
 
 		HttpResponse<String> response = get("/avatars/Aurora/storage");
 
@@ -112,7 +106,7 @@ class ProtocolEvaluationAcceptanceTest {
 
 	@Test
 	void storageValuationIsCorrectAtBeanLevel() {
-		awaitCollectionFinished();
+		assertThat(signals.awaitCollection(ofMinutes(1))).isTrue();
 
 		MetaInformationRepository metaRepo = server.getApplicationContext().getBean(MetaInformationRepository.class);
 
@@ -128,17 +122,6 @@ class ProtocolEvaluationAcceptanceTest {
 		int statusCode = get("/thatEndpointDoesNotExist").getStatus();
 
 		assertThat(statusCode).isBetween(400, 499);
-	}
-
-	private void awaitCollectionFinished() {
-		Duration maxWait = ofMinutes(1);
-		Instant stop = now().plus(maxWait);
-		while (!collectionFinished) {
-			if (now().isAfter(stop)) {
-				return;
-			}
-			silentThrow(() -> MILLISECONDS.sleep(50));
-		}
 	}
 
 	@MockBean(Configuration.class)
@@ -183,26 +166,38 @@ class ProtocolEvaluationAcceptanceTest {
 	}
 
 	@MockBean(PostCollectionHook.class)
-	PostCollectionHook collectionHook() {
-		return new CollectionFinishedHook();
+	PostCollectionHook collectionHook(BootSignalRecorder recorder) {
+		return new CollectionFinishedHook(recorder);
 	}
 
 	public static class CollectionFinishedHook implements PostCollectionHook {
+		private final BootSignalRecorder signals;
+
+		public CollectionFinishedHook(BootSignalRecorder signals) {
+			this.signals = signals;
+		}
+
 		@Override
 		public void run() {
-			collectionFinished = true;
+			signals.recordCollectionFinished();
 		}
 	}
 
 	@MockBean(DefaultTaskExceptionHandler.class)
-	DefaultTaskExceptionHandler exceptionHandler() {
-		return new TestTaskExceptionHandler();
+	DefaultTaskExceptionHandler exceptionHandler(BootSignalRecorder recorder) {
+		return new TestTaskExceptionHandler(recorder);
 	}
 
 	public static class TestTaskExceptionHandler extends DefaultTaskExceptionHandler {
+		private final BootSignalRecorder signals;
+
+		public TestTaskExceptionHandler(BootSignalRecorder signals) {
+			this.signals = signals;
+		}
+
 		@Override
 		public void handle(Object bean, Throwable throwable) {
-			exceptionFound = true;
+			signals.recordException();
 			throwable.printStackTrace();
 		}
 	}
