@@ -16,21 +16,16 @@ only **rejected/deferred** items stay, with their decision + rationale (knowledg
 4.10), verified **1:1** against the production DB. `domain`/`businessLogic` stay framework-free
 (ArchUnit-guarded); the style is enforced from one place (shared Eclipse formatter + Spotless,
 warnings-as-errors, a one-rule Checkstyle brace gate); an offline acceptance test covers
-evaluate→overview against a synthetic committed fixture; DB startup ordering is deterministic. Single
-public `main` branch. (Decisions + rationale: [open-questions.md](open-questions.md).)
+evaluate→overview against a synthetic committed fixture; DB startup ordering is deterministic; the boot
+tests carry no `static` signal flags (an injected `BootSignalRecorder` bridges the bean↔test lifecycle).
+Single public `main` branch. (Decisions + rationale: [open-questions.md](open-questions.md).)
 
-**Next action (author-pinned): B8** — remove the `static` signal-flags from the boot tests
-(`SmokeTest` + `ProtocolEvaluationAcceptanceTest`) via an **injected recorder singleton** (the robust
-static-free design; a naive `@TestInstance(PER_CLASS)` swap passed the acceptance test but broke
-`SmokeTest.applicationIsStarting` — scheduled-job signals went unobserved → 60s timeout). Run on a
-feature branch per the workflow; verify with a clean build (twice) when the machine is free of load.
-
-**Then — pick from the remaining items H7 unblocked** (all land *in Gradle*): **E1**
-(erzeugter Gildenmehrwert — the headline metric, now easy to TDD on this harness and would surface
-storage valuation via an endpoint), **G6+** (JaCoCo), **H6** (failsafe → Gradle integration-test set),
-**C2** (move `secret_token` out of source), **C5** (vuln scan). **H9** (jump to Micronaut 5) only *after*
-1:1 is re-proven. Plan via the agent pipeline (planner → implementer → falsifier → reviewer).
-*(A4/CI stays deprioritized — local-only Docker → home-server deploy.)*
+**Next action — pick from the H7-unblocked set** (all land *in Gradle*): **E1** (erzeugter
+Gildenmehrwert — the headline metric, now easy to TDD on this harness and would surface storage
+valuation via an endpoint; *recommended next*), **G6+** (JaCoCo), **H6** (failsafe → Gradle
+integration-test set), **C2** (move `secret_token` out of source), **C5** (vuln scan). **H9** (jump to
+Micronaut 5) only *after* 1:1 is re-proven. Plan via the agent pipeline (planner → implementer →
+falsifier → reviewer). *(A4/CI stays deprioritized — local-only Docker → home-server deploy.)*
 
 **Gotchas worth keeping:**
 - The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit — ignore the
@@ -162,7 +157,6 @@ doc is intentionally **not** committed — its value lives here.
 | **G8** | **`/commit`** slash command encoding the strict one-line/no-footer/never-push protocol | Repo's strictest, most-violated-by-default rule (footers slip in); reproducible showcase artifact | P3 | `/review`,`/tdd` rejected (duplicate reviewer/implementer agents). `/spec` deferred → gate on **G4**; keep MCP-free + JUnit-`@Ignore`-first (not Cucumber/Jira). |
 | **A8** | Broaden `.gitignore`: add `CLAUDE.local.md`, `.claude/cache/`, `.claude/.tmp/` | Pre-empts committing personal overrides/cache | P3 | Scope to those paths; **avoid** a blanket `**/*.local.*` (would swallow legit `*.local.properties` fixtures). Folds into **A5**. |
 | **B7** | Migrate remaining JUnit `Assertions` → **AssertJ** (`SmokeTest`, `MetaInformationTest`) | Single assertion idiom (documented preference) | P3 | Opportunistic. `MetaInformationTest` = clean win; defer `SmokeTest` to its planned Levenshtein-rework. |
-| **B8** | **Remove the `static` signal-flags from the boot tests** (`SmokeTest`, `ProtocolEvaluationAcceptanceTest`): replace the cross-test `static` `collectionFinished`/`dataIsLoaded`/`exceptionFound` with a static-free design — an injected recorder singleton, or `@TestInstance(PER_CLASS)` + instance fields | Per the avoid-`static` rule (handbook §3); the flags exist only to bridge the `@MockBean`↔test-instance lifecycle (set by a bean at startup, read by the test) | P3 | A naive `@TestInstance(PER_CLASS)` + instance-fields swap passed `ProtocolEvaluationAcceptanceTest` but **broke `SmokeTest.applicationIsStarting`** (the scheduled-job signals went unobserved → 60s timeout, `dataIsLoaded` false). Needs a verified static-free design (injected recorder bean looks most robust). Keep the pre-context static *initializer* (the accepted test exception). |
 | **H6** | `maven-failsafe-plugin` + rename boot/integration tests to `*IT` (separate integration phase) | Keeps the fast TDD loop fast; isolates server-booting tests | P3 | Gate on **H2** (real Selenium IT), **not** the in-memory *fast* acceptance test (`ProtocolEvaluationAcceptanceTest`). Update testing.md same change. **2026-06-15: land in Gradle post-H7 (failsafe → Gradle integration test set).** |
 | **G6+** | **JaCoCo** report-only (no enforced threshold) wired into `mvn verify` | Visible coverage to guide B3/B4 test work; low-ceremony first step toward G6 | P3 | Report-only — don't gate a young suite. Promote to a threshold under **G6** later; "into CI" half needs A4. **2026-06-15: land in Gradle post-H7.** |
 | **G9** | **Point Claude at official docs (WebFetch) for less-trafficked libraries** — a `working-with-claude.md` convention: for **Micronaut / ORMLite / Selenium / RxJava** (thin in LLM training data), fetch the official docs before writing against an unfamiliar API; prefer doc-grounded code over confabulation | Enterprise-audit Pitfall #5, the most stack-relevant gap: a solo dev has no reviewer to catch a hallucinated API, and ArchUnit/tests catch structure, not invented method signatures. MCP-free (WebFetch is available) | P2 | Flagged independently by two audit reviewers. Doc-only; fits the Epic-G showcase. |
