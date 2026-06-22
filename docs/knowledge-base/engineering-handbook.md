@@ -62,7 +62,13 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
   Self-documenting names + small functions replace comments. The reviewer flags unnecessary comments.
 - **No dead code & no undeclared dependencies** (e.g. an unused class importing a library absent from
   `build.gradle.kts` — delete it).
-- Prefer `record`s / immutability for value objects. Return `Optional` instead of sentinels.
+- **Prefer immutable `record`s; avoid getter/setter boilerplate.** Model value objects, DTOs and
+  config as `record`s. For DTOs, **public fields** are acceptable instead of accessors (as in
+  `BankEntry`/`StorageEntry`); record accessors (`config.apiToken()`) are fine — they are not bean
+  getters. Don't write `getX()`/`setX()` unless a framework strictly requires it. (Micronaut binds
+  `@ConfigurationProperties` to a record with no extra annotation.) Return `Optional` instead of sentinels.
+- **`Logger` is the last constructor parameter** — collaborators first, the logger (incidental
+  infrastructure) last.
 - Constants/config over magic values; **no secrets in source** (token, credentials → config).
 - **Warnings are errors.** Compiler and lint warnings are build failures — enforced in
   `build.gradle.kts` via `-Xlint:all` + `-Werror` on every `JavaCompile`. The default is to **fix**
