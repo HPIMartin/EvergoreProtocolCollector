@@ -6,7 +6,8 @@
   platform `4.10.3`, **Java 25** (Gradle toolchain, auto-provisioned via the foojay resolver),
   runtime Netty. Main class `…​.Application`. Build & test: `./gradlew build`.
 - Key deps: Selenium 4.7.2, ORMLite-JDBC 6.1, sqlite-jdbc 3.41.2.2, commons-text 1.10,
-  micronaut-openapi (Swagger/RapiDoc/ReDoc), snakeyaml (Micronaut 4 no longer bundles it). Test:
+  micronaut-openapi (Swagger/RapiDoc/ReDoc), `micronaut-management` (health endpoint + indicators),
+  snakeyaml (Micronaut 4 no longer bundles it). Test:
   micronaut-test-junit5, JUnit 5 (+ `junit-platform-launcher`), unirest-java 3.11.11 (used by
   `SmokeTest`), AssertJ 3.27.7, ArchUnit 1.4.1 (reads Java 25 bytecode).
 - The **Gradle wrapper** (`./gradlew`, distribution pinned in `gradle/wrapper/`) is the single build
@@ -89,13 +90,12 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 | `GET /avatars/{avatar}/bank?page=N` | Paged (100/page) bank entries for one avatar. |
 | `GET /avatars/{avatar}/storage?page=N` | Paged storage entries for one avatar. |
 | `GET /favicon.ico` | Favicon (token-exempt). |
+| `GET /health` | Micronaut management health endpoint — token-exempt, anonymous. Reports UNKNOWN (no run yet) or UP + `lastSuccessfulRun` timestamp. Use as a liveness/last-run monitor hook. |
 | `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs. |
 
 ## Scheduled job
 
-`EvergoreDataCollectorJob` — `@Scheduled(fixedDelay = "24h")`, 30 s initial delay; runs
-`EvergoreDataExtractor.loadData()` then `EvergoreDataEvaluator.evaluateData()`. In tests
-`DELAY_IN_SEC` is set to 0.
+`EvergoreDataCollectorJob` — `@Scheduled(fixedDelay = "24h")`, configurable initial delay (`Configuration.getCollectorInitialDelaySeconds()`); runs `EvergoreDataExtractor.loadData()` then `EvergoreDataEvaluator.evaluateData()`, then records the completion time in `LastRunStatus` (injected `Clock`). Tests set the delay to 0 via a `ZeroDelayConfiguration` subclass.
 
 ## CI / dev environment
 

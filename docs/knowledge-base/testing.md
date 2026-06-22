@@ -17,10 +17,14 @@
 | `ProtocolEvaluationAcceptanceTest` | End-to-end: copies the committed synthetic fixture DB (`testdata.sqlite`) to a `build/` working copy, boots the real Micronaut `EmbeddedServer` against it, stubs the scraper (`loadData()` no-op) while the **real** `EvergoreDataEvaluator` runs via the scheduled job, then asserts `/overview` bank totals and `/avatars/{a}/bank|storage` rows through `RenderedTable`, plus storage **valuation** at the `MetaInformationRepository` bean level (no endpoint surfaces it yet — Epic E1). | `@MicronautTest` acceptance / e2e |
 | `RenderedTable` | Parses rendered HTML tables into a header + rows of cell text, tolerant to attributes/styling/wrapper tags, so UI restyling never breaks assertions. The robust successor to `TestHelper`'s Levenshtein matching; **all** markup coupling lives here alone. | helper (no `@Test`) |
 | `TestDataGenerator` | Run-on-demand writer (`./gradlew generateAcceptanceDb`) of the committed synthetic fixture `testdata.sqlite` — 3 avatars; bank in both directions; storage with quality scaling and a zero-value item. Item names reference `EvergoreItem.*.ingameName`, so values stay derived, not invented. | fixture generator (`main`) |
+| `LastRunStatusTest` | Three pure unit tests: empty before any run; records a specific `Instant` and returns it; second record overwrites the first. No framework. | pure unit |
+| `LastRunHealthIndicatorTest` | Two pure unit tests (with framework dep on `micronaut-management`): reports `UNKNOWN` with no detail map before any run; reports `UP` with `lastSuccessfulRun` detail key after a run. Subscribes to the `Publisher` inline via an anonymous `Subscriber`. | pure unit |
+| `EvergoreDataCollectorJobTest` | Three unit tests: records `lastSuccessfulRun` after a successful cycle; does **not** record when `loadData` throws; does **not** record when `evaluateData` throws. Uses `Clock.fixed(…)`, `ZeroDelayConfiguration extends Configuration` (delay 0), and local `FailableExtractor`/`FailableEvaluator` inner classes — no static state. | pure unit |
+| `HealthEndpointTest` | Boots the real Micronaut `EmbeddedServer`; mocks the extractor (no-op `loadData`), config (zero delay, test DB path), and hooks (BootSignalRecorder pattern). Asserts: `GET /health` returns **exactly 200** without a token; response body contains `lastRun` + `lastSuccessfulRun`; `/overview` without a token is rejected (4xx); `/healthz` is rejected with the same status as `/overview` (exact-match scoping test — ensures the `/health` exemption does not bleed to prefix matches). | `@MicronautTest` integration |
 
 ## Boot-signal seam
 
-`SmokeTest` and `ProtocolEvaluationAcceptanceTest` need state written by a context bean at startup —
+`SmokeTest`, `ProtocolEvaluationAcceptanceTest`, and `HealthEndpointTest` need state written by a context bean at startup —
 the `@Scheduled` collector finished, data was loaded, an exception fired — and read back in the test
 body. They observe it through an injected, DI-shared **`BootSignalRecorder`** (`@Singleton` scope via a
 test `@Factory`), **not** `static` flags. This bridges the `@MockBean`/context lifecycle and the JUnit
@@ -37,6 +41,9 @@ deduplicated from both tests; a `false` return now fails the test loudly instead
 `EvergoreDataExtractor` (parse→persist pipeline, delta filter including the empty-watermark case) ·
 `BankDatabaseRepository` / `StorageDatabaseRepository` (`getNewest()` empty + newest-wins, in-memory SQLite) ·
 the **evaluate→overview pipeline end-to-end** via `ProtocolEvaluationAcceptanceTest` (real evaluator + real DB + HTTP) ·
+`LastRunStatus` (record + read) · `LastRunHealthIndicator` (UNKNOWN / UP + detail) ·
+`EvergoreDataCollectorJob` (records run on success, not on failure) ·
+`/health` endpoint + `TokenValidationFilter` exact-match scoping via `HealthEndpointTest` ·
 and *indirectly* via `SmokeTest`: controllers, filters, repositories, visitors, the job, `OutputFormatter`.
 
 **Most important UNTESTED logic:**

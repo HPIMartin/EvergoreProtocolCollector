@@ -1,17 +1,15 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
-import jakarta.inject.Singleton;
+import jakarta.inject.*;
 
-import io.micronaut.http.HttpRequest;
-import io.micronaut.http.MutableHttpResponse;
-import io.micronaut.http.annotation.Filter;
-import io.micronaut.http.filter.HttpServerFilter;
-import io.micronaut.http.filter.ServerFilterChain;
-import org.reactivestreams.Publisher;
+import io.micronaut.http.*;
+import io.micronaut.http.annotation.*;
+import io.micronaut.http.filter.*;
+import org.reactivestreams.*;
 
-import dev.schoenberg.evergore.protocolParser.Logger;
-import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
-import dev.schoenberg.evergore.protocolParser.rest.controller.FaviconController;
+import dev.schoenberg.evergore.protocolParser.*;
+import dev.schoenberg.evergore.protocolParser.exceptions.*;
+import dev.schoenberg.evergore.protocolParser.rest.controller.*;
 
 @Singleton
 @Filter("/**")
@@ -32,7 +30,7 @@ public class TokenValidationFilter implements HttpServerFilter {
 
 	@Override
 	public Publisher<MutableHttpResponse<?>> doFilter(HttpRequest<?> request, ServerFilterChain chain) {
-		if (isFaviconController(request)) {
+		if (isPublicEndpoint(request)) {
 			return chain.proceed(request);
 		}
 
@@ -44,8 +42,9 @@ public class TokenValidationFilter implements HttpServerFilter {
 		return chain.proceed(request);
 	}
 
-	private boolean isFaviconController(HttpRequest<?> request) {
-		return request.getPath().equals(FaviconController.PATH);
+	private boolean isPublicEndpoint(HttpRequest<?> request) {
+		String path = request.getPath();
+		return path.equals(FaviconController.PATH) || path.equals("/health") || path.startsWith("/health/");
 	}
 
 	private AccessNotAllowed reject() {

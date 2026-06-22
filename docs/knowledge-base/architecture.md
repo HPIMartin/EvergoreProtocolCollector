@@ -20,10 +20,15 @@ Root package `dev.schoenberg.evergore.protocolParser` (`…` below).
         │  per avatar, since last_updated: sum bank + value storage  (TransferType visitors + EvergoreItem)
         │  write results to MetaInformationRepository; advance last_updated
         ▼
+   LastRunStatus.recordSuccessfulRun(clock.instant())   (monitoring seam)
+        ▼
    PostCollectionHook   (no-op in prod; test seam)
 
 Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ OverviewController / AvatarController
                         ▶ read MetaInformation / repositories ▶ OutputFormatter ▶ HTML
+
+Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut management
+                        ▶ LastRunHealthIndicator ▶ reports UNKNOWN (no run yet) or UP + lastSuccessfulRun timestamp
 ```
 
 ## Layers & responsibilities (condensed)
@@ -45,7 +50,13 @@ Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ OverviewControl
 - **REST:** `OverviewController` (`/overview`) · `AvatarController` (`/avatars/{a}/bank|storage`) ·
   `FaviconController` · `OutputFormatter` (HTML table builder, escapes cells) ·
   `TransferTypeControllerVisitor` (enum ▶ UI string) · filters `BrowserLoggingFilter` (per-IP rate
-  limit) + `TokenValidationFilter` (`?token=`) · `ApplicationExceptionHandler`.
+  limit) + `TokenValidationFilter` (`?token=`) · `ApplicationExceptionHandler`. `TokenValidationFilter`
+  exempts `/favicon.ico` and `/health` (exact) + `/health/*` (sub-paths) — using exact match, NOT a
+  broad prefix, so `/healthz` and similar paths remain protected.
+- **Monitoring:** `monitoring/LastRunStatus` (`@Singleton`, records the `Instant` of the last
+  successful collection) · `monitoring/LastRunHealthIndicator` (implements `HealthIndicator`, exposed
+  at `GET /health` via `micronaut-management`; returns UNKNOWN before first run, UP + `lastSuccessfulRun`
+  detail after).
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.
