@@ -23,7 +23,8 @@
             	url += "bank";
         	}
             
-            url += "?token=secret_token&page=" + numberFieldValue;
+            var token = new URLSearchParams(window.location.search).get("token");
+            url += "?token=" + token + "&page=" + numberFieldValue;
             window.location.href = url;
         }
         

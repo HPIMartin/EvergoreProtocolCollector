@@ -64,9 +64,10 @@ so run it once by hand in an existing checkout.
 - **`pre-commit`** — the fast quality gate: `./gradlew spotlessCheck checkstyleMain checkstyleTest`
   (formatting + brace gate), plus a scan of **staged content** for private-key blocks, AWS-style
   access keys, credential literals, real e-mail addresses, absolute user-home paths, and committed
-  key/keystore files (`.pfx`/`.p12`/`.jks`/`.pem`/`.key`). The `hooks/` directory is excluded from the
-  scan (the scripts hold the detection patterns themselves). **Excludes the test run and the full
-  build** to keep the TDD micro-commit loop fast.
+  key/keystore files (`.pfx`/`.p12`/`.jks`/`.pem`/`.key`) — and, **under `src/main` only**, hard-coded
+  auth tokens (a literal `?token=…` or a `…token = "…"` assignment; tests legitimately use a non-secret
+  test token). The `hooks/` directory is excluded from the scan (the scripts hold the detection patterns
+  themselves). **Excludes the test run and the full build** to keep the TDD micro-commit loop fast.
 - **`commit-msg`** — enforces the §7 message rules: one single line, a present-tense verb first
   (optional leading `[doc] ` tag), and no body / `Co-Authored-By` / tool footer.
 
@@ -102,13 +103,15 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 | `credentials` | `"zugang.txt"` | **Evergore login** — line 1 = username, line 2 = password. Read by `SeleniumPageSource.tryToLogin`. Not in the repo; supplied at image build. |
 | `evergoreFolder` | `c:\evergore` | Windows path; unused on the Linux container scrape path. |
 | DB path | `database/temp.sqlite` (or `:memory:` if `useInMemory`) | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
-| Auth token | `"secret_token"` (hard-coded in `TokenValidationFilter`) | Every request needs `?token=secret_token` except `/favicon.ico`. |
+| Auth token | `evergore.security.api-token` — **required**, env-injected as `EVERGORE_SECURITY_API_TOKEN` (bound by the `SecurityConfiguration` `@ConfigurationProperties` bean) | Every request needs `?token=<configured token>` except `/favicon.ico` + `/health`. **Mandatory at startup** — a blank/unset token makes the app refuse to boot (`ApiTokenStartupValidator` logs an error and throws). No token value lives in the repo. |
 
 - **`application.yml`** holds only Micronaut concerns (app name, Swagger static routes, Netty
-  `max-order: 3`). No domain/runtime settings, **no `server.port`** → defaults to **8080**.
+  `max-order: 3`), **no `server.port`** → defaults to **8080**. The one runtime setting bound from the
+  environment is the **API token** — `evergore.security.api-token` ← `EVERGORE_SECURITY_API_TOKEN`, via
+  the `@ConfigurationProperties` bean `SecurityConfiguration`; no value lives in the repo.
 - **`logback.xml`**: single colored STDOUT appender, root level `verbose` (very chatty).
 
-## HTTP endpoints (all need `?token=secret_token`, except favicon)
+## HTTP endpoints (all need a valid `?token=…`, except `/favicon.ico` + `/health`)
 
 | Method · Path | Purpose |
 |---|---|

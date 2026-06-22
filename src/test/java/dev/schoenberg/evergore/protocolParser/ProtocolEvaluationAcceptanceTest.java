@@ -203,6 +203,6 @@ class ProtocolEvaluationAcceptanceTest {
 	}
 
 	private HttpResponse<String> get(String endpoint) {
-		return Unirest.get(endpoint + "?token=secret_token").asString();
+		return Unirest.get(endpoint + "?token=test-token").asString();
 	}
 }

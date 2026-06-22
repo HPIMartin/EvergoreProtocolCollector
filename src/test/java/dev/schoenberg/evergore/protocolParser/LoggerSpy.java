@@ -13,6 +13,9 @@ public class LoggerSpy implements Logger {
 	}
 
 	@Override
+	public void error(String reason) {}
+
+	@Override
 	public void error(String reason, Throwable error) {}
 
 	@Override

@@ -78,6 +78,13 @@ class HealthEndpointTest {
 		assertThat(healthzStatus).isEqualTo(protectedStatus);
 	}
 
+	@Test
+	void protectedEndpointIsRejectedWithWrongToken() {
+		int status = Unirest.get("/overview?token=definitely-the-wrong-token").asString().getStatus();
+
+		assertThat(status).isBetween(400, 499);
+	}
+
 	@MockBean(Configuration.class)
 	Configuration configurationMock() {
 		return new TestConfiguration();

@@ -9,17 +9,19 @@ import org.reactivestreams.*;
 
 import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.exceptions.*;
+import dev.schoenberg.evergore.protocolParser.helper.config.SecurityConfiguration;
 import dev.schoenberg.evergore.protocolParser.rest.controller.*;
 
 @Singleton
 @Filter("/**")
 public class TokenValidationFilter implements HttpServerFilter {
 	private static final String TOKEN_PARAMETER_NAME = "token";
-	private static final String VALID_TOKEN = "secret_token";
 
+	private final SecurityConfiguration securityConfiguration;
 	private final Logger logger;
 
-	public TokenValidationFilter(Logger logger) {
+	public TokenValidationFilter(SecurityConfiguration securityConfiguration, Logger logger) {
+		this.securityConfiguration = securityConfiguration;
 		this.logger = logger;
 	}
 
@@ -35,7 +37,7 @@ public class TokenValidationFilter implements HttpServerFilter {
 		}
 
 		String token = request.getParameters().get(TOKEN_PARAMETER_NAME, String.class).orElseThrow(this::reject);
-		if (!token.equals(VALID_TOKEN)) {
+		if (!token.equals(securityConfiguration.apiToken())) {
 			throw reject();
 		}
 

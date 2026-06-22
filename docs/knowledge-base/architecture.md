@@ -87,8 +87,9 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 
 1. **`Configuration` is config in name only** — values are hard-coded Java fields (browser, server,
    paths, in-memory toggle); ignores `application.yml`/env.
-2. **Secrets in source/image** — `TokenValidationFilter` hard-codes `"secret_token"`; Evergore
-   credentials live in `zugang.txt` baked into the Docker image.
+2. **Secrets in source/image** — the API token is now env-injected (`evergore.security.api-token` via
+   `SecurityConfiguration`, required at startup), but Evergore credentials still live in `zugang.txt`
+   baked into the Docker image.
 3. **Duplicated mapping** — `TransferType`→German-string exists in *two* visitors (DB + controller);
    `ApplicationExceptionHandler` uses an `instanceof` chain (its own `// TODO: Visitor-Pattern`).
 

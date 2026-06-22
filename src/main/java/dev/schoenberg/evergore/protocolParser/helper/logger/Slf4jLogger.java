@@ -19,6 +19,11 @@ public class Slf4jLogger implements Logger {
 	}
 
 	@Override
+	public void error(String reason) {
+		getLogger().error(reason);
+	}
+
+	@Override
 	public void error(String reason, Throwable error) {
 		getLogger().error(reason, error);
 	}

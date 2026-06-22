@@ -30,7 +30,7 @@ only `/health` + `/health/`).
 **Next action — pick from the H7-unblocked set** (all land *in Gradle*): **E1** (erzeugter
 Gildenmehrwert — the headline metric, now easy to TDD on this harness and would surface storage
 valuation via an endpoint; *recommended next*), **G6+** (JaCoCo), **H6** (failsafe → Gradle
-integration-test set), **C2** (move `secret_token` out of source), **C5** (vuln scan). **H9** (jump to
+integration-test set), **C5** (vuln scan). **H9** (jump to
 Micronaut 5) only *after* 1:1 is re-proven. Plan via the agent pipeline (planner → implementer →
 falsifier → reviewer). *(A4/CI stays deprioritized — local-only Docker → home-server deploy.)*
 
@@ -86,9 +86,7 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **C1** | Make `Configuration` real via `@ConfigurationProperties` bound from `application.yml`/env (browser, server, db path, credentials path, in-memory toggle, **+ the hard-coded Firefox binary path in `Browser.java`**) | Hard-coded fields defeat config & deployability | No domain settings hard-coded in `.java`; overridable by env | M |
-| **C2** | Move the API token out of `TokenValidationFilter` into config/secret; rotate off `"secret_token"` — **H7 done (2026-06-16); now actionable** | Hard-coded secret in source + test | Token read from config; absent token fails closed | S |
-| **C3** | Stop baking `zugang.txt` into the image; inject credentials via env/secret/mount; read via `FileLoader` port | Credentials in the image is a leak | Image has no credentials; documented secret-injection path | M |
+| **C1** | Make `Configuration` real via `@ConfigurationProperties` bound from `application.yml`/env (browser, server, db path, credentials path, in-memory toggle, **+ the hard-coded Firefox binary path in `Browser.java`**) | Hard-coded fields defeat config & deployability | No domain settings hard-coded in `.java`; overridable by env | M || **C3** | Stop baking `zugang.txt` into the image; inject credentials via env/secret/mount; read via `FileLoader` port | Credentials in the image is a leak | Image has no credentials; documented secret-injection path | M |
 | **C4** | Lower `logback` root from `verbose`; ensure credentials/tokens never logged | Chatty logs may leak secrets | Sensible levels; a log-scrub check | S |
 | **C5** | **Simple dependency vulnerability scan** wired into the build (OWASP dependency-check or the Gradle-native equivalent) | Catch known-vulnerable deps; good-practice for the showcase | Build surfaces known CVEs in deps. Gated on **H7** (land in Gradle); *Dependabot already covers basic dependency alerts* | S |
 
@@ -156,7 +154,7 @@ doc is intentionally **not** committed — its value lives here.
 
 | ID | Item | Why | Priority | Sequencing / caveat |
 |----|------|-----|----------|---------------------|
-| **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%) — the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`), sequence with/after **C2** so it doesn't block the secret cleanup. System.out check: the dead-code deletion already removed ~half the hits (`CsvParser`); whitelist `@Ignore` Gherkin once G4 lands. |
+| **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%) — the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`); the hard-coded API token is already env-injected, so no cleanup-ordering constraint remains. System.out check: the dead-code deletion already removed ~half the hits (`CsvParser`); whitelist `@Ignore` Gherkin once G4 lands. |
 | **G7-fix** | Clean existing violations: `System.out` in `SeleniumPageSource`/`AlternativeFileLoaderWrapper`, `printStackTrace` in `SmokeTest`, `// TODO: Visitor-Pattern` in `ApplicationExceptionHandler`, the empty `catch (Exception e) {}` swallow + `// NOOP` comment in `SeleniumPageSource`, and the commented-out line in `SmokeTest` | The "no comments / logger-only / self-explanatory" rules are currently violated | P2 | `CsvParser` System.out sites are covered by the earlier dead-code deletion. |
 | **G8** | **`/commit`** slash command encoding the strict one-line/no-footer/never-push protocol | Repo's strictest, most-violated-by-default rule (footers slip in); reproducible showcase artifact | P3 | `/review`,`/tdd` rejected (duplicate reviewer/implementer agents). `/spec` deferred → gate on **G4**; keep MCP-free + JUnit-`@Ignore`-first (not Cucumber/Jira). |
 | **A8** | Broaden `.gitignore`: add `CLAUDE.local.md`, `.claude/cache/`, `.claude/.tmp/` | Pre-empts committing personal overrides/cache | P3 | Scope to those paths; **avoid** a blanket `**/*.local.*` (would swallow legit `*.local.properties` fixtures). Folds into **A5**. |
@@ -176,7 +174,7 @@ doc is intentionally **not** committed — its value lives here.
   formatter cannot fill — see build-run-deploy.md. The "general linter" rejection still stands.)*
 - **maven-enforcer** — fabricated origin, BOM-managed deps, in-container fixed JDK → low value.
 - **commit-message *skill*** — rule already in CLAUDE.md + reviewer gate + the `git push` deny; a skill adds context cost, not enforcement (use **G8** `/commit`, or a git `commit-msg` hook).
-- **security-auditor *subagent*** — redundant with the reviewer's `security` category; OWASP ceremony for a no-prod-pressure scraper. Keep only "extend reviewer + secret-scan hook" under C2/C3.
+- **security-auditor *subagent*** — redundant with the reviewer's `security` category; OWASP ceremony for a no-prod-pressure scraper. Keep only "extend reviewer + secret-scan hook" under C3.
 - **ADRs (`docs/adr/`)** — duplicate the `open-questions.md` Decisions table ("git is history; docs are knowledge").
 - **format-on-save hook** — premature; folded into the shared-formatter adoption (needs a formatter + CI first).
 - **block-dangerous-bash hook** — now largely covered by the hardened permission **deny** (`git push`, `rm -rf`, `git reset --hard`, added 2026-06-15); revisit only for force-push/rebase nuance.
@@ -187,5 +185,5 @@ doc is intentionally **not** committed — its value lives here.
 ## Dependency notes
 
 - The acceptance test (`ProtocolEvaluationAcceptanceTest`) enables most of E (date-range, dashboard build on a testable core).
-- C-epic is independent and can run in parallel; do C2/C3 before any real deployment.
+- C-epic is independent and can run in parallel; do C3 before any real deployment.
 - **D-4**/Q3 (hunt-loot valuation rule) gates E3 — **B5 is resolved** (`Category.storage` removed; see open-questions Decisions D-5).
