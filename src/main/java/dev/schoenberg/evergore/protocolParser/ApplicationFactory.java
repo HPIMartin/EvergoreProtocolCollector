@@ -1,19 +1,19 @@
 package dev.schoenberg.evergore.protocolParser;
 
-import jakarta.inject.Singleton;
+import java.time.*;
+
+import jakarta.inject.*;
 
 import io.micronaut.context.annotation.Factory;
 
-import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
-import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
-import dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseRepository;
-import dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationDatabaseRepository;
-import dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseRepository;
-import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
-import dev.schoenberg.evergore.protocolParser.helper.fileLoader.AlternativeFileLoaderWrapper;
-import dev.schoenberg.evergore.protocolParser.helper.fileLoader.DiscFileLoader;
-import dev.schoenberg.evergore.protocolParser.helper.fileLoader.ResourceFileLoader;
-import dev.schoenberg.evergore.protocolParser.helper.selenium.FileLoader;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
+import dev.schoenberg.evergore.protocolParser.database.*;
+import dev.schoenberg.evergore.protocolParser.database.bank.*;
+import dev.schoenberg.evergore.protocolParser.database.metaInformation.*;
+import dev.schoenberg.evergore.protocolParser.database.storage.*;
+import dev.schoenberg.evergore.protocolParser.helper.config.*;
+import dev.schoenberg.evergore.protocolParser.helper.fileLoader.*;
+import dev.schoenberg.evergore.protocolParser.helper.selenium.*;
 
 @Factory
 public class ApplicationFactory {
@@ -45,5 +45,10 @@ public class ApplicationFactory {
 	@Singleton
 	public PostCollectionHook postCollectionHook() {
 		return () -> {};
+	}
+
+	@Singleton
+	public Clock clock() {
+		return Clock.systemUTC();
 	}
 }
