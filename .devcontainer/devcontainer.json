@@ -8,7 +8,7 @@
 			"installGradle": "false"
 		}
 	},
-	"postCreateCommand": "./gradlew --no-daemon build -x test || true",
+	"postCreateCommand": "git config core.hooksPath hooks; ./gradlew --no-daemon build -x test || true",
 	"customizations": {
 		"vscode": {
 			"extensions": [

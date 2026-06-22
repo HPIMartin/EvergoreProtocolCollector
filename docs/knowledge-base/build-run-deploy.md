@@ -48,6 +48,32 @@
   is **not** a general linter (that overlap with the reviewer agent / future Sonar G6 was why it was earlier
   declined).
 
+## Git hooks (local enforcement)
+
+The repo ships POSIX-sh git hooks in `hooks/`, activated via `core.hooksPath` (hooks are **not**
+shared by clone). Ensure they're active with:
+
+```sh
+git config core.hooksPath hooks
+```
+
+The devcontainer `postCreate` runs this automatically — but it only applies on the **next container
+rebuild** (the devcontainer image is built outside the devcontainer; see [dev-environment.md](dev-environment.md)),
+so run it once by hand in an existing checkout.
+
+- **`pre-commit`** — the fast quality gate: `./gradlew spotlessCheck checkstyleMain checkstyleTest`
+  (formatting + brace gate), plus a scan of **staged content** for private-key blocks, AWS-style
+  access keys, credential literals, real e-mail addresses, absolute user-home paths, and committed
+  key/keystore files (`.pfx`/`.p12`/`.jks`/`.pem`/`.key`). The `hooks/` directory is excluded from the
+  scan (the scripts hold the detection patterns themselves). **Excludes the test run and the full
+  build** to keep the TDD micro-commit loop fast.
+- **`commit-msg`** — enforces the §7 message rules: one single line, a present-tense verb first
+  (optional leading `[doc] ` tag), and no body / `Co-Authored-By` / tool footer.
+
+`--no-verify` bypasses both; reserve it for genuine emergencies. The hooks are a git-level safety net
+complementing the harness-level checks (`.claude/`); the full `./gradlew build` (with tests) remains
+the gate for landing on `main`.
+
 ## Run via Docker (primary path)
 
 - **`Dockerfile`** is multi-stage:

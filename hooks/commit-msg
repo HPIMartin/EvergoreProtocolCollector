@@ -1,0 +1,43 @@
+#!/bin/sh
+# Enforce the project's strict commit-message rules (see engineering-handbook.md section 7):
+# one single line, a present-tense verb first (optional leading "[doc] " tag), no body,
+# no Co-Authored-By line, no tool footer.
+set -eu
+
+msg_file=$1
+source=${2:-}
+
+case "$source" in
+	merge|squash) exit 0 ;;
+esac
+
+reject() {
+	printf '\n[commit-msg] %s\n' "$1" >&2
+	exit 1
+}
+
+clean=$(sed '/^#.*>8/,$d' "$msg_file" | git stripspace --strip-comments)
+subject=$(printf '%s\n' "$clean" | grep -vE '^[[:space:]]*$' | head -n1)
+
+[ -n "$subject" ] || reject "empty commit message."
+
+body_lines=$(printf '%s\n' "$clean" | grep -cE '[^[:space:]]' || true)
+[ "$body_lines" -le 1 ] || reject "the message must be a single line — no body. The git log is the record; details belong in the diff/KB, not a commit body."
+
+if printf '%s\n' "$clean" | grep -qiE 'co-authored-by|generated with|claude code|noreply@anthropic\.com'; then
+	reject "remove the Co-Authored-By line / tool footer — commits carry no attribution footer."
+fi
+
+stripped=$(printf '%s' "$subject" | sed -E 's/^\[doc\] //')
+first=$(printf '%s' "$stripped" | sed -E 's/[[:space:]].*$//')
+
+printf '%s' "$first" | grep -qE '^[A-Z][a-zA-Z0-9]+$' \
+	|| reject "start with a capitalized present-tense verb (optionally prefixed with '[doc] '), e.g. 'Add ...', 'Remove ...', '[doc] Refine ...'. Got: '$subject'"
+
+if printf '%s' "$first" | grep -qE '^(Added|Removed|Fixed|Updated|Created|Changed|Refactored|Implemented|Renamed|Moved|Deleted|Wired|Documented|Adjusted|Improved|Introduced|Replaced|Returned|Handled|Ignored|Aligned|Exposed|Recorded|Served|Bumped|Merged|Reverted|Enabled|Disabled|Wrote|Built|Tested|Deployed|Cleaned|Optimized|Patched|Migrated|Dropped|Pinned|Refined|Groomed|Adding|Removing|Fixing|Updating|Creating|Changing|Refactoring|Implementing|Renaming|Moving|Deleting|Wiring|Documenting|Building|Testing|Deploying|Cleaning|Optimizing|Patching|Migrating|Dropping|Pinning|Refining)$'; then
+	reject "use the present tense — '$first' is past tense or a gerund. Write the verb as a command, e.g. 'Add'/'Fix'/'Refine'."
+fi
+
+if printf '%s' "$stripped" | grep -qE '^(feat|fix|chore|docs|refactor|test|build|ci|style|perf)(\(.*\))?:'; then
+	reject "no conventional-commit prefixes (feat:/fix:/...). Start with a plain present-tense verb."
+fi

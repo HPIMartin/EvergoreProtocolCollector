@@ -139,6 +139,16 @@ template** demonstrating the practice. Scenarios are written in **product langua
   keep machine-specific permissions (e.g. an absolute-path `cd`) in `.claude/settings.local.json`.
 - **The commit log is the changelog.** Don't keep a separate `CHANGELOG`, and don't mirror git
   history or diffs in the docs — `git log` / `git diff` are the source of truth for *what changed*.
+- **Git enforcement hooks (must be active).** The rules above are enforced mechanically by POSIX-sh
+  hooks shipped in `hooks/` and wired via `core.hooksPath` — *ensure they are active* in any checkout
+  (`git config core.hooksPath hooks`; the devcontainer `postCreate` sets this automatically). `commit-msg`
+  enforces the single-line, present-tense-verb-first subject (optional `[doc] ` tag) and rejects a body,
+  `Co-Authored-By`, or any tool footer; `pre-commit` runs the fast format/brace gate
+  (`spotlessCheck` + `checkstyleMain`/`checkstyleTest`) and a staged-content scan for secrets and
+  personal/host data. The test run and full build are **deliberately excluded** so the TDD
+  micro-commit loop stays fast (commits are already green by the time they're made). They are a
+  git-level safety net, not a substitute for the rules — `--no-verify` bypasses them and is for
+  genuine emergencies only. Details: [build-run-deploy.md](build-run-deploy.md).
 
 ### Branching, merge & the review gateway (decided 2026-06-20)
 

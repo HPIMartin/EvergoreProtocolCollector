@@ -1,0 +1,58 @@
+#!/bin/sh
+# Fast pre-commit quality gate. Deliberately excludes the test run and the full build to keep the
+# TDD micro-commit loop fast; every commit is already green by the time it is made.
+# Active via: git config core.hooksPath hooks (set automatically by the devcontainer postCreate).
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+reject() {
+	printf '\n[pre-commit] %s\n' "$1" >&2
+	exit 1
+}
+
+# Staged additions/modifications, excluding this hooks/ directory so the scan never matches the
+# detection patterns that live in the hook scripts themselves.
+staged=$(git diff --cached --name-only --diff-filter=ACM -- . ':(exclude)hooks/*' || true)
+
+keystore_files=$(printf '%s\n' "$staged" | grep -iE '\.(pfx|p12|jks|pem|key)$' || true)
+[ -z "$keystore_files" ] || reject "refusing to commit key/keystore file(s):
+$keystore_files
+Keys and credentials belong in a gitignored *.local.* file or a secret store, never the repo."
+
+pem_re='-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----'
+aws_re='AKIA[0-9A-Z]{16}'
+cred_re="(password|passwd|secret|api[_-]?key)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{3,}"
+email_re='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+email_allow='@(example|test|invalid|localhost)\.[A-Za-z]+$|@localhost$'
+host_re="(/home/|/Users/)[A-Za-z0-9._-]+/|[Cc]:\\\\+Users"
+
+findings=""
+oldifs=$IFS
+IFS='
+'
+for f in $staged; do
+	IFS=$oldifs
+	case "$f" in
+		*.png|*.ico|*.jar|*.exe|*.sqlite|*.gz|*.zip|*.jks|*.p12|*.pfx|*.woff|*.woff2|*.ttf) IFS='
+'; continue ;;
+	esac
+	blob=$(git show ":$f" 2>/dev/null) || { IFS='
+'; continue; }
+	hits=$(printf '%s\n' "$blob" | grep -nIE -e "$pem_re" -e "$aws_re" -e "$cred_re" -e "$host_re" || true)
+	emails=$(printf '%s\n' "$blob" | grep -nIoE "$email_re" | grep -viE "$email_allow" || true)
+	if [ -n "$hits$emails" ]; then
+		findings=$(printf '%s\n--- %s ---\n%s\n%s\n' "$findings" "$f" "$hits" "$emails")
+	fi
+	IFS='
+'
+done
+IFS=$oldifs
+[ -z "$(printf '%s' "$findings" | tr -d '[:space:]')" ] || reject "possible secret or personal/host data in staged content:
+$findings
+If this is real, remove it (use a gitignored *.local.* file or a secret store, injected at runtime)."
+
+printf '[pre-commit] spotlessCheck + checkstyle...\n'
+if ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then
+	reject "formatting/brace gate failed. Run './gradlew spotlessApply', add any missing braces, then restage."
+fi
