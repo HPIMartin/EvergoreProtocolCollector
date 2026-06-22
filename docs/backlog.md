@@ -20,8 +20,12 @@ evaluate→overview against a synthetic committed fixture; DB startup ordering i
 tests carry no `static` signal flags (an injected `BootSignalRecorder` bridges the bean↔test lifecycle).
 Single public `main` branch. (Decisions + rationale: [open-questions.md](open-questions.md).) Item value
 math is pinned by an all-items golden master with the dead `Category.storage` multiplier removed, and
-`getNewest()` returns `Optional` instead of a `MIN_VALUE` placeholder. **In flight:** F2 observability
-(`/health` + last-successful-run) on a feature branch, pending its review gate.
+`getNewest()` returns `Optional` instead of a `MIN_VALUE` placeholder. Observability is in place — an
+anonymous `/health` endpoint surfaces a last-successful-run health indicator (the token filter exempts
+only `/health` + `/health/`).
+
+**Author-picked next:** **G13** (git enforcement hooks — the four checks approved 2026-06-22) and **G14**
+(de-shortcode the docs); otherwise the standing H7-unblocked set below.
 
 **Next action — pick from the H7-unblocked set** (all land *in Gradle*): **E1** (erzeugter
 Gildenmehrwert — the headline metric, now easy to TDD on this harness and would surface storage
@@ -112,7 +116,6 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
 | **F1** | Replace bundled gecko binaries with Selenium Manager / WebDriverManager; make scraping resilient (retries, selector config, change detection) | Brittle, Windows-pinned drivers | Driver auto-resolves; scrape survives minor markup changes or fails loudly | M |
-| **F2** | Observability: health/readiness endpoint, structured logs, last-successful-run metric | Know when scraping silently breaks | `/health` + a visible "last run" signal | S |
 | **F3** | **Creative:** weekly guild report (Discord webhook / email), CSV/Sheets export, inactivity alerts | Push value to the guild, not just a page | One delivery channel shipped behind config | M |
 | **F4** | **Creative:** multi-guild / multi-world support | Generalize beyond `[Boten]` on `zyrthania` | Config-driven guild/world; data partitioned | L |
 | **F5** | **Creative:** public read-only OpenAPI JSON API for guild tooling | Already have OpenAPI; expose clean JSON | Documented `/api` returning per-avatar metrics | M |
@@ -163,6 +166,8 @@ doc is intentionally **not** committed — its value lives here.
 | **G9** | **Point Claude at official docs (WebFetch) for less-trafficked libraries** — a `working-with-claude.md` convention: for **Micronaut / ORMLite / Selenium / RxJava** (thin in LLM training data), fetch the official docs before writing against an unfamiliar API; prefer doc-grounded code over confabulation | Enterprise-audit Pitfall #5, the most stack-relevant gap: a solo dev has no reviewer to catch a hallucinated API, and ArchUnit/tests catch structure, not invented method signatures. MCP-free (WebFetch is available) | P2 | Flagged independently by two audit reviewers. Doc-only; fits the Epic-G showcase. |
 | **G10** | **SessionStart orient/lessons hook** in `.claude/settings.json`: deterministically inject the orient pointer (CLAUDE.md → KB README → backlog "Current status" → open-questions → `process-learnings.md`) so every fresh session reads the lessons first | The 100%-fires complement to the advisory `/continue` + CLAUDE.md "Start here"; completes the self-improvement loop and is the most on-thesis hooks-over-rules showcase artifact (sibling to **G7**) | P3 | Enterprise-audit gap. The lessons file already exists (`process-learnings.md`); only the deterministic hook is missing. |
 | **G11** | **Improve the AI/agent working environment in the devcontainer** (low prio): pre-install tools used every session (`git-filter-repo`, `sqlite3`, `jq`), pre-allow common read-only commands in the committed `settings.json` (portable forms only), and add conventions/hooks that cut token use (scratch-file hygiene, scoped reads over blind re-scans) | Recurring friction: missing `git-filter-repo`/`docker`, repeated permission prompts, the "always allow" flow re-polluting `settings.json`, broad re-reads burning tokens | P3 | Author request 2026-06-16. Sits with **G7**/**G10** (the hooks/showcase items). G12 (the permission-audit slice) landed 2026-06-21. |
+| **G13** | **Git enforcement hooks** (committed `hooks/` + `core.hooksPath` wired in the devcontainer `postCreate`, in-container): **pre-commit** = `./gradlew spotlessCheck checkstyleMain checkstyleTest` + a **secret-scan** (tokens/keys/credentials/real emails/host-paths) + reject `System.out`/`printStackTrace`/leftover `// TODO`; **commit-msg** = one-line, present-tense-verb-first, no body/`Co-Authored-By`/footer. **Excludes tests/`build`** (would break the fast TDD micro-commit loop; commits are already green). | Mechanically prevents slips rules can't — the F2-v2 commits were Spotless-dirty because `spotlessApply` output was left uncommitted; "hooks > rules" at the git layer | P2 | Author request 2026-06-22 (all 4 checks chosen). **Git-level complement** to harness-level **G7** (PreToolUse, catches Claude edits earlier) + **G8** (`/commit`); the lighter/faster form of **A4**'s local gate (no full `verify`). Implement **after F2**. |
+| **G14** | **De-shortcode the KB/docs**: sweep `knowledge-base/`, `open-questions.md` Decisions, `process-learnings.md` so each entry stands alone — identify things by symbol/behavior/file/concept, **not** a backlog shortcode (`D5`/`D7`/`B8`/…) that is removed when the item completes; shortcodes allowed only as an optional secondary pointer to **still-live** items. | Completed items are removed from the backlog, so a doc naming only a shortcode becomes a dangling reference needing `git` archaeology — defeats "docs are knowledge"; same principle as no-tracker-IDs-in-code, extended to docs | P3 | Author raised 2026-06-22. Convention applies **going forward** now; the sweep of existing dangling refs (incl. new `process-learnings` rows that lead with `D5`/`B5`) is this item. |
 
 ### Considered and rejected (do not re-propose without a new reason)
 
