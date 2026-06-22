@@ -17,6 +17,7 @@ dependencies {
 	annotationProcessor("io.micronaut.openapi:micronaut-openapi")
 
 	implementation("io.micronaut:micronaut-inject")
+	implementation("io.micronaut:micronaut-management")
 	implementation("io.micronaut:micronaut-runtime")
 	implementation("io.micronaut.validation:micronaut-validation")
 	implementation("io.micronaut:micronaut-http-client")
