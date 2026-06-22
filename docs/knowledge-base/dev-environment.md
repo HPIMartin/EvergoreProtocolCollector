@@ -13,6 +13,11 @@ Java bump) a one-line image change instead of a host installation.
   with `./gradlew build -x test`. The JDK version is single-sourced here (the feature `version`).
 - VS Code extensions: Claude Code + Java pack (the Java pack is the *editor* language server /
   IntelliSense — distinct from the JDK; optional for the Gradle/agent-driven flow).
+- **Node.js (LTS) via the `node` feature** — for the planned frontend rewrite (Angular or React,
+  undecided) and Node-based dev tooling; the Java build/runtime does not use it. The standalone `node`
+  feature installs via **nvm** (downloaded binaries), *not* the yarn apt repo whose GPG key once broke
+  `apt` when `sonarlint` pulled node (see the lesson below), so it should be safe — but the image builds
+  on the **host** (no docker-in-docker, H2), so this only takes effect on the next rebuild; verify there.
 - **Deferred** (removed to get a building container; re-add when needed):
   `docker-outside-of-docker` → selenium-firefox compose service (backlog **H2**);
   `sonarlint` → static analysis (backlog **G6**);

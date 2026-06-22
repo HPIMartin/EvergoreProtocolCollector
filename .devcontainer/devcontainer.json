@@ -6,6 +6,9 @@
 			"version": "25",
 			"installMaven": "false",
 			"installGradle": "false"
+		},
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "lts"
 		}
 	},
 	"postCreateCommand": "git config core.hooksPath hooks; ./gradlew --no-daemon build -x test || true",
