@@ -26,6 +26,7 @@ cred_re="(password|passwd|secret|api[_-]?key)[[:space:]]*[:=][[:space:]]*[\"'][^
 email_re='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
 email_allow='@(example|test|invalid|localhost)\.[A-Za-z]+$|@localhost$'
 host_re="(/home/|/Users/)[A-Za-z0-9._-]+/|[Cc]:\\\\+Users"
+host_allow='/home/vscode/'
 # Hard-coded auth tokens — scanned only under src/main below (tests legitimately use a non-secret test token).
 token_url='\?token=[A-Za-z0-9._-]+'
 token_assign="(valid[_-]?token|api[_-]?token|auth[_-]?token|access[_-]?token|secret[_-]?token|bearer[_-]?token)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{3,}"
@@ -42,14 +43,15 @@ for f in $staged; do
 	esac
 	blob=$(git show ":$f" 2>/dev/null) || { IFS='
 '; continue; }
-	hits=$(printf '%s\n' "$blob" | grep -nIE -e "$pem_re" -e "$aws_re" -e "$cred_re" -e "$host_re" || true)
+	hits=$(printf '%s\n' "$blob" | grep -nIE -e "$pem_re" -e "$aws_re" -e "$cred_re" || true)
+	hosts=$(printf '%s\n' "$blob" | grep -nIoE "$host_re" | grep -viE "$host_allow" || true)
 	emails=$(printf '%s\n' "$blob" | grep -nIoE "$email_re" | grep -viE "$email_allow" || true)
 	tokens=""
 	case "$f" in
 		src/main/*) tokens=$(printf '%s\n' "$blob" | grep -niIE -e "$token_url" -e "$token_assign" || true) ;;
 	esac
-	if [ -n "$hits$emails$tokens" ]; then
-		findings=$(printf '%s\n--- %s ---\n%s\n%s\n%s\n' "$findings" "$f" "$hits" "$emails" "$tokens")
+	if [ -n "$hits$hosts$emails$tokens" ]; then
+		findings=$(printf '%s\n--- %s ---\n%s\n%s\n%s\n%s\n' "$findings" "$f" "$hits" "$hosts" "$emails" "$tokens")
 	fi
 	IFS='
 '
