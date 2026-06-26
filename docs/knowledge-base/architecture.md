@@ -1,6 +1,7 @@
 # 04 — Architecture
 
-Java 17 · Micronaut 3.8.4 (Netty) · ORMLite + SQLite · Selenium · OpenAPI/Swagger.
+Java · Micronaut (Netty) · ORMLite + SQLite · Selenium · OpenAPI/Swagger — exact versions live in
+[`build.gradle.kts`](../../build.gradle.kts), the single source of truth (this prose must not duplicate them).
 Root package `dev.schoenberg.evergore.protocolParser` (`…` below).
 
 ## Data-flow (the one use case that matters)

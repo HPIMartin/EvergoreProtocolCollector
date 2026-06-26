@@ -6,7 +6,7 @@
 
 ## What this is
 
-A Java 17 / Micronaut service that scrapes the browser game **Evergore** for a guild's bank +
+A Java / Micronaut service that scrapes the browser game **Evergore** for a guild's bank +
 storage transaction logs, values item movements, and computes each member's contribution —
 **automating a manual Google Sheet**. It is also, deliberately, a **showcase of clean,
 test-driven, AI-assisted development**.

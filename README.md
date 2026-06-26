@@ -1,6 +1,6 @@
 # Evergore Protocol Collector
 
-A Java 17 / Micronaut service that scrapes the browser game **Evergore** for a guild's bank and
+A Java / Micronaut service that scrapes the browser game **Evergore** for a guild's bank and
 storage (*Lager*) transaction logs, values item movements via a built-in item catalog, and computes
 each member's contribution — **automating a manual Google Sheet**. It also serves as a showcase of
 clean, test-driven, AI-assisted development.

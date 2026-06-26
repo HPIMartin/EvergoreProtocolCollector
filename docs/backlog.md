@@ -17,15 +17,20 @@ only **rejected/deferred** items stay, with their decision + rationale (knowledg
 (ArchUnit-guarded); the style is enforced from one place (shared Eclipse formatter + Spotless,
 warnings-as-errors, a one-rule Checkstyle brace gate); an offline acceptance test covers
 evaluate→overview against a synthetic committed fixture; DB startup ordering is deterministic; the boot
-tests carry no `static` signal flags (an injected `BootSignalRecorder` bridges the bean↔test lifecycle).
+tests carry no `static` signal flags and block on a deterministic, no-timeout latch (an injected
+`BootSignalRecorder` bridges the bean↔test lifecycle).
 Single public `main` branch. (Decisions + rationale: [open-questions.md](open-questions.md).) Item value
 math is pinned by an all-items golden master with the dead `Category.storage` multiplier removed, and
 `getNewest()` returns `Optional` instead of a `MIN_VALUE` placeholder. Observability is in place — an
 anonymous `/health` endpoint surfaces a last-successful-run health indicator (the token filter exempts
-only `/health` + `/health/`).
+only `/health` + `/health/`). Request rate-limiting is config-driven (`RateLimitConfiguration`,
+`evergore.rate-limit.*`); diagnostics route through the project `Logger`, enforced in committed `.java`
+by the pre-commit hook.
 
-**Author-picked next:** **G13** (git enforcement hooks — the four checks approved 2026-06-22) and **G14**
-(de-shortcode the docs); otherwise the standing H7-unblocked set below.
+**Author-picked next:** move the boot-collection `awaitCollection()` out of each acceptance/health test
+into `@BeforeEach` — a non-test-relevant precondition doesn't belong in every test body (handbook §6,
+arrange discipline); **high prio**. Then **G14** (de-shortcode the docs); otherwise the standing
+H7-unblocked set below.
 
 **Next action — pick from the H7-unblocked set** (all land *in Gradle*): **E1** (erzeugter
 Gildenmehrwert — the headline metric, now easy to TDD on this harness and would surface storage
@@ -89,6 +94,7 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 | **C1** | Make `Configuration` real via `@ConfigurationProperties` bound from `application.yml`/env (browser, server, db path, credentials path, in-memory toggle, **+ the hard-coded Firefox binary path in `Browser.java`**) | Hard-coded fields defeat config & deployability | No domain settings hard-coded in `.java`; overridable by env | M || **C3** | Stop baking `zugang.txt` into the image; inject credentials via env/secret/mount; read via `FileLoader` port | Credentials in the image is a leak | Image has no credentials; documented secret-injection path | M |
 | **C4** | Lower `logback` root from `verbose`; ensure credentials/tokens never logged | Chatty logs may leak secrets | Sensible levels; a log-scrub check | S |
 | **C5** | **Simple dependency vulnerability scan** wired into the build (OWASP dependency-check or the Gradle-native equivalent) | Catch known-vulnerable deps; good-practice for the showcase | Build surfaces known CVEs in deps. Gated on **H7** (land in Gradle); *Dependabot already covers basic dependency alerts* | S |
+| **C6** | **Harden the request rate limiter** (`BrowserLoggingFilter` / its counter): make the block transition thread-safe (`block()` is not `synchronized`) and add a test that the limit re-opens after the block window expires | The throttle is config-driven but its concurrency + expiry path are untested | Concurrent requests can't corrupt the block state; a test proves the block lifts after `block-duration` | S |
 
 ## Epic D — Hexagonal completion `P1→P2`
 

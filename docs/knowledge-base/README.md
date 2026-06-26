@@ -9,7 +9,7 @@ human or AI agent can get up to speed **without re-scanning the whole codebase**
 
 ## What this project is, in one sentence
 
-A Java 17 / Micronaut service that **scrapes the browser game [Evergore](https://evergore.de)**
+A Java / Micronaut service that **scrapes the browser game [Evergore](https://evergore.de)**
 for a guild's bank and storage transaction logs, stores them in SQLite, and computes
 per-member contribution metrics — automating a manual Google Sheet that a guild
 officer used to maintain by hand.

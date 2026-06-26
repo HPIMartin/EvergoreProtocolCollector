@@ -62,6 +62,11 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
   Self-documenting names + small functions replace comments. The reviewer flags unnecessary comments.
 - **No dead code & no undeclared dependencies** (e.g. an unused class importing a library absent from
   `build.gradle.kts` — delete it).
+- **The code/build is the single source of truth; docs must never duplicate volatile facts.** Versions
+  (Java / Micronaut / Gradle), dependency lists, file/test counts, and other build-derived details live in
+  `build.gradle.kts` and the code — docs point to them, never restate them (restated facts rot silently).
+  Prose states only stable, conceptual things. If a doc ever contradicts the build, the build wins and the
+  doc is fixed in the same change.
 - **Prefer immutable `record`s; avoid getter/setter boilerplate.** Model value objects, DTOs and
   config as `record`s. For DTOs, **public fields** are acceptable instead of accessors (as in
   `BankEntry`/`StorageEntry`); record accessors (`config.apiToken()`) are fine — they are not bean
