@@ -31,8 +31,11 @@ test `@Factory`), **not** `static` flags. This bridges the `@MockBean`/context l
 test-instance lifecycle without global mutable state: the mock-bean helpers get the recorder by
 constructor injection and write to it; the test injects the same instance and reads it. A
 `@TestInstance(PER_CLASS)` + instance-fields alternative was tried and broke `SmokeTest` (the startup
-signal went unobserved → timeout). The recorder also owns the `awaitCollection(timeout)` poll,
-deduplicated from both tests; a `false` return now fails the test loudly instead of silently proceeding.
+signal went unobserved → timeout). The recorder also owns `awaitCollection()`, deduplicated across the
+tests. It blocks on a `CountDownLatch` with **no timeout** — the test returns exactly when the collection
+finishes, so it is deterministic on any hardware (slow machines just wait longer, they never flake).
+`recordException()` releases the latch too, so a failed boot fails the `exceptionOccurred()` assertion
+instead of hanging forever.
 
 ## Coverage map
 

@@ -1,19 +1,16 @@
 package dev.schoenberg.evergore.protocolParser;
 
-import java.time.Duration;
-import java.time.Instant;
+import java.util.concurrent.CountDownLatch;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
-import static java.time.Instant.now;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class BootSignalRecorder {
-	private volatile boolean collectionFinished;
+	private final CountDownLatch collectionFinished = new CountDownLatch(1);
 	private volatile boolean dataLoaded;
 	private volatile boolean exceptionOccurred;
 
 	public void recordCollectionFinished() {
-		collectionFinished = true;
+		collectionFinished.countDown();
 	}
 
 	public void recordDataLoaded() {
@@ -22,17 +19,11 @@ public class BootSignalRecorder {
 
 	public void recordException() {
 		exceptionOccurred = true;
+		collectionFinished.countDown();
 	}
 
-	public boolean awaitCollection(Duration timeout) {
-		Instant deadline = now().plus(timeout);
-		while (!collectionFinished) {
-			if (now().isAfter(deadline)) {
-				return false;
-			}
-			silentThrow(() -> MILLISECONDS.sleep(50));
-		}
-		return true;
+	public void awaitCollection() {
+		silentThrow(() -> collectionFinished.await());
 	}
 
 	public boolean dataLoaded() {

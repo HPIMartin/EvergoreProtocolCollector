@@ -26,7 +26,6 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
-import static java.time.Duration.ofMinutes;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
@@ -55,7 +54,7 @@ class ProtocolEvaluationAcceptanceTest {
 
 	@Test
 	void overviewShowsCorrectBankTotalsForAllThreeAvatars() {
-		assertThat(signals.awaitCollection(ofMinutes(1))).isTrue();
+		signals.awaitCollection();
 
 		HttpResponse<String> response = get("/overview");
 
@@ -75,7 +74,7 @@ class ProtocolEvaluationAcceptanceTest {
 
 	@Test
 	void aurorasBankEndpointShowsExpectedEntry() {
-		assertThat(signals.awaitCollection(ofMinutes(1))).isTrue();
+		signals.awaitCollection();
 
 		HttpResponse<String> response = get("/avatars/Aurora/bank");
 
@@ -89,7 +88,7 @@ class ProtocolEvaluationAcceptanceTest {
 
 	@Test
 	void aurorasStorageEndpointShowsExpectedEntry() {
-		assertThat(signals.awaitCollection(ofMinutes(1))).isTrue();
+		signals.awaitCollection();
 
 		HttpResponse<String> response = get("/avatars/Aurora/storage");
 
@@ -106,7 +105,7 @@ class ProtocolEvaluationAcceptanceTest {
 
 	@Test
 	void storageValuationIsCorrectAtBeanLevel() {
-		assertThat(signals.awaitCollection(ofMinutes(1))).isTrue();
+		signals.awaitCollection();
 
 		MetaInformationRepository metaRepo = server.getApplicationContext().getBean(MetaInformationRepository.class);
 

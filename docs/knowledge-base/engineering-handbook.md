@@ -52,7 +52,7 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
   and read by the test use an **injected, DI-shared recorder** — a `@Singleton`-scoped bean provided by
   a test `@Factory` (DI scope, **not** the GoF static-`getInstance` Singleton antipattern), **not** static
   flags. A `@TestInstance(PER_CLASS)` + instance-fields alternative was tried and **broke `SmokeTest`**
-  (the `@MockBean`+`@Scheduled` startup signal went unobserved → 60s timeout), so the DI-shared recorder
+  (the `@MockBean`+`@Scheduled` startup signal went unobserved), so the DI-shared recorder
   is the proven seam (see [testing.md](testing.md), `BootSignalRecorder`). The rare defensible
   case is a static *initializer* doing one-time setup that genuinely must run **before** the framework
   context boots (e.g. seeding/deleting a test DB before repositories connect) — accepted in **test**
@@ -115,6 +115,12 @@ template** demonstrating the practice. Scenarios are written in **product langua
 - **Some** adapter/integration tests (repositories vs `:memory:` SQLite).
 - **Few** acceptance tests (collect→evaluate→overview via fakes) and a thin smoke test for wiring.
 - Replace brittle assertions (the Levenshtein HTML matching) once output is behind a clean port.
+- **Deterministic, never wall-clock-dependent.** A test must pass on *any* hardware (a first-gen
+  Raspberry Pi included — it may just take longer); correctness must never hinge on a `sleep`/`timeout`
+  threshold. Waiting on an async event means waiting on a **real signal** (a `CountDownLatch.await()`
+  with no timeout, a future, a condition), released on both the success *and* failure paths so a bad run
+  fails an assertion instead of hanging. A timeout/retry is a *mitigation*, not a fix — never "stabilise"
+  a flake by bumping one. (See [testing.md](testing.md), the boot-signal seam.)
 
 ## 7. Git & commits (author's rules — strict)
 

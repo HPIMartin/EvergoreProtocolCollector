@@ -17,7 +17,6 @@ import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static java.time.Duration.*;
 import static org.assertj.core.api.Assertions.*;
 
 @MicronautTest
@@ -46,7 +45,7 @@ class HealthEndpointTest {
 
 	@Test
 	void healthEndpointIsAccessibleWithoutToken() {
-		assertThat(signals.awaitCollection(ofMinutes(1))).isTrue();
+		signals.awaitCollection();
 
 		HttpResponse<String> response = Unirest.get("/health").asString();
 
@@ -55,7 +54,7 @@ class HealthEndpointTest {
 
 	@Test
 	void healthEndpointBodyContainsLastRunDetail() {
-		assertThat(signals.awaitCollection(ofMinutes(1))).isTrue();
+		signals.awaitCollection();
 
 		HttpResponse<String> response = Unirest.get("/health").asString();
 

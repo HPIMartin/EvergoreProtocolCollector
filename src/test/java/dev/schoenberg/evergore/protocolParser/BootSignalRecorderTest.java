@@ -1,20 +1,41 @@
 package dev.schoenberg.evergore.protocolParser;
 
-import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.Test;
 
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class BootSignalRecorderTest {
 	@Test
-	void recordCollectionFinishedFlipsQueryFromFalseToTrue() {
+	void awaitCollectionUnblocksOnceCollectionFinishes() {
 		BootSignalRecorder recorder = new BootSignalRecorder();
+		CountDownLatch returned = new CountDownLatch(1);
+		Thread waiter = new Thread(() -> {
+			recorder.awaitCollection();
+			returned.countDown();
+		});
 
-		assertThat(recorder.awaitCollection(Duration.ofMillis(1))).isFalse();
+		waiter.start();
 		recorder.recordCollectionFinished();
 
-		assertThat(recorder.awaitCollection(Duration.ofMillis(10))).isTrue();
+		silentThrow(() -> returned.await());
+	}
+
+	@Test
+	void awaitCollectionUnblocksWhenAnExceptionIsRecorded() {
+		BootSignalRecorder recorder = new BootSignalRecorder();
+		CountDownLatch returned = new CountDownLatch(1);
+		Thread waiter = new Thread(() -> {
+			recorder.awaitCollection();
+			returned.countDown();
+		});
+
+		waiter.start();
+		recorder.recordException();
+
+		silentThrow(() -> returned.await());
 	}
 
 	@Test
@@ -35,24 +56,5 @@ class BootSignalRecorderTest {
 		recorder.recordException();
 
 		assertThat(recorder.exceptionOccurred()).isTrue();
-	}
-
-	@Test
-	void awaitCollectionReturnsTrueWhenCollectionAlreadyFinished() {
-		BootSignalRecorder recorder = new BootSignalRecorder();
-		recorder.recordCollectionFinished();
-
-		boolean result = recorder.awaitCollection(Duration.ofMillis(100));
-
-		assertThat(result).isTrue();
-	}
-
-	@Test
-	void awaitCollectionReturnsFalseOnTimeoutWhenCollectionNeverFinishes() {
-		BootSignalRecorder recorder = new BootSignalRecorder();
-
-		boolean result = recorder.awaitCollection(Duration.ofMillis(50));
-
-		assertThat(result).isFalse();
 	}
 }

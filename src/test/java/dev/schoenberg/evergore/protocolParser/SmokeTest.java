@@ -38,7 +38,6 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformati
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.NEWLINE;
-import static java.time.Duration.ofMinutes;
 import static java.time.Instant.EPOCH;
 import static java.util.Arrays.asList;
 import static kong.unirest.Unirest.config;
@@ -69,11 +68,10 @@ class SmokeTest {
 	void applicationIsStarting() {
 		assertTrue(server.isRunning());
 
-		boolean finishedInTime = signals.awaitCollection(ofMinutes(1));
+		signals.awaitCollection();
 
 		assertFalse(signals.exceptionOccurred());
 		assertTrue(signals.dataLoaded());
-		assertTrue(finishedInTime);
 	}
 
 	@Test
