@@ -11,6 +11,13 @@
 			"version": "lts"
 		}
 	},
+	"containerEnv": {
+		"CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
+	},
+	"initializeCommand": "mkdir -p .devcontainer/.claude-home && echo '*' > .devcontainer/.claude-home/.gitignore",
+	"mounts": [
+		"source=${localWorkspaceFolder}/.devcontainer/.claude-home,target=/home/vscode/.claude,type=bind"
+	],
 	"postCreateCommand": "git config core.hooksPath hooks; ./gradlew --no-daemon build -x test || true",
 	"customizations": {
 		"vscode": {
