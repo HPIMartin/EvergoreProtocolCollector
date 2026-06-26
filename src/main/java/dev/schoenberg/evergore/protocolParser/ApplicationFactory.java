@@ -18,8 +18,8 @@ import dev.schoenberg.evergore.protocolParser.helper.selenium.*;
 @Factory
 public class ApplicationFactory {
 	@Singleton
-	public FileLoader fileLoader(Configuration config) {
-		return new AlternativeFileLoaderWrapper(new DiscFileLoader(config), new ResourceFileLoader());
+	public FileLoader fileLoader(Configuration config, Logger logger) {
+		return new AlternativeFileLoaderWrapper(new DiscFileLoader(config), new ResourceFileLoader(), logger);
 	}
 
 	@Singleton

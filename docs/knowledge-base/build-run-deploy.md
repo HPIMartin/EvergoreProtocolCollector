@@ -66,7 +66,9 @@ so run it once by hand in an existing checkout.
   access keys, credential literals, real e-mail addresses, absolute user-home paths, and committed
   key/keystore files (`.pfx`/`.p12`/`.jks`/`.pem`/`.key`) — and, **under `src/main` only**, hard-coded
   auth tokens (a literal `?token=…` or a `…token = "…"` assignment; tests legitimately use a non-secret
-  test token). The `hooks/` directory is excluded from the scan (the scripts hold the detection patterns
+  test token). It also **rejects, in committed `.java`,** `System.out`/`System.err`, `printStackTrace`,
+  and leftover `TODO`/`FIXME` — use the project `Logger`, and track follow-ups in the backlog, not code
+  comments. The `hooks/` directory is excluded from the scan (the scripts hold the detection patterns
   themselves). **Excludes the test run and the full build** to keep the TDD micro-commit loop fast.
 - **`commit-msg`** — enforces the §7 message rules: one single line, a present-tense verb first
   (optional leading `[doc] ` tag), and no body / `Co-Authored-By` / tool footer.

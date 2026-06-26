@@ -2,16 +2,19 @@ package dev.schoenberg.evergore.protocolParser.helper.fileLoader;
 
 import java.io.File;
 
+import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.helper.selenium.FileLoader;
 
 public class AlternativeFileLoaderWrapper implements FileLoader {
 
 	private final FileLoader primaryLoader;
 	private final FileLoader backupLoader;
+	private final Logger logger;
 
-	public AlternativeFileLoaderWrapper(FileLoader primaryLoader, FileLoader backupLoader) {
+	public AlternativeFileLoaderWrapper(FileLoader primaryLoader, FileLoader backupLoader, Logger logger) {
 		this.primaryLoader = primaryLoader;
 		this.backupLoader = backupLoader;
+		this.logger = logger;
 	}
 
 	@Override
@@ -19,14 +22,14 @@ public class AlternativeFileLoaderWrapper implements FileLoader {
 		try {
 			File result = primaryLoader.fetchFile(path);
 			if (result != null) {
-				System.out.println("Found file in primary source.");
+				logger.info("Found file in primary source.");
 				return result;
 			}
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			// NOOP
+		}
 
-		System.out.println("Trying to fetch file from backup...");
+		logger.info("Trying to fetch file from backup...");
 		return backupLoader.fetchFile(path);
-
 	}
-
 }

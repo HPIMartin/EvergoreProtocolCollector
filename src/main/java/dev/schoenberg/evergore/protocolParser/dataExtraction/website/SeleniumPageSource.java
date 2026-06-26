@@ -9,6 +9,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageContents;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
@@ -29,10 +30,12 @@ public class SeleniumPageSource implements PageSource {
 
 	private final Configuration config;
 	private final Driver driver;
+	private final Logger logger;
 
-	public SeleniumPageSource(Configuration config, Driver driver) {
+	public SeleniumPageSource(Configuration config, Driver driver, Logger logger) {
 		this.config = config;
 		this.driver = driver;
+		this.logger = logger;
 	}
 
 	@Override
@@ -47,7 +50,9 @@ public class SeleniumPageSource implements PageSource {
 
 		try {
 			webDriver.close();
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			// NOOP
+		}
 
 		return result;
 	}
@@ -108,12 +113,14 @@ public class SeleniumPageSource implements PageSource {
 
 				wait(driver, SERVER + "/" + "portal");
 				driver.findElement(xpath("//button[@type=\"submit\"]")).click();
-			} catch (Exception e) {}
+			} catch (Exception e) {
+				logger.debug("Login attempt failed; continuing unauthenticated: " + e.getMessage());
+			}
 		}
 	}
 
 	private void wait(WebDriver driver, String url) {
-		System.out.println("Waiting for: " + url);
+		logger.info("Waiting for: " + url);
 		new WebDriverWait(driver, ofMinutes(1)).until(urlToBe(url));
 	}
 }

@@ -39,7 +39,6 @@ public class ApplicationExceptionHandler implements ExceptionHandler<ProtocolPar
 		}
 		logger.error(reason, exception);
 
-		// TODO: Visitor-Pattern
 		if (exception instanceof AccessNotAllowed) {
 			return status(UNAUTHORIZED);
 		} else if (exception instanceof NoElementFound) {

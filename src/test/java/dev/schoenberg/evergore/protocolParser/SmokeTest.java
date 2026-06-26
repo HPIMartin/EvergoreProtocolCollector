@@ -164,7 +164,6 @@ class SmokeTest {
 		@Override
 		public void handle(Object bean, Throwable throwable) {
 			signals.recordException();
-			throwable.printStackTrace();
 		}
 	}
 

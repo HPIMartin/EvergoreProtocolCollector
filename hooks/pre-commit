@@ -32,6 +32,7 @@ token_url='\?token=[A-Za-z0-9._-]+'
 token_assign="(valid[_-]?token|api[_-]?token|auth[_-]?token|access[_-]?token|secret[_-]?token|bearer[_-]?token)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{3,}"
 
 findings=""
+smells=""
 oldifs=$IFS
 IFS='
 '
@@ -53,6 +54,13 @@ for f in $staged; do
 	if [ -n "$hits$hosts$emails$tokens" ]; then
 		findings=$(printf '%s\n--- %s ---\n%s\n%s\n%s\n%s\n' "$findings" "$f" "$hits" "$hosts" "$emails" "$tokens")
 	fi
+	code=""
+	case "$f" in
+		*.java) code=$(printf '%s\n' "$blob" | grep -nIE -e 'System\.(out|err)\.' -e 'printStackTrace' -e '(TODO|FIXME)' || true) ;;
+	esac
+	if [ -n "$code" ]; then
+		smells=$(printf '%s\n--- %s ---\n%s\n' "$smells" "$f" "$code")
+	fi
 	IFS='
 '
 done
@@ -60,6 +68,9 @@ IFS=$oldifs
 [ -z "$(printf '%s' "$findings" | tr -d '[:space:]')" ] || reject "possible secret or personal/host data in staged content:
 $findings
 If this is real, remove it (use a gitignored *.local.* file or a secret store, injected at runtime)."
+
+[ -z "$(printf '%s' "$smells" | tr -d '[:space:]')" ] || reject "forbidden in committed Java — use the project Logger, and track TODO/FIXME in the backlog, not code:
+$smells"
 
 printf '[pre-commit] spotlessCheck + checkstyle...\n'
 if ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then
