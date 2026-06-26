@@ -14,7 +14,6 @@
 	"containerEnv": {
 		"CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
 	},
-	"initializeCommand": "mkdir -p .devcontainer/.claude-home && echo '*' > .devcontainer/.claude-home/.gitignore",
 	"mounts": [
 		"source=${localWorkspaceFolder}/.devcontainer/.claude-home,target=/home/vscode/.claude,type=bind"
 	],

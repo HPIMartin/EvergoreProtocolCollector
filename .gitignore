@@ -14,8 +14,8 @@ src/test/resources/smokeTest.sqlite
 
 .claude/settings.local.json
 /.claude/worktrees/
-# Persisted Claude Code login + history (devcontainer bind mount) — holds live tokens, never commit
-/.devcontainer/.claude-home/
+# Persisted Claude login + history (devcontainer bind mount) — folder is committed empty; its contents (live tokens) never are
+/.devcontainer/.claude-home/*
 /logs.txt
 /database/
 /diag.txt
