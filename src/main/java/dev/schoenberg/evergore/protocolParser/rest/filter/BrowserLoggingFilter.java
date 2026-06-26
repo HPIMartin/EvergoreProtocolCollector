@@ -16,27 +16,22 @@ import org.reactivestreams.Publisher;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.exceptions.TooManyRequests;
+import dev.schoenberg.evergore.protocolParser.helper.config.RateLimitConfiguration;
 
 import static java.time.Duration.between;
-import static java.time.Duration.ofMinutes;
-import static java.time.Duration.ofSeconds;
 import static java.time.Instant.EPOCH;
 import static java.time.Instant.now;
 
 @Singleton
 @Filter("/**")
 public class BrowserLoggingFilter implements HttpServerFilter {
+	private final RateLimitConfiguration rateLimitConfiguration;
 	private final Logger logger;
+	private final Map<String, RateLimitCounter> counters = new ConcurrentHashMap<>();
 
-	private static final long MAX_REQUESTS_PER_INTERVAL = 5;
-	private static final Duration RATE_LIMIT_INTERVAL = ofSeconds(10);
-	private static final Duration BLOCK_INTERVAL = ofMinutes(1);
-
-	private final Map<String, RateLimitCounter> counters;
-
-	public BrowserLoggingFilter(Logger logger) {
+	public BrowserLoggingFilter(RateLimitConfiguration rateLimitConfiguration, Logger logger) {
+		this.rateLimitConfiguration = rateLimitConfiguration;
 		this.logger = logger;
-		counters = new ConcurrentHashMap<>();
 	}
 
 	@Override
@@ -50,9 +45,9 @@ public class BrowserLoggingFilter implements HttpServerFilter {
 		String clientIp = request.getRemoteAddress().getAddress().getHostAddress();
 		logger.info("Client IP: " + clientIp + " Agent: " + userAgent);
 
-		RateLimitCounter counter = counters.computeIfAbsent(clientIp, k -> new RateLimitCounter());
+		RateLimitCounter counter = counters.computeIfAbsent(clientIp, k -> new RateLimitCounter(rateLimitConfiguration.interval(), rateLimitConfiguration.blockDuration()));
 
-		if (counter.increment() > MAX_REQUESTS_PER_INTERVAL) {
+		if (counter.increment() > rateLimitConfiguration.maxRequestsPerInterval()) {
 			logger.info("Blocked:" + clientIp);
 			counter.block();
 		}
@@ -65,9 +60,16 @@ public class BrowserLoggingFilter implements HttpServerFilter {
 	}
 
 	private static class RateLimitCounter {
+		private final Duration interval;
+		private final Duration blockDuration;
 		private volatile long count = 0;
 		private volatile Instant lastReset = now();
 		private volatile Instant blockedUntil = EPOCH;
+
+		RateLimitCounter(Duration interval, Duration blockDuration) {
+			this.interval = interval;
+			this.blockDuration = blockDuration;
+		}
 
 		public synchronized long increment() {
 			resetIfNecessary();
@@ -79,12 +81,12 @@ public class BrowserLoggingFilter implements HttpServerFilter {
 		}
 
 		public void block() {
-			blockedUntil = now().plus(BLOCK_INTERVAL);
+			blockedUntil = now().plus(blockDuration);
 			count = 0;
 		}
 
 		private void resetIfNecessary() {
-			if (between(lastReset, now()).compareTo(RATE_LIMIT_INTERVAL) >= 0) {
+			if (between(lastReset, now()).compareTo(interval) >= 0) {
 				count = 0;
 				lastReset = now();
 			}

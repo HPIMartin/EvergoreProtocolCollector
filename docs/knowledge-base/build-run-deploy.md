@@ -104,10 +104,12 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 | `evergoreFolder` | `c:\evergore` | Windows path; unused on the Linux container scrape path. |
 | DB path | `database/temp.sqlite` (or `:memory:` if `useInMemory`) | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
 | Auth token | `evergore.security.api-token` — **required**, env-injected as `EVERGORE_SECURITY_API_TOKEN` (bound by the `SecurityConfiguration` `@ConfigurationProperties` bean) | Every request needs `?token=<configured token>` except `/favicon.ico` + `/health`. **Mandatory at startup** — a blank/unset token makes the app refuse to boot (`ApiTokenStartupValidator` logs an error and throws). No token value lives in the repo. |
+| Rate limit | `evergore.rate-limit.*` — `max-requests-per-interval` `5`, `interval` `10s`, `block-duration` `1m` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `BrowserLoggingFilter` (filter order 1, ahead of the token filter); exceeding the limit within `interval` blocks that IP for `block-duration` → **429** (`TooManyRequests`). Config-driven — no hard-coded constants; the test profile raises the limit so the suite isn't throttled. |
 
-- **`application.yml`** holds only Micronaut concerns (app name, Swagger static routes, Netty
-  `max-order: 3`), **no `server.port`** → defaults to **8080**. The one runtime setting bound from the
-  environment is the **API token** — `evergore.security.api-token` ← `EVERGORE_SECURITY_API_TOKEN`, via
+- **`application.yml`** holds Micronaut concerns (app name, Swagger static routes, Netty
+  `max-order: 3`) plus the **rate-limit defaults** (`evergore.rate-limit.*`, bound to
+  `RateLimitConfiguration`), **no `server.port`** → defaults to **8080**. The one setting bound from the
+  *environment* is the **API token** — `evergore.security.api-token` ← `EVERGORE_SECURITY_API_TOKEN`, via
   the `@ConfigurationProperties` bean `SecurityConfiguration`; no value lives in the repo.
 - **`logback.xml`**: single colored STDOUT appender, root level `verbose` (very chatty).
 

@@ -1,0 +1,5 @@
+evergore:
+  rate-limit:
+    max-requests-per-interval: 2
+    interval: 10s
+    block-duration: 1m

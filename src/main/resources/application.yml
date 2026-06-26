@@ -24,3 +24,8 @@ netty:
   default:
     allocator:
       max-order: 3
+evergore:
+  rate-limit:
+    max-requests-per-interval: 5
+    interval: 10s
+    block-duration: 1m
