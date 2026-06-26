@@ -126,6 +126,12 @@ template** demonstrating the practice. Scenarios are written in **product langua
   with no timeout, a future, a condition), released on both the success *and* failure paths so a bad run
   fails an assertion instead of hanging. A timeout/retry is a *mitigation*, not a fix — never "stabilise"
   a flake by bumping one. (See [testing.md](testing.md), the boot-signal seam.)
+- **Arrange discipline — shared, non-test-relevant preconditions live in `@BeforeEach`, not each test
+  body.** A test body holds only the arranges that make its *act* + *assert* legible; common
+  infrastructure setup (waiting for app boot/collection to finish, base-URL config) is hoisted to
+  `@BeforeEach` rather than copy-pasted into every test. Duplicating a precondition across tests is noise.
+  The exception: when the precondition *is* the behaviour under test (e.g. `SmokeTest.applicationIsStarting`
+  asserting the boot collection completes), it stays in the test where it's the act/assert.
 
 ## 7. Git & commits (author's rules — strict)
 

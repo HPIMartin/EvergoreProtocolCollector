@@ -35,7 +35,10 @@ signal went unobserved → timeout). The recorder also owns `awaitCollection()`,
 tests. It blocks on a `CountDownLatch` with **no timeout** — the test returns exactly when the collection
 finishes, so it is deterministic on any hardware (slow machines just wait longer, they never flake).
 `recordException()` releases the latch too, so a failed boot fails the `exceptionOccurred()` assertion
-instead of hanging forever.
+instead of hanging forever. The acceptance + health tests call it from `@BeforeEach` — it's a shared,
+non-test-relevant precondition, not a per-test arrange (handbook §6). `SmokeTest.applicationIsStarting`
+is the exception: there the collection completing *is* the behaviour under test, so the await stays in
+the test body.
 
 ## Coverage map
 

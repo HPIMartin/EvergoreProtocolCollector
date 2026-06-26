@@ -27,10 +27,7 @@ only `/health` + `/health/`). Request rate-limiting is config-driven (`RateLimit
 `evergore.rate-limit.*`); diagnostics route through the project `Logger`, enforced in committed `.java`
 by the pre-commit hook.
 
-**Author-picked next:** move the boot-collection `awaitCollection()` out of each acceptance/health test
-into `@BeforeEach` — a non-test-relevant precondition doesn't belong in every test body (handbook §6,
-arrange discipline); **high prio**. Then **G14** (de-shortcode the docs); otherwise the standing
-H7-unblocked set below.
+**Author-picked next:** **G14** (de-shortcode the docs); otherwise the standing H7-unblocked set below.
 
 **Next action — pick from the H7-unblocked set** (all land *in Gradle*): **E1** (erzeugter
 Gildenmehrwert — the headline metric, now easy to TDD on this harness and would surface storage

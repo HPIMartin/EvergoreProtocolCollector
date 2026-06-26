@@ -41,12 +41,11 @@ class HealthEndpointTest {
 	void setup() {
 		Unirest.config().verifySsl(false);
 		Unirest.config().defaultBaseUrl("http://localhost:" + server.getPort());
+		signals.awaitCollection();
 	}
 
 	@Test
 	void healthEndpointIsAccessibleWithoutToken() {
-		signals.awaitCollection();
-
 		HttpResponse<String> response = Unirest.get("/health").asString();
 
 		assertThat(response.getStatus()).isEqualTo(200);
@@ -54,8 +53,6 @@ class HealthEndpointTest {
 
 	@Test
 	void healthEndpointBodyContainsLastRunDetail() {
-		signals.awaitCollection();
-
 		HttpResponse<String> response = Unirest.get("/health").asString();
 
 		assertThat(response.getBody()).contains("lastRun");

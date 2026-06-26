@@ -50,12 +50,11 @@ class ProtocolEvaluationAcceptanceTest {
 	void setup() {
 		Unirest.config().verifySsl(false);
 		Unirest.config().defaultBaseUrl("http://localhost:" + server.getPort());
+		signals.awaitCollection();
 	}
 
 	@Test
 	void overviewShowsCorrectBankTotalsForAllThreeAvatars() {
-		signals.awaitCollection();
-
 		HttpResponse<String> response = get("/overview");
 
 		assertThat(response.getStatus()).isBetween(200, 299);
@@ -74,8 +73,6 @@ class ProtocolEvaluationAcceptanceTest {
 
 	@Test
 	void aurorasBankEndpointShowsExpectedEntry() {
-		signals.awaitCollection();
-
 		HttpResponse<String> response = get("/avatars/Aurora/bank");
 
 		assertThat(response.getStatus()).isBetween(200, 299);
@@ -88,8 +85,6 @@ class ProtocolEvaluationAcceptanceTest {
 
 	@Test
 	void aurorasStorageEndpointShowsExpectedEntry() {
-		signals.awaitCollection();
-
 		HttpResponse<String> response = get("/avatars/Aurora/storage");
 
 		assertThat(response.getStatus()).isBetween(200, 299);
@@ -105,8 +100,6 @@ class ProtocolEvaluationAcceptanceTest {
 
 	@Test
 	void storageValuationIsCorrectAtBeanLevel() {
-		signals.awaitCollection();
-
 		MetaInformationRepository metaRepo = server.getApplicationContext().getBean(MetaInformationRepository.class);
 
 		assertThat(metaRepo.<Double>get(getStoragePlacement("Aurora"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(185.04, within(1e-6)));
