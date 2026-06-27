@@ -129,8 +129,6 @@ class EvergoreDataEvaluatorTest {
 		assertThat(metaRepo.<LocalDateTime>get(getLastUpdatedKey())).isPresent().hasValueSatisfying(v -> assertThat(v).isAfter(priorWatermark));
 	}
 
-	// --- Test DSL helpers ---
-
 	private static BankEntry bankPlacement(int amount) {
 		return new BankEntry(Instant.EPOCH, AVATAR, amount, EINLAGERUNG);
 	}

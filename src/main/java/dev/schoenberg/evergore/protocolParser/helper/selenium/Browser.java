@@ -51,7 +51,6 @@ public enum Browser {
 
 	private static WebDriver chrome(Configuration config) {
 		ChromeOptions options = new ChromeOptions();
-		// options.setExperimentalOption("useAutomationExtension", false);
 		options.addArguments("--whitelisted-ips");
 		options.addArguments("--no-sandbox");
 		options.addArguments("--disable-extensions");
@@ -72,8 +71,6 @@ public enum Browser {
 	}
 
 	private static WebDriver firefoxDocker(Configuration config) {
-		// webBrowserDriverPath is a env variable set to "/usr/bin/geckodriver"
-		// System.setProperty("webdriver.gecko.driver", webBrowserDriverPath);
 		FirefoxOptions options = new FirefoxOptions();
 		options.addArguments("--no-sandbox");
 		options.addArguments("--disable-extensions");

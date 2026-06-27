@@ -48,7 +48,7 @@ public class EvergoreDataEvaluator {
 	}
 
 	public void evaluateData() {
-		LocalDateTime lastUpdated = updatedUpdatedDate();
+		LocalDateTime lastUpdated = advanceWatermarkAndReturnPrevious();
 		updateAvatarInformation(lastUpdated);
 	}
 
@@ -59,7 +59,7 @@ public class EvergoreDataEvaluator {
 		avatars.forEach(avatar -> updateInformation(avatar, lastUpdated));
 	}
 
-	private LocalDateTime updatedUpdatedDate() {
+	private LocalDateTime advanceWatermarkAndReturnPrevious() {
 		LocalDateTime lastUpdated = getStoredValue(getLastUpdatedKey(), BEGINNING_OF_TIME);
 
 		logger.info("Old value: " + lastUpdated);

@@ -50,9 +50,7 @@ public class SeleniumPageSource implements PageSource {
 
 		try {
 			webDriver.close();
-		} catch (Exception e) {
-			// NOOP
-		}
+		} catch (Exception e) {}
 
 		return result;
 	}
@@ -94,9 +92,7 @@ public class SeleniumPageSource implements PageSource {
 	private void dismissCookieBanner(WebDriver driver) {
 		try {
 			driver.findElement(xpath("//button[@class='fc-button fc-cta-consent fc-primary-button' and p[@class='fc-button-label' and text()='Einwilligen']]")).click();
-		} catch (Exception e) {
-			// NOOP
-		}
+		} catch (Exception e) {}
 	}
 
 	private void tryToLogin(WebDriver driver) {

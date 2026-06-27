@@ -29,18 +29,18 @@ public class EntityParser {
 
 	private static List<Entry> loadEntries(List<String> lines, List<Integer> entryBeginnings) {
 		List<Entry> result = new ArrayList<>();
-		Integer oldBegining = null;
+		Integer previousBeginning = null;
 		for (int beginning : entryBeginnings) {
-			if (oldBegining == null) {
-				oldBegining = beginning;
+			if (previousBeginning == null) {
+				previousBeginning = beginning;
 			} else {
-				List<String> entryContent = lines.subList(oldBegining, beginning);
+				List<String> entryContent = lines.subList(previousBeginning, beginning);
 				result.add(parseContent(entryContent));
-				oldBegining = beginning;
+				previousBeginning = beginning;
 			}
 		}
-		if (oldBegining != null) {
-			result.add(parseContent(lines.subList(oldBegining, lines.size())));
+		if (previousBeginning != null) {
+			result.add(parseContent(lines.subList(previousBeginning, lines.size())));
 		}
 		return result;
 	}

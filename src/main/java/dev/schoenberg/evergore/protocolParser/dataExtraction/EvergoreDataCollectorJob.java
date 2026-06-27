@@ -23,15 +23,15 @@ public class EvergoreDataCollectorJob {
 	private final LastRunStatus lastRunStatus;
 	private final Clock clock;
 
-	public EvergoreDataCollectorJob(Configuration config, Logger logger, EvergoreDataExtractor dataExtractor, EvergoreDataEvaluator evaluation, PostCollectionHook hook,
-			LastRunStatus lastRunStatus, Clock clock) {
+	public EvergoreDataCollectorJob(Configuration config, EvergoreDataExtractor dataExtractor, EvergoreDataEvaluator evaluation, PostCollectionHook hook,
+			LastRunStatus lastRunStatus, Clock clock, Logger logger) {
 		this.config = config;
-		this.logger = logger;
 		this.dataExtractor = dataExtractor;
 		this.evaluation = evaluation;
 		this.hook = hook;
 		this.lastRunStatus = lastRunStatus;
 		this.clock = clock;
+		this.logger = logger;
 	}
 
 	@Scheduled(fixedDelay = "24h")

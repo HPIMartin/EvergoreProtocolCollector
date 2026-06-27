@@ -43,7 +43,5 @@ public class StorageDatabaseEntry {
 		this.type = type;
 	}
 
-	protected StorageDatabaseEntry() {
-		// ORMLite needs a no-arg constructor
-	}
+	protected StorageDatabaseEntry() {}
 }

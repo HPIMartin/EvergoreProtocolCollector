@@ -35,7 +35,5 @@ public class BankDatabaseEntry {
 		this.type = type;
 	}
 
-	protected BankDatabaseEntry() {
-		// ORMLite needs a no-arg constructor
-	}
+	protected BankDatabaseEntry() {}
 }

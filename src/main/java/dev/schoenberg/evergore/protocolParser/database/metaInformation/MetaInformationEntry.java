@@ -19,9 +19,7 @@ public class MetaInformationEntry {
 		this.value = value;
 	}
 
-	protected MetaInformationEntry() {
-		// ORMLite needs a no-arg constructor
-	}
+	protected MetaInformationEntry() {}
 
 	public MetaInformationEntry changeValue(String newValue) {
 		return new MetaInformationEntry(key, newValue);

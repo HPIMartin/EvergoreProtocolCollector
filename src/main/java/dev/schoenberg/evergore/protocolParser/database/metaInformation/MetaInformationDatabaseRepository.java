@@ -36,14 +36,14 @@ public class MetaInformationDatabaseRepository extends Repository<MetaInformatio
 	}
 
 	@Override
-	public <T> Optional<T> get(MetaInformationKey<T> mik) {
-		List<MetaInformationEntry> result = getAllFor(mik.id);
+	public <T> Optional<T> get(MetaInformationKey<T> key) {
+		List<MetaInformationEntry> result = getAllFor(key.id);
 
 		if (result.isEmpty()) {
 			return empty();
 		}
 
-		return of(convert(mik, result.get(0)).value);
+		return of(convert(key, result.get(0)).value);
 	}
 
 	@Override

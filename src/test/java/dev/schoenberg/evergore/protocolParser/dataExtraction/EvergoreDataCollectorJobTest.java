@@ -27,7 +27,7 @@ class EvergoreDataCollectorJobTest {
 		lastRunStatus = new LastRunStatus();
 		extractor = new FailableExtractor();
 		evaluator = new FailableEvaluator();
-		tested = new EvergoreDataCollectorJob(new ZeroDelayConfiguration(), new LoggerSpy(), extractor, evaluator, () -> {}, lastRunStatus, Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+		tested = new EvergoreDataCollectorJob(new ZeroDelayConfiguration(), extractor, evaluator, () -> {}, lastRunStatus, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
 	}
 
 	@Test

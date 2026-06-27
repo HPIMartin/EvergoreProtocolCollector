@@ -1,4 +1,4 @@
-package dev.schoenberg.evergore.protocolParser;
+package dev.schoenberg.evergore.protocolParser.rest.filter;
 
 import java.io.InputStream;
 import java.nio.file.Files;
