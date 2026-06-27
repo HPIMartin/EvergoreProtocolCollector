@@ -236,7 +236,7 @@ is its own directory + HEAD + index. That — not the commit count — is what m
 ## 9. Review gate & process learnings
 
 Before each commit, a reviewer (human, or a dedicated review agent — see
-[working-with-claude.md](working-with-claude.md)) checks **process adherence** (was it a real
+[working-with-ai-agents.md](working-with-ai-agents.md)) checks **process adherence** (was it a real
 red→green→refactor micro-step? whitespace kept separate? KB updated? commit-message rules met?) and
 **code criteria** (clean code, SOLID, hexagonal boundaries). If something is off: send back with
 concrete feedback, and **record the lesson in `docs/process-learnings.md`** so future work — and

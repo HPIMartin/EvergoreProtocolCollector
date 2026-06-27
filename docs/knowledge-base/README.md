@@ -27,7 +27,7 @@ officer used to maintain by hand.
 | 07 | [git-state.md](git-state.md) | Git conventions & the rule that **git is the source of truth** for history (docs don't duplicate it) |
 | 08 | [glossary.md](glossary.md) | German ↔ English domain glossary (the domain is German) |
 | 09 | [engineering-handbook.md](engineering-handbook.md) | **How the code should look & how we develop** — clean code, SOLID, hexagonal rules, TDD, BDD, commits, Definition of Done |
-| 10 | [working-with-claude.md](working-with-claude.md) | The **AI-assisted workflow showcase** — memory layers, session playbook, sub-agents, asking style |
+| 10 | [working-with-ai-agents.md](working-with-ai-agents.md) | The **AI-assisted workflow showcase** — memory layers, session playbook, sub-agents, asking style |
 | 11 | [multi-agent-playbook.md](multi-agent-playbook.md) | The **agent team**: Planner (you+me) · Implementer · Falsifier · Reviewer — pipeline, roles, how to invoke |
 | 12 | [dev-environment.md](dev-environment.md) | **Fully-virtualized dev** — the devcontainer, the in-container rule for agents, JDK single-source & upgrade procedure |
 

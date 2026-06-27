@@ -2,7 +2,7 @@
 
 How we develop this project with a small team of AI agents: **you + I (Opus) plan; cheaper agents
 implement; independent agents try to break it and gate the commit.** This is part of the project's
-"showcase how to work with Claude" goal (see [working-with-claude.md](working-with-claude.md)).
+"showcase how to work with an AI agent" goal (see [working-with-ai-agents.md](working-with-ai-agents.md)).
 
 ## Roles
 

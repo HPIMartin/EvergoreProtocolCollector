@@ -1,8 +1,10 @@
-# 10 — Working with Claude (the AI-assisted workflow showcase)
+# 10 — Working with AI agents (the AI-assisted workflow showcase)
 
-A goal of this project is to be a **worked example of developing well *with* an AI agent** (Claude
-Code). This doc captures the workflow so it's repeatable. The engineering standards themselves are in
-[engineering-handbook.md](engineering-handbook.md); this is about *how we collaborate with the agent*.
+A goal of this project is to be a **worked example of developing well *with* an AI agent**. The
+showcase tool is Claude Code, but this workflow is tool-neutral — any capable AI coding agent (or a
+human) follows the same loop. This doc captures it so it's repeatable. The engineering standards
+themselves are in [engineering-handbook.md](engineering-handbook.md); this is about *how we
+collaborate with the agent*.
 
 ## Why this approach
 
@@ -15,16 +17,16 @@ questions instead of guessing. This repo is structured to make all three the def
 | Layer | Lives in | Holds | Lifetime |
 |-------|----------|-------|----------|
 | **Project truth** | `docs/knowledge-base/` + `docs/backlog.md` + `docs/open-questions.md` | How the system works, the plan, decisions | Versioned with the code |
-| **Session bootstrap** | `/CLAUDE.md` | Rules + pointers, auto-loaded each session | Versioned with the code |
-| **Cross-session memory** | Claude's user memory (outside the repo) | Author profile, working preferences, handy references | Per-user, across projects |
+| **Session bootstrap** | the tool's entry file (e.g. `/CLAUDE.md`), a thin wrapper built from [agent-entry-template.md](agent-entry-template.md) | Rules + pointers, auto-loaded each session | Versioned with the code |
+| **Cross-session memory** | the tool's own user-level memory (outside the repo) | Author profile, working preferences, handy references | Per-user, across projects |
 
 Rule of thumb: **anything another contributor needs goes in the repo** (`docs/`), not only in
 cross-session memory.
 
 ## Session playbook
 
-1. **Orient** — read `CLAUDE.md`, then `docs/knowledge-base/README.md`, `backlog.md`, `open-questions.md`.
-   Don't re-scan the whole codebase; trust + verify the KB.
+1. **Orient** — read your tool's entry file (e.g. `CLAUDE.md`), then `docs/knowledge-base/README.md`,
+   `backlog.md`, `open-questions.md`. Don't re-scan the whole codebase; trust + verify the KB.
 2. **Pick one backlog item** (smallest valuable slice). Confirm scope.
 3. **Clarify by asking** — when a decision is the author's, ask with **multiple-choice options**
    (recommended first). Record the answer in `open-questions.md` under Decisions.
@@ -70,10 +72,9 @@ session is paid for repeatedly. Keep the working context lean:
 
 ## Environment gotchas (save yourself time)
 
-- **Bash stdout:** on this machine the Bash tool may not return stdout. Redirect to a file
-  (`cmd > out.txt 2>&1`) and `Read` it; prefer Read/Grep/Glob. Note: `rm` may be permission-blocked.
 - **Reading the Google Sheet:** use the gviz CSV endpoint
   `…/gviz/tq?tqx=out:csv&gid=<GID>` (the plain `/export?format=csv` redirect expires before it can be followed).
+- Tool-specific quirks (e.g. a host's Bash-stdout behaviour) belong in that tool's own entry file, not here.
 
 ## How this knowledge base was built (worked example)
 

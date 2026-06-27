@@ -13,7 +13,7 @@ Everything durable lives in the knowledge base — **start at
 - *What & why:* project overview, the Google Sheet it replaces, the domain model & value math.
 - *How it's built:* architecture, build/run/deploy, testing, glossary.
 - *How we work:* [engineering handbook](docs/knowledge-base/engineering-handbook.md) ·
-  [working with Claude](docs/knowledge-base/working-with-claude.md) ·
+  [working with AI agents](docs/knowledge-base/working-with-ai-agents.md) ·
   [multi-agent playbook](docs/knowledge-base/multi-agent-playbook.md) ·
   [dev environment](docs/knowledge-base/dev-environment.md).
 

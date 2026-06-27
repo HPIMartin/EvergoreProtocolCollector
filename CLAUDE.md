@@ -20,7 +20,7 @@ test-driven, AI-assisted development**.
 3. Follow the engineering standards in
    [`docs/knowledge-base/engineering-handbook.md`](docs/knowledge-base/engineering-handbook.md)
    and the AI workflow in
-   [`docs/knowledge-base/working-with-claude.md`](docs/knowledge-base/working-with-claude.md).
+   [`docs/knowledge-base/working-with-ai-agents.md`](docs/knowledge-base/working-with-ai-agents.md).
 4. For implementation, run the agent team in
    [`docs/knowledge-base/multi-agent-playbook.md`](docs/knowledge-base/multi-agent-playbook.md)
    (Planner = you+me → `implementer` → `falsifier` → `reviewer`; defined in `.claude/agents/`).
