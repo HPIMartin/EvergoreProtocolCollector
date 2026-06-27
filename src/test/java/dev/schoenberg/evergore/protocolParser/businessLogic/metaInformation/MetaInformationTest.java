@@ -3,7 +3,7 @@ package dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class MetaInformationTest {
 
@@ -21,8 +21,8 @@ class MetaInformationTest {
 
 		String result = tested.getSerializedValue();
 
-		assertEquals(42, testKey.value);
-		assertEquals("hello", result);
+		assertThat(testKey.value).isEqualTo(42);
+		assertThat(result).isEqualTo("hello");
 	}
 
 	@Test
@@ -31,8 +31,8 @@ class MetaInformationTest {
 
 		MetaInformation<Integer> result = MetaInformation.fromSerializedValue(testKey, "world");
 
-		assertEquals(1337, result.value);
-		assertEquals("world", testKey.serialized);
+		assertThat(result.value).isEqualTo(1337);
+		assertThat(testKey.serialized).isEqualTo("world");
 	}
 
 	private static class TestMetaInformationKey extends MetaInformationKey<Integer> {
