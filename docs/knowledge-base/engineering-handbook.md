@@ -40,6 +40,12 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
   *are or do* (their domain/capability role), so a reader with only the source can understand them.
   A corollary: names must never reference tracker/backlog IDs (`D2`, `H8`, ticket numbers) or the task
   that produced them — e.g. `ProtocolEvaluationAcceptanceTest`, not `D2AcceptanceTest`.
+- **The same principle governs the durable docs** (the KB, the decisions log, `process-learnings.md`):
+  identify things by symbol/behavior/file/concept, **never** by a backlog shortcode (`D5`/`H7`/…). Backlog
+  items keep their IDs **in the backlog itself**; a code may appear in prose only as an *optional secondary
+  pointer* to a **still-live** item. **Completing a backlog item removes its row *and* every shortcode that
+  referenced it** — in other rows' prose and across all docs — so no dangling code survives and no reader
+  needs `git` archaeology to resolve a reference.
 - Small methods, early returns, no deep nesting. No commented-out code in commits.
 - **No logic in constructors — field assignment only.** Constructors must not run logic or side
   effects (no IO, no `init()`/`ensureTable()`-style calls). Put "construct + initialize" in a static

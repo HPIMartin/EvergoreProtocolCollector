@@ -11,6 +11,8 @@
 `git log` is the record of what landed; this section tracks only **where we are and what's next**.
 **Backlog convention:** completed items are **removed** (the commits show them — no `DONE` tombstones);
 only **rejected/deferred** items stay, with their decision + rationale (knowledge git doesn't hold).
+Item IDs live **only here**; removing an item also removes **every shortcode that referenced it** — in other
+rows' prose and across the docs — so no dangling code is left behind (handbook §3).
 
 **Where we are:** the rebuild's core is in place on an up-to-date stack (Gradle / Java 25 / Micronaut
 4.10), verified **1:1** against the production DB. `domain`/`businessLogic` stay framework-free
