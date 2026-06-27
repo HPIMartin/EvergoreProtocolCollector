@@ -78,5 +78,8 @@
 			"Bash(rm -rf:*)",
 			"Bash(git reset --hard:*)"
 		]
+	},
+	"worktree": {
+		"baseRef": "head"
 	}
 }

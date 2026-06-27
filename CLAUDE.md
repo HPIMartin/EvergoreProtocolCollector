@@ -74,12 +74,11 @@ in this project. Flow for a user-facing capability: write the **Gherkin scenario
 4. One logical change per commit; keep whitespace/format churn out of feature commits. A doc change that
    **describes a code change rides in that commit** — never a standalone `Refresh docs after X`. Group
    parts into one commit only when they can't stand alone (the revert/cherry-pick test).
-5. **Branching & merge (planner picks the track up-front):** small/single-cycle work commits **directly
-   on `main`**; large/multi-cycle or new-BDD work runs on a **feature branch** (agents commit each TDD
-   step themselves; author + planner review the branch `git log` as the gateway), merged by **rebase +
-   fast-forward only — no merge commits, no squash**. **Every commit on `main` is verified-good:** never
-   one that builds red, that the falsifier exposes as fake-green, or that the reviewer rejects — defects
-   are repaired by rebase before the merge, never by a follow-up "fix" commit. Detail: handbook §7.
+5. **Branching & merge:** default is a **git worktree per context** (parallel-safe) → land via **rebase
+   onto current `main` → review the rebased tip → `--ff-only`**, author-serialized. A single expected
+   commit, when you're the **sole writer** of `main`, may go **directly on `main`**; a second commit or
+   any parallel work → worktree+branch. **Every commit on `main` is verified-good.** **Never `git
+   push`.** Full rules: handbook §7.
 
 ## Definition of Done
 
