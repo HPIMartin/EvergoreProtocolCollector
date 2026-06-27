@@ -70,12 +70,6 @@ session is paid for repeatedly. Keep the working context lean:
 - Put the recommended option first and say so. Be picky — surface trade-offs and decisions the
   author may not have considered, rather than quietly defaulting.
 
-## Environment gotchas (save yourself time)
-
-- **Reading the Google Sheet:** use the gviz CSV endpoint
-  `…/gviz/tq?tqx=out:csv&gid=<GID>` (the plain `/export?format=csv` redirect expires before it can be followed).
-- Tool-specific quirks (e.g. a host's Bash-stdout behaviour) belong in that tool's own entry file, not here.
-
 ## How this knowledge base was built (worked example)
 
 The initial pass: read git history + the uncommitted diff (discovering it was 95% line-ending

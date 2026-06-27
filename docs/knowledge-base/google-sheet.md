@@ -2,7 +2,12 @@
 
 Source: the guild's Google Sheet — the document ID is intentionally kept out of the repo
 (it lives in local notes alongside the Evergore credentials). It was reverse-engineered via the
-CSV export (`/gviz/tq?tqx=out:csv&gid=...`). Data snapshot is from **July 2022**.
+CSV export. Data snapshot is from **July 2022**.
+
+**Reading the sheet (how to pull it):** use the gviz CSV endpoint
+`https://docs.google.com/spreadsheets/d/<DOC_ID>/gviz/tq?tqx=out:csv&gid=<GID>` — the plain
+`/export?format=csv` redirect expires before it can be followed, so gviz is the reliable form. The
+CSV export only sees the one visible tab; the workbook may have more (see *Unknowns* below).
 
 ## What the sheet is
 
