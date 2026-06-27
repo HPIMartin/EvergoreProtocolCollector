@@ -13,14 +13,14 @@ memory
 src/test/resources/smokeTest.sqlite
 
 .claude/settings.local.json
+CLAUDE.local.md
 /.claude/worktrees/
+/.claude/cache/
+/.claude/.tmp/
 # Persisted Claude login + history (devcontainer bind mount) — folder is committed empty; its contents (live tokens) never are
 /.devcontainer/.claude-home/*
 /logs.txt
 /database/
-/diag.txt
-/.agentscan*.txt
-/gs_temp.txt
 
 # Secrets, keystores, and machine-specific helper scripts (never commit — CLAUDE.md hard rule)
 *.local.*
