@@ -11,4 +11,9 @@ public class NoElementFound extends ProtocolParserException {
 	public String getMessage() {
 		return requestedValue;
 	}
+
+	@Override
+	public <T> T accept(ExceptionResponseVisitor<T> visitor) {
+		return visitor.onNoElementFound(this);
+	}
 }

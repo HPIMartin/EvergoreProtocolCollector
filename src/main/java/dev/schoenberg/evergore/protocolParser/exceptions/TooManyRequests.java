@@ -11,4 +11,9 @@ public class TooManyRequests extends ProtocolParserException {
 	public String getMessage() {
 		return identifier;
 	}
+
+	@Override
+	public <T> T accept(ExceptionResponseVisitor<T> visitor) {
+		return visitor.onTooManyRequests(this);
+	}
 }
