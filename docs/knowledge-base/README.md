@@ -4,8 +4,22 @@ This folder is the persistent knowledge base for the project. It exists so that 
 human or AI agent can get up to speed **without re-scanning the whole codebase**.
 
 > Status: created 2026-06-13 by an analysis pass. Facts in docs 01–08 are derived from
-> the working tree as it stood during the rebuild (branch `main`). Docs 09–10 capture how we work.
+> the working tree as it stood during the rebuild (branch `main`). Docs 09–13 capture how we work.
 > The backlog and open questions (`../backlog.md`, `../open-questions.md`) are living documents.
+
+## Step 0 — onboarding a tool (per-tool entry file)
+
+This KB is **tool-neutral and the single source of truth** — any human or AI tool reads it directly.
+Tools that auto-load a native entry file get a thin wrapper that *points* here (Claude Code loads
+[`../../CLAUDE.md`](../../CLAUDE.md)); the rules themselves are never duplicated into the wrapper.
+
+- **No native entry file?** Build a thin wrapper from
+  [agent-entry-template.md](agent-entry-template.md): copy its SHARED section, fill the TOOL-SPECIFIC
+  section with only that tool's mechanics, and record `Based on agent-entry-template version: N`.
+- **Already have a wrapper?** At session start, **quick-check** that its SHARED section still matches
+  the template's current `Template version`. On a version bump, **re-sync** the wrapper's SHARED
+  section. (Lightweight for now — a version marker + a manual quick-check; a SessionStart hook can
+  enforce it later, sibling to backlog **G10**.)
 
 ## What this project is, in one sentence
 
@@ -30,10 +44,13 @@ officer used to maintain by hand.
 | 10 | [working-with-ai-agents.md](working-with-ai-agents.md) | The **AI-assisted workflow showcase** — memory layers, session playbook, sub-agents, asking style |
 | 11 | [multi-agent-playbook.md](multi-agent-playbook.md) | The **agent team**: Planner (you+me) · Implementer · Falsifier · Reviewer — pipeline, roles, how to invoke |
 | 12 | [dev-environment.md](dev-environment.md) | **Fully-virtualized dev** — the devcontainer, the in-container rule for agents, JDK single-source & upgrade procedure |
+| 13 | [agent-entry-template.md](agent-entry-template.md) | **Per-tool session-bootstrap template** — the SHARED rules + TOOL-SPECIFIC skeleton each tool's entry file (e.g. `CLAUDE.md`) is built from, plus the template version |
 
 ## Living documents (outside this folder)
 
-- **[../../CLAUDE.md](../../CLAUDE.md)** — session bootstrap; auto-loaded by Claude Code each session.
+- **[../../CLAUDE.md](../../CLAUDE.md)** — the Claude Code per-tool entry file (built from
+  [agent-entry-template.md](agent-entry-template.md)); auto-loaded each session. Other tools build their
+  own equivalent from the template — see "Step 0" below.
 - **[../../.claude/agents/](../../.claude/agents/)** — the `implementer` / `falsifier` / `reviewer` subagent definitions.
 - **[../backlog.md](../backlog.md)** — prioritized backlog (PO / architect / engineering hats).
 - **[../open-questions.md](../open-questions.md)** — open questions & decisions log.
