@@ -42,15 +42,11 @@ author's decision (see [engineering-handbook.md](engineering-handbook.md) §7).
 ### FAIL-loop rules (when the falsifier or reviewer rejects)
 
 A FAIL sends the work back to step 2, then re-runs a **fresh** falsifier and a **fresh** reviewer.
-Two rules keep that loop bounded and the history clean:
+The **loop-bounding governance** (cap at 2 re-implement rounds → escalate + re-plan; early-escalate on
+a repeated finding; process-only FAILs don't consume a round) is canonical and tool-neutral in
+[engineering-handbook.md](engineering-handbook.md) §9. Below is the harness-specific *how* of keeping
+the history clean while that loop runs:
 
-- **Cap at 2 re-implement rounds, then re-plan.** A feature gets at most two FAIL→fix rounds
-  (three implement attempts total). On hitting the cap, **stop the agent loop and escalate to the
-  author** with the falsifier+reviewer findings — repeated FAILs usually mean the *plan/spec* is
-  wrong, not the code, so we go back to step 1 (PLAN) rather than re-implement again. **Early
-  escalate** if two consecutive rounds raise the *same* finding (same signal — re-plan now).
-  **Process-only FAILs** (whitespace not separated, KB not updated, commit-message format) are cheap
-  mechanical fixes and **do not consume a round**.
 - **Fold fixes into the commit they belong to — never append "fix review" commits.** The branch is
   unpushed, so rewriting local history is safe and expected (clean up before the author pushes), so the
   history reads as if the work were done right the first time. **In this harness `git reset` (all forms,

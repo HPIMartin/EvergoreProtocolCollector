@@ -241,3 +241,18 @@ red→green→refactor micro-step? whitespace kept separate? KB updated? commit-
 **code criteria** (clean code, SOLID, hexagonal boundaries). If something is off: send back with
 concrete feedback, and **record the lesson in `docs/process-learnings.md`** so future work — and
 future agents — drift toward the process, not away from it.
+
+**Bounded review loop → re-plan (governance).** A rejection sends the work back to re-implement, then
+a *fresh* falsifier and reviewer re-check it. Keep that loop bounded:
+
+- **Cap at two re-implement rounds (three attempts total), then re-plan.** On hitting the cap, stop
+  and escalate to the author with the findings — repeated FAILs usually mean the *plan/spec* is wrong,
+  not the code, so go back to planning rather than re-implement again. **Early-escalate** when two
+  consecutive rounds raise the *same* finding (same signal — re-plan now).
+- **Process-only FAILs** (whitespace not separated, KB not updated, commit-message format) are cheap
+  mechanical fixes and **do not consume a round**.
+- Fixes are **folded into the commit they belong to** (§7), never appended as a "fix review" commit.
+
+This governance is tool-neutral; the agent-team mechanics that exercise it (who runs falsify vs.
+review, harness-specific history-rewrite recipes) live in
+[multi-agent-playbook.md](multi-agent-playbook.md).
