@@ -199,7 +199,10 @@ is its own directory + HEAD + index. That — not the commit count — is what m
   (2) **rebase onto current local `main`**, resolving conflicts there; (3) **review the rebased tip** —
   with rebase + fast-forward there are no merge commits and no automerge, so the rebased tip is
   **byte-identical to what `main` becomes**; reviewing it *is* reviewing the final state, scoped to one
-  feature, with no merge artifacts (falsifier + reviewer gate here); (4) on PASS, **fast-forward
+  feature, with no merge artifacts (falsifier + reviewer gate here). **When presenting work at this
+  gateway, always state the full worktree name — its branch and absolute path — so the author can open
+  that worktree directly in their editor and review every changed file in one place before the merge.**
+  (4) on PASS, **fast-forward
   `main`** by running, from the primary checkout, `git merge --ff-only <branch>` (precondition: the
   primary checkout is **clean** — else stop and surface it); (5) remove the worktree.
 - **Merge strategy (hard rule): rebase + fast-forward only.** No merge commits, no squashing (rare
