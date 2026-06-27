@@ -59,7 +59,7 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
   code; in production code, justify it hard.
 - **Avoid comments — make the code say it.** No comments in code, config, or infrastructure unless
   intent genuinely can't be expressed in names/structure (rare; then explain *why*, not *what*).
-  Self-documenting names + small functions replace comments. The reviewer flags unnecessary comments.
+  Self-documenting names + small functions replace comments. A reviewer (human or agent) flags unnecessary comments.
 - **No dead code & no undeclared dependencies** (e.g. an unused class importing a library absent from
   `build.gradle.kts` — delete it).
 - **The code/build is the single source of truth; docs must never duplicate volatile facts.** Versions

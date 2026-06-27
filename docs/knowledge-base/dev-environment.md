@@ -44,11 +44,12 @@ Java bump) a one-line image change instead of a host installation.
 > that's why the host has a Bash-stdout quirk and CRLF history. Inside the container, Bash behaves
 > normally. "Work in the container" means starting the session from the in-container terminal.
 
-## Rule for all agents
+## Rule for all contributors
 
 **Never install or run toolchains (JDK/Gradle/Firefox) natively on the host.** Run `./gradlew …`, the
-app, and the scraper only inside the devcontainer or via Docker. This rule is in `CLAUDE.md` and in each
-agent definition under `.claude/agents/`.
+app, and the scraper only inside the devcontainer or via Docker. This applies to all contributors and
+agents; it is restated in each tool's entry file (e.g. `CLAUDE.md`) and in each agent definition under
+`.claude/agents/`.
 
 ## JDK version is single-sourced (upgrade procedure)
 
