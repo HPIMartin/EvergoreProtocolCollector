@@ -17,7 +17,7 @@ Java bump) a one-line image change instead of a host installation.
   undecided) and Node-based dev tooling; the Java build/runtime does not use it. The standalone `node`
   feature installs via **nvm** (downloaded binaries), *not* the yarn apt repo whose GPG key once broke
   `apt` when `sonarlint` pulled node (see the lesson below), so it should be safe — but the image builds
-  on the **host** (no docker-in-docker, H2), so this only takes effect on the next rebuild; verify there.
+  on the **host** (no docker-in-docker — backlog H2), so this only takes effect on the next rebuild; verify there.
 - **Deferred** (removed to get a building container; re-add when needed):
   `docker-outside-of-docker` → selenium-firefox compose service (backlog **H2**);
   `sonarlint` → static analysis (backlog **G6**);
@@ -31,7 +31,7 @@ Java bump) a one-line image change instead of a host installation.
 > install. Resolution: a generic `base` image + the `java` feature, with the two failure-prone
 > features deferred. A named-volume Maven cache then failed too (root-owned volume vs the `vscode`
 > user → `Could not create local repository at /home/vscode/.m2`), so it was removed pending a
-> correctly-owned cache (H5).
+> correctly-owned cache (backlog H5).
 
 ## How to work in it (recommended)
 
@@ -65,7 +65,7 @@ foojay resolver if not already present, so a host/devcontainer JDK mismatch self
 
 **To upgrade (e.g. to a future Java):** bump the toolchain in `build.gradle.kts` plus the devcontainer
 and Dockerfile bases together, rebuild the container, run `./gradlew build`. Nothing is installed on
-the host. Tracked as backlog **H4** (make it a single, documented switch).
+the host. (The standing goal: make this version bump a single, documented switch.)
 
 ## Production image (`Dockerfile`)
 
@@ -82,7 +82,7 @@ Scraping needs a browser. Plan: a **docker-compose** dev setup with a `selenium/
 service; tests connect via `RemoteWebDriver` to it. This retires the bundled Windows
 `gecko-*-win.exe` drivers and lets scraping/integration tests run anywhere. **Near-term unit/TDD
 work (evaluator, parser) needs no browser**, so this isn't blocking. (Re-adding the
-`docker-outside-of-docker` feature is part of H2.)
+`docker-outside-of-docker` feature is part of backlog H2.)
 
 See backlog **Epic H** for the open items, and [build-run-deploy.md](build-run-deploy.md) for the
 production runtime details.

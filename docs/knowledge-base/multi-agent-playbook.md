@@ -111,7 +111,7 @@ Planner phase and every commit-plan approval and push happen with **you** in the
   in its own worktree (`Agent` `isolation: "worktree"`).
 - Run **focused** tests during micro-steps (`./gradlew test --tests ClassName`), full `./gradlew build` before the gate.
 
-## Worked example (the storage feature, backlog B1 → A2)
+## Worked example (the storage-value evaluator feature)
 
 1. **Plan:** test list for `EvergoreDataEvaluator` storage calc — e.g. ① place value = Σ storageValue·qty·quality/100 ② withdraw value uses withdrawlValue ③ unknown item → UNDEFINED+log ④ watermark advances. Commit messages approved.
 2. **Implement (Sonnet):** four red→green→refactor micro-commits with those messages.

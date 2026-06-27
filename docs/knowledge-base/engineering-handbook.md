@@ -20,7 +20,7 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
   This is currently true for `domain`/`businessLogic` — **keep it true.**
 - Every outbound dependency goes through a **port** (interface owned by the inner layer). New
   external integration ⇒ define a port first, implement it as an adapter. (The missing one today is
-  `PageSource` for scraping — see backlog D1.)
+  a `PageSource` port for scraping — `SeleniumPageSource` is still wired in without an inner-layer interface.)
 - The composition root is the single place that knows concrete classes (`ApplicationFactory` / `config`).
 
 ## 2. SOLID, applied here
@@ -46,8 +46,8 @@ config        — Micronaut @Factory wiring + @ConfigurationProperties
   **factory method** (e.g. the `Repository` subclass `get(...)` methods — Effective Java Item 1) or a
   lifecycle hook. Logic in a constructor breaks testability and violates SRP.
 - **Avoid the `static` keyword — treat it as a smell, above all mutable static state.** It creates
-  hidden cross-instance / cross-test coupling and breaks testability & isolation (the D7 bug: a
-  `public static int DELAY_IN_SEC` stomped between two boot-test contexts). Prefer dependency
+  hidden cross-instance / cross-test coupling and breaks testability & isolation (a
+  `public static int DELAY_IN_SEC` once stomped between two boot-test contexts). Prefer dependency
   injection, instance state, or a proper seam. Boot tests that need state written by a bean at startup
   and read by the test use an **injected, DI-shared recorder** — a `@Singleton`-scoped bean provided by
   a test `@Factory` (DI scope, **not** the GoF static-`getInstance` Singleton antipattern), **not** static
@@ -138,7 +138,7 @@ template** demonstrating the practice. Scenarios are written in **product langua
 - **Propose exactly one commit message, get the author's confirmation, THEN commit. Never `git push`.**
 - Message = **single line**, **starts with a present-tense verb** (after an optional `[doc]` tag),
   briefly states what the commit actively changes. **No body. No `Co-Authored-By` or tool footer.** English.
-  - ✅ `Add storage value calculation to data evaluator` · `Remove dead CsvParser` · `[doc] Groom backlog: pin H7`
+  - ✅ `Add storage value calculation to data evaluator` · `Remove dead CsvParser` · `[doc] Groom the backlog current-status section`
   - ❌ `feat:`/`fix:`/other conventional-commit prefixes · multi-line bodies · `Co-Authored-By:` lines
 - **`[doc]` prefix for pure documentation/process/meta commits** — touching only `docs/`, `.claude/`, or
   top-level `*.md`, with no product-code/build change. Code & build commits stay **bare** (verb-first).

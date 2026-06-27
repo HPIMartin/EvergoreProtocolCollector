@@ -14,7 +14,7 @@
   entry point — no host toolchain needed beyond a JDK. The deployable is the **application
   distribution** (`./gradlew installDist` → `build/install/protocolParser/bin/protocolParser` + `lib/`),
   not a fat jar.
-- **Warnings are errors** (H8): every `JavaCompile` runs `-Xlint:all` + `-Werror`, so any compiler/lint
+- **Warnings are errors:** every `JavaCompile` runs `-Xlint:all` + `-Werror`, so any compiler/lint
   warning fails the build. Two categories are excluded deliberately — `-serial` (obsolete
   `serialVersionUID` ceremony) and `-processing` (Micronaut/ORMLite/JUnit/ArchUnit annotations that no
   processor claims — inherent to the stack, not our code). The code is otherwise warning-clean.
@@ -22,7 +22,7 @@
   boot (and will *block* in a future release). `--enable-native-access=ALL-UNNAMED` is set for the test
   JVM and baked into the distribution's start script (`applicationDefaultJvmArgs`), so both tests and the
   Docker runtime start clean and stay forward-compatible.
-- **Formatting (A7):** a **single shared Eclipse JDT profile**, `config/eclipse/formatter.xml` (tabs,
+- **Formatting:** a **single shared Eclipse JDT profile**, `config/eclipse/formatter.xml` (tabs,
   `lineSplit=180`, empty bodies compact, enum constants one-per-line, **method chains wrap one-per-`.`
   when >180**, **no blank before a method's closing `}`**), is the one source of truth — consumed
   by **VS Code** (`java.format.settings.url` + `…profile`), **Eclipse**, **IntelliJ** (Eclipse-formatter
@@ -33,7 +33,8 @@
   forbidden** (`java.sources.organizeImports.starThreshold: 999999` → always explicit; the codebase is now
   wildcard-free). The formatter wraps `if`-bodies but cannot *insert* `{ }`; always-braces is enforced
   separately by the Checkstyle `NeedBraces` gate (next bullet). Universal whitespace basics (trim, final newline)
-  are native VS Code `files.*` settings (no `.editorconfig`). See open-question D-10.
+  are native VS Code `files.*` settings (no `.editorconfig`). See the formatter-engine decision (Eclipse
+  JDT, single shared profile) in [open-questions.md](../open-questions.md).
 - **Linting — Checkstyle (single-purpose):** a deliberately minimal `config/checkstyle/checkstyle.xml`
   (the Gradle/Checkstyle default path) holds **exactly one rule, `NeedBraces`** — it enforces *only* what the
   formatter cannot express (the formatter wraps `if`/`for`/`while` bodies but cannot *insert* `{ }`). Layout
@@ -45,8 +46,8 @@
   for live inline squiggles; the engine version there is the extension's own bundle (the single rule is
   version-stable, so build and IDE need not pin the same engine). Checkstyle only *reports* — it has no
   auto-fix; add braces via the redhat.java "Add braces" quick-fix. Checkstyle stays scoped to this one gap and
-  is **not** a general linter (that overlap with the reviewer agent / future Sonar G6 was why it was earlier
-  declined).
+  is **not** a general linter (that overlap with the reviewer agent / a future Sonar-style static-analysis
+  gate — backlog G6 — was why it was earlier declined).
 
 ## Git hooks (local enforcement)
 
@@ -84,7 +85,7 @@ the gate for landing on `main`.
   - *runtime stage* `selenium/standalone-firefox:109.0` (Firefox + geckodriver for the `DOCKER`
     browser mode) with the **JDK 25 copied from the build stage** (Ubuntu base has no openjdk-25),
     the distribution copied to `/opt/protocolParser`, **`COPY zugang.txt /`** (still bakes credentials
-    into the image — C3/C3-deferred), `ENTRYPOINT /opt/protocolParser/bin/protocolParser`, `WORKDIR /`
+    into the image — injecting them instead is deferred; backlog C3), `ENTRYPOINT /opt/protocolParser/bin/protocolParser`, `WORKDIR /`
     so the SQLite path `database/temp.sqlite` and `zugang.txt` resolve as before. `.dockerignore`
     keeps the build context lean and excludes DBs / the gitignored benchmark.
 - **`buildAndRun.bat`** (gitignored, machine-specific): `docker build` → `docker run -p 8080:8080 -v
