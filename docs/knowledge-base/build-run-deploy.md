@@ -48,6 +48,10 @@
   auto-fix; add braces via the redhat.java "Add braces" quick-fix. Checkstyle stays scoped to this one gap and
   is **not** a general linter (that overlap with the reviewer agent / a future Sonar-style static-analysis
   gate — backlog G6 — was why it was earlier declined).
+- **Coverage — JaCoCo (report-only):** the `jacoco` plugin produces an HTML coverage report at
+  `build/reports/jacoco/test/html/index.html`; `test` finalizes `jacocoTestReport`, so every
+  `./gradlew build` regenerates it. **No threshold is enforced** (`jacocoTestCoverageVerification` is not
+  wired) — the report guides test work without gating a young suite (a threshold would come later under G6).
 
 ## Git hooks (local enforcement)
 

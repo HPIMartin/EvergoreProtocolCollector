@@ -2,6 +2,7 @@ plugins {
 	id("io.micronaut.application") version "4.6.2"
 	id("com.diffplug.spotless") version "7.0.4"
 	checkstyle
+	jacoco
 }
 
 group = "dev.schoenberg.evergore"
@@ -92,6 +93,10 @@ spotless {
 		trimTrailingWhitespace()
 		endWithNewline()
 	}
+}
+
+tasks.test {
+	finalizedBy(tasks.jacocoTestReport)
 }
 
 tasks.register<JavaExec>("generateAcceptanceDb") {
