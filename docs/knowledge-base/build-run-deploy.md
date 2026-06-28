@@ -52,6 +52,12 @@
   `build/reports/jacoco/test/html/index.html`; `test` finalizes `jacocoTestReport`, so every
   `./gradlew build` regenerates it. **No threshold is enforced** (`jacocoTestCoverageVerification` is not
   wired) — the report guides test work without gating a young suite (a threshold would come later under G6).
+- **Dependency vulnerability scan — OWASP dependency-check (on-demand):** `./gradlew dependencyCheckAnalyze`
+  produces a CVE report under `build/reports`; **non-gating** (`failBuildOnCVSS = 11f` — above the CVSS
+  maximum of 10, so it never fails — and `failOnError = false`). It is **not** wired into `build`: the plugin
+  treats an NVD-init failure (HTTP 429 / no API key / no cached datafeed) as *fatal* regardless of
+  `failOnError`, which would break offline builds in this key-less devcontainer. Continuous alerting is
+  handled by Dependabot; wiring the scan into the build awaits an NVD API key + a persisted datafeed.
 
 ## Git hooks (local enforcement)
 

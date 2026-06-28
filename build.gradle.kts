@@ -1,6 +1,7 @@
 plugins {
 	id("io.micronaut.application") version "4.6.2"
 	id("com.diffplug.spotless") version "7.0.4"
+	id("org.owasp.dependencycheck") version "12.2.2"
 	checkstyle
 	jacoco
 }
@@ -93,6 +94,11 @@ spotless {
 		trimTrailingWhitespace()
 		endWithNewline()
 	}
+}
+
+dependencyCheck {
+	failBuildOnCVSS = 11f
+	failOnError = false
 }
 
 tasks.test {
