@@ -16,8 +16,8 @@ adapters/out  — Selenium (PageSource), ORMLite repos, file, logging (implement
 config        — Micronaut @Factory wiring + @ConfigurationProperties
 ```
 
-- `domain` and `application` must not import `io.micronaut`, `selenium`, `ormlite`, or any adapter.
-  This is currently true for `domain`/`businessLogic` — **keep it true.**
+- `domain`, `businessLogic`, and `application` must not import `io.micronaut`, `selenium`, `ormlite`,
+  or any adapter. This holds today and is enforced by `HexagonalArchitectureTest` — **keep it true.**
 - Every outbound dependency goes through a **port** (interface owned by the inner layer). New
   external integration ⇒ define a port first, implement it as an adapter. (The missing one today is
   a `PageSource` port for scraping — `SeleniumPageSource` is still wired in without an inner-layer interface.)

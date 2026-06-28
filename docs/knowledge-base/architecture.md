@@ -35,12 +35,17 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 ## Layers & responsibilities (condensed)
 
 - **Entry/lifecycle:** `Application` (boots Micronaut) · `ApplicationFactory` (`@Factory`,
-  the **composition root** — builds the un-annotated repositories + `FileLoader` + no-op hooks) ·
+  the **composition root** — builds the un-annotated repositories, the framework-free `application`
+  use-cases, `FileLoader` + no-op hooks) ·
   `EvergoreDataCollectorJob` (`@Scheduled`) · `DatabaseStartupInitialization` (creates tables on startup).
+- **Application use-cases (framework-free):** `application/{EvergoreDataExtractor,EvergoreDataEvaluator}`
+  (the collect + evaluate coordinators) · `application/LastRunStatus` (the monitoring seam recording the
+  last successful run). Plain objects with no framework annotation, wired in `ApplicationFactory`.
 - **Extraction pipeline:** `helper/selenium/{Browser,Driver,FileLoader}` ·
   `dataExtraction/website/SeleniumPageSource` (the Selenium adapter: login, cookie banner,
-  pagination; implements `PageSource`) · `PageContents` (DTO) · `EvergoreDataExtractor` (coordinator + delta filter) ·
-  `parser/{EntityParser,EntryFactory}` (text ▶ `Entry`, regex from `Constants`).
+  pagination; implements `PageSource`) · `PageContents` (DTO) ·
+  `parser/{EntityParser,EntryFactory}` (text ▶ `Entry`, regex from `Constants`). The coordinator
+  `EvergoreDataExtractor` (delta filter) lives in the framework-free `application` layer.
 - **Persistence:** `database/Repository` (ORMLite base) · `database/{bank,storage,metaInformation}/*`
   (the adapters that implement the businessLogic ports) · `database/TransferTypeDatabaseVisitor`
   (enum ⇄ German DB strings "Einlagerung"/"Entnahme").
@@ -55,20 +60,21 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   `TransferType`/exception visitors, no `instanceof`). `TokenValidationFilter`
   exempts `/favicon.ico` and `/health` (exact) + `/health/*` (sub-paths) — using exact match, NOT a
   broad prefix, so `/healthz` and similar paths remain protected.
-- **Monitoring:** `monitoring/LastRunStatus` (`@Singleton`, records the `Instant` of the last
-  successful collection) · `monitoring/LastRunHealthIndicator` (implements `HealthIndicator`, exposed
-  at `GET /health` via `micronaut-management`; returns UNKNOWN before first run, UP + `lastSuccessfulRun`
-  detail after).
+- **Monitoring:** `application/LastRunStatus` (framework-free, records the `Instant` of the last
+  successful collection) · `monitoring/LastRunHealthIndicator` (the adapter implementing
+  `HealthIndicator`, exposed at `GET /health` via `micronaut-management`; returns UNKNOWN before first
+  run, UP + `lastSuccessfulRun` detail after).
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.
 
 ## What's GOOD (keep this)
 
-- **Domain & businessLogic are framework-free — now mechanically enforced.** The `domain` and
-  `businessLogic` packages import nothing from `micronaut`, `selenium`, `ormlite`, `jakarta`, or
-  `netty`; only ~16 files touch the framework, all at the edges. `HexagonalArchitectureTest`
-  (ArchUnit) fails the build on any violation, so this invariant is a build gate, not just a convention.
+- **Domain, businessLogic & application are framework-free — now mechanically enforced.** The
+  `domain`, `businessLogic`, and `application` packages import nothing from `micronaut`, `selenium`,
+  `ormlite`, `jakarta`, or `netty`, and `application` additionally depends only inward (never on
+  adapters/config). `HexagonalArchitectureTest` (ArchUnit) fails the build on any violation, so these
+  invariants are a build gate, not just a convention.
 - **Persistence is correctly inverted.** `businessLogic` defines the repository *interfaces*;
   `database/*` implements them; application/REST code depends only on the interfaces. The
   `ApplicationFactory` binds interface→impl. This is a genuine Dependency-Inversion seam.
@@ -92,10 +98,6 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 2. **Secrets in source/image** — the API token is now env-injected (`evergore.security.api-token` via
    `SecurityConfiguration`, required at startup), but Evergore credentials still live in `zugang.txt`
    baked into the Docker image.
-3. **Application use-cases carry framework annotations** — `EvergoreDataExtractor`,
-   `EvergoreDataEvaluator`, and `LastRunStatus` are `@Singleton` and sit next to the adapters, so the
-   "application layer is framework-free" goal isn't met yet; the ArchUnit guard covers only `domain`/
-   `businessLogic`, not the use-case package or framework-annotation creep.
 
 ## Target structure (proposed, hexagonal)
 

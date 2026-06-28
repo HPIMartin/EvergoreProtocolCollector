@@ -19,4 +19,23 @@ class HexagonalArchitectureTest {
 			.resideInAnyPackage("io.micronaut..", "jakarta..", "org.openqa.selenium..", "com.j256.ormlite..", "org.sqlite..", "com.fasterxml.jackson..", "io.reactivex..",
 					"org.apache.commons..", "ch.qos.logback..", "org.slf4j..", "io.netty..")
 			.because("the domain and businessLogic core must stay framework-free (hexagonal boundary)");
+
+	@ArchTest
+	static final ArchRule applicationUseCasesStayFrameworkFree = noClasses()
+			.that()
+			.resideInAPackage("..application..")
+			.should()
+			.dependOnClassesThat()
+			.resideInAnyPackage("io.micronaut..", "jakarta..", "org.openqa.selenium..", "com.j256.ormlite..", "org.sqlite..", "com.fasterxml.jackson..", "io.reactivex..",
+					"org.apache.commons..", "ch.qos.logback..", "org.slf4j..", "io.netty..")
+			.because("the application use-cases must stay framework-free (hexagonal boundary)");
+
+	@ArchTest
+	static final ArchRule applicationDependsOnlyInward = noClasses()
+			.that()
+			.resideInAPackage("..application..")
+			.should()
+			.dependOnClassesThat()
+			.resideInAnyPackage("..dataExtraction.website..", "..database..", "..rest..", "..monitoring..", "..helper.config..", "..helper.selenium..")
+			.because("application use-cases must not depend on adapters or config (dependencies point inward)");
 }
