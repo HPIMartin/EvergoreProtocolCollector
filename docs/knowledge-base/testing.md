@@ -21,6 +21,9 @@
 | `LastRunHealthIndicatorTest` | Two pure unit tests (with framework dep on `micronaut-management`): reports `UNKNOWN` with no detail map before any run; reports `UP` with `lastSuccessfulRun` detail key after a run. Subscribes to the `Publisher` inline via an anonymous `Subscriber`. | pure unit |
 | `EvergoreDataCollectorJobTest` | Three unit tests: records `lastSuccessfulRun` after a successful cycle; does **not** record when `loadData` throws; does **not** record when `evaluateData` throws. Uses `Clock.fixed(…)`, `ZeroDelayConfiguration extends Configuration` (delay 0), and local `FailableExtractor`/`FailableEvaluator` inner classes — no static state. | pure unit |
 | `HealthEndpointTest` | Boots the real Micronaut `EmbeddedServer`; mocks the extractor (no-op `loadData`), config (zero delay, test DB path), and hooks (BootSignalRecorder pattern). Asserts: `GET /health` returns **exactly 200** without a token; response body contains `lastRun` + `lastSuccessfulRun`; `/overview` without a token is rejected (4xx); `/healthz` is rejected with the same status as `/overview` (exact-match scoping test — ensures the `/health` exemption does not bleed to prefix matches). | `@MicronautTest` integration |
+| `TransferTypeTest` | Two pure unit tests locking `TransferType.toGermanString()` for both constants (`EINLAGERUNG`→"Einlagerung", `ENTNAHME`→"Entnahme") — the single source for the enum→German mapping. | pure unit |
+| `ApplicationExceptionHandlerTest` | Four unit tests asserting each `ProtocolParserException` subclass maps to its HTTP status via the visitor, plus the `onUnknown` branch. `accept` is `abstract`, so a new exception subclass is a compile error rather than a silent fallback. | pure unit |
+| `RateLimitCounterTest` | Three pure unit tests for `RateLimitCounter`: the block lifts deterministically after `block-duration` (injected `Clock`, no `sleep`), stays active before expiry, and 20 concurrent `block()` calls leave consistent state. | pure unit |
 
 ## Boot-signal seam
 
@@ -50,7 +53,9 @@ the **evaluate→overview pipeline end-to-end** via `ProtocolEvaluationAcceptanc
 `LastRunStatus` (record + read) · `LastRunHealthIndicator` (UNKNOWN / UP + detail) ·
 `EvergoreDataCollectorJob` (records run on success, not on failure) ·
 `/health` endpoint + `TokenValidationFilter` exact-match scoping via `HealthEndpointTest` ·
-and *indirectly* via `SmokeTest`: controllers, filters, repositories, visitors, the job, `OutputFormatter`.
+`TransferType`→German mapping (`toGermanString`) · `ApplicationExceptionHandler` exception→HTTP visitor dispatch ·
+`RateLimitCounter` (block thread-safety + deterministic expiry) ·
+and *indirectly* via `SmokeTest`: controllers, filters, repositories, the job, `OutputFormatter`.
 
 **Most important UNTESTED logic:**
 1. **`EntryFactory` / `EntityParser`** — date/avatar/type/quality regex parsing, `Entnahme` branch,

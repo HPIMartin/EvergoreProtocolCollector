@@ -18,7 +18,7 @@ Root package `dev.schoenberg.evergore.protocolParser` (`…` below).
         │  5. persist via BankRepository / StorageRepository
         ▼
    EvergoreDataEvaluator.evaluateData()
-        │  per avatar, since last_updated: sum bank + value storage  (TransferType visitors + EvergoreItem)
+        │  per avatar, since last_updated: sum bank + value storage  (TransferType visitor + EvergoreItem)
         │  write results to MetaInformationRepository; advance last_updated
         ▼
    LastRunStatus.recordSuccessfulRun(clock.instant())   (monitoring seam)
@@ -50,8 +50,9 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 - **Domain (framework-free):** `Entry`, `Item`, `EvergoreItem` (catalog + value math).
 - **REST:** `OverviewController` (`/overview`) · `AvatarController` (`/avatars/{a}/bank|storage`) ·
   `FaviconController` · `OutputFormatter` (HTML table builder, escapes cells) ·
-  `TransferTypeControllerVisitor` (enum ▶ UI string) · filters `BrowserLoggingFilter` (per-IP rate
-  limit) + `TokenValidationFilter` (`?token=`) · `ApplicationExceptionHandler`. `TokenValidationFilter`
+  filters `BrowserLoggingFilter` (per-IP rate
+  limit) + `TokenValidationFilter` (`?token=`) · `ApplicationExceptionHandler` (dispatches via the
+  `TransferType`/exception visitors, no `instanceof`). `TokenValidationFilter`
   exempts `/favicon.ico` and `/health` (exact) + `/health/*` (sub-paths) — using exact match, NOT a
   broad prefix, so `/healthz` and similar paths remain protected.
 - **Monitoring:** `monitoring/LastRunStatus` (`@Singleton`, records the `Instant` of the last
@@ -91,8 +92,10 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 2. **Secrets in source/image** — the API token is now env-injected (`evergore.security.api-token` via
    `SecurityConfiguration`, required at startup), but Evergore credentials still live in `zugang.txt`
    baked into the Docker image.
-3. **Duplicated mapping** — `TransferType`→German-string exists in *two* visitors (DB + controller);
-   `ApplicationExceptionHandler` uses an `instanceof` chain (its own `// TODO: Visitor-Pattern`).
+3. **Application use-cases carry framework annotations** — `EvergoreDataExtractor`,
+   `EvergoreDataEvaluator`, and `LastRunStatus` are `@Singleton` and sit next to the adapters, so the
+   "application layer is framework-free" goal isn't met yet; the ArchUnit guard covers only `domain`/
+   `businessLogic`, not the use-case package or framework-annotation creep.
 
 ## Target structure (proposed, hexagonal)
 
