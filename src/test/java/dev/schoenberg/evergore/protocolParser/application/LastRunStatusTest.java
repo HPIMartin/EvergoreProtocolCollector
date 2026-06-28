@@ -1,4 +1,4 @@
-package dev.schoenberg.evergore.protocolParser.monitoring;
+package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.*;
 

@@ -8,6 +8,8 @@ import io.micronaut.health.*;
 import io.micronaut.management.health.indicator.*;
 import org.reactivestreams.*;
 
+import dev.schoenberg.evergore.protocolParser.application.*;
+
 @Singleton
 public class LastRunHealthIndicator implements HealthIndicator {
 

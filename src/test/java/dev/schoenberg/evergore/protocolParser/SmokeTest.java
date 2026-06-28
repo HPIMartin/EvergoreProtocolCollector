@@ -18,10 +18,10 @@ import kong.unirest.Unirest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
-import dev.schoenberg.evergore.protocolParser.dataExtraction.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.website.SeleniumPageSource;

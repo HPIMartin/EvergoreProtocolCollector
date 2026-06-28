@@ -8,6 +8,8 @@ import io.micronaut.management.health.indicator.*;
 import org.junit.jupiter.api.*;
 import org.reactivestreams.*;
 
+import dev.schoenberg.evergore.protocolParser.application.*;
+
 import static org.assertj.core.api.Assertions.*;
 
 class LastRunHealthIndicatorTest {

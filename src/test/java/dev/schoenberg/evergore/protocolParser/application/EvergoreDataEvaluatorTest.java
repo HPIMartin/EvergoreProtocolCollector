@@ -1,4 +1,4 @@
-package dev.schoenberg.evergore.protocolParser.dataExtraction;
+package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Instant;
 import java.time.LocalDateTime;

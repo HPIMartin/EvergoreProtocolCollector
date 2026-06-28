@@ -1,4 +1,4 @@
-package dev.schoenberg.evergore.protocolParser.dataExtraction;
+package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -9,8 +9,6 @@ import java.util.function.DoubleConsumer;
 import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.ToDoubleFunction;
-
-import jakarta.inject.Singleton;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
@@ -31,7 +29,6 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformati
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UNDEFINED;
 import static java.util.Arrays.asList;
 
-@Singleton
 public class EvergoreDataEvaluator {
 	private static final LocalDateTime BEGINNING_OF_TIME = LocalDateTime.of(1, 1, 1, 0, 0);
 

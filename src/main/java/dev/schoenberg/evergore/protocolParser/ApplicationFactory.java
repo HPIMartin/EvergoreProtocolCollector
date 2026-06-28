@@ -6,6 +6,10 @@ import jakarta.inject.*;
 
 import io.micronaut.context.annotation.Factory;
 
+import dev.schoenberg.evergore.protocolParser.application.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
 import dev.schoenberg.evergore.protocolParser.database.*;
 import dev.schoenberg.evergore.protocolParser.database.bank.*;
@@ -20,6 +24,21 @@ public class ApplicationFactory {
 	@Singleton
 	public FileLoader fileLoader(Configuration config, Logger logger) {
 		return new AlternativeFileLoaderWrapper(new DiscFileLoader(config), new ResourceFileLoader(), logger);
+	}
+
+	@Singleton
+	public EvergoreDataExtractor evergoreDataExtractor(PageSource pageSource, BankRepository bankRepo, StorageRepository storageRepo, Logger logger) {
+		return new EvergoreDataExtractor(pageSource, bankRepo, storageRepo, logger);
+	}
+
+	@Singleton
+	public EvergoreDataEvaluator evergoreDataEvaluator(MetaInformationRepository metaRepo, StorageRepository storageRepo, BankRepository bankRepo, Logger logger) {
+		return new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, logger);
+	}
+
+	@Singleton
+	public LastRunStatus lastRunStatus() {
+		return new LastRunStatus();
 	}
 
 	@Singleton

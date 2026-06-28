@@ -1,11 +1,8 @@
-package dev.schoenberg.evergore.protocolParser.monitoring;
+package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.*;
 import java.util.*;
 
-import jakarta.inject.*;
-
-@Singleton
 public class LastRunStatus {
 
 	private volatile Instant lastSuccessfulRunInstant;

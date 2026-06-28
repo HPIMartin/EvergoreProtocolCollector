@@ -5,11 +5,11 @@ import java.time.*;
 import org.junit.jupiter.api.*;
 
 import dev.schoenberg.evergore.protocolParser.*;
+import dev.schoenberg.evergore.protocolParser.application.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
-import dev.schoenberg.evergore.protocolParser.monitoring.*;
 
 import static org.assertj.core.api.Assertions.*;
 

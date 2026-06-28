@@ -1,4 +1,4 @@
-package dev.schoenberg.evergore.protocolParser.dataExtraction;
+package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -14,6 +14,8 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.PageContents;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.EINLAGERUNG;

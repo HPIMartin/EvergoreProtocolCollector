@@ -17,8 +17,8 @@ import kong.unirest.Unirest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationRepository;
-import dev.schoenberg.evergore.protocolParser.dataExtraction.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;

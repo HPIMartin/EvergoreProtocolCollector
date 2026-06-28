@@ -1,11 +1,9 @@
-package dev.schoenberg.evergore.protocolParser.dataExtraction;
+package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import jakarta.inject.Singleton;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
@@ -13,10 +11,11 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankReposito
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.PageContents;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.parser.EntityParser;
 import dev.schoenberg.evergore.protocolParser.domain.Entry;
 
-@Singleton
 public class EvergoreDataExtractor {
 	private final PageSource pageSource;
 	private final BankRepository bankRepo;
