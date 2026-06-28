@@ -166,6 +166,12 @@ template** demonstrating the practice. Scenarios are written in **product langua
   Watch the Claude Code "always allow" flow: it can write path-bearing rules into the committed
   `settings.json` — prefer bare commands that match the existing portable `Bash(<cmd>:*)` rules, and
   keep machine-specific permissions (e.g. an absolute-path `cd`) in `.claude/settings.local.json`.
+  For the **worktree workflow**, give a `git -C <worktree> …` command its **portable, path-eliding**
+  form: the portable `Bash(git <sub>:*)` rules don't match it (they prefix-match `git <sub>`, not
+  `git -C …`), so without a wildcard the always-allow flow re-pins a dead, host-path-bearing rule on
+  every new worktree hash. A single committed `Bash(git -C *.claude/worktrees/*)` (the `*` elides the
+  absolute path) covers **every** worktree with no host detail; `-C` deny variants (`push`,
+  `reset --hard`, `clean`) keep that broad allow from auto-running destructive git.
 - **The commit log is the changelog.** Don't keep a separate `CHANGELOG`, and don't mirror git
   history or diffs in the docs — `git log` / `git diff` are the source of truth for *what changed*.
 - **Git enforcement hooks (must be active).** The rules above are enforced mechanically by POSIX-sh

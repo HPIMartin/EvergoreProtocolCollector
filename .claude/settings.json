@@ -7,6 +7,8 @@
 			"Edit(CLAUDE.md)",
 			"Write(.claude/agents/**)",
 			"Edit(.claude/agents/**)",
+			"Write(.claude/worktrees/**)",
+			"Edit(.claude/worktrees/**)",
 			"Write(src/**)",
 			"Edit(src/**)",
 			"Write(build.gradle.kts)",
@@ -40,8 +42,13 @@
 			"Bash(git check-attr:*)",
 			"Bash(git check-ignore:*)",
 			"Bash(git ls-files:*)",
+			"Bash(git worktree:*)",
+			"Bash(git -C *.claude/worktrees/*)",
+			"Bash(GIT_SEQUENCE_EDITOR=true GIT_EDITOR=true git -C *.claude/worktrees/* rebase:*)",
 			"Bash(./gradlew:*)",
 			"Bash(gradle:*)",
+			"Bash(sh hooks/*)",
+			"Bash(sh -n hooks/*)",
 			"Bash(ls:*)",
 			"Bash(cat:*)",
 			"Bash(grep:*)",
@@ -67,16 +74,26 @@
 			"Bash(readlink:*)",
 			"Bash(sqlite3:*)",
 			"Bash(jq:*)",
-			"Bash(git worktree:*)",
 			"Bash(python3:*)",
 			"Bash(java -version)",
+			"WebSearch",
+			"WebFetch(domain:docs.micronaut.io)",
+			"WebFetch(domain:github.com)",
 			"Skill(claude-api)",
-			"Skill(claude-api:*)"
+			"Skill(claude-api:*)",
+			"Skill(update-config)",
+			"Skill(update-config:*)"
 		],
 		"deny": [
 			"Bash(git push:*)",
+			"Bash(git -C * push:*)",
 			"Bash(rm -rf:*)",
-			"Bash(git reset --hard:*)"
+			"Bash(git reset --hard:*)",
+			"Bash(git -C * reset --hard:*)",
+			"Bash(git -C * clean:*)"
+		],
+		"additionalDirectories": [
+			"/tmp"
 		]
 	},
 	"worktree": {
