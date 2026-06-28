@@ -1,13 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation;
 
-public class MetaInformation<T> {
-	public final MetaInformationKey<T> key;
-	public final T value;
-
-	public MetaInformation(MetaInformationKey<T> key, T value) {
-		this.key = key;
-		this.value = value;
-	}
+public record MetaInformation<T>(MetaInformationKey<T> key, T value) {
 
 	public String getSerializedValue() {
 		return key.serialize(value);

@@ -107,6 +107,6 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 	}
 
 	private BankDatabaseEntry convert(BankEntry entry) {
-		return new BankDatabaseEntry(from(entry.timeStamp), entry.avatar, entry.amount, transferTypeVisitor.convert(entry.type));
+		return new BankDatabaseEntry(from(entry.timeStamp()), entry.avatar(), entry.amount(), transferTypeVisitor.convert(entry.type()));
 	}
 }

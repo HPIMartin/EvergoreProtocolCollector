@@ -17,7 +17,7 @@ public class FakeMetaInformationRepository implements MetaInformationRepository 
 	@Override
 	public <T> void add(List<MetaInformation<T>> meta) {
 		for (MetaInformation<T> m : meta) {
-			store.put(m.key.id, m.value);
+			store.put(m.key().id, m.value());
 		}
 	}
 

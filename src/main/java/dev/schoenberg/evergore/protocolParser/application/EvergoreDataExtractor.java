@@ -37,7 +37,7 @@ public class EvergoreDataExtractor {
 
 	private void updateLagerEntries(List<Entry> lager) {
 		Optional<StorageEntry> latest = storageRepo.getNewest();
-		latest.ifPresent(e -> logger.debug("Latest element from: " + e.timeStamp));
+		latest.ifPresent(e -> logger.debug("Latest element from: " + e.timeStamp()));
 		AtomicInteger beforeFilter = new AtomicInteger(0);
 		AtomicInteger afterFilter = new AtomicInteger(0);
 		storageRepo
@@ -55,7 +55,7 @@ public class EvergoreDataExtractor {
 
 	private void updateBankEntries(List<Entry> bank) {
 		Optional<BankEntry> latest = bankRepo.getNewest();
-		latest.ifPresent(e -> logger.debug("Latest element from: " + e.timeStamp));
+		latest.ifPresent(e -> logger.debug("Latest element from: " + e.timeStamp()));
 		AtomicInteger beforeFilter = new AtomicInteger(0);
 		AtomicInteger afterFilter = new AtomicInteger(0);
 		bankRepo
@@ -77,11 +77,11 @@ public class EvergoreDataExtractor {
 	}
 
 	private boolean isNewer(BankEntry latest, BankEntry toCheck) {
-		return toCheck.timeStamp.isAfter(latest.timeStamp);
+		return toCheck.timeStamp().isAfter(latest.timeStamp());
 	}
 
 	private boolean isNewer(StorageEntry latest, StorageEntry toCheck) {
-		return toCheck.timeStamp.isAfter(latest.timeStamp);
+		return toCheck.timeStamp().isAfter(latest.timeStamp());
 	}
 
 	private List<BankEntry> mapBank(Entry e) {

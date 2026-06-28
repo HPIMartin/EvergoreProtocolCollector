@@ -50,8 +50,9 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   (the adapters that implement the businessLogic ports) · `database/TransferTypeDatabaseVisitor`
   (enum ⇄ German DB strings "Einlagerung"/"Entnahme").
 - **Business logic (framework-free):** ports `BankRepository`, `StorageRepository`,
-  `MetaInformationRepository` · value objects `BankEntry`, `StorageEntry` · `TransferType` + visitor ·
-  `MetaInformation` / `MetaInformationKey` (typed keys: `DateTimeKey`/`LongKey`/`DoubleKey`) · `Constants`.
+  `MetaInformationRepository` · value-object records `BankEntry`, `StorageEntry`, `MetaInformation` ·
+  `TransferType` + visitor · `MetaInformationKey` (typed keys: `DateTimeKey`/`LongKey`/`DoubleKey`) ·
+  `Constants`.
 - **Domain (framework-free):** `Entry`, `Item`, `EvergoreItem` (catalog + value math).
 - **REST:** `OverviewController` (`/overview`) · `AvatarController` (`/avatars/{a}/bank|storage`) ·
   `FaviconController` · `OutputFormatter` (HTML table builder, escapes cells) ·

@@ -43,7 +43,7 @@ public class MetaInformationDatabaseRepository extends Repository<MetaInformatio
 			return empty();
 		}
 
-		return of(convert(key, result.get(0)).value);
+		return of(convert(key, result.get(0)).value());
 	}
 
 	@Override
@@ -56,7 +56,7 @@ public class MetaInformationDatabaseRepository extends Repository<MetaInformatio
 	}
 
 	private <T> void storeInformation(MetaInformation<T> metainformation) {
-		List<MetaInformationEntry> existing = getAllFor(metainformation.key.id);
+		List<MetaInformationEntry> existing = getAllFor(metainformation.key().id);
 		if (existing.isEmpty()) {
 			silentThrow(() -> meta.create(convert(metainformation)));
 		} else {
@@ -69,6 +69,6 @@ public class MetaInformationDatabaseRepository extends Repository<MetaInformatio
 	}
 
 	private <T> MetaInformationEntry convert(MetaInformation<T> entry) {
-		return new MetaInformationEntry(entry.key.id, entry.getSerializedValue());
+		return new MetaInformationEntry(entry.key().id, entry.getSerializedValue());
 	}
 }

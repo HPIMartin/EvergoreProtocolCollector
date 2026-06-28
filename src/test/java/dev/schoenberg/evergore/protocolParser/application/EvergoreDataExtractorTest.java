@@ -43,8 +43,8 @@ class EvergoreDataExtractorTest {
 		tested.loadData();
 
 		assertThat(bankRepo.added).hasSize(1);
-		assertThat(bankRepo.added.get(0).avatar).isEqualTo("TestAvatar");
-		assertThat(bankRepo.added.get(0).type).isEqualTo(EINLAGERUNG);
+		assertThat(bankRepo.added.get(0).avatar()).isEqualTo("TestAvatar");
+		assertThat(bankRepo.added.get(0).type()).isEqualTo(EINLAGERUNG);
 	}
 
 	@Test
@@ -52,9 +52,9 @@ class EvergoreDataExtractorTest {
 		tested.loadData();
 
 		assertThat(storageRepo.added).hasSize(1);
-		assertThat(storageRepo.added.get(0).avatar).isEqualTo("TestAvatar");
-		assertThat(storageRepo.added.get(0).name).isEqualTo("Drachenhaut");
-		assertThat(storageRepo.added.get(0).type).isEqualTo(EINLAGERUNG);
+		assertThat(storageRepo.added.get(0).avatar()).isEqualTo("TestAvatar");
+		assertThat(storageRepo.added.get(0).name()).isEqualTo("Drachenhaut");
+		assertThat(storageRepo.added.get(0).type()).isEqualTo(EINLAGERUNG);
 	}
 
 	@Test

@@ -31,7 +31,7 @@ class MetaInformationTest {
 
 		MetaInformation<Integer> result = MetaInformation.fromSerializedValue(testKey, "world");
 
-		assertThat(result.value).isEqualTo(1337);
+		assertThat(result.value()).isEqualTo(1337);
 		assertThat(testKey.serialized).isEqualTo("world");
 	}
 

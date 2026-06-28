@@ -83,7 +83,7 @@ public class EvergoreDataEvaluator {
 		long bankWithdrawl = getStoredValue(bankWithdrawlKey, 0L);
 
 		BankStatus bank = new BankStatus(bankPlacement, bankWithdrawl);
-		bankRepo.getAllFor(avatar, lastUpdated).forEach(e -> e.type.accept(bankVisitor).accept(bank, e));
+		bankRepo.getAllFor(avatar, lastUpdated).forEach(e -> e.type().accept(bankVisitor).accept(bank, e));
 
 		MetaInformation<Long> updatedBankPlacement = new MetaInformation<>(bankPlacementKey, bank.placement);
 		MetaInformation<Long> updatedBankWithdrawl = new MetaInformation<>(bankWithdrawlKey, bank.withdrawl);
@@ -102,7 +102,7 @@ public class EvergoreDataEvaluator {
 				.getAllFor(avatar, lastUpdated)
 				.stream()
 				.map(e -> new StorageEntryItem(e, findItem(e)))
-				.forEach(e -> e.entry.type.accept(storageEntryVisitor).accept(storage, e));
+				.forEach(e -> e.entry().type().accept(storageEntryVisitor).accept(storage, e));
 
 		MetaInformation<Double> updatedStoragePlacement = new MetaInformation<>(storagePlacementKey, storage.placement);
 		MetaInformation<Double> updatedStorageWithdrawl = new MetaInformation<>(storageWithdrawlKey, storage.withdrawl);
@@ -141,13 +141,13 @@ public class EvergoreDataEvaluator {
 		}
 
 		private BiConsumer<StorageStatus, StorageEntryItem> operation(Function<StorageStatus, DoubleConsumer> statusFunction, ToDoubleFunction<EvergoreItem> valueFunction) {
-			return (status, value) -> statusFunction.apply(status).accept(valueFunction.applyAsDouble(value.item) * value.entry.quantity * (value.entry.quality / 100D));
+			return (status, value) -> statusFunction.apply(status).accept(valueFunction.applyAsDouble(value.item()) * value.entry().quantity() * (value.entry().quality() / 100D));
 		}
 	}
 
 	private EvergoreItem findItem(StorageEntry entry) {
-		return Arrays.stream(EvergoreItem.values()).filter(e -> e.ingameName.equals(entry.name)).findAny().orElseGet(() -> {
-			logger.info("Unable to find item: " + entry.name);
+		return Arrays.stream(EvergoreItem.values()).filter(e -> e.ingameName.equals(entry.name())).findAny().orElseGet(() -> {
+			logger.info("Unable to find item: " + entry.name());
 			return UNDEFINED;
 		});
 	}
@@ -186,7 +186,7 @@ public class EvergoreDataEvaluator {
 		}
 
 		private BiConsumer<BankStatus, BankEntry> operation(Function<BankStatus, LongConsumer> statusFunction) {
-			return (status, value) -> statusFunction.apply(status).accept(value.amount);
+			return (status, value) -> statusFunction.apply(status).accept(value.amount());
 		}
 	}
 

@@ -37,8 +37,8 @@ class BankDatabaseRepositoryTest {
 		List<BankEntry> found = repo.getAllFor("Aurora", 0, 10);
 
 		assertThat(found).hasSize(1);
-		assertThat(found.get(0).avatar).isEqualTo("Aurora");
-		assertThat(found.get(0).amount).isEqualTo(1000);
+		assertThat(found.get(0).avatar()).isEqualTo("Aurora");
+		assertThat(found.get(0).amount()).isEqualTo(1000);
 	}
 
 	@Test
@@ -60,7 +60,7 @@ class BankDatabaseRepositoryTest {
 		Optional<BankEntry> result = repo.getNewest();
 
 		assertThat(result).isPresent();
-		assertThat(result.get().timeStamp).isEqualTo(later);
+		assertThat(result.get().timeStamp()).isEqualTo(later);
 	}
 
 	private static Configuration testConfiguration() {

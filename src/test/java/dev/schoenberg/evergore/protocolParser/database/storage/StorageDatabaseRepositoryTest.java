@@ -37,7 +37,7 @@ class StorageDatabaseRepositoryTest {
 		Optional<StorageEntry> result = repo.getNewest();
 
 		assertThat(result).isPresent();
-		assertThat(result.get().timeStamp).isEqualTo(later);
+		assertThat(result.get().timeStamp()).isEqualTo(later);
 	}
 
 	private static Configuration inMemoryConfiguration() {

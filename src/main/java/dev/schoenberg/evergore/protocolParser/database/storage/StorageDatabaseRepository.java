@@ -106,6 +106,6 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	}
 
 	private StorageDatabaseEntry convert(StorageEntry entry) {
-		return new StorageDatabaseEntry(from(entry.timeStamp), entry.avatar, entry.quantity, entry.name, entry.quality, transferTypeVisitor.convert(entry.type));
+		return new StorageDatabaseEntry(from(entry.timeStamp()), entry.avatar(), entry.quantity(), entry.name(), entry.quality(), transferTypeVisitor.convert(entry.type()));
 	}
 }

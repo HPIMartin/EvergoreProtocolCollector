@@ -58,10 +58,10 @@ public class AvatarController {
 		logger.info("Found " + all.size() + " entries.");
 
 		List<Column<BankEntry>> columns = new ArrayList<>();
-		columns.add(new Column<>("TimeStamp", b -> getLocalDateTimeString(b.timeStamp)));
-		columns.add(new Column<>("Avatar", b -> b.avatar));
-		columns.add(new Column<>("Amount", b -> valueOf(b.amount)));
-		columns.add(new Column<>("TransferType", b -> b.type.toGermanString()));
+		columns.add(new Column<>("TimeStamp", b -> getLocalDateTimeString(b.timeStamp())));
+		columns.add(new Column<>("Avatar", b -> b.avatar()));
+		columns.add(new Column<>("Amount", b -> valueOf(b.amount())));
+		columns.add(new Column<>("TransferType", b -> b.type().toGermanString()));
 
 		return pageWithMeta.replace("###PAGE_CONTENT_PLACEHOLDER###", formatter.createTable(all, columns));
 	}
@@ -77,12 +77,12 @@ public class AvatarController {
 		logger.info("Found " + all.size() + " entries.");
 
 		List<Column<StorageEntry>> columns = new ArrayList<>();
-		columns.add(new Column<>("TimeStamp", d -> getLocalDateTimeString(d.timeStamp)));
-		columns.add(new Column<>("Avatar", d -> d.avatar));
-		columns.add(new Column<>("Quantity", d -> valueOf(d.quantity)));
-		columns.add(new Column<>("Name", d -> d.name));
-		columns.add(new Column<>("Quality", d -> valueOf(d.quality)));
-		columns.add(new Column<>("TransferType", d -> d.type.toGermanString()));
+		columns.add(new Column<>("TimeStamp", d -> getLocalDateTimeString(d.timeStamp())));
+		columns.add(new Column<>("Avatar", d -> d.avatar()));
+		columns.add(new Column<>("Quantity", d -> valueOf(d.quantity())));
+		columns.add(new Column<>("Name", d -> d.name()));
+		columns.add(new Column<>("Quality", d -> valueOf(d.quality())));
+		columns.add(new Column<>("TransferType", d -> d.type().toGermanString()));
 
 		return pageWithMeta.replace("###PAGE_CONTENT_PLACEHOLDER###", formatter.createTable(all, columns));
 	}
