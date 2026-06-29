@@ -88,6 +88,7 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 |----|------|-----|------------|--------|
 | **B3** | Expand `EntryFactory`/`EntityParser` tests: date/avatar/type/quality parsing, merged quantity (3+5+7→1 item, qty 15), `Entnahme`, `Impressum` terminator | Parser is barely tested; it's the ingest contract | Table-driven tests over representative raw protocol snippets | M |
 | **B4** | Repository tests against in-memory SQLite: `getNewest`, paging, `getAllFor(avatar, after)` | Only incidental smoke coverage | Fast tests using `:memory:` | M |
+| **B8** | **Audit & align the existing test suite to the test-style conventions** (emerged 2026-06-29 reworking the parser contract tests): no logic buried in tests (no case-`record` + loop + soft-assert iteration); one named `@Test` per distinct behaviour with the expected literal in the assert; "one assert per test" = one assertion *case* (assert a composite value as a whole via an intention-revealing helper like `assertEntry`); minimal, noise-free input values; data-driven (`@ParameterizedTest`/`@MethodSource`) only where it genuinely fits (ask when unsure). **Codify the rules in the KB first** (handbook §6 / `testing.md`), then bring older tests (e.g. `SmokeTest`) into line | The conventions are newer than most of the suite; the showcase's tests should be exemplary and consistent | Rules documented in the KB; existing tests conform | M |
 
 ## Epic C — Configuration & security `P1`  *(good-practice showcase; not urgent while learning/fun)*
 
