@@ -53,11 +53,29 @@
   `./gradlew build` regenerates it. **No threshold is enforced** (`jacocoTestCoverageVerification` is not
   wired) — the report guides test work without gating a young suite (a threshold would come later under G6).
 - **Dependency vulnerability scan — OWASP dependency-check (on-demand):** `./gradlew dependencyCheckAnalyze`
-  produces a CVE report under `build/reports`; **non-gating** (`failBuildOnCVSS = 11f` — above the CVSS
-  maximum of 10, so it never fails — and `failOnError = false`). It is **not** wired into `build`: the plugin
-  treats an NVD-init failure (HTTP 429 / no API key / no cached datafeed) as *fatal* regardless of
-  `failOnError`, which would break offline builds in this key-less devcontainer. Continuous alerting is
-  handled by Dependabot; wiring the scan into the build awaits an NVD API key + a persisted datafeed.
+  produces a CVE report under `build/reports` from two sources — the **NVD** feed and the **Sonatype OSS
+  Index** analyzer (enabled automatically when its token is present). Currently **non-gating**
+  (`failOnError = false` and the CVSS threshold defaults to `11`, above the CVSS maximum of 10, so it never
+  fails). It stays **on-demand, not wired into `build`** — gating belongs to CI/delivery, never the local
+  build (the plugin also treats an NVD-init failure as *fatal* regardless of `failOnError`, which would
+  break `build` anywhere lacking the key + feed). Continuous alerting is handled by Dependabot.
+  - **Two config files, by design (minimise scattered settings):**
+    - **Secrets → one gitignored file `secrets.local.properties`** (repo root, copied from the committed
+      `secrets.local.properties.template`) holds *both* scan credentials together: `nvdApiKey=<key>` and
+      `sonatypeOssIndexToken=<token>` (optionally `sonatypeOssIndexUsername=<account-email>`); the generic
+      name leaves room for future secrets. It matches the `*.local.*` rule, so it can never be
+      committed (pre-commit secret-scan is a second net). Each value also falls back to an env var
+      (`NVD_API_KEY` / `OSS_INDEX_TOKEN` / `OSS_INDEX_USERNAME`) for CI. Absent → the scan still runs (NVD
+      rate-limited; OSS Index analyzer off).
+    - **Tunable params → `gradle.properties`** (committed, central): `dependencyCheck.failBuildOnCvss` is the
+      one place to set the CVSS fail threshold (lower it toward `0.0` to enforce an up-to-date dependency
+      base — a CI/delivery gate, since the scan never runs in `build`).
+  - **Set up on a new machine:** `cp secrets.local.properties.template secrets.local.properties`, then fill
+    in the values (request an NVD key at <https://nvd.nist.gov/developers/request-an-api-key>, an OSS Index
+    token at <https://ossindex.sonatype.org/>); verify with `git check-ignore secrets.local.properties`. The
+    first `dependencyCheckAnalyze` downloads the full NVD datafeed (slow, one-time; cached under `~/.gradle`).
+    A leaked NVD/OSS-Index key is low-harm (rate-limit only) but is still kept out of the repo — secrets
+    never land in a public showcase, no exceptions (handbook §7).
 
 ## Git hooks (local enforcement)
 

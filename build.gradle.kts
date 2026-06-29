@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
 	id("io.micronaut.application") version "4.6.2"
 	id("com.diffplug.spotless") version "7.0.4"
@@ -96,9 +98,25 @@ spotless {
 	}
 }
 
+val scanSecrets = Properties()
+file("secrets.local.properties").takeIf { it.exists() }?.inputStream()?.use { scanSecrets.load(it) }
+
+fun scanSecret(key: String, environmentVariable: String): String? = System.getenv(environmentVariable) ?: scanSecrets.getProperty(key)
+
+val nvdApiKey = scanSecret("nvdApiKey", "NVD_API_KEY")
+val ossIndexToken = scanSecret("sonatypeOssIndexToken", "OSS_INDEX_TOKEN")
+val ossIndexUsername = scanSecret("sonatypeOssIndexUsername", "OSS_INDEX_USERNAME")
+val failBuildOnCvss = (providers.gradleProperty("dependencyCheck.failBuildOnCvss").orNull ?: "11").toFloat()
+
 dependencyCheck {
-	failBuildOnCVSS = 11f
+	failBuildOnCVSS = failBuildOnCvss
 	failOnError = false
+	nvdApiKey?.let { nvd.apiKey = it }
+	ossIndexToken?.let { token ->
+		analyzers.ossIndex.enabled = true
+		analyzers.ossIndex.password = token
+		ossIndexUsername?.let { analyzers.ossIndex.username = it }
+	}
 }
 
 tasks.test {

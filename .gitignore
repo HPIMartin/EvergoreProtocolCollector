@@ -24,6 +24,8 @@ CLAUDE.local.md
 
 # Secrets, keystores, and machine-specific helper scripts (never commit — CLAUDE.md hard rule)
 *.local.*
+# ...but the committed template (empty placeholders) must stay tracked
+!secrets.local.properties.template
 *.pfx
 *.p12
 *.jks
