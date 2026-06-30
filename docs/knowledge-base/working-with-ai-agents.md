@@ -64,6 +64,47 @@ session is paid for repeatedly. Keep the working context lean:
   Routine TDD runs lean: plan → implementer → falsifier → reviewer.
 - **Terse by default** — bullets and the outcome first; expand on request.
 
+## Permissions & autonomy (committed vs local)
+
+The agent runs against a permission allow/deny list so it can work **autonomously and
+token-efficiently** — no prompt on every command — inside guardrails that stop a wrong turn from doing
+harm. Two files, two distinct purposes:
+
+- **Committed `.claude/settings.json` — the shared, portable policy.** What *every* contributor of this
+  repo should inherit. A rule belongs here only if it is **portable** (no machine/host paths, no
+  personal scratch dirs), **project-relevant** (the build tool, git, this project's doc sources,
+  standard read-only shell utilities), and something you'd hand a teammate. Keep it **small and stable**.
+- **Local `.claude/settings.local.json` (gitignored) — per-machine / per-dev taste.** Allows *you*
+  personally accept but won't impose on others — machine-specific absolute paths, or a broader tool
+  you're comfortable with (one dev allows blanket `curl`, another doesn't). Each dev curates their own;
+  nothing here is shared.
+
+**Decision rule (don't let it drift):** portable + project-relevant + shareable → *committed*;
+machine-specific or personal-taste → *local*. **Don't promote local → committed** to "tidy up" — it
+forces one dev's taste on everyone and can leak host detail; and don't bury a genuinely shared,
+portable rule down in local where teammates never get it.
+
+**Keep it from sprawling.** The "always allow" button writes the *exact command string* to the local
+file — with a `cd`, an inline `VAR=…`, an absolute scratch path or a one-off message baked in, that
+rule never matches again, so the file silently fills with dead one-shot entries. Two habits prevent it:
+when a *recurring* command isn't covered, deliberately add a **portable** rule to committed
+`settings.json` instead of clicking "always allow"; and periodically prune the local file back to the
+few rules you actually chose. (A *running* agent session keeps its approval list in memory and rewrites
+the local file on every new approval, so an in-session prune can be clobbered — prune when the session
+is idle, or edit the file yourself.)
+
+**Token-efficient commands that still match.** Combined one-liners (`echo … && git status && grep …`)
+are **fewer tool round-trips** and are auto-allowed **as long as every segment matches an allow rule** —
+so prefer them over splitting into atomic calls. Only two things make a chain un-matchable and force a
+prompt: a leading **`cd`** and an inline **`VAR=…`** assignment. Avoid those (use absolute paths /
+`git -C <path>` / literal values) and chains run prompt-free. (Worktree-path specifics: handbook §7.)
+
+**Autonomy within guardrails.** The aim is maximum useful autonomy at minimum ceremony *and* a hard
+floor a mistake can't cross even with no bad intent. The `deny` list is that floor (here: `git push`,
+`git reset --hard`, `git clean`, `rm -rf`, and their `-C` variants). Widen the allow list freely for
+convenience; **never weaken the deny floor**, and route anything genuinely destructive or
+outward-facing through the human.
+
 ## How to ask questions (the author's preference)
 
 - Always offer **multiple-choice** options; the author will free-type only if none fit.
