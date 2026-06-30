@@ -1,6 +1,6 @@
-# 04 — Architecture
+# 04: Architecture
 
-Java · Micronaut (Netty) · ORMLite + SQLite · Selenium · OpenAPI/Swagger — exact versions live in
+Java · Micronaut (Netty) · ORMLite + SQLite · Selenium · OpenAPI/Swagger. Exact versions live in
 [`build.gradle.kts`](../../build.gradle.kts), the single source of truth (this prose must not duplicate them).
 Root package `dev.schoenberg.evergore.protocolParser` (`…` below).
 
@@ -35,7 +35,7 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 ## Layers & responsibilities (condensed)
 
 - **Entry/lifecycle:** `Application` (boots Micronaut) · `ApplicationFactory` (`@Factory`,
-  the **composition root** — builds the un-annotated repositories, the framework-free `application`
+  the **composition root** that builds the un-annotated repositories, the framework-free `application`
   use-cases, `FileLoader` + no-op hooks) ·
   `EvergoreDataCollectorJob` (`@Scheduled`) · `DatabaseStartupInitialization` (creates tables on startup).
 - **Application use-cases (framework-free):** `application/{EvergoreDataExtractor,EvergoreDataEvaluator}`
@@ -59,7 +59,7 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   filters `BrowserLoggingFilter` (per-IP rate
   limit) + `TokenValidationFilter` (`?token=`) · `ApplicationExceptionHandler` (dispatches via the
   `TransferType`/exception visitors, no `instanceof`). `TokenValidationFilter`
-  exempts `/favicon.ico` and `/health` (exact) + `/health/*` (sub-paths) — using exact match, NOT a
+  exempts `/favicon.ico` and `/health` (exact) + `/health/*` (sub-paths), using exact match, NOT a
   broad prefix, so `/healthz` and similar paths remain protected.
 - **Monitoring:** `application/LastRunStatus` (framework-free, records the `Instant` of the last
   successful collection) · `monitoring/LastRunHealthIndicator` (the adapter implementing
@@ -71,7 +71,7 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 
 ## What's GOOD (keep this)
 
-- **Domain, businessLogic & application are framework-free — now mechanically enforced.** The
+- **Domain, businessLogic & application are framework-free, now mechanically enforced.** The
   `domain`, `businessLogic`, and `application` packages import nothing from `micronaut`, `selenium`,
   `ormlite`, `jakarta`, or `netty`, and `application` additionally depends only inward (never on
   adapters/config). `HexagonalArchitectureTest` (ArchUnit) fails the build on any violation, so these
@@ -94,9 +94,9 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 
 ### Top violations to fix (detail in [../backlog.md](../backlog.md))
 
-1. **`Configuration` is config in name only** — values are hard-coded Java fields (browser, server,
+1. **`Configuration` is config in name only**: values are hard-coded Java fields (browser, server,
    paths, in-memory toggle); ignores `application.yml`/env.
-2. **Secrets in source/image** — the API token is now env-injected (`evergore.security.api-token` via
+2. **Secrets in source/image**: the API token is now env-injected (`evergore.security.api-token` via
    `SecurityConfiguration`, required at startup), but Evergore credentials still live in `zugang.txt`
    baked into the Docker image.
 

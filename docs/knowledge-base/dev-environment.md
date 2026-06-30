@@ -1,6 +1,6 @@
-# 12 — Dev Environment & Virtualization
+# 12: Dev Environment & Virtualization
 
-**Principle: the dev environment is fully virtualized. Nothing — JDK, Gradle, Firefox — is installed
+**Principle: the dev environment is fully virtualized. Nothing (JDK, Gradle, Firefox) is installed
 or run on the host.** All work (builds, tests, the app, and the AI agents) runs inside the
 **devcontainer** or via Docker. This keeps the host clean and makes toolchain upgrades (e.g. a future
 Java bump) a one-line image change instead of a host installation.
@@ -12,12 +12,12 @@ Java bump) a one-line image change instead of a host installation.
   committed **Gradle wrapper** (`./gradlew`), which needs only a JDK; the `postCreateCommand` warms up
   with `./gradlew build -x test`. The JDK version is single-sourced here (the feature `version`).
 - VS Code extensions: Claude Code + Java pack (the Java pack is the *editor* language server /
-  IntelliSense — distinct from the JDK; optional for the Gradle/agent-driven flow).
-- **Node.js (LTS) via the `node` feature** — for the planned frontend rewrite (Angular or React,
+  IntelliSense, distinct from the JDK; optional for the Gradle/agent-driven flow).
+- **Node.js (LTS) via the `node` feature**, for the planned frontend rewrite (Angular or React,
   undecided) and Node-based dev tooling; the Java build/runtime does not use it. The standalone `node`
   feature installs via **nvm** (downloaded binaries), *not* the yarn apt repo whose GPG key once broke
-  `apt` when `sonarlint` pulled node (see the lesson below), so it should be safe — but the image builds
-  on the **host** (no docker-in-docker — backlog H2), so this only takes effect on the next rebuild; verify there.
+  `apt` when `sonarlint` pulled node (see the lesson below), so it should be safe; but the image builds
+  on the **host** (no docker-in-docker, backlog H2), so this only takes effect on the next rebuild; verify there.
 - **Deferred** (removed to get a building container; re-add when needed):
   `docker-outside-of-docker` → selenium-firefox compose service (backlog **H2**);
   `sonarlint` → static analysis (backlog **G6**);
@@ -40,7 +40,7 @@ Java bump) a one-line image change instead of a host installation.
 3. Run **Claude Code from the container's integrated terminal** → all agents then execute **inside the
    container**, never on the host. Builds/tests run there too.
 
-> Note: a Claude Code session started on the *host* (like the bootstrap session) runs on the host —
+> Note: a Claude Code session started on the *host* (like the bootstrap session) runs on the host;
 > that's why the host has a Bash-stdout quirk and CRLF history. Inside the container, Bash behaves
 > normally. "Work in the container" means starting the session from the in-container terminal.
 
@@ -73,10 +73,10 @@ Multi-stage: `eclipse-temurin:25-jdk` build (`./gradlew clean test installDist`)
 standalone-firefox` runtime with the JDK 25 copied in and the application distribution at
 `/opt/protocolParser`. The `dos2unix`/jar-name hacks are gone (LF enforced via `.gitattributes`; the
 distribution dir name is version-independent), and a `.dockerignore` keeps the context lean. It still
-**bakes `zugang.txt` (secrets) into the image** — secret injection is backlog **C3**. The image is not
-built inside the devcontainer (no docker-in-docker — backlog **H2**); build/validate it on the Docker host.
+**bakes `zugang.txt` (secrets) into the image**; secret injection is backlog **C3**. The image is not
+built inside the devcontainer (no docker-in-docker, backlog **H2**); build/validate it on the Docker host.
 
-## Selenium in-container (deferred — backlog H2)
+## Selenium in-container (deferred, backlog H2)
 
 Scraping needs a browser. Plan: a **docker-compose** dev setup with a `selenium/standalone-firefox`
 service; tests connect via `RemoteWebDriver` to it. This retires the bundled Windows

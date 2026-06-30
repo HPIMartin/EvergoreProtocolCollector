@@ -2,12 +2,12 @@
 
 A Java / Micronaut service that scrapes the browser game **Evergore** for a guild's bank and
 storage (*Lager*) transaction logs, values item movements via a built-in item catalog, and computes
-each member's contribution — **automating a manual Google Sheet**. It also serves as a showcase of
+each member's contribution, **automating a manual Google Sheet**. It also serves as a showcase of
 clean, test-driven, AI-assisted development.
 
 ## Documentation
 
-Everything durable lives in the knowledge base — **start at
+Everything durable lives in the knowledge base. **Start at
 [docs/knowledge-base/README.md](docs/knowledge-base/README.md)**:
 
 - *What & why:* project overview, the Google Sheet it replaces, the domain model & value math.
@@ -20,7 +20,7 @@ Everything durable lives in the knowledge base — **start at
 Plan & decisions: [backlog](docs/backlog.md) · [open questions](docs/open-questions.md).
 Per-session bootstrap for AI agents: [CLAUDE.md](CLAUDE.md).
 
-## Develop & run (fully virtualized — nothing installed on the host)
+## Develop & run (fully virtualized, nothing installed on the host)
 
 Open the repo in **VS Code → Dev Containers: Reopen in Container** (provisions the JDK), then:
 
@@ -34,5 +34,5 @@ Production image & runtime config: [build-run-deploy.md](docs/knowledge-base/bui
 ## Conventions
 
 Clean code · TDD · BDD (for docs/showcase) · SOLID · hexagonal architecture. **Git is the source of
-truth for history** — fine-grained commits and their messages are the changelog; the docs don't
+truth for history**: fine-grained commits and their messages are the changelog; the docs don't
 duplicate them. See the [engineering handbook](docs/knowledge-base/engineering-handbook.md).

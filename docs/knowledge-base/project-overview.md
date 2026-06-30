@@ -1,12 +1,12 @@
-# 01 — Project Overview
+# 01: Project Overview
 
 ## The game
 
 **Evergore** (evergore.de) is a German-language, browser-based text/strategy MMO. Players
 control an **Avatar**. Avatars join a **Gilde** (guild). A guild shares two communal stores:
 
-- **Gildenbank** — holds the in-game currency (gold). Members pay in / take out.
-- **Gildenlager** ("Lager" = warehouse/storage) — holds **items** (raw materials, hunt loot,
+- **Gildenbank**: holds the in-game currency (gold). Members pay in / take out.
+- **Gildenlager** ("Lager" = warehouse/storage): holds **items** (raw materials, hunt loot,
   crafted goods, gems, equipment …). Members deposit and withdraw items.
 
 Every movement in either store is recorded by the game in a **Transaktionsbericht**
@@ -14,7 +14,7 @@ Every movement in either store is recorded by the game in a **Transaktionsberich
 
 ## The problem this project solves
 
-A guild officer wants to know **who is pulling their weight** — i.e. each member's net
+A guild officer wants to know **who is pulling their weight**, i.e. each member's net
 contribution to the guild's shared wealth over time. The game shows raw transaction logs
 but does no aggregation, and items have no obvious gold value attached in the log.
 
@@ -28,7 +28,7 @@ Tedious, error-prone, and always out of date.
 2. Parses each protocol entry into a structured transaction (who, when, what, how much, in/out).
 3. Values item movements using a built-in item catalog (`EvergoreItem`) with gold values + crafting recipes.
 4. Aggregates per Avatar: total paid into the bank, taken out, value deposited to storage,
-   value withdrawn — and from those, the member's **erzeugter Gildenmehrwert** ("generated guild value").
+   value withdrawn, and from those, the member's **erzeugter Gildenmehrwert** ("generated guild value").
 5. Persists results to SQLite and exposes a small token-protected HTML/REST view.
 
 ## Who it's for

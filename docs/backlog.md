@@ -1,6 +1,6 @@
-# Backlog — Evergore Protocol Collector
+# Backlog: Evergore Protocol Collector
 
-> **Status: v2 (2026-06-13) — strategic questions answered.** Scope = feature-parity dashboard
+> **Status: v2 (2026-06-13), strategic questions answered.** Scope = feature-parity dashboard
 > (Epic E) **+** clean-code craftsmanship **+** a *showcase of working with Claude* (Epic G).
 > Status is "live but learning/fun, no production pressure", so Epic C/F are good-practice, not
 > urgent. Architecture: targeted fixes now, full repackaging (D3) deferred until tested. Decisions
@@ -9,10 +9,10 @@
 ## ▶ Current status / next action
 
 `git log` is the record of what landed; this section tracks only **where we are and what's next**.
-**Backlog convention:** completed items are **removed** (the commits show them — no `DONE` tombstones);
+**Backlog convention:** completed items are **removed** (the commits show them, no `DONE` tombstones);
 only **rejected/deferred** items stay, with their decision + rationale (knowledge git doesn't hold).
-Item IDs live **only here**; removing an item also removes **every shortcode that referenced it** — in other
-rows' prose and across the docs — so no dangling code is left behind (handbook §3).
+Item IDs live **only here**; removing an item also removes **every shortcode that referenced it** (in other
+rows' prose and across the docs), so no dangling code is left behind (handbook §3).
 
 **Where we are:** the rebuild's core is in place on an up-to-date stack (Gradle / Java 25 / Micronaut
 4.10), verified **1:1** against the production DB. `domain`/`businessLogic` stay framework-free
@@ -23,31 +23,31 @@ tests carry no `static` signal flags and block on a deterministic, no-timeout la
 `BootSignalRecorder` bridges the bean↔test lifecycle).
 Single public `main` branch. (Decisions + rationale: [open-questions.md](open-questions.md).) Item value
 math is pinned by an all-items golden master with the dead `Category.storage` multiplier removed, and
-`getNewest()` returns `Optional` instead of a `MIN_VALUE` placeholder. Observability is in place — an
+`getNewest()` returns `Optional` instead of a `MIN_VALUE` placeholder. Observability is in place: an
 anonymous `/health` endpoint surfaces a last-successful-run health indicator (the token filter exempts
 only `/health` + `/health/`). Request rate-limiting is config-driven (`RateLimitConfiguration`,
 `evergore.rate-limit.*`); diagnostics route through the project `Logger`, enforced in committed `.java`
 by the pre-commit hook. The rate-limiter's block transition is now thread-safe with a deterministic,
 clock-injected expiry test; the `TransferType`→German mapping lives in one place (`toGermanString`) and
 `ApplicationExceptionHandler` dispatches via an abstract-`accept` visitor (no `instanceof`). A one-off
-conformance audit (documented rules vs. code) ran 2026-06-27 — trivial findings were swept inline, the
+conformance audit (documented rules vs. code) ran 2026-06-27: trivial findings were swept inline, the
 rest filed below as **D9** / **G16**.
 
-**Next action — pick from the standing next-up set** (unblocked by the Gradle migration; all land *in Gradle*): **E1** (erzeugter
-Gildenmehrwert — the headline metric, now easy to TDD on this harness and would surface storage
+**Next action: pick from the standing next-up set** (unblocked by the Gradle migration; all land *in Gradle*): **E1** (erzeugter
+Gildenmehrwert, the headline metric, now easy to TDD on this harness and would surface storage
 valuation via an endpoint; *recommended next*), **H6** (failsafe → Gradle
 integration-test set). **H9** (jump to
 Micronaut 5) only *after* 1:1 is re-proven. Plan via the agent pipeline (planner → implementer →
-falsifier → reviewer). *(A4/CI stays deprioritized — local-only Docker → home-server deploy.)*
+falsifier → reviewer). *(A4/CI stays deprioritized: local-only Docker → home-server deploy.)*
 
 **Gotchas worth keeping:**
-- The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit — ignore the
+- The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit. Ignore the
   warning, `git diff --check` if unsure. (The new build serves CRLF if the working-tree templates are
-  CRLF; a clean LF checkout serves LF — the 1:1 check normalises line endings.)
+  CRLF; a clean LF checkout serves LF; the 1:1 check normalises line endings.)
 - **Java 25 made `java.sql.Timestamp.from` strict** (`Math.multiplyExact` throws where JDK 17 wrapped);
   the empty watermark `LocalDateTime.MIN` was replaced by `BEGINNING_OF_TIME` in `EvergoreDataEvaluator`.
   **ArchUnit must be ≥ 1.4.1** to read Java 25 bytecode (older silently checks zero classes = false green).
-- The **devcontainer/`Dockerfile` are not built inside the devcontainer** (no docker-in-docker — H2);
+- The **devcontainer/`Dockerfile` are not built inside the devcontainer** (no docker-in-docker, H2);
   validate them on the Docker host / next container rebuild.
 - The Claude "always allow" flow can re-pollute the committed `settings.json` (path-bearing rules +
   tabs→spaces). Prefer bare commands matching the portable `Bash(<cmd>:*)` rules; diff against HEAD if unsure.
@@ -76,50 +76,50 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 
 ---
 
-## Epic A — Repo hygiene & foundation `P0`
+## Epic A: Repo hygiene & foundation `P0`
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **A4** | ~~CI (GitHub Actions)~~ **Deprioritized 2026-06-15** (local-only deploy, no CI). *Optional later, low prio:* a **local** gate — git `pre-commit` running `mvn -B verify` | Solo + local Docker→home-server deploy; no shared PRs to guard | revisit if the repo ever goes shared/CI | S |
+| **A4** | ~~CI (GitHub Actions)~~ **Deprioritized 2026-06-15** (local-only deploy, no CI). *Optional later, low prio:* a **local** gate, git `pre-commit` running `mvn -B verify` | Solo + local Docker→home-server deploy; no shared PRs to guard | revisit if the repo ever goes shared/CI | S |
 
-## Epic B — Lock the core with tests `P0→P1`
+## Epic B: Lock the core with tests `P0→P1`
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
 | **B4** | Repository tests against in-memory SQLite: `getNewest`, paging, `getAllFor(avatar, after)` | Only incidental smoke coverage | Fast tests using `:memory:` | M |
 | **B8** | **Audit & align the existing test suite to the test-style conventions** (emerged 2026-06-29 reworking the parser contract tests): no logic buried in tests (no case-`record` + loop + soft-assert iteration); one named `@Test` per distinct behaviour with the expected literal in the assert; "one assert per test" = one assertion *case* (assert a composite value as a whole via an intention-revealing helper like `assertEntry`); minimal, noise-free input values; data-driven (`@ParameterizedTest`/`@MethodSource`) only where it genuinely fits (ask when unsure). **Codify the rules in the KB first** (handbook §6 / `testing.md`), then bring older tests (e.g. `SmokeTest`) into line | The conventions are newer than most of the suite; the showcase's tests should be exemplary and consistent | Rules documented in the KB; existing tests conform | M |
-| **B9** | **Parser: `Einzahlung` is silently misclassified as `EINLAGERUNG`** (falsifier finding, Strang 2) — the headline regex (`LAGER_EINTRAG_START`) accepts `Einzahlung` as a transfer type, but `EntryFactory.generateEntry()` only branches on `Entnahme` and defaults everything else to `EINLAGERUNG`; no `EINZAHLUNG` enum exists, so an `Einzahlung` transaction is stored as a deposit with no error. **Needs author domain confirmation:** does `Einzahlung` occur in real Evergore bank/storage logs, and is it semantically distinct from `Einlagerung`? | Silent misclassification corrupts ingested data | If real → a distinct type + branch + a contract test; if not → rejected with rationale (decision logged) | S |
-| **B10** | **Parser: a malformed date aborts the whole ingest** (falsifier finding, Strang 2 — **confirmed bug**) — `LAGER_EINTRAG_START` uses `\d{2}\.\d{2}.\d{4}` with an **unescaped** third separator, so a line like `11.12X2001 …` matches as a headline and then `LocalDateTime` parsing throws an uncaught `DateTimeParseException`, killing the entire parse run. Fix: escape the dot (`\.`) so a malformed line is not treated as a headline | One bad line must not kill the whole ingest | Regex escaped; a malformed-date line is skipped/handled, not fatal; covered by a contract test | S |
-| **B11** | **Parser: the `+1` modifier is discarded, so `+1` items merge with their base item** (falsifier finding, Strang 2) — `3 X +1` and `5 X` both parse to name=`X`, quality 100 and merge into one item (qty 8). The single-item case is documented (`ignoresThePlusOneQualityModifier`), but the merge consequence is not. **Needs author domain confirmation:** does a `+1` item have a different value than its base? If yes → preserve the modifier (distinct item/quality) + a valuation rule; if no → keep merging and document it as intended | Valuation correctness if `+1` affects item value | Decision logged; behaviour documented, or the modifier preserved with a test | S |
+| **B9** | **Parser: `Einzahlung` is silently misclassified as `EINLAGERUNG`** (falsifier finding, Strang 2): the headline regex (`LAGER_EINTRAG_START`) accepts `Einzahlung` as a transfer type, but `EntryFactory.generateEntry()` only branches on `Entnahme` and defaults everything else to `EINLAGERUNG`; no `EINZAHLUNG` enum exists, so an `Einzahlung` transaction is stored as a deposit with no error. **Needs author domain confirmation:** does `Einzahlung` occur in real Evergore bank/storage logs, and is it semantically distinct from `Einlagerung`? | Silent misclassification corrupts ingested data | If real → a distinct type + branch + a contract test; if not → rejected with rationale (decision logged) | S |
+| **B10** | **Parser: a malformed date aborts the whole ingest** (falsifier finding, Strang 2, **confirmed bug**): `LAGER_EINTRAG_START` uses `\d{2}\.\d{2}.\d{4}` with an **unescaped** third separator, so a line like `11.12X2001 …` matches as a headline and then `LocalDateTime` parsing throws an uncaught `DateTimeParseException`, killing the entire parse run. Fix: escape the dot (`\.`) so a malformed line is not treated as a headline | One bad line must not kill the whole ingest | Regex escaped; a malformed-date line is skipped/handled, not fatal; covered by a contract test | S |
+| **B11** | **Parser: the `+1` modifier is discarded, so `+1` items merge with their base item** (falsifier finding, Strang 2): `3 X +1` and `5 X` both parse to name=`X`, quality 100 and merge into one item (qty 8). The single-item case is documented (`ignoresThePlusOneQualityModifier`), but the merge consequence is not. **Needs author domain confirmation:** does a `+1` item have a different value than its base? If yes → preserve the modifier (distinct item/quality) + a valuation rule; if no → keep merging and document it as intended | Valuation correctness if `+1` affects item value | Decision logged; behaviour documented, or the modifier preserved with a test | S |
 
-## Epic C — Configuration & security `P1`  *(good-practice showcase; not urgent while learning/fun)*
+## Epic C: Configuration & security `P1`  *(good-practice showcase; not urgent while learning/fun)*
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **C1** | Make `Configuration` real via `@ConfigurationProperties` bound from `application.yml`/env (browser, server, db path, credentials path, in-memory toggle, **+ the hard-coded Firefox binary path in `Browser.java`**). The conformance audit also flagged the **public mutable fields** `useInMemory`/`DATABASE_TEMP_SQLITE` and the Windows `c:\evergore` default path — fold these in (immutable record/port, no host paths) | Hard-coded fields defeat config & deployability; mutable public config breaks "prefer immutable records" | No domain settings hard-coded in `.java`; overridable by env; config is immutable | M || **C3** | Stop baking `zugang.txt` into the image; inject credentials via env/secret/mount; read via `FileLoader` port | Credentials in the image is a leak | Image has no credentials; documented secret-injection path | M |
+| **C1** | Make `Configuration` real via `@ConfigurationProperties` bound from `application.yml`/env (browser, server, db path, credentials path, in-memory toggle, **+ the hard-coded Firefox binary path in `Browser.java`**). The conformance audit also flagged the **public mutable fields** `useInMemory`/`DATABASE_TEMP_SQLITE` and the Windows `c:\evergore` default path: fold these in (immutable record/port, no host paths) | Hard-coded fields defeat config & deployability; mutable public config breaks "prefer immutable records" | No domain settings hard-coded in `.java`; overridable by env; config is immutable | M || **C3** | Stop baking `zugang.txt` into the image; inject credentials via env/secret/mount; read via `FileLoader` port | Credentials in the image is a leak | Image has no credentials; documented secret-injection path | M |
 | **C4** | Lower `logback` root from `verbose`; ensure credentials/tokens never logged | Chatty logs may leak secrets | Sensible levels; a log-scrub check | S |
-| **C6** | **Evaluate a prebuilt-NVD-database Docker image for the dependency-check scan** instead of the in-build Gradle plugin downloading the NVD feed — candidates: **official** `owasp/dependency-check-action` (DB nightly); community `registry.gitlab.com/gitlab-ci-utils/docker-dependency-check` (weekly) / `nbaars/owasp-dependency-check-as-one` (daily). Bakes a fresh CVE DB into the image (no cold-start download, no scan-time API key, hermetic/reproducible) | Removes the one-time NVD datafeed download + the scan-time rate-limit/API-key dependency; gives a daily-fresh DB and a reproducible scan | Decision logged; if adopted, the scan runs from a prebuilt image with no cold-start NVD download (vs. today's on-demand Gradle-plugin scan). **Deferred** — needs Docker *where it runs*, which the devcontainer lacks today (**H2**); becomes the better path once **CI** (**A4**) or a Docker-host scan exists. Prefer the **official** image over community builds (supply-chain). Lighter interim win: persist the `~/.gradle` NVD cache across rebuilds (**H5**). Author request 2026-06-29 | S (eval) |
+| **C6** | **Evaluate a prebuilt-NVD-database Docker image for the dependency-check scan** instead of the in-build Gradle plugin downloading the NVD feed. Candidates: **official** `owasp/dependency-check-action` (DB nightly); community `registry.gitlab.com/gitlab-ci-utils/docker-dependency-check` (weekly) / `nbaars/owasp-dependency-check-as-one` (daily). Bakes a fresh CVE DB into the image (no cold-start download, no scan-time API key, hermetic/reproducible) | Removes the one-time NVD datafeed download + the scan-time rate-limit/API-key dependency; gives a daily-fresh DB and a reproducible scan | Decision logged; if adopted, the scan runs from a prebuilt image with no cold-start NVD download (vs. today's on-demand Gradle-plugin scan). **Deferred:** needs Docker *where it runs*, which the devcontainer lacks today (**H2**); becomes the better path once **CI** (**A4**) or a Docker-host scan exists. Prefer the **official** image over community builds (supply-chain). Lighter interim win: persist the `~/.gradle` NVD cache across rebuilds (**H5**). Author request 2026-06-29 | S (eval) |
 
-## Epic D — Hexagonal completion `P1→P2`
+## Epic D: Hexagonal completion `P1→P2`
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
 | **D3** | Restructure packages to `domain / application / adapters{in,out} / config`; keep core framework-free | Make the boundaries explicit & enforceable | Micronaut/Selenium/ORMLite imports only under `adapters`+`config` | L |
-| **D9** | **Naming/consistency follow-ups** (conformance-audit findings): (a) fix the pervasive `withdrawl`→`withdrawal` misspelling in identifiers **and** DB key strings (`bank_withdrawl_`→`bank_withdrawal_`, `storage_withdrawl_`→`storage_withdrawal_` — needs a one-time key migration); (b) rename the German identifiers `PageContents.lager`/`updateLagerEntries`/`Constants.LAGER_EINTRAG_START` → `storage`/`STORAGE_ENTRY_PATTERN`; (c) move `Logger` to the last constructor param in the `Repository` base + its three subclasses | English-only + intention-revealing-name rules; consistency with `StorageEntry`/`StorageRepository` | Identifiers corrected; DB migration keeps values 1:1 | S |
-| **D6** | **Refactor the `EvergoreItem` catalog in-place** — the ~660-constant enum (752 lines) is the project's biggest file. **Decision 2026-06-19: keep it an enum** (the compile-checked recipe hard-links are valued) and **do NOT externalize** to a config/YAML file. Refactor for readability/maintainability instead, e.g.: pull the nested `Category`/`Recipe`/`Ingredient` types into their own files; add concise recipe/ingredient factory helpers to shorten each constant; group constants. Approach TBD with the author. Any change **must** keep a **golden-master test** asserting `getStorageValue`/`getWithdrawlValue` are unchanged for all items | Tame the biggest file without losing the type-safe cross-references; eases value maintenance (relates to **D-3**) | P3 | Golden-master test gates it (1:1). |
+| **D9** | **Naming/consistency follow-ups** (conformance-audit findings): (a) fix the pervasive `withdrawl`→`withdrawal` misspelling in identifiers **and** DB key strings (`bank_withdrawl_`→`bank_withdrawal_`, `storage_withdrawl_`→`storage_withdrawal_`, needs a one-time key migration); (b) rename the German identifiers `PageContents.lager`/`updateLagerEntries`/`Constants.LAGER_EINTRAG_START` → `storage`/`STORAGE_ENTRY_PATTERN`; (c) move `Logger` to the last constructor param in the `Repository` base + its three subclasses | English-only + intention-revealing-name rules; consistency with `StorageEntry`/`StorageRepository` | Identifiers corrected; DB migration keeps values 1:1 | S |
+| **D6** | **Refactor the `EvergoreItem` catalog in-place**: the ~660-constant enum (752 lines) is the project's biggest file. **Decision 2026-06-19: keep it an enum** (the compile-checked recipe hard-links are valued) and **do NOT externalize** to a config/YAML file. Refactor for readability/maintainability instead, e.g.: pull the nested `Category`/`Recipe`/`Ingredient` types into their own files; add concise recipe/ingredient factory helpers to shorten each constant; group constants. Approach TBD with the author. Any change **must** keep a **golden-master test** asserting `getStorageValue`/`getWithdrawlValue` are unchanged for all items | Tame the biggest file without losing the type-safe cross-references; eases value maintenance (relates to **D-3**) | P3 | Golden-master test gates it (1:1). |
 
-## Epic E — Product: replace the Google Sheet `P2→P3`  *(in scope — full parity; no time pressure)*
+## Epic E: Product, replace the Google Sheet `P2→P3`  *(in scope, full parity; no time pressure)*
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **E1** | Compute & store **erzeugter Gildenmehrwert** per avatar (bank+storage net) | Sheet col 5 — the headline metric | Overview shows net value; matches the verified formula | S |
+| **E1** | Compute & store **erzeugter Gildenmehrwert** per avatar (bank+storage net) | Sheet col 5, the headline metric | Overview shows net value; matches the verified formula | S |
 | **E2** | Surface **last bank/storage activity** per avatar (sheet col 10/11) | Easy parity win from stored timestamps | Overview/avatar view shows last-activity | S |
 | **E3** | Implement **geschätzte Jagdeinlagerungen** + percentage(s) (sheet col 6/7/8) | Needs the hunt-loot valuation rule resolved first (Q3) | Values reproduce sheet within tolerance on a sample | M |
 | **E4** | **Date-range reporting** (Datum von/bis) instead of only a running watermark | Sheet reports over a chosen window | Query metrics for an arbitrary `[from,to]` | M |
 | **E5** | Real **overview dashboard** (sortable table, all columns, maybe charts); consider JSON API + small frontend vs. current HTML-string templates | The sheet's value is the at-a-glance view | A guild officer can replace the sheet with this page | L |
 | **E6** | **History / time-series**: snapshot metrics over time for trends per avatar | The sheet is a point-in-time; trends are more useful | Stored snapshots; a trend view | L |
 
-## Epic F — Ops, robustness & creative growth `P3`
+## Epic F: Ops, robustness & creative growth `P3`
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
@@ -128,30 +128,30 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 | **F4** | **Creative:** multi-guild / multi-world support | Generalize beyond `[Boten]` on `zyrthania` | Config-driven guild/world; data partitioned | L |
 | **F5** | **Creative:** public read-only OpenAPI JSON API for guild tooling | Already have OpenAPI; expose clean JSON | Documented `/api` returning per-avatar metrics | M |
 
-## Epic G — Documentation, standards & Claude-workflow showcase `P0→P1`
+## Epic G: Documentation, standards & Claude-workflow showcase `P0→P1`
 
-The project doubles as an example of clean, AI-assisted development — so the "how" is a deliverable.
+The project doubles as an example of clean, AI-assisted development, so the "how" is a deliverable.
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
 | **G3** | Keep KB in lockstep with code (baked into Definition of Done) | Docs rot otherwise | Behavior-changing commits touch the matching KB doc | S (ongoing) |
 | **G4** | Decide BDD tooling: plain JUnit given/when/then vs Cucumber `.feature` (open question D-9) | Shapes how scenarios are written & shared | Decision logged; first scenario follows it | S |
 | **G5** | Optional: short "case study" of the rebuild for the showcase | The meta-goal is demonstrating AI-assisted dev | A narrative others can learn from | M |
-| **G16** | **Refresh `testing.md` + resolve the fork-isolation discrepancy** (conformance-audit findings): add the missing test classes to the inventory (`BootSignalRecorderTest`, `ApiTokenStartupValidatorTest`, `RateLimitFilterTest`) and correct the stale `@Test` counts; **decide** the `setForkEvery(1)` mismatch — `testing.md` claims per-class JVM forking but `build.gradle.kts` does not set it: either add it to the build or correct the doc (and verify the suite stays stable without it) | Docs-are-knowledge: the inventory drifted and the doc contradicts the build (handbook §3 — the build wins) | Inventory matches the suite; the fork claim and the build agree | S |
-| **G6** | *(future)* Static code-analysis / metrics gate — complexity, duplication, coverage thresholds (SonarQube/Sonar). **Re-add the `sonarlint` devcontainer feature** (removed because its `node`→yarn-repo dependency broke apt with a GPG error — troubleshoot the key) | Objective quality guardrail beyond agent review | CI fails on threshold breach | M |
-| **G17** | **Forbid wildcard imports project-wide** (author decision 2026-06-30): the de-facto style is `import …*;` (all prod + legacy tests), but nothing in the build enforces either way and the newer tests use explicit imports → inconsistency. Add a **single-purpose** Checkstyle rule (`AvoidStarImport`, sibling to the existing `NeedBraces` gate — *not* a general linter, so the rejected-items note still holds), then **one-time-expand** every existing wildcard import to explicit (IDE organize-imports; Spotless can't expand `.*` since it needs type info) | Clean-code showcase + consistency: explicit imports make dependencies visible and match the new tests; "enforce style from one place" is already the pattern | Build fails on any `import …*;`; no wildcard import remains under `src/`. **Own change, *after* the in-flight strands land** — a project-wide import reformat would conflict with every open worktree | M |
+| **G16** | **Refresh `testing.md` + resolve the fork-isolation discrepancy** (conformance-audit findings): add the missing test classes to the inventory (`BootSignalRecorderTest`, `ApiTokenStartupValidatorTest`, `RateLimitFilterTest`) and correct the stale `@Test` counts; **decide** the `setForkEvery(1)` mismatch: `testing.md` claims per-class JVM forking but `build.gradle.kts` does not set it, so either add it to the build or correct the doc (and verify the suite stays stable without it) | Docs-are-knowledge: the inventory drifted and the doc contradicts the build (handbook §3: the build wins) | Inventory matches the suite; the fork claim and the build agree | S |
+| **G6** | *(future)* Static code-analysis / metrics gate: complexity, duplication, coverage thresholds (SonarQube/Sonar). **Re-add the `sonarlint` devcontainer feature** (removed because its `node`→yarn-repo dependency broke apt with a GPG error; troubleshoot the key) | Objective quality guardrail beyond agent review | CI fails on threshold breach | M |
+| **G17** | **Forbid wildcard imports project-wide** (author decision 2026-06-30): the de-facto style is `import …*;` (all prod + legacy tests), but nothing in the build enforces either way and the newer tests use explicit imports → inconsistency. Add a **single-purpose** Checkstyle rule (`AvoidStarImport`, sibling to the existing `NeedBraces` gate, *not* a general linter, so the rejected-items note still holds), then **one-time-expand** every existing wildcard import to explicit (IDE organize-imports; Spotless can't expand `.*` since it needs type info) | Clean-code showcase + consistency: explicit imports make dependencies visible and match the new tests; "enforce style from one place" is already the pattern | Build fails on any `import …*;`; no wildcard import remains under `src/`. **Own change, *after* the in-flight strands land**: a project-wide import reformat would conflict with every open worktree | M |
 
-## Epic H — Dev environment & virtualization `P0→P2`
+## Epic H: Dev environment & virtualization `P0→P2`
 
-Goal: **fully virtualized dev — nothing (JDK/Maven/Firefox) installed or run on the host.** All work
+Goal: **fully virtualized dev, nothing (JDK/Maven/Firefox) installed or run on the host.** All work
 (incl. agents) runs in the devcontainer or via Docker; JDK upgrades = change an image tag, not the host.
 See [knowledge-base/dev-environment.md](knowledge-base/dev-environment.md).
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
 | **H2** | docker-compose: add a `selenium/standalone-firefox` service; tests use `RemoteWebDriver`; retire bundled `gecko-*-win.exe`. **Re-add the `docker-outside-of-docker` devcontainer feature** (removed to get a building container) | Browser-in-container ⇒ scraping/integration tests run anywhere, no host Firefox | An integration test scrapes via the service | M |
-| **H5** | *(was: cross-rebuild Maven cache — obsolete, Maven gone)* Optional: persist the Gradle caches (`~/.gradle`, build cache) across rebuilds with correct `vscode` ownership | Faster rebuilds | Gradle deps/build cached across container rebuilds | S |
-| **H9** | **Jump Micronaut 4.10 → 5.0** (Java-25 baseline, Apr 2026) and re-verify 1:1. **Only after** the current migration's 1:1 is locked (ideally via the automated acceptance test `ProtocolEvaluationAcceptanceTest`) | Stay on the newest line; deferred deliberately — one framework risk at a time | `./gradlew build` green on MN5 + endpoints still 1:1 vs the prod snapshot | M |
+| **H5** | *(was: cross-rebuild Maven cache, obsolete, Maven gone)* Optional: persist the Gradle caches (`~/.gradle`, build cache) across rebuilds with correct `vscode` ownership | Faster rebuilds | Gradle deps/build cached across container rebuilds | S |
+| **H9** | **Jump Micronaut 4.10 → 5.0** (Java-25 baseline, Apr 2026) and re-verify 1:1. **Only after** the current migration's 1:1 is locked (ideally via the automated acceptance test `ProtocolEvaluationAcceptanceTest`) | Stay on the newest line; deferred deliberately, one framework risk at a time | `./gradlew build` green on MN5 + endpoints still 1:1 vs the prod snapshot | M |
 
 ---
 
@@ -160,32 +160,32 @@ See [knowledge-base/dev-environment.md](knowledge-base/dev-environment.md).
 A workflow gap-analysis compared an external *"enterprise Java shop"* Claude Code guide against this
 repo and **adversarially verified** every derived item (genuinely missing? worth it for a *solo*
 Micronaut showcase?). The guide is Spring/Gradle/team-scale; only the items below survived. The source
-doc is intentionally **not** committed — its value lives here.
+doc is intentionally **not** committed; its value lives here.
 
 ### New items (verified worth doing)
 
 | ID | Item | Why | Priority | Sequencing / caveat |
 |----|------|-----|----------|---------------------|
-| **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%) — the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`); the hard-coded API token is already env-injected, so no cleanup-ordering constraint remains. System.out check: the dead-code deletion already removed ~half the hits (`CsvParser`); whitelist `@Ignore` Gherkin once G4 lands. |
+| **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%), the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`); the hard-coded API token is already env-injected, so no cleanup-ordering constraint remains. System.out check: the dead-code deletion already removed ~half the hits (`CsvParser`); whitelist `@Ignore` Gherkin once G4 lands. |
 | **G8** | **`/commit`** slash command encoding the strict one-line/no-footer/never-push protocol | Repo's strictest, most-violated-by-default rule (footers slip in); reproducible showcase artifact | P3 | `/review`,`/tdd` rejected (duplicate reviewer/implementer agents). `/spec` deferred → gate on **G4**; keep MCP-free + JUnit-`@Ignore`-first (not Cucumber/Jira). |
 | **B7** | Migrate the remaining JUnit `Assertions` in `SmokeTest` → **AssertJ** | Single assertion idiom (documented preference) | P3 | The `MetaInformationTest` slice is done; `SmokeTest` stays deferred to its planned `RenderedTable`/Levenshtein-rework (its `assertClosest` helper should go too). |
 | **H6** | `maven-failsafe-plugin` + rename boot/integration tests to `*IT` (separate integration phase) | Keeps the fast TDD loop fast; isolates server-booting tests | P3 | Gate on **H2** (real Selenium IT), **not** the in-memory *fast* acceptance test (`ProtocolEvaluationAcceptanceTest`). Update testing.md same change. **2026-06-15: land in Gradle post-migration (failsafe → Gradle integration test set).** |
-| **G9** | **Point the agent at official docs (WebFetch) for less-trafficked libraries** — a `working-with-ai-agents.md` convention: for **Micronaut / ORMLite / Selenium / RxJava** (thin in LLM training data), fetch the official docs before writing against an unfamiliar API; prefer doc-grounded code over confabulation | Enterprise-audit Pitfall #5, the most stack-relevant gap: a solo dev has no reviewer to catch a hallucinated API, and ArchUnit/tests catch structure, not invented method signatures. MCP-free (WebFetch is available) | P2 | Flagged independently by two audit reviewers. Doc-only; fits the Epic-G showcase. |
+| **G9** | **Point the agent at official docs (WebFetch) for less-trafficked libraries**, a `working-with-ai-agents.md` convention: for **Micronaut / ORMLite / Selenium / RxJava** (thin in LLM training data), fetch the official docs before writing against an unfamiliar API; prefer doc-grounded code over confabulation | Enterprise-audit Pitfall #5, the most stack-relevant gap: a solo dev has no reviewer to catch a hallucinated API, and ArchUnit/tests catch structure, not invented method signatures. MCP-free (WebFetch is available) | P2 | Flagged independently by two audit reviewers. Doc-only; fits the Epic-G showcase. |
 | **G10** | **SessionStart orient/lessons hook** in `.claude/settings.json`: deterministically inject the orient pointer (CLAUDE.md → KB README → backlog "Current status" → open-questions → `process-learnings.md`) so every fresh session reads the lessons first | The 100%-fires complement to the advisory `/continue` + CLAUDE.md "Start here"; completes the self-improvement loop and is the most on-thesis hooks-over-rules showcase artifact (sibling to **G7**) | P3 | Enterprise-audit gap. The lessons file already exists (`process-learnings.md`); only the deterministic hook is missing. |
 | **G11** | **Improve the AI/agent working environment in the devcontainer** (low prio): pre-install tools used every session (`git-filter-repo`, `sqlite3`, `jq`), pre-allow common read-only commands in the committed `settings.json` (portable forms only), and add conventions/hooks that cut token use (scratch-file hygiene, scoped reads over blind re-scans) | Recurring friction: missing `git-filter-repo`/`docker`, repeated permission prompts, the "always allow" flow re-polluting `settings.json`, broad re-reads burning tokens | P3 | Author request 2026-06-16. Sits with **G7**/**G10** (the hooks/showcase items). The permission-audit slice landed 2026-06-21; the worktree-wildcard slice (portable `git -C *.claude/worktrees/*` + `-C` deny guards, cruft purged from local) landed 2026-06-28. |
-| **G13** | **Git enforcement hooks** (committed `hooks/` + `core.hooksPath` wired in the devcontainer `postCreate`, in-container): **pre-commit** = `./gradlew spotlessCheck checkstyleMain checkstyleTest` + a **secret-scan** (tokens/keys/credentials/real emails/host-paths) + reject `System.out`/`printStackTrace`/leftover `// TODO`; **commit-msg** = one-line, present-tense-verb-first, no body/`Co-Authored-By`/footer. **Excludes tests/`build`** (would break the fast TDD micro-commit loop; commits are already green). | Mechanically prevents slips rules can't — an earlier feature's re-implementation commits were Spotless-dirty because `spotlessApply` output was left uncommitted; "hooks > rules" at the git layer | P2 | Author request 2026-06-22 (all 4 checks chosen). **Git-level complement** to harness-level **G7** (PreToolUse, catches Claude edits earlier) + **G8** (`/commit`); the lighter/faster form of **A4**'s local gate (no full `verify`). Implement **after the preceding feature**. |
+| **G13** | **Git enforcement hooks** (committed `hooks/` + `core.hooksPath` wired in the devcontainer `postCreate`, in-container): **pre-commit** = `./gradlew spotlessCheck checkstyleMain checkstyleTest` + a **secret-scan** (tokens/keys/credentials/real emails/host-paths) + reject `System.out`/`printStackTrace`/leftover `// TODO`; **commit-msg** = one-line, present-tense-verb-first, no body/`Co-Authored-By`/footer. **Excludes tests/`build`** (would break the fast TDD micro-commit loop; commits are already green). | Mechanically prevents slips rules can't: an earlier feature's re-implementation commits were Spotless-dirty because `spotlessApply` output was left uncommitted; "hooks > rules" at the git layer | P2 | Author request 2026-06-22 (all 4 checks chosen). **Git-level complement** to harness-level **G7** (PreToolUse, catches Claude edits earlier) + **G8** (`/commit`); the lighter/faster form of **A4**'s local gate (no full `verify`). Implement **after the preceding feature**. |
 
 ### Considered and rejected (do not re-propose without a new reason)
 
-- **Checkstyle *as a general linter*** — duplicates **G6** + the reviewer agent; fold into G6 if anything.
+- **Checkstyle *as a general linter*** duplicates **G6** + the reviewer agent; fold into G6 if anything.
   *(Introduced 2026-06-19 in a single-purpose, disjoint scope: one rule, `NeedBraces`, for the brace gap the
-  formatter cannot fill — see build-run-deploy.md. The "general linter" rejection still stands.)*
-- **maven-enforcer** — fabricated origin, BOM-managed deps, in-container fixed JDK → low value.
-- **commit-message *skill*** — rule already in CLAUDE.md + reviewer gate + the `git push` deny; a skill adds context cost, not enforcement (use **G8** `/commit`, or a git `commit-msg` hook).
-- **security-auditor *subagent*** — redundant with the reviewer's `security` category; OWASP ceremony for a no-prod-pressure scraper. Keep only "extend reviewer + secret-scan hook" under C3.
-- **ADRs (`docs/adr/`)** — duplicate the `open-questions.md` Decisions table ("git is history; docs are knowledge").
-- **format-on-save hook** — premature; folded into the shared-formatter adoption (needs a formatter + CI first).
-- **block-dangerous-bash hook** — now largely covered by the hardened permission **deny** (`git push`, `rm -rf`, `git reset --hard`, added 2026-06-15; `-C` worktree variants + `git -C * clean` added 2026-06-28); revisit only for force-push/rebase nuance.
+  formatter cannot fill, see build-run-deploy.md. The "general linter" rejection still stands.)*
+- **maven-enforcer**: fabricated origin, BOM-managed deps, in-container fixed JDK → low value.
+- **commit-message *skill***: rule already in CLAUDE.md + reviewer gate + the `git push` deny; a skill adds context cost, not enforcement (use **G8** `/commit`, or a git `commit-msg` hook).
+- **security-auditor *subagent***: redundant with the reviewer's `security` category; OWASP ceremony for a no-prod-pressure scraper. Keep only "extend reviewer + secret-scan hook" under C3.
+- **ADRs (`docs/adr/`)** duplicate the `open-questions.md` Decisions table ("git is history; docs are knowledge").
+- **format-on-save hook**: premature; folded into the shared-formatter adoption (needs a formatter + CI first).
+- **block-dangerous-bash hook**: now largely covered by the hardened permission **deny** (`git push`, `rm -rf`, `git reset --hard`, added 2026-06-15; `-C` worktree variants + `git -C * clean` added 2026-06-28); revisit only for force-push/rebase nuance.
 - **N/A / enterprise-only:** Spring Modulith (not Spring), CLAUDE.md <200-line guard (it's 76), `.mcp.json`/Jira/GitHub MCP (solo, no tracker), `output-styles/`, path-scoped `rules/`, directory-level `CLAUDE.md`, a `docs-writer`/`tdd-runner` agent (tdd = existing `implementer`), quarterly surface audit, English-in-repo (already decided).
 
 ---
@@ -194,4 +194,4 @@ doc is intentionally **not** committed — its value lives here.
 
 - The acceptance test (`ProtocolEvaluationAcceptanceTest`) enables most of E (date-range, dashboard build on a testable core).
 - C-epic is independent and can run in parallel; do C3 before any real deployment.
-- **D-4**/Q3 (hunt-loot valuation rule) gates E3 — the storage-multiplier question is **resolved** (`Category.storage` removed; see the open-questions Decisions entry on that removal).
+- **D-4**/Q3 (hunt-loot valuation rule) gates E3; the storage-multiplier question is **resolved** (`Category.storage` removed; see the open-questions Decisions entry on that removal).

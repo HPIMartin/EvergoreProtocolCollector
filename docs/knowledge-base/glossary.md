@@ -1,4 +1,4 @@
-# 08 — Glossary (German ↔ English)
+# 08: Glossary (German ↔ English)
 
 The game and all scraped data are German. Code/identifiers are mostly English, with German domain
 terms kept verbatim where they're proper nouns (item names, transfer types). Use this when reading
@@ -15,20 +15,20 @@ the protocol, the `EvergoreItem` catalog, or the Google Sheet.
 | (Gilden)Lager | Guild storage / warehouse (holds items) |
 | Welt / Server (z.B. "zyrthania") | Game world / server shard |
 | Zugang (`zugang.txt`) | Access / login credentials |
-| Impressum | "Imprint" — page footer; used by the parser as an end-of-content marker |
+| Impressum | "Imprint": page footer; used by the parser as an end-of-content marker |
 
 ## Transactions
 
 | German | English / meaning |
 |--------|-------------------|
-| Transaktionsbericht | Transaction report — the scraped protocol of bank/storage movements |
+| Transaktionsbericht | Transaction report: the scraped protocol of bank/storage movements |
 | Einlagerung | Deposit **into storage** (`TransferType.EINLAGERUNG`, "place") |
 | Entnahme | Withdrawal **from storage** (`TransferType.ENTNAHME`) |
 | Einzahlung | Deposit **into the bank** (gold) |
 | Auszahlung | Withdrawal **from the bank** (gold) |
-| erzeugter Gildenmehrwert | "Generated guild added value" — a member's net contribution (deposits − withdrawals) |
+| erzeugter Gildenmehrwert | "Generated guild added value": a member's net contribution (deposits − withdrawals) |
 | letzte Lager-/Bankaktivität | Last storage / bank activity timestamp |
-| geschätzte Jagdeinlagerungen | "Estimated hunt deposits" — estimated value of hunt-loot deposited |
+| geschätzte Jagdeinlagerungen | "Estimated hunt deposits": estimated value of hunt-loot deposited |
 
 ## Item catalog (`EvergoreItem.Category`)
 
