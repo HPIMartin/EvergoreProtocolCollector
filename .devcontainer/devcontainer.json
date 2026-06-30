@@ -23,7 +23,8 @@
 			"extensions": [
 				"Anthropic.claude-code",
 				"vscjava.vscode-java-pack",
-				"shengchen.vscode-checkstyle"
+				"shengchen.vscode-checkstyle",
+				"eamodio.gitlens"
 			],
 			"settings": {
 				"java.configuration.updateBuildConfiguration": "automatic",
