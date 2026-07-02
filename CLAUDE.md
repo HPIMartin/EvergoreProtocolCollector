@@ -3,7 +3,7 @@
 > Auto-loaded by Claude Code at the start of every session. This is a **thin wrapper**: the rules live
 > in the knowledge base (the [single source of truth](docs/knowledge-base/README.md)) and this file
 > only points to them and adds Claude-Code mechanics. **Built from
-> [`agent-entry-template.md`](docs/knowledge-base/agent-entry-template.md) · based on template version: 1.**
+> [`agent-entry-template.md`](docs/knowledge-base/agent-entry-template.md) · based on template version: 2.**
 > At session start, quick-check that the SHARED section below still matches the template (re-sync on a
 > version bump). **Conversation may be in German; code, comments, identifiers, and docs are always English.**
 
@@ -16,9 +16,11 @@ development**. (Detail: [README.md](README.md) / [project-overview.md](docs/know
 
 ## Start here (every session)
 
-1. **Read the knowledge base first; do not re-scan the codebase blindly:**
-   [`docs/knowledge-base/README.md`](docs/knowledge-base/README.md).
-2. Check the backlog [`docs/backlog.md`](docs/backlog.md) and open decisions
+1. **Read the knowledge base map first,** [`docs/knowledge-base/README.md`](docs/knowledge-base/README.md);
+   then read only the sections relevant to the task. Do **not** blindly re-scan the codebase or read
+   the big docs whole (token hygiene → working-with-ai-agents.md).
+2. Check the backlog's **"▶ Current status / next action"** section in
+   [`docs/backlog.md`](docs/backlog.md) and any decisions touching your task in
    [`docs/open-questions.md`](docs/open-questions.md).
 3. Engineering standards: [`engineering-handbook.md`](docs/knowledge-base/engineering-handbook.md);
    AI workflow: [`working-with-ai-agents.md`](docs/knowledge-base/working-with-ai-agents.md);
@@ -40,6 +42,8 @@ development**. (Detail: [README.md](README.md) / [project-overview.md](docs/know
   remove completed backlog items, keep only rejected/deferred with rationale) → KB README + handbook §7.
 - **Ask, don't guess:** author decisions get multiple-choice options (recommended first), recorded in
   [`open-questions.md`](docs/open-questions.md).
+- **Context & token hygiene** (section-scoped reads, no re-reads, batched tool calls, short focused
+  sessions) → working-with-ai-agents.md.
 
 ## Claude-Code mechanics (this tool only)
 

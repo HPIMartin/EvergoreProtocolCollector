@@ -25,8 +25,10 @@ cross-session memory.
 
 ## Session playbook
 
-1. **Orient:** read your tool's entry file (e.g. `CLAUDE.md`), then `docs/knowledge-base/README.md`,
-   `backlog.md`, `open-questions.md`. Don't re-scan the whole codebase; trust + verify the KB.
+1. **Orient:** read your tool's entry file (e.g. `CLAUDE.md`), then `docs/knowledge-base/README.md`
+   (the map), the backlog's "▶ Current status / next action" section and the decisions touching your
+   task. Don't re-scan the whole codebase or read the big docs whole; trust + verify the KB
+   (see "Context & token hygiene" below).
 2. **Pick one backlog item** (smallest valuable slice). Confirm scope.
 3. **Clarify by asking:** when a decision is the author's, ask with **multiple-choice options**
    (recommended first). Record the answer in `open-questions.md` under Decisions.
@@ -51,18 +53,34 @@ the only one who pushes.
 
 ## Context & token hygiene
 
-Long sessions dominate cost: every turn re-sends the whole accumulated context, so a sprawling
-session is paid for repeatedly. Keep the working context lean:
+Long sessions dominate cost: every token that enters the context is re-read on **every** subsequent
+turn, and after any pause the whole context is re-written to the prompt cache. Context size × session
+length is the product to minimize; keep the working context lean:
 
+- **Section-scoped reads for the big docs.** The backlog, the decisions log and the handbook are
+  thousands of tokens each. At session start read the KB README (the map), the backlog's
+  **"▶ Current status / next action"** section and only the decisions/sections touching the task;
+  locate them with Grep or line-scoped reads instead of pulling whole files. Read a file whole only
+  when it is the object of the work.
+- **Never re-read a file already in context** unless it changed on disk; the earlier read is still
+  there, and each re-read injects the full file again.
+- **Batch independent tool calls** into one turn (and prefer combined one-liners where the permission
+  rules match, see below): every round trip re-reads the entire context, so avoidable calls and
+  error-retries are pure waste.
 - **Search via sub-agents, not the main context.** Use `Explore` / sub-agents for broad reading;
-  they return conclusions and keep large file dumps out of the main session. Read specific line
-  ranges rather than whole large files.
-- **`/clear` at task boundaries.** Start a fresh context between unrelated backlog items. The agent
-  flags good `/clear` points; the author triggers it (the agent can't clear its own context).
+  they return conclusions and keep large file dumps out of the main session.
+- **`/clear` at task boundaries; prefer short, focused sessions.** Start a fresh context between
+  unrelated backlog items; a long-lived large context also pays a full cache re-write after every
+  pause longer than the cache TTL (5 min on API billing; 1 h for Claude Code on a subscription).
+  The agent flags good `/clear` points; the author triggers it (the agent can't clear its own context).
+- **Load heavyweight skills / one-off imports in a throwaway session,** not mid-feature: anything
+  injected stays in the context for the rest of the session.
 - **Reserve the Workflow / fan-out tooling for occasional large parallel audits** (explicit opt-in),
   never the interactive, human-gated commit loop (see [multi-agent-playbook.md](multi-agent-playbook.md)).
   Routine TDD runs lean: plan → implementer → falsifier → reviewer.
 - **Terse by default:** bullets and the outcome first; expand on request.
+- **Keep the shared docs themselves lean** (KB-current): this hygiene only works if the per-session
+  entry docs stay small; condense, don't accrete.
 
 ## Permissions & autonomy (committed vs local)
 
@@ -99,11 +117,13 @@ so prefer them over splitting into atomic calls. Only two things make a chain un
 prompt: a leading **`cd`** and an inline **`VAR=…`** assignment. Avoid those (use absolute paths /
 `git -C <path>` / literal values) and chains run prompt-free. (Worktree-path specifics: handbook §7.)
 
-**Autonomy within guardrails.** The aim is maximum useful autonomy at minimum ceremony *and* a hard
-floor a mistake can't cross even with no bad intent. The `deny` list is that floor (here: `git push`,
-`git reset --hard`, `git clean`, `rm -rf`, and their `-C` variants). Widen the allow list freely for
-convenience; **never weaken the deny floor**, and route anything genuinely destructive or
-outward-facing through the human.
+**Autonomy within guardrails.** The aim is maximum useful autonomy at minimum ceremony plus a deny
+floor under it. The `deny` list blocks the named destructive commands outright (here: `git push`,
+`git reset` in all forms, `git clean`, `git branch -D`, `rm -rf`, and their `-C` variants). It is a
+guardrail against accidents, not a sandbox: broad interpreter allows (`python3`, `node`, `find`,
+`sed -i`, shell redirects) could technically reach the same effects and are trusted by design (single
+trusted author, accident threat model). Widen the allow list freely for convenience; **never weaken
+the deny floor**, and route anything genuinely destructive or outward-facing through the human.
 
 ## How to ask questions (the author's preference)
 

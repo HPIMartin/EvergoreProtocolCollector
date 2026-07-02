@@ -6,7 +6,7 @@ equivalent). It exists so every tool bootstraps from the **same** rules without 
 knowledge base: a wrapper *points* into the KB and adds only that tool's own mechanics. The KB
 (`docs/knowledge-base/` + `backlog.md` + `open-questions.md`) is the single source of truth.
 
-**Template version: 1.** Bump this on any change to the SHARED section below. Every wrapper records the
+**Template version: 2.** Bump this on any change to the SHARED section below. Every wrapper records the
 version it was built from and, at session start, quick-checks that its SHARED section still matches,
 re-syncing on a bump. See the [KB README](README.md) "step 0".
 
@@ -33,9 +33,11 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
 
 0. If your tool has **no native entry file**, build one now from this template (see "step 0" in the
    KB README) and record the template version.
-1. Read the knowledge base first, [`docs/knowledge-base/README.md`](docs/knowledge-base/README.md);
-   do **not** blindly re-scan the codebase.
-2. Check the backlog [`docs/backlog.md`](docs/backlog.md) and open decisions
+1. Read the knowledge base **map** first, [`docs/knowledge-base/README.md`](docs/knowledge-base/README.md);
+   then read only the sections relevant to the task. Do **not** blindly re-scan the codebase or read
+   the big docs whole (token hygiene → working-with-ai-agents.md).
+2. Check the backlog's **"▶ Current status / next action"** section in
+   [`docs/backlog.md`](docs/backlog.md) and any decisions touching your task in
    [`docs/open-questions.md`](docs/open-questions.md).
 3. Engineering standards: [`engineering-handbook.md`](docs/knowledge-base/engineering-handbook.md);
    AI workflow: [`working-with-ai-agents.md`](docs/knowledge-base/working-with-ai-agents.md);
@@ -56,6 +58,8 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
   remove completed backlog items, keep only rejected/deferred with rationale) → KB README + handbook §7.
 - **Ask, don't guess:** author decisions get multiple-choice options (recommended first), recorded in
   `open-questions.md`.
+- **Context & token hygiene** (section-scoped reads, no re-reads, batched tool calls, short focused
+  sessions) → working-with-ai-agents.md.
 
 ---
 

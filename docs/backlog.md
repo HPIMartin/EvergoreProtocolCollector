@@ -15,23 +15,14 @@ Item IDs live **only here**; removing an item also removes **every shortcode tha
 rows' prose and across the docs), so no dangling code is left behind (handbook §3).
 
 **Where we are:** the rebuild's core is in place on an up-to-date stack (Gradle / Java 25 / Micronaut
-4.10), verified **1:1** against the production DB. `domain`/`businessLogic` stay framework-free
-(ArchUnit-guarded); the style is enforced from one place (shared Eclipse formatter + Spotless,
-warnings-as-errors, a one-rule Checkstyle brace gate); an offline acceptance test covers
-evaluate→overview against a synthetic committed fixture; DB startup ordering is deterministic; the boot
-tests carry no `static` signal flags and block on a deterministic, no-timeout latch (an injected
-`BootSignalRecorder` bridges the bean↔test lifecycle).
-Single public `main` branch. (Decisions + rationale: [open-questions.md](open-questions.md).) Item value
-math is pinned by an all-items golden master with the dead `Category.storage` multiplier removed, and
-`getNewest()` returns `Optional` instead of a `MIN_VALUE` placeholder. Observability is in place: an
-anonymous `/health` endpoint surfaces a last-successful-run health indicator (the token filter exempts
-only `/health` + `/health/`). Request rate-limiting is config-driven (`RateLimitConfiguration`,
-`evergore.rate-limit.*`); diagnostics route through the project `Logger`, enforced in committed `.java`
-by the pre-commit hook. The rate-limiter's block transition is now thread-safe with a deterministic,
-clock-injected expiry test; the `TransferType`→German mapping lives in one place (`toGermanString`) and
-`ApplicationExceptionHandler` dispatches via an abstract-`accept` visitor (no `instanceof`). A one-off
-conformance audit (documented rules vs. code) ran 2026-06-27: trivial findings were swept inline, the
-rest filed below as **D9** / **G16**.
+4.10), verified **1:1** against the production DB; single public `main` branch. The framework-free core
+is ArchUnit-guarded, style is enforced from one place, an offline acceptance test covers
+evaluate→overview against a synthetic committed fixture, startup and boot tests are deterministic
+(no-timeout latch), and observability (anonymous `/health`, config-driven rate-limiting) is in place.
+The *how* lives in the KB ([architecture](knowledge-base/architecture.md) ·
+[testing](knowledge-base/testing.md) · [build-run-deploy](knowledge-base/build-run-deploy.md));
+decisions + rationale in [open-questions.md](open-questions.md); the code is the source of truth for
+the rest. A one-off conformance audit (2026-06-27) filed its remaining findings as **D9** / **G16**.
 
 **Next action: pick from the standing next-up set** (unblocked by the Gradle migration; all land *in Gradle*): **E1** (erzeugter
 Gildenmehrwert, the headline metric, now easy to TDD on this harness and would surface storage
@@ -55,7 +46,9 @@ falsifier → reviewer). *(A4/CI stays deprioritized: local-only Docker → home
   `Bash(git -C *.claude/worktrees/*)` (2026-06-28); still watch the tabs→spaces rewrite.
 - Keep `zugang.txt` (creds, gitignored); machine-specific config stays in gitignored `*.local.*` files.
 
-**Orient (any new session):** `CLAUDE.md` → `docs/knowledge-base/README.md` → this backlog → `docs/open-questions.md`.
+**Orient (any new session):** `CLAUDE.md` → `docs/knowledge-base/README.md` → **this section** (not the
+whole backlog) → `docs/open-questions.md` for decisions touching your task. Section-scoped reading is
+the rule: [working-with-ai-agents.md](knowledge-base/working-with-ai-agents.md) "Context & token hygiene".
 
 ## Priority legend & effort
 
@@ -98,7 +91,7 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 |----|------|-----|------------|--------|
 | **C1** | Make `Configuration` real via `@ConfigurationProperties` bound from `application.yml`/env (browser, server, db path, credentials path, in-memory toggle, **+ the hard-coded Firefox binary path in `Browser.java`**). The conformance audit also flagged the **public mutable fields** `useInMemory`/`DATABASE_TEMP_SQLITE` and the Windows `c:\evergore` default path: fold these in (immutable record/port, no host paths) | Hard-coded fields defeat config & deployability; mutable public config breaks "prefer immutable records" | No domain settings hard-coded in `.java`; overridable by env; config is immutable | M || **C3** | Stop baking `zugang.txt` into the image; inject credentials via env/secret/mount; read via `FileLoader` port | Credentials in the image is a leak | Image has no credentials; documented secret-injection path | M |
 | **C4** | Lower `logback` root from `verbose`; ensure credentials/tokens never logged | Chatty logs may leak secrets | Sensible levels; a log-scrub check | S |
-| **C6** | **Evaluate a prebuilt-NVD-database Docker image for the dependency-check scan** instead of the in-build Gradle plugin downloading the NVD feed. Candidates: **official** `owasp/dependency-check-action` (DB nightly); community `registry.gitlab.com/gitlab-ci-utils/docker-dependency-check` (weekly) / `nbaars/owasp-dependency-check-as-one` (daily). Bakes a fresh CVE DB into the image (no cold-start download, no scan-time API key, hermetic/reproducible) | Removes the one-time NVD datafeed download + the scan-time rate-limit/API-key dependency; gives a daily-fresh DB and a reproducible scan | Decision logged; if adopted, the scan runs from a prebuilt image with no cold-start NVD download (vs. today's on-demand Gradle-plugin scan). **Deferred:** needs Docker *where it runs*, which the devcontainer lacks today (**H2**); becomes the better path once **CI** (**A4**) or a Docker-host scan exists. Prefer the **official** image over community builds (supply-chain). Lighter interim win: persist the `~/.gradle` NVD cache across rebuilds (**H5**). Author request 2026-06-29 | S (eval) |
+| **C6** | **Evaluate a prebuilt-NVD-database Docker image for the dependency-check scan** (prefer the **official** `owasp/dependency-check-action`, nightly DB) instead of the in-build Gradle plugin downloading the NVD feed: no cold-start download, no scan-time API key, hermetic/reproducible | Removes the scan-time rate-limit/API-key dependency. **Deferred:** needs Docker where it runs, which the devcontainer lacks (**H2**); better path once **A4** or a Docker-host scan exists. Interim win: persist the `~/.gradle` NVD cache (**H5**). Author request 2026-06-29 | Decision logged; if adopted, the scan runs from a prebuilt image with no cold-start NVD download | S (eval) |
 
 ## Epic D: Hexagonal completion `P1→P2`
 
@@ -172,7 +165,7 @@ doc is intentionally **not** committed; its value lives here.
 | **H6** | `maven-failsafe-plugin` + rename boot/integration tests to `*IT` (separate integration phase) | Keeps the fast TDD loop fast; isolates server-booting tests | P3 | Gate on **H2** (real Selenium IT), **not** the in-memory *fast* acceptance test (`ProtocolEvaluationAcceptanceTest`). Update testing.md same change. **2026-06-15: land in Gradle post-migration (failsafe → Gradle integration test set).** |
 | **G9** | **Point the agent at official docs (WebFetch) for less-trafficked libraries**, a `working-with-ai-agents.md` convention: for **Micronaut / ORMLite / Selenium / RxJava** (thin in LLM training data), fetch the official docs before writing against an unfamiliar API; prefer doc-grounded code over confabulation | Enterprise-audit Pitfall #5, the most stack-relevant gap: a solo dev has no reviewer to catch a hallucinated API, and ArchUnit/tests catch structure, not invented method signatures. MCP-free (WebFetch is available) | P2 | Flagged independently by two audit reviewers. Doc-only; fits the Epic-G showcase. |
 | **G10** | **SessionStart orient/lessons hook** in `.claude/settings.json`: deterministically inject the orient pointer (CLAUDE.md → KB README → backlog "Current status" → open-questions → `process-learnings.md`) so every fresh session reads the lessons first | The 100%-fires complement to the advisory `/continue` + CLAUDE.md "Start here"; completes the self-improvement loop and is the most on-thesis hooks-over-rules showcase artifact (sibling to **G7**) | P3 | Enterprise-audit gap. The lessons file already exists (`process-learnings.md`); only the deterministic hook is missing. |
-| **G11** | **Improve the AI/agent working environment in the devcontainer** (low prio): pre-install tools used every session (`git-filter-repo`, `sqlite3`, `jq`), pre-allow common read-only commands in the committed `settings.json` (portable forms only), and add conventions/hooks that cut token use (scratch-file hygiene, scoped reads over blind re-scans) | Recurring friction: missing `git-filter-repo`/`docker`, repeated permission prompts, the "always allow" flow re-polluting `settings.json`, broad re-reads burning tokens | P3 | Author request 2026-06-16. Sits with **G7**/**G10** (the hooks/showcase items). The permission-audit slice landed 2026-06-21; the worktree-wildcard slice (portable `git -C *.claude/worktrees/*` + `-C` deny guards, cruft purged from local) landed 2026-06-28. |
+| **G11** | **Improve the AI/agent working environment in the devcontainer** (low prio): pre-install tools used every session (`git-filter-repo`, `sqlite3`, `jq`), pre-allow common read-only commands in the committed `settings.json` (portable forms only), and add conventions/hooks that cut token use (scratch-file hygiene, scoped reads over blind re-scans) | Recurring friction: missing `git-filter-repo`/`docker`, repeated permission prompts, the "always allow" flow re-polluting `settings.json`, broad re-reads burning tokens | P3 | Author request 2026-06-16. Sits with **G7**/**G10** (the hooks/showcase items). The permission-audit slice landed 2026-06-21; the worktree-wildcard slice landed 2026-06-28; the token-hygiene reading conventions (section-scoped reads, no re-reads, batching) landed 2026-07-02 in `working-with-ai-agents.md` + the entry template. Open: the tool pre-installs + hooks. |
 | **G13** | **Git enforcement hooks** (committed `hooks/` + `core.hooksPath` wired in the devcontainer `postCreate`, in-container): **pre-commit** = `./gradlew spotlessCheck checkstyleMain checkstyleTest` + a **secret-scan** (tokens/keys/credentials/real emails/host-paths) + reject `System.out`/`printStackTrace`/leftover `// TODO`; **commit-msg** = one-line, present-tense-verb-first, no body/`Co-Authored-By`/footer. **Excludes tests/`build`** (would break the fast TDD micro-commit loop; commits are already green). | Mechanically prevents slips rules can't: an earlier feature's re-implementation commits were Spotless-dirty because `spotlessApply` output was left uncommitted; "hooks > rules" at the git layer | P2 | Author request 2026-06-22 (all 4 checks chosen). **Git-level complement** to harness-level **G7** (PreToolUse, catches Claude edits earlier) + **G8** (`/commit`); the lighter/faster form of **A4**'s local gate (no full `verify`). Implement **after the preceding feature**. |
 
 ### Considered and rejected (do not re-propose without a new reason)
