@@ -52,7 +52,8 @@ the history clean while that loop runs:
   history reads as if the work were done right the first time. **In this harness `git reset` (all forms,
   including `--soft`/`--mixed`) and `git branch -D` are permission-blocked** by Claude Code's built-in
   destructive-git guardrails (alongside `git push`); they override project `allow` and can't be
-  allowlisted via `settings.json` at all, so the reset/rebase recipes don't run. (Plain `rm <file>` is
+  allowlisted via `settings.json` at all, so the reset/rebase recipes don't run. The committed `deny`
+  list encodes the same floor, so it holds even in tools without those built-ins. (Plain `rm <file>` is
   **fine**; only `rm -rf` is denied.) **If you ever do run a reset outside the tool, prefer the
   least-destructive form, `git reset --soft`; never `--hard`** (it discards the working tree). Reset-free method that
   folds a fix into any commit, even a deep one: save the corrected tree on a WIP commit, branch off the
