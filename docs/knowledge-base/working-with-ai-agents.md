@@ -46,8 +46,9 @@ tests/build) and synthesize their reports, much faster than reading everything s
 *decisions* with the human; use agents for *gathering and drafting*. (This very knowledge base was
 bootstrapped that way; see "How this was built" below.)
 
-For **implementation**, we use a dedicated agent team (Planner (you+me, Opus) → Implementer
-(Sonnet) → Falsifier (Sonnet) → Reviewer/Gate (Opus)) defined in `.claude/agents/` and described in
+For **implementation**, we use a dedicated agent team (Planner (you + the main session) → Implementer
+→ Falsifier panel → Reviewer/Gate; the per-role models live in the `.claude/agents/` frontmatter and
+the playbook's roles table) defined in `.claude/agents/` and described in
 **[multi-agent-playbook.md](multi-agent-playbook.md)**. The author approves the commit plan and is
 the only one who pushes.
 
@@ -77,10 +78,21 @@ length is the product to minimize; keep the working context lean:
   injected stays in the context for the rest of the session.
 - **Reserve the Workflow / fan-out tooling for occasional large parallel audits** (explicit opt-in),
   never the interactive, human-gated commit loop (see [multi-agent-playbook.md](multi-agent-playbook.md)).
-  Routine TDD runs lean: plan → implementer → falsifier → reviewer.
+  Routine TDD runs lean: plan → implementer → falsifier panel → reviewer.
 - **Terse by default:** bullets and the outcome first; expand on request.
 - **Keep the shared docs themselves lean** (KB-current): this hygiene only works if the per-session
   entry docs stay small; condense, don't accrete.
+
+## Choosing the session model
+
+The main session is the planner's brain, and its whole context is re-read on every turn, so the
+session model dominates token spend more than any subagent choice. Pick it by the session's job:
+planning, architecture and review/audit sessions run the strongest tier the current plan offers
+(Fable when available, otherwise Opus); routine TDD/implementation sessions run a smaller tier
+(Opus or Sonnet), and the pipeline's gates still check the work. When the strongest tier is
+unavailable, fall back one tier rather than postponing the session. Subagent tiers are pinned per
+role in the `.claude/agents/` frontmatter; one-off gate escalation follows the playbook's
+escalation rule.
 
 ## Permissions & autonomy (committed vs local)
 
