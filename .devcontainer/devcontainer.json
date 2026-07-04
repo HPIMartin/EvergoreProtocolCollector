@@ -9,7 +9,8 @@
 		},
 		"ghcr.io/devcontainers/features/node:1": {
 			"version": "lts"
-		}
+		},
+		"ghcr.io/devcontainers/features/python:1": {}
 	},
 	"containerEnv": {
 		"CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
