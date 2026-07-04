@@ -52,30 +52,22 @@
   `build/reports/jacoco/test/html/index.html`; `test` finalizes `jacocoTestReport`, so every
   `./gradlew build` regenerates it. **No threshold is enforced** (`jacocoTestCoverageVerification` is not
   wired): the report guides test work without gating a young suite (a threshold would come later under G6).
-- **Dependency vulnerability scan, OWASP dependency-check (on-demand):** `./gradlew dependencyCheckAnalyze`
-  produces a CVE report under `build/reports` from two sources: the **NVD** feed and the **Sonatype OSS
-  Index** analyzer (enabled automatically when its token is present). Currently **non-gating**
-  (`failOnError = false` and the CVSS threshold defaults to `11`, above the CVSS maximum of 10, so it never
-  fails). It stays **on-demand, not wired into `build`**: gating belongs to CI/delivery, never the local
-  build (the plugin also treats an NVD-init failure as *fatal* regardless of `failOnError`, which would
-  break `build` anywhere lacking the key + feed). Continuous alerting is handled by Dependabot.
-  - **Two config files, by design (minimise scattered settings):**
-    - **Secrets → one gitignored file `secrets.local.properties`** (repo root, copied from the committed
-      `secrets.local.properties.template`) holds *both* scan credentials together: `nvdApiKey=<key>` and
-      `sonatypeOssIndexToken=<token>` (optionally `sonatypeOssIndexUsername=<account-email>`); the generic
-      name leaves room for future secrets. It matches the `*.local.*` rule, so it can never be
-      committed (pre-commit secret-scan is a second net). Each value also falls back to an env var
-      (`NVD_API_KEY` / `OSS_INDEX_TOKEN` / `OSS_INDEX_USERNAME`) for CI. Absent → the scan still runs (NVD
-      rate-limited; OSS Index analyzer off).
-    - **Tunable params → `gradle.properties`** (committed, central): `dependencyCheck.failBuildOnCvss` is the
-      one place to set the CVSS fail threshold (lower it toward `0.0` to enforce an up-to-date dependency
-      base, a CI/delivery gate, since the scan never runs in `build`).
-  - **Set up on a new machine:** `cp secrets.local.properties.template secrets.local.properties`, then fill
-    in the values (request an NVD key at <https://nvd.nist.gov/developers/request-an-api-key>, an OSS Index
-    token at <https://ossindex.sonatype.org/>); verify with `git check-ignore secrets.local.properties`. The
-    first `dependencyCheckAnalyze` downloads the full NVD datafeed (slow, one-time; cached under `~/.gradle`).
-    A leaked NVD/OSS-Index key is low-harm (rate-limit only) but is still kept out of the repo: secrets
-    never land in a public showcase, no exceptions (handbook §7).
+- **Dependency vulnerability scan, Trivy (on-demand):** `./gradlew vulnScan` generates a CycloneDX
+  SBOM of the resolved dependency graph (`org.cyclonedx.bom` plugin →
+  `build/reports/cyclonedx/bom.json`) and scans it with **Trivy** (`trivy sbom`), printing the CVE
+  report to the console. Trivy pulls its vulnerability DB from an OCI registry on first run (small,
+  fast, **no account or API key**) and caches it under `~/.cache/trivy`. Currently **non-gating**:
+  without `vulnScan.failOnSeverity` the task never fails. It stays **on-demand, not wired into
+  `build`**: gating belongs to CI/delivery, never the local build. Continuous alerting is handled by
+  Dependabot.
+  - **Tunable params → `gradle.properties`** (committed, central): `vulnScan.failOnSeverity` is a
+    comma-separated Trivy severity list (e.g. `HIGH,CRITICAL`); when set, the scan reports only those
+    severities and exits non-zero on a finding (a CI/delivery gate, since the scan never runs in
+    `build`). Absent/blank = report-only. The scan needs **no secrets**; the `*.local.*` gitignore
+    rule stays in place for future ones.
+  - **Toolchain:** the `trivy` binary comes from the devcontainer feature
+    `ghcr.io/dhoeric/features/trivy` (present after a container rebuild; any `trivy` on the `PATH`
+    works, e.g. from the [official install script](https://trivy.dev/latest/getting-started/installation/)).
 
 ## Git hooks (local enforcement)
 

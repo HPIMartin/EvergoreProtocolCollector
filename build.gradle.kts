@@ -1,9 +1,7 @@
-import java.util.Properties
-
 plugins {
 	id("io.micronaut.application") version "4.6.2"
 	id("com.diffplug.spotless") version "7.0.4"
-	id("org.owasp.dependencycheck") version "12.2.2"
+	id("org.cyclonedx.bom") version "3.2.4"
 	checkstyle
 	jacoco
 }
@@ -98,29 +96,28 @@ spotless {
 	}
 }
 
-val scanSecrets = Properties()
-file("secrets.local.properties").takeIf { it.exists() }?.inputStream()?.use { scanSecrets.load(it) }
-
-fun scanSecret(key: String, environmentVariable: String): String? = System.getenv(environmentVariable) ?: scanSecrets.getProperty(key)
-
-val nvdApiKey = scanSecret("nvdApiKey", "NVD_API_KEY")
-val ossIndexToken = scanSecret("sonatypeOssIndexToken", "OSS_INDEX_TOKEN")
-val ossIndexUsername = scanSecret("sonatypeOssIndexUsername", "OSS_INDEX_USERNAME")
-val failBuildOnCvss = (providers.gradleProperty("dependencyCheck.failBuildOnCvss").orNull ?: "11").toFloat()
-
-dependencyCheck {
-	failBuildOnCVSS = failBuildOnCvss
-	failOnError = false
-	nvdApiKey?.let { nvd.apiKey = it }
-	ossIndexToken?.let { token ->
-		analyzers.ossIndex.enabled = true
-		analyzers.ossIndex.password = token
-		ossIndexUsername?.let { analyzers.ossIndex.username = it }
-	}
-}
-
 tasks.test {
 	finalizedBy(tasks.jacocoTestReport)
+}
+
+val vulnScanFailOnSeverity = providers.gradleProperty("vulnScan.failOnSeverity").orNull?.takeIf { it.isNotBlank() }
+
+tasks.register<Exec>("vulnScan") {
+	group = "verification"
+	description = "Scans the resolved dependencies for known vulnerabilities (CycloneDX SBOM analyzed by Trivy)."
+	dependsOn("cyclonedxBom")
+	val bom = layout.buildDirectory.file("reports/cyclonedx/bom.json")
+	commandLine(buildList {
+		add("trivy")
+		add("sbom")
+		vulnScanFailOnSeverity?.let {
+			add("--severity")
+			add(it)
+			add("--exit-code")
+			add("1")
+		}
+		add(bom.get().asFile.absolutePath)
+	})
 }
 
 tasks.register<JavaExec>("generateAcceptanceDb") {
