@@ -43,6 +43,27 @@ dependencies {
 	testImplementation("com.tngtech.archunit:archunit-junit5:1.4.1")
 }
 
+val frontendDistUsage: Attribute<String> = Attribute.of("dev.schoenberg.evergore.frontend-dist", String::class.java)
+
+val frontendDistDependencies: Configuration by configurations.dependencyScope("frontendDistDependencies")
+
+val frontendDist: Configuration by configurations.resolvable("frontendDist") {
+	extendsFrom(frontendDistDependencies)
+	attributes {
+		attribute(frontendDistUsage, "spa")
+	}
+}
+
+dependencies {
+	frontendDistDependencies(project(":frontend"))
+}
+
+tasks.processResources {
+	into("static/ui") {
+		from(frontendDist)
+	}
+}
+
 application {
 	mainClass.set("dev.schoenberg.evergore.protocolParser.Application")
 	applicationDefaultJvmArgs = listOf("--enable-native-access=ALL-UNNAMED")

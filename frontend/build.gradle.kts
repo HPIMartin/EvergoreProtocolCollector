@@ -12,6 +12,16 @@ node {
 	fastNpmInstall = true
 }
 
+val frontendDistUsage: Attribute<String> = Attribute.of("dev.schoenberg.evergore.frontend-dist", String::class.java)
+
+configurations {
+	consumable("frontendDist") {
+		attributes {
+			attribute(frontendDistUsage, "spa")
+		}
+	}
+}
+
 val npmBuild = tasks.register<NpmTask>("npmBuild") {
 	group = "build"
 	description = "Builds the SPA with vite into build/dist."
@@ -23,6 +33,12 @@ val npmBuild = tasks.register<NpmTask>("npmBuild") {
 	inputs.files(fileTree("public")).withPathSensitivity(PathSensitivity.RELATIVE)
 	outputs.dir(layout.buildDirectory.dir("dist"))
 	outputs.cacheIf { true }
+}
+
+artifacts {
+	add("frontendDist", layout.buildDirectory.dir("dist")) {
+		builtBy(npmBuild)
+	}
 }
 
 val npmTest = tasks.register<NpmTask>("npmTest") {
