@@ -1,5 +1,7 @@
 /build/
 /.gradle/
+frontend/build/
+frontend/.gradle/
 /target/
 node_modules/
 .classpath

@@ -3,3 +3,5 @@ plugins {
 }
 
 rootProject.name = "protocolParser"
+
+include("frontend")
