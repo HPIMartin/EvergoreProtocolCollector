@@ -15,6 +15,9 @@ micronaut:
       swagger-ui:
         paths: classpath:META-INF/swagger/views/swagger-ui
         mapping: /swagger-ui/**
+      spa:
+        paths: classpath:static/ui
+        mapping: /**
 endpoints:
   health:
     enabled: true

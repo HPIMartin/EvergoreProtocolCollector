@@ -64,7 +64,7 @@ class HealthEndpointTest {
 	void protectedEndpointIsRejectedWithoutToken() {
 		int status = Unirest.get("/overview").asString().getStatus();
 
-		assertThat(status).isBetween(400, 499);
+		assertThat(status).isEqualTo(401);
 	}
 
 	@Test

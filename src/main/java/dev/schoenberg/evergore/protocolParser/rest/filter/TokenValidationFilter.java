@@ -46,7 +46,7 @@ public class TokenValidationFilter implements HttpServerFilter {
 
 	private boolean isPublicEndpoint(HttpRequest<?> request) {
 		String path = request.getPath();
-		return path.equals(FaviconController.PATH) || path.equals("/health") || path.startsWith("/health/");
+		return path.equals(FaviconController.PATH) || path.equals("/health") || path.startsWith("/health/") || SpaStaticResourcePaths.matches(path);
 	}
 
 	private AccessNotAllowed reject() {

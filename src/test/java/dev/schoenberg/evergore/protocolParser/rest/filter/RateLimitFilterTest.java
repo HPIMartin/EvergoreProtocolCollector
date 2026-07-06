@@ -1,9 +1,11 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.stream.Stream;
 
 import jakarta.inject.Inject;
 
@@ -22,7 +24,7 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@MicronautTest(environments = "ratelimit")
+@MicronautTest(environments = "ratelimit", rebuildContext = true)
 class RateLimitFilterTest {
 
 	private static final Path WORKING_DB = Paths.get("build/tmp/rateLimit/rateLimit.sqlite");
@@ -47,13 +49,51 @@ class RateLimitFilterTest {
 
 	@Test
 	void blocksRequestsOnceTheConfiguredLimitIsExceeded() {
-		assertThat(favicon()).isEqualTo(200);
-		assertThat(favicon()).isEqualTo(200);
-		assertThat(favicon()).isEqualTo(429);
+		assertThat(status("/favicon.ico")).isEqualTo(200);
+		assertThat(status("/favicon.ico")).isEqualTo(200);
+		assertThat(status("/favicon.ico")).isEqualTo(429);
 	}
 
-	private int favicon() {
-		return Unirest.get("/favicon.ico").asString().getStatus();
+	@Test
+	void allowsRepeatedTokenlessRequestsToTheSpaShellRoot() {
+		assertThat(status("/")).isEqualTo(200);
+		assertThat(status("/")).isEqualTo(200);
+		assertThat(status("/")).isEqualTo(200);
+	}
+
+	@Test
+	void allowsRepeatedTokenlessRequestsToIndexHtml() {
+		assertThat(status("/index.html")).isEqualTo(200);
+		assertThat(status("/index.html")).isEqualTo(200);
+		assertThat(status("/index.html")).isEqualTo(200);
+	}
+
+	@Test
+	void allowsRepeatedTokenlessRequestsToBundledAssets() {
+		String assetPath = bundledAssetPath();
+
+		assertThat(status(assetPath)).isEqualTo(200);
+		assertThat(status(assetPath)).isEqualTo(200);
+		assertThat(status(assetPath)).isEqualTo(200);
+	}
+
+	@Test
+	void stillRejectsTheOverviewEndpointWithoutAToken() {
+		assertThat(status("/overview")).isEqualTo(401);
+	}
+
+	private int status(String path) {
+		return Unirest.get(path).asString().getStatus();
+	}
+
+	private String bundledAssetPath() {
+		return silentThrow(() -> {
+			URL assetsUrl = getClass().getResource("/static/ui/assets");
+			try (Stream<Path> files = Files.list(Paths.get(assetsUrl.toURI()))) {
+				Path asset = files.filter(path -> path.getFileName().toString().endsWith(".js")).findFirst().orElseThrow();
+				return "/assets/" + asset.getFileName();
+			}
+		});
 	}
 
 	@MockBean(Configuration.class)

@@ -38,6 +38,10 @@ public class BrowserLoggingFilter implements HttpServerFilter {
 
 	@Override
 	public Publisher<MutableHttpResponse<?>> doFilter(HttpRequest<?> request, ServerFilterChain chain) {
+		if (SpaStaticResourcePaths.matches(request.getPath())) {
+			return chain.proceed(request);
+		}
+
 		String userAgent = request.getHeaders().get("user-agent");
 		String clientIp = request.getRemoteAddress().getAddress().getHostAddress();
 		logger.info("Client IP: " + clientIp + " Agent: " + userAgent);
