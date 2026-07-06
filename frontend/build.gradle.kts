@@ -37,10 +37,26 @@ val npmTest = tasks.register<NpmTask>("npmTest") {
 	outputs.cacheIf { true }
 }
 
+val npmLint = tasks.register<NpmTask>("npmLint") {
+	group = "verification"
+	description = "Lints and format-checks the frontend with ESLint and Prettier."
+	dependsOn(tasks.npmInstall)
+	npmCommand.set(listOf("run", "lint"))
+	inputs.files("package.json", "package-lock.json", "eslint.config.js", ".prettierrc.json", ".prettierignore")
+		.withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.files(fileTree(".") { include("tsconfig*.json") }).withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.file("vite.config.ts").withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.file("index.html").withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.dir("src").withPathSensitivity(PathSensitivity.RELATIVE)
+	outputs.file(layout.buildDirectory.file("reports/eslint/results.txt"))
+	outputs.cacheIf { true }
+}
+
 tasks.assemble {
 	dependsOn(npmBuild)
 }
 
 tasks.check {
 	dependsOn(npmTest)
+	dependsOn(npmLint)
 }

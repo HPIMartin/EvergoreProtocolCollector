@@ -9,6 +9,8 @@ describe('App', () => {
   it('renders the application title', () => {
     render(<App />)
 
-    expect(screen.getByTestId('app-title').textContent).toBe('Evergore Protocol Collector')
+    expect(screen.getByTestId('app-title').textContent).toBe(
+      'Evergore Protocol Collector',
+    )
   })
 })
