@@ -125,13 +125,21 @@ is idle, or edit the file yourself.)
 
 **Token-efficient commands that still match.** Combined one-liners (`echo … && git status && grep …`)
 are **fewer tool round-trips** and are auto-allowed **as long as every segment matches an allow rule**,
-so prefer them over splitting into atomic calls. Only two things make a chain un-matchable and force a
-prompt: a leading **`cd`** and an inline **`VAR=…`** assignment. Avoid those (use absolute paths /
-`git -C <path>` / literal values) and chains run prompt-free. (Worktree-path specifics: handbook §7.)
+so prefer them over splitting into atomic calls. An inline **`VAR=…`** assignment still makes a chain
+un-matchable — use literal values. A leading **`cd`** auto-allows only in its project-anchored absolute
+form (`cd /workspaces/EvergoreProtocolCollector` or a path below it; decided 2026-07-06), and deny
+rules block `cd` arguments containing `..`, `$`, `` ` `` or `~`, so the working directory cannot leave
+the project silently; bare `cd`, relative and quoted forms still prompt. Prefer `git -C <path>` /
+absolute paths anyway — `cd` is the fallback when a tool must run from a subdirectory (e.g. a
+worktree's `./gradlew`). (Worktree-path specifics: handbook §7.)
 
 **Autonomy within guardrails.** The aim is maximum useful autonomy at minimum ceremony plus a deny
 floor under it. The `deny` list blocks the named destructive commands outright (here: `git push`,
-`git reset` in all forms, `git clean`, `git branch -D`, `rm -rf`, and their `-C` variants). It is a
+`git reset` in all forms, `git clean`, `git branch -D`, `rm -rf`, their `-C` variants, the `cd`
+escape guards, and reads of secret files — live credentials, `zugang.txt`,
+`secrets.local.properties`). Between allow and deny sits a small **`ask` tier** for legitimate but
+risky commands (`gh api` can mutate the remote, `git restore` can discard working-tree state): they
+always prompt and must never drift into a blanket allow. It is a
 guardrail against accidents, not a sandbox: broad interpreter allows (`python3`, `node`, `find`,
 `sed -i`, shell redirects) could technically reach the same effects and are trusted by design (single
 trusted author, accident threat model). Widen the allow list freely for convenience; **never weaken
