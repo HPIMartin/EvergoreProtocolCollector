@@ -25,6 +25,22 @@ val npmBuild = tasks.register<NpmTask>("npmBuild") {
 	outputs.cacheIf { true }
 }
 
+val npmTest = tasks.register<NpmTask>("npmTest") {
+	group = "verification"
+	description = "Runs the frontend component tests with vitest."
+	dependsOn(tasks.npmInstall)
+	npmCommand.set(listOf("run", "test"))
+	inputs.files("package.json", "package-lock.json", "vite.config.ts").withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.files(fileTree(".") { include("tsconfig*.json") }).withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.dir("src").withPathSensitivity(PathSensitivity.RELATIVE)
+	outputs.file(layout.buildDirectory.file("reports/vitest/results.xml"))
+	outputs.cacheIf { true }
+}
+
 tasks.assemble {
 	dependsOn(npmBuild)
+}
+
+tasks.check {
+	dependsOn(npmTest)
 }
