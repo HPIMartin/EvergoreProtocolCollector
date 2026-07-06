@@ -184,6 +184,13 @@ template** demonstrating the practice. Scenarios are written in **product langua
   micro-commit loop stays fast (commits are already green by the time they're made). They are a
   git-level safety net, not a substitute for the rules; `--no-verify` bypasses them and is for
   genuine emergencies only. Details: [build-run-deploy.md](build-run-deploy.md).
+- **`[wip]` parking commits (pause only).** `/pause` may autonomously park uncommitted work as ONE
+  local commit `[wip] <one-line state>` via `git commit --no-verify` (WIP legitimately fails the
+  hooks — the one sanctioned non-emergency bypass; the no-secrets rule applies unchanged, so the
+  diff is eyeballed before parking). A `[wip]` commit is a checkpoint, not history: `/continue`
+  resolves it first — finish or rework, then replace it through the normal confirmed-message
+  protocol (reset-free rewrite recipe → multi-agent playbook). It never survives to the review
+  gateway or a push; parked directly on `main`, it is resolved before any new work starts.
 
 ### Branching, merge & the review gateway (revised 2026-06-27)
 
