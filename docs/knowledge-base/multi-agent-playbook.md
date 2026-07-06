@@ -129,6 +129,6 @@ Planner phase and every commit-plan approval and push happen with **you** in the
 ## Evolution
 
 Start lean (1 implementer, the 2-lens falsifier panel, 1 reviewer). Widen the panel + majority vote
-for high-risk changes; consider a `/tdd-step` slash command in `.claude/commands/` once the loop is proven;
+for high-risk changes; consider a `/tdd-step` skill in `.claude/skills/` once the loop is proven;
 use the **Workflow tool** only for occasional large parallel audits (explicit opt-in), never for the
 interactive, human-gated commit loop.

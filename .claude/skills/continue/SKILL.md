@@ -14,6 +14,8 @@ chat memory — reconstruct the current state from the repo and git.
 
 2. Determine the ACTUAL state from git, not just the docs (the tree may have moved on):
    - `git status` and `git log --oneline -15` (if Bash stdout isn't surfaced, redirect to a file and Read it).
+   - `git worktree list` — a pause may have left in-flight strands in worktrees (see the backlog's
+     per-strand notes); resume such a strand inside its worktree per the multi-agent playbook.
    - Reconcile with the backlog's "Current status". If they disagree, trust the working tree + git
      and say so (then offer to update the doc).
 
