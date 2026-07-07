@@ -7,6 +7,7 @@ import jakarta.inject.*;
 import io.micronaut.context.annotation.Factory;
 
 import dev.schoenberg.evergore.protocolParser.application.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
@@ -32,8 +33,8 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public EvergoreDataEvaluator evergoreDataEvaluator(MetaInformationRepository metaRepo, StorageRepository storageRepo, BankRepository bankRepo, Logger logger) {
-		return new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, logger);
+	public EvergoreDataEvaluator evergoreDataEvaluator(MetaInformationRepository metaRepo, StorageRepository storageRepo, BankRepository bankRepo, Clock clock, Logger logger) {
+		return new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, clock, logger);
 	}
 
 	@Singleton
@@ -68,6 +69,6 @@ public class ApplicationFactory {
 
 	@Singleton
 	public Clock clock() {
-		return Clock.systemUTC();
+		return Clock.system(Constants.APP_ZONE);
 	}
 }

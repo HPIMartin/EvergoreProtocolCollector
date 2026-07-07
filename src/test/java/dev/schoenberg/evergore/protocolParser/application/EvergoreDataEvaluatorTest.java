@@ -1,12 +1,15 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import dev.schoenberg.evergore.protocolParser.ApplicationFactory;
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
@@ -14,6 +17,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.Fake
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
 
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.EINLAGERUNG;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.ENTNAHME;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
@@ -29,6 +33,7 @@ class EvergoreDataEvaluatorTest {
 	private static final String AVATAR = "avatar_a";
 	private static final String BANK_ONLY_AVATAR = "bank_only";
 	private static final String STORAGE_ONLY_AVATAR = "storage_only";
+	private static final Instant FIXED_NOW = Instant.parse("2026-06-21T12:00:00Z");
 
 	private FakeMetaInformationRepository metaRepo;
 	private BankRepositoryStub bankRepo;
@@ -42,7 +47,7 @@ class EvergoreDataEvaluatorTest {
 		bankRepo = new BankRepositoryStub();
 		storageRepo = new StorageRepositoryStub();
 		logger = new LoggerSpy();
-		tested = new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, logger);
+		tested = new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
 	}
 
 	@Test
@@ -127,6 +132,23 @@ class EvergoreDataEvaluatorTest {
 		assertThat(bankRepo.capturedAfter()).isEqualTo(priorWatermark);
 		assertThat(storageRepo.capturedAfter()).isEqualTo(priorWatermark);
 		assertThat(metaRepo.<LocalDateTime>get(getLastUpdatedKey())).isPresent().hasValueSatisfying(v -> assertThat(v).isAfter(priorWatermark));
+	}
+
+	@Test
+	void storesTheWatermarkInBerlinWallClockNotUtc() {
+		Instant nearMidnightUtc = Instant.parse("2026-06-21T23:30:00Z");
+		tested = new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, Clock.fixed(nearMidnightUtc, APP_ZONE), logger);
+		bankRepo.seedAvatars(List.of());
+		storageRepo.seedAvatars(List.of());
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<LocalDateTime>get(getLastUpdatedKey())).contains(LocalDateTime.of(2026, 6, 22, 1, 30));
+	}
+
+	@Test
+	void applicationClockUsesTheBerlinZone() {
+		assertThat(new ApplicationFactory().clock().getZone()).isEqualTo(APP_ZONE);
 	}
 
 	private static BankEntry bankPlacement(int amount) {

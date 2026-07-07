@@ -81,7 +81,7 @@ class EvergoreDataCollectorJobTest {
 		boolean failOnEvaluate;
 
 		FailableEvaluator() {
-			super(new FakeMetaInformationRepository(), new StorageRepositoryStub(), new BankRepositoryStub(), new LoggerSpy());
+			super(new FakeMetaInformationRepository(), new StorageRepositoryStub(), new BankRepositoryStub(), Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
 		}
 
 		@Override

@@ -1,5 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -35,12 +36,14 @@ public class EvergoreDataEvaluator {
 	private final MetaInformationRepository metaRepo;
 	private final BankRepository bankRepo;
 	private final StorageRepository storageRepo;
+	private final Clock clock;
 	private final Logger logger;
 
-	public EvergoreDataEvaluator(MetaInformationRepository metaRepo, StorageRepository storageRepo, BankRepository bankRepo, Logger logger) {
+	public EvergoreDataEvaluator(MetaInformationRepository metaRepo, StorageRepository storageRepo, BankRepository bankRepo, Clock clock, Logger logger) {
 		this.metaRepo = metaRepo;
 		this.bankRepo = bankRepo;
 		this.storageRepo = storageRepo;
+		this.clock = clock;
 		this.logger = logger;
 	}
 
@@ -61,7 +64,7 @@ public class EvergoreDataEvaluator {
 
 		logger.info("Old value: " + lastUpdated);
 
-		LocalDateTime now = LocalDateTime.now();
+		LocalDateTime now = LocalDateTime.now(clock);
 		MetaInformation<LocalDateTime> newUpdatedInformation = new MetaInformation<>(getLastUpdatedKey(), now);
 		metaRepo.add(asList(newUpdatedInformation));
 
