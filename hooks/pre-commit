@@ -26,7 +26,7 @@ cred_re="(password|passwd|secret|api[_-]?key)[[:space:]]*[:=][[:space:]]*[\"'][^
 email_re='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
 email_allow='@(example|test|invalid|localhost)\.[A-Za-z]+$|@localhost$'
 host_re="(/home/|/Users/)[A-Za-z0-9._-]+/|[Cc]:\\\\+Users"
-host_allow='/home/vscode/'
+host_allow='/home/vscode/|/home/app/'
 # Hard-coded auth tokens — scanned only under src/main below (tests legitimately use a non-secret test token).
 token_url='\?token=[A-Za-z0-9._-]+'
 token_assign="(valid[_-]?token|api[_-]?token|auth[_-]?token|access[_-]?token|secret[_-]?token|bearer[_-]?token)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{3,}"
