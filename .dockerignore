@@ -9,3 +9,6 @@ src/test/resources/benchmark
 .claude
 docs
 *.md
+frontend/node_modules
+frontend/build
+frontend/.gradle

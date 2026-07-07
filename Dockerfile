@@ -6,11 +6,12 @@ FROM eclipse-temurin:25-jdk AS build
 ENV APP_HOME=/home/app
 WORKDIR $APP_HOME
 
-COPY gradlew settings.gradle.kts build.gradle.kts ./
+COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
 COPY gradle ./gradle
 COPY src ./src
+COPY frontend ./frontend
 
-RUN ./gradlew --no-daemon clean test installDist
+RUN ./gradlew --no-daemon clean check installDist
 
 #
 # Runtime stage — Firefox + geckodriver for scraping, plus the JDK 25 copied from the build stage
