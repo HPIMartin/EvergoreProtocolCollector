@@ -13,10 +13,13 @@ Java bump) a one-line image change instead of a host installation.
   with `./gradlew build -x test`. The JDK version is single-sourced here (the feature `version`).
 - VS Code extensions: Claude Code + Java pack (the Java pack is the *editor* language server /
   IntelliSense, distinct from the JDK; optional for the Gradle/agent-driven flow).
-- **Node.js (LTS) via the `node` feature**, for the planned frontend rewrite (Angular or React,
-  undecided) and Node-based dev tooling; the Java build/runtime does not use it. The standalone `node`
-  feature installs via **nvm** (downloaded binaries), *not* the yarn apt repo whose GPG key once broke
-  `apt` when `sonarlint` pulled node (see the lesson below), so it should be safe; but the image builds
+- **Node.js (LTS) via the `node` feature**, for **IDE tooling only** (editor IntelliSense, running npm
+  scripts by hand from the terminal): the `:frontend` Gradle build does **not** use this Node
+  installation. `node-gradle` downloads its own pinned Node version (`gradle.properties` →
+  `nodeVersion`, see [frontend.md](frontend.md)) per machine, so the actual build is reproducible
+  independent of whatever the devcontainer feature happens to provide. The standalone `node` feature
+  installs via **nvm** (downloaded binaries), *not* the yarn apt repo whose GPG key once broke `apt`
+  when `sonarlint` pulled node (see the lesson below), so it should be safe; but the image builds
   on the **host** (no docker-in-docker, backlog H2), so this only takes effect on the next rebuild; verify there.
 - **Deferred** (removed to get a building container; re-add when needed):
   `docker-outside-of-docker` → selenium-firefox compose service (backlog **H2**);
@@ -69,10 +72,11 @@ the host. (The standing goal: make this version bump a single, documented switch
 
 ## Production image (`Dockerfile`)
 
-Multi-stage: `eclipse-temurin:25-jdk` build (`./gradlew clean test installDist`) → `selenium/
-standalone-firefox` runtime with the JDK 25 copied in and the application distribution at
-`/opt/protocolParser`. The `dos2unix`/jar-name hacks are gone (LF enforced via `.gitattributes`; the
-distribution dir name is version-independent), and a `.dockerignore` keeps the context lean. It still
+Multi-stage: `eclipse-temurin:25-jdk` build (`./gradlew clean check installDist`, gating on the
+frontend's tests and lint too) → `selenium/standalone-firefox` runtime with the JDK 25 copied in and
+the application distribution at `/opt/protocolParser`. The `dos2unix`/jar-name hacks are gone (LF
+enforced via `.gitattributes`; the distribution dir name is version-independent), and a
+`.dockerignore` keeps the context lean. It still
 **bakes `zugang.txt` (secrets) into the image**; secret injection is backlog **C3**. The image is not
 built inside the devcontainer (no docker-in-docker, backlog **H2**); build/validate it on the Docker host.
 

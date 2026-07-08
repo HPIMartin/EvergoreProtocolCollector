@@ -48,6 +48,13 @@
   auto-fix; add braces via the redhat.java "Add braces" quick-fix. Checkstyle stays scoped to this one gap and
   is **not** a general linter (that overlap with the reviewer agent / a future Sonar-style static-analysis
   gate, backlog G6, was why it was earlier declined).
+- **Frontend build (`:frontend` Gradle subproject):** a React/TypeScript SPA built with Vite, wired
+  into the root build via a `frontendDist` Gradle configuration (`:frontend`'s `build/dist` consumed
+  into `processResources` under `static/ui`, so the SPA ships inside the main jar). Node is pinned in
+  `gradle.properties` (`nodeVersion`) and downloaded per-machine by the `node-gradle` plugin; `npm ci`
+  installs from the lockfile. `npmBuild` feeds `assemble`; `npmTest` (Vitest) and `npmLint`
+  (ESLint + Prettier) feed `check`, so `./gradlew build` gates the frontend too. Details, structure and
+  conventions: [frontend.md](frontend.md).
 - **Coverage, JaCoCo (report-only):** the `jacoco` plugin produces an HTML coverage report at
   `build/reports/jacoco/test/html/index.html`; `test` finalizes `jacocoTestReport`, so every
   `./gradlew build` regenerates it. **No threshold is enforced** (`jacocoTestCoverageVerification` is not
@@ -55,14 +62,16 @@
 - **Dependency vulnerability scan, Trivy (on-demand):** `./gradlew vulnScan` generates a CycloneDX
   SBOM of the resolved dependency graph (`org.cyclonedx.bom` plugin →
   `build/reports/cyclonedx/bom.json`) and scans it with **Trivy** (`trivy sbom`), printing the CVE
-  report to the console. Trivy pulls its vulnerability DB from an OCI registry on first run (small,
-  fast, **no account or API key**) and caches it under `~/.cache/trivy`. Currently **non-gating**:
-  without `vulnScan.failOnSeverity` the task never fails. It stays **on-demand, not wired into
-  `build`**: gating belongs to CI/delivery, never the local build. Continuous alerting is handled by
-  Dependabot.
+  report to the console. It also `dependsOn` a `:frontend:vulnScan` task that scans the npm dependency
+  graph directly (`trivy fs --scanners vuln --skip-dirs node_modules .`, picking up
+  `package-lock.json`), so one `./gradlew vulnScan` covers both dependency graphs. Trivy pulls its
+  vulnerability DB from an OCI registry on first run (small, fast, **no account or API key**) and
+  caches it under `~/.cache/trivy`. Currently **non-gating**: without `vulnScan.failOnSeverity` neither
+  task ever fails. Both stay **on-demand, not wired into `build`/`check`**: gating belongs to
+  CI/delivery, never the local build. Continuous alerting is handled by Dependabot.
   - **Tunable params → `gradle.properties`** (committed, central): `vulnScan.failOnSeverity` is a
-    comma-separated Trivy severity list (e.g. `HIGH,CRITICAL`); when set, the scan reports only those
-    severities and exits non-zero on a finding (a CI/delivery gate, since the scan never runs in
+    comma-separated Trivy severity list (e.g. `HIGH,CRITICAL`); when set, both tasks report only those
+    severities and exit non-zero on a finding (a CI/delivery gate, since the scan never runs in
     `build`). Absent/blank = report-only. The scan needs **no secrets**; the `*.local.*` gitignore
     rule stays in place for future ones.
   - **Toolchain:** the `trivy` binary comes from the devcontainer feature
@@ -101,13 +110,17 @@ the gate for landing on `main`.
 ## Run via Docker (primary path)
 
 - **`Dockerfile`** is multi-stage:
-  - *build stage* `eclipse-temurin:25-jdk`, runs `./gradlew clean test installDist`.
+  - *build stage* `eclipse-temurin:25-jdk`, copies `frontend/` and `gradle.properties` (needed for the
+    pinned `nodeVersion`) alongside the Java sources, then runs `./gradlew clean check installDist`
+    (not `clean test installDist`: `test` matches nothing under `:frontend`, so `check` is what gates
+    the image on the frontend's tests and lint too).
   - *runtime stage* `selenium/standalone-firefox:109.0` (Firefox + geckodriver for the `DOCKER`
     browser mode) with the **JDK 25 copied from the build stage** (Ubuntu base has no openjdk-25),
     the distribution copied to `/opt/protocolParser`, **`COPY zugang.txt /`** (still bakes credentials
     into the image; injecting them instead is deferred, backlog C3), `ENTRYPOINT /opt/protocolParser/bin/protocolParser`, `WORKDIR /`
     so the SQLite path `database/temp.sqlite` and `zugang.txt` resolve as before. `.dockerignore`
-    keeps the build context lean and excludes DBs / the gitignored benchmark.
+    keeps the build context lean and excludes DBs / the gitignored benchmark, plus
+    `frontend/node_modules`, `frontend/build` and `frontend/.gradle`.
 - **`buildAndRun.bat`** (gitignored, machine-specific): `docker build` → `docker run -p 8080:8080 -v
   "<host>/database:/database"`. The container serves on **8080** and persists SQLite to a mounted host
   `database/` dir.
@@ -153,9 +166,10 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 
 ## CI / dev environment
 
-- **No real CI.** No `.github/workflows/`. `.github/` has only `dependabot.yml` (devcontainers
-  ecosystem) and `.github/modernize/java-upgrade/` (local Copilot/VS Code "Java upgrade" agent
-  instrumentation: hook scripts that log tool use; not a pipeline).
+- **No real CI.** No `.github/workflows/`. `.github/` has only `dependabot.yml` (`devcontainers`
+  ecosystem for the root, `npm` ecosystem for `/frontend`, both weekly) and
+  `.github/modernize/java-upgrade/` (local Copilot/VS Code "Java upgrade" agent instrumentation: hook
+  scripts that log tool use; not a pipeline).
 - `.devcontainer/devcontainer.json`: Java dev container (base + `java` feature, **JDK 25**, Maven
   off, Gradle via the wrapper); see [dev-environment.md](dev-environment.md). Dev only.
 

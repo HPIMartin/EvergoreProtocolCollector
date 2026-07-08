@@ -20,17 +20,20 @@ is ArchUnit-guarded, style is enforced from one place, an offline acceptance tes
 evaluate→overview against a synthetic committed fixture, startup and boot tests are deterministic
 (no-timeout latch), and observability (anonymous `/health`, config-driven rate-limiting) is in place.
 The *how* lives in the KB ([architecture](knowledge-base/architecture.md) ·
-[testing](knowledge-base/testing.md) · [build-run-deploy](knowledge-base/build-run-deploy.md));
-decisions + rationale in [open-questions.md](open-questions.md); the code is the source of truth for
-the rest. A one-off conformance audit (2026-06-27) filed its remaining findings as **D9** / **G16**.
+[testing](knowledge-base/testing.md) · [build-run-deploy](knowledge-base/build-run-deploy.md) ·
+[frontend](knowledge-base/frontend.md)); decisions + rationale in [open-questions.md](open-questions.md);
+the code is the source of truth for the rest. A one-off conformance audit (2026-06-27) filed its
+remaining findings as **D9** / **G16**.
 
-**Next action: the bug track first** (setup-review decision 2026-07-03: confirmed bugs go before
-features): **B10** (malformed date aborts the ingest), **B12** (watermark timezone double-count),
-**B13** (WebDriver leak), plus the domain confirmations **B9**/**B11**. Then back to the standing
-next-up set (all land *in Gradle*): **E1** (erzeugter Gildenmehrwert, the headline metric, now easy
-to TDD on this harness), **H6** (failsafe → Gradle integration-test set). **H9** (jump to
-Micronaut 5) only *after* 1:1 is re-proven. Plan via the agent pipeline (planner → implementer →
-falsifier panel → reviewer). *(A4/CI stays deprioritized: local-only Docker → home-server deploy.)*
+**Next action:** **E5** (the dashboard rebuild: JSON API + React SPA, decision 2026-07-04) runs as
+three worktree strands. **Strand 1 (`frontend-build`)** — scaffold the React/TS/Vite frontend and wire
+it into the Gradle build, the Docker image and `vulnScan` — is **implementation-complete and at the
+review gateway** (falsifier panel → reviewer → author). **Strand 2 (`json-api`)** and **strand 3
+(`spa-views`)** are next: `json-api` inverts the token filter to `/api/**` and exposes the dashboard
+data; `spa-views` builds the actual React views against it. The **bug track** (**B10**, **B12**,
+**B13**) stays parked in its own worktree, `.claude/worktrees/bug-track`, resuming once a strand lands.
+Plan via the agent pipeline (planner → implementer → falsifier panel → reviewer). *(A4/CI stays
+deprioritized: local-only Docker → home-server deploy.)*
 
 **Gotchas worth keeping:**
 - The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit. Ignore the
@@ -119,7 +122,7 @@ Effort: `S` ≤½ day · `M` ~1–2 days · `L` ≥3 days. IDs are stable refere
 | **E2** | Surface **last bank/storage activity** per avatar (sheet col 10/11) | Easy parity win from stored timestamps | Overview/avatar view shows last-activity | S |
 | **E3** | Implement **geschätzte Jagdeinlagerungen** + percentage(s) (sheet col 6/7/8) | Needs the hunt-loot valuation rule resolved first (D-4) | Values reproduce sheet within tolerance on a sample | M |
 | **E4** | **Date-range reporting** (Datum von/bis) instead of only a running watermark | Sheet reports over a chosen window | Query metrics for an arbitrary `[from,to]` | M |
-| **E5** | Real **overview dashboard** (sortable table, all columns, maybe charts); consider JSON API + small frontend vs. current HTML-string templates | The sheet's value is the at-a-glance view | A guild officer can replace the sheet with this page | L |
+| **E5** | Real **overview dashboard**: JSON API + React SPA (decision 2026-07-04, resolves D-6), replacing the current HTML-string templates; sortable table, all columns, maybe charts | The sheet's value is the at-a-glance view | A guild officer can replace the sheet with this page | L |
 | **E6** | **History / time-series**: snapshot metrics over time for trends per avatar | The sheet is a point-in-time; trends are more useful | Stored snapshots; a trend view | L |
 
 ## Epic F: Ops, robustness & creative growth `P3`

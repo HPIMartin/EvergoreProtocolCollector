@@ -45,6 +45,7 @@ officer used to maintain by hand.
 | 11 | [multi-agent-playbook.md](multi-agent-playbook.md) | The **agent team**: Planner (you+me) · Implementer · Falsifier · Reviewer. Pipeline, roles, how to invoke |
 | 12 | [dev-environment.md](dev-environment.md) | **Fully-virtualized dev**: the devcontainer, the in-container rule for agents, JDK single-source & upgrade procedure |
 | 13 | [agent-entry-template.md](agent-entry-template.md) | **Per-tool session-bootstrap template**: the SHARED rules + TOOL-SPECIFIC skeleton each tool's entry file (e.g. `CLAUDE.md`) is built from, plus the template version |
+| 14 | [frontend.md](frontend.md) | The **React/TypeScript SPA** (Epic E5): stack, `domain`/`api`/`ui`/`app` structure and its dependency rule, TDD/testing conventions, and how the frontend build wires into Gradle, Docker and `vulnScan` |
 
 ## Living documents (outside this folder)
 
