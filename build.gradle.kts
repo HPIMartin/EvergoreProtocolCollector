@@ -127,6 +127,7 @@ tasks.register<Exec>("vulnScan") {
 	group = "verification"
 	description = "Scans the resolved dependencies for known vulnerabilities (CycloneDX SBOM analyzed by Trivy)."
 	dependsOn("cyclonedxBom")
+	dependsOn(":frontend:vulnScan")
 	val bom = layout.buildDirectory.file("reports/cyclonedx/bom.json")
 	commandLine(buildList {
 		add("trivy")

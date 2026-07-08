@@ -76,3 +76,25 @@ tasks.check {
 	dependsOn(npmTest)
 	dependsOn(npmLint)
 }
+
+val vulnScanFailOnSeverity = providers.gradleProperty("vulnScan.failOnSeverity").orNull?.takeIf { it.isNotBlank() }
+
+tasks.register<Exec>("vulnScan") {
+	group = "verification"
+	description = "Scans the npm dependencies for known vulnerabilities with Trivy."
+	commandLine(buildList {
+		add("trivy")
+		add("fs")
+		add("--scanners")
+		add("vuln")
+		add("--skip-dirs")
+		add("node_modules")
+		vulnScanFailOnSeverity?.let {
+			add("--severity")
+			add(it)
+			add("--exit-code")
+			add("1")
+		}
+		add(".")
+	})
+}
