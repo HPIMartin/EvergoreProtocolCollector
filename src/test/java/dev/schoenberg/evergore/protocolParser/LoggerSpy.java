@@ -6,6 +6,7 @@ import java.util.List;
 
 public class LoggerSpy implements Logger {
 	private final List<String> infoMessages = new ArrayList<>();
+	private final List<String> errorMessages = new ArrayList<>();
 
 	@Override
 	public void info(String toLog) {
@@ -13,15 +14,23 @@ public class LoggerSpy implements Logger {
 	}
 
 	@Override
-	public void error(String reason) {}
+	public void error(String reason) {
+		errorMessages.add(reason);
+	}
 
 	@Override
-	public void error(String reason, Throwable error) {}
+	public void error(String reason, Throwable error) {
+		errorMessages.add(reason);
+	}
 
 	@Override
 	public void debug(String toLog) {}
 
 	public List<String> infoMessages() {
 		return Collections.unmodifiableList(infoMessages);
+	}
+
+	public List<String> errorMessages() {
+		return Collections.unmodifiableList(errorMessages);
 	}
 }

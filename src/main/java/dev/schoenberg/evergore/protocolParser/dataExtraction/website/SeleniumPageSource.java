@@ -41,18 +41,27 @@ public class SeleniumPageSource implements PageSource {
 	@Override
 	public PageContents load() {
 		WebDriver webDriver = driver.createWebDriver();
-		loadEvergore(webDriver);
-
-		List<String> bank = loadContent(webDriver, "guild_protocol&selection=2");
-		List<String> lager = loadContent(webDriver, "town_protocol&selection=3");
-
-		PageContents result = new PageContents(lager, bank);
-
 		try {
-			webDriver.close();
-		} catch (Exception e) {}
+			loadEvergore(webDriver);
 
-		return result;
+			List<String> bank = loadContent(webDriver, "guild_protocol&selection=2");
+			List<String> lager = loadContent(webDriver, "town_protocol&selection=3");
+
+			return new PageContents(lager, bank);
+		} catch (RuntimeException e) {
+			logger.error("Failed to scrape Evergore", e);
+			throw e;
+		} finally {
+			quit(webDriver);
+		}
+	}
+
+	private void quit(WebDriver webDriver) {
+		try {
+			webDriver.quit();
+		} catch (RuntimeException e) {
+			logger.error("Failed to quit the WebDriver", e);
+		}
 	}
 
 	private List<String> loadContent(WebDriver driver, String protocol) {
