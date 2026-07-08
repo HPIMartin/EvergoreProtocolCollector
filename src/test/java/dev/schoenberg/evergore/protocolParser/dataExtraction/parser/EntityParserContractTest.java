@@ -80,8 +80,36 @@ class EntityParserContractTest {
 		assertThat(EntityParser.parse(List.of())).isEmpty();
 	}
 
+	@Test
+	void skipsAHeadlineWithAMalformedDateAndStillParsesNeighbouringEntries() {
+		List<Entry> entries = EntityParser
+				.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "11.12X2001 13:37 Bad Einlagerung", "02.02.2002 12:00 Bert Entnahme", "2 Other"));
+
+		assertThat(entries).hasSize(2);
+		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
+		assertEntry(entries.get(1), "Bert", ENTNAHME, new Item(2, "Other", 100));
+	}
+
+	@Test
+	void doesNotFoldAMalformedHeadlinesItemsIntoThePrecedingEntry() {
+		List<Entry> entries = EntityParser
+				.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "11.12X2001 13:37 Bad Einlagerung", "5 Ghost", "02.02.2002 12:00 Bert Entnahme", "2 Other"));
+
+		assertThat(entries).hasSize(2);
+		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
+		assertEntry(entries.get(1), "Bert", ENTNAHME, new Item(2, "Other", 100));
+	}
+
+	@Test
+	void doesNotAbortTheIngestOnAnOutOfRangeDate() {
+		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "31.13.2001 25:99 Bad Einlagerung", "5 Ghost"));
+
+		assertThat(entries).hasSize(1);
+		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
+	}
+
 	private static Entry parse(String... lines) {
-		return EntryFactory.parseContent(List.of(lines));
+		return EntryFactory.parseContent(List.of(lines)).orElseThrow();
 	}
 
 	private static LocalDateTime berlinTime(Entry entry) {

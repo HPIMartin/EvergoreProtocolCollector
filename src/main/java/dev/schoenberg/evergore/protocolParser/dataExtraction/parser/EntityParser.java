@@ -5,7 +5,7 @@ import java.util.List;
 
 import dev.schoenberg.evergore.protocolParser.domain.Entry;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.LAGER_EINTRAG_START;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.LAGER_EINTRAG_BOUNDARY;
 import static dev.schoenberg.evergore.protocolParser.dataExtraction.parser.EntryFactory.parseContent;
 
 public class EntityParser {
@@ -19,7 +19,7 @@ public class EntityParser {
 		List<Integer> result = new ArrayList<>();
 		int lineCounter = 0;
 		for (String line : lines) {
-			if (line.matches(LAGER_EINTRAG_START)) {
+			if (line.matches(LAGER_EINTRAG_BOUNDARY)) {
 				result.add(lineCounter);
 			}
 			lineCounter++;
@@ -35,12 +35,12 @@ public class EntityParser {
 				previousBeginning = beginning;
 			} else {
 				List<String> entryContent = lines.subList(previousBeginning, beginning);
-				result.add(parseContent(entryContent));
+				parseContent(entryContent).ifPresent(result::add);
 				previousBeginning = beginning;
 			}
 		}
 		if (previousBeginning != null) {
-			result.add(parseContent(lines.subList(previousBeginning, lines.size())));
+			parseContent(lines.subList(previousBeginning, lines.size())).ifPresent(result::add);
 		}
 		return result;
 	}

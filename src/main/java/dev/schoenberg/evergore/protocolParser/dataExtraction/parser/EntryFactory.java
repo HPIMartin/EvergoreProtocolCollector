@@ -3,6 +3,7 @@ package dev.schoenberg.evergore.protocolParser.dataExtraction.parser;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -22,23 +23,30 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.LAG
 public class EntryFactory {
 	private EntryFactory() {}
 
-	public static Entry parseContent(List<String> rawContent) {
+	public static Optional<Entry> parseContent(List<String> rawContent) {
 		List<Item> items = parseItems(rawContent.subList(1, rawContent.size()));
 		return generateEntry(rawContent.get(0), items);
 	}
 
-	private static Entry generateEntry(String headline, List<Item> items) {
+	private static Optional<Entry> generateEntry(String headline, List<Item> items) {
 		Pattern pattern = Pattern.compile(LAGER_EINTRAG_START);
 		Matcher matcher = pattern.matcher(headline);
-		matcher.find();
+		if (!matcher.find()) {
+			return Optional.empty();
+		}
 		String avatar = matcher.group(GROUP_NAME_AVATAR);
 		DateTimeFormatter formatter = new DateTimeFormatterBuilder().appendPattern("dd.MM.yyyy HH:mm").toFormatter().withZone(APP_ZONE);
-		Instant date = formatter.parse(matcher.group(GROUP_NAME_DATE), Instant::from);
+		Instant date;
+		try {
+			date = formatter.parse(matcher.group(GROUP_NAME_DATE), Instant::from);
+		} catch (DateTimeParseException e) {
+			return Optional.empty();
+		}
 
 		if ("Entnahme".equals(matcher.group(GROUP_NAME_TYPE))) {
-			return new Entry(avatar.trim(), date, items, TransferType.ENTNAHME);
+			return Optional.of(new Entry(avatar.trim(), date, items, TransferType.ENTNAHME));
 		}
-		return new Entry(avatar.trim(), date, items, TransferType.EINLAGERUNG);
+		return Optional.of(new Entry(avatar.trim(), date, items, TransferType.EINLAGERUNG));
 	}
 
 	private static List<Item> parseItems(List<String> rawItems) {

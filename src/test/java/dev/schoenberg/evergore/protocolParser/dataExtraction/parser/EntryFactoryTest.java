@@ -25,7 +25,7 @@ class EntryFactoryTest {
 		input.add("5 Drachenhaut");
 		input.add("7 Drachenhaut");
 
-		Entry e = EntryFactory.parseContent(input);
+		Entry e = EntryFactory.parseContent(input).orElseThrow();
 
 		assertThat(e.items()).hasSize(1);
 	}
