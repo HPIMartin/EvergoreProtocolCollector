@@ -26,14 +26,30 @@ the code is the source of truth for the rest. A one-off conformance audit (2026-
 remaining findings as **D9** / **G16**.
 
 **Next action:** **E5** (the dashboard rebuild: JSON API + React SPA, decision 2026-07-04) runs as
-three worktree strands. **Strand 1 (`frontend-build`)** — scaffold the React/TS/Vite frontend and wire
-it into the Gradle build, the Docker image and `vulnScan` — is **implementation-complete and at the
-review gateway** (falsifier panel → reviewer → author). **Strand 2 (`json-api`)** and **strand 3
-(`spa-views`)** are next: `json-api` inverts the token filter to `/api/**` and exposes the dashboard
-data; `spa-views` builds the actual React views against it. The **bug track** (**B10**, **B12**,
-**B13**) stays parked in its own worktree, `.claude/worktrees/bug-track`, resuming once a strand lands.
-Plan via the agent pipeline (planner → implementer → falsifier panel → reviewer). *(A4/CI stays
-deprioritized: local-only Docker → home-server deploy.)*
+three worktree strands. **Strand 1 (`frontend-build`)** — the React/TS/Vite frontend wired into the
+Gradle build, the Docker image and `vulnScan` — **landed on `main` 2026-07-11** (rebased onto current
+main; the rebase surfaced a CycloneDX-aggregate-vs-`:frontend` clash, fixed by basing `vulnScan` on the
+direct CycloneDX BOM). **Strand 2 (`json-api`)** and **strand 3 (`spa-views`)** are next: `json-api`
+inverts the token filter to `/api/**` and exposes the dashboard data; `spa-views` builds the actual
+React views against it. The **bug track** (**B10**, **B12**, **B13**) stays parked in its own worktree,
+`.claude/worktrees/bug-track`, resuming once a strand lands. Plan via the agent pipeline (planner →
+implementer → falsifier panel → reviewer). *(A4/CI stays deprioritized: local-only Docker → home-server
+deploy.)*
+
+**Frontend-build review carry-overs (2026-07-11, falsifier panel + reviewer PASS; deferred, non-blocking):**
+- **For `json-api`** (which reworks the filter/fallback anyway): (a) `SpaHistoryFallbackController.isSpaNavigationRequest`
+  uses `!path.contains(".")`, wrong both ways (a dotless missing asset → 200 SPA shell instead of 404; a dotted
+  client route → 404 instead of the shell) — tighten to a trailing-extension match with tests both ways; (b)
+  `SpaStaticResourcePaths.matches` tests a **non-canonicalized** path, so `/assets/../overview` skips the token
+  filter (no proven leak — Micronaut's static resolver 404s it) — fold the fix into the `/api/**` inversion; (c)
+  document/accept that `/`, `/index.html`, `/assets/**` are served with **no token, rate-limit or audit log**.
+- **Test hygiene:** harden the frontend `vitest` worker pool/timeout (a spurious "failed to start forks worker"
+  flake under CPU load, seen twice incl. once on the landing build); and move `smokeTest.sqlite` out of
+  `src/test/resources` — it is rewritten every run, perpetually busting `processTestResources → test → jacoco`
+  caching for the whole backend chain and risking cross-run flakiness (relates to **B8** / **B4**).
+- **Hook hardening:** the pre-commit host-path scan can be prefix-squatted (`/home/<allowed>/home/<real>/…`
+  slips past `grep -oE`) — relates to **G7** / **G13**. The `/home/app` Dockerfile exemption (commit `cc75a2e`)
+  itself was reviewed as necessary and correct.
 
 **Gotchas worth keeping:**
 - The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes to LF on commit. Ignore the
