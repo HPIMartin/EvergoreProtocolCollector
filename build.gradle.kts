@@ -126,9 +126,9 @@ val vulnScanFailOnSeverity = providers.gradleProperty("vulnScan.failOnSeverity")
 tasks.register<Exec>("vulnScan") {
 	group = "verification"
 	description = "Scans the resolved dependencies for known vulnerabilities (CycloneDX SBOM analyzed by Trivy)."
-	dependsOn("cyclonedxBom")
+	dependsOn(":cyclonedxDirectBom")
 	dependsOn(":frontend:vulnScan")
-	val bom = layout.buildDirectory.file("reports/cyclonedx/bom.json")
+	val bom = layout.buildDirectory.file("reports/cyclonedx-direct/bom.json")
 	commandLine(buildList {
 		add("trivy")
 		add("sbom")
