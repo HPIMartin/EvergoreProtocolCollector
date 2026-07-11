@@ -13,9 +13,6 @@ Project settings (`.claude/settings.json`):
 Local settings (`.claude/settings.local.json`):
 !`cat .claude/settings.local.json 2>/dev/null || echo "(not found)"`
 
-User settings (`~/.claude/settings.json`, read-only reference for rule matching, never modify this file):
-!`cat ~/.claude/settings.json 2>/dev/null || echo "(not found)"`
-
 ## Task
 
 Optimize the permission configuration of this project based on what actually happened in this session. Work through the following steps in order.
