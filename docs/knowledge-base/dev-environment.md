@@ -47,6 +47,15 @@ Java bump) a one-line image change instead of a host installation.
 > that's why the host has a Bash-stdout quirk and CRLF history. Inside the container, Bash behaves
 > normally. "Work in the container" means starting the session from the in-container terminal.
 
+> Note: the Claude Code VS Code extension can race the editor's own file-watcher. When it edits a file
+> the IDE is watching (a worktree file, especially with a second Claude session active), a read taken
+> right after the edit may transiently show the old content and a follow-up edit may fail to find its
+> target, even though the write landed and commits fine once things settle. It is a presentation race,
+> not an external process rewriting the file (an idle file is stable; no `git restore` runs). Trust
+> `git diff` / `git show` over a `grep` taken mid-edit; if writes look reverted, apply the change and
+> commit in one shell process (write, `git add`, `git commit`) so the commit captures the content, then
+> verify `HEAD`.
+
 ## Rule for all contributors
 
 **Never install or run toolchains (JDK/Gradle/Firefox) natively on the host.** Run `./gradlew …`, the
