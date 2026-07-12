@@ -1,8 +1,8 @@
 # 08: Glossary (German ↔ English)
 
-The game and all scraped data are German. Code/identifiers are mostly English, with German domain
-terms kept verbatim where they're proper nouns (item names, transfer types). Use this when reading
-the protocol, the `EvergoreItem` catalog, or the Google Sheet.
+- Game and all scraped data are German; code/identifiers are mostly English, with German domain
+  terms kept verbatim where they're proper nouns (item names, transfer types).
+- Use this when reading the protocol, the `EvergoreItem` catalog, or the Google Sheet.
 
 ## Game & guild
 

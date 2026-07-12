@@ -1,16 +1,15 @@
 # 10: Working with AI agents (the AI-assisted workflow showcase)
 
-A goal of this project is to be a **worked example of developing well *with* an AI agent**. The
-showcase tool is Claude Code, but this workflow is tool-neutral: any capable AI coding agent (or a
-human) follows the same loop. This doc captures it so it's repeatable. The engineering standards
-themselves are in [engineering-handbook.md](engineering-handbook.md); this is about *how we
-collaborate with the agent*.
+- A worked example of developing well *with* an AI agent. Showcase tool: Claude Code; the workflow
+  is tool-neutral (any capable agent or human follows the same loop).
+- Standards live in [engineering-handbook.md](engineering-handbook.md); this doc covers only the
+  collaboration workflow.
 
 ## Why this approach
 
-LLM agents are most useful when they (a) start from durable project knowledge instead of re-deriving
-it every session, (b) make their reasoning and decisions inspectable, and (c) ask the human the right
-questions instead of guessing. This repo is structured to make all three the default.
+Agents work best when they (a) start from durable project knowledge instead of re-deriving it each
+session, (b) make reasoning and decisions inspectable, (c) ask the human instead of guessing. The
+repo makes all three the default.
 
 ## The three memory layers (what goes where)
 
@@ -20,143 +19,117 @@ questions instead of guessing. This repo is structured to make all three the def
 | **Session bootstrap** | the tool's entry file (e.g. `/CLAUDE.md`), a thin wrapper built from [agent-entry-template.md](agent-entry-template.md) | Rules + pointers, auto-loaded each session | Versioned with the code |
 | **Cross-session memory** | the tool's own user-level memory (outside the repo) | Author profile, working preferences, handy references | Per-user, across projects |
 
-Rule of thumb: **anything another contributor needs goes in the repo** (`docs/`), not only in
+Rule of thumb: anything another contributor needs goes in the repo (`docs/`), not only in
 cross-session memory.
 
 ## Session playbook
 
-1. **Orient:** read your tool's entry file (e.g. `CLAUDE.md`), then `docs/knowledge-base/README.md`
-   (the map), the backlog's "▶ Current status / next action" section and the decisions touching your
-   task. Don't re-scan the whole codebase or read the big docs whole; trust + verify the KB
-   (see "Context & token hygiene" below).
-2. **Pick one backlog item** (smallest valuable slice). Confirm scope.
-3. **Clarify by asking:** when a decision is the author's, ask with **multiple-choice options**
-   (recommended first). Record the answer in `open-questions.md` under Decisions.
-4. **TDD:** red → green → refactor (see handbook §4). For user-facing work, add a BDD scenario.
-5. **Update the KB:** change the relevant doc in the same change as the code.
-6. **Commit (gated):** propose **one** one-line, present-tense-verb message, get the author's
-   confirmation, then commit. **Never push.** LF endings; whitespace separate from logic.
-7. **Log decisions/assumptions** so the next session inherits them; record process slips in
+1. **Orient:** read the tool's entry file, `docs/knowledge-base/README.md` (the map), the backlog's
+   "▶ Current status / next action" section and the decisions touching the task. No whole-codebase
+   scans or whole-doc reads (see "Context & token hygiene").
+2. **Pick one backlog item** (smallest valuable slice); confirm scope.
+3. **Clarify by asking:** author decisions get multiple-choice options (see "How to ask
+   questions"); record the answer in `open-questions.md` under Decisions.
+4. **TDD:** red → green → refactor (handbook §4); BDD scenario for user-facing work.
+5. **Update the KB** in the same change as the code.
+6. **Commit (gated):** propose one one-line, present-tense-verb message, confirm with the author,
+   commit. **Never push.** LF endings; whitespace separate from logic.
+7. **Log decisions/assumptions** for the next session; process slips go to
    `docs/process-learnings.md`.
 
 ## Using sub-agents (parallel fan-out)
 
-For broad reading/analysis, spin up parallel agents (e.g. one mapping architecture, one assessing
-tests/build) and synthesize their reports, much faster than reading everything serially. Keep
-*decisions* with the human; use agents for *gathering and drafting*. (This very knowledge base was
-bootstrapped that way; see "How this was built" below.)
-
-For **implementation**, we use a dedicated agent team (Planner (you + the main session) → Implementer
-→ Falsifier panel → Reviewer/Gate; the per-role models live in the `.claude/agents/` frontmatter and
-the playbook's roles table) defined in `.claude/agents/` and described in
-**[multi-agent-playbook.md](multi-agent-playbook.md)**. The author approves the commit plan and is
-the only one who pushes.
+- Broad reading/analysis: parallel agents (e.g. one mapping architecture, one assessing
+  tests/build), then synthesize; faster than serial reading.
+- Decisions stay with the human; agents gather and draft. The repeatable loop: gather → persist →
+  ask → decide → build.
+- Implementation: Planner (you + main session) → Implementer → Falsifier panel → Reviewer/Gate;
+  defined in `.claude/agents/`, described in [multi-agent-playbook.md](multi-agent-playbook.md),
+  per-role models in the frontmatter and the playbook's roles table.
+- The author approves the commit plan and is the only one who pushes.
 
 ## Context & token hygiene
 
-Long sessions dominate cost: every token that enters the context is re-read on **every** subsequent
-turn, and after any pause the whole context is re-written to the prompt cache. Context size × session
-length is the product to minimize; keep the working context lean:
+Every token in context is re-read on every turn, and after a pause the whole context is re-written
+to the prompt cache; minimize context size × session length:
 
-- **Section-scoped reads for the big docs.** The backlog, the decisions log and the handbook are
-  thousands of tokens each. At session start read the KB README (the map), the backlog's
-  **"▶ Current status / next action"** section and only the decisions/sections touching the task;
-  locate them with Grep or line-scoped reads instead of pulling whole files. Read a file whole only
+- **Section-scoped reads for the big docs** (backlog, decisions log, handbook: thousands of tokens
+  each): read the KB README, the backlog's "▶ Current status / next action" section and only
+  task-relevant decisions/sections; locate via Grep or line-scoped reads. Read a file whole only
   when it is the object of the work.
-- **Never re-read a file already in context** unless it changed on disk; the earlier read is still
-  there, and each re-read injects the full file again.
-- **Batch independent tool calls** into one turn (and prefer combined one-liners where the permission
-  rules match, see below): every round trip re-reads the entire context, so avoidable calls and
-  error-retries are pure waste.
-- **Search via sub-agents, not the main context.** Use `Explore` / sub-agents for broad reading;
-  they return conclusions and keep large file dumps out of the main session.
-- **`/clear` at task boundaries; prefer short, focused sessions.** Start a fresh context between
-  unrelated backlog items; a long-lived large context also pays a full cache re-write after every
-  pause longer than the cache TTL (5 min on API billing; 1 h for Claude Code on a subscription).
-  The agent flags good `/clear` points; the author triggers it (the agent can't clear its own context).
-- **Load heavyweight skills / one-off imports in a throwaway session,** not mid-feature: anything
-  injected stays in the context for the rest of the session.
-- **Reserve the Workflow / fan-out tooling for occasional large parallel audits** (explicit opt-in),
-  never the interactive, human-gated commit loop (see [multi-agent-playbook.md](multi-agent-playbook.md)).
+- **Never re-read a file already in context** unless it changed on disk; each re-read injects the
+  full file again.
+- **Batch independent tool calls** into one turn (and prefer combined one-liners where permission
+  rules match, see below): every round trip re-reads the entire context.
+- **Search via sub-agents, not the main context:** `Explore` / sub-agents return conclusions,
+  keeping file dumps out of the main session.
+- **`/clear` at task boundaries; short focused sessions.** Fresh context between unrelated backlog
+  items; a long-lived context pays a full cache re-write after any pause beyond the cache TTL
+  (5 min on API billing; 1 h for Claude Code on a subscription). The agent flags good `/clear`
+  points; the author triggers it (the agent can't clear its own context).
+- **Heavyweight skills / one-off imports in a throwaway session:** anything injected stays in
+  context for the rest of the session.
+- **Workflow / fan-out tooling only for occasional large parallel audits** (explicit opt-in), never
+  the interactive, human-gated commit loop (see [multi-agent-playbook.md](multi-agent-playbook.md)).
   Routine TDD runs lean: plan → implementer → falsifier panel → reviewer.
-- **Terse by default:** bullets and the outcome first; expand on request.
-- **Keep the shared docs themselves lean** (KB-current): this hygiene only works if the per-session
-  entry docs stay small; condense, don't accrete.
+- **Terse by default:** bullets, outcome first; expand on request.
+- **Keep the shared docs lean** (KB-current): condense, don't accrete; hygiene only works if the
+  per-session entry docs stay small.
 
 ## Choosing the session model
 
-The main session is the planner's brain, and its whole context is re-read on every turn, so the
-session model dominates token spend more than any subagent choice. Pick it by the session's job:
-planning, architecture and review/audit sessions run the strongest tier the current plan offers
-(Fable when available, otherwise Opus); routine TDD/implementation sessions run a smaller tier
-(Opus or Sonnet), and the pipeline's gates still check the work. When the strongest tier is
-unavailable, fall back one tier rather than postponing the session. Subagent tiers are pinned per
-role in the `.claude/agents/` frontmatter; one-off gate escalation follows the playbook's
-escalation rule.
+- The main session's whole context is re-read every turn, so its model dominates token spend more
+  than any subagent choice.
+- Planning / architecture / review-audit sessions: strongest tier the plan offers (Fable when
+  available, otherwise Opus). Routine TDD/implementation: smaller tier (Opus or Sonnet); the
+  pipeline's gates still check the work.
+- Strongest tier unavailable: fall back one tier rather than postponing.
+- Subagent tiers are pinned per role in the `.claude/agents/` frontmatter; one-off gate escalation
+  per the playbook's escalation rule.
 
 ## Permissions & autonomy (committed vs local)
 
-The agent runs against a permission allow/deny list so it can work **autonomously and
-token-efficiently** (no prompt on every command) inside guardrails that stop a wrong turn from doing
-harm. Two files, two distinct purposes:
+A permission allow/deny list lets the agent work autonomously and token-efficiently (no prompt per
+command) inside guardrails. Two files:
 
-- **Committed `.claude/settings.json`, the shared, portable policy.** What *every* contributor of this
-  repo should inherit. A rule belongs here only if it is **portable** (no machine/host paths, no
-  personal scratch dirs), **project-relevant** (the build tool, git, this project's doc sources,
-  standard read-only shell utilities), and something you'd hand a teammate. Keep it **small and stable**.
-- **Local `.claude/settings.local.json` (gitignored), per-machine / per-dev taste.** Allows *you*
-  personally accept but won't impose on others: machine-specific absolute paths, or a broader tool
-  you're comfortable with (one dev allows blanket `curl`, another doesn't). Each dev curates their own;
-  nothing here is shared.
-
-**Decision rule (don't let it drift):** portable + project-relevant + shareable → *committed*;
-machine-specific or personal-taste → *local*. **Don't promote local → committed** to "tidy up": it
-forces one dev's taste on everyone and can leak host detail; and don't bury a genuinely shared,
-portable rule down in local where teammates never get it.
-
-**Keep it from sprawling.** The "always allow" button writes the *exact command string* to the local
-file. With a `cd`, an inline `VAR=…`, an absolute scratch path or a one-off message baked in, that
-rule never matches again, so the file silently fills with dead one-shot entries. Two habits prevent it:
-when a *recurring* command isn't covered, deliberately add a **portable** rule to committed
-`settings.json` instead of clicking "always allow"; and periodically prune the local file back to the
-few rules you actually chose. (A *running* agent session keeps its approval list in memory and rewrites
-the local file on every new approval, so an in-session prune can be clobbered: prune when the session
-is idle, or edit the file yourself.)
-
-**Token-efficient commands that still match.** Combined one-liners (`echo … && git status && grep …`)
-are **fewer tool round-trips** and are auto-allowed **as long as every segment matches an allow rule**,
-so prefer them over splitting into atomic calls. An inline **`VAR=…`** assignment still makes a chain
-un-matchable — use literal values. A leading **`cd`** auto-allows only in its project-anchored absolute
-form (`cd /workspaces/EvergoreProtocolCollector` or a path below it; decided 2026-07-06), and deny
-rules block `cd` arguments containing `..`, `$`, `` ` `` or `~`, so the working directory cannot leave
-the project silently; bare `cd`, relative and quoted forms still prompt. Prefer `git -C <path>` /
-absolute paths anyway — `cd` is the fallback when a tool must run from a subdirectory (e.g. a
-worktree's `./gradlew`). (Worktree-path specifics: handbook §7.)
-
-**Autonomy within guardrails.** The aim is maximum useful autonomy at minimum ceremony plus a deny
-floor under it. The `deny` list blocks the named destructive commands outright (here: `git push`,
-`git reset` in all forms, `git clean`, `git branch -D`, `rm -rf`, their `-C` variants, the `cd`
-escape guards, and reads of secret files — live credentials, `zugang.txt`,
-`secrets.local.properties`). Between allow and deny sits a small **`ask` tier** for legitimate but
-risky commands (`gh api` can mutate the remote, `git restore` can discard working-tree state): they
-always prompt and must never drift into a blanket allow. It is a
-guardrail against accidents, not a sandbox: broad interpreter allows (`python3`, `node`, `find`,
-`sed -i`, shell redirects) could technically reach the same effects and are trusted by design (single
-trusted author, accident threat model). Widen the allow list freely for convenience; **never weaken
-the deny floor**, and route anything genuinely destructive or outward-facing through the human.
+- **Committed `.claude/settings.json`: the shared, portable policy.** Only rules that are portable
+  (no machine/host paths or personal scratch dirs), project-relevant (build tool, git, this
+  project's doc sources, standard read-only shell utilities) and teammate-worthy. Keep it small and
+  stable.
+- **Local `.claude/settings.local.json` (gitignored): per-machine / per-dev taste.**
+  Machine-specific absolute paths, or broader tools one dev accepts (e.g. blanket `curl`) but won't
+  impose. Each dev curates their own.
+- **Decision rule:** portable + project-relevant + shareable → committed; machine-specific or
+  personal taste → local. Don't promote local → committed to "tidy up" (imposes taste, can leak
+  host detail); don't bury a genuinely shared portable rule in local.
+- **Keep it from sprawling.** "Always allow" writes the exact command string to the local file;
+  with a `cd`, inline `VAR=…`, absolute scratch path or one-off message baked in it never matches
+  again, so dead one-shot entries accumulate. Instead: add a portable committed rule for recurring
+  commands; periodically prune the local file, but only when the session is idle (or by hand): a
+  running session keeps its approval list in memory and rewrites the local file on every new
+  approval, clobbering an in-session prune.
+- **Token-efficient commands that still match.** Combined one-liners
+  (`echo … && git status && grep …`) save round-trips and auto-allow when every segment matches an
+  allow rule; prefer them over atomic calls. Inline `VAR=…` makes a chain un-matchable: use literal
+  values. A leading `cd` auto-allows only project-anchored absolute
+  (`cd /workspaces/EvergoreProtocolCollector` or below; decided 2026-07-06); deny rules block `cd`
+  arguments containing `..`, `$`, `` ` `` or `~` (the working directory can't silently leave the
+  project); bare, relative and quoted `cd` still prompt. Prefer `git -C <path>` / absolute paths;
+  `cd` is the fallback when a tool must run from a subdirectory (e.g. a worktree's `./gradlew`).
+  Worktree-path specifics: handbook §7.
+- **Autonomy within guardrails.** Maximum useful autonomy, minimum ceremony, a deny floor
+  underneath. `deny` blocks outright: `git push`, `git reset` (all forms), `git clean`,
+  `git branch -D`, `rm -rf`, their `-C` variants, the `cd` escape guards, reads of secret files
+  (live credentials, `zugang.txt`, `secrets.local.properties`). An `ask` tier between allow and
+  deny covers legitimate but risky commands (`gh api` can mutate the remote, `git restore` can
+  discard working-tree state): always prompt, never drift into blanket allow. A guardrail against
+  accidents, not a sandbox: broad interpreter allows (`python3`, `node`, `find`, `sed -i`, shell
+  redirects) could reach the same effects and are trusted by design (single trusted author,
+  accident threat model). Widen the allow list freely; never weaken the deny floor; route anything
+  genuinely destructive or outward-facing through the human.
 
 ## How to ask questions (the author's preference)
 
-- Always offer **multiple-choice** options; the author will free-type only if none fit.
-- Put the recommended option first and say so. Be picky: surface trade-offs and decisions the
-  author may not have considered, rather than quietly defaulting.
-
-## How this knowledge base was built (worked example)
-
-The initial pass: read git history + the uncommitted diff (discovering it was 95% line-ending
-churn over ~15 real files), pulled the Google Sheet via gviz and reverse-engineered its columns
-(verifying the Gildenmehrwert formula against real rows), and ran two parallel sub-agents to map the
-architecture and the test/build state. Findings were written to `docs/knowledge-base/`, a prioritized
-backlog to `docs/backlog.md`, and four strategic questions were put to the author as multiple-choice,
-whose answers are recorded in `open-questions.md`. That loop, **gather → persist → ask → decide →
-build**, is the pattern to repeat.
+- Always multiple-choice; the author free-types only if none fit.
+- Recommended option first, and say so. Be picky: surface trade-offs the author may not have
+  considered rather than quietly defaulting.

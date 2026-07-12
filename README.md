@@ -33,6 +33,7 @@ Production image & runtime config: [build-run-deploy.md](docs/knowledge-base/bui
 
 ## Conventions
 
-Clean code · TDD · BDD (for docs/showcase) · SOLID · hexagonal architecture. **Git is the source of
-truth for history**: fine-grained commits and their messages are the changelog; the docs don't
-duplicate them. See the [engineering handbook](docs/knowledge-base/engineering-handbook.md).
+- Clean code · TDD · BDD (for docs/showcase) · SOLID · hexagonal architecture.
+- **Git is the source of truth for history**: fine-grained commits and their messages are the
+  changelog; docs don't duplicate them.
+- See the [engineering handbook](docs/knowledge-base/engineering-handbook.md).

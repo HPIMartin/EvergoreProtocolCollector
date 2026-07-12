@@ -27,21 +27,25 @@
 
 ## Boot-signal seam
 
-`SmokeTest`, `ProtocolEvaluationAcceptanceTest`, and `HealthEndpointTest` need state written by a context bean at startup
-(the `@Scheduled` collector finished, data was loaded, an exception fired) and read back in the test
-body. They observe it through an injected, DI-shared **`BootSignalRecorder`** (`@Singleton` scope via a
-test `@Factory`), **not** `static` flags. This bridges the `@MockBean`/context lifecycle and the JUnit
-test-instance lifecycle without global mutable state: the mock-bean helpers get the recorder by
-constructor injection and write to it; the test injects the same instance and reads it. A
-`@TestInstance(PER_CLASS)` + instance-fields alternative was tried and broke `SmokeTest` (the startup
-signal went unobserved → timeout). The recorder also owns `awaitCollection()`, deduplicated across the
-tests. It blocks on a `CountDownLatch` with **no timeout**: the test returns exactly when the collection
-finishes, so it is deterministic on any hardware (slow machines just wait longer, they never flake).
-`recordException()` releases the latch too, so a failed boot fails the `exceptionOccurred()` assertion
-instead of hanging forever. The acceptance + health tests call it from `@BeforeEach`: it's a shared,
-non-test-relevant precondition, not a per-test arrange (handbook §6). `SmokeTest.applicationIsStarting`
-is the exception: there the collection completing *is* the behaviour under test, so the await stays in
-the test body.
+- `SmokeTest`, `ProtocolEvaluationAcceptanceTest`, and `HealthEndpointTest` need state written by a
+  context bean at startup (the `@Scheduled` collector finished, data was loaded, an exception
+  fired) and read back in the test body.
+- They observe it through an injected, DI-shared **`BootSignalRecorder`** (`@Singleton` scope via a
+  test `@Factory`), **not** `static` flags: this bridges the `@MockBean`/context lifecycle and the
+  JUnit test-instance lifecycle without global mutable state. The mock-bean helpers get the
+  recorder by constructor injection and write to it; the test injects the same instance and reads
+  it.
+- A `@TestInstance(PER_CLASS)` + instance-fields alternative was tried and broke `SmokeTest` (the
+  startup signal went unobserved, causing a timeout).
+- The recorder owns `awaitCollection()`, deduplicated across the tests. It blocks on a
+  `CountDownLatch` with **no timeout**: the test returns exactly when the collection finishes, so
+  it is deterministic on any hardware (slow machines just wait longer, they never flake).
+  `recordException()` releases the latch too, so a failed boot fails the `exceptionOccurred()`
+  assertion instead of hanging forever.
+- The acceptance + health tests call it from `@BeforeEach`: it's a shared, non-test-relevant
+  precondition, not a per-test arrange (handbook §6). `SmokeTest.applicationIsStarting` is the
+  exception: there the collection completing *is* the behaviour under test, so the await stays in
+  the test body.
 
 ## Coverage map
 
@@ -71,32 +75,32 @@ observable behaviour**:
 - **Unit/integration suite** reproduces the pre-migration baseline exactly: **22 tests, 7 classes, 0
   failures** on the new stack.
 - **1:1 against production data:** the migrated distribution was run against a snapshot of the
-  production SQLite DB and its `/overview`, `/avatars/{avatar}/bank` and `/avatars/{avatar}/storage`
+  production SQLite DB; its `/overview`, `/avatars/{avatar}/bank` and `/avatars/{avatar}/storage`
   responses were **byte-identical (after LF normalisation)** to the live production instance.
 - **JDK 25 behaviour change found & fixed:** `java.sql.Timestamp.from(Instant)` now uses
   `Math.multiplyExact` and **throws** on extreme instants where JDK 17 silently wrapped. The empty
-  watermark `LocalDateTime.MIN` hit this in `EvergoreDataEvaluator` (first-run / empty-meta path); it
-  was replaced with an earliest-representable sentinel (`BEGINNING_OF_TIME`) that preserves the
+  watermark `LocalDateTime.MIN` hit this in `EvergoreDataEvaluator` (first-run / empty-meta path);
+  replaced with an earliest-representable sentinel (`BEGINNING_OF_TIME`) that preserves the
   include-everything semantics. `SmokeTest`'s throwaway `Instant.MIN` timestamp was likewise made a
   valid instant. `ArchUnit` was bumped to 1.4.1 so it parses Java 25 bytecode (1.3.0 silently
   imported zero classes, making the hexagonal guard a false green).
 
 An automated, offline acceptance test of the same flow now exists as `ProtocolEvaluationAcceptanceTest`,
-driven by a **synthetic** committed fixture DB (`TestDataGenerator` → `testdata.sqlite`): no production
-data, no PII, so the fixture is safe to commit and the test is fully reproducible. The optional richer
-variant (boot against a real prod snapshot) would carry guild members' data (PII) and must stay
-**gitignored**, never committed.
+driven by a **synthetic** committed fixture DB (`TestDataGenerator` → `testdata.sqlite`): no
+production data, no PII, so the fixture is safe to commit and the test is fully reproducible. The
+optional richer variant (boot against a real prod snapshot) would carry guild members' data (PII)
+and must stay **gitignored**, never committed.
 
 ### Test isolation (forking)
 
-`build.gradle.kts` runs each test class in a fresh JVM (`setForkEvery(1)`). Two `@MicronautTest` classes
-now boot the embedded server with the real `@Scheduled` collector job; sharing one JVM let one boot's
-startup timing perturb the other's, exposing a **latent startup race in `SmokeTest`**: its job
-(`initialDelay` 0 in tests) could evaluate before `DatabaseStartupInitialization` created the tables
-(`no such table: metaInformation`). Per-class JVM isolation removes the cross-class interference.
-`ProtocolEvaluationAcceptanceTest` is immune by construction (its fixture already contains the tables);
-the underlying ordering assumption in the production startup (job-vs-table-init) is tracked as a
-follow-up, not fixed here.
+`build.gradle.kts` runs each test class in a fresh JVM (`setForkEvery(1)`). Two `@MicronautTest`
+classes now boot the embedded server with the real `@Scheduled` collector job; sharing one JVM let
+one boot's startup timing perturb the other's, exposing a **latent startup race in `SmokeTest`**:
+its job (`initialDelay` 0 in tests) could evaluate before `DatabaseStartupInitialization` created
+the tables (`no such table: metaInformation`). Per-class JVM isolation removes the cross-class
+interference. `ProtocolEvaluationAcceptanceTest` is immune by construction (its fixture already
+contains the tables); the underlying ordering assumption in the production startup
+(job-vs-table-init) is tracked as a follow-up, not fixed here.
 
 ## Testing direction for the rebuild (TDD/BDD)
 

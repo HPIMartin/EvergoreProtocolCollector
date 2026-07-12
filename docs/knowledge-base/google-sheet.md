@@ -1,26 +1,23 @@
 # 02: The Google Sheet (the thing being replaced)
 
-Source: the guild's Google Sheet. The document ID is intentionally kept out of the repo
-(it lives in local notes alongside the Evergore credentials). It was reverse-engineered via the
-CSV export. Data snapshot is from **July 2022**.
-
-**Reading the sheet (how to pull it):** use the gviz CSV endpoint
-`https://docs.google.com/spreadsheets/d/<DOC_ID>/gviz/tq?tqx=out:csv&gid=<GID>`. The plain
-`/export?format=csv` redirect expires before it can be followed, so gviz is the reliable form. The
-CSV export only sees the one visible tab; the workbook may have more (see *Unknowns* below).
+- **Source:** the guild's Google Sheet (CSV export, reverse-engineered). Snapshot: **July 2022**.
+- **Document ID:** kept out of the repo (local notes, alongside the Evergore credentials).
+- **Reading the sheet:** use the gviz CSV endpoint
+  `https://docs.google.com/spreadsheets/d/<DOC_ID>/gviz/tq?tqx=out:csv&gid=<GID>`. The plain
+  `/export?format=csv` redirect expires first; gviz is reliable.
+- The CSV export only sees the one visible tab; the workbook may have more (see *Unknowns* below).
 
 ## What the sheet is
 
-A per-Avatar **guild contribution dashboard**. One row per guild member, with a "Datum von / bis"
-(date from / to) range at the top, so the whole sheet represents contributions **over a chosen
-time window** (the snapshot covers everything up to 10.07.2022).
-
-The guild tag visible in the sheet is **`[Boten]`**.
+- A **guild contribution dashboard**: one row per guild member (Avatar).
+- A "Datum von / bis" (date from/to) range at the top defines the time window; snapshot covers
+  up to 10.07.2022.
+- The guild tag visible in the sheet is **`[Boten]`**.
 
 ## Column model (reverse-engineered)
 
-Each member row has the avatar name plus 11 value columns. Headers are merged/German, so the
-mapping below was derived by **checking the arithmetic against the data** (confidence noted).
+Each row: avatar name plus 11 value columns. Headers are merged/German; mapping below derived by
+**checking arithmetic against data** (confidence noted).
 
 | Col | Header group | Meaning | Sign | Confidence |
 |----:|--------------|---------|------|------------|
@@ -40,7 +37,7 @@ mapping below was derived by **checking the arithmetic against the data** (confi
 ### Verification of the core formula (col5)
 
 `erzeugter Gildenmehrwert = Bank-Einzahlung + Bank-Auszahlung + Einlagerung + Entnahme`
-(withdrawals are negative, so this is *deposits minus withdrawals*). Checked against rows:
+(withdrawals negative: deposits minus withdrawals). Checked against rows:
 
 - **Alessia:** 57 938 + 0 + 45 120 − 200 608 = **−97 550** ✓
 - **Bambor:** 58 410 + 0 + 169 254 − 226 494 = **1 170** ✓
@@ -50,8 +47,11 @@ mapping below was derived by **checking the arithmetic against the data** (confi
 
 ### Verification of col7
 
-`col7 ≈ col6 / col3`: Bambor 92 082 / 169 254 = 54% ✓, Evildead 151 792 / 292 118 = 52% ✓,
-Aargh 19 314 / 44 208 = 44% ✓. (Capped at 100% where hunt-loot estimate exceeds deposits.)
+`col7 ≈ col6 / col3` (capped 100%):
+
+- **Bambor:** 92 082 / 169 254 = **54%** ✓
+- **Evildead:** 151 792 / 292 118 = **52%** ✓
+- **Aargh:** 19 314 / 44 208 = **44%** ✓
 
 ## Sheet ↔ software mapping (the gap)
 
@@ -65,15 +65,13 @@ Aargh 19 314 / 44 208 = 44% ✓. (Capped at 100% where hunt-loot estimate exceed
 | letzte Lager-/Bankaktivität (col10/11) | 🟡 Per-entry timestamps are stored; a "last activity per avatar" is derivable but not surfaced as such. |
 | Date-range filter (Datum von/bis) | ❌ Software accumulates from a `last_updated` watermark; no arbitrary date-range reporting yet. |
 
-**Bottom line:** the software currently reproduces roughly the left third of the sheet (bank
-totals) and is mid-way through the storage-value third. Full sheet parity = remaining storage
-metrics + Gildenmehrwert + hunt-loot estimates + last-activity surfacing + date-range queries.
-
+**Bottom line:** software reproduces the bank-totals third; storage-value third in progress.
+Full parity = remaining storage metrics + Gildenmehrwert + hunt-loot estimates + last-activity
+surfacing + date-range queries.
 
 ## Unknowns to confirm with the author
 
 1. Exact meaning of **col8** and **col9**.
 2. Are there **other tabs** in the workbook (raw protocol, item price list, per-month history)?
-   The CSV export only sees the one tab; the workbook may have more.
 3. Are the **item gold values** in `EvergoreItem` the source of truth, or were sheet values
    maintained separately (and possibly drifted)?
