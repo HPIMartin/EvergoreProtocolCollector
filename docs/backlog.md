@@ -25,13 +25,13 @@ The *how* lives in the KB ([architecture](knowledge-base/architecture.md) ·
 the code is the source of truth for the rest. A one-off conformance audit (2026-06-27) filed its
 remaining findings as **D9** / **G16**.
 
-**Next action:** **E5** (the dashboard rebuild: JSON API + React SPA, decision 2026-07-04) runs as
-three worktree strands, of which **`json-api`** (invert the token filter to `/api/**` and expose the
-dashboard data) and **`spa-views`** (the React views against it) remain. Open confirmed-bug follow-ups:
-**B15**/**B16**/**B17**, plus the domain confirmations **B9**/**B11**. Then the standing next-up set
-(all land *in Gradle*): **E1** (erzeugter Gildenmehrwert, the headline metric), **H6** (failsafe →
-Gradle integration-test set); **H9** (jump to Micronaut 5) only *after* 1:1 is re-proven. Plan via the
-agent pipeline (planner → implementer → falsifier panel → reviewer). *(A4/CI stays deprioritized:
+**Next action:** the **data-integrity milestone**: **B15** (watermark from the max ingested entry
+timestamp, advanced only after a successful update) with **B14** and the domain confirmations
+**B9**/**B11** (decision 2026-07-17: integrity before dashboard, an aborted run under-counts
+permanently). Then **E5**'s remaining strands **`json-api`** → **`spa-views`** (decision 2026-07-04),
+then **B16**/**B17**, **E1**/**E2**, **H2**+**H6**; **H9** only *after* 1:1 is re-proven. Milestone
+cuts + acceptance: [roadmap.md](roadmap.md); risk register: [risks.md](risks.md). Plan via the agent
+pipeline (planner → implementer → falsifier panel → reviewer). *(A4/CI stays deprioritized:
 local-only Docker → home-server deploy.)*
 
 **Deferred frontend follow-ups (non-blocking, mostly for `json-api`):**

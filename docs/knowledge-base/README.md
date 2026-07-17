@@ -43,6 +43,8 @@ contribution metrics, automating a hand-maintained Google Sheet.
 - [../../CLAUDE.md](../../CLAUDE.md): Claude Code entry file (from the template; auto-loaded).
 - [../../.claude/agents/](../../.claude/agents/): subagent definitions (implementer, falsifiers, doc-reviewer, reviewer).
 - [../backlog.md](../backlog.md): prioritized backlog (PO / architect / engineering hats).
+- [../roadmap.md](../roadmap.md): milestone order + per-milestone acceptance (items stay in the backlog).
+- [../risks.md](../risks.md): risk register with countermeasures.
 - [../open-questions.md](../open-questions.md): open questions & decisions log.
 - [../process-learnings.md](../process-learnings.md): where the process slipped & how we prevent it.
 
