@@ -9,7 +9,7 @@
 
 | Risk | L | I | Countermeasure |
 |------|---|---|----------------|
-| The game serves only ~30 days of logs; DB loss or a >30-day scrape outage is irreversible | M | H | Open: no automated backup exists; proposed: scheduled off-host copy of the mounted `database/` dir (author decision pending). Migrations must prove 1:1 (backlog D10) |
+| The game serves only ~30 days of logs; DB loss or a >30-day scrape outage is irreversible | M | H | Monthly manual backup by the author (decision 2026-07-17: no automation); a prompt restore re-scrapes the 30-day window, bounding the gap. Migrations must prove 1:1 (backlog D10) |
 | The watermark advances before the avatar update and derives from `now()`: an aborted run under-counts permanently | M | H | First milestone (roadmap M1, backlog B15) |
 | Silent misclassification corrupts stored data: `Einzahlung` defaults to a deposit, `+1` items merge with their base, the catalog typo zero-values a real item | M | M | Author confirmations plus contract tests or a logged rejection (backlog B9, B11); unknown items become loud (backlog B14); all in roadmap M1 |
 | The production DB file is named `temp.sqlite`, inviting careless deletion | L | H | Rename once config is really bindable (backlog C1); until then a known trap |
@@ -39,7 +39,7 @@
 | Long hobby pauses lose context between sessions | H | M | `/pause` parks state as `[wip]` and updates the backlog status; `/continue` reorients from repo and git; the KB carries the knowledge |
 | Fake-green tests or hallucinated APIs pass a solo review | M | H | Independent falsifier panel and reviewer gate (caught the round-1 fake-greens, see process-learnings 2026-07-09); doc-grounded WebFetch for thin-training-data libraries (backlog G9); escalated gates for risky domains |
 | KB drift misleads KB-first agents | M | M | Rotating doc-reviewer sweep at every gate; accuracy sweep and citation guard (backlog G18, G19) |
-| The planned history rewrite (after backlog F1) breaks clones and dangles commit-hash references in durable docs | H | L | Author-only and announced; replace doc hash references (e.g. `cc75a2e`) with symbol references before rewriting |
+| The planned history rewrite (after backlog F1) breaks clones and dangles commit-hash references in durable docs | H | L | Author-only and announced; doc hash references (e.g. `cc75a2e`) become symbol references beforehand (folded into the backlog F1 acceptance) |
 | Parallel worktree strands collide on shared files (build scripts, settings) | M | L | Strand scoping and serialized landings via the gateway; repo-wide reformats only between strands (backlog G17) |
 
 ## Latent tech debt

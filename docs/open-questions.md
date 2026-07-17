@@ -55,6 +55,7 @@ second copy.
 | 2026-07-17 | **Data integrity before the dashboard:** the watermark rework plus the catalog fix and the domain confirmations (backlog B15, B14, B9, B11) precede the E5 strands | Until fixed, every aborted run permanently under-counts and the 30-day log window makes the loss irreversible; the dashboard would render wrong numbers → roadmap.md M1 |
 | 2026-07-17 | **Falsifier panel: third lens + per-surface composition:** `falsifier-frontend` joins the panel; a gate spawns only the lenses matching the touched surface (backend → domain+robustness, frontend-only → frontend+robustness, full-stack → all three); pure `[doc]` changes gate on the `doc-reviewer` alone (the `reviewer` only on genuine process doubt) | Gate effort should track what the change can break: a backend diff gains nothing from a frontend lens, a doc diff nothing from falsifiers; spend stays where it converts → multi-agent-playbook.md, `.claude/agents/falsifier-frontend.md` |
 | 2026-07-17 | **Gate escalation extends to auth/security-surface changes** (filters, token handling, what is publicly exposed) | The `/api/**` token-filter inversion is an auth change yet matched no escalation trigger; a security regression is as costly as a valuation one → multi-agent-playbook.md |
+| 2026-07-17 | **DB backup stays a monthly manual routine (author); no automation item** | The cadence suffices for a hobby: after a restore the 30-day log window re-scrapes most of the gap; revisit if the cadence slips → risks.md |
 
 ## Detail questions (lower priority, to confirm later)
 
