@@ -21,6 +21,9 @@ All domain types live framework-free under `…/domain` and `…/businessLogic`.
 - A headline of type `Einzahlung` parses to `TransferType.EINLAGERUNG`, same as `Einlagerung`:
   `Einzahlung` occurs in real protocols but warrants no distinct behavior (decision 2026-07-17,
   see [open-questions.md](../open-questions.md)).
+- The parser strips a trailing `+1` off an item line before dedup, so `3 X +1` and `5 X` merge into
+  one `Item(8, "X", 100)`: a `+1` item is value-equal to its base, so merging loses nothing
+  (decision 2026-07-17).
 
 ## EvergoreItem: the item catalog
 

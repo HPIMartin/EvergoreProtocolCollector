@@ -11,7 +11,7 @@
 |------|---|---|----------------|
 | The game serves only ~30 days of logs; DB loss or a >30-day scrape outage is irreversible | M | H | Monthly manual backup by the author (decision 2026-07-17: no automation); a prompt restore re-scrapes the 30-day window, bounding the gap. Migrations must prove 1:1 (backlog D10) |
 | The watermark advances before the avatar update and derives from `now()`: an aborted run under-counts permanently | M | H | First milestone (roadmap M1, backlog B15) |
-| Silent misclassification corrupts stored data: `Einzahlung` defaults to a deposit (pinned by contract test), `+1` items merge with their base, the catalog typo zero-values a real item | M | M | Author confirmations plus contract tests or a logged rejection (backlog B11); unknown items become loud (backlog B14); all in roadmap M1 |
+| Silent misclassification corrupts stored data: the catalog typo zero-values a real item (`Einzahlung` mapping and the `+1` merge are pinned by contract tests) | M | M | The catalog typo fix (backlog B14, unknown items become loud too); all in roadmap M1 |
 | The production DB file is named `temp.sqlite`, inviting careless deletion | L | H | Rename once config is really bindable (backlog C1); until then a known trap |
 
 ## External dependency: the game

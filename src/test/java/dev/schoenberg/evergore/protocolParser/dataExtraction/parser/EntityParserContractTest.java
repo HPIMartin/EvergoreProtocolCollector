@@ -53,6 +53,13 @@ class EntityParserContractTest {
 	}
 
 	@Test
+	void mergesAPlusOneModifiedItemWithItsUnmodifiedCounterpart() {
+		Entry entry = parse("01.01.2000 00:00 Name Einlagerung", "3 X +1", "5 X");
+
+		assertThat(entry.items()).containsExactly(new Item(8, "X", 100));
+	}
+
+	@Test
 	void mergesQuantitiesForSameNameAndQuality() {
 		Entry entry = parse("01.01.2000 00:00 Name Einlagerung", "2 Item", "3 Item");
 
