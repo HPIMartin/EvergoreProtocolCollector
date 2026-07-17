@@ -25,6 +25,13 @@ class EntityParserContractTest {
 	}
 
 	@Test
+	void mapsTheEinzahlungHeadlineToEinlagerung() {
+		Entry entry = parse("01.01.2000 00:00 Hans Meyer Einzahlung");
+
+		assertEntry(entry, "Hans Meyer", EINLAGERUNG);
+	}
+
+	@Test
 	void parsesWithdrawalEntry() {
 		Entry entry = parse("01.01.2000 00:00 Name Entnahme", "1 Item");
 

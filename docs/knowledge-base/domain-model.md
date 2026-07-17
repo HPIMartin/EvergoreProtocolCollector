@@ -16,6 +16,12 @@ All domain types live framework-free under `…/domain` and `…/businessLogic`.
 | **EvergoreItem** | enum `domain/EvergoreItem` | The **item catalog** (see below). The heart of the value logic. |
 | **MetaInformation / MetaInformationKey** | `businessLogic/metaInformation/*` | Typed key/value store for computed results & the `last_updated` watermark. |
 
+## Parser characterization pins (author-confirmed)
+
+- A headline of type `Einzahlung` parses to `TransferType.EINLAGERUNG`, same as `Einlagerung`:
+  `Einzahlung` occurs in real protocols but warrants no distinct behavior (decision 2026-07-17,
+  see [open-questions.md](../open-questions.md)).
+
 ## EvergoreItem: the item catalog
 
 A large enum (~600 entries) capturing the game's craftable + gatherable items. Each value:
