@@ -25,6 +25,7 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformati
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.ERDE_EIBENLANZE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.LEINENTUCH;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -76,6 +77,17 @@ class EvergoreDataEvaluatorTest {
 		double expectedWithdrawl = LEINENTUCH.getWithdrawlValue() * quantity * (quality / 100D);
 		assertThat(metaRepo.<Double>get(getStoragePlacement(AVATAR))).contains(expectedPlacement);
 		assertThat(metaRepo.<Double>get(getStorageWithdrawl(AVATAR))).contains(expectedWithdrawl);
+	}
+
+	@Test
+	void resolvesErdeEibenlanzeByItsRealIngameSpelling() {
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement("Erde-Eibenlanze", 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Double>get(getStoragePlacement(AVATAR))).contains(ERDE_EIBENLANZE.getStorageValue());
 	}
 
 	@Test

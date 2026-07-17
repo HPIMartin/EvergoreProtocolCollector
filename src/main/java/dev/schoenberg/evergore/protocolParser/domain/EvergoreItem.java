@@ -204,7 +204,7 @@ public enum EvergoreItem {
 			new Recipe(1, new Ingredient(21, MITHRILBARREN), new Ingredient(5, SCHMIEDEOEL), new Ingredient(10, SCHLEIFSTEIN), new Ingredient(10, GRIFFBAND))),
 	STILETT("Stilett", 2400, DOLCHE, new Recipe(1, new Ingredient(7, EISENBARREN), new Ingredient(10, SCHMIEDEOEL))),
 	STOSSDOLCH("Stoßdolch", 7400, DOLCHE, new Recipe(1, new Ingredient(14, SORANDILBARREN), new Ingredient(3, SCHMIEDEOEL), new Ingredient(11, SCHLEIFSTEIN))),
-	ERDE_EIBENLANZE("Erde-EIbenlanze", 37600, ERDSTAEBE,
+	ERDE_EIBENLANZE("Erde-Eibenlanze", 37600, ERDSTAEBE,
 			new Recipe(1, new Ingredient(34, EIBENBRETTER), new Ingredient(6, MAGIESPLITTER), new Ingredient(10, PHASENKRAUT), new Ingredient(20, ERDENBLUT))),
 	ERDE_ESCHENSTAB("Erde-Eschenstab", 24800, ERDSTAEBE, new Recipe(1, new Ingredient(30, ESCHENBRETTER), new Ingredient(8, MAGIESPLITTER), new Ingredient(38, PHASENKRAUT))),
 	ERDE_KRUMMSTAB("Erde-Krummstab", 3000, ERDSTAEBE, new Recipe(1, new Ingredient(16, BUCHENBRETTER), new Ingredient(16, MAGIESPLITTER))),
