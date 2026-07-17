@@ -10,7 +10,7 @@ independent agents try to break it and gate the commit.** Part of the project's 
 |------|-------------|----------|----------------|
 | **Planner** | You + me (main-session model), in chat | No, a *hat* | Backlog item → approved, ordered commit/test list + acceptance criteria (Gherkin if user-facing) |
 | **Implementer** | `implementer` (frontmatter `model: sonnet`) | Yes | Approved plan → red→green→refactor per step, commits each locally → summary |
-| **Falsifier panel** | `falsifier-domain` + `falsifier-robustness` (`model: sonnet`) | Yes (both fresh) | Feature diff/commits → two adversarial verdicts (domain math · test honesty/robustness) + counter-tests |
+| **Falsifier panel** | `falsifier-domain` · `falsifier-robustness` · `falsifier-frontend` (each `model: sonnet`); spawned per touched surface (see cadence) | Yes (fresh) | Feature diff/commits → adversarial verdicts (domain math · test honesty/robustness · SPA behavior) + counter-tests |
 | **Doc reviewer** | `doc-reviewer` (`model: haiku`) | Yes (fresh) | Feature diff/commits → PASS/FAIL against the KB README's DOC checklist + findings with rule IDs |
 | **Reviewer / Gate** | `reviewer` (`model: opus`) | Yes (fresh) | Feature commits + panel + doc-reviewer reports → PASS/FAIL + findings + proposed `process-learnings.md` entry |
 
@@ -29,9 +29,11 @@ is the author's decision ([engineering-handbook.md](engineering-handbook.md) §7
    - per step: red (failing test) → focused test → green (minimal code) → refactor
      → commit locally with the EXACT pre-approved message
    - never pushes; domain/businessLogic/application stay framework-free
-3. FALSIFY (spawn the panel: `falsifier-domain` + `falsifier-robustness`, both fresh)
+3. FALSIFY (spawn the panel, each lens fresh; only the lenses the change touches, see cadence)
    - domain lens: value math, watermark/aggregation, parser fidelity
    - robustness lens: fake-green tests, edges, time/concurrency/resources, boundaries, secrets
+   - frontend lens: fake-green component tests, user paths, async determinism, layer boundaries,
+     API contract
    - each returns verdict + counter-tests (parallel only in separate worktrees, else sequential)
 4. REVIEW GATE (spawn `doc-reviewer` + `reviewer`, both fresh), once per FEATURE commit
    - doc-reviewer: docs hygiene per the DOC checklist, task-scoped, plus a stateless
@@ -62,11 +64,16 @@ repeated finding; process-only FAILs don't consume a round) is canonical in
   `git update-ref -d refs/heads/<name>` (plumbing bypasses the `-D` block).
 - Tip-only fix: `git commit --amend`. `git rebase -i` has no interactive TTY here.
 
-**Cadence (cost vs rigor; decided 2026-06-13, panel + escalation 2026-07-03):** micro-steps run
-lightweight; falsifier panel + review gate run **at the feature commit**, not per micro-commit.
-**Escalation:** features touching valuation math, time/timezones, concurrency or data migration →
-spawn gate agents with a one-off `model` override on the strongest available tier (`fable`, else
-`opus`); frontmatter defaults stay unchanged.
+**Cadence (cost vs rigor; decided 2026-06-13, panel + escalation 2026-07-03, per-surface lenses +
+doc fast lane 2026-07-17):** micro-steps run lightweight; falsifier panel + review gate run **at
+the feature commit**, not per micro-commit. **Spawn only the lenses the change can break:**
+backend-only → `falsifier-domain` + `falsifier-robustness`; frontend-only → `falsifier-frontend` +
+`falsifier-robustness`; full-stack → all three. **Pure documentation/process changes (`[doc]`
+scope) skip the falsifier panel:** the `doc-reviewer` is the gate; add the `reviewer` only when
+process adherence is genuinely in doubt. **Escalation:** features touching valuation math,
+time/timezones, concurrency, data migration or the auth/security surface (filters, token handling,
+what is publicly exposed) → spawn gate agents with a one-off `model` override on the strongest
+available tier (`fable`, else `opus`); frontmatter defaults stay unchanged.
 
 ## Two tracks: direct-on-main vs. feature branch (decided 2026-06-20)
 
@@ -86,8 +93,8 @@ Planner picks the track up-front and announces it (author can veto). Full rule:
 ## How to invoke
 
 Orchestrator = the main session (me), via the `Agent` tool: `subagent_type` = `implementer` /
-`falsifier-domain` / `falsifier-robustness` / `doc-reviewer` / `reviewer` (defined in
-`.claude/agents/`). Planner phase, commit-plan approvals and pushes happen with **you** in chat.
+`falsifier-domain` / `falsifier-robustness` / `falsifier-frontend` / `doc-reviewer` / `reviewer`
+(defined in `.claude/agents/`). Planner phase, commit-plan approvals and pushes happen with **you** in chat.
 
 ## Handoff contracts (what each agent returns)
 
@@ -121,7 +128,7 @@ Orchestrator = the main session (me), via the `Agent` tool: `subagent_type` = `i
 
 ## Evolution
 
-Start lean (1 implementer, 2-lens panel, doc-reviewer, 1 reviewer). Widen the panel + majority vote
+Stay lean (1 implementer, the per-surface lens panel, doc-reviewer, 1 reviewer). Widen the panel + majority vote
 for high-risk changes; consider a `/tdd-step` skill once the loop is proven; **Workflow tool** only
 for occasional large parallel audits (explicit opt-in), never for the interactive, human-gated
 commit loop.
