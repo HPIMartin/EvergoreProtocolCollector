@@ -76,7 +76,9 @@ stored `last_updated` watermark:
 - **Bank:** sum entry `amount` into `placement` (EINLAGERUNG) or `withdrawl` (ENTNAHME), via
   `TransferTypeBankEntryVisitor`.
 - **Storage:** for each entry, look up its `EvergoreItem` by `ingameName`
-  (unknown name → `UNDEFINED`, logged), then add
+  (unknown name → `UNDEFINED`, valued 0, **logged at WARN**; every miss is collected into the
+  `EvaluationResult` returned by `evaluateData()` and surfaced via `/health`'s `lastRun` detail as
+  `unknownItemCount` + distinct `unknownItemNames`, so a catalog gap is loud, not silent), then add
   `itemValue × quantity × (quality / 100)` into `placement` / `withdrawl`, where `itemValue` is
   `getStorageValue()` for deposits and `getWithdrawlValue()` for withdrawals
   (`TransferTypeStorageEntryVisitor`). **Quality scales value linearly.**

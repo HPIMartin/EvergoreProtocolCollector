@@ -41,8 +41,9 @@ public class EvergoreDataCollectorJob {
 		dataExtractor.loadData();
 		logger.info("Scheduled extraction finished!");
 		logger.info("Evaluate Data...");
-		evaluation.evaluateData();
+		EvaluationResult result = evaluation.evaluateData();
 		logger.info("Data evaluation done!");
+		lastRunStatus.recordUnknownItems(result.unknownItemNames());
 		lastRunStatus.recordSuccessfulRun(clock.instant());
 		hook.run();
 	}

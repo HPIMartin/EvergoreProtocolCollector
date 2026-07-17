@@ -2,8 +2,10 @@ package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.DoubleConsumer;
@@ -47,16 +49,18 @@ public class EvergoreDataEvaluator {
 		this.logger = logger;
 	}
 
-	public void evaluateData() {
+	public EvaluationResult evaluateData() {
 		LocalDateTime lastUpdated = advanceWatermarkAndReturnPrevious();
-		updateAvatarInformation(lastUpdated);
+		List<String> unknownItemNames = new ArrayList<>();
+		updateAvatarInformation(lastUpdated, unknownItemNames);
+		return new EvaluationResult(List.copyOf(unknownItemNames));
 	}
 
-	private void updateAvatarInformation(LocalDateTime lastUpdated) {
+	private void updateAvatarInformation(LocalDateTime lastUpdated, List<String> unknownItemNames) {
 		Set<String> avatars = new HashSet<>(bankRepo.getAllDifferentAvatars());
 		avatars.addAll(storageRepo.getAllDifferentAvatars());
 
-		avatars.forEach(avatar -> updateInformation(avatar, lastUpdated));
+		avatars.forEach(avatar -> updateInformation(avatar, lastUpdated, unknownItemNames));
 	}
 
 	private LocalDateTime advanceWatermarkAndReturnPrevious() {
@@ -73,9 +77,9 @@ public class EvergoreDataEvaluator {
 		return lastUpdated;
 	}
 
-	private void updateInformation(String avatar, LocalDateTime lastUpdated) {
+	private void updateInformation(String avatar, LocalDateTime lastUpdated, List<String> unknownItemNames) {
 		updateBankInformation(avatar, lastUpdated);
-		updateStorageInformation(avatar, lastUpdated);
+		updateStorageInformation(avatar, lastUpdated, unknownItemNames);
 	}
 
 	private void updateBankInformation(String avatar, LocalDateTime lastUpdated) {
@@ -93,7 +97,7 @@ public class EvergoreDataEvaluator {
 		metaRepo.add(asList(updatedBankPlacement, updatedBankWithdrawl));
 	}
 
-	private void updateStorageInformation(String avatar, LocalDateTime lastUpdated) {
+	private void updateStorageInformation(String avatar, LocalDateTime lastUpdated, List<String> unknownItemNames) {
 		MetaInformationKey<Double> storagePlacementKey = getStoragePlacement(avatar);
 		MetaInformationKey<Double> storageWithdrawlKey = getStorageWithdrawl(avatar);
 
@@ -104,7 +108,7 @@ public class EvergoreDataEvaluator {
 		storageRepo
 				.getAllFor(avatar, lastUpdated)
 				.stream()
-				.map(e -> new StorageEntryItem(e, findItem(e)))
+				.map(e -> new StorageEntryItem(e, findItem(e, unknownItemNames)))
 				.forEach(e -> e.entry().type().accept(storageEntryVisitor).accept(storage, e));
 
 		MetaInformation<Double> updatedStoragePlacement = new MetaInformation<>(storagePlacementKey, storage.placement);
@@ -148,9 +152,10 @@ public class EvergoreDataEvaluator {
 		}
 	}
 
-	private EvergoreItem findItem(StorageEntry entry) {
+	private EvergoreItem findItem(StorageEntry entry, List<String> unknownItemNames) {
 		return Arrays.stream(EvergoreItem.values()).filter(e -> e.ingameName.equals(entry.name())).findAny().orElseGet(() -> {
-			logger.info("Unable to find item: " + entry.name());
+			logger.warn("Unable to find item: " + entry.name());
+			unknownItemNames.add(entry.name());
 			return UNDEFINED;
 		});
 	}

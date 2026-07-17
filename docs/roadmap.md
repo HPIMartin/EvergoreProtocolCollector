@@ -13,7 +13,7 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M1 | Data integrity | B15, B14 | An aborted run under-counts permanently and the game serves only ~30 days of logs, so waiting loses data irreversibly (decision 2026-07-17) |
+| M1 | Data integrity | B15 | An aborted run under-counts permanently and the game serves only ~30 days of logs, so waiting loses data irreversibly (decision 2026-07-17) |
 | M2 | JSON API (strand `json-api`) | E5 | Unblocks the SPA; reworks the token filter and SPA fallback in one place |
 | M3 | Dashboard views (strand `spa-views`) | E5 | The officer-visible payoff of the dashboard rebuild |
 | M4 | Ingest & test robustness | B16, B17 | Small hardening set, deliberately behind `json-api` (decision 2026-07-17) |
@@ -31,8 +31,7 @@ remains.
       written only after a successful run (backlog B15).
 - [ ] The extractor ingests boundary-minute entries the previous scrape could not yet see
       (occurrence-counting deduplication at the stored max timestamp; backlog B15).
-- [ ] `Erde-Eibenlanze` valued correctly; unknown items warn and are countable via `/health`
-      (backlog B14).
+- [x] `Erde-Eibenlanze` valued correctly; unknown items warn and are countable via `/health`.
 - [x] The `Einzahlung`→`EINLAGERUNG` mapping and the value-neutral `+1` merge pinned by contract
       tests and documented.
 - [ ] Full `./gradlew build` green; gates run on the strongest tier (time/valuation escalation,

@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
 import java.time.*;
+import java.util.*;
 
 import org.junit.jupiter.api.*;
 
@@ -55,6 +56,15 @@ class EvergoreDataCollectorJobTest {
 		assertThat(lastRunStatus.lastSuccessfulRun()).isEmpty();
 	}
 
+	@Test
+	void forwardsTheRunsUnknownItemsToLastRunStatus() {
+		evaluator.unknownItems = List.of("Unobtainium");
+
+		tested.scheduleEvery24Hours();
+
+		assertThat(lastRunStatus.unknownItemNames()).containsExactly("Unobtainium");
+	}
+
 	private static class ZeroDelayConfiguration extends Configuration {
 		@Override
 		public int getCollectorInitialDelaySeconds() {
@@ -79,16 +89,18 @@ class EvergoreDataCollectorJobTest {
 
 	private static class FailableEvaluator extends EvergoreDataEvaluator {
 		boolean failOnEvaluate;
+		List<String> unknownItems = List.of();
 
 		FailableEvaluator() {
 			super(new FakeMetaInformationRepository(), new StorageRepositoryStub(), new BankRepositoryStub(), Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
 		}
 
 		@Override
-		public void evaluateData() {
+		public EvaluationResult evaluateData() {
 			if (failOnEvaluate) {
 				throw new RuntimeException("evaluateData failed");
 			}
+			return new EvaluationResult(unknownItems);
 		}
 	}
 }

@@ -91,7 +91,7 @@ class EvergoreDataEvaluatorTest {
 	}
 
 	@Test
-	void unknownItemFallsBackToZeroValueAndLogsMessage() {
+	void unknownItemFallsBackToZeroValueAndLogsAWarning() {
 		String unknownItemName = "Unobtainium";
 		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(unknownItemName, 1, 100)));
 		storageRepo.seedAvatars(List.of(AVATAR));
@@ -100,7 +100,30 @@ class EvergoreDataEvaluatorTest {
 		tested.evaluateData();
 
 		assertThat(metaRepo.<Double>get(getStoragePlacement(AVATAR))).contains(0.0);
-		assertThat(logger.infoMessages()).contains("Unable to find item: " + unknownItemName);
+		assertThat(logger.warnMessages()).contains("Unable to find item: " + unknownItemName);
+	}
+
+	@Test
+	void evaluationResultCountsEachUnknownItemOccurrence() {
+		String unknownItemName = "Unobtainium";
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(unknownItemName, 1, 100), storagePlacement(unknownItemName, 2, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(result.unknownItemNames()).containsExactly(unknownItemName, unknownItemName);
+	}
+
+	@Test
+	void evaluationResultHasNoUnknownItemsWhenEveryItemResolves() {
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(LEINENTUCH.ingameName, 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(result.unknownItemNames()).isEmpty();
 	}
 
 	@Test

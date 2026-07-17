@@ -175,7 +175,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 | `GET /avatars/{avatar}/bank?page=N` | Paged (100/page) bank entries for one avatar. |
 | `GET /avatars/{avatar}/storage?page=N` | Paged storage entries for one avatar. |
 | `GET /favicon.ico` | Favicon (token-exempt). |
-| `GET /health` | Micronaut management health endpoint: token-exempt, anonymous. Reports UNKNOWN (no run yet) or UP + `lastSuccessfulRun` timestamp. Use as a liveness/last-run monitor hook. |
+| `GET /health` | Micronaut management health endpoint: token-exempt, anonymous. Reports UNKNOWN (no run yet) or UP + `lastSuccessfulRun` timestamp; when the last run hit unknown catalog items, the `lastRun` detail also carries `unknownItemCount` and the distinct `unknownItemNames`. Use as a liveness/last-run monitor hook. |
 | `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs. |
 
 ## Scheduled job

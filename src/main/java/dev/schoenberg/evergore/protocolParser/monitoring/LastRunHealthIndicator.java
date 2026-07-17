@@ -1,5 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.monitoring;
 
+import java.time.*;
 import java.util.*;
 
 import jakarta.inject.*;
@@ -40,7 +41,20 @@ public class LastRunHealthIndicator implements HealthIndicator {
 	private HealthResult buildResult() {
 		return lastRunStatus
 				.lastSuccessfulRun()
-				.map(instant -> HealthResult.builder(NAME, HealthStatus.UP).details(Map.of("lastSuccessfulRun", instant.toString())).build())
+				.map(instant -> HealthResult.builder(NAME, HealthStatus.UP).details(details(instant)).build())
 				.orElseGet(() -> HealthResult.builder(NAME, HealthStatus.UNKNOWN).build());
+	}
+
+	private Map<String, Object> details(Instant instant) {
+		Map<String, Object> details = new HashMap<>();
+		details.put("lastSuccessfulRun", instant.toString());
+
+		List<String> unknownItemNames = lastRunStatus.unknownItemNames();
+		if (!unknownItemNames.isEmpty()) {
+			details.put("unknownItemCount", unknownItemNames.size());
+			details.put("unknownItemNames", unknownItemNames.stream().distinct().sorted().toList());
+		}
+
+		return details;
 	}
 }

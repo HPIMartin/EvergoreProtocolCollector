@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.*;
+import java.util.*;
 
 import org.junit.jupiter.api.*;
 
@@ -38,5 +39,17 @@ class LastRunStatusTest {
 		tested.recordSuccessfulRun(second);
 
 		assertThat(tested.lastSuccessfulRun()).contains(second);
+	}
+
+	@Test
+	void hasNoUnknownItemNamesInitially() {
+		assertThat(tested.unknownItemNames()).isEmpty();
+	}
+
+	@Test
+	void recordsTheUnknownItemNamesOfTheLastRun() {
+		tested.recordUnknownItems(List.of("Unobtainium", "Unobtainium"));
+
+		assertThat(tested.unknownItemNames()).containsExactly("Unobtainium", "Unobtainium");
 	}
 }

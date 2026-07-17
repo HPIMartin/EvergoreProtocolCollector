@@ -46,6 +46,30 @@ class LastRunHealthIndicatorTest {
 		assertThat(details.get("lastSuccessfulRun")).isEqualTo(recorded.toString());
 	}
 
+	@Test
+	void omitsUnknownItemDetailWhenNoneOccurredInLastRun() {
+		lastRunStatus.recordSuccessfulRun(Instant.parse("2026-06-21T12:00:00Z"));
+
+		HealthResult result = singleResult();
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> details = (Map<String, Object>) result.getDetails();
+		assertThat(details).doesNotContainKey("unknownItemCount");
+	}
+
+	@Test
+	void reportsUnknownItemCountAndNamesWhenPresentInLastRun() {
+		lastRunStatus.recordSuccessfulRun(Instant.parse("2026-06-21T12:00:00Z"));
+		lastRunStatus.recordUnknownItems(List.of("Unobtainium", "Unobtainium"));
+
+		HealthResult result = singleResult();
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> details = (Map<String, Object>) result.getDetails();
+		assertThat(details).containsEntry("unknownItemCount", 2);
+		assertThat(details).containsEntry("unknownItemNames", List.of("Unobtainium"));
+	}
+
 	private HealthResult singleResult() {
 		Publisher<HealthResult> publisher = tested.getResult();
 		HealthResult[] holder = new HealthResult[1];
