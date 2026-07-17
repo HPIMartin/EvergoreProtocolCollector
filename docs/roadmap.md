@@ -23,15 +23,18 @@
 
 ## M1: Data integrity
 
-Slice: the cumulative per-avatar sums become trustworthy; no known silent-corruption path remains.
+Slice: the per-avatar sums become trustworthy and self-healing; no known silent-corruption path
+remains.
 
-- [ ] Watermark derived from the max ingested entry timestamp, advanced only after a successful
-      avatar update; DST fall-back, clock skew, same-minute and mid-run-failure cases covered by
-      deterministic tests (backlog B15).
+- [ ] Every evaluation recomputes the per-avatar sums from all stored entries: idempotent (a
+      second run yields identical sums), self-healing after a mid-run failure; `last_updated`
+      written only after a successful run (backlog B15).
+- [ ] The extractor ingests boundary-minute entries the previous scrape could not yet see
+      (occurrence-counting deduplication at the stored max timestamp; backlog B15).
 - [ ] `Erde-Eibenlanze` valued correctly; unknown items warn and are countable via `/health`
       (backlog B14).
-- [ ] `Einzahlung` (backlog B9) and the `+1` modifier (backlog B11) author-confirmed: distinct
-      type/value with contract tests, or rejected with the decision logged.
+- [ ] The `Einzahlung`→`EINLAGERUNG` mapping and the value-neutral `+1` merge pinned by contract
+      tests and documented (backlog B9, B11).
 - [ ] Full `./gradlew build` green; gates run on the strongest tier (time/valuation escalation,
       playbook cadence).
 
