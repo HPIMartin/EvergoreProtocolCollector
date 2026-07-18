@@ -1,7 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.database.bank;
 
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,7 +9,6 @@ import com.j256.ormlite.dao.GenericRawResults;
 import com.j256.ormlite.support.ConnectionSource;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
-import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
@@ -57,10 +55,8 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 	}
 
 	@Override
-	public List<BankEntry> getAllFor(String avatar, LocalDateTime after) {
-		Timestamp afterTimestamp = Timestamp.from(after.atZone(Constants.APP_ZONE).toInstant());
-
-		List<BankDatabaseEntry> result = silentThrow(() -> bank.queryBuilder().where().eq(AVATAR_COLUMN, avatar).and().gt(TIMESTAMP_COLUMN, afterTimestamp).query());
+	public List<BankEntry> getAllFor(String avatar) {
+		List<BankDatabaseEntry> result = silentThrow(() -> bank.queryBuilder().where().eq(AVATAR_COLUMN, avatar).query());
 
 		return convert(result);
 	}

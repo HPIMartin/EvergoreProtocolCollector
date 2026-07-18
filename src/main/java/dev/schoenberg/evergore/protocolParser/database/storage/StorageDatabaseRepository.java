@@ -1,7 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.database.storage;
 
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,7 +9,6 @@ import com.j256.ormlite.dao.GenericRawResults;
 import com.j256.ormlite.support.ConnectionSource;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
-import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
@@ -56,10 +54,8 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	}
 
 	@Override
-	public List<StorageEntry> getAllFor(String avatar, LocalDateTime after) {
-		Timestamp afterTimestamp = Timestamp.from(after.atZone(Constants.APP_ZONE).toInstant());
-
-		List<StorageDatabaseEntry> result = silentThrow(() -> storage.queryBuilder().where().eq(AVATAR_COLUMN, avatar).and().gt(TIMESTAMP_COLUMN, afterTimestamp).query());
+	public List<StorageEntry> getAllFor(String avatar) {
+		List<StorageDatabaseEntry> result = silentThrow(() -> storage.queryBuilder().where().eq(AVATAR_COLUMN, avatar).query());
 
 		return convert(result);
 	}

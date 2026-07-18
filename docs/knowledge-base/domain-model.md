@@ -14,7 +14,7 @@ All domain types live framework-free under `…/domain` and `…/businessLogic`.
 | **BankEntry** | `businessLogic/banking/BankEntry(date, avatar, int amount, TransferType)` | A bank (gold) transaction. |
 | **StorageEntry** | `businessLogic/storage/StorageEntry(date, avatar, quantity, name, quality, TransferType)` | A storage (item) transaction. |
 | **EvergoreItem** | enum `domain/EvergoreItem` | The **item catalog** (see below). The heart of the value logic. |
-| **MetaInformation / MetaInformationKey** | `businessLogic/metaInformation/*` | Typed key/value store for computed results & the `last_updated` watermark. |
+| **MetaInformation / MetaInformationKey** | `businessLogic/metaInformation/*` | Typed key/value store for computed results & the display-only `last_updated` timestamp. |
 
 ## Parser characterization pins (author-confirmed)
 
@@ -70,21 +70,32 @@ getRecipeStorageValue() = 0                          if NOT_CRAFTABLE
 
 ## How the metrics are computed: `EvergoreDataEvaluator`
 
-`dataExtraction/EvergoreDataEvaluator` is the **aggregation use case**. For each Avatar, since the
-stored `last_updated` watermark:
+`application/EvergoreDataEvaluator` is the **aggregation use case**. Every `evaluateData()` call is
+a **full recompute** (design decision 2026-07-17, see [open-questions.md](../open-questions.md)):
+per avatar, sums start at **zero** and aggregate over **every stored entry** for that avatar
+(`BankRepository.getAllFor(avatar)` / `StorageRepository.getAllFor(avatar)`, no time cutoff), then
+**overwrite** the stored meta values (no accumulation onto whatever was there before):
 
 - **Bank:** sum entry `amount` into `placement` (EINLAGERUNG) or `withdrawl` (ENTNAHME), via
   `TransferTypeBankEntryVisitor`.
 - **Storage:** for each entry, look up its `EvergoreItem` by `ingameName`
   (unknown name → `UNDEFINED`, valued 0, **logged at WARN**; every miss is collected into the
   `EvaluationResult` returned by `evaluateData()` and surfaced via `/health`'s `lastRun` detail as
-  `unknownItemCount` + distinct `unknownItemNames`, so a catalog gap is loud, not silent), then add
+  `unknownItemCount` + distinct `unknownItemNames`, so a catalog gap is loud, not silent; since
+  evaluation is a full recompute, this count is unknown-item rows across **the entire stored
+  history**, recomputed each run, not just those new since the previous run), then add
   `itemValue × quantity × (quality / 100)` into `placement` / `withdrawl`, where `itemValue` is
   `getStorageValue()` for deposits and `getWithdrawlValue()` for withdrawals
   (`TransferTypeStorageEntryVisitor`). **Quality scales value linearly.**
 - Results are written per-Avatar to `MetaInformationRepository` under typed keys
-  (`getBankPlacement(avatar)`, `getBankWithdrawl`, `getStoragePlacement`, `getStorageWithdrawl`)
-  and the `last_updated` key is advanced to "now".
+  (`getBankPlacement(avatar)`, `getBankWithdrawl`, `getStoragePlacement`, `getStorageWithdrawl`).
+- The `last_updated` key is **display-only** (the overview's "last updated" timestamp): written
+  **once**, after every avatar updated successfully, as `LocalDateTime.now(clock)`; a failed run
+  (an avatar's repository call throws) writes nothing, so a retry starts clean and self-heals.
+
+This makes evaluation **idempotent** (a second run yields identical sums) and **self-healing**
+(a failed run never leaves a partial watermark advance behind; the next successful run recomputes
+correctly from the stored entries regardless of what a prior failed run wrote).
 
 This maps directly to the Google Sheet's columns 1–4 (see [02-google-sheet.md](google-sheet.md)).
 The net **erzeugter Gildenmehrwert** (col 5) is `placement − withdrawl` summed across bank + storage,

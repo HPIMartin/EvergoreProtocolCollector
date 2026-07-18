@@ -63,7 +63,7 @@ Each row: avatar name plus 11 value columns. Headers are merged/German; mapping 
 | geschätzte Jagdeinlagerungen + % (col6/7/8) | ❌ Not implemented. `EvergoreItem` *has* a `JAGDBEUTEN` (hunt-loot) category, so the data exists to compute it. |
 | count (col9) | ❌ Meaning unknown; not implemented. |
 | letzte Lager-/Bankaktivität (col10/11) | 🟡 Per-entry timestamps are stored; a "last activity per avatar" is derivable but not surfaced as such. |
-| Date-range filter (Datum von/bis) | ❌ Software accumulates from a `last_updated` watermark; no arbitrary date-range reporting yet. |
+| Date-range filter (Datum von/bis) | ❌ Software recomputes sums from all stored entries each run; no arbitrary date-range reporting yet. |
 
 **Bottom line:** software reproduces the bank-totals third; storage-value third in progress.
 Full parity = remaining storage metrics + Gildenmehrwert + hunt-loot estimates + last-activity

@@ -119,6 +119,7 @@ spotless {
 
 tasks.test {
 	finalizedBy(tasks.jacocoTestReport)
+	forkEvery = 1
 }
 
 val vulnScanFailOnSeverity = providers.gradleProperty("vulnScan.failOnSeverity").orNull?.takeIf { it.isNotBlank() }

@@ -10,7 +10,6 @@
 | Risk | L | I | Countermeasure |
 |------|---|---|----------------|
 | The game serves only ~30 days of logs; DB loss or a >30-day scrape outage is irreversible | M | H | Monthly manual backup by the author (decision 2026-07-17: no automation); a prompt restore re-scrapes the 30-day window, bounding the gap. Migrations must prove 1:1 (backlog D10) |
-| The watermark advances before the avatar update and derives from `now()`: an aborted run under-counts permanently | M | H | First milestone (roadmap M1, backlog B15) |
 | The production DB file is named `temp.sqlite`, inviting careless deletion | L | H | Rename once config is really bindable (backlog C1); until then a known trap |
 
 ## External dependency: the game

@@ -26,7 +26,7 @@
 Slice: the per-avatar sums become trustworthy and self-healing; no known silent-corruption path
 remains.
 
-- [ ] Every evaluation recomputes the per-avatar sums from all stored entries: idempotent (a
+- [x] Every evaluation recomputes the per-avatar sums from all stored entries: idempotent (a
       second run yields identical sums), self-healing after a mid-run failure; `last_updated`
       written only after a successful run (backlog B15).
 - [ ] The extractor ingests boundary-minute entries the previous scrape could not yet see

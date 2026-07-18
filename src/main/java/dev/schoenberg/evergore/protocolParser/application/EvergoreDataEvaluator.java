@@ -33,8 +33,6 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UNDEFIN
 import static java.util.Arrays.asList;
 
 public class EvergoreDataEvaluator {
-	private static final LocalDateTime BEGINNING_OF_TIME = LocalDateTime.of(1, 1, 1, 0, 0);
-
 	private final MetaInformationRepository metaRepo;
 	private final BankRepository bankRepo;
 	private final StorageRepository storageRepo;
@@ -50,63 +48,43 @@ public class EvergoreDataEvaluator {
 	}
 
 	public EvaluationResult evaluateData() {
-		LocalDateTime lastUpdated = advanceWatermarkAndReturnPrevious();
 		List<String> unknownItemNames = new ArrayList<>();
-		updateAvatarInformation(lastUpdated, unknownItemNames);
+		updateAvatarInformation(unknownItemNames);
+		metaRepo.add(asList(new MetaInformation<>(getLastUpdatedKey(), LocalDateTime.now(clock))));
 		return new EvaluationResult(List.copyOf(unknownItemNames));
 	}
 
-	private void updateAvatarInformation(LocalDateTime lastUpdated, List<String> unknownItemNames) {
+	private void updateAvatarInformation(List<String> unknownItemNames) {
 		Set<String> avatars = new HashSet<>(bankRepo.getAllDifferentAvatars());
 		avatars.addAll(storageRepo.getAllDifferentAvatars());
 
-		avatars.forEach(avatar -> updateInformation(avatar, lastUpdated, unknownItemNames));
+		avatars.forEach(avatar -> updateInformation(avatar, unknownItemNames));
 	}
 
-	private LocalDateTime advanceWatermarkAndReturnPrevious() {
-		LocalDateTime lastUpdated = getStoredValue(getLastUpdatedKey(), BEGINNING_OF_TIME);
-
-		logger.info("Old value: " + lastUpdated);
-
-		LocalDateTime now = LocalDateTime.now(clock);
-		MetaInformation<LocalDateTime> newUpdatedInformation = new MetaInformation<>(getLastUpdatedKey(), now);
-		metaRepo.add(asList(newUpdatedInformation));
-
-		logger.info("New value: " + getStoredValue(getLastUpdatedKey(), BEGINNING_OF_TIME));
-
-		return lastUpdated;
+	private void updateInformation(String avatar, List<String> unknownItemNames) {
+		updateBankInformation(avatar);
+		updateStorageInformation(avatar, unknownItemNames);
 	}
 
-	private void updateInformation(String avatar, LocalDateTime lastUpdated, List<String> unknownItemNames) {
-		updateBankInformation(avatar, lastUpdated);
-		updateStorageInformation(avatar, lastUpdated, unknownItemNames);
-	}
-
-	private void updateBankInformation(String avatar, LocalDateTime lastUpdated) {
+	private void updateBankInformation(String avatar) {
 		MetaInformationKey<Long> bankPlacementKey = getBankPlacement(avatar);
 		MetaInformationKey<Long> bankWithdrawlKey = getBankWithdrawl(avatar);
 
-		long bankPlacement = getStoredValue(bankPlacementKey, 0L);
-		long bankWithdrawl = getStoredValue(bankWithdrawlKey, 0L);
-
-		BankStatus bank = new BankStatus(bankPlacement, bankWithdrawl);
-		bankRepo.getAllFor(avatar, lastUpdated).forEach(e -> e.type().accept(bankVisitor).accept(bank, e));
+		BankStatus bank = new BankStatus(0L, 0L);
+		bankRepo.getAllFor(avatar).forEach(e -> e.type().accept(bankVisitor).accept(bank, e));
 
 		MetaInformation<Long> updatedBankPlacement = new MetaInformation<>(bankPlacementKey, bank.placement);
 		MetaInformation<Long> updatedBankWithdrawl = new MetaInformation<>(bankWithdrawlKey, bank.withdrawl);
 		metaRepo.add(asList(updatedBankPlacement, updatedBankWithdrawl));
 	}
 
-	private void updateStorageInformation(String avatar, LocalDateTime lastUpdated, List<String> unknownItemNames) {
+	private void updateStorageInformation(String avatar, List<String> unknownItemNames) {
 		MetaInformationKey<Double> storagePlacementKey = getStoragePlacement(avatar);
 		MetaInformationKey<Double> storageWithdrawlKey = getStorageWithdrawl(avatar);
 
-		double storagePlacement = getStoredValue(storagePlacementKey, 0D);
-		double storageWithdrawl = getStoredValue(storageWithdrawlKey, 0D);
-
-		StorageStatus storage = new StorageStatus(storagePlacement, storageWithdrawl);
+		StorageStatus storage = new StorageStatus(0D, 0D);
 		storageRepo
-				.getAllFor(avatar, lastUpdated)
+				.getAllFor(avatar)
 				.stream()
 				.map(e -> new StorageEntryItem(e, findItem(e, unknownItemNames)))
 				.forEach(e -> e.entry().type().accept(storageEntryVisitor).accept(storage, e));
@@ -196,9 +174,5 @@ public class EvergoreDataEvaluator {
 		private BiConsumer<BankStatus, BankEntry> operation(Function<BankStatus, LongConsumer> statusFunction) {
 			return (status, value) -> statusFunction.apply(status).accept(value.amount());
 		}
-	}
-
-	private <T> T getStoredValue(MetaInformationKey<T> key, T alternative) {
-		return metaRepo.get(key).orElse(alternative);
 	}
 }

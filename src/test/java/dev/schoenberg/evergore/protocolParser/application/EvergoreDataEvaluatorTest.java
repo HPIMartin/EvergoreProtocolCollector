@@ -28,6 +28,7 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformati
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.ERDE_EIBENLANZE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.LEINENTUCH;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class EvergoreDataEvaluatorTest {
 
@@ -127,17 +128,57 @@ class EvergoreDataEvaluatorTest {
 	}
 
 	@Test
-	void accumulatesStorageValueOnTopOfPreviouslyStoredValue() {
-		double previouslyStored = 100.0;
-		metaRepo.put(getStoragePlacement(AVATAR), previouslyStored);
+	void overwritesAPreviouslyStoredValueWithTheFreshRecompute() {
+		metaRepo.put(getStoragePlacement(AVATAR), 999.0);
 		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(LEINENTUCH.ingameName, 1, 100)));
 		storageRepo.seedAvatars(List.of(AVATAR));
 		bankRepo.seedAvatars(List.of());
 
 		tested.evaluateData();
 
-		double expected = previouslyStored + LEINENTUCH.getStorageValue() * 1 * 1.0;
+		double expected = LEINENTUCH.getStorageValue() * 1 * 1.0;
 		assertThat(metaRepo.<Double>get(getStoragePlacement(AVATAR))).contains(expected);
+	}
+
+	@Test
+	void evaluatingTwiceYieldsIdenticalSums() {
+		bankRepo.seedEntries(AVATAR, List.of(bankPlacement(100)));
+		bankRepo.seedAvatars(List.of(AVATAR));
+		storageRepo.seedAvatars(List.of());
+
+		tested.evaluateData();
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Long>get(getBankPlacement(AVATAR))).contains(100L);
+	}
+
+	@Test
+	void selfHealsAfterAMidRunFailureOnANextSuccessfulRun() {
+		FlakyStorageRepositoryStub flakyStorage = new FlakyStorageRepositoryStub();
+		flakyStorage.seedEntries(AVATAR, List.of(storagePlacement(LEINENTUCH.ingameName, 1, 100)));
+		flakyStorage.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+		EvergoreDataEvaluator flakyEvaluator = new EvergoreDataEvaluator(metaRepo, flakyStorage, bankRepo, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
+		flakyStorage.failOnNextCall = true;
+
+		assertThatThrownBy(flakyEvaluator::evaluateData).isInstanceOf(RuntimeException.class);
+		flakyEvaluator.evaluateData();
+
+		double expected = LEINENTUCH.getStorageValue() * 1 * 1.0;
+		assertThat(metaRepo.<Double>get(getStoragePlacement(AVATAR))).contains(expected);
+	}
+
+	@Test
+	void doesNotWriteLastUpdatedWhenARunFails() {
+		FlakyStorageRepositoryStub flakyStorage = new FlakyStorageRepositoryStub();
+		flakyStorage.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+		EvergoreDataEvaluator flakyEvaluator = new EvergoreDataEvaluator(metaRepo, flakyStorage, bankRepo, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
+		flakyStorage.failOnNextCall = true;
+
+		assertThatThrownBy(flakyEvaluator::evaluateData).isInstanceOf(RuntimeException.class);
+
+		assertThat(metaRepo.<LocalDateTime>get(getLastUpdatedKey())).isEmpty();
 	}
 
 	@Test
@@ -156,21 +197,7 @@ class EvergoreDataEvaluatorTest {
 	}
 
 	@Test
-	void usesStoredWatermarkAsCutoffForBothReposAndAdvancesItAfterEvaluation() {
-		LocalDateTime priorWatermark = LocalDateTime.of(2024, 1, 1, 12, 0);
-		metaRepo.put(getLastUpdatedKey(), priorWatermark);
-		bankRepo.seedAvatars(List.of(AVATAR));
-		storageRepo.seedAvatars(List.of(AVATAR));
-
-		tested.evaluateData();
-
-		assertThat(bankRepo.capturedAfter()).isEqualTo(priorWatermark);
-		assertThat(storageRepo.capturedAfter()).isEqualTo(priorWatermark);
-		assertThat(metaRepo.<LocalDateTime>get(getLastUpdatedKey())).isPresent().hasValueSatisfying(v -> assertThat(v).isAfter(priorWatermark));
-	}
-
-	@Test
-	void storesTheWatermarkInBerlinWallClockNotUtc() {
+	void writesLastUpdatedInBerlinWallClockNotUtcAfterASuccessfulRun() {
 		Instant nearMidnightUtc = Instant.parse("2026-06-21T23:30:00Z");
 		tested = new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, Clock.fixed(nearMidnightUtc, APP_ZONE), logger);
 		bankRepo.seedAvatars(List.of());
@@ -200,5 +227,18 @@ class EvergoreDataEvaluatorTest {
 
 	private static StorageEntry storageWithdrawl(String itemName, int quantity, int quality) {
 		return new StorageEntry(Instant.EPOCH, AVATAR, quantity, itemName, quality, ENTNAHME);
+	}
+
+	private static class FlakyStorageRepositoryStub extends StorageRepositoryStub {
+		private boolean failOnNextCall;
+
+		@Override
+		public List<StorageEntry> getAllFor(String avatar) {
+			if (failOnNextCall) {
+				failOnNextCall = false;
+				throw new RuntimeException("storage lookup failed");
+			}
+			return super.getAllFor(avatar);
+		}
 	}
 }

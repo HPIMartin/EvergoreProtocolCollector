@@ -18,10 +18,11 @@
         │  5. persist via BankRepository / StorageRepository
         ▼
    EvergoreDataEvaluator.evaluateData()
-        │  per avatar, since last_updated: sum bank + value storage  (TransferType visitor + EvergoreItem)
-        │  write results to MetaInformationRepository; advance last_updated
+        │  per avatar, full recompute from ALL stored entries (no cutoff): sum bank + value storage
+        │  (TransferType visitor + EvergoreItem); overwrites MetaInformationRepository
+        │  last_updated (display-only) written once, after every avatar succeeds
         ▼
-   LastRunStatus.recordSuccessfulRun(clock.instant())   (monitoring seam)
+   LastRunStatus.recordSuccessfulRun(clock.instant()) + recordUnknownItems(...)   (monitoring seam)
         ▼
    PostCollectionHook   (no-op in prod; test seam)
 
@@ -29,7 +30,8 @@ Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ OverviewControl
                         ▶ read MetaInformation / repositories ▶ OutputFormatter ▶ HTML
 
 Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut management
-                        ▶ LastRunHealthIndicator ▶ reports UNKNOWN (no run yet) or UP + lastSuccessfulRun timestamp
+                        ▶ LastRunHealthIndicator ▶ reports UNKNOWN (no run yet) or UP + lastSuccessfulRun
+                        timestamp + unknownItemCount/unknownItemNames when the last run hit unknown items
 ```
 
 ## Layers & responsibilities (condensed)

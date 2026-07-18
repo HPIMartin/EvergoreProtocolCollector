@@ -10,7 +10,7 @@
 | `EntryFactoryTest` | One test `deduplicates()`: 3 raw lines collapse to 1 item by name+quality. | pure unit (thin) |
 | `EvergoreItemTest` | `getStorageValue()`/`getWithdrawlValue()` for 3 cases (raw, craftable, gem). | pure unit |
 | `HexagonalArchitectureTest` | ArchUnit guard: `domain`+`businessLogic` depend on **no** framework/library packages (Micronaut, jakarta, Selenium, ORMLite/SQLite, Jackson, RxJava, Apache Commons, logback/SLF4J, Netty). Turns the hexagonal golden rule into a build failure (verified non-vacuous: temporarily forbidding `java.time` flags 22 core usages). | architecture guard (ArchUnit + JUnit 5) |
-| `EvergoreDataEvaluatorTest` | Six unit tests covering: bank aggregation (placement + withdrawl sums), storage valuation (craftable item with quantity and partial quality), unknown item fallback (zero value + logger message), value accumulation onto a previously stored value, avatar union across both repos (all keys written per avatar), and the `last_updated` watermark (old value used as cutoff for both repos, new value written and is after old). Hand-written fakes: `FakeMetaInformationRepository`, `BankRepositoryStub`, `StorageRepositoryStub`, `LoggerSpy`. | pure unit |
+| `EvergoreDataEvaluatorTest` | Unit tests covering: bank aggregation (placement + withdrawl sums), storage valuation (craftable item with quantity and partial quality), unknown item fallback (zero value + WARN + collected into `EvaluationResult`), full recompute (sums start at zero over all stored entries and **overwrite** stale meta values; a second run is idempotent), mid-run-failure self-healing (a failed avatar writes nothing; `last_updated` is display-only, written once after full success), and avatar union across both repos (all keys written per avatar). Hand-written fakes: `FakeMetaInformationRepository`, `BankRepositoryStub`, `StorageRepositoryStub`, `LoggerSpy`. | pure unit |
 | `EvergoreDataExtractorTest` | Four unit tests: parsed bank/storage entries are persisted, entries older than the stored watermark are filtered out, and all entries are kept when no newest entry exists (`Optional.empty()`). `FakePageSource` returns canned `PageContents`; capturing extensions of `BankRepositoryStub`/`StorageRepositoryStub` return `Optional` from `getNewest()`. No browser, no framework. | pure unit |
 | `BankDatabaseRepositoryTest` | Three tests: repository is usable without separate init (file DB); `getNewest()` returns `Optional.empty()` on an empty table; `getNewest()` returns the entry with the latest timestamp after inserts (in-memory SQLite). | adapter integration |
 | `StorageDatabaseRepositoryTest` | Two tests: `getNewest()` returns `Optional.empty()` on empty; returns the entry with the latest timestamp after inserts (in-memory SQLite). | adapter integration |
@@ -50,7 +50,7 @@
 ## Coverage map
 
 **Has tests:** `EvergoreItem` (value math, 3 of ~600 entries) · `MetaInformation` (serialization) ·
-`EntryFactory` (dedup size only) · `EvergoreDataEvaluator` (bank aggregation, storage valuation, unknown item fallback, value accumulation, avatar union, watermark) ·
+`EntryFactory` (dedup size only) · `EvergoreDataEvaluator` (bank aggregation, storage valuation, unknown item fallback, full-recompute overwrite + idempotence + failed-run self-heal, avatar union) ·
 `EvergoreDataExtractor` (parse→persist pipeline, delta filter including the empty-watermark case) ·
 `BankDatabaseRepository` / `StorageDatabaseRepository` (`getNewest()` empty + newest-wins, in-memory SQLite) ·
 the **evaluate→overview pipeline end-to-end** via `ProtocolEvaluationAcceptanceTest` (real evaluator + real DB + HTTP) ·
@@ -65,7 +65,7 @@ and *indirectly* via `SmokeTest`: controllers, filters, repositories, the job, `
 1. **`EntryFactory` / `EntityParser`**: date/avatar/type/quality regex parsing, `Entnahme` branch,
    merged-quantity value, `Impressum` terminator. Only dedup-size is asserted.
 2. **`SeleniumPageSource`**: Selenium scraping/pagination/login (inherently hard; page-source port now exists, but the Selenium path itself is not unit-tested).
-3. **Repositories**: paging, `getAllFor(avatar, after)`. Only incidental smoke coverage.
+3. **Repositories**: paging, `getAllFor(avatar)`. Only incidental smoke coverage.
 
 ## Migration verification: Gradle / Java 25 / Micronaut 4.10 (2026-06-16)
 
@@ -78,11 +78,11 @@ observable behaviour**:
   production SQLite DB; its `/overview`, `/avatars/{avatar}/bank` and `/avatars/{avatar}/storage`
   responses were **byte-identical (after LF normalisation)** to the live production instance.
 - **JDK 25 behaviour change found & fixed:** `java.sql.Timestamp.from(Instant)` now uses
-  `Math.multiplyExact` and **throws** on extreme instants where JDK 17 silently wrapped. The empty
-  watermark `LocalDateTime.MIN` hit this in `EvergoreDataEvaluator` (first-run / empty-meta path);
-  replaced with an earliest-representable sentinel (`BEGINNING_OF_TIME`) that preserves the
-  include-everything semantics. `SmokeTest`'s throwaway `Instant.MIN` timestamp was likewise made a
-  valid instant. `ArchUnit` was bumped to 1.4.1 so it parses Java 25 bytecode (1.3.0 silently
+  `Math.multiplyExact` and **throws** on extreme instants where JDK 17 silently wrapped. The
+  evaluator's then-existing empty-watermark sentinel (`LocalDateTime.MIN`) hit this on the first
+  run and was replaced with an earliest-representable valid instant (the watermark itself is gone
+  since the full-recompute rework — avoid extreme sentinel instants in anything converted to
+  `Timestamp`). `SmokeTest`'s throwaway `Instant.MIN` timestamp was likewise made a valid instant. `ArchUnit` was bumped to 1.4.1 so it parses Java 25 bytecode (1.3.0 silently
   imported zero classes, making the hexagonal guard a false green).
 
 An automated, offline acceptance test of the same flow now exists as `ProtocolEvaluationAcceptanceTest`,
