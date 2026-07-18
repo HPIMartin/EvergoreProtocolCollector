@@ -1,10 +1,10 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.banking;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public class BankRepositoryStub implements BankRepository {
 	private final Map<String, List<BankEntry>> entriesByAvatar = new HashMap<>();
@@ -39,7 +39,7 @@ public class BankRepositoryStub implements BankRepository {
 	}
 
 	@Override
-	public Optional<BankEntry> getNewest() {
+	public List<BankEntry> getAllSince(Instant timestampInclusive) {
 		throw new UnsupportedOperationException();
 	}
 }

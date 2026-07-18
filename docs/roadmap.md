@@ -13,31 +13,12 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M1 | Data integrity | B15 | An aborted run under-counts permanently and the game serves only ~30 days of logs, so waiting loses data irreversibly (decision 2026-07-17) |
 | M2 | JSON API (strand `json-api`) | E5 | Unblocks the SPA; reworks the token filter and SPA fallback in one place |
 | M3 | Dashboard views (strand `spa-views`) | E5 | The officer-visible payoff of the dashboard rebuild |
 | M4 | Ingest & test robustness | B16, B17 | Small hardening set, deliberately behind `json-api` (decision 2026-07-17) |
 | M5 | Sheet parity, confirmed columns | E1, E2 | The headline metric lands on integrity-fixed data and a real dashboard |
 | M6 | Real-browser integration tests | H2, H6 | Scrape coverage without host Firefox; the test split gates on the Selenium service |
-| M7 | Micronaut 5 | H9 | Deferred deliberately until 1:1 is re-proven through the nets built in M1-M6 |
-
-## M1: Data integrity
-
-Slice: the per-avatar sums become trustworthy and self-healing; no known silent-corruption path
-remains.
-
-- [x] Every evaluation recomputes the per-avatar sums from all stored entries: idempotent (a
-      second run yields identical sums), self-healing after a mid-run failure; `last_updated`
-      written only after a successful run (backlog B15).
-- [ ] The extractor ingests boundary-minute entries the previous scrape could not yet see
-      (occurrence-counting deduplication at the stored max timestamp; backlog B15).
-- [x] `Erde-Eibenlanze` valued correctly; unknown items warn and are countable via `/health`.
-- [x] The `Einzahlung`→`EINLAGERUNG` mapping and the value-neutral `+1` merge pinned by contract
-      tests and documented.
-- [ ] Full `./gradlew build` green; gates run on the strongest tier (time/valuation escalation,
-      playbook cadence).
-
-Track: feature branch/worktree.
+| M7 | Micronaut 5 | H9 | Deferred deliberately until 1:1 is re-proven through the nets built in M2-M6 |
 
 ## M2: JSON API (strand `json-api`)
 
@@ -110,7 +91,7 @@ Slice: the framework moves to the current major without losing 1:1.
 
 - [ ] `./gradlew build` green on Micronaut 5; endpoints 1:1 against the prod snapshot; the offline
       acceptance net green (backlog H9).
-- [ ] Precondition: M1-M6 landed (their nets are the safety for this jump).
+- [ ] Precondition: M2-M6 landed (their nets are the safety for this jump).
 
 ## Later (unordered; pull between milestones when they fit)
 

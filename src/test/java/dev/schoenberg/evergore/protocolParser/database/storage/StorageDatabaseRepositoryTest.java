@@ -2,7 +2,6 @@ package dev.schoenberg.evergore.protocolParser.database.storage;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -16,28 +15,37 @@ import static org.assertj.core.api.Assertions.assertThat;
 class StorageDatabaseRepositoryTest {
 
 	@Test
-	void getNewestReturnsEmptyOnEmptyRepository() {
+	void getAllSinceIncludesTheRowExactlyAtTheGivenTimestamp() {
 		StorageDatabaseRepository repo = StorageDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
+		Instant boundary = Instant.parse("2024-06-01T13:37:00Z");
+		repo.add(List.of(new StorageEntry(boundary, "Aurora", 3, "Drachenhaut", 80, TransferType.EINLAGERUNG)));
 
-		Optional<StorageEntry> result = repo.getNewest();
+		List<StorageEntry> result = repo.getAllSince(boundary);
+
+		assertThat(result).containsExactly(new StorageEntry(boundary, "Aurora", 3, "Drachenhaut", 80, TransferType.EINLAGERUNG));
+	}
+
+	@Test
+	void getAllSinceExcludesRowsOlderThanTheGivenTimestamp() {
+		StorageDatabaseRepository repo = StorageDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
+		Instant boundary = Instant.parse("2024-06-01T13:37:00Z");
+		repo.add(List.of(new StorageEntry(Instant.parse("2024-06-01T13:36:00Z"), "Aurora", 1, "Drachenhaut", 80, TransferType.EINLAGERUNG)));
+
+		List<StorageEntry> result = repo.getAllSince(boundary);
 
 		assertThat(result).isEmpty();
 	}
 
 	@Test
-	void getNewestReturnsEntryWithLatestTimestampAfterInserts() {
+	void getAllSinceIncludesRowsNewerThanTheGivenTimestamp() {
 		StorageDatabaseRepository repo = StorageDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
-		Instant earlier = Instant.parse("2024-01-01T00:00:00Z");
-		Instant later = Instant.parse("2024-06-01T00:00:00Z");
-		repo
-				.add(List
-						.of(new StorageEntry(earlier, "Aurora", 5, "Leinentuch", 100, TransferType.EINLAGERUNG),
-								new StorageEntry(later, "Aurora", 3, "Drachenhaut", 80, TransferType.EINLAGERUNG)));
+		Instant boundary = Instant.parse("2024-06-01T13:37:00Z");
+		StorageEntry newer = new StorageEntry(Instant.parse("2024-06-01T13:38:00Z"), "Aurora", 3, "Drachenhaut", 80, TransferType.EINLAGERUNG);
+		repo.add(List.of(newer));
 
-		Optional<StorageEntry> result = repo.getNewest();
+		List<StorageEntry> result = repo.getAllSince(boundary);
 
-		assertThat(result).isPresent();
-		assertThat(result.get().timeStamp()).isEqualTo(later);
+		assertThat(result).containsExactly(newer);
 	}
 
 	private static Configuration inMemoryConfiguration() {

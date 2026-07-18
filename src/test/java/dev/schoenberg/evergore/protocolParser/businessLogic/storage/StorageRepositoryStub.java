@@ -1,10 +1,10 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.storage;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public class StorageRepositoryStub implements StorageRepository {
 	private final Map<String, List<StorageEntry>> entriesByAvatar = new HashMap<>();
@@ -39,7 +39,7 @@ public class StorageRepositoryStub implements StorageRepository {
 	}
 
 	@Override
-	public Optional<StorageEntry> getNewest() {
+	public List<StorageEntry> getAllSince(Instant timestampInclusive) {
 		throw new UnsupportedOperationException();
 	}
 }

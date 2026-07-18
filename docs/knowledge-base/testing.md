@@ -11,9 +11,9 @@
 | `EvergoreItemTest` | `getStorageValue()`/`getWithdrawlValue()` for 3 cases (raw, craftable, gem). | pure unit |
 | `HexagonalArchitectureTest` | ArchUnit guard: `domain`+`businessLogic` depend on **no** framework/library packages (Micronaut, jakarta, Selenium, ORMLite/SQLite, Jackson, RxJava, Apache Commons, logback/SLF4J, Netty). Turns the hexagonal golden rule into a build failure (verified non-vacuous: temporarily forbidding `java.time` flags 22 core usages). | architecture guard (ArchUnit + JUnit 5) |
 | `EvergoreDataEvaluatorTest` | Unit tests covering: bank aggregation (placement + withdrawl sums), storage valuation (craftable item with quantity and partial quality), unknown item fallback (zero value + WARN + collected into `EvaluationResult`), full recompute (sums start at zero over all stored entries and **overwrite** stale meta values; a second run is idempotent), mid-run-failure self-healing (a failed avatar writes nothing; `last_updated` is display-only, written once after full success), and avatar union across both repos (all keys written per avatar). Hand-written fakes: `FakeMetaInformationRepository`, `BankRepositoryStub`, `StorageRepositoryStub`, `LoggerSpy`. | pure unit |
-| `EvergoreDataExtractorTest` | Four unit tests: parsed bank/storage entries are persisted, entries older than the stored watermark are filtered out, and all entries are kept when no newest entry exists (`Optional.empty()`). `FakePageSource` returns canned `PageContents`; capturing extensions of `BankRepositoryStub`/`StorageRepositoryStub` return `Optional` from `getNewest()`. No browser, no framework. | pure unit |
-| `BankDatabaseRepositoryTest` | Three tests: repository is usable without separate init (file DB); `getNewest()` returns `Optional.empty()` on an empty table; `getNewest()` returns the entry with the latest timestamp after inserts (in-memory SQLite). | adapter integration |
-| `StorageDatabaseRepositoryTest` | Two tests: `getNewest()` returns `Optional.empty()` on empty; returns the entry with the latest timestamp after inserts (in-memory SQLite). | adapter integration |
+| `EvergoreDataExtractorTest` | Unit tests covering: parsed bank/storage entries are persisted; a still-visible entry older than the stored max but missing from the database is healed (ingested) via `getAllSince(min scraped timestamp)`; an identical already-stored row (bank and storage) is not duplicated; a scraped identical pair with one already stored ingests only the surplus; two identical scraped rows both survive when neither is stored yet; entries are ingested oldest-first for partial-batch safety. `FakePageSource` returns canned `PageContents`; capturing extensions of `BankRepositoryStub`/`StorageRepositoryStub` assert the `getAllSince` argument (a wrong argument yields an empty result, so a mutant passing the wrong timestamp is caught). No browser, no framework. | pure unit |
+| `BankDatabaseRepositoryTest` | Repository is usable without separate init (file DB); `getAllSince(timestamp)` includes the row exactly at the boundary, excludes older rows, includes newer rows (in-memory SQLite). | adapter integration |
+| `StorageDatabaseRepositoryTest` | `getAllSince(timestamp)` includes the row exactly at the boundary, excludes older rows, includes newer rows (in-memory SQLite). | adapter integration |
 | `ProtocolEvaluationAcceptanceTest` | End-to-end: copies the committed synthetic fixture DB (`testdata.sqlite`) to a `build/` working copy, boots the real Micronaut `EmbeddedServer` against it, stubs the scraper (`loadData()` no-op) while the **real** `EvergoreDataEvaluator` runs via the scheduled job, then asserts `/overview` bank totals and `/avatars/{a}/bank|storage` rows through `RenderedTable`, plus storage **valuation** at the `MetaInformationRepository` bean level (no endpoint surfaces it yet, Epic E1). | `@MicronautTest` acceptance / e2e |
 | `RenderedTable` | Parses rendered HTML tables into a header + rows of cell text, tolerant to attributes/styling/wrapper tags, so UI restyling never breaks assertions. The robust successor to `TestHelper`'s Levenshtein matching; **all** markup coupling lives here alone. | helper (no `@Test`) |
 | `TestDataGenerator` | Run-on-demand writer (`./gradlew generateAcceptanceDb`) of the committed synthetic fixture `testdata.sqlite`: 3 avatars; bank in both directions; storage with quality scaling and a zero-value item. Item names reference `EvergoreItem.*.ingameName`, so values stay derived, not invented. | fixture generator (`main`) |
@@ -51,8 +51,8 @@
 
 **Has tests:** `EvergoreItem` (value math, 3 of ~600 entries) · `MetaInformation` (serialization) ·
 `EntryFactory` (dedup size only) · `EvergoreDataEvaluator` (bank aggregation, storage valuation, unknown item fallback, full-recompute overwrite + idempotence + failed-run self-heal, avatar union) ·
-`EvergoreDataExtractor` (parse→persist pipeline, delta filter including the empty-watermark case) ·
-`BankDatabaseRepository` / `StorageDatabaseRepository` (`getNewest()` empty + newest-wins, in-memory SQLite) ·
+`EvergoreDataExtractor` (parse→persist pipeline, window dedup via `getAllSince(min scraped timestamp)`: heals a still-visible entry missing from the database, no-duplicate + surplus-only dedup, oldest-first partial-batch safety) ·
+`BankDatabaseRepository` / `StorageDatabaseRepository` (`getAllSince` inclusive boundary, in-memory SQLite) ·
 the **evaluate→overview pipeline end-to-end** via `ProtocolEvaluationAcceptanceTest` (real evaluator + real DB + HTTP) ·
 `LastRunStatus` (record + read) · `LastRunHealthIndicator` (UNKNOWN / UP + detail) ·
 `EvergoreDataCollectorJob` (records run on success, not on failure) ·
@@ -65,7 +65,7 @@ and *indirectly* via `SmokeTest`: controllers, filters, repositories, the job, `
 1. **`EntryFactory` / `EntityParser`**: date/avatar/type/quality regex parsing, `Entnahme` branch,
    merged-quantity value, `Impressum` terminator. Only dedup-size is asserted.
 2. **`SeleniumPageSource`**: Selenium scraping/pagination/login (inherently hard; page-source port now exists, but the Selenium path itself is not unit-tested).
-3. **Repositories**: paging, `getAllFor(avatar)`. Only incidental smoke coverage.
+3. **Repositories**: paging, `getAllFor(avatar)`. Only incidental smoke coverage (`getAllSince` has adapter tests).
 
 ## Migration verification: Gradle / Java 25 / Micronaut 4.10 (2026-06-16)
 

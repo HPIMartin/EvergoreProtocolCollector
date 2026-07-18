@@ -103,10 +103,9 @@ derivable but not yet stored as a single metric.
 
 ## Identity / equality quirks
 
-- `BankEntry` equality is implemented via a `stupidMerge()` string concatenation (self-described).
-  This is a smell; a value-based `equals`/record would be cleaner.
-- Repositories' `getNewest()` returns `Optional<BankEntry>` / `Optional<StorageEntry>`, empty when
-  the table has no rows. Callers treat `Optional.empty()` as "no watermark; keep every parsed entry".
+- `BankEntry` and `StorageEntry` are records, so equality is value-based (all fields); this is
+  load-bearing for the ingest window dedup (`surplusOverStored` matches scraped vs. stored rows
+  by equality).
 
 See [04-architecture.md](architecture.md) for how these types flow through the system, and
 [08-glossary.md](glossary.md) for the German terms.

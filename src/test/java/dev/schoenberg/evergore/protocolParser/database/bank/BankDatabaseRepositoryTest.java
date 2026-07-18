@@ -4,7 +4,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,25 +41,37 @@ class BankDatabaseRepositoryTest {
 	}
 
 	@Test
-	void getNewestReturnsEmptyOnEmptyRepository() {
+	void getAllSinceIncludesTheRowExactlyAtTheGivenTimestamp() {
 		BankDatabaseRepository repo = BankDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
+		Instant boundary = Instant.parse("2024-06-01T13:37:00Z");
+		repo.add(List.of(new BankEntry(boundary, "Aurora", 100, TransferType.EINLAGERUNG)));
 
-		Optional<BankEntry> result = repo.getNewest();
+		List<BankEntry> result = repo.getAllSince(boundary);
+
+		assertThat(result).containsExactly(new BankEntry(boundary, "Aurora", 100, TransferType.EINLAGERUNG));
+	}
+
+	@Test
+	void getAllSinceExcludesRowsOlderThanTheGivenTimestamp() {
+		BankDatabaseRepository repo = BankDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
+		Instant boundary = Instant.parse("2024-06-01T13:37:00Z");
+		repo.add(List.of(new BankEntry(Instant.parse("2024-06-01T13:36:00Z"), "Aurora", 5, TransferType.EINLAGERUNG)));
+
+		List<BankEntry> result = repo.getAllSince(boundary);
 
 		assertThat(result).isEmpty();
 	}
 
 	@Test
-	void getNewestReturnsEntryWithLatestTimestampAfterInserts() {
+	void getAllSinceIncludesRowsNewerThanTheGivenTimestamp() {
 		BankDatabaseRepository repo = BankDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
-		Instant earlier = Instant.parse("2024-01-01T00:00:00Z");
-		Instant later = Instant.parse("2024-06-01T00:00:00Z");
-		repo.add(List.of(new BankEntry(earlier, "Aurora", 100, TransferType.EINLAGERUNG), new BankEntry(later, "Aurora", 200, TransferType.EINLAGERUNG)));
+		Instant boundary = Instant.parse("2024-06-01T13:37:00Z");
+		BankEntry newer = new BankEntry(Instant.parse("2024-06-01T13:38:00Z"), "Aurora", 100, TransferType.EINLAGERUNG);
+		repo.add(List.of(newer));
 
-		Optional<BankEntry> result = repo.getNewest();
+		List<BankEntry> result = repo.getAllSince(boundary);
 
-		assertThat(result).isPresent();
-		assertThat(result.get().timeStamp()).isEqualTo(later);
+		assertThat(result).containsExactly(newer);
 	}
 
 	private static Configuration testConfiguration() {

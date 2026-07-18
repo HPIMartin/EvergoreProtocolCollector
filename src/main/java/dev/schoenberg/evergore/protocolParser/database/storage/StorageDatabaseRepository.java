@@ -1,11 +1,9 @@
 package dev.schoenberg.evergore.protocolParser.database.storage;
 
-import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 import com.j256.ormlite.dao.Dao;
-import com.j256.ormlite.dao.GenericRawResults;
 import com.j256.ormlite.support.ConnectionSource;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
@@ -18,12 +16,9 @@ import dev.schoenberg.evergore.protocolParser.exceptions.NoElementFound;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.AVATAR_COLUMN;
-import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TABLE;
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
-import static java.lang.String.join;
 import static java.sql.Timestamp.from;
-import static java.sql.Timestamp.valueOf;
 
 public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> implements StorageRepository {
 	private final Dao<StorageDatabaseEntry, String> storage;
@@ -61,36 +56,21 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	}
 
 	@Override
-	public void add(List<StorageEntry> newEntries) {
-		silentThrow(() -> storage.create(newEntries.stream().map(this::convert).toList()));
+	public List<StorageEntry> getAllSince(Instant timestampInclusive) {
+		List<StorageDatabaseEntry> result = silentThrow(() -> storage.queryBuilder().where().ge(StorageDatabaseEntry.TIMESTAMP_COLUMN, from(timestampInclusive)).query());
+
+		return convert(result);
 	}
 
 	@Override
-	public Optional<StorageEntry> getNewest() {
-		return silentThrow(() -> {
-			GenericRawResults<String[]> raw = storage.queryRaw("SELECT max(" + TIMESTAMP_COLUMN + ") FROM " + TABLE);
-
-			List<String[]> results = raw.getResults();
-
-			log(results);
-
-			if (results.isEmpty() || results.get(0) == null || results.get(0)[0] == null) {
-				return Optional.empty();
-			}
-
-			Timestamp highestTimeStamp = valueOf(results.get(0)[0]);
-			return Optional.of(convert(storage.queryBuilder().where().eq(StorageDatabaseEntry.TIMESTAMP_COLUMN, highestTimeStamp).queryForFirst()));
-		});
+	public void add(List<StorageEntry> newEntries) {
+		silentThrow(() -> storage.create(newEntries.stream().map(this::convert).toList()));
 	}
 
 	@Override
 	public List<String> getAllDifferentAvatars() {
 		List<StorageDatabaseEntry> avatars = silentThrow(() -> storage.queryBuilder().distinct().selectColumns(AVATAR_COLUMN).query());
 		return avatars.stream().map(bde -> bde.avatar).toList();
-	}
-
-	private void log(List<String[]> results) {
-		logger.debug("[" + join(",", results.stream().map(x -> "[" + join(",", x) + "]").toList()) + "]");
 	}
 
 	private List<StorageEntry> convert(List<StorageDatabaseEntry> dbEntries) {

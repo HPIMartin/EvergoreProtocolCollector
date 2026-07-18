@@ -14,7 +14,10 @@
         │  1. PageSource (port) → SeleniumPageSource (Selenium adapter)  ──Selenium──▶  evergore.de (login, paginate bank + Lager protocols)
         │  2. EntityParser.parse → EntryFactory   (raw text ▶ domain Entry list, regex, dedup)
         │  3. map Entry ▶ BankEntry / StorageEntry
-        │  4. keep only entries newer than repo.getNewest()
+        │  4. dedup over the whole scraped window: fetch repo.getAllSince(min scraped timestamp) and
+        │     ingest only the surplus over those stored rows (occurrence-counting, so two legitimate
+        │     identical same-minute rows both survive); heals a still-visible row an earlier, buggy
+        │     scrape failed to store, regardless of how old it is relative to the stored max
         │  5. persist via BankRepository / StorageRepository
         ▼
    EvergoreDataEvaluator.evaluateData()
