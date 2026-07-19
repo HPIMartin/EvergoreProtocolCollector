@@ -22,9 +22,7 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.GRO
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.LAGER_EINTRAG_START;
 
 public class EntryFactory {
-	// A stricter twin of LAGER_EINTRAG_BOUNDARY (literal dots, not wildcards): matches a well-formed
-	// timestamp prefix without requiring a known transfer-type word, so it can distinguish "type
-	// unrecognized" from "date malformed" for the warning below.
+	// Stricter than LAGER_EINTRAG_BOUNDARY (literal dots) to tell an unknown type apart from a malformed date when warning.
 	private static final Pattern TIMESTAMPED_HEADLINE = Pattern.compile("^\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}.*");
 
 	private EntryFactory() {}

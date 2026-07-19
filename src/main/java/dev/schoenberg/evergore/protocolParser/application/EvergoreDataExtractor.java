@@ -49,8 +49,7 @@ public class EvergoreDataExtractor {
 		bankRepo.add(selectEntriesToIngest(parsed, BankEntry::timeStamp, bankRepo::getAllSince));
 	}
 
-	// Dedup covers the whole scraped window (not just its newest minute), so a still-visible entry
-	// that an earlier, buggy scrape failed to store gets healed permanently instead of staying lost.
+	// Dedup against the whole scraped window heals a still-visible entry an earlier scrape dropped.
 	private <T> List<T> selectEntriesToIngest(List<T> parsed, Function<T, Instant> timestampOf, Function<Instant, List<T>> allSince) {
 		if (parsed.isEmpty()) {
 			return List.of();
