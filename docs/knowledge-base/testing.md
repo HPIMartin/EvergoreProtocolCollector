@@ -93,14 +93,15 @@ and must stay **gitignored**, never committed.
 
 ### Test isolation (forking)
 
-`build.gradle.kts` runs each test class in a fresh JVM (`setForkEvery(1)`). Two `@MicronautTest`
-classes now boot the embedded server with the real `@Scheduled` collector job; sharing one JVM let
-one boot's startup timing perturb the other's, exposing a **latent startup race in `SmokeTest`**:
-its job (`initialDelay` 0 in tests) could evaluate before `DatabaseStartupInitialization` created
-the tables (`no such table: metaInformation`). Per-class JVM isolation removes the cross-class
-interference. `ProtocolEvaluationAcceptanceTest` is immune by construction (its fixture already
-contains the tables); the underlying ordering assumption in the production startup
-(job-vs-table-init) is tracked as a follow-up, not fixed here.
+`build.gradle.kts` runs each test class in a fresh JVM (`forkEvery = 1`). This is a **temporary
+workaround, not the intended strategy**: it was added alongside the meta-sums recompute so the
+`@MicronautTest` classes that boot the real `@Scheduled` collector job stop interfering across a
+shared JVM (a `no such table: metaInformation` failure when a job evaluates before table
+initialization). The blanket per-class fork is a blunt fix and costs build time; the suspected root
+cause (shared mutable static state — `Configuration.useInMemory`/`DATABASE_TEMP_SQLITE`, a shared
+SQLite file, `BootSignalRecorder`) is unconfirmed, and the proper resolution (remove the shared
+state and run one JVM, or parallelize, or split a boot-test suite) is tracked in the
+build-performance plan (S4) together with the doc/build-agreement item **G16**.
 
 ## Testing direction for the rebuild (TDD/BDD)
 
