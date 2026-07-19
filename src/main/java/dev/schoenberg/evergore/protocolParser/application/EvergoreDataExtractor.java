@@ -35,8 +35,8 @@ public class EvergoreDataExtractor {
 
 	public void loadData() {
 		PageContents load = pageSource.load();
-		updateBankEntries(EntityParser.parse(load.bank()));
-		updateLagerEntries(EntityParser.parse(load.lager()));
+		updateBankEntries(EntityParser.parse(load.bank(), logger));
+		updateLagerEntries(EntityParser.parse(load.lager(), logger));
 	}
 
 	private void updateLagerEntries(List<Entry> lager) {

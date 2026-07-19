@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.domain.Entry;
 import dev.schoenberg.evergore.protocolParser.domain.Item;
@@ -21,17 +22,25 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.GRO
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.LAGER_EINTRAG_START;
 
 public class EntryFactory {
+	// A stricter twin of LAGER_EINTRAG_BOUNDARY (literal dots, not wildcards): matches a well-formed
+	// timestamp prefix without requiring a known transfer-type word, so it can distinguish "type
+	// unrecognized" from "date malformed" for the warning below.
+	private static final Pattern TIMESTAMPED_HEADLINE = Pattern.compile("^\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}.*");
+
 	private EntryFactory() {}
 
-	public static Optional<Entry> parseContent(List<String> rawContent) {
+	public static Optional<Entry> parseContent(List<String> rawContent, Logger logger) {
 		List<Item> items = parseItems(rawContent.subList(1, rawContent.size()));
-		return generateEntry(rawContent.get(0), items);
+		return generateEntry(rawContent.get(0), items, logger);
 	}
 
-	private static Optional<Entry> generateEntry(String headline, List<Item> items) {
+	private static Optional<Entry> generateEntry(String headline, List<Item> items, Logger logger) {
 		Pattern pattern = Pattern.compile(LAGER_EINTRAG_START);
 		Matcher matcher = pattern.matcher(headline);
 		if (!matcher.find()) {
+			if (TIMESTAMPED_HEADLINE.matcher(headline).matches()) {
+				logger.warn("Dropping protocol entry: unmatched transfer type in headline: " + headline);
+			}
 			return Optional.empty();
 		}
 		String avatar = matcher.group(GROUP_NAME_AVATAR);
@@ -40,6 +49,7 @@ public class EntryFactory {
 		try {
 			date = formatter.parse(matcher.group(GROUP_NAME_DATE), Instant::from);
 		} catch (DateTimeParseException e) {
+			logger.warn("Dropping protocol entry: out-of-range date in headline: " + headline);
 			return Optional.empty();
 		}
 

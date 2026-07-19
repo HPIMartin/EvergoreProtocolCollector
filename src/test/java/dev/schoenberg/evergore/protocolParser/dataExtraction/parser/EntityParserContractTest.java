@@ -3,8 +3,10 @@ package dev.schoenberg.evergore.protocolParser.dataExtraction.parser;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.domain.Entry;
 import dev.schoenberg.evergore.protocolParser.domain.Item;
@@ -15,6 +17,13 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.base.Transfer
 import static org.assertj.core.api.Assertions.assertThat;
 
 class EntityParserContractTest {
+
+	private LoggerSpy logger;
+
+	@BeforeEach
+	void setup() {
+		logger = new LoggerSpy();
+	}
 
 	@Test
 	void parsesHeadlineIntoEntry() {
@@ -82,7 +91,7 @@ class EntityParserContractTest {
 
 	@Test
 	void splitsProtocolIntoOneEntryPerHeadline() {
-		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "02.02.2002 12:00 Bert Entnahme", "2 Other"));
+		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "02.02.2002 12:00 Bert Entnahme", "2 Other"), logger);
 
 		assertThat(entries).hasSize(2);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
@@ -91,13 +100,13 @@ class EntityParserContractTest {
 
 	@Test
 	void returnsNoEntriesForEmptyProtocol() {
-		assertThat(EntityParser.parse(List.of())).isEmpty();
+		assertThat(EntityParser.parse(List.of(), logger)).isEmpty();
 	}
 
 	@Test
 	void skipsAHeadlineWithAMalformedDateAndStillParsesNeighbouringEntries() {
 		List<Entry> entries = EntityParser
-				.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "11.12X2001 13:37 Bad Einlagerung", "02.02.2002 12:00 Bert Entnahme", "2 Other"));
+				.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "11.12X2001 13:37 Bad Einlagerung", "02.02.2002 12:00 Bert Entnahme", "2 Other"), logger);
 
 		assertThat(entries).hasSize(2);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
@@ -107,7 +116,7 @@ class EntityParserContractTest {
 	@Test
 	void doesNotFoldAMalformedHeadlinesItemsIntoThePrecedingEntry() {
 		List<Entry> entries = EntityParser
-				.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "11.12X2001 13:37 Bad Einlagerung", "5 Ghost", "02.02.2002 12:00 Bert Entnahme", "2 Other"));
+				.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "11.12X2001 13:37 Bad Einlagerung", "5 Ghost", "02.02.2002 12:00 Bert Entnahme", "2 Other"), logger);
 
 		assertThat(entries).hasSize(2);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
@@ -116,14 +125,21 @@ class EntityParserContractTest {
 
 	@Test
 	void doesNotAbortTheIngestOnAnOutOfRangeDate() {
-		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "31.13.2001 25:99 Bad Einlagerung", "5 Ghost"));
+		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "31.13.2001 25:99 Bad Einlagerung", "5 Ghost"), logger);
 
 		assertThat(entries).hasSize(1);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
 	}
 
-	private static Entry parse(String... lines) {
-		return EntryFactory.parseContent(List.of(lines)).orElseThrow();
+	@Test
+	void warnsWhenATypedHeadlineWithAnOutOfRangeDateIsDropped() {
+		EntryFactory.parseContent(List.of("31.13.2001 25:99 Bad Einlagerung", "5 Ghost"), logger);
+
+		assertThat(logger.warnMessages()).containsExactly("Dropping protocol entry: out-of-range date in headline: 31.13.2001 25:99 Bad Einlagerung");
+	}
+
+	private Entry parse(String... lines) {
+		return EntryFactory.parseContent(List.of(lines), logger).orElseThrow();
 	}
 
 	private static LocalDateTime berlinTime(Entry entry) {

@@ -23,9 +23,9 @@
 |--------|-------------------|
 | Transaktionsbericht | Transaction report: the scraped protocol of bank/storage movements |
 | Einlagerung | Deposit **into storage** (`TransferType.EINLAGERUNG`, "place") |
-| Entnahme | Withdrawal **from storage** (`TransferType.ENTNAHME`) |
+| Entnahme | Withdrawal, **both from storage and from the bank** (`TransferType.ENTNAHME`) |
 | Einzahlung | Deposit **into the bank** (gold) |
-| Auszahlung | Withdrawal **from the bank** (gold) |
+| Auszahlung | Not protocol text: the Google Sheet's column label for a bank withdrawal (the protocol itself words this **Entnahme**) |
 | erzeugter Gildenmehrwert | "Generated guild added value": a member's net contribution (deposits − withdrawals) |
 | letzte Lager-/Bankaktivität | Last storage / bank activity timestamp |
 | geschätzte Jagdeinlagerungen | "Estimated hunt deposits": estimated value of hunt-loot deposited |
