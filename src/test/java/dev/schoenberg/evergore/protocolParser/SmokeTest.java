@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -47,10 +48,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @MicronautTest
 class SmokeTest {
-	private static final String TEST_DATABASE_PATH = "src/test/resources/smokeTest.sqlite";
+	private static final Path TEST_DATABASE_PATH = Paths.get("build", "tmp", "smokeTest.sqlite");
 
 	static {
-		silentThrow(() -> Files.deleteIfExists(Paths.get(TEST_DATABASE_PATH)));
+		silentThrow(() -> {
+			Files.createDirectories(TEST_DATABASE_PATH.getParent());
+			Files.deleteIfExists(TEST_DATABASE_PATH);
+		});
 	}
 
 	private @Inject EmbeddedServer server;
@@ -175,7 +179,7 @@ class SmokeTest {
 	public static class TestConfiguration extends Configuration {
 		@Override
 		public String getDatabasePath() {
-			return TEST_DATABASE_PATH;
+			return TEST_DATABASE_PATH.toString();
 		}
 
 		@Override

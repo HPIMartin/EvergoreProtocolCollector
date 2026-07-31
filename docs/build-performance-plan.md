@@ -133,6 +133,11 @@ git worktree remove --force /tmp/egc-bench
 - **Verify**: two consecutive `./gradlew build` runs, the second reports `test` up-to-date (or
   `FROM-CACHE`); `git status` stays clean after a test run; full build green.
 - **KB**: testing.md (SmokeTest description).
+- **Correction**: the file was never committed, only gitignored, so nothing had to be removed from
+  git. The cache-busting came purely from it being rewritten inside the `processTestResources` input
+  directory, which is what moving it under `build/` fixes.
+- **Measured** (2026-07-31): `test` reports up-to-date on the second consecutive build (see S1), and
+  `git status` is clean after a test run. `build/tmp/smokeTest.sqlite` is created as expected.
 
 ### S4: Fix the test JVM strategy (undo the blanket `forkEvery = 1`)
 

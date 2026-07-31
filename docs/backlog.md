@@ -39,9 +39,8 @@ local-only Docker → home-server deploy.)*
   filter (no proven leak, Micronaut's static resolver 404s it): fold the fix into the `/api/**` inversion; (c)
   document/accept that `/`, `/index.html`, `/assets/**` are served with **no token, rate-limit or audit log**.
 - **Test hygiene:** harden the frontend `vitest` worker pool/timeout (a spurious "failed to start forks worker"
-  flake under CPU load, seen twice incl. once on the landing build); and move `smokeTest.sqlite` out of
-  `src/test/resources`: it is rewritten every run, perpetually busting `processTestResources → test → jacoco`
-  caching for the whole backend chain and risking cross-run flakiness (relates to **B8** / **B4**).
+  flake under CPU load, seen twice incl. once on the landing build; parallel Gradle execution raises the load
+  that triggers it) (relates to **B8** / **B4**).
 - **Hook hardening:** the pre-commit host-path scan can be prefix-squatted (`/home/<allowed>/home/<real>/…`
   slips past `grep -oE`): relates to **G7** / **G13**. The `/home/app` Dockerfile exemption (commit `cc75a2e`)
   itself was reviewed as necessary and correct.

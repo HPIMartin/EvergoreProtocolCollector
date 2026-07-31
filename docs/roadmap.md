@@ -61,9 +61,8 @@ dependency.
       and the single-digit-headline absorption case (backlog B17).
 - [ ] The `SeleniumPageSource` wait has no wall-clock dependency in tests; a both-fail test pins
       "scrape exception propagates, both failures logged" (backlog B16).
-- [ ] `smokeTest.sqlite` no longer rewritten under `src/test/resources` (restores backend build
-      caching); the frontend vitest worker pool/timeout hardened (the deferred test-hygiene
-      follow-ups in the backlog status section).
+- [ ] The frontend vitest worker pool/timeout hardened (the deferred test-hygiene follow-up in the
+      backlog status section).
 
 ## M5: Sheet parity, confirmed columns
 
