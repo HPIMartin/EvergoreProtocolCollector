@@ -178,6 +178,10 @@ git worktree remove --force /tmp/egc-bench
   `compileJava` (check with `--dry-run`); a deliberately brace-less local change still FAILS
   checkstyle (then revert it); hook wall time ~15–45 s.
 - **KB**: build-run-deploy.md (checkstyle section), and the hook comment if it names timings.
+- **Measured** (2026-07-31): the `--dry-run` task graph drops from **12 tasks to 2** (the whole
+  `compileJava` / `processResources` / `:frontend:npmBuild` chain is gone). A deliberate brace-less
+  `if` still fails `checkstyleMain` with a `NeedBraces` error, so the gate keeps its teeth without a
+  compiled classpath, and that failing run took **6s**.
 
 ### S6: Share the Node distribution across worktrees
 

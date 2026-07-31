@@ -106,6 +106,12 @@ checkstyle {
 	configFile = file("config/checkstyle/checkstyle.xml")
 }
 
+// The active rules are not type-aware, so Checkstyle needs no compiled classpath. Emptying it drops
+// `checkstyleMain -> classes -> processResources -> :frontend:npmBuild` from the pre-commit hook.
+tasks.withType<Checkstyle>().configureEach {
+	classpath = files()
+}
+
 spotless {
 	java {
 		target("src/**/*.java")

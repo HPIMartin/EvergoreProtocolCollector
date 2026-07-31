@@ -59,6 +59,10 @@
     (`java.checkstyle.configuration`) for live inline squiggles; the engine version there is the
     extension's own bundle (the single rule is version-stable, so build and IDE need not pin the
     same engine).
+  - The Checkstyle tasks run with an **empty classpath** (`classpath = files()`): the active rules are
+    not type-aware, and the default classpath would drag `classes → processResources →
+    :frontend:npmBuild` into every `pre-commit` run. The gate itself is unaffected, it still fails on a
+    braceless `if`.
   - Checkstyle only *reports*, no auto-fix; add braces via the redhat.java "Add braces" quick-fix.
   - Stays scoped to this one gap, not a general linter (that overlap with the reviewer agent / a
     future Sonar-style static-analysis gate, backlog G6, was why it was earlier declined).
