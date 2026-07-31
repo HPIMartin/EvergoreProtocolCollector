@@ -17,8 +17,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ApplicationExceptionHandlerTest {
 
 	private static final HttpRequest<?> GET_REQUEST = HttpRequest.GET("/test");
+	private static final String SECRET_TOKEN = "s3cr3t-api-token";
 
-	private final ApplicationExceptionHandler handler = new ApplicationExceptionHandler(new LoggerSpy());
+	private final LoggerSpy logger = new LoggerSpy();
+	private final ApplicationExceptionHandler handler = new ApplicationExceptionHandler(logger);
 
 	@Test
 	void accessNotAllowedMapsToUnauthorized() {
@@ -46,6 +48,13 @@ class ApplicationExceptionHandlerTest {
 		HttpResponse<?> response = handle(new UnknownException());
 
 		assertThat(response.getStatus().getCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.getCode());
+	}
+
+	@Test
+	void logsThePathWithoutTheTokenQueryParameter() {
+		handler.handle(HttpRequest.GET("/overview?token=" + SECRET_TOKEN), new AccessNotAllowed());
+
+		assertThat(logger.errorMessages()).containsExactly("Exception while requesting: /overview");
 	}
 
 	private HttpResponse<?> handle(ProtocolParserException exception) {

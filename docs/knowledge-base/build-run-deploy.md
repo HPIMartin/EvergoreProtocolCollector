@@ -175,7 +175,10 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
   from the *environment* is the **API token**: `evergore.security.api-token` ←
   `EVERGORE_SECURITY_API_TOKEN`, via the `@ConfigurationProperties` bean `SecurityConfiguration`;
   no value lives in the repo.
-- **`logback.xml`**: single colored STDOUT appender, root level `verbose` (very chatty).
+- **`logback.xml`**: single colored STDOUT appender, root level `info`. Nothing logs a request URI's
+  query string, so the `?token=…` credential never reaches the log: the request filter logs only
+  client IP and user-agent, and the exception handler logs `request.getPath()`, which excludes the
+  query (pinned by `ApplicationExceptionHandlerTest`).
 
 ## HTTP endpoints (all need a valid `?token=…`, except `/favicon.ico` + `/health`)
 
@@ -210,4 +213,5 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 - Scraping depends on live evergore.de markup/selectors and a valid login → brittle by nature.
 - Bundled `gecko-*-win.exe` drivers are Windows-only and version-pinned (recently upgraded in the
   working tree); the container uses its own Firefox/driver. Consider Selenium Manager / WebDriverManager.
-- `verbose` logging + credentials handling deserve a hardening pass before any real deployment.
+- The Evergore login credentials are read from a file that is baked into the image; injecting them
+  instead is still open (backlog C3).
