@@ -102,6 +102,11 @@ git worktree remove --force /tmp/egc-bench
 - **Verify**: up-to-date build is seconds, not minutes; the cold-worktree scenario shows `FROM-CACHE`
   for `compileJava`/`npmBuild` (`--info` or the profile report); `./gradlew build` still green.
 - **KB**: document both flags and the shared-cache-across-worktrees property in build-run-deploy.md.
+- **Measured** (2026-07-31, main, together with S3 since S1 only pays off for `test` once S3 lands):
+  full build green in **18m 37s**; the immediately following no-change build in **4s**, all 23 tasks
+  up-to-date (baseline ~1-2 min, and `test` re-ran every time). The cold-worktree `FROM-CACHE` check
+  is still open: it needs these flags committed first, since a worktree reads `gradle.properties`
+  from its own checkout.
 
 ### S2: Trial the configuration cache (separate commit, may be rejected)
 

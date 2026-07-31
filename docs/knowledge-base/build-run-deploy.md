@@ -14,6 +14,12 @@
   `gradle/wrapper/`) is the single entry point, no host toolchain needed beyond a JDK. Deployable
   is the application distribution (`./gradlew installDist` →
   `build/install/protocolParser/bin/protocolParser` + `lib/`), not a fat jar.
+- **Build performance (`gradle.properties`):** `org.gradle.caching` and `org.gradle.parallel` are on,
+  with `org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=768m` for the daemon that parallel execution
+  needs. The local build cache (`~/.gradle/caches/build-cache-1`) is **shared by every worktree**, so
+  a fresh worktree at an already-built commit replays `compileJava`, `checkstyle*` and the
+  `:frontend` tasks as cache hits instead of running them cold. The cache lives in the container
+  layer, so a devcontainer rebuild discards it (backlog H5).
 - **Warnings are errors:** every `JavaCompile` runs `-Xlint:all` + `-Werror`, so any compiler/lint
   warning fails the build. Excluded deliberately: `-serial` (obsolete `serialVersionUID` ceremony)
   and `-processing` (Micronaut/ORMLite/JUnit/ArchUnit annotations no processor claims, inherent to
