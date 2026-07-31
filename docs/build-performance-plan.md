@@ -141,9 +141,15 @@ git worktree remove --force /tmp/egc-bench
 
 ### S4: Fix the test JVM strategy (undo the blanket `forkEvery = 1`)
 
-- **Precondition**: coordinate with the in-flight data-integrity strand. Cheapest is to raise it
-  in that strand's fold round (the line is not yet on main); otherwise fix immediately after it
-  lands. Do not create a competing edit to `build.gradle.kts` while the strand is open.
+- **It also breaks focused test runs, not just the full build** (measured 2026-07-31):
+  `./gradlew test --tests '*OneClass*'` on a single trivial unit test ran past **14 minutes** and was
+  killed before finishing. Worker PIDs churned throughout, consistent with a fresh JVM plus JaCoCo
+  instrumentation per forked class rather than per *matched* class. Confirming which of the two the
+  filter actually forks is part of this step; either way a focused run costs minutes, which makes the
+  red-green-refactor loop unusable and raises S4's priority above the remaining steps: the TDD loop,
+  not the full build, is the cost that actually hurts. (Note when measuring: the XML reports and
+  `in-progress-results-generic.bin` are finalized when the `test` task ends, so an empty results
+  directory mid-run is normal and is not evidence of a stall.)
 - **[author] Decision**, options in recommended order:
   1. **Root-cause fix (recommended)**: find why the recompute tests needed per-class isolation
      (suspects: the public mutable `Configuration.useInMemory`/`DATABASE_TEMP_SQLITE` statics, a

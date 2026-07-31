@@ -155,6 +155,41 @@ remains the gate for landing on `main`.
   behaviour is verified 1:1** by running the distribution against the production DB (see
   testing.md).
 
+## Deploy to the home server
+
+Runs on the Docker host (no docker-in-docker in the devcontainer, backlog H2).
+
+1. **Back up the live database first.** Evergore serves only the last 30 days of logs, so
+   `database/temp.sqlite` is the only history. A first run recomputes the meta sums from all stored
+   entries and ingests still-visible entries missing from the database, both in place and not
+   reversible: `cp database/temp.sqlite database/temp.sqlite.bak-<yyyymmdd>`.
+2. **Build the image** on the Docker host (`buildAndRun.bat`, gitignored and machine-specific). The
+   build context needs `zugang.txt`, which is baked into the image (backlog C3).
+3. **Run** with the API token in the environment and a fixed timezone:
+
+   ```sh
+   docker run -p 8080:8080 -e EVERGORE_SECURITY_API_TOKEN=<token> -e TZ=UTC \
+     -v "<host>/database:/database" <image>
+   ```
+
+   - The token is **mandatory**: a blank or unset value makes the app refuse to boot
+     (`ApiTokenStartupValidator`). Keeping the value stable keeps existing bookmark URLs valid.
+   - `TZ=UTC` keeps the runtime off a DST zone while timestamps persist as default-timezone
+     wall-clock text (backlog D14). The container default is already UTC; setting it explicitly
+     pins it.
+4. **Verify**, in order: `GET /health` is anonymous and reports `UNKNOWN` until the first
+   collection finishes, then `UP` with `lastSuccessfulRun`; `GET /overview?token=<token>` renders
+   the avatar table; a request without a token returns **401**.
+5. **Rollback:** stop the container, restore the backup copy, start the previous image tag.
+
+A scrape failure is contained: Micronaut's task exception handler logs it, the app keeps serving,
+and the database is left untouched, so a broken scrape degrades to stale data rather than downtime.
+
+**Database compatibility:** the `bankEntries` / `storageEntries` columns and the `last_updated`,
+`bank_placement_<avatar>` and `bank_withdrawl_<avatar>` meta keys are stable, and the
+`storage_placement_<avatar>` / `storage_withdrawl_<avatar>` keys are additive, so deploying needs no
+schema migration (a migration framework is backlog D10).
+
 ## Runtime configuration & secrets
 
 Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **not** env-driven yet):
