@@ -102,7 +102,7 @@ Slice: the framework moves to the current major without losing 1:1.
   hygiene (D11), inward-only core rule (D13), catalog refactor (D6); full repackaging (D3) last,
   on top of a tested core.
 - **Ops & repo slimming:** drop the bundled webdrivers (F1; the author rewrites history
-  afterwards), devcontainer features fix (H10), Dependabot ecosystems plus one refresh pass
+  afterwards), Dependabot ecosystems plus one refresh pass
   including the pending major PRs (H11), build hardening (H12), Gradle cache persistence (H5).
 - **Showcase & workflow:** enforcement hooks (G7, G13), `/commit` command (G8), SessionStart hook
   (G10), agent-environment polish (G11), wildcard-import ban (G17, only between strands),
