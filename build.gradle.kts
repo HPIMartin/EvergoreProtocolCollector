@@ -121,6 +121,14 @@ spotless {
 		trimTrailingWhitespace()
 		endWithNewline()
 	}
+	// The Gradle scripts get the whitespace basics only: no opinionated Kotlin formatter, because
+	// every one of them indents with spaces while this codebase is tab-indented throughout.
+	kotlinGradle {
+		target("*.gradle.kts", "frontend/*.gradle.kts")
+		leadingSpacesToTabs()
+		trimTrailingWhitespace()
+		endWithNewline()
+	}
 }
 
 tasks.test {

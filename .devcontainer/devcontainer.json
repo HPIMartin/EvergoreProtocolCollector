@@ -1,31 +1,40 @@
 {
 	"name": "Evergore Protocol Collector (Java 25 / Gradle)",
-	"image": "mcr.microsoft.com/devcontainers/base:bookworm",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
 	"features": {
 		"ghcr.io/devcontainers/features/java:1": {
 			"version": "25",
 			"installMaven": "false",
 			"installGradle": "false"
 		},
-		"ghcr.io/devcontainers/features/node:1": {
-			"version": "lts"
+		"ghcr.io/devcontainers/features/node:2": {
+			"version": "24.18.0"
 		},
 		"ghcr.io/devcontainers/features/python:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+			"moby": "false"
+		},
 		"ghcr.io/dhoeric/features/trivy:1": {}
 	},
 	"containerEnv": {
 		"CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
 	},
 	"mounts": [
-		"source=${localWorkspaceFolder}/.devcontainer/.claude-home,target=/home/vscode/.claude,type=bind"
+		"source=${localWorkspaceFolder}/.devcontainer/.claude-home,target=/home/vscode/.claude,type=bind",
+		"source=evergore-gradle,target=/home/vscode/.gradle,type=volume",
+		"source=evergore-npm,target=/home/vscode/.npm,type=volume"
 	],
-	"postCreateCommand": "git config core.hooksPath hooks; ./gradlew --no-daemon build -x test || true",
+	"postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.gradle /home/vscode/.npm && git config core.hooksPath hooks && ./gradlew --no-daemon build -x test",
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"Anthropic.claude-code",
 				"vscjava.vscode-java-pack",
 				"shengchen.vscode-checkstyle",
+				"SonarSource.sonarlint-vscode",
 				"eamodio.gitlens"
 			],
 			"settings": {

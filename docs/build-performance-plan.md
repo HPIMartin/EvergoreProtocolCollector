@@ -41,9 +41,8 @@ configuration is.
 5. **Per-worktree node/npm state**: node-gradle downloads its own Node distribution into
    `frontend/.gradle/nodejs` *per worktree* (even though the devcontainer already ships the same
    version) and `npm ci` rebuilds `node_modules` (~130 MB) per worktree.
-6. **Nothing survives a devcontainer rebuild**: `~/.gradle` (wrapper dist, JDK toolchain, dependency
-   cache, and after step S1 the build cache) and `~/.npm` live in the container layer
-   (relates to the still-live backlog item H5).
+6. ~~**Nothing survives a devcontainer rebuild**~~: fixed by S8 (named volumes for `~/.gradle` and
+   `~/.npm`); pending proof on the author's next container rebuild.
 
 ## Rules for the implementing agent
 
@@ -145,7 +144,11 @@ git worktree remove --force /tmp/egc-bench
   `./gradlew test --tests '*OneClass*'` on a single trivial unit test ran past **14 minutes** and was
   killed before finishing. Worker PIDs churned throughout, consistent with a fresh JVM plus JaCoCo
   instrumentation per forked class rather than per *matched* class. Confirming which of the two the
-  filter actually forks is part of this step; either way a focused run costs minutes, which makes the
+  filter actually forks is part of this step. A second measurement (2026-08-01) let one run finish:
+  a single-class `--tests` run took **19m33s** end to end while the matched test itself took 8.1 s,
+  and it left **198** `junit-platform-unique-ids-*` files in `build/test-results/test/testlist`
+  against only 27 test classes in the suite — so the fork count is not simply one per candidate
+  class either, and the mechanism is still open. Either way a focused run costs minutes, which makes the
   red-green-refactor loop unusable and raises S4's priority above the remaining steps: the TDD loop,
   not the full build, is the cost that actually hurts. (Note when measuring: the XML reports and
   `in-progress-results-generic.bin` are finalized when the `test` task ends, so an empty results
@@ -225,26 +228,17 @@ git worktree remove --force /tmp/egc-bench
 - **Verify**: create a scratch worktree, run the warm-up, then `time ./gradlew build` inside it and
   compare against the cold-worktree baseline.
 
-### S8: Persist caches across devcontainer rebuilds (backlog item H5)
+### S8: Persist caches across devcontainer rebuilds — **landed 2026-08-01, proof pending**
 
-- **Change**: in `.devcontainer/devcontainer.json` add named volumes and fix ownership in
-  `postCreateCommand` (volumes are root-owned on first creation):
-
-  ```jsonc
-  "mounts": [
-      "source=${localWorkspaceFolder}/.devcontainer/.claude-home,target=/home/vscode/.claude,type=bind",
-      "source=egc-gradle-home,target=/home/vscode/.gradle,type=volume",
-      "source=egc-npm-cache,target=/home/vscode/.npm,type=volume"
-  ],
-  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.gradle /home/vscode/.npm && git config core.hooksPath hooks && ./gradlew --no-daemon build -x test || true"
-  ```
-
-  (The `&&` chaining is the still-live backlog item H12's postCreate fix; land it here.)
-- **Caveat**: devcontainer changes cannot be validated inside the container (no docker-in-docker);
-  verify on the next container rebuild on the host, per the backlog gotcha.
+- **Change** (done): `.devcontainer/devcontainer.json` mounts the named volumes `evergore-gradle` →
+  `~/.gradle` and `evergore-npm` → `~/.npm`, and `postCreateCommand` starts with
+  `sudo chown -R vscode:vscode` on both (a fresh volume is root-owned, which is what broke the
+  earlier `~/.m2` attempt). The whole chain now uses `&&` and no trailing `|| true`.
+- **Caveat**: devcontainer changes cannot be validated inside the container (its image is built by
+  the host's Dev Containers extension); the next rebuild is the proof.
 - **Verify** (next rebuild): rebuild the container twice; the second rebuild's postCreate build
   needs no dependency downloads and finishes in a fraction of the first.
-- **KB**: dev-environment.md; close H5 (and H12's postCreate bullet) in the backlog per DOC-5.
+- **KB**: documented in dev-environment.md.
 
 ### S9 (optional, low priority): JaCoCo report on demand
 

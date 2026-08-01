@@ -10,6 +10,12 @@ updates:
    directory: "/"
    schedule:
      interval: weekly
+ # The devcontainers ecosystem tracks the features only; the digest-pinned base image in
+ # .devcontainer/Dockerfile needs the docker ecosystem.
+ - package-ecosystem: "docker"
+   directory: "/.devcontainer"
+   schedule:
+     interval: weekly
  - package-ecosystem: "npm"
    directory: "/frontend"
    schedule:

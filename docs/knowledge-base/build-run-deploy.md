@@ -18,8 +18,11 @@
   with `org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=768m` for the daemon that parallel execution
   needs. The local build cache (`~/.gradle/caches/build-cache-1`) is **shared by every worktree**, so
   a fresh worktree at an already-built commit replays `compileJava`, `checkstyle*` and the
-  `:frontend` tasks as cache hits instead of running them cold. The cache lives in the container
-  layer, so a devcontainer rebuild discards it (backlog H5).
+  `:frontend` tasks as cache hits instead of running them cold. `~/.gradle` sits on a named Docker
+  volume, so it survives devcontainer rebuilds (see [dev-environment.md](dev-environment.md)).
+- **Wrapper integrity:** `gradle-wrapper.properties` carries `distributionSha256Sum` next to
+  `distributionUrl`; the wrapper aborts if the downloaded distribution does not match. Bump both
+  together on a Gradle upgrade.
 - **Warnings are errors:** every `JavaCompile` runs `-Xlint:all` + `-Werror`, so any compiler/lint
   warning fails the build. Excluded deliberately: `-serial` (obsolete `serialVersionUID` ceremony)
   and `-processing` (Micronaut/ORMLite/JUnit/ArchUnit annotations no processor claims, inherent to
@@ -37,6 +40,11 @@
     (java → external → `dev.schoenberg` → static last) + `trimTrailingWhitespace` +
     `endWithNewline`, wired into `check`: `./gradlew build` fails on any deviation;
     `./gradlew spotlessApply` fixes.
+  - The **Gradle scripts** (`build.gradle.kts`, `settings.gradle.kts`, `frontend/build.gradle.kts`)
+    are covered by a `kotlinGradle` block carrying the whitespace basics only:
+    `leadingSpacesToTabs()` + `trimTrailingWhitespace()` + `endWithNewline()`. Deliberately *no*
+    Kotlin formatter (ktlint/ktfmt): each of them indents with spaces while this codebase is
+    tab-indented, and reconciling that needs an `.editorconfig`, which is declined (below).
   - VS Code does format + organize-imports on save (`.vscode/settings.json`); star imports are
     forbidden (`java.sources.organizeImports.starThreshold: 999999` → always explicit; the
     codebase is now wildcard-free).
@@ -150,14 +158,16 @@ remains the gate for landing on `main`.
 - **`buildAndRun.bat`** (gitignored, machine-specific): `docker build` → `docker run -p 8080:8080
   -v "<host>/database:/database"`. The container serves on **8080** and persists SQLite to a
   mounted host `database/` dir.
-- *Note:* the Docker image and devcontainer are **not built/validated in the devcontainer** (no
-  docker-in-docker yet, backlog H2); validate them on the Docker host. The new-stack **app
-  behaviour is verified 1:1** by running the distribution against the production DB (see
-  testing.md).
+- *Note:* the production image **can** be built from inside the devcontainer — the
+  `docker-outside-of-docker` feature puts a `docker` CLI on the host daemon. The **devcontainer's own
+  image** is still built by the host's Dev Containers extension, so `.devcontainer/` changes only
+  land on the next rebuild. The new-stack **app behaviour is verified 1:1** by running the
+  distribution against the production DB (see testing.md).
 
 ## Deploy to the home server
 
-Runs on the Docker host (no docker-in-docker in the devcontainer, backlog H2).
+Runs against the Docker host daemon — from a host shell or from the devcontainer, whose `docker`
+CLI targets that same daemon.
 
 1. **Back up the live database first.** Evergore serves only the last 30 days of logs, so
    `database/temp.sqlite` is the only history. A first run recomputes the meta sums from all stored
@@ -237,11 +247,13 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 ## CI / dev environment
 
 - **No real CI.** No `.github/workflows/`. `.github/` has only `dependabot.yml` (`devcontainers`
-  ecosystem for the root, `npm` ecosystem for `/frontend`, both weekly) and
+  ecosystem for the root, `docker` for `/.devcontainer` — the features lock does not cover the
+  base image — and `npm` for `/frontend`, all weekly) and
   `.github/modernize/java-upgrade/` (local Copilot/VS Code "Java upgrade" agent instrumentation:
   hook scripts that log tool use, not a pipeline).
-- `.devcontainer/devcontainer.json`: Java dev container (base + `java` feature, **JDK 25**, Maven
-  off, Gradle via the wrapper); see [dev-environment.md](dev-environment.md). Dev only.
+- `.devcontainer/`: Java dev container (digest-pinned bookworm base + apt tools, `java` feature with
+  **JDK 25**, Maven off, Gradle via the wrapper); see [dev-environment.md](dev-environment.md).
+  Dev only.
 
 ## Notable runtime risks
 

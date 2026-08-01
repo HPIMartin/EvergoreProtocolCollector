@@ -4,29 +4,72 @@
   all work (builds, tests, the app, the AI agents) runs in the **devcontainer** or via Docker.
 - Why: clean host; toolchain upgrades (e.g. a future Java bump) become a one-line image change.
 
-## The devcontainer (`.devcontainer/devcontainer.json`)
+## The devcontainer (`.devcontainer/`)
 
-- Base image `mcr.microsoft.com/devcontainers/base:bookworm` (stable, always available) + **JDK 25
-  via the `java` feature** (`version: 25`, Maven off, Gradle off). The JDK version is single-sourced
-  in that feature `version`. Generic base + feature is deliberate: pinned Java image tags proved
-  unreliable (e.g. `java:1-17-bookworm` does not exist, `No manifest found`).
-- Build runs through the committed **Gradle wrapper** (`./gradlew`), which needs only a JDK;
-  `postCreateCommand` warms up with `./gradlew build -x test`.
-- VS Code extensions: Claude Code + Java pack (the *editor* language server, distinct from the JDK;
-  optional for the Gradle/agent-driven flow).
-- **Node.js (LTS) via the `node` feature, IDE tooling only** (IntelliSense, manual npm scripts).
-  The `:frontend` Gradle build does not use it: `node-gradle` downloads its own pinned Node
-  (`gradle.properties` → `nodeVersion`, see [frontend.md](frontend.md)) per machine, so the build
-  is reproducible regardless of the feature's version. The feature installs via **nvm** (downloaded
-  binaries), not the broken yarn apt repo (see the `sonarlint` deferral below), so it should be
-  safe; the image builds on the **host** (no docker-in-docker, backlog H2), so it takes effect on
-  the next rebuild only; verify there.
-- **Deferred** (removed to get a building container; re-add when needed):
-  - `docker-outside-of-docker` → selenium-firefox compose service (backlog **H2**).
-  - `sonarlint` → static analysis (backlog **G6**): it pulls `node` via the yarn apt repo, whose
-    broken GPG key breaks `apt-get update` (and with it the `docker-outside-of-docker` install).
-  - cross-rebuild **Maven cache**: the named volume at `~/.m2` was root-owned and broke the
-    `vscode` user's `~/.m2` (re-add with correct ownership, backlog **H5**).
+Two files: `Dockerfile` (base image + apt tools) and `devcontainer.json` (features, mounts,
+postCreate). The base image is pinned by digest, every feature by digest in
+`devcontainer-lock.json` — regenerate it with `devcontainer upgrade --workspace-folder .`
+(`@devcontainers/cli` resolves straight from the registry, no Docker needed).
+
+### `Dockerfile`
+
+- Base `mcr.microsoft.com/devcontainers/base:bookworm`, **pinned by digest** (tag kept for
+  readability, so Dependabot's `docker` ecosystem can bump tag + digest together). Generic base +
+  features is deliberate: pinned Java image tags proved unreliable (e.g. `java:1-17-bookworm` does
+  not exist, `No manifest found`).
+- One `apt-get` layer with `bc`, `firefox-esr`, `git-filter-repo`, `sqlite3` (~103 MB / 84
+  packages). Baked into the image, **not** installed in `postCreate`, so a rebuild replays the
+  cached layer instead of re-downloading.
+- `firefox-esr` makes the scrape path (`browser=docker`) locally runnable with **no code change**:
+  `Browser.DOCKER` builds a local headless `FirefoxDriver` and Selenium Manager fetches the matching
+  geckodriver into `~/.cache/selenium` itself (0.37.1 against Firefox ESR 140, verified 2026-08-01).
+  `DockerBrowserSmokeTest` pins it ([testing.md](testing.md)). This is the interim step; the planned
+  end state stays the remote `selenium/standalone-firefox` service (backlog **H2**), which retires it.
+- `~/.cache` is **not** on a volume, so the geckodriver (a few MB) and the Trivy DB are re-fetched
+  after a rebuild. Cheap enough to leave alone; add a third volume if it ever annoys.
+
+### `devcontainer.json` features (all digest-pinned in `devcontainer-lock.json`)
+
+| Feature | Setting | Why |
+|---|---|---|
+| `java` | `version: 25`, Maven off, Gradle off | The JDK; version single-sourced here (see below). |
+| `node` | `version: 24.18.0` | IDE tooling only; **must match `gradle.properties` → `nodeVersion`**. |
+| `python` | defaults | Utility scripting. |
+| `github-cli` | defaults | `gh` for PR/issue metadata (Dependabot triage needs more than the git refs). |
+| `docker-outside-of-docker` | `moby: false` | Docker CE CLI against the **host** daemon: image build, deploy and H2's Selenium service from inside the container. |
+| `trivy` | defaults | `./gradlew vulnScan` ([build-run-deploy.md](build-run-deploy.md)). |
+
+- The `node` feature reference is `node:2` (**major 2**, tag `1` would stay on 1.x forever). The 2.0
+  break is the removal of the default yarn-v1 install; this project uses npm, so it does not apply.
+- The exact `24.18.0` is a second place holding the Node version. The `:frontend` build does **not**
+  read it: `node-gradle` downloads its own pinned Node per machine (`gradle.properties` →
+  `nodeVersion`, see [frontend.md](frontend.md)), so the build stays reproducible either way. Pin
+  both to the same value and bump them together.
+- **Not deferred any more:** `docker-outside-of-docker` (re-added, above) and the cross-rebuild
+  caches (below). `sonarlint`: the third-party feature is a **no-op** (its `install.sh` only
+  `echo`s; the only effect is two VS Code extensions plus a `dependsOn` on `node`), so the
+  `SonarSource.sonarlint-vscode` extension is declared directly instead. Its old GPG failure came
+  from the `node` feature's yarn apt repo, which node 2.x no longer uses by default — see backlog
+  **G6**.
+
+### Caches persisted across rebuilds
+
+- Named volumes `evergore-gradle` → `~/.gradle` and `evergore-npm` → `~/.npm`. Without them a
+  rebuild discards ~1 GB of Gradle caches (deps, wrapper dists, build cache).
+- Docker creates a fresh volume **root-owned**, which is what broke the earlier `~/.m2` attempt, so
+  `postCreate` starts with `sudo chown -R vscode:vscode` on both paths.
+
+### `postCreateCommand`
+
+Chained with `&&`, no `|| true`: `chown` → `git config core.hooksPath hooks` → `./gradlew
+--no-daemon build -x test`. It **aborts on the first failure by design**; the old `;` chain
+swallowed errors and left the container half-configured. Consequence: a first start without network
+now fails visibly instead of silently.
+
+### VS Code extensions
+
+Claude Code, Java pack (the *editor* language server, distinct from the JDK), Checkstyle, SonarLint,
+GitLens.
 
 ## How to work in it (recommended)
 
@@ -62,18 +105,20 @@ Java version pinned in places that must stay in sync (**currently `25`**):
 
 1. `build.gradle.kts` → `java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }`.
 2. `.devcontainer/devcontainer.json` → the `java` feature `version`.
-3. `Dockerfile` → build stage base (`eclipse-temurin:25-jdk`) and the JDK copied into the runtime
-   stage.
+3. The root `Dockerfile` (production image) → build stage base (`eclipse-temurin:25-jdk`) and the
+   JDK copied into the runtime stage. (`.devcontainer/Dockerfile` carries no JDK; the feature does.)
 
 - The **Gradle** version is pinned separately in `gradle/wrapper/gradle-wrapper.properties`
-  (currently `9.5.1`; Java 25 needs Gradle ≥ 9.1).
+  (currently `9.5.1`; Java 25 needs Gradle ≥ 9.1), together with `distributionSha256Sum`, so the
+  wrapper refuses a tampered or swapped distribution. **On a version bump both must change**: take
+  the new sum from `<distributionUrl>.sha256` (Gradle publishes one per distribution).
 - The build toolchain JDK is auto-provisioned by the foojay resolver, so a host/devcontainer JDK
   mismatch self-heals.
 - **To upgrade:** bump the toolchain in `build.gradle.kts` plus the devcontainer and Dockerfile
   bases together, rebuild the container, run `./gradlew build`; nothing lands on the host.
   (Standing goal: keep this bump a single, documented switch.)
 
-## Production image (`Dockerfile`)
+## Production image (root `Dockerfile`)
 
 - Multi-stage: `eclipse-temurin:25-jdk` build (`./gradlew clean check installDist`, gating on the
   frontend's tests and lint too) → `selenium/standalone-firefox` runtime with JDK 25 copied in and
@@ -81,16 +126,20 @@ Java version pinned in places that must stay in sync (**currently `25`**):
 - No `dos2unix`/jar-name hacks (LF enforced via `.gitattributes`; version-independent distribution
   dir name); `.dockerignore` keeps the context lean.
 - Still **bakes `zugang.txt` (secrets) into the image**; secret injection is backlog **C3**.
-- Not built inside the devcontainer (no docker-in-docker, backlog **H2**); build/validate on the
-  Docker host.
+- Buildable **from inside the devcontainer** since the `docker-outside-of-docker` feature returned:
+  the `docker` CLI targets the host daemon, so `docker build` / `docker run` need no host shell.
+  (The devcontainer image itself is still built by the host's Dev Containers extension, so changes
+  under `.devcontainer/` only take effect on the author's next rebuild.)
 
-## Selenium in-container (deferred, backlog H2)
+## Selenium in-container
 
-- Scraping needs a browser. Plan: **docker-compose** dev setup with a
-  `selenium/standalone-firefox` service; tests connect via `RemoteWebDriver`. Retires the bundled
-  Windows `gecko-*-win.exe` drivers; scraping/integration tests run anywhere.
-- Not blocking: near-term unit/TDD work (evaluator, parser) needs no browser.
-- Re-adding the `docker-outside-of-docker` feature is part of backlog H2.
+- Scraping needs a browser. **Today:** `firefox-esr` from `.devcontainer/Dockerfile`; `browser=docker`
+  drives it locally and Selenium Manager supplies the geckodriver. No code change, no service.
+- **Planned end state (backlog H2):** a `selenium/standalone-firefox` service with tests connecting
+  via `RemoteWebDriver`. That needs `Browser.DOCKER` rebuilt (it constructs a *local* `FirefoxDriver`
+  today) plus a configurable hub URL; in exchange the dev browser matches the production runtime and
+  `firefox-esr` drops out of the image again. Retires the bundled Windows `gecko-*-win.exe` drivers
+  (backlog **F1**).
 
 See backlog **Epic H** for open items; production runtime details:
 [build-run-deploy.md](build-run-deploy.md).
