@@ -103,9 +103,20 @@ git worktree remove --force /tmp/egc-bench
 - **KB**: document both flags and the shared-cache-across-worktrees property in build-run-deploy.md.
 - **Measured** (2026-07-31, main, together with S3 since S1 only pays off for `test` once S3 lands):
   full build green in **18m 37s**; the immediately following no-change build in **4s**, all 23 tasks
-  up-to-date (baseline ~1-2 min, and `test` re-ran every time). The cold-worktree `FROM-CACHE` check
-  is still open: it needs these flags committed first, since a worktree reads `gradle.properties`
-  from its own checkout.
+  up-to-date (baseline ~1-2 min, and `test` re-ran every time).
+- **Cold-worktree check** (2026-08-01, after S4): a fresh worktree at HEAD builds green in **11s**,
+  12 of 25 tasks `FROM-CACHE` — including `compileJava` and `:frontend:npmBuild`, plus `checkstyle*`,
+  `spotless*`, `npmLint`, `npmTest`, `compileTestJava`, `test` and `jacocoTestReport`. Cross-worktree
+  sharing is confirmed: both worktrees compute the **same** cache key for `compileJava`
+  (`3ec47124…`) and `npmBuild` (`dd73cda4…`), so entries are portable, not path-bound.
+- **Caveat worth knowing** (cost the first attempt at this check a false negative): Gradle stores a
+  cache entry only when a task actually *executes*. A task that has been UP-TO-DATE in the main
+  worktree ever since caching was enabled has never been stored, so the first cold worktree still
+  runs it cold — and stores it for the next one. The first attempt therefore saw `compileJava` and
+  `npmBuild` execute (18s build); after forcing one real execution of each, the next fresh worktree
+  hit both from cache.
+- `:frontend:nodeSetup` and `:frontend:npmInstall` still run per worktree — that is S6's scope, not
+  a cache failure.
 
 ### S2: Trial the configuration cache (separate commit, may be rejected)
 

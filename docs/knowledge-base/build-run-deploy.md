@@ -16,9 +16,13 @@
   `build/install/protocolParser/bin/protocolParser` + `lib/`), not a fat jar.
 - **Build performance (`gradle.properties`):** `org.gradle.caching` and `org.gradle.parallel` are on,
   with `org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=768m` for the daemon that parallel execution
-  needs. The local build cache (`~/.gradle/caches/build-cache-1`) is **shared by every worktree**, so
-  a fresh worktree at an already-built commit replays `compileJava`, `checkstyle*` and the
-  `:frontend` tasks as cache hits instead of running them cold. `~/.gradle` sits on a named Docker
+  needs. The local build cache (`~/.gradle/caches/build-cache-1`) is **shared by every worktree** —
+  both compute the same cache key, so entries are portable, not path-bound. Verified 2026-08-01: a
+  fresh worktree at an already-built commit builds green in **11s** with `compileJava`,
+  `checkstyle*`, `spotless*`, the `:frontend` tasks, `test` and `jacocoTestReport` all `FROM-CACHE`.
+  Gradle stores an entry only when a task really *executes*, so a task that has stayed UP-TO-DATE
+  since caching was enabled has nothing stored yet: the **first** cold worktree still runs it and
+  only the next one hits. `~/.gradle` sits on a named Docker
   volume, so it survives devcontainer rebuilds (see [dev-environment.md](dev-environment.md)).
 - **Wrapper integrity:** `gradle-wrapper.properties` carries `distributionSha256Sum` next to
   `distributionUrl`; the wrapper aborts if the downloaded distribution does not match. Bump both
