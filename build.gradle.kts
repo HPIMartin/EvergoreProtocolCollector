@@ -133,7 +133,19 @@ spotless {
 
 tasks.test {
 	finalizedBy(tasks.jacocoTestReport)
-	forkEvery = 1
+
+	// Guard against re-adding `forkEvery`. Gradle restarts the test JVM per compiled *class file* of
+	// the test source set (198 here, only 28 of which hold tests), and `--tests` does not reduce that
+	// count because it filters inside the worker - so per-class forking cost ~8 min per suite run and
+	// made focused runs unusable. It has twice been added as a crutch for a startup race that was
+	// already fixed elsewhere and twice been proven unnecessary (2026-06-20, 2026-08-01). This check
+	// is configuration-time on purpose: `forkEvery` is not a tracked task input, so a re-add would
+	// leave `test` UP-TO-DATE and an execution-time check unreached.
+	check(forkEvery == 0L) {
+		"tasks.test.forkEvery is set to $forkEvery, but the suite is green in a single JVM. " +
+				"Per-class forking costs ~8 min per run and breaks focused --tests runs. " +
+				"See the test-execution model in docs/knowledge-base/testing.md before changing this."
+	}
 }
 
 val vulnScanFailOnSeverity = providers.gradleProperty("vulnScan.failOnSeverity").orNull?.takeIf { it.isNotBlank() }

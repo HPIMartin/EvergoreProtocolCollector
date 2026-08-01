@@ -106,7 +106,7 @@ Slice: the framework moves to the current major without losing 1:1.
   including the pending major PRs (H11).
 - **Showcase & workflow:** enforcement hooks (G7, G13), `/commit` command (G8), SessionStart hook
   (G10), agent-environment polish (G11), wildcard-import ban (G17, only between strands),
-  `testing.md` refresh (G16), KB accuracy sweep and citation guard (G18, G19), BDD tooling
+  KB accuracy sweep and citation guard (G18, G19), BDD tooling
   decision (G4), case study (G5), static-analysis gate (G6).
 - **Product growth:** hunt-loot estimate (E3, gated on the D-4 valuation rule), date-range
   reporting (E4), history/time-series (E6), delivery channel (F3), multi-guild (F4), public API (F5).

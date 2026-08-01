@@ -4,28 +4,37 @@
 
 | Test | Scope | Style |
 |------|-------|-------|
-| `SmokeTest` | Boots the real Micronaut `EmbeddedServer`; mocks Selenium (`TestEvergoreDataExtractor extends EvergoreDataExtractor` with `super(null,…)`); points DB at `build/tmp/smokeTest.sqlite` (under the build directory, so rewriting it per run cannot invalidate the `processTestResources` inputs); sets job delay 0; asserts app starts + the job runs, `/overview` & `/avatars/{a}/bank|storage` return seeded HTML (fuzzy via Levenshtein), unknown path → 4xx. `@MockBean` for `Configuration`, the hooks, task-exception-handler. | `@MicronautTest` integration / smoke |
+| `SmokeTest` | Boots the real Micronaut `EmbeddedServer`; mocks Selenium (`TestEvergoreDataExtractor extends EvergoreDataExtractor` with `super(null,…)`); points DB at `build/tmp/smokeTest.sqlite` (under the build directory, so rewriting it per run cannot invalidate the `processTestResources` inputs); sets job delay 0; asserts app starts + the job runs, `/overview` & `/avatars/{a}/bank\|storage` return seeded HTML (fuzzy via Levenshtein), unknown path → 4xx, and that the `PageSource` bean resolves to the `SeleniumPageSource` adapter. `@MockBean` for `Configuration`, the hooks, task-exception-handler. | `@MicronautTest` integration / smoke |
 | `DockerBrowserSmokeTest` | Starts the browser for the **configured** mode (`Configuration.browser` → `Browser.fromString`), loads a `data:` URL and reads an element back, so the scrape path's driver half is covered without the network or the live game. Selenium Manager resolves the driver itself (`~/.cache/selenium`, geckodriver 0.37.1 against Firefox ESR 140); a browser on the `PATH` is the only prerequisite. `assumeTrue`-skipped where none exists — the production image's build stage runs `check` on `eclipse-temurin:25-jdk` and must not gain a browser dependency. | integration (real browser, no server) |
 | `TestHelper` | Levenshtein "closest line" helper for fuzzy HTML assertions. | helper (no `@Test`) |
 | `MetaInformationTest` | `MetaInformation<T>` delegates serialize/deserialize to its `MetaInformationKey<T>`. | pure unit |
-| `EntryFactoryTest` | One test `deduplicates()`: 3 raw lines collapse to 1 item by name+quality. | pure unit (thin) |
-| `EvergoreItemTest` | `getStorageValue()`/`getWithdrawlValue()` for 3 cases (raw, craftable, gem). | pure unit |
-| `HexagonalArchitectureTest` | ArchUnit guard: `domain`+`businessLogic` depend on **no** framework/library packages (Micronaut, jakarta, Selenium, ORMLite/SQLite, Jackson, RxJava, Apache Commons, logback/SLF4J, Netty). Turns the hexagonal golden rule into a build failure (verified non-vacuous: temporarily forbidding `java.time` flags 22 core usages). | architecture guard (ArchUnit + JUnit 5) |
-| `EvergoreDataEvaluatorTest` | Unit tests covering: bank aggregation (placement + withdrawl sums), storage valuation (craftable item with quantity and partial quality), unknown item fallback (zero value + WARN + collected into `EvaluationResult`), full recompute (sums start at zero over all stored entries and **overwrite** stale meta values; a second run is idempotent), mid-run-failure self-healing (a failed avatar writes nothing; `last_updated` is display-only, written once after full success), and avatar union across both repos (all keys written per avatar). Hand-written fakes: `FakeMetaInformationRepository`, `BankRepositoryStub`, `StorageRepositoryStub`, `LoggerSpy`. | pure unit |
+| `EntryFactoryTest` | `deduplicates()`: 3 raw lines collapse to 1 item by name+quality; a timestamped headline with no known transfer type is dropped **with a warning**. | pure unit (thin) |
+| `EntityParserContractTest` | The parser contract, pinned line by line: headline → entry, `Einzahlung`→`EINLAGERUNG`, withdrawal entries, quality defaulting to 100 when absent, the value-neutral `+1` modifier (ignored, and merged with its unmodified counterpart), quantity merging for same name+quality, separation when quality differs, the `Impressum` terminator, one entry per headline, empty protocol → no entries, and the malformed/out-of-range-date paths (skipped without aborting the ingest, neighbouring entries still parsed, the malformed headline's items **not** folded into the preceding entry, a warning when a typed headline is dropped). | pure unit |
+| `EvergoreItemTest` | `getStorageValue()`/`getWithdrawlValue()` for raw, craftable and gem items, plus two all-items golden-master rules: withdrawl value is market value scaled by 0.6 for **every** item, storage value is zero for all non-craftable and the sum of ingredient withdrawl costs per unit for all craftable ones. | pure unit |
+| `HexagonalArchitectureTest` | ArchUnit guard, three rules: `domain`+`businessLogic` depend on **no** framework/library packages (Micronaut, jakarta, Selenium, ORMLite/SQLite, Jackson, RxJava, Apache Commons, logback/SLF4J, Netty); the `application` use cases stay framework-free too; `application` depends only **inward**. Turns the hexagonal golden rule into a build failure (verified non-vacuous: temporarily forbidding `java.time` flags 22 core usages). | architecture guard (ArchUnit + JUnit 5) |
+| `EvergoreDataEvaluatorTest` | Unit tests covering: bank aggregation (placement + withdrawl sums), storage valuation (craftable item with quantity and partial quality), `Erde-Eibenlanze` resolving by its real in-game spelling, unknown item fallback (zero value + WARN + counted per occurrence into `EvaluationResult`, and empty when everything resolves), full recompute (sums start at zero over all stored entries and **overwrite** stale meta values; a second run is idempotent), mid-run-failure self-healing (a failed avatar writes nothing, and no `last_updated` is written), avatar union across both repos (all keys written per avatar), and `last_updated` being written in Berlin wall-clock time from the application `Clock`. Hand-written fakes: `FakeMetaInformationRepository`, `BankRepositoryStub`, `StorageRepositoryStub`, `LoggerSpy`. | pure unit |
 | `EvergoreDataExtractorTest` | Unit tests covering: parsed bank/storage entries are persisted; a still-visible entry older than the stored max but missing from the database is healed (ingested) via `getAllSince(min scraped timestamp)`; an identical already-stored row (bank and storage) is not duplicated; a scraped identical pair with one already stored ingests only the surplus; two identical scraped rows both survive when neither is stored yet; entries are ingested oldest-first for partial-batch safety. `FakePageSource` returns canned `PageContents`; capturing extensions of `BankRepositoryStub`/`StorageRepositoryStub` assert the `getAllSince` argument (a wrong argument yields an empty result, so a mutant passing the wrong timestamp is caught). No browser, no framework. | pure unit |
 | `BankDatabaseRepositoryTest` | Repository is usable without separate init (file DB); `getAllSince(timestamp)` includes the row exactly at the boundary, excludes older rows, includes newer rows (in-memory SQLite). | adapter integration |
 | `StorageDatabaseRepositoryTest` | `getAllSince(timestamp)` includes the row exactly at the boundary, excludes older rows, includes newer rows (in-memory SQLite). | adapter integration |
-| `ProtocolEvaluationAcceptanceTest` | End-to-end: copies the committed synthetic fixture DB (`testdata.sqlite`) to a `build/` working copy, boots the real Micronaut `EmbeddedServer` against it, stubs the scraper (`loadData()` no-op) while the **real** `EvergoreDataEvaluator` runs via the scheduled job, then asserts `/overview` bank totals and `/avatars/{a}/bank|storage` rows through `RenderedTable`, plus storage **valuation** at the `MetaInformationRepository` bean level (no endpoint surfaces it yet, Epic E1). | `@MicronautTest` acceptance / e2e |
+| `ProtocolEvaluationAcceptanceTest` | End-to-end: copies the committed synthetic fixture DB (`testdata.sqlite`) to a `build/` working copy, boots the real Micronaut `EmbeddedServer` against it, stubs the scraper (`loadData()` no-op) while the **real** `EvergoreDataEvaluator` runs via the scheduled job, then asserts `/overview` bank totals and `/avatars/{a}/bank\|storage` rows through `RenderedTable`, plus storage **valuation** at the `MetaInformationRepository` bean level (no endpoint surfaces it yet, Epic E1) and an unknown endpoint answering 4xx. | `@MicronautTest` acceptance / e2e |
 | `RenderedTable` | Parses rendered HTML tables into a header + rows of cell text, tolerant to attributes/styling/wrapper tags, so UI restyling never breaks assertions. The robust successor to `TestHelper`'s Levenshtein matching; **all** markup coupling lives here alone. | helper (no `@Test`) |
 | `TestDataGenerator` | Run-on-demand writer (`./gradlew generateAcceptanceDb`) of the committed synthetic fixture `testdata.sqlite`: 3 avatars; bank in both directions; storage with quality scaling and a zero-value item. Item names reference `EvergoreItem.*.ingameName`, so values stay derived, not invented. | fixture generator (`main`) |
-| `LastRunStatusTest` | Three pure unit tests: empty before any run; records a specific `Instant` and returns it; second record overwrites the first. No framework. | pure unit |
-| `LastRunHealthIndicatorTest` | Two pure unit tests (with framework dep on `micronaut-management`): reports `UNKNOWN` with no detail map before any run; reports `UP` with `lastSuccessfulRun` detail key after a run. Subscribes to the `Publisher` inline via an anonymous `Subscriber`. | pure unit |
-| `EvergoreDataCollectorJobTest` | Three unit tests: records `lastSuccessfulRun` after a successful cycle; does **not** record when `loadData` throws; does **not** record when `evaluateData` throws. Uses `Clock.fixed(…)`, `ZeroDelayConfiguration extends Configuration` (delay 0), and local `FailableExtractor`/`FailableEvaluator` inner classes; no static state. | pure unit |
-| `HealthEndpointTest` | Boots the real Micronaut `EmbeddedServer`; mocks the extractor (no-op `loadData`), config (zero delay, test DB path), and hooks (BootSignalRecorder pattern). Asserts: `GET /health` returns **exactly 200** without a token; response body contains `lastRun` + `lastSuccessfulRun`; `/overview` without a token is rejected (4xx); `/healthz` is rejected with the same status as `/overview` (exact-match scoping test: ensures the `/health` exemption does not bleed to prefix matches). | `@MicronautTest` integration |
-| `TransferTypeTest` | Two pure unit tests locking `TransferType.toGermanString()` for both constants (`EINLAGERUNG`→"Einlagerung", `ENTNAHME`→"Entnahme"), the single source for the enum→German mapping. | pure unit |
-| `ApplicationExceptionHandlerTest` | Four unit tests asserting each `ProtocolParserException` subclass maps to its HTTP status via the visitor, plus the `onUnknown` branch. `accept` is `abstract`, so a new exception subclass is a compile error rather than a silent fallback. | pure unit |
+| `LastRunStatusTest` | Pure unit tests: empty before any run; records a specific `Instant` and returns it; second record overwrites the first; no unknown item names initially; records the unknown item names of the last run. No framework. | pure unit |
+| `LastRunHealthIndicatorTest` | Pure unit tests (with framework dep on `micronaut-management`): reports `UNKNOWN` with no detail map before any run; reports `UP` with `lastSuccessfulRun` detail key after a run; omits the unknown-item detail when the last run had none; reports the unknown-item count **and** names when present. Subscribes to the `Publisher` inline via an anonymous `Subscriber`. | pure unit |
+| `EvergoreDataCollectorJobTest` | Pure unit tests: records `lastSuccessfulRun` after a successful cycle; does **not** record when `loadData` throws; does **not** record when `evaluateData` throws; forwards the run's unknown items to `LastRunStatus`. Uses `Clock.fixed(…)`, `ZeroDelayConfiguration extends Configuration` (delay 0), and local `FailableExtractor`/`FailableEvaluator` inner classes; no static state. | pure unit |
+| `HealthEndpointTest` | Boots the real Micronaut `EmbeddedServer`; mocks the extractor (no-op `loadData`), config (zero delay, test DB path), and hooks (BootSignalRecorder pattern). Asserts: `GET /health` returns **exactly 200** without a token; response body contains `lastRun` + `lastSuccessfulRun`; `/overview` without a token is rejected (4xx); `/healthz` is rejected with the same status as `/overview` (exact-match scoping test: ensures the `/health` exemption does not bleed to prefix matches); a **wrong** token is rejected 4xx, not just a missing one. | `@MicronautTest` integration |
+| `TransferTypeTest` | Locks `TransferType.toGermanString()` for both constants (`EINLAGERUNG`→"Einlagerung", `ENTNAHME`→"Entnahme"), the single source for the enum→German mapping. | pure unit |
+| `ApplicationExceptionHandlerTest` | Unit tests asserting each `ProtocolParserException` subclass maps to its HTTP status via the visitor, plus the `onUnknown` branch, plus that the logged path carries **no** token query parameter. `accept` is `abstract`, so a new exception subclass is a compile error rather than a silent fallback. | pure unit |
 | `ProductionSnapshotRecomputeCheck` | **`@Disabled`, on-demand**: boots the real context against a *copy* of a local production snapshot (`temp.sqlite`, gitignored) with the scraper stubbed, so the real `EvergoreDataEvaluator` recomputes the meta sums on real data and the delta can be inspected before a deploy; also exports the valuation catalog and asserts item names are unique (`findItem` takes the first name match). Details: [1:1 against the production instance](#11-against-the-production-instance). | `@MicronautTest` on-demand check |
-| `RateLimitCounterTest` | Three pure unit tests for `RateLimitCounter`: the block lifts deterministically after `block-duration` (injected `Clock`, no `sleep`), stays active before expiry, and 20 concurrent `block()` calls leave consistent state. | pure unit |
+| `RateLimitCounterTest` | Pure unit tests for `RateLimitCounter`: the block lifts deterministically after `block-duration` (injected `Clock`, no `sleep`), stays active before expiry, and 20 concurrent `block()` calls leave consistent state. | pure unit |
+| `RateLimitFilterTest` | Boots the server in the `ratelimit` environment (`rebuildContext = true`) against its own fixture DB copy: `/favicon.ico` is blocked with 429 once the configured limit is exceeded, while `/`, `/index.html` and a **bundled** asset (resolved from the packaged `assets/` dir, not hard-coded) stay repeatedly reachable without a token, and `/overview` still answers 401. | `@MicronautTest` integration |
+| `SpaHistoryFallbackTest` | Boots the server against its own fixture DB copy: an unknown *navigation* path returns 200 with the byte-identical bundled `index.html` and `Cache-Control: no-cache`, while a missing asset and an unknown `/api` path keep the default 404. | `@MicronautTest` integration |
+| `SpaBundlePackagingTest` | Guards that `/static/ui/index.html` is on the test runtime classpath, i.e. the SPA bundle really is packaged into the jar by `processResources`. | pure unit (packaging guard) |
+| `ApiTokenStartupValidatorTest` | Startup fails with the property name (`evergore.security.api-token`) in the message for an empty, blank and `null` token; a set token starts up; the `onApplicationEvent` entry point propagates the same failure. | pure unit |
+| `BootSignalRecorderTest` | `awaitCollection()` unblocks both on `recordCollectionFinished()` and on `recordException()` (real threads, no timeouts), and the `dataLoaded`/`exceptionOccurred` queries flip false→true. Pins the boot-signal seam itself. | pure unit (concurrency) |
+| `BankEntryEqualityTest` / `StorageEntryEqualityTest` | Value equality of the two entry records: equal when all fields match, different for each single field in turn (timestamp, avatar, amount/quantity, name, quality, transfer type). The window-dedup in `EvergoreDataExtractor` compares entries by value, so this is load-bearing, not record boilerplate. | pure unit |
+| `SeleniumPageSourceTest` | Drives `SeleniumPageSource` against a `RecordingWebDriver` fake: the driver is quit after a successful scrape **and** after a failing one (try/finally), the scrape failure propagates and is logged, and a failure while quitting is logged without discarding the already-scraped contents. | pure unit (fake driver) |
+| Fakes & stubs | `LoggerSpy` (records info/warn/error messages), `FakeMetaInformationRepository` (in-memory map), `BankRepositoryStub` / `StorageRepositoryStub`, `RecordingWebDriver` (scriptable Selenium `WebDriver`). Hand-written, no mocking framework. | helpers (no `@Test`) |
 
 ## Boot-signal seam
 
@@ -51,23 +60,27 @@
 
 ## Coverage map
 
-**Has tests:** `EvergoreItem` (value math, 3 of ~600 entries) · `MetaInformation` (serialization) ·
-`EntryFactory` (dedup size only) · `EvergoreDataEvaluator` (bank aggregation, storage valuation, unknown item fallback, full-recompute overwrite + idempotence + failed-run self-heal, avatar union) ·
+**Has tests:** `EvergoreItem` (value math per item kind **plus** two all-items golden-master rules over the whole catalog) · `MetaInformation` (serialization) ·
+`EntryFactory` / `EntityParser` (the parsing contract: headline→entry, type mapping, quality defaulting, `+1` merging, quantity merging, `Impressum` terminator, malformed/out-of-range dates) · `EvergoreDataEvaluator` (bank aggregation, storage valuation, unknown item fallback + per-occurrence counting, full-recompute overwrite + idempotence + failed-run self-heal, avatar union, Berlin wall-clock `last_updated`) ·
 `EvergoreDataExtractor` (parse→persist pipeline, window dedup via `getAllSince(min scraped timestamp)`: heals a still-visible entry missing from the database, no-duplicate + surplus-only dedup, oldest-first partial-batch safety) ·
 `BankDatabaseRepository` / `StorageDatabaseRepository` (`getAllSince` inclusive boundary, in-memory SQLite) ·
 the **evaluate→overview pipeline end-to-end** via `ProtocolEvaluationAcceptanceTest` (real evaluator + real DB + HTTP) ·
-`LastRunStatus` (record + read) · `LastRunHealthIndicator` (UNKNOWN / UP + detail) ·
-`EvergoreDataCollectorJob` (records run on success, not on failure) ·
-`/health` endpoint + `TokenValidationFilter` exact-match scoping via `HealthEndpointTest` ·
-`TransferType`→German mapping (`toGermanString`) · `ApplicationExceptionHandler` exception→HTTP visitor dispatch ·
-`RateLimitCounter` (block thread-safety + deterministic expiry) ·
+`LastRunStatus` (record + read, incl. unknown item names) · `LastRunHealthIndicator` (UNKNOWN / UP + detail, incl. the unknown-item detail) ·
+`EvergoreDataCollectorJob` (records run on success, not on failure; forwards unknown items) ·
+`/health` endpoint + `TokenValidationFilter` exact-match scoping and wrong-token rejection via `HealthEndpointTest` ·
+`TransferType`→German mapping (`toGermanString`) · `ApplicationExceptionHandler` exception→HTTP visitor dispatch + token-free logging ·
+`RateLimitCounter` (block thread-safety + deterministic expiry) and the filter's public-path exemptions (`RateLimitFilterTest`) ·
+`ApiTokenStartupValidator` (startup aborts on an unset/blank token) ·
+the SPA seam: history fallback vs. 404 (`SpaHistoryFallbackTest`) and bundle packaging (`SpaBundlePackagingTest`) ·
+`BankEntry`/`StorageEntry` value equality (load-bearing for the window dedup) ·
+`SeleniumPageSource`'s driver lifecycle (quit on success and failure, failure logging) ·
+`BootSignalRecorder` (the boot-signal seam itself) ·
 and *indirectly* via `SmokeTest`: controllers, filters, repositories, the job, `OutputFormatter`.
 
 **Most important UNTESTED logic:**
-1. **`EntryFactory` / `EntityParser`**: date/avatar/type/quality regex parsing, `Entnahme` branch,
-   merged-quantity value, `Impressum` terminator. Only dedup-size is asserted.
-2. **`SeleniumPageSource`**: Selenium scraping/pagination/login (inherently hard; page-source port now exists, but the Selenium path itself is not unit-tested).
-3. **Repositories**: paging, `getAllFor(avatar)`. Only incidental smoke coverage (`getAllSince` has adapter tests).
+1. **`SeleniumPageSource`'s scrape itself**: navigation, pagination and login against the live site
+   (inherently hard). The driver *lifecycle* around it is covered by `SeleniumPageSourceTest`.
+2. **Repositories**: paging, `getAllFor(avatar)`. Only incidental smoke coverage (`getAllSince` has adapter tests).
 
 ## Migration verification: Gradle / Java 25 / Micronaut 4.10 (2026-06-16)
 
@@ -174,17 +187,25 @@ what makes the storage cross-check above possible.
 - It writes only under `build/`, never to the snapshot. Always copy the snapshot; never open the
   original read-write.
 
-## Test isolation (forking)
+## Test execution model (one JVM)
 
-`build.gradle.kts` runs each test class in a fresh JVM (`forkEvery = 1`). This is a **temporary
-workaround, not the intended strategy**: it was added alongside the meta-sums recompute so the
-`@MicronautTest` classes that boot the real `@Scheduled` collector job stop interfering across a
-shared JVM (a `no such table: metaInformation` failure when a job evaluates before table
-initialization). The blanket per-class fork is a blunt fix and costs build time; the suspected root
-cause (shared mutable static state — `Configuration.useInMemory`/`DATABASE_TEMP_SQLITE`, a shared
-SQLite file, `BootSignalRecorder`) is unconfirmed, and the proper resolution (remove the shared
-state and run one JVM, or parallelize, or split a boot-test suite) is tracked in the
-build-performance plan (S4) together with the doc/build-agreement item **G16**.
+The whole suite runs in a **single test JVM**. `tasks.test` sets no `forkEvery`, and a
+configuration-time `check` fails the build if it is ever set again.
+
+- **Nothing needs the isolation.** There is no shared mutable state across test classes: every
+  `@MicronautTest` overrides `Configuration.getDatabasePath()` in its own `@MockBean` subclass and
+  owns a private SQLite file under `build/tmp/**`, and boot signals travel through the DI-scoped
+  `BootSignalRecorder` (above), not statics. `Configuration.useInMemory` / `DATABASE_TEMP_SQLITE`
+  are public and mutable but are *instance* fields of a `@Singleton` that nothing writes.
+- **What forking cost.** Gradle hands every non-anonymous **class file** of the test source set to
+  the test-class processor, so `forkEvery = 1` restarted the JVM once per class file — 198 of them,
+  only 28 holding tests. `--tests` does not reduce that count: it filters inside the worker at JUnit
+  discovery, so one focused test still paid all 198 boots (19m33s for an 8.1 s test), and the full
+  suite took ~9 min for ~31 s of actual test time.
+- **Why a guard.** Per-class forking has twice been added as a crutch for a startup race that was
+  already fixed elsewhere, and twice removed once the suite was proven green in one JVM (decisions
+  2026-06-20, 2026-08-01). The check is configuration-time on purpose: `forkEvery` is not a tracked
+  task input, so a re-add leaves `test` UP-TO-DATE and an execution-time check would never run.
 
 ## Testing direction for the rebuild (TDD/BDD)
 

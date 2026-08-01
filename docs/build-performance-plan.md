@@ -153,22 +153,34 @@ git worktree remove --force /tmp/egc-bench
   not the full build, is the cost that actually hurts. (Note when measuring: the XML reports and
   `in-progress-results-generic.bin` are finalized when the `test` task ends, so an empty results
   directory mid-run is normal and is not evidence of a stall.)
-- **[author] Decision**, options in recommended order:
-  1. **Root-cause fix (recommended)**: find why the recompute tests needed per-class isolation
-     (suspects: the public mutable `Configuration.useInMemory`/`DATABASE_TEMP_SQLITE` statics, a
-     shared SQLite file, static state in `BootSignalRecorder`), fix the shared state, run the whole
-     suite in one JVM. Expected: test task ~1.5–2 min.
-  2. **Keep per-class forking but parallelize**: `forkEvery = 1` plus
-     `maxParallelForks = Runtime.getRuntime().availableProcessors() / 2`. Expected: ~2–3 min; no
-     shared-state work needed, but 12 concurrent Micronaut boots may contend.
-  3. **Split suites**: fast unit suite in one JVM, a separate `bootTest` task with forking for the
-     `@MicronautTest` classes only.
-- Whatever lands must also resolve the testing.md fork-isolation discrepancy flagged by the
-  conformance audit (still-live backlog item G16): the doc and the build must agree.
-- **Verify**: `./gradlew test` wall time at or under the expected number; suite green in 5
+- **[author] Decision 2026-08-01: option 1, and it turned out to need no fix at all** — delete the
+  line, plus a build-level guard against a third re-add (author's call). Options 2 (parallel forks)
+  and 3 (suite split) were rejected once the investigation showed there is no shared state to work
+  around; at ~31 s of test time in one JVM they would have added JVM boots, not removed them.
+- **The fork mechanism, which this step had left open**: Gradle hands every **non-anonymous class
+  file** of the test source set to the test-class processor, so `forkEvery = 1` restarts the JVM
+  once per class file — neither per candidate test class nor per matched class. Proof: 204 `.class`
+  files under `build/classes/java/test`, 6 of them anonymous (`$1`) → 198, matching the 198
+  `junit-platform-unique-ids-*.txt` files exactly; only 28 of them were non-empty. `--tests` filters
+  *inside* the worker at JUnit discovery, so it removes no forks at all — 170 JVMs booted, found
+  nothing and exited. Without `forkEvery`: 1 file.
+- **All three suspected root causes were disproven**: `BootSignalRecorder` has no static state
+  whatsoever (instance fields, DI-`@Singleton` via a test `@Factory`); `Configuration.useInMemory` /
+  `DATABASE_TEMP_SQLITE` are public and mutable but *instance* fields of a `@Singleton` that nothing
+  in the tree writes; and the shared SQLite file was already gone when the fork landed — at
+  `2f9888a` every `@MicronautTest` already pointed at its own file under `build/tmp/**`. Decisive:
+  a worktree at `2f9888a`, **the commit that introduced `forkEvery = 1`**, runs green without it
+  (26 classes, 122 tests, 31 s). The same crutch had already been added and removed on 2026-06-20.
+- **Measured** (2026-08-01, main): `cleanTest test` (cache disabled so the tests really execute)
+  **1m 01s**, five consecutive runs all green and identical — 28 classes, 134 tests, 0 failures,
+  0 errors, 1 fork each. Baseline ~9 min. With the build cache on, a repeat run replays in **5 s**.
+  The guard was proven to have teeth: re-adding `forkEvery = 1` fails the build in 1 s with the
+  explanatory message.
+- **Verify** (done): `./gradlew test` wall time at or under the expected number; suite green in 5
   consecutive runs (isolation regressions show up as flakes); no test order dependence
   (`test.systemProperty("junit.jupiter.testclass.order.default", …)` experiments are out of scope).
-- **KB**: testing.md execution-model section.
+- **KB**: testing.md execution-model section; this also completed the testing.md inventory refresh
+  (the conformance audit's remaining doc item), so that backlog row is gone.
 
 ### S5: Decouple the pre-commit hook from the frontend build
 
