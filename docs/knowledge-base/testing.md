@@ -23,6 +23,7 @@
 | `HealthEndpointTest` | Boots the real Micronaut `EmbeddedServer`; mocks the extractor (no-op `loadData`), config (zero delay, test DB path), and hooks (BootSignalRecorder pattern). Asserts: `GET /health` returns **exactly 200** without a token; response body contains `lastRun` + `lastSuccessfulRun`; `/overview` without a token is rejected (4xx); `/healthz` is rejected with the same status as `/overview` (exact-match scoping test: ensures the `/health` exemption does not bleed to prefix matches). | `@MicronautTest` integration |
 | `TransferTypeTest` | Two pure unit tests locking `TransferType.toGermanString()` for both constants (`EINLAGERUNG`→"Einlagerung", `ENTNAHME`→"Entnahme"), the single source for the enum→German mapping. | pure unit |
 | `ApplicationExceptionHandlerTest` | Four unit tests asserting each `ProtocolParserException` subclass maps to its HTTP status via the visitor, plus the `onUnknown` branch. `accept` is `abstract`, so a new exception subclass is a compile error rather than a silent fallback. | pure unit |
+| `ProductionSnapshotRecomputeCheck` | **`@Disabled`, on-demand**: boots the real context against a *copy* of a local production snapshot (`temp.sqlite`, gitignored) with the scraper stubbed, so the real `EvergoreDataEvaluator` recomputes the meta sums on real data and the delta can be inspected before a deploy; also exports the valuation catalog and asserts item names are unique (`findItem` takes the first name match). Details: [1:1 against the production instance](#11-against-the-production-instance). | `@MicronautTest` on-demand check |
 | `RateLimitCounterTest` | Three pure unit tests for `RateLimitCounter`: the block lifts deterministically after `block-duration` (injected `Clock`, no `sleep`), stays active before expiry, and 20 concurrent `block()` calls leave consistent state. | pure unit |
 
 ## Boot-signal seam
@@ -74,9 +75,9 @@ observable behaviour**:
 
 - **Unit/integration suite** reproduces the pre-migration baseline exactly: **22 tests, 7 classes, 0
   failures** on the new stack.
-- **1:1 against production data:** the migrated distribution was run against a snapshot of the
-  production SQLite DB; its `/overview`, `/avatars/{avatar}/bank` and `/avatars/{avatar}/storage`
-  responses were **byte-identical (after LF normalisation)** to the live production instance.
+- **1:1 against production data:** the migrated distribution rendered the production snapshot
+  identically to the live instance. Procedure and current result: [1:1 against the production
+  instance](#11-against-the-production-instance).
 - **JDK 25 behaviour change found & fixed:** `java.sql.Timestamp.from(Instant)` now uses
   `Math.multiplyExact` and **throws** on extreme instants where JDK 17 silently wrapped. The
   evaluator's then-existing empty-watermark sentinel (`LocalDateTime.MIN`) hit this on the first
@@ -88,10 +89,91 @@ observable behaviour**:
 An automated, offline acceptance test of the same flow now exists as `ProtocolEvaluationAcceptanceTest`,
 driven by a **synthetic** committed fixture DB (`TestDataGenerator` → `testdata.sqlite`): no
 production data, no PII, so the fixture is safe to commit and the test is fully reproducible. The
-optional richer variant (boot against a real prod snapshot) would carry guild members' data (PII)
-and must stay **gitignored**, never committed.
+richer variant (boot against a real prod snapshot) is `ProductionSnapshotRecomputeCheck`: committed
+but `@Disabled`, because the snapshot it needs carries guild members' data (PII) and stays
+**gitignored**. See the next section.
 
-### Test isolation (forking)
+## 1:1 against the production instance
+
+The release gate before deploying: render the **same database** through the candidate build and
+through the live instance, then diff. It catches rendering drift that the synthetic fixture cannot,
+because it uses the real data volume, the real item mix and the real avatar set.
+
+### Procedure
+
+1. `./gradlew installDist`.
+2. Run the distribution from an **isolated working directory** holding a *copy* of the production
+   snapshot at `database/temp.sqlite`, with `EVERGORE_SECURITY_API_TOKEN` set. Never point a run at
+   the original snapshot file: a first run recomputes the meta sums in place and is not reversible.
+3. Fetch `/overview` plus `/avatars/{avatar}/bank` and `/avatars/{avatar}/storage` for every avatar,
+   from **both** instances. Sweep pages 0 **and** 1: page 1 is the more interesting case, because
+   `getAllFor(avatar, page, size)` throws `NoElementFound` on an empty result, so any avatar with
+   fewer than `PAGE_SIZE` entries answers **404** there. That 404 pattern is part of the contract
+   and must match too.
+4. Diff after LF normalisation only. Explain every remaining difference; do not widen the
+   normalisation until the diff is empty.
+
+- **Pace the sweep.** Both sides enforce 5 requests per 10 s and then block the client IP for 1
+  minute (hard-coded before, `evergore.rate-limit.*` now, same numbers). The filter increments the
+  counter on blocked requests too, so retrying inside a block **extends** it: leave at least 4 s
+  between requests and back off well past a minute after a 429.
+- The scrape branch cannot run in the devcontainer (no Firefox binary). Micronaut's task exception
+  handler catches it, the app keeps serving, and the database stays untouched, so the check is
+  unaffected.
+
+### Current result
+
+Full sweep over the whole avatar set, 165 responses per side, against one identical snapshot:
+
+- **Every status code matches**, including the 404s from the empty page-1 requests.
+- `/overview` is **byte-identical** after LF normalisation.
+- The detail pages differ in **exactly one line**, the same line in every one of them: the live
+  instance still ships the client-side paging script with the literal placeholder
+  `?token=secret_token`, the candidate reads the token from the current URL instead. That is the
+  intended fix that came with the config-driven API token (the old page's paging control navigated
+  with a bogus token). **No rendered data differs.**
+- `/health` is the one endpoint that answers differently by design: token-exempt and anonymous in
+  the candidate, token-gated in the live instance.
+
+### Recompute delta on real data
+
+The meta sums are recomputed from all stored entries instead of being accumulated behind a
+watermark, so the first run on a long-lived database corrects accumulated drift. Measured on the
+production snapshot via the gitignored harness described below:
+
+- **Bank:** 31 of 41 avatars change their deposit total, 2 their withdrawal total. Every changed
+  value moves **down**, never up: the old accumulator over-counted by 5.24 % of deposits.
+- **Storage:** all 42 avatars change; here most values move **up**, because the old accumulator also
+  missed history. No endpoint surfaces these yet.
+- **Both sides verified against an independent recomputation** and matched exactly: bank totals
+  against a plain `SUM(amount) GROUP BY avatar, type`, storage totals against a catalog-driven sum
+  over every stored row. The old values disagreed with that ground truth for 31 of 41 avatars, the
+  new ones for none. The delta is the fix landing, not a regression.
+- **Catalog gap, pre-existing:** the snapshot holds storage rows whose item name is not in
+  `EvergoreItem`; they value at zero and are reported through `/health`'s `unknownItemNames`.
+- **Not covered by this check:** the re-ingest of still-visible entries missing from the database
+  needs a live scrape, so it is only exercised by `EvergoreDataExtractorTest`.
+
+### The production-snapshot harness
+
+`ProductionSnapshotRecomputeCheck` boots the real context against a **copy** of the snapshot, stubs
+the scraper, and lets the real `EvergoreDataEvaluator` run through the scheduled job, mirroring
+`ProtocolEvaluationAcceptanceTest`'s mock-bean set. It also exports the valuation catalog, which is
+what makes the storage cross-check above possible.
+
+- The class itself holds **no production data**: the PII sits in `temp.sqlite`, which stays
+  gitignored. So the harness is committed and reviewable, and only the snapshot it feeds on is
+  local.
+- It is **`@Disabled`**: without a local snapshot it has nothing to run against, and a check that
+  passes on one machine only must not become a build gate. It still compiles under `-Werror`, so a
+  refactor cannot rot it unnoticed.
+- To run it, drop the `@Disabled` for that run and restore it afterwards. Re-enabling it by flag
+  would need `junit.jupiter.conditions.deactivate` forwarded to the test JVM from
+  `build.gradle.kts`, which is not wired.
+- It writes only under `build/`, never to the snapshot. Always copy the snapshot; never open the
+  original read-write.
+
+## Test isolation (forking)
 
 `build.gradle.kts` runs each test class in a fresh JVM (`forkEvery = 1`). This is a **temporary
 workaround, not the intended strategy**: it was added alongside the meta-sums recompute so the
