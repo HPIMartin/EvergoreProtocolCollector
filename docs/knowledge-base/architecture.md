@@ -76,9 +76,10 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 ## What's GOOD (keep this)
 
 - **Framework-free core, mechanically enforced:** `domain`, `businessLogic`, `application` import
-  nothing from `micronaut`, `selenium`, `ormlite`, `jakarta`, or `netty`; `application` additionally
-  depends only inward (never on adapters/config). `HexagonalArchitectureTest` (ArchUnit) fails the
-  build on any violation: a build gate, not just a convention.
+  nothing from `micronaut`, `selenium`, `ormlite`, `jakarta`, or `netty`; `application` and the
+  core (`domain`, `businessLogic`) additionally depend only inward, the core never on adapters,
+  config or the use-cases around it. `HexagonalArchitectureTest` (ArchUnit) fails the build on any
+  violation: a build gate, not just a convention.
 - **Persistence correctly inverted** (genuine Dependency-Inversion seam): `businessLogic` defines
   the repository *interfaces*, `database/*` implements them, application/REST depend only on the
   interfaces; `ApplicationFactory` binds interface→impl.

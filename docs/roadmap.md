@@ -99,7 +99,7 @@ Slice: the framework moves to the current major without losing 1:1.
   (C7), `vulnScan` to zero then gated (C8).
 - **Schema migrations, then renames:** migration framework (D10) gates the
   `withdrawl` → `withdrawal` key migration (D9); repository unification (D12), exception/logging
-  hygiene (D11), inward-only core rule (D13), catalog refactor (D6); full repackaging (D3) last,
+  hygiene (D11), catalog refactor (D6); full repackaging (D3) last,
   on top of a tested core.
 - **Ops & repo slimming:** drop the bundled webdrivers (F1; the author rewrites history
   afterwards), Dependabot ecosystems plus one refresh pass
