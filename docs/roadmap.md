@@ -95,7 +95,7 @@ Slice: the framework moves to the current major without losing 1:1.
 ## Later (unordered; pull between milestones when they fit)
 
 - **Security & config good practice:** real bound `Configuration` (C1), credentials out of the
-  image (C3, before any deployment beyond the home server), client-error log noise (C9), rate-limiter cleanup
+  image (C3, before any deployment beyond the home server), rate-limiter cleanup
   (C7), `vulnScan` to zero then gated (C8).
 - **Schema migrations, then renames:** migration framework (D10) gates the
   `withdrawl` → `withdrawal` key migration (D9); repository unification (D12), exception/logging

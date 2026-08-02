@@ -13,6 +13,7 @@ import dev.schoenberg.evergore.protocolParser.exceptions.ProtocolParserException
 import dev.schoenberg.evergore.protocolParser.exceptions.TooManyRequests;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ApplicationExceptionHandlerTest {
 
@@ -54,11 +55,68 @@ class ApplicationExceptionHandlerTest {
 	void logsThePathWithoutTheTokenQueryParameter() {
 		handler.handle(HttpRequest.GET("/overview?token=" + SECRET_TOKEN), new AccessNotAllowed());
 
-		assertThat(logger.errorMessages()).containsExactly("Exception while requesting: /overview");
+		assertThat(logger.infoMessages()).containsExactly("Exception while requesting: /overview");
+	}
+
+	@Test
+	void accessNotAllowedIsLoggedAsOneLineWithoutTheStackTrace() {
+		handle(new AccessNotAllowed());
+
+		assertLoggedWithoutStackTrace("Exception while requesting: /test");
+	}
+
+	@Test
+	void tooManyRequestsIsLoggedAsOneLineWithoutTheStackTrace() {
+		handle(new TooManyRequests("some-id"));
+
+		assertLoggedWithoutStackTrace("Exception while requesting: /test");
+	}
+
+	@Test
+	void noElementFoundIsLoggedAsOneLineWithoutTheStackTrace() {
+		handle(new NoElementFound("some-value"));
+
+		assertLoggedWithoutStackTrace("Exception while requesting: /test");
+	}
+
+	@Test
+	void unknownExceptionIsLoggedWithItsStackTrace() {
+		UnknownException exception = new UnknownException();
+
+		handle(exception);
+
+		assertLoggedWithStackTrace("Exception while requesting: /test", exception);
+	}
+
+	@Test
+	void aFailingResponseMappingIsStillLoggedWithItsStackTrace() {
+		FailingMappingException exception = new FailingMappingException();
+
+		assertThatThrownBy(() -> handle(exception)).isInstanceOf(IllegalStateException.class);
+
+		assertLoggedWithStackTrace("Exception while requesting: /test", exception);
 	}
 
 	private HttpResponse<?> handle(ProtocolParserException exception) {
 		return handler.handle(GET_REQUEST, exception);
+	}
+
+	private void assertLoggedWithoutStackTrace(String expectedMessage) {
+		assertThat(logger.infoMessages()).containsExactly(expectedMessage);
+		assertThat(logger.errorMessages()).isEmpty();
+	}
+
+	private void assertLoggedWithStackTrace(String expectedMessage, Throwable expectedCause) {
+		assertThat(logger.errorMessages()).containsExactly(expectedMessage);
+		assertThat(logger.errorThrowables()).containsExactly(expectedCause);
+		assertThat(logger.infoMessages()).isEmpty();
+	}
+
+	private static class FailingMappingException extends ProtocolParserException {
+		@Override
+		public <T> T accept(ExceptionResponseVisitor<T> visitor) {
+			throw new IllegalStateException("mapping this exception to a response fails");
+		}
 	}
 
 	private static class UnknownException extends ProtocolParserException {

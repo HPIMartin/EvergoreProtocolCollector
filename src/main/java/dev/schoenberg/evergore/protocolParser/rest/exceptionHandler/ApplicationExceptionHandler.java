@@ -34,13 +34,27 @@ public class ApplicationExceptionHandler implements ExceptionHandler<ProtocolPar
 	@Override
 	public HttpResponse<?> handle(@SuppressWarnings("rawtypes") HttpRequest request, ProtocolParserException exception) {
 		String reason = "Exception while requesting: " + request.getPath();
-		logger.error(reason, exception);
-		return exception.accept(this);
+		HttpResponse<?> response;
+		try {
+			response = exception.accept(this);
+		} catch (RuntimeException mappingFailure) {
+			logger.error(reason, exception);
+			throw mappingFailure;
+		}
+		if (isServerError(response)) {
+			logger.error(reason, exception);
+		} else {
+			logger.info(reason);
+		}
+		return response;
+	}
+
+	private static boolean isServerError(HttpResponse<?> response) {
+		return response.getStatus().getCode() >= INTERNAL_SERVER_ERROR.getCode();
 	}
 
 	@Override
 	public HttpResponse<?> onAccessNotAllowed(AccessNotAllowed exception) {
-		exception.setStackTrace(new StackTraceElement[0]);
 		return status(UNAUTHORIZED);
 	}
 
@@ -51,7 +65,6 @@ public class ApplicationExceptionHandler implements ExceptionHandler<ProtocolPar
 
 	@Override
 	public HttpResponse<?> onTooManyRequests(TooManyRequests exception) {
-		exception.setStackTrace(new StackTraceElement[0]);
 		return status(TOO_MANY_REQUESTS);
 	}
 

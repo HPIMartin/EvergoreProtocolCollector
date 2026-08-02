@@ -227,7 +227,9 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 - **`logback.xml`**: single colored STDOUT appender, root level `info`. Nothing logs a request URI's
   query string, so the `?token=…` credential never reaches the log: the request filter logs only
   client IP and user-agent, and the exception handler logs `request.getPath()`, which excludes the
-  query (pinned by `ApplicationExceptionHandlerTest`).
+  query (pinned by `ApplicationExceptionHandlerTest`). An expected client error (401, 404, 429) is
+  one `info` line; only a server error logs at `error` with its stack trace, so probing the token
+  cannot bury real errors in traces.
 
 ## HTTP endpoints (all need a valid `?token=…`, except `/favicon.ico` + `/health`)
 

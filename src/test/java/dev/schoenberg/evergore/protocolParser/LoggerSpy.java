@@ -8,6 +8,7 @@ public class LoggerSpy implements Logger {
 	private final List<String> infoMessages = new ArrayList<>();
 	private final List<String> warnMessages = new ArrayList<>();
 	private final List<String> errorMessages = new ArrayList<>();
+	private final List<Throwable> errorThrowables = new ArrayList<>();
 
 	@Override
 	public void info(String toLog) {
@@ -27,6 +28,7 @@ public class LoggerSpy implements Logger {
 	@Override
 	public void error(String reason, Throwable error) {
 		errorMessages.add(reason);
+		errorThrowables.add(error);
 	}
 
 	@Override
@@ -42,5 +44,9 @@ public class LoggerSpy implements Logger {
 
 	public List<String> errorMessages() {
 		return Collections.unmodifiableList(errorMessages);
+	}
+
+	public List<Throwable> errorThrowables() {
+		return Collections.unmodifiableList(errorThrowables);
 	}
 }
