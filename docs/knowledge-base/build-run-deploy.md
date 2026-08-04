@@ -192,8 +192,9 @@ CLI targets that same daemon.
      wall-clock text (backlog D14). The container default is already UTC; setting it explicitly
      pins it.
 4. **Verify**, in order: `GET /health` is anonymous and reports `UNKNOWN` until the first
-   collection finishes, then `UP` with `lastSuccessfulRun`; `GET /overview?token=<token>` renders
-   the avatar table; a request without a token returns **401**.
+   collection finishes, then `UP` with `lastSuccessfulRun`; `GET /` serves the SPA shell without a
+   token; `GET /api/v1/avatars?token=<token>` answers the overview JSON, and the same request
+   without a token returns **401**.
 5. **Rollback:** stop the container, restore the backup copy, start the previous image tag.
 
 A scrape failure is contained: Micronaut's task exception handler logs it, the app keeps serving,
@@ -253,9 +254,12 @@ red if a framework upgrade changes it.
 
 | Method · Path | Purpose |
 |---|---|
-| `GET /overview` | HTML table of per-avatar bank metrics + last-updated (from `MetaInformation`). |
-| `GET /avatars/{avatar}/bank?page=N` | Paged (100/page) bank entries for one avatar. |
-| `GET /avatars/{avatar}/storage?page=N` | Paged storage entries for one avatar. |
+| `GET /api/v1/avatars` | JSON overview: per-avatar bank totals + `lastUpdated`. Contract in [frontend.md](frontend.md). |
+| `GET /api/v1/avatars/{avatar}/bank?page=N&size=M` | JSON bank entries for one avatar, newest first. |
+| `GET /api/v1/avatars/{avatar}/storage?page=N&size=M` | JSON storage entries for one avatar, newest first. |
+| `GET /overview` | Legacy HTML table of per-avatar bank metrics + last-updated; replaced by the SPA in strand `spa-views`. |
+| `GET /avatars/{avatar}/bank?page=N` | Legacy HTML, paged (100/page) bank entries for one avatar. |
+| `GET /avatars/{avatar}/storage?page=N` | Legacy HTML, paged storage entries for one avatar. |
 | `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle. **Public**: no token, no rate limit, no audit log entry (decision 2026-08-04). An unknown navigation path **with a token** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
 | `GET /favicon.ico` | Favicon: public, but rate-limited and logged like any other request. |
 | `GET /health` | Micronaut management health endpoint: token-exempt, anonymous. Reports UNKNOWN (no run yet) or UP + `lastSuccessfulRun` timestamp; when the last run hit unknown catalog items, the `lastRun` detail also carries `unknownItemCount` and the distinct `unknownItemNames`. Use as a liveness/last-run monitor hook. |

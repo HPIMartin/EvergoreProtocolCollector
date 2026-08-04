@@ -59,14 +59,17 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   `TransferType` + visitor · `MetaInformationKey` (typed: `DateTimeKey`/`LongKey`/`DoubleKey`) ·
   `Constants`.
 - **Domain (framework-free):** `Entry`, `Item`, `EvergoreItem` (catalog + value math).
-- **REST:** `OverviewController` (`/overview`) · `AvatarController` (`/avatars/{a}/bank|storage`) ·
-  `FaviconController` · `OutputFormatter` (HTML table builder, escapes cells) ·
+- **REST:** `controller/api/*` (the JSON API under `/api/v1`: `AvatarSummariesController`,
+  `AvatarEntriesController`, and `controller/api/wire/*` holding the published contract types plus
+  `TransferTypeWireNames`; contract in
+  [frontend.md](frontend.md)) · the legacy HTML pages `OverviewController` (`/overview`) and
+  `AvatarController` (`/avatars/{a}/bank|storage`) with `OutputFormatter` (HTML table builder,
+  escapes cells), both replaced by the SPA in strand `spa-views` · `FaviconController` ·
   `SpaHistoryFallbackController` (serves the SPA shell for unknown navigation paths;
   `SpaNavigationPaths` decides which 404s it may answer) · filters `BrowserLoggingFilter` (per-IP
-  rate limit) + `TokenValidationFilter` (`?token=`) ·
-  `ApplicationExceptionHandler` (dispatches via the `TransferType`/exception visitors, no
-  `instanceof`; the mapped status picks the log severity, so an expected client error is one `info`
-  line and only a server error logs its stack trace).
+  rate limit) + `TokenValidationFilter` (`?token=`) · `ApplicationExceptionHandler` (dispatches via
+  the `TransferType`/exception visitors, no `instanceof`; the mapped status picks the log severity,
+  so an expected client error is one `info` line and only a server error logs its stack trace).
 - **The token scope is default-deny** (author decision 2026-08-04): **every** path needs a token
   except the ones configured under `evergore.security.public-paths`, matched by `PublicPaths` with
   Micronaut's `AntPathMatcher` so `/assets/**` is one entry. A new controller is therefore protected

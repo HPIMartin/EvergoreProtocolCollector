@@ -18,6 +18,10 @@ micronaut:
       spa:
         paths: classpath:static/ui
         mapping: /**
+jackson:
+  serialization-inclusion: ALWAYS
+  serialization:
+    write-dates-as-timestamps: false
 endpoints:
   health:
     enabled: true

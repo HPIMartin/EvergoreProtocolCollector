@@ -2,8 +2,7 @@
 
 - The dashboard rebuild (Epic E5, decision 2026-07-04) replaces the server-rendered HTML-string
   templates with a JSON API + a React single-page app (SPA).
-- This doc covers the SPA; the JSON API is a separate, not-yet-built strand (see the backlog's
-  "Current status" section).
+- This doc covers both the SPA and the JSON API it reads from.
 
 ## Stack
 
@@ -37,6 +36,53 @@ Four top-level folders under `frontend/src/`:
   `App.test.tsx` asserts on `screen.getByTestId('app-title')`).
 - Tables render **semantic HTML** (`<table>`/`<thead>`/`<tbody>`/`<th>`/`<td>`), not div-grids,
   for accessibility and testability.
+
+## The JSON API the SPA reads
+
+Shape and field names decided 2026-08-04 (open-questions.md). The controllers live in
+`rest/controller/api/`, the published contract types in `rest/controller/api/wire/`; the HTML
+controllers are untouched legacy.
+
+| Route | Answers |
+|-------|---------|
+| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, `withdrawn`, `deposited`) per avatar, sorted by name. |
+| `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first. |
+| `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first. |
+
+- **One envelope for every collection**: `page`, `size`, `totalCount`, `items`. `/api/v1/avatars`
+  adds `lastUpdated`; it is the only view that states how fresh the numbers are.
+- **Paging**: `?page=` (zero-based, `@Min(0)`) and `?size=` (default 100, `1..1000`); a violation is
+  a **400**, not a clamp, so a client bug stays visible. `totalCount` is the unpaged total, so the
+  SPA can size its navigation instead of inferring the end from a short page.
+- **`lastUpdated: null`** means no collection run has completed. A sentinel instant is not an option:
+  Java 25 throws when converting an extreme instant into `java.sql.Timestamp`.
+- **`lastUpdated` is display-only and up to an hour off inside the DST fall-back hour.** It is stored
+  as a Berlin wall-clock time, so the instant behind it is unrecoverable while the local hour repeats
+  and the conversion resolves to the earlier offset. The epoch/UTC storage format fixes this at the
+  root; entry timestamps are unaffected because they are real instants.
+- **Timestamps** are ISO-8601 UTC and **`transferType`** is one of `DEPOSIT` / `WITHDRAWAL`; the
+  client localizes both. The wire names come from `TransferTypeWireNames`, a visitor over the domain
+  enum, so the German domain constants (`EINLAGERUNG`/`ENTNAHME`) never reach the contract and stay
+  renameable. `toGermanString()` stays with the HTML pages.
+- **No field name is derived from a Java identifier.** Every wire record component carries an explicit
+  `@JsonProperty`, so renaming a component cannot change the contract. There is no JDK-standard
+  annotation for this (JSON binding never landed in Java SE), so the Jackson annotation is deliberate
+  and confined to the `wire` package.
+- **A tokenless deep link answers 401.** Only `/` and `/index.html` are public, so the shell loads
+  from there and the client must carry `?token=` across its routes; `spa-views` owns that.
+- **404 vs. empty page** (author decision 2026-08-05): a **404 means the avatar is unknown**, i.e. has
+  no row in either ledger. A known avatar whose bank or storage ledger happens to be empty answers 200
+  with `totalCount: 0` and `items: []`, like the overview does, so the SPA can tell "no storage
+  activity" from "no such member" without a second request. A page past the last entry is likewise a
+  valid empty window. "Known" means **the avatar has a ledger row somewhere**, deliberately not "the
+  meta information mentions it": today the evaluator only writes meta keys for avatars that have rows,
+  so the two coincide, and pinning the contract to the ledgers keeps it true if that ever diverges. The
+  legacy HTML pages still 404 in that case and keep that quirk until `spa-views` replaces them.
+- **Errors carry no envelope**: 401 (missing or wrong token) and 404 answer with an empty body;
+  400 (a paging constraint violated) and 405 answer with Micronaut's own JSON error shape. The SPA
+  codes against the status, not against a body.
+- Both defaults that would silently break this are pinned in `application.yml`
+  (`jackson.serialization-inclusion: ALWAYS`, `write-dates-as-timestamps: false`).
 
 ## Build integration
 
