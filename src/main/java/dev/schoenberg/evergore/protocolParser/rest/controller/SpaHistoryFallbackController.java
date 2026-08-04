@@ -10,12 +10,22 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Error;
 
+import dev.schoenberg.evergore.protocolParser.rest.filter.PathCanonicalizer;
+import dev.schoenberg.evergore.protocolParser.rest.filter.SpaNavigationPaths;
+
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 
 @Controller
 public class SpaHistoryFallbackController {
-	private static final String API_PATH_PREFIX = "/api";
 	private static final String INDEX_HTML_RESOURCE = "/static/ui/index.html";
+
+	private final PathCanonicalizer canonicalizer;
+	private final SpaNavigationPaths navigationPaths;
+
+	public SpaHistoryFallbackController(PathCanonicalizer canonicalizer, SpaNavigationPaths navigationPaths) {
+		this.canonicalizer = canonicalizer;
+		this.navigationPaths = navigationPaths;
+	}
 
 	@Error(status = HttpStatus.NOT_FOUND, global = true)
 	public HttpResponse<?> handleUnknownPath(HttpRequest<?> request) {
@@ -27,9 +37,8 @@ public class SpaHistoryFallbackController {
 	}
 
 	private boolean isSpaNavigationRequest(HttpRequest<?> request) {
-		String path = request.getPath();
-		return request.getMethod() == HttpMethod.GET && !path.contains(".") && !path.startsWith(API_PATH_PREFIX)
-				&& request.getHeaders().accept().contains(MediaType.TEXT_HTML_TYPE);
+		return request.getMethod() == HttpMethod.GET && request.getHeaders().accept().contains(MediaType.TEXT_HTML_TYPE)
+				&& navigationPaths.isSpaOwned(canonicalizer.canonicalize(request.getPath()));
 	}
 
 	private byte[] loadSpaShell() {

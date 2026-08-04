@@ -57,6 +57,22 @@ class SpaHistoryFallbackTest {
 	}
 
 	@Test
+	void servesTheSpaShellForAClientRouteWithADotInAMiddleSegment() {
+		HttpResponse<String> response = getHtml("/avatars/Dr.Who/details");
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getBody()).isEqualTo(bundledIndexHtml());
+	}
+
+	@Test
+	void servesTheSpaShellForAClientRouteWhoseLastSegmentCarriesANonExtensionDot() {
+		HttpResponse<String> response = getHtml("/avatars/Dr.Who");
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getBody()).isEqualTo(bundledIndexHtml());
+	}
+
+	@Test
 	void keepsTheDefaultNotFoundForAMissingAsset() {
 		int status = getHtml("/assets/does-not-exist.js").getStatus();
 
@@ -64,8 +80,29 @@ class SpaHistoryFallbackTest {
 	}
 
 	@Test
+	void keepsTheDefaultNotFoundForADotlessMissingAsset() {
+		int status = getHtml("/assets/does-not-exist").getStatus();
+
+		assertThat(status).isEqualTo(404);
+	}
+
+	@Test
+	void keepsTheDefaultNotFoundForAMissingSwaggerPath() {
+		int status = getHtml("/swagger/does-not-exist").getStatus();
+
+		assertThat(status).isEqualTo(404);
+	}
+
+	@Test
 	void keepsTheDefaultNotFoundForAnUnknownApiPath() {
 		int status = getHtml("/api/does-not-exist").getStatus();
+
+		assertThat(status).isEqualTo(404);
+	}
+
+	@Test
+	void keepsTheDefaultNotFoundForATraversalThatResolvesBelowTheAssetsMapping() {
+		int status = getHtml("/overview/../assets/does-not-exist").getStatus();
 
 		assertThat(status).isEqualTo(404);
 	}

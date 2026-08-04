@@ -60,12 +60,14 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   `Constants`.
 - **Domain (framework-free):** `Entry`, `Item`, `EvergoreItem` (catalog + value math).
 - **REST:** `OverviewController` (`/overview`) · `AvatarController` (`/avatars/{a}/bank|storage`) ·
-  `FaviconController` · `OutputFormatter` (HTML table builder, escapes cells) · filters
-  `BrowserLoggingFilter` (per-IP rate limit) + `TokenValidationFilter` (`?token=`; exempts
-  `/favicon.ico` and `/health` (exact) + `/health/*`, exact match NOT a broad prefix, so `/healthz`
-  and similar stay protected) · `ApplicationExceptionHandler` (dispatches via the
-  `TransferType`/exception visitors, no `instanceof`; the mapped status picks the log severity, so
-  an expected client error is one `info` line and only a server error logs its stack trace).
+  `FaviconController` · `OutputFormatter` (HTML table builder, escapes cells) ·
+  `SpaHistoryFallbackController` (serves the SPA shell for unknown navigation paths;
+  `SpaNavigationPaths` decides which 404s it may answer) · filters `BrowserLoggingFilter` (per-IP
+  rate limit) + `TokenValidationFilter` (`?token=`; exempts `/favicon.ico` and `/health` (exact) +
+  `/health/*`, exact match NOT a broad prefix, so `/healthz` and similar stay protected) ·
+  `ApplicationExceptionHandler` (dispatches via the `TransferType`/exception visitors, no
+  `instanceof`; the mapped status picks the log severity, so an expected client error is one `info`
+  line and only a server error logs its stack trace).
 - **Monitoring:** `monitoring/LastRunHealthIndicator` (adapter implementing `HealthIndicator`,
   exposed at `GET /health` via `micronaut-management`; UNKNOWN before the first run, then UP +
   `lastSuccessfulRun` detail). Fed by `application/LastRunStatus` (above).
