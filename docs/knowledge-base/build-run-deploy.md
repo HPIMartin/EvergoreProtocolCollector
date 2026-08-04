@@ -215,12 +215,14 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 | `credentials` | `"zugang.txt"` | **Evergore login**: line 1 = username, line 2 = password. Read by `SeleniumPageSource.tryToLogin`. Not in the repo; supplied at image build. |
 | `evergoreFolder` | `c:\evergore` | Windows path; unused on the Linux container scrape path. |
 | DB path | `database/temp.sqlite` (or `:memory:` if `useInMemory`) | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
-| Auth token | `evergore.security.api-token`, **required**, env-injected as `EVERGORE_SECURITY_API_TOKEN` (bound by the `SecurityConfiguration` `@ConfigurationProperties` bean) | Every request needs `?token=<configured token>` except `/favicon.ico` + `/health`. **Mandatory at startup**: a blank/unset token makes the app refuse to boot (`ApiTokenStartupValidator` logs an error and throws). No token value lives in the repo. |
+| Auth token | `evergore.security.api-token`, **required**, env-injected as `EVERGORE_SECURITY_API_TOKEN` (bound by the `SecurityConfiguration` `@ConfigurationProperties` bean) | **Every** request needs `?token=<configured token>` except the configured public paths below. **Mandatory at startup**: a blank/unset token makes the app refuse to boot (`ApiTokenStartupValidator` logs an error and throws). No token value lives in the repo. |
+| Public paths | `evergore.security.public-paths` in `application.yml`: `/`, `/index.html`, `/assets/**`, `/favicon.ico`, `/health`, `/swagger/**`, `/swagger-ui/**`, `/redoc/**`, `/rapidoc/**` (same `SecurityConfiguration` bean) | The **only** token-free surface; Ant patterns, matched against the canonicalized path by `PublicPaths`. Everything not listed needs a token, so a new controller is protected by default. Empty or unset ⇒ everything is protected (fail closed), which makes a misconfiguration a visible 401 on `/` rather than a silent hole. |
 | Rate limit | `evergore.rate-limit.*`: `max-requests-per-interval` `5`, `interval` `10s`, `block-duration` `1m` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `BrowserLoggingFilter` (filter order 1, ahead of the token filter); exceeding the limit within `interval` blocks that IP for `block-duration` → **429** (`TooManyRequests`). Config-driven, no hard-coded constants; the test profile raises the limit so the suite isn't throttled. |
 
 - **`application.yml`** holds Micronaut concerns (app name, Swagger static routes, Netty
   `max-order: 3`) plus the **rate-limit defaults** (`evergore.rate-limit.*`, bound to
-  `RateLimitConfiguration`), **no `server.port`** → defaults to **8080**. The one setting bound
+  `RateLimitConfiguration`) and the **public-path list** (`evergore.security.public-paths`, next to
+  the static-resource mappings it mirrors), **no `server.port`** → defaults to **8080**. The one setting bound
   from the *environment* is the **API token**: `evergore.security.api-token` ←
   `EVERGORE_SECURITY_API_TOKEN`, via the `@ConfigurationProperties` bean `SecurityConfiguration`;
   no value lives in the repo.
@@ -231,16 +233,28 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
   one `info` line; only a server error logs at `error` with its stack trace, so probing the token
   cannot bury real errors in traces.
 
-## HTTP endpoints (all need a valid `?token=…`, except `/favicon.ico` + `/health`)
+## HTTP endpoints
+
+The token scope is **default-deny** (author decision 2026-08-04): a valid `?token=…` is required
+everywhere except the paths configured under `evergore.security.public-paths`. The decision is made
+on the **canonicalized** path (`PathCanonicalizer`), so `/assets/../overview` is protected like
+`/overview`. Consequence for the SPA: a deep link opened without a token answers **401**, the shell
+loads from `/` and the client carries `?token=` across its routes.
+
+Public and unthrottled are **not** the same set. The rate limiter and request log skip only the SPA
+static surface (`/`, `/index.html`, `/assets/**`, via `SpaStaticResourcePaths`); the remaining public
+paths are token-free but still counted and logged.
+
 
 | Method · Path | Purpose |
 |---|---|
 | `GET /overview` | HTML table of per-avatar bank metrics + last-updated (from `MetaInformation`). |
 | `GET /avatars/{avatar}/bank?page=N` | Paged (100/page) bank entries for one avatar. |
 | `GET /avatars/{avatar}/storage?page=N` | Paged storage entries for one avatar. |
-| `GET /favicon.ico` | Favicon (token-exempt). |
+| `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle. **Public**: no token, no rate limit, no audit log entry (decision 2026-08-04). An unknown navigation path **with a token** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
+| `GET /favicon.ico` | Favicon: public, but rate-limited and logged like any other request. |
 | `GET /health` | Micronaut management health endpoint: token-exempt, anonymous. Reports UNKNOWN (no run yet) or UP + `lastSuccessfulRun` timestamp; when the last run hit unknown catalog items, the `lastRun` detail also carries `unknownItemCount` and the distinct `unknownItemNames`. Use as a liveness/last-run monitor hook. |
-| `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs. |
+| `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: public, but rate-limited and logged. |
 
 ## Scheduled job
 

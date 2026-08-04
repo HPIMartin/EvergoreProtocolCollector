@@ -10,7 +10,6 @@ import org.reactivestreams.*;
 import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.exceptions.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.SecurityConfiguration;
-import dev.schoenberg.evergore.protocolParser.rest.controller.*;
 
 @Singleton
 @Filter("/**")
@@ -18,10 +17,14 @@ public class TokenValidationFilter implements HttpServerFilter {
 	private static final String TOKEN_PARAMETER_NAME = "token";
 
 	private final SecurityConfiguration securityConfiguration;
+	private final PathCanonicalizer canonicalizer;
+	private final PublicPaths publicPaths;
 	private final Logger logger;
 
-	public TokenValidationFilter(SecurityConfiguration securityConfiguration, Logger logger) {
+	public TokenValidationFilter(SecurityConfiguration securityConfiguration, PathCanonicalizer canonicalizer, PublicPaths publicPaths, Logger logger) {
 		this.securityConfiguration = securityConfiguration;
+		this.canonicalizer = canonicalizer;
+		this.publicPaths = publicPaths;
 		this.logger = logger;
 	}
 
@@ -32,7 +35,7 @@ public class TokenValidationFilter implements HttpServerFilter {
 
 	@Override
 	public Publisher<MutableHttpResponse<?>> doFilter(HttpRequest<?> request, ServerFilterChain chain) {
-		if (isPublicEndpoint(request)) {
+		if (publicPaths.contains(canonicalizer.canonicalize(request.getPath()))) {
 			return chain.proceed(request);
 		}
 
@@ -42,11 +45,6 @@ public class TokenValidationFilter implements HttpServerFilter {
 		}
 
 		return chain.proceed(request);
-	}
-
-	private boolean isPublicEndpoint(HttpRequest<?> request) {
-		String path = request.getPath();
-		return path.equals(FaviconController.PATH) || path.equals("/health") || path.startsWith("/health/") || SpaStaticResourcePaths.matches(path);
 	}
 
 	private AccessNotAllowed reject() {

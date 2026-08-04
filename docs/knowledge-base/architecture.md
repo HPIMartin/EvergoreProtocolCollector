@@ -63,11 +63,15 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   `FaviconController` · `OutputFormatter` (HTML table builder, escapes cells) ·
   `SpaHistoryFallbackController` (serves the SPA shell for unknown navigation paths;
   `SpaNavigationPaths` decides which 404s it may answer) · filters `BrowserLoggingFilter` (per-IP
-  rate limit) + `TokenValidationFilter` (`?token=`; exempts `/favicon.ico` and `/health` (exact) +
-  `/health/*`, exact match NOT a broad prefix, so `/healthz` and similar stay protected) ·
+  rate limit) + `TokenValidationFilter` (`?token=`) ·
   `ApplicationExceptionHandler` (dispatches via the `TransferType`/exception visitors, no
   `instanceof`; the mapped status picks the log severity, so an expected client error is one `info`
   line and only a server error logs its stack trace).
+- **The token scope is default-deny** (author decision 2026-08-04): **every** path needs a token
+  except the ones configured under `evergore.security.public-paths`, matched by `PublicPaths` with
+  Micronaut's `AntPathMatcher` so `/assets/**` is one entry. A new controller is therefore protected
+  the moment it exists; nobody has to remember to add it to a list. An empty or missing
+  configuration protects everything (fail closed).
 - **Monitoring:** `monitoring/LastRunHealthIndicator` (adapter implementing `HealthIndicator`,
   exposed at `GET /health` via `micronaut-management`; UNKNOWN before the first run, then UP +
   `lastSuccessfulRun` detail). Fed by `application/LastRunStatus` (above).

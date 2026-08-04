@@ -36,6 +36,7 @@ dependencies {
 
 	testImplementation("io.micronaut.test:micronaut-test-junit5")
 	testImplementation("org.junit.jupiter:junit-jupiter-api")
+	testImplementation("org.junit.jupiter:junit-jupiter-params")
 	testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	testImplementation("com.konghq:unirest-java:3.11.11")

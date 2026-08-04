@@ -61,25 +61,10 @@ class HealthEndpointTest {
 	}
 
 	@Test
-	void protectedEndpointIsRejectedWithoutToken() {
-		int status = Unirest.get("/overview").asString().getStatus();
+	void healthPrefixedPathThatIsNotTheHealthEndpointIsNotPublic() {
+		int status = Unirest.get("/healthz").asString().getStatus();
 
 		assertThat(status).isEqualTo(401);
-	}
-
-	@Test
-	void healthPrefixedPathThatIsNotTheHealthEndpointStillRequiresToken() {
-		int protectedStatus = Unirest.get("/overview").asString().getStatus();
-		int healthzStatus = Unirest.get("/healthz").asString().getStatus();
-
-		assertThat(healthzStatus).isEqualTo(protectedStatus);
-	}
-
-	@Test
-	void protectedEndpointIsRejectedWithWrongToken() {
-		int status = Unirest.get("/overview?token=definitely-the-wrong-token").asString().getStatus();
-
-		assertThat(status).isBetween(400, 499);
 	}
 
 	@MockBean(Configuration.class)

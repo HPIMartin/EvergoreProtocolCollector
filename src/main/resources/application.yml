@@ -28,6 +28,17 @@ netty:
     allocator:
       max-order: 3
 evergore:
+  security:
+    public-paths:
+      - /
+      - /index.html
+      - /assets/**
+      - /favicon.ico
+      - /health
+      - /swagger/**
+      - /swagger-ui/**
+      - /redoc/**
+      - /rapidoc/**
   rate-limit:
     max-requests-per-interval: 5
     interval: 10s

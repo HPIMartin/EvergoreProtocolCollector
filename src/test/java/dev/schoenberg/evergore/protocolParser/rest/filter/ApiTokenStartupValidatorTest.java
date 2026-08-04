@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
@@ -46,6 +48,6 @@ class ApiTokenStartupValidatorTest {
 	}
 
 	private ApiTokenStartupValidator validatorWithToken(String token) {
-		return new ApiTokenStartupValidator(new SecurityConfiguration(token), new LoggerSpy());
+		return new ApiTokenStartupValidator(new SecurityConfiguration(token, List.of()), new LoggerSpy());
 	}
 }
