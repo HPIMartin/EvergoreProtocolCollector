@@ -72,6 +72,12 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   Micronaut's `AntPathMatcher` so `/assets/**` is one entry. A new controller is therefore protected
   the moment it exists; nobody has to remember to add it to a list. An empty or missing
   configuration protects everything (fail closed).
+- Every path-based decision runs on the **canonicalized** path (`PathCanonicalizer`), so a `..`
+  segment cannot make a protected path look static and a leading `//` cannot be read as an authority.
+  The filter therefore stays mapped on `/**`: a narrower `@Filter` pattern is matched against the raw
+  path and would never reach the canonicalizing code. `PathCanonicalizer`, `PublicPaths`,
+  `SpaNavigationPaths` and `SpaStaticResourcePaths` are injected `@Singleton`s, not static utilities
+  (handbook §1).
 - **Monitoring:** `monitoring/LastRunHealthIndicator` (adapter implementing `HealthIndicator`,
   exposed at `GET /health` via `micronaut-management`; UNKNOWN before the first run, then UP +
   `lastSuccessfulRun` detail). Fed by `application/LastRunStatus` (above).

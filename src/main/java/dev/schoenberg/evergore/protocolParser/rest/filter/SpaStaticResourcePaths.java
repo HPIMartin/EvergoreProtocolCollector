@@ -1,11 +1,21 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
-public final class SpaStaticResourcePaths {
+import jakarta.inject.Singleton;
+
+@Singleton
+public class SpaStaticResourcePaths {
+	private static final String SHELL_PATH = "/";
+	private static final String INDEX_PATH = "/index.html";
 	private static final String ASSETS_PREFIX = "/assets/";
 
-	private SpaStaticResourcePaths() {}
+	private final PathCanonicalizer canonicalizer;
 
-	public static boolean matches(String path) {
-		return path.equals("/") || path.equals("/index.html") || path.startsWith(ASSETS_PREFIX);
+	public SpaStaticResourcePaths(PathCanonicalizer canonicalizer) {
+		this.canonicalizer = canonicalizer;
+	}
+
+	public boolean matches(String rawPath) {
+		String path = canonicalizer.canonicalize(rawPath);
+		return path.equals(SHELL_PATH) || path.equals(INDEX_PATH) || path.startsWith(ASSETS_PREFIX);
 	}
 }

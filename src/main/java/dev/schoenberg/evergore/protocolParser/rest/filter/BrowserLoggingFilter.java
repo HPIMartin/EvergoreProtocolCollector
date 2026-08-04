@@ -21,12 +21,14 @@ import dev.schoenberg.evergore.protocolParser.helper.config.RateLimitConfigurati
 @Filter("/**")
 public class BrowserLoggingFilter implements HttpServerFilter {
 	private final RateLimitConfiguration rateLimitConfiguration;
+	private final SpaStaticResourcePaths staticResourcePaths;
 	private final Clock clock;
 	private final Logger logger;
 	private final Map<String, RateLimitCounter> counters = new ConcurrentHashMap<>();
 
-	public BrowserLoggingFilter(RateLimitConfiguration rateLimitConfiguration, Clock clock, Logger logger) {
+	public BrowserLoggingFilter(RateLimitConfiguration rateLimitConfiguration, SpaStaticResourcePaths staticResourcePaths, Clock clock, Logger logger) {
 		this.rateLimitConfiguration = rateLimitConfiguration;
+		this.staticResourcePaths = staticResourcePaths;
 		this.clock = clock;
 		this.logger = logger;
 	}
@@ -38,7 +40,7 @@ public class BrowserLoggingFilter implements HttpServerFilter {
 
 	@Override
 	public Publisher<MutableHttpResponse<?>> doFilter(HttpRequest<?> request, ServerFilterChain chain) {
-		if (SpaStaticResourcePaths.matches(request.getPath())) {
+		if (staticResourcePaths.matches(request.getPath())) {
 			return chain.proceed(request);
 		}
 

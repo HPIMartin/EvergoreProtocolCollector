@@ -5,6 +5,8 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import jakarta.inject.Inject;
@@ -16,18 +18,24 @@ import kong.unirest.Unirest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import dev.schoenberg.evergore.protocolParser.RawHttpClient;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static io.micronaut.http.HttpStatus.BAD_REQUEST;
+import static io.micronaut.http.HttpStatus.OK;
+import static io.micronaut.http.HttpStatus.TOO_MANY_REQUESTS;
+import static io.micronaut.http.HttpStatus.UNAUTHORIZED;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @MicronautTest(environments = "ratelimit", rebuildContext = true)
 class RateLimitFilterTest {
 
 	private static final Path WORKING_DB = Paths.get("build/tmp/rateLimit/rateLimit.sqlite");
+	private static final int REQUESTS_PER_BURST = 3;
 
 	static {
 		silentThrow(() -> {
@@ -49,40 +57,55 @@ class RateLimitFilterTest {
 
 	@Test
 	void blocksRequestsOnceTheConfiguredLimitIsExceeded() {
-		assertThat(status("/favicon.ico")).isEqualTo(200);
-		assertThat(status("/favicon.ico")).isEqualTo(200);
-		assertThat(status("/favicon.ico")).isEqualTo(429);
+		List<Integer> statuses = statusesOfThreeRequestsTo("/favicon.ico");
+
+		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
 
 	@Test
 	void allowsRepeatedTokenlessRequestsToTheSpaShellRoot() {
-		assertThat(status("/")).isEqualTo(200);
-		assertThat(status("/")).isEqualTo(200);
-		assertThat(status("/")).isEqualTo(200);
+		List<Integer> statuses = statusesOfThreeRequestsTo("/");
+
+		assertThat(statuses).containsOnly(OK.getCode());
 	}
 
 	@Test
 	void allowsRepeatedTokenlessRequestsToIndexHtml() {
-		assertThat(status("/index.html")).isEqualTo(200);
-		assertThat(status("/index.html")).isEqualTo(200);
-		assertThat(status("/index.html")).isEqualTo(200);
+		List<Integer> statuses = statusesOfThreeRequestsTo("/index.html");
+
+		assertThat(statuses).containsOnly(OK.getCode());
 	}
 
 	@Test
 	void allowsRepeatedTokenlessRequestsToBundledAssets() {
 		String assetPath = bundledAssetPath();
 
-		assertThat(status(assetPath)).isEqualTo(200);
-		assertThat(status(assetPath)).isEqualTo(200);
-		assertThat(status(assetPath)).isEqualTo(200);
+		List<Integer> statuses = statusesOfThreeRequestsTo(assetPath);
+
+		assertThat(statuses).containsOnly(OK.getCode());
 	}
 
 	@Test
-	void stillRejectsTheOverviewEndpointWithoutAToken() {
-		assertThat(status("/overview")).isEqualTo(401);
+	void countsADoubleSlashPathInsteadOfMistakingItForTheSpaRoot() {
+		List<Integer> statuses = statusesOfThreeRequestsTo("//probe");
+
+		assertThat(statuses).containsExactly(UNAUTHORIZED.getCode(), UNAUTHORIZED.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
 
-	private int status(String path) {
+	@Test
+	void doesNotCountAMalformedRequestTargetBecauseTheFrameworkAnswersItFirst() {
+		RawHttpClient rawClient = new RawHttpClient(server.getPort());
+
+		List<Integer> statuses = IntStream.range(0, REQUESTS_PER_BURST).mapToObj(request -> rawClient.statusOf("/overview%zz")).toList();
+
+		assertThat(statuses).as("Micronaut answers a malformed target itself, so the counter never sees it; a 429 would mean it did").containsOnly(BAD_REQUEST.getCode());
+	}
+
+	private List<Integer> statusesOfThreeRequestsTo(String path) {
+		return IntStream.range(0, REQUESTS_PER_BURST).mapToObj(request -> statusOf(path)).toList();
+	}
+
+	private int statusOf(String path) {
 		return Unirest.get(path).asString().getStatus();
 	}
 
