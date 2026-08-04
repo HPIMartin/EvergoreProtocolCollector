@@ -18,6 +18,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class BankDatabaseRepositoryTest {
 	private static final String FRESH_DB_PATH = "build/tmp/test/bankRepositoryTest.sqlite";
+	private static final Instant BOUNDARY = Instant.parse("2024-06-01T13:37:00Z");
+	private static final Instant ONE_MINUTE_BEFORE_BOUNDARY = BOUNDARY.minusSeconds(60);
+	private static final Instant ONE_MINUTE_AFTER_BOUNDARY = BOUNDARY.plusSeconds(60);
 
 	@BeforeEach
 	void deleteStaleDatabase() {
@@ -26,68 +29,83 @@ class BankDatabaseRepositoryTest {
 
 	@Test
 	void freshlyConstructedRepositoryIsImmediatelyUsableWithoutSeparateInit() {
-		Configuration config = testConfiguration();
-		LoggerSpy logger = new LoggerSpy();
-
-		BankDatabaseRepository repo = BankDatabaseRepository.get(config, logger, () -> {});
-		BankEntry entry = new BankEntry(Instant.parse("2024-01-10T10:00:00Z"), "Aurora", 1000, TransferType.EINLAGERUNG);
-		repo.add(List.of(entry));
+		BankDatabaseRepository repo = repositoryOnAFreshFile();
+		BankEntry stored = bankEntry("Aurora", BOUNDARY, 1000);
+		repo.add(List.of(stored));
 
 		List<BankEntry> found = repo.getAllFor("Aurora", 0, 10);
 
-		assertThat(found).hasSize(1);
-		assertThat(found.get(0).avatar()).isEqualTo("Aurora");
-		assertThat(found.get(0).amount()).isEqualTo(1000);
+		assertThat(found).containsExactly(stored);
 	}
 
 	@Test
 	void getAllSinceIncludesTheRowExactlyAtTheGivenTimestamp() {
-		BankDatabaseRepository repo = BankDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
-		Instant boundary = Instant.parse("2024-06-01T13:37:00Z");
-		repo.add(List.of(new BankEntry(boundary, "Aurora", 100, TransferType.EINLAGERUNG)));
+		BankDatabaseRepository repo = repositoryInMemory();
+		BankEntry atBoundary = bankEntry("Aurora", BOUNDARY, 100);
+		repo.add(List.of(atBoundary));
 
-		List<BankEntry> result = repo.getAllSince(boundary);
+		List<BankEntry> result = repo.getAllSince(BOUNDARY);
 
-		assertThat(result).containsExactly(new BankEntry(boundary, "Aurora", 100, TransferType.EINLAGERUNG));
+		assertThat(result).containsExactly(atBoundary);
 	}
 
 	@Test
 	void getAllSinceExcludesRowsOlderThanTheGivenTimestamp() {
-		BankDatabaseRepository repo = BankDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
-		Instant boundary = Instant.parse("2024-06-01T13:37:00Z");
-		repo.add(List.of(new BankEntry(Instant.parse("2024-06-01T13:36:00Z"), "Aurora", 5, TransferType.EINLAGERUNG)));
+		BankDatabaseRepository repo = repositoryInMemory();
+		repo.add(List.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 5)));
 
-		List<BankEntry> result = repo.getAllSince(boundary);
+		List<BankEntry> result = repo.getAllSince(BOUNDARY);
 
 		assertThat(result).isEmpty();
 	}
 
 	@Test
 	void getAllSinceIncludesRowsNewerThanTheGivenTimestamp() {
-		BankDatabaseRepository repo = BankDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
-		Instant boundary = Instant.parse("2024-06-01T13:37:00Z");
-		BankEntry newer = new BankEntry(Instant.parse("2024-06-01T13:38:00Z"), "Aurora", 100, TransferType.EINLAGERUNG);
+		BankDatabaseRepository repo = repositoryInMemory();
+		BankEntry newer = bankEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 100);
 		repo.add(List.of(newer));
 
-		List<BankEntry> result = repo.getAllSince(boundary);
+		List<BankEntry> result = repo.getAllSince(BOUNDARY);
 
 		assertThat(result).containsExactly(newer);
 	}
 
-	private static Configuration testConfiguration() {
-		return new Configuration() {
-			@Override
-			public String getDatabasePath() {
-				return FRESH_DB_PATH;
-			}
-		};
+	@Test
+	void countForCountsOnlyTheRowsOfTheGivenAvatar() {
+		BankDatabaseRepository repo = repositoryInMemory();
+		repo.add(List.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 100), bankEntry("Aurora", BOUNDARY, 200), bankEntry("Boreas", ONE_MINUTE_AFTER_BOUNDARY, 300)));
+
+		long count = repo.countFor("Aurora");
+
+		assertThat(count).isEqualTo(2);
 	}
 
-	private static Configuration inMemoryConfiguration() {
+	@Test
+	void countForReturnsZeroForAnAvatarWithoutRows() {
+		BankDatabaseRepository repo = repositoryInMemory();
+
+		long count = repo.countFor("Nobody");
+
+		assertThat(count).isZero();
+	}
+
+	private static BankEntry bankEntry(String avatar, Instant timeStamp, int amount) {
+		return new BankEntry(timeStamp, avatar, amount, TransferType.EINLAGERUNG);
+	}
+
+	private static BankDatabaseRepository repositoryOnAFreshFile() {
+		return BankDatabaseRepository.get(configurationFor(FRESH_DB_PATH), new LoggerSpy(), () -> {});
+	}
+
+	private static BankDatabaseRepository repositoryInMemory() {
+		return BankDatabaseRepository.get(configurationFor(":memory:"), new LoggerSpy(), () -> {});
+	}
+
+	private static Configuration configurationFor(String databasePath) {
 		return new Configuration() {
 			@Override
 			public String getDatabasePath() {
-				return ":memory:";
+				return databasePath;
 			}
 		};
 	}

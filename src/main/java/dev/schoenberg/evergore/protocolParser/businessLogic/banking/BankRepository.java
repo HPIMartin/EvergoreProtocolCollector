@@ -10,6 +10,8 @@ public interface BankRepository {
 
 	List<BankEntry> getAllFor(String avatar);
 
+	long countFor(String avatar);
+
 	List<BankEntry> getAllSince(Instant timestampInclusive);
 
 	List<String> getAllDifferentAvatars();

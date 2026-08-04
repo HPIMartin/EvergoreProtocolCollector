@@ -56,6 +56,11 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	}
 
 	@Override
+	public long countFor(String avatar) {
+		return silentThrow(() -> storage.queryBuilder().where().eq(AVATAR_COLUMN, avatar).countOf());
+	}
+
+	@Override
 	public List<StorageEntry> getAllSince(Instant timestampInclusive) {
 		List<StorageDatabaseEntry> result = silentThrow(() -> storage.queryBuilder().where().ge(StorageDatabaseEntry.TIMESTAMP_COLUMN, from(timestampInclusive)).query());
 

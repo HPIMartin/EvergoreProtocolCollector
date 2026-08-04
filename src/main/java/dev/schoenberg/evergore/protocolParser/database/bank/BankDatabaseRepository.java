@@ -57,6 +57,11 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 	}
 
 	@Override
+	public long countFor(String avatar) {
+		return silentThrow(() -> bank.queryBuilder().where().eq(AVATAR_COLUMN, avatar).countOf());
+	}
+
+	@Override
 	public List<BankEntry> getAllSince(Instant timestampInclusive) {
 		List<BankDatabaseEntry> result = silentThrow(() -> bank.queryBuilder().where().ge(BankDatabaseEntry.TIMESTAMP_COLUMN, from(timestampInclusive)).query());
 

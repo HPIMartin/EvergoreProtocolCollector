@@ -24,6 +24,11 @@ public class BankRepositoryStub implements BankRepository {
 	}
 
 	@Override
+	public long countFor(String avatar) {
+		return getAllFor(avatar).size();
+	}
+
+	@Override
 	public List<String> getAllDifferentAvatars() {
 		return avatars;
 	}

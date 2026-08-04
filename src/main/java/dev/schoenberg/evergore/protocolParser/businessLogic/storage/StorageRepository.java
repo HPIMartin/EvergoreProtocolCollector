@@ -10,6 +10,8 @@ public interface StorageRepository {
 
 	List<StorageEntry> getAllFor(String avatar);
 
+	long countFor(String avatar);
+
 	List<StorageEntry> getAllSince(Instant timestampInclusive);
 
 	List<String> getAllDifferentAvatars();

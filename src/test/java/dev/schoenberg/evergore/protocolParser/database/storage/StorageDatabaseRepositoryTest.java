@@ -13,39 +13,67 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class StorageDatabaseRepositoryTest {
+	private static final Instant BOUNDARY = Instant.parse("2024-06-01T13:37:00Z");
+	private static final Instant ONE_MINUTE_BEFORE_BOUNDARY = BOUNDARY.minusSeconds(60);
+	private static final Instant ONE_MINUTE_AFTER_BOUNDARY = BOUNDARY.plusSeconds(60);
 
 	@Test
 	void getAllSinceIncludesTheRowExactlyAtTheGivenTimestamp() {
-		StorageDatabaseRepository repo = StorageDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
-		Instant boundary = Instant.parse("2024-06-01T13:37:00Z");
-		repo.add(List.of(new StorageEntry(boundary, "Aurora", 3, "Drachenhaut", 80, TransferType.EINLAGERUNG)));
+		StorageDatabaseRepository repo = repositoryInMemory();
+		StorageEntry atBoundary = storageEntry("Aurora", BOUNDARY, 3);
+		repo.add(List.of(atBoundary));
 
-		List<StorageEntry> result = repo.getAllSince(boundary);
+		List<StorageEntry> result = repo.getAllSince(BOUNDARY);
 
-		assertThat(result).containsExactly(new StorageEntry(boundary, "Aurora", 3, "Drachenhaut", 80, TransferType.EINLAGERUNG));
+		assertThat(result).containsExactly(atBoundary);
 	}
 
 	@Test
 	void getAllSinceExcludesRowsOlderThanTheGivenTimestamp() {
-		StorageDatabaseRepository repo = StorageDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
-		Instant boundary = Instant.parse("2024-06-01T13:37:00Z");
-		repo.add(List.of(new StorageEntry(Instant.parse("2024-06-01T13:36:00Z"), "Aurora", 1, "Drachenhaut", 80, TransferType.EINLAGERUNG)));
+		StorageDatabaseRepository repo = repositoryInMemory();
+		repo.add(List.of(storageEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1)));
 
-		List<StorageEntry> result = repo.getAllSince(boundary);
+		List<StorageEntry> result = repo.getAllSince(BOUNDARY);
 
 		assertThat(result).isEmpty();
 	}
 
 	@Test
 	void getAllSinceIncludesRowsNewerThanTheGivenTimestamp() {
-		StorageDatabaseRepository repo = StorageDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
-		Instant boundary = Instant.parse("2024-06-01T13:37:00Z");
-		StorageEntry newer = new StorageEntry(Instant.parse("2024-06-01T13:38:00Z"), "Aurora", 3, "Drachenhaut", 80, TransferType.EINLAGERUNG);
+		StorageDatabaseRepository repo = repositoryInMemory();
+		StorageEntry newer = storageEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 3);
 		repo.add(List.of(newer));
 
-		List<StorageEntry> result = repo.getAllSince(boundary);
+		List<StorageEntry> result = repo.getAllSince(BOUNDARY);
 
 		assertThat(result).containsExactly(newer);
+	}
+
+	@Test
+	void countForCountsOnlyTheRowsOfTheGivenAvatar() {
+		StorageDatabaseRepository repo = repositoryInMemory();
+		repo.add(List.of(storageEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1), storageEntry("Aurora", BOUNDARY, 2), storageEntry("Boreas", ONE_MINUTE_AFTER_BOUNDARY, 3)));
+
+		long count = repo.countFor("Aurora");
+
+		assertThat(count).isEqualTo(2);
+	}
+
+	@Test
+	void countForReturnsZeroForAnAvatarWithoutRows() {
+		StorageDatabaseRepository repo = repositoryInMemory();
+
+		long count = repo.countFor("Nobody");
+
+		assertThat(count).isZero();
+	}
+
+	private static StorageEntry storageEntry(String avatar, Instant timeStamp, int quantity) {
+		return new StorageEntry(timeStamp, avatar, quantity, "Drachenhaut", 80, TransferType.EINLAGERUNG);
+	}
+
+	private static StorageDatabaseRepository repositoryInMemory() {
+		return StorageDatabaseRepository.get(inMemoryConfiguration(), new LoggerSpy(), () -> {});
 	}
 
 	private static Configuration inMemoryConfiguration() {
