@@ -21,7 +21,7 @@ class ApplicationExceptionHandlerTest {
 	private static final String SECRET_TOKEN = "s3cr3t-api-token";
 
 	private final LoggerSpy logger = new LoggerSpy();
-	private final ApplicationExceptionHandler handler = new ApplicationExceptionHandler(logger);
+	private final ApplicationExceptionHandler tested = new ApplicationExceptionHandler(logger);
 
 	@Test
 	void accessNotAllowedMapsToUnauthorized() {
@@ -53,7 +53,7 @@ class ApplicationExceptionHandlerTest {
 
 	@Test
 	void logsThePathWithoutTheTokenQueryParameter() {
-		handler.handle(HttpRequest.GET("/overview?token=" + SECRET_TOKEN), new AccessNotAllowed());
+		tested.handle(HttpRequest.GET("/overview?token=" + SECRET_TOKEN), new AccessNotAllowed());
 
 		assertThat(logger.infoMessages()).containsExactly("Exception while requesting: /overview");
 	}
@@ -98,7 +98,7 @@ class ApplicationExceptionHandlerTest {
 	}
 
 	private HttpResponse<?> handle(ProtocolParserException exception) {
-		return handler.handle(GET_REQUEST, exception);
+		return tested.handle(GET_REQUEST, exception);
 	}
 
 	private void assertLoggedWithoutStackTrace(String expectedMessage) {
