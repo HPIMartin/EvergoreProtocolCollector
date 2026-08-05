@@ -60,7 +60,7 @@ public class ApplicationExceptionHandler implements ExceptionHandler<ProtocolPar
 
 	@Override
 	public HttpResponse<?> onNoElementFound(NoElementFound exception) {
-		return status(NOT_FOUND, exception.requestedValue);
+		return status(NOT_FOUND);
 	}
 
 	@Override
