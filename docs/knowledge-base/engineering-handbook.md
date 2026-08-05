@@ -56,7 +56,11 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
   Defensible only as a static initializer for setup that must precede framework boot (e.g.
   seeding/deleting a test DB), in **test** code; in production, justify hard.
 - **No comments** in code, config, or infrastructure unless intent can't live in names/structure
-  (rare; then *why*, not *what*). Reviewers flag unnecessary comments.
+  (rare; then *why*, not *what*).
+- **Javadoc is an absolute no-go** (author decision 2026-08-04) and counts as a comment, not as
+  documentation: no `/** */` on classes, methods, records or fields. Non-obvious knowledge goes into
+  an expressive name, a **test name**, the KB, or `open-questions.md`. Reviewers flag every doc
+  comment and every explanatory comment the diff adds, not only the "unnecessary" ones.
 - **No dead code, no undeclared dependencies** (an unused class importing a library absent from
   `build.gradle.kts`: delete it).
 - **Code/build is the single source of truth; docs never duplicate volatile facts.** Versions

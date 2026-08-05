@@ -27,8 +27,12 @@ commits/diff, and the reports of the **falsifier panel** (`falsifier-domain` +
 ## Code criteria
 
 - Clean code: intention-revealing names, small methods, no dead code, no secrets, no undeclared deps.
-- **Flag unnecessary comments**: code, config and infra should be self-explanatory; comments only
-  where intent genuinely can't be expressed in code.
+- **Flag every comment the diff adds**: code, config and infra should be self-explanatory. **Javadoc
+  is an absolute no-go** (handbook §1): any `/** */` block is a finding, however well written, and so
+  is an explanatory `//` line whose content belongs in a name, a test name or the KB.
+- **Tests rank above production code.** Every test the diff touches is strictly arrange/act/assert
+  with the act as its own named value; an act buried inside the assertion (`assertThat(call().x())`)
+  is a finding on its own.
 - **SOLID** and **hexagonal**: `domain`, `businessLogic`, `application` import no framework/adapter;
   `application` depends only inward (`HexagonalArchitectureTest` enforces this); new outbound deps
   go through ports.

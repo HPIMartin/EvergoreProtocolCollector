@@ -13,30 +13,11 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M2 | JSON API (strand `json-api`) | E5 | Unblocks the SPA; reworks the token filter and SPA fallback in one place |
 | M3 | Dashboard views (strand `spa-views`) | E5 | The officer-visible payoff of the dashboard rebuild |
-| M4 | Ingest & test robustness | B16, B17 | Small hardening set, deliberately behind `json-api` (decision 2026-07-17) |
+| M4 | Ingest & test robustness | B16, B17 | Small hardening set, deliberately behind the dashboard strands (decision 2026-07-17) |
 | M5 | Sheet parity, confirmed columns | E1, E2 | The headline metric lands on integrity-fixed data and a real dashboard |
 | M6 | Real-browser integration tests | H2, H6 | Scrape coverage without host Firefox; the test split gates on the Selenium service |
-| M7 | Micronaut 5 | H9 | Deferred deliberately until 1:1 is re-proven through the nets built in M2-M6 |
-
-## M2: JSON API (strand `json-api`)
-
-Slice: dashboard data is served as JSON under a token-protected `/api/**`; the static SPA surface
-is public.
-
-- [ ] Token-filter scope inverted to `/api/**` (decision 2026-07-04): tests prove a token is
-      required there and not for `/`, `/index.html`, `/assets/**`, `/swagger/**`.
-- [ ] The public no-token/no-rate-limit/no-audit surface is documented and accepted
-      (open-questions entry).
-- [ ] Overview and per-avatar bank/storage data served as JSON; the offline acceptance net asserts
-      the overview JSON against the synthetic fixture (sibling to `ProtocolEvaluationAcceptanceTest`).
-- [ ] SPA fallback fixed both ways (trailing-extension match: a dotless missing asset 404s, a
-      dotted client route gets the shell) and static-path matching canonicalizes first; tests both
-      ways (the deferred `json-api` follow-ups in the backlog status section).
-- [ ] `./gradlew build` green including the frontend `check`.
-
-Track: worktree strand `json-api`.
+| M7 | Micronaut 5 | H9 | Deferred deliberately until 1:1 is re-proven through the nets built in M3-M6 |
 
 ## M3: Dashboard views (strand `spa-views`)
 
@@ -90,7 +71,7 @@ Slice: the framework moves to the current major without losing 1:1.
 
 - [ ] `./gradlew build` green on Micronaut 5; endpoints 1:1 against the prod snapshot; the offline
       acceptance net green (backlog H9).
-- [ ] Precondition: M2-M6 landed (their nets are the safety for this jump).
+- [ ] Precondition: M3-M6 landed (their nets are the safety for this jump).
 
 ## Later (unordered; pull between milestones when they fit)
 

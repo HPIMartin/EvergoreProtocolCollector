@@ -246,10 +246,9 @@ Public and unthrottled are **not** the same set. The rate limiter and request lo
 static surface (`/`, `/index.html`, `/assets/**`, via `SpaStaticResourcePaths`); the remaining public
 paths are token-free but still counted and logged.
 
-
 One class of request never reaches either filter: a **malformed request target** (an invalid
 percent-escape such as `/overview%zz`) is answered **400 by Micronaut itself**, ahead of the filter
-chain, so it is neither counted nor logged. Pinned by a test that goes
+chain, so it is neither counted nor logged. Tracked as backlog **C10** and pinned by a test that goes
 red if a framework upgrade changes it.
 
 | Method · Path | Purpose |

@@ -37,8 +37,10 @@ ambiguity, not wording.
 
 ## Rules
 
-- One behavior per test; AssertJ; arrange/act/assert; table-driven where inputs vary.
+- One behavior per test; AssertJ; **strict arrange/act/assert with the act as its own named value**
+  (never buried in the assertion); table-driven where inputs vary. Tests rank above production code.
 - No dead code, no commented-out code, no secrets, no undeclared dependencies. LF line endings.
+- **No Javadoc, ever** (handbook §1): knowledge goes into names, test names or the KB.
 - Commit messages: single-line, present-tense verb first, no body, no `Co-Authored-By`/footer.
 - **Docs:** update the relevant KB doc in the same change when behavior/config changes; completed
   backlog item → remove its row + all shortcode references; follow the **DOC checklist** in
