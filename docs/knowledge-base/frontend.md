@@ -65,9 +65,11 @@ controllers are untouched legacy.
   enum, so the German domain constants (`EINLAGERUNG`/`ENTNAHME`) never reach the contract and stay
   renameable. `toGermanString()` stays with the HTML pages.
 - **No field name is derived from a Java identifier.** Every wire record component carries an explicit
-  `@JsonProperty`, so renaming a component cannot change the contract. There is no JDK-standard
-  annotation for this (JSON binding never landed in Java SE), so the Jackson annotation is deliberate
-  and confined to the `wire` package.
+  `@JsonProperty`, so renaming a component cannot change the contract, and `RenameSafetyTest` fails
+  the build if one is missing. The same rule covers the DB side: every `@DatabaseField` names its
+  column and every `@DatabaseTable` its table. There is no JDK-standard annotation for this (JSON
+  binding never landed in Java SE), so the Jackson annotation is deliberate and confined to the
+  `wire` package.
 - **A tokenless deep link answers 401.** Only `/` and `/index.html` are public, so the shell loads
   from there and the client must carry `?token=` across its routes; `spa-views` owns that.
 - **404 vs. empty page** (author decision 2026-08-05): a **404 means the avatar is unknown**, i.e. has

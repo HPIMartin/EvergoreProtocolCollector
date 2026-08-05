@@ -12,8 +12,9 @@ public class BankDatabaseEntry {
 	public static final String TABLE = "bankEntries";
 	public static final String AVATAR_COLUMN = "avatar";
 	public static final String TIMESTAMP_COLUMN = "timeStamp";
+	public static final String ID_COLUMN = "id";
 
-	@DatabaseField(generatedId = true, allowGeneratedIdInsert = true)
+	@DatabaseField(columnName = ID_COLUMN, generatedId = true, allowGeneratedIdInsert = true)
 	public UUID id;
 
 	@DatabaseField(columnName = TIMESTAMP_COLUMN, dataType = DataType.DATE_STRING)
