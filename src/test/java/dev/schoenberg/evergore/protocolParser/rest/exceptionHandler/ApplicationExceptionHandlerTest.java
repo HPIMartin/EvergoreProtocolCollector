@@ -59,6 +59,13 @@ class ApplicationExceptionHandlerTest {
 	}
 
 	@Test
+	void anAvatarCarryingControlCharactersIsLoggedPercentEncoded() {
+		tested.handle(HttpRequest.GET("/avatars/unknown%0D%0AInjected/bank"), new NoElementFound("unknown\r\nInjected"));
+
+		assertThat(logger.infoMessages()).containsExactly("Exception while requesting: /avatars/unknown%0D%0AInjected/bank");
+	}
+
+	@Test
 	void accessNotAllowedIsLoggedAsOneLineWithoutTheStackTrace() {
 		handle(new AccessNotAllowed());
 
