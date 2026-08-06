@@ -61,7 +61,9 @@ local-only Docker → home-server deploy.)*
   tree with no error at all (seen three times in the `json-api` gate, once losing two `process-learnings`
   rows into the main worktree while the branch stayed without them). Address the target explicitly in every
   call: `git -C <abs path> …`, absolute paths for reads, writes and Gradle. `git status --short` in **both**
-  worktrees before a gateway claim. Mechanical enforcement is folded into **G7**.
+  worktrees before a gateway claim. Mechanical enforcement is folded into **G7**. A drifted Gradle run is
+  **green**, so an exit code proves nothing: count the test-result XMLs in the worktree's own `build/` and
+  check the strand's new test classes are among them, or the suite silently ran without the change.
 - Keep `zugang.txt` (creds, gitignored); machine-specific config stays in gitignored `*.local.*` files.
 - **Commit from inside the devcontainer:** a Windows host session fails the pre-commit gate
   (`checkstyleMain` → `:frontend:npmBuild` → Linux-installed `node_modules`, no `tsc`); see the
