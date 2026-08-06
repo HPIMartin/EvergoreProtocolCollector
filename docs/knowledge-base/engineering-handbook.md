@@ -172,6 +172,11 @@ language**, given/when/then:
   first). A checkpoint, not history: `/continue` resolves it first (finish or rework, replace via
   the normal confirmed-message protocol; reset-free rewrite recipe → multi-agent playbook). Never
   survives to the review gateway or a push; parked on `main`, resolved before any new work.
+- **Deleting is the author's act, without exception**: an agent never runs `rm`, not even on its own
+  throwaway files; it hands the author the exact command (the author owns his files, and a deletion
+  no rebase undoes). Probes under the gitignored `src/probe/java` need no exception:
+  `./gradlew clearProbes` removes them, with the scope pinned in the build script rather than in a
+  permission rule ([build-run-deploy.md](build-run-deploy.md)).
 
 ### Branching, merge & the review gateway (revised 2026-06-27)
 

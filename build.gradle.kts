@@ -102,11 +102,6 @@ tasks.withType<Test> {
 	jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
 
-checkstyle {
-	toolVersion = "10.21.0"
-	configFile = file("config/checkstyle/checkstyle.xml")
-}
-
 // The active rules are not type-aware, so Checkstyle needs no compiled classpath. Emptying it drops
 // `checkstyleMain -> classes -> processResources -> :frontend:npmBuild` from the pre-commit hook.
 tasks.withType<Checkstyle>().configureEach {
@@ -116,6 +111,7 @@ tasks.withType<Checkstyle>().configureEach {
 spotless {
 	java {
 		target("src/**/*.java")
+		targetExclude("src/probe/**")
 		removeUnusedImports()
 		importOrder("java", "javax", "jakarta", "", "dev.schoenberg", "\\#")
 		eclipse().configFile("config/eclipse/formatter.xml")
@@ -147,6 +143,37 @@ tasks.test {
 				"Per-class forking costs ~8 min per run and breaks focused --tests runs. " +
 				"See the test-execution model in docs/knowledge-base/testing.md before changing this."
 	}
+}
+
+val probe: SourceSet by sourceSets.creating {
+	compileClasspath += sourceSets["test"].output + sourceSets["test"].compileClasspath
+	runtimeClasspath += sourceSets["test"].output + sourceSets["test"].runtimeClasspath
+}
+
+checkstyle {
+	toolVersion = "10.21.0"
+	configFile = file("config/checkstyle/checkstyle.xml")
+	sourceSets = project.sourceSets.matching { it != probe }
+}
+
+configurations["probeAnnotationProcessor"].extendsFrom(configurations["testAnnotationProcessor"])
+
+tasks.named<JavaCompile>("compileProbeJava") {
+	options.compilerArgs.remove("-Werror")
+}
+
+tasks.register<Test>("probe") {
+	group = "verification"
+	description = "Runs the throwaway probes in src/probe/java; deliberately not wired into check or build."
+	testClassesDirs = probe.output.classesDirs
+	classpath = probe.runtimeClasspath
+	failOnNoDiscoveredTests = true
+}
+
+tasks.register<Delete>("clearProbes") {
+	group = "verification"
+	description = "Deletes src/probe with everything in it, so removing a probe needs no rm."
+	delete(layout.projectDirectory.dir("src/probe"))
 }
 
 val vulnScanFailOnSeverity = providers.gradleProperty("vulnScan.failOnSeverity").orNull?.takeIf { it.isNotBlank() }

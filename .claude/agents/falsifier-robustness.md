@@ -28,8 +28,8 @@ Read `docs/knowledge-base/engineering-handbook.md`, the relevant KB docs, and th
 - **Boundaries & hygiene:** `domain`, `businessLogic` and `application` must be framework-free, and
   `application` depends only inward, never on adapters/config (`HexagonalArchitectureTest` fails the
   build otherwise). New dead code, secrets, or undeclared deps? Sentinel returns instead of `Optional`?
-- Try to **construct a failing case**: write the counter-test as a snippet (do not commit it) and
-  run focused tests to demonstrate.
+- Try to **construct a failing case**: write it as a probe under `src/probe/java`, run
+  `./gradlew probe`, and run focused tests to demonstrate.
 
 ## Environment
 **Run everything inside the devcontainer / via Docker, never natively on the host.** Only when a
@@ -42,6 +42,15 @@ silently land in the main repo instead of the strand you were told to work in, a
 then reads or writes the wrong tree without any error. Address the worktree explicitly in **every**
 call: `git -C <abs path> …` and absolute paths for reads, writes and Gradle. Verify with `pwd`
 before you trust a relative result.
+
+**Throwaway code goes under `src/probe/java`, never under `src/test/java`.** Run it with
+`./gradlew probe` and clear it with `./gradlew clearProbes` before you return; `rm` stays the
+author's command, for your own probes too (handbook §7). What a probe may use, and why that location
+keeps the build and git out of it: `docs/knowledge-base/build-run-deploy.md`.
+
+**Run Gradle only in the worktree you were given, and alone** (multi-agent-playbook.md): two runs in
+one checkout corrupt each other's `build/` state. If a sibling's run is already active there, report
+that instead of racing it.
 
 ## Return (your final message = data for the orchestrator)
 - `robust: yes | no`

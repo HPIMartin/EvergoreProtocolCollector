@@ -90,6 +90,32 @@
   `./gradlew build` regenerates it. No threshold is enforced (`jacocoTestCoverageVerification` is
   not wired): the report guides test work without gating a young suite (a threshold would come
   later under G6).
+- **Throwaway probes, `src/probe/java` (gitignored, on-demand):**
+  - `./gradlew probe` compiles and runs that source set as a JUnit suite. Its compile and runtime
+    classpath is the **test** classpath plus `sourceSets.test.output`, so a probe can use
+    `@MicronautTest`, the `@MockBean` boot setup, `LoggerSpy`, `RawHttpClient` and the repository
+    stubs exactly as a test does.
+  - `probeAnnotationProcessor` extends `testAnnotationProcessor`: without it Micronaut's processor
+    never runs over the probe and `@MicronautTest` finds no beans.
+  - **Deliberately not wired into `check`/`build`**, and out of the format gates' reach
+    (`spotless` `targetExclude`; `checkstyle.sourceSets` drops this one source set through a live
+    `matching {}` view, so one added later is gated by default, and `check` never depends on
+    `checkstyleProbe`, which would pull `compileProbeJava` in with it): a
+    failing, unformatted or uncompilable probe leaves `./gradlew build` green, and `/src/probe/` is
+    gitignored, so `git add -A` cannot commit one. That combination is what makes a leftover probe
+    harmless hygiene instead of a step in the review gate (decision in
+    [open-questions.md](../open-questions.md)).
+  - JVM args and the JUnit platform come from the shared `tasks.withType<Test>` block, so `probe`
+    boots with `--enable-native-access=ALL-UNNAMED` like `test`; `forkEvery` stays unset here too.
+  - `compileProbeJava` drops `-Werror` (it keeps `-Xlint:all`): a probe measuring a deprecated API is
+    a normal probe, and the task reaches no `build` graph, so nothing else loosens.
+  - The task pins `failOnNoDiscoveredTests` (Gradle 9.5.1 defaults it to `true`; pinned so a default
+    flip cannot re-open the hole), so a run that discovers **no** test fails instead of reporting a
+    green one nobody ran. It is task-scoped: a `@Test`-less class beside a discovered sibling still
+    passes, and an empty `src/probe/java` leaves the task `NO-SOURCE` for Gradle to skip.
+  - `./gradlew clearProbes` deletes `src/probe` with everything in it, so a falsifier agent gets rid
+    of its own probes without ever running `rm` (the deletion rule keeps no exception, handbook §7);
+    nothing under `src/probe/` is reviewed or shipped.
 - **Dependency vulnerability scan, Trivy (on-demand):**
   - `./gradlew vulnScan` generates a CycloneDX SBOM of the resolved dependency graph
     (`org.cyclonedx.bom` plugin → `build/reports/cyclonedx/bom.json`) and scans it with **Trivy**

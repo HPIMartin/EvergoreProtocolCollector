@@ -61,6 +61,12 @@ then reads or writes the wrong tree without any error. Address the worktree expl
 call: `git -C <abs path> …` and absolute paths for reads, writes and Gradle. Verify with `pwd`
 before you trust a relative result.
 
+**Code that is not meant to stay goes under `src/probe/java`** (probing a library's real behaviour
+before you write the helper, reproducing something by hand), never into `src/test/java`. Run it with
+`./gradlew probe`, clear it with `./gradlew clearProbes` before you hand off; `rm` stays the author's
+command, for your own probes too (handbook §7). Details:
+`docs/knowledge-base/build-run-deploy.md`.
+
 ## Return (your final message = data for the orchestrator)
 
 Per step: phase outcomes (red proven? green? refactor?), focused-test result, commit message used.

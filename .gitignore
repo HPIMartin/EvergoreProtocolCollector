@@ -3,6 +3,7 @@
 frontend/build/
 frontend/.gradle/
 /target/
+/src/probe/
 node_modules/
 .classpath
 .project

@@ -59,7 +59,9 @@ Applies to every `*.md` in the repo (root, `docs/`, `.claude/`). Findings cite r
 - **DOC-3 Git is history:** no changelogs, no commit narration, no was/now diffs, no session
   references. Docs state current truth only.
 - **DOC-4 Single home:** each rule/fact lives in exactly one doc; everything else cross-links.
-  Duplication drifts.
+  Duplication drifts. Exception: `.claude/agents/*.md` are prompts, not docs, and an agent only ever
+  reads its own brief, so an operative instruction may repeat verbatim across briefs; its rationale
+  still lives only in the KB.
 - **DOC-5 Backlog holds only live work:** open and in-progress items only; completing an item
   removes its row **and** every shortcode reference repo-wide; rejected/deferred items stay, with
   rationale.

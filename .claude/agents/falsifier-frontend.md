@@ -50,6 +50,17 @@ then reads or writes the wrong tree without any error. Address the worktree expl
 call: `git -C <abs path> …` and absolute paths for reads, writes and Gradle. Verify with `pwd`
 before you trust a relative result.
 
+**JVM-side throwaway code goes under `src/probe/java`, never under `src/test/java`.** Run it with
+`./gradlew probe` and clear it with `./gradlew clearProbes` before you return; `rm` stays the
+author's command, for your own probes too (handbook §7). What a probe may use, and why that location
+keeps the build and git out of it: `docs/knowledge-base/build-run-deploy.md`. A **Vitest** probe has
+no such home yet, since `frontend/src` feeds `npmTest` and `npmLint` and hence `check`: put throwaway
+component code into your report as a snippet and say you needed one, rather than into the tree.
+
+**Run Gradle and npm only in the worktree you were given, and alone** (multi-agent-playbook.md): two
+runs in one checkout corrupt each other's `build/` and `node_modules` state. If a sibling's run is
+already active there, report that instead of racing it.
+
 ## Return (your final message = data for the orchestrator)
 - `robust: yes | no`
 - weaknesses: a list of `{severity: high|med|low, where: file:line, why}`

@@ -111,10 +111,14 @@ Orchestrator = the main session (me), via the `Agent` tool: `subagent_type` = `i
 - **Bash stdout** may not surface on the Windows host: redirect to a file
   (`./gradlew build > out.txt 2>&1`) and `Read` it; in-container, Bash is normal.
 - Permission-blocked commands + reset-free rewrite: see the FAIL-loop section. Prefer Read/Grep/Glob.
-- **Never overlap a tree-mutating agent with another agent's build.** The falsifier rewrites source
-  for counter-tests; a concurrent build on the same tree reports phantom failures. Run falsify →
-  review sequentially, or isolate per worktree (`Agent` `isolation: "worktree"`); same inside the
-  panel. (The doc-reviewer only reads docs and runs no build; it may run alongside the reviewer.)
+- **Never overlap a tree-mutating agent with another agent's build.** The falsifier writes probes and
+  runs Gradle; a concurrent run on the same tree reports phantom failures and the two corrupt each
+  other's `build/` state. Run falsify → review sequentially, or isolate per worktree (`Agent`
+  `isolation: "worktree"`); same inside the panel. (The doc-reviewer only reads docs and runs no
+  build; it may run alongside the reviewer.)
+- **Probes live in the gitignored `src/probe/java`**, run via `./gradlew probe` and get cleared with
+  `./gradlew clearProbes`, never with `rm` (→ [build-run-deploy.md](build-run-deploy.md),
+  handbook §7): outside `check`/`build` and outside git, a leftover probe breaks nothing.
 - Focused tests during micro-steps (`./gradlew test --tests ClassName`); full `./gradlew build`
   before the gate.
 
