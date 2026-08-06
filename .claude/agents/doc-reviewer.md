@@ -48,6 +48,14 @@ inbound/outbound links (DOC-10) and cross-doc duplication (DOC-4).
   You only flag rule violations (DOC-5).
 - Code, tests, build files.
 
+## Environment
+
+**The working directory is not reliable.** With several worktrees checked out, a Bash call can
+silently land in the main repo instead of the strand you were told to work in, and a relative path
+then reads or writes the wrong tree without any error. Address the worktree explicitly in **every**
+call: `git -C <abs path> …` and absolute paths for reads, writes and Gradle. Verify with `pwd`
+before you trust a relative result.
+
 ## Return (your final message = data for the orchestrator)
 
 - `verdict: PASS | FAIL` (task-scoped findings only)

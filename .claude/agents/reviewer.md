@@ -46,6 +46,12 @@ tooling as a finding. Run the full `./gradlew build`, confirm green. On the Wind
 stdout may not surface: redirect to a file (`./gradlew build > r.txt 2>&1`) and Read it. Do not
 modify code, commit, or push.
 
+**The working directory is not reliable.** With several worktrees checked out, a Bash call can
+silently land in the main repo instead of the strand you were told to work in, and a relative path
+then reads or writes the wrong tree without any error. Address the worktree explicitly in **every**
+call: `git -C <abs path> …` and absolute paths for reads, writes and Gradle. Verify with `pwd`
+before you trust a relative result.
+
 ## Return (your final message = data for the orchestrator)
 
 - `verdict: PASS | FAIL`

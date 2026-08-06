@@ -55,6 +55,12 @@ and Read it (`./gradlew test --tests ClassName > o.txt 2>&1` focused; `./gradlew
 before hand-off); in-container (the normal case), Bash output is fine. `rm -rf` is blocked. Prefer
 Read/Grep/Glob. See `docs/knowledge-base/dev-environment.md`.
 
+**The working directory is not reliable.** With several worktrees checked out, a Bash call can
+silently land in the main repo instead of the strand you were told to work in, and a relative path
+then reads or writes the wrong tree without any error. Address the worktree explicitly in **every**
+call: `git -C <abs path> …` and absolute paths for reads, writes and Gradle. Verify with `pwd`
+before you trust a relative result.
+
 ## Return (your final message = data for the orchestrator)
 
 Per step: phase outcomes (red proven? green? refactor?), focused-test result, commit message used.

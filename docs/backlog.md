@@ -56,6 +56,12 @@ local-only Docker → home-server deploy.)*
   tabs→spaces). Prefer bare commands matching the portable `Bash(<cmd>:*)` rules; diff against HEAD if unsure.
   The worktree `git -C <abs-path>` re-prompt loop is fixed by the committed portable wildcard
   `Bash(git -C *.claude/worktrees/*)` (2026-06-28); still watch the tabs→spaces rewrite.
+- **The shell's working directory drifts between worktrees.** With a strand worktree checked out next to
+  `main`, a Bash call can silently run in the wrong one, and a relative path then reads or writes the wrong
+  tree with no error at all (seen three times in the `json-api` gate, once losing two `process-learnings`
+  rows into the main worktree while the branch stayed without them). Address the target explicitly in every
+  call: `git -C <abs path> …`, absolute paths for reads, writes and Gradle. `git status --short` in **both**
+  worktrees before a gateway claim. Mechanical enforcement is folded into **G7**.
 - Keep `zugang.txt` (creds, gitignored); machine-specific config stays in gitignored `*.local.*` files.
 - **Commit from inside the devcontainer:** a Windows host session fails the pre-commit gate
   (`checkstyleMain` → `:frontend:npmBuild` → Linux-installed `node_modules`, no `tsc`); see the
@@ -179,7 +185,7 @@ doc is intentionally **not** committed; its value lives here.
 
 | ID | Item | Why | Priority | Sequencing / caveat |
 |----|------|-----|----------|---------------------|
-| **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO` | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%), the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`); the hard-coded API token is already env-injected, so no cleanup-ordering constraint remains. System.out check: the dead-code deletion already removed ~half the hits (`CsvParser`); whitelist `@Ignore` Gherkin once G4 lands. |
+| **G7** | **Deterministic enforcement hooks** in `.claude/settings.json`: (a) PreToolUse Edit/Write **secret-scan**; (b) Pre/PostToolUse reject of `System.out`/`printStackTrace`/leftover `// TODO`; (c) **PreToolUse guard against working-directory drift** (author request 2026-08-05): reject a Bash call that writes through a repo-relative path, or runs `git`/`./gradlew` without an explicit `-C`/absolute target, while more than one worktree is checked out. The failure mode is silent, so a rule cannot catch it and a hook can | Demonstrates the guide's core thesis (CLAUDE.md ~80% vs hooks 100%), the showcase's headline technique | P2 | secret-scan: tune pattern (must catch `?token=…`); the hard-coded API token is already env-injected, so no cleanup-ordering constraint remains. System.out check: the dead-code deletion already removed ~half the hits (`CsvParser`); whitelist `@Ignore` Gherkin once G4 lands. |
 | **G8** | **`/commit`** slash command encoding the strict one-line/no-footer/never-push protocol | Repo's strictest, most-violated-by-default rule (footers slip in); reproducible showcase artifact | P3 | `/review`,`/tdd` rejected (duplicate reviewer/implementer agents). `/spec` deferred → gate on **G4**; keep MCP-free + JUnit-`@Ignore`-first (not Cucumber/Jira). |
 | **B7** | Migrate the remaining JUnit `Assertions` in `SmokeTest` → **AssertJ** | Single assertion idiom (documented preference) | P3 | `SmokeTest` stays deferred to its planned `RenderedTable`/Levenshtein-rework (its `assertClosest` helper should go too). |
 | **H6** | `maven-failsafe-plugin` + rename boot/integration tests to `*IT` (separate integration phase) | Keeps the fast TDD loop fast; isolates server-booting tests | P3 | Gate on **H2** (real Selenium IT), **not** the in-memory *fast* acceptance test (`ProtocolEvaluationAcceptanceTest`). Update testing.md same change. **2026-06-15: land in Gradle post-migration (failsafe → Gradle integration test set).** |
