@@ -17,6 +17,7 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    maxWorkers: 2,
     reporters: ['default', 'junit'],
     outputFile: 'build/reports/vitest/results.xml',
   },

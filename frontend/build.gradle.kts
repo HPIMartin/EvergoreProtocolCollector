@@ -46,6 +46,7 @@ val npmTest = tasks.register<NpmTask>("npmTest") {
 	description = "Runs the frontend component tests with vitest."
 	dependsOn(tasks.npmInstall)
 	npmCommand.set(listOf("run", "test"))
+	mustRunAfter(":test")
 	inputs.files("package.json", "package-lock.json", "vite.config.ts").withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.files(fileTree(".") { include("tsconfig*.json") }).withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.dir("src").withPathSensitivity(PathSensitivity.RELATIVE)

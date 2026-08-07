@@ -35,9 +35,6 @@ pipeline (planner → implementer → falsifier panel → reviewer). *(A4/CI sta
 local-only Docker → home-server deploy.)*
 
 **Deferred frontend follow-ups (non-blocking):**
-- **Test hygiene:** harden the frontend `vitest` worker pool/timeout (a spurious "failed to start forks worker"
-  flake under CPU load, seen twice incl. once on the landing build; parallel Gradle execution raises the load
-  that triggers it) (relates to **B8** / **B4**).
 - **React-hook lint:** no `eslint-plugin-react-hooks` is declared, so nothing enforces `rules-of-hooks` or
   `exhaustive-deps` on the SPA's hooks. Adding it needs a call on `useLoad`, whose effect depends on the
   request key alone **on purpose** (the key is the request's full identity), which `exhaustive-deps` flags.

@@ -172,6 +172,12 @@ controllers are untouched legacy.
   skip-when-unchanged (`UP-TO-DATE`/`FROM-CACHE`):
   - `npmBuild` (`vite build` into `frontend/build/dist`); wired into `assemble`.
   - `npmTest` (`vitest run`) and `npmLint` (`eslint` + `prettier --check`); wired into `check`.
+- **`npmTest` never runs while the Java suite runs** (`mustRunAfter(":test")`) and the Vitest worker
+  fan-out is bounded (`test.maxWorkers: 2`). Almost every test file boots its own jsdom, and beside
+  Gradle's parallel `:test` the fork pool starved: whole files never *started* ("Failed to start forks
+  worker", "Timeout waiting for worker to respond") while no single test failed, so `./gradlew build`
+  went red under load and the result XML looked green with a short test count. Standalone the suite
+  never failed, which is why the ordering carries the fix and the bound is only the second net.
 - **Dev server against a running application:** `npm run dev` serves the SPA on 5173 and proxies
   `/api` to `http://localhost:8080` (`server.proxy` in `vite.config.ts`), so the SPA can be driven
   against real data with hot reload. Deep links work there because Vite answers unknown paths with
