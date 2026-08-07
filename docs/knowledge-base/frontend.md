@@ -26,6 +26,19 @@ Four top-level folders under `frontend/src/`:
 
 - Enforced per the table above (no sideways/upward imports); mirrors the backend's inward-only
   rule (`application` depends only inward, never on adapters/config).
+- Each folder has an `index.ts` as its **public surface**; cross-layer imports go through it, inside
+  a layer modules import each other directly.
+- Responsibilities, so a reader knows which folder to open:
+  - `domain`: the wire contract's concepts as types, plus the framework-free logic over them (the
+    `Ledger` visitor, the German and Berlin-local wording).
+  - `api`: the `ProtocolApi` port and its `fetch` adapter, which validates every wire body before
+    translating it into domain types; `HttpGet` is the seam the tests fake.
+  - `ui`: presentational tables and links; props in, callbacks out, no knowledge of routes or HTTP.
+  - `app`: the composition root: routing, each view's load state, and the shell that wires the
+    adapter into the views.
+- **`Ledger<E>` and `Route` are visitors** (an `accept` taking one object with a method per case),
+  the TypeScript form of the backend's `TransferTypeVisitor`: a consumer cannot forget a case, and
+  there is no tag to switch on with a `default` that swallows the next one.
 
 ## Conventions
 
@@ -75,6 +88,29 @@ Four top-level folders under `frontend/src/`:
   reaches the jar. It replaces a Storybook dependency: pure props-in components need no second toolchain.
 - `tsconfig.app.json` lists the `node` types because `theme.test.ts` reads the stylesheet from disk.
 
+## The SPA's views
+
+- **Client routes:** `/` and `/overview` show the guild overview, `/avatars/{avatar}/bank` and
+  `/avatars/{avatar}/storage` show one avatar's ledger. Every other path renders "no view", so a typo
+  in a bookmark says so instead of showing an empty page.
+- The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
+  malformed escape is "no view", not a crash.
+- **Every view passes through one of four outcomes** (`useLoad` + `LoadedView`): loading, loaded,
+  token refused, failed with a reason. A ledger view additionally tells **"known avatar, no
+  entries"** from **"unknown avatar"**, which is the client side of the 404 decision below.
+- **The token is read once from the address** (`?token=`) and carried into every request and every
+  in-app link; it is kept nowhere else (no cookie, no `localStorage`), so a link is the whole
+  credential and closing the tab ends the session.
+- A view asks for `page=0&size=100` and shows `items.length` of `totalCount`; **paging controls do
+  not exist yet** (decision 2026-08-07 in open-questions.md).
+- Timestamps are shown as Berlin wall-clock (`dd.MM.yyyy HH:mm`) and transfer types as
+  `Einlagerung`/`Entnahme`; the tables' column headers are German, like the sheet's.
+- **Links are real `<a href>`s** with an intercepted plain click: a modified or middle click stays
+  the browser's business, so bookmarking and open-in-new-tab keep working.
+- **Tests reach no network.** The faked seam is `HttpGet`, answering a real `Response`, so status
+  handling and URL building are exercised for real. Asynchronous assertions flush microtasks with
+  `act`; no test uses a timer, a `waitFor` poll or a wall-clock wait.
+
 ## The JSON API the SPA reads
 
 Shape and field names decided 2026-08-04 (open-questions.md). The controllers live in
@@ -109,7 +145,7 @@ controllers are untouched legacy.
   binding never landed in Java SE), so the Jackson annotation is deliberate and confined to the
   `wire` package.
 - **A tokenless deep link answers 401.** Only `/` and `/index.html` are public, so the shell loads
-  from there and the client must carry `?token=` across its routes; `spa-data-shell` owns that.
+  from there and the client carries `?token=` across its routes (see the SPA's views above).
 - **404 vs. empty page** (author decision 2026-08-05): a **404 means the avatar is unknown**, i.e. has
   no row in either ledger. A known avatar whose bank or storage ledger happens to be empty answers 200
   with `totalCount: 0` and `items: []`, like the overview does, so the SPA can tell "no storage
