@@ -6,6 +6,7 @@
   --color-accent: #c8a04a;
   --color-accent-strong: #e2bd6a;
   --color-border: #3a2b20;
+  --color-border-strong: #5a4430;
   --color-negative: #b5543a;
 
   --font-display:
@@ -26,6 +27,7 @@
 
   --radius: 3px;
   --border-width: 1px;
+  --content-width: 1100px;
 }
 
 *,
@@ -77,6 +79,53 @@ a:hover {
 :focus-visible {
   outline: 2px solid var(--color-accent-strong);
   outline-offset: 2px;
+}
+
+.page-frame {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4);
+}
+
+.page-frame__banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--border-width) solid var(--color-border-strong);
+}
+
+.page-frame__brand {
+  margin: 0;
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-size: var(--font-size-title);
+  letter-spacing: var(--letter-spacing-display);
+}
+
+.page-frame__navigation ul {
+  display: flex;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.page-frame__link {
+  color: var(--color-text-muted);
+  font-family: var(--font-display);
+  font-size: var(--font-size-heading);
+}
+
+.page-frame__link[aria-current='page'] {
+  color: var(--color-accent);
+  border-bottom: 2px solid var(--color-accent);
+}
+
+.page-frame__content {
+  padding-top: var(--space-5);
 }
 
 .status-panel {

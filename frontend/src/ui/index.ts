@@ -1,3 +1,5 @@
 export { formatGold, formatTimestamp } from './format.ts'
+export { PageFrame } from './PageFrame.tsx'
+export type { NavigationLink, PageFrameProps } from './PageFrame.tsx'
 export { StatusPanel } from './StatusPanel.tsx'
 export type { StatusPanelProps, StatusVariant } from './StatusPanel.tsx'

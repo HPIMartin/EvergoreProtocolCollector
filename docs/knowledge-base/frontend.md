@@ -54,6 +54,7 @@ Four top-level folders under `frontend/src/`:
 
 | Component | Renders |
 |-----------|---------|
+| `PageFrame` | Banner with brand and navigation (`aria-current="page"` marks the current link), `<main>` for the view. |
 | `StatusPanel` | The `loading` / `empty` / `error` states; `role="alert"` for the error, `role="status"` otherwise. |
 
 - `format.ts` carries the German domain notation: gold with `de-DE` grouping, instants as Berlin
