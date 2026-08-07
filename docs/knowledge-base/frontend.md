@@ -37,6 +37,20 @@ Four top-level folders under `frontend/src/`:
 - Tables render **semantic HTML** (`<table>`/`<thead>`/`<tbody>`/`<th>`/`<td>`), not div-grids,
   for accessibility and testability.
 
+## The ui layer: the theme
+
+- **One stylesheet.** `src/index.css` holds the design tokens (in `:root`) and every component rule.
+  Components carry class names only: no inline styles, no per-component stylesheet, so a colour or a
+  spacing exists in exactly one place.
+- Token groups: `--color-*`, `--font-*`, `--space-*`, plus `--radius`, `--border-width`,
+  `--content-width`. The look they encode (dark tavern climate, compact rows, serif display type over
+  a sans body) is the 2026-08-07 decision in [open-questions.md](../open-questions.md).
+- `theme.test.ts` guards the stylesheet rather than the pixels: every `var()` resolves, every declared
+  token is used, no token is declared twice, no literal colour stands outside the token block, and every
+  colour-bearing property is painted from a token, so a CSS keyword colour cannot slip past the literal
+  check. Together they keep "one place" true as the sheet grows.
+- `tsconfig.app.json` lists the `node` types because `theme.test.ts` reads the stylesheet from disk.
+
 ## The JSON API the SPA reads
 
 Shape and field names decided 2026-08-04 (open-questions.md). The controllers live in
