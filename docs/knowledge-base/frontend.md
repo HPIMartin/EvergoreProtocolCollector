@@ -172,6 +172,11 @@ controllers are untouched legacy.
   skip-when-unchanged (`UP-TO-DATE`/`FROM-CACHE`):
   - `npmBuild` (`vite build` into `frontend/build/dist`); wired into `assemble`.
   - `npmTest` (`vitest run`) and `npmLint` (`eslint` + `prettier --check`); wired into `check`.
+- **Dev server against a running application:** `npm run dev` serves the SPA on 5173 and proxies
+  `/api` to `http://localhost:8080` (`server.proxy` in `vite.config.ts`), so the SPA can be driven
+  against real data with hot reload. Deep links work there because Vite answers unknown paths with
+  `index.html`; in the packaged application the legacy HTML pages still own the three dashboard
+  paths, so the shell is reached at `/` (decision 2026-08-07 in open-questions.md).
 - The built SPA reaches the main jar via a **`frontendDist` Gradle configuration**:
   - `:frontend` exposes `build/dist` as a consumable `frontendDist` artifact; the root project
     declares a matching resolvable configuration and copies it into `processResources` under
