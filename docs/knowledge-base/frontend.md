@@ -55,11 +55,20 @@ Four top-level folders under `frontend/src/`:
 | Component | Renders |
 |-----------|---------|
 | `PageFrame` | Banner with brand and navigation (`aria-current="page"` marks the current link), `<main>` for the view. |
+| `SortableTable<Row>` | Semantic `<table>`; a column is `text`, `number` or `timestamp`; a header click sorts, a second click reverses. |
 | `StatusPanel` | The `loading` / `empty` / `error` states; `role="alert"` for the error, `role="status"` otherwise. |
 
 - `format.ts` carries the German domain notation: gold with `de-DE` grouping, instants as Berlin
   wall-clock `dd.MM.yyyy HH:mm`. The zone is pinned to `Europe/Berlin` instead of taken from the
   runtime, so a browser in another zone still shows the time the game showed.
+- **Sorting**: text by German collation (`Intl.Collator('de-DE')`, so `Ärger` sorts under `A`), numbers
+  numerically, timestamps by instant (an offset other than `Z` still lands in the right place). Missing
+  values sort last in **both** directions, equal keys keep their given order, and a table without
+  `initialSort` renders the order it was handed, which is the API's newest-first.
+- **Tone**: a number column declares itself `credit`, `debit` or `neutral`; a negative value is always
+  `debit` and a zero always `neutral`, so "nothing moved" stays uncoloured.
+- An `initialSort` naming a column the table does not have **throws**, for the reason the API answers
+  400 instead of clamping a bad page size: a client bug stays visible.
 - `tsconfig.app.json` lists the `node` types because `theme.test.ts` reads the stylesheet from disk.
 
 ## The JSON API the SPA reads

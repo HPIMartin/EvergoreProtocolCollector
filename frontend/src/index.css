@@ -1,12 +1,14 @@
 :root {
   --color-surface: #1b1410;
   --color-surface-raised: #241a14;
+  --color-row-odd: #1f1712;
   --color-text: #e8dcc0;
   --color-text-muted: #a1907a;
   --color-accent: #c8a04a;
   --color-accent-strong: #e2bd6a;
   --color-border: #3a2b20;
   --color-border-strong: #5a4430;
+  --color-positive: #7fa650;
   --color-negative: #b5543a;
 
   --font-display:
@@ -17,13 +19,19 @@
   --font-size-title: 30px;
   --font-size-heading: 19px;
   --font-size-body: 15px;
+  --font-size-table: 13px;
+  --font-size-small: 11px;
   --line-height-body: 1.5;
   --line-height-tight: 1.2;
   --letter-spacing-display: 0.02em;
 
+  --space-1: 4px;
+  --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
+  --space-cell-block: 6px;
+  --space-cell-inline: 10px;
 
   --radius: 3px;
   --border-width: 1px;
@@ -126,6 +134,89 @@ a:hover {
 
 .page-frame__content {
   padding-top: var(--space-5);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-table);
+}
+
+.data-table__caption {
+  padding-bottom: var(--space-2);
+  color: var(--color-text-muted);
+  font-family: var(--font-display);
+  font-size: var(--font-size-heading);
+  letter-spacing: var(--letter-spacing-display);
+  text-align: left;
+}
+
+.data-table__header {
+  padding: 0;
+  border-bottom: var(--border-width) solid var(--color-border-strong);
+  background-color: var(--color-surface-raised);
+  text-align: left;
+}
+
+.data-table__sort {
+  display: flex;
+  gap: var(--space-1);
+  align-items: baseline;
+  width: 100%;
+  padding: var(--space-cell-block) var(--space-cell-inline);
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-display);
+  cursor: pointer;
+}
+
+.data-table__sort:hover {
+  color: var(--color-accent-strong);
+}
+
+.data-table__header[data-kind='number'] .data-table__sort {
+  justify-content: flex-end;
+}
+
+.data-table__indicator {
+  color: var(--color-accent);
+  font-size: var(--font-size-small);
+}
+
+.data-table__row:nth-child(odd) {
+  background-color: var(--color-row-odd);
+}
+
+.data-table__cell {
+  padding: var(--space-cell-block) var(--space-cell-inline);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.data-table__cell[data-kind='number'] {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.data-table__cell[data-kind='timestamp'] {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.data-table__cell[data-tone='credit'] {
+  color: var(--color-positive);
+}
+
+.data-table__cell[data-tone='debit'] {
+  color: var(--color-negative);
+}
+
+.data-table__empty {
+  padding: var(--space-4) 0;
+  border: 0;
 }
 
 .status-panel {
