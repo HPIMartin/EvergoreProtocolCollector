@@ -1,8 +1,12 @@
 :root {
   --color-surface: #1b1410;
+  --color-surface-raised: #241a14;
   --color-text: #e8dcc0;
+  --color-text-muted: #a1907a;
   --color-accent: #c8a04a;
   --color-accent-strong: #e2bd6a;
+  --color-border: #3a2b20;
+  --color-negative: #b5543a;
 
   --font-display:
     'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia,
@@ -18,6 +22,10 @@
 
   --space-3: 12px;
   --space-4: 16px;
+  --space-5: 24px;
+
+  --radius: 3px;
+  --border-width: 1px;
 }
 
 *,
@@ -69,4 +77,19 @@ a:hover {
 :focus-visible {
   outline: 2px solid var(--color-accent-strong);
   outline-offset: 2px;
+}
+
+.status-panel {
+  margin: 0;
+  padding: var(--space-5) var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.status-panel[data-variant='error'] {
+  border-color: var(--color-negative);
+  color: var(--color-negative);
 }

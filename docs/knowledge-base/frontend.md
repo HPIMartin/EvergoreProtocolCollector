@@ -37,7 +37,7 @@ Four top-level folders under `frontend/src/`:
 - Tables render **semantic HTML** (`<table>`/`<thead>`/`<tbody>`/`<th>`/`<td>`), not div-grids,
   for accessibility and testability.
 
-## The ui layer: the theme
+## The ui layer: theme and primitives
 
 - **One stylesheet.** `src/index.css` holds the design tokens (in `:root`) and every component rule.
   Components carry class names only: no inline styles, no per-component stylesheet, so a colour or a
@@ -49,6 +49,13 @@ Four top-level folders under `frontend/src/`:
   token is used, no token is declared twice, no literal colour stands outside the token block, and every
   colour-bearing property is painted from a token, so a CSS keyword colour cannot slip past the literal
   check. Together they keep "one place" true as the sheet grows.
+- **Primitives.** All presentational: everything arrives as props, none of them knows `fetch` or a
+  route. They live in `src/ui/` and are re-exported from `src/ui/index.ts`.
+
+| Component | Renders |
+|-----------|---------|
+| `StatusPanel` | The `loading` / `empty` / `error` states; `role="alert"` for the error, `role="status"` otherwise. |
+
 - `format.ts` carries the German domain notation: gold with `de-DE` grouping, instants as Berlin
   wall-clock `dd.MM.yyyy HH:mm`. The zone is pinned to `Europe/Berlin` instead of taken from the
   runtime, so a browser in another zone still shows the time the game showed.
