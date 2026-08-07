@@ -229,6 +229,10 @@ a:hover {
   text-align: center;
 }
 
+.status-panel[data-variant='loading'] {
+  border-style: dashed;
+}
+
 .status-panel[data-variant='error'] {
   border-color: var(--color-negative);
   color: var(--color-negative);
