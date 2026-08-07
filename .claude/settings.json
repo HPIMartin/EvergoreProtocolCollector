@@ -187,6 +187,7 @@
 			"Bash(cd *$*)",
 			"Bash(cd *~*)",
 			"Bash(cd *`*)",
+			"EnterWorktree",
 			"Read(**/.credentials.json)",
 			"Read(zugang.txt)",
 			"Read(secrets.local.properties)"

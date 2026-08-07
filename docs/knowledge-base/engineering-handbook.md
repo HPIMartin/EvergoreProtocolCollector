@@ -193,7 +193,8 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   via the gateway. Promote before commit #1 if foreseeable (`git switch -c` / worktree); if #1
   already landed standalone-valid, continue on a branch off now-current `main`. (Git forbids `main`
   in two worktrees, so parallel work auto-avoids this path; background/tool agents auto-isolate
-  into worktrees; a second **foreground** session must `EnterWorktree` before editing.)
+  into worktrees; a second **foreground** session creates its worktree with `git worktree` and
+  drives it from the primary checkout by absolute path.)
 - **On the branch**: the implementer runs the full TDD loop and commits each red→green→refactor
   step itself, protocol-conform messages, no per-commit pre-approval.
 - **The review gateway (per feature, serialized):**
@@ -220,9 +221,13 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   commit it belongs to, before the merge: never left on `main`, never a follow-up "fix" commit.
 - **Reword at the gateway** non-interactively via scripted `GIT_SEQUENCE_EDITOR` / `GIT_EDITOR`
   (no interactive TTY). `git push` stays the author's alone (deny in `.claude/settings.json`).
-- **Tool-neutral**: plain git (worktree · branch · rebase · `--ff-only`). Claude Code uses
-  `EnterWorktree`/`ExitWorktree` and `Agent` worktree-isolation; other tools/humans use
-  `git worktree` directly.
+- **Tool-neutral**: plain git (worktree · branch · rebase · `--ff-only`). Claude Code adds `Agent`
+  worktree-isolation for tool agents; other tools/humans use `git worktree` directly.
+- **A session never relocates into a worktree** (`EnterWorktree`, denied in
+  `.claude/settings.json`): session history is filed per working directory, so a relocated session
+  drops out of the primary checkout's resume list and is unreachable from the editor window that
+  opened it. Sessions stay in the primary checkout and reach the worktree by absolute path, the
+  discipline the cwd-drift gotcha (backlog) already demands.
 
 ## 8. Definition of Done (checklist)
 
