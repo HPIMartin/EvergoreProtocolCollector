@@ -49,6 +49,9 @@ Four top-level folders under `frontend/src/`:
   token is used, no token is declared twice, no literal colour stands outside the token block, and every
   colour-bearing property is painted from a token, so a CSS keyword colour cannot slip past the literal
   check. Together they keep "one place" true as the sheet grows.
+- `format.ts` carries the German domain notation: gold with `de-DE` grouping, instants as Berlin
+  wall-clock `dd.MM.yyyy HH:mm`. The zone is pinned to `Europe/Berlin` instead of taken from the
+  runtime, so a browser in another zone still shows the time the game showed.
 - `tsconfig.app.json` lists the `node` types because `theme.test.ts` reads the stylesheet from disk.
 
 ## The JSON API the SPA reads
