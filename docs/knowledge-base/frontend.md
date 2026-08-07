@@ -69,6 +69,10 @@ Four top-level folders under `frontend/src/`:
   `debit` and a zero always `neutral`, so "nothing moved" stays uncoloured.
 - An `initialSort` naming a column the table does not have **throws**, for the reason the API answers
   400 instead of clamping a bad page size: a client bug stays visible.
+- **The gallery**: `gallery.html` plus `src/ui/gallery/` shows every primitive with fixture rows modeled
+  on the guild sheet's columns ([google-sheet.md](google-sheet.md)). `npm run dev` serves it at
+  `/gallery.html`; `vite build` ignores it, because `index.html` is the only build input, so it never
+  reaches the jar. It replaces a Storybook dependency: pure props-in components need no second toolchain.
 - `tsconfig.app.json` lists the `node` types because `theme.test.ts` reads the stylesheet from disk.
 
 ## The JSON API the SPA reads

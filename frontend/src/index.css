@@ -30,6 +30,7 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
+  --space-6: 32px;
   --space-cell-block: 6px;
   --space-cell-inline: 10px;
 
@@ -134,6 +135,14 @@ a:hover {
 
 .page-frame__content {
   padding-top: var(--space-5);
+}
+
+.page-section {
+  margin-bottom: var(--space-6);
+}
+
+.page-section .status-panel + .status-panel {
+  margin-top: var(--space-3);
 }
 
 .data-table {
