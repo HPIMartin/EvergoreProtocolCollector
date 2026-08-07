@@ -25,8 +25,9 @@ The *how* lives in the KB ([architecture](knowledge-base/architecture.md) ·
 the code is the source of truth for the rest. A one-off conformance audit (2026-06-27) filed its
 remaining finding as **D9**.
 
-**Next action:** **E5**'s remaining strand **`spa-views`** (decision 2026-07-04), which now has the
-JSON API and the inverted token scope under it,
+**Next action:** **E5**'s remaining strands **`spa-look`** (theme and ui primitives) and
+**`spa-data-shell`** (wire types, fetching, routing), which now have the JSON API and the inverted
+token scope under them,
 then **B16**/**B17**, **E1**/**E2**, **H2**+**H6**; **H9** only *after* 1:1 is re-proven. Milestone
 cuts + acceptance: [roadmap.md](roadmap.md); risk register: [risks.md](risks.md). Plan via the agent
 pipeline (planner → implementer → falsifier panel → reviewer). *(A4/CI stays deprioritized:

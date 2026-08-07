@@ -71,7 +71,7 @@ controllers are untouched legacy.
   binding never landed in Java SE), so the Jackson annotation is deliberate and confined to the
   `wire` package.
 - **A tokenless deep link answers 401.** Only `/` and `/index.html` are public, so the shell loads
-  from there and the client must carry `?token=` across its routes; `spa-views` owns that.
+  from there and the client must carry `?token=` across its routes; `spa-data-shell` owns that.
 - **404 vs. empty page** (author decision 2026-08-05): a **404 means the avatar is unknown**, i.e. has
   no row in either ledger. A known avatar whose bank or storage ledger happens to be empty answers 200
   with `totalCount: 0` and `items: []`, like the overview does, so the SPA can tell "no storage
@@ -79,7 +79,7 @@ controllers are untouched legacy.
   valid empty window. "Known" means **the avatar has a ledger row somewhere**, deliberately not "the
   meta information mentions it": today the evaluator only writes meta keys for avatars that have rows,
   so the two coincide, and pinning the contract to the ledgers keeps it true if that ever diverges. The
-  legacy HTML pages still 404 in that case and keep that quirk until `spa-views` replaces them.
+  legacy HTML pages still 404 in that case and keep that quirk until `spa-data-shell` replaces them.
 - **Errors carry no envelope**: 401 (missing or wrong token) and 404 answer with an empty body;
   400 (a paging constraint violated) and 405 answer with Micronaut's own JSON error shape. The SPA
   codes against the status, not against a body.
