@@ -64,7 +64,7 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   `TransferTypeWireNames`; contract in
   [frontend.md](frontend.md)) · the legacy HTML pages `OverviewController` (`/overview`) and
   `AvatarController` (`/avatars/{a}/bank|storage`) with `OutputFormatter` (HTML table builder,
-  escapes cells), both replaced by the SPA in strand `spa-data-shell` · `FaviconController` ·
+  escapes cells), both superseded by the SPA but still owning their paths · `FaviconController` ·
   `SpaHistoryFallbackController` (serves the SPA shell for unknown navigation paths;
   `SpaNavigationPaths` decides which 404s it may answer) · filters `BrowserLoggingFilter` (per-IP
   rate limit) + `TokenValidationFilter` (`?token=`) · `ApplicationExceptionHandler` (dispatches via

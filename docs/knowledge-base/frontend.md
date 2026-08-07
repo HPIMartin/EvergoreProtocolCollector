@@ -153,7 +153,7 @@ controllers are untouched legacy.
   valid empty window. "Known" means **the avatar has a ledger row somewhere**, deliberately not "the
   meta information mentions it": today the evaluator only writes meta keys for avatars that have rows,
   so the two coincide, and pinning the contract to the ledgers keeps it true if that ever diverges. The
-  legacy HTML pages still 404 in that case and keep that quirk until `spa-data-shell` replaces them.
+  legacy HTML pages still 404 in that case and keep that quirk until they are deleted.
 - **Errors carry no envelope**: 401 (missing or wrong token) and 404 answer with an empty body;
   400 (a paging constraint violated) and 405 answer with Micronaut's own JSON error shape. The SPA
   codes against the status, not against a body.
@@ -177,6 +177,8 @@ controllers are untouched legacy.
   against real data with hot reload. Deep links work there because Vite answers unknown paths with
   `index.html`; in the packaged application the legacy HTML pages still own the three dashboard
   paths, so the shell is reached at `/` (decision 2026-08-07 in open-questions.md).
+- Run `vitest`/`eslint` from `frontend/`: the Vitest config (jsdom environment) lives in
+  `frontend/vite.config.ts`, and a run started from the repo root silently uses none of it.
 - The built SPA reaches the main jar via a **`frontendDist` Gradle configuration**:
   - `:frontend` exposes `build/dist` as a consumable `frontendDist` artifact; the root project
     declares a matching resolvable configuration and copies it into `processResources` under

@@ -25,10 +25,11 @@ The *how* lives in the KB ([architecture](knowledge-base/architecture.md) ·
 the code is the source of truth for the rest. A one-off conformance audit (2026-06-27) filed its
 remaining finding as **D9**.
 
-**Next action:** **E5**'s remaining strands **`spa-look`** (theme and ui primitives) and
-**`spa-data-shell`** (wire types, fetching, routing), which now have the JSON API and the inverted
-token scope under them,
-then **B16**/**B17**, **E1**/**E2**, **H2**+**H6**; **H9** only *after* 1:1 is re-proven. Milestone
+**Next action:** **E5**'s last piece: **delete the legacy HTML pages** (`OverviewController`,
+`AvatarController`, `OutputFormatter` and their templates), which still own `/overview` and
+`/avatars/{avatar}/bank|storage`, so those paths reach the SPA shell on a deep link too
+(decision 2026-08-07); then **B16**/**B17**, **E1**/**E2**, **H2**+**H6**; **H9** only *after*
+1:1 is re-proven. Milestone
 cuts + acceptance: [roadmap.md](roadmap.md); risk register: [risks.md](risks.md). Plan via the agent
 pipeline (planner → implementer → falsifier panel → reviewer). *(A4/CI stays deprioritized:
 local-only Docker → home-server deploy.)*
@@ -37,6 +38,14 @@ local-only Docker → home-server deploy.)*
 - **Test hygiene:** harden the frontend `vitest` worker pool/timeout (a spurious "failed to start forks worker"
   flake under CPU load, seen twice incl. once on the landing build; parallel Gradle execution raises the load
   that triggers it) (relates to **B8** / **B4**).
+- **React-hook lint:** no `eslint-plugin-react-hooks` is declared, so nothing enforces `rules-of-hooks` or
+  `exhaustive-deps` on the SPA's hooks. Adding it needs a call on `useLoad`, whose effect depends on the
+  request key alone **on purpose** (the key is the request's full identity), which `exhaustive-deps` flags.
+- **Row identity:** the entry tables key rows by position, which holds while a whole page is replaced at
+  once; sorting or paging inside a loaded page needs a stable identity per entry first.
+- **Test-helper duplication:** the three `ui` table tests and `App.test.tsx` each carry their own copy of
+  the same cell/header text helpers. One shared helper needs a home that is not production code without a
+  test of its own (same shape of problem as the duplicated test boot setup).
 - **Hook hardening:** the pre-commit host-path scan can be prefix-squatted (`/home/<allowed>/home/<real>/…`
   slips past `grep -oE`): relates to **G7** / **G13**. The `/home/app` Dockerfile exemption (commit `cc75a2e`)
   itself was reviewed as necessary and correct.

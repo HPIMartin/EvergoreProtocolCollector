@@ -24,11 +24,14 @@
 Slice: a guild officer reads the overview and avatar details in the SPA instead of the
 HTML-string templates.
 
-- [ ] Sortable overview table plus avatar bank/storage views, served by the real service on the
-      existing routes (`/overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`).
-- [ ] Every view TDD-built with Vitest/RTL (`data-testid`, semantic tables); the frontend layer
+- [x] Overview table plus avatar bank/storage views on the existing client routes (`/overview`,
+      `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`), reading the JSON API with the token
+      carried across every route and every in-app link.
+- [x] Every view TDD-built with Vitest/RTL (`data-testid`, semantic tables); the frontend layer
       rules hold at lint time ([frontend.md](knowledge-base/frontend.md)).
-- [ ] Visual style recreated without copying game assets (decision 2026-07-04).
+- [x] Visual style recreated without copying game assets (decision 2026-07-04), sortable columns.
+- [ ] The legacy HTML pages deleted, so the three paths reach the shell on a deep link too
+      (decision 2026-08-07).
 - [ ] All columns the service already stores are visible; the full sheet handover completes with M5.
 
 Track: worktree strands `spa-look` (theme and primitives) and `spa-data-shell` (wire types, fetching, routing).

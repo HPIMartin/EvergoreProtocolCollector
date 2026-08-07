@@ -282,7 +282,7 @@ red if a framework upgrade changes it.
 | `GET /api/v1/avatars` | JSON overview: per-avatar bank totals + `lastUpdated`. Contract in [frontend.md](frontend.md). |
 | `GET /api/v1/avatars/{avatar}/bank?page=N&size=M` | JSON bank entries for one avatar, newest first. |
 | `GET /api/v1/avatars/{avatar}/storage?page=N&size=M` | JSON storage entries for one avatar, newest first. |
-| `GET /overview` | Legacy HTML table of per-avatar bank metrics + last-updated; replaced by the SPA in strand `spa-data-shell`. |
+| `GET /overview` | Legacy HTML table of per-avatar bank metrics + last-updated; still owns this path, its deletion is open. |
 | `GET /avatars/{avatar}/bank?page=N` | Legacy HTML, paged (100/page) bank entries for one avatar. |
 | `GET /avatars/{avatar}/storage?page=N` | Legacy HTML, paged storage entries for one avatar. |
 | `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle. **Public**: no token, no rate limit, no audit log entry (decision 2026-08-04). An unknown navigation path **with a token** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
