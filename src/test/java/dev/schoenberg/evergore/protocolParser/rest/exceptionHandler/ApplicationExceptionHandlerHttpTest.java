@@ -62,7 +62,7 @@ class ApplicationExceptionHandlerHttpTest {
 	}
 
 	private HttpResponse<String> requestBankPageOf(String avatar) {
-		return Unirest.get("/avatars/" + avatar + "/bank?token=test-token").asString();
+		return Unirest.get("/api/v1/avatars/" + avatar + "/bank?token=test-token").asString();
 	}
 
 	@MockBean(Configuration.class)
