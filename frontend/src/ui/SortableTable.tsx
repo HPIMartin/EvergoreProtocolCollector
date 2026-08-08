@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { formatGold, formatTimestamp, instantOf } from './format.ts'
+import { Link } from './Link.tsx'
 import { StatusPanel } from './StatusPanel.tsx'
 
 export type ColumnTone = 'neutral' | 'credit' | 'debit'
@@ -31,6 +32,11 @@ export type Column<Row> =
       readonly kind: 'timestamp'
       readonly value: (row: Row) => string | null
     })
+  | (ColumnHead & {
+      readonly kind: 'link'
+      readonly value: (row: Row) => string
+      readonly href: (row: Row) => string
+    })
 
 export type SortableTableProps<Row> = {
   readonly caption: string
@@ -39,6 +45,7 @@ export type SortableTableProps<Row> = {
   readonly rowKey: (row: Row) => string
   readonly emptyMessage: string
   readonly initialSort?: Sort
+  readonly onFollow?: (href: string) => void
 }
 
 const missingValue = '–'
@@ -57,6 +64,8 @@ const sortKeyOf = <Row,>(column: Column<Row>, row: Row): SortKey => {
       const timestamp = column.value(row)
       return timestamp === null ? null : instantOf(timestamp)
     }
+    case 'link':
+      return column.value(row)
   }
 }
 
@@ -92,6 +101,7 @@ const sortedBy = <Row,>(
 type Cell = {
   readonly text: string
   readonly tone: ColumnTone
+  readonly href: string | null
 }
 
 const toneOf = (value: number, columnTone: ColumnTone): ColumnTone => {
@@ -104,21 +114,32 @@ const toneOf = (value: number, columnTone: ColumnTone): ColumnTone => {
 const cellOf = <Row,>(column: Column<Row>, row: Row): Cell => {
   switch (column.kind) {
     case 'text':
-      return { text: column.value(row), tone: 'neutral' }
+      return { text: column.value(row), tone: 'neutral', href: null }
     case 'number': {
       const value = column.value(row)
       if (value === null) {
-        return { text: missingValue, tone: 'neutral' }
+        return { text: missingValue, tone: 'neutral', href: null }
       }
-      return { text: formatGold(value), tone: toneOf(value, column.tone) }
+      return {
+        text: formatGold(value),
+        tone: toneOf(value, column.tone),
+        href: null,
+      }
     }
     case 'timestamp': {
       const timestamp = column.value(row)
       return {
         text: timestamp === null ? missingValue : formatTimestamp(timestamp),
         tone: 'neutral',
+        href: null,
       }
     }
+    case 'link':
+      return {
+        text: column.value(row),
+        tone: 'neutral',
+        href: column.href(row),
+      }
   }
 }
 
@@ -157,6 +178,7 @@ export function SortableTable<Row>({
   rowKey,
   emptyMessage,
   initialSort,
+  onFollow,
 }: SortableTableProps<Row>) {
   const [sort, setSort] = useState<Sort | null>(initialSort ?? null)
 
@@ -219,7 +241,13 @@ export function SortableTable<Row>({
                     data-tone={cell.tone}
                     data-testid={`cell-${column.key}`}
                   >
-                    {cell.text}
+                    {cell.href === null ? (
+                      cell.text
+                    ) : (
+                      <Link href={cell.href} onFollow={onFollow}>
+                        {cell.text}
+                      </Link>
+                    )}
                   </td>
                 )
               })}

@@ -68,7 +68,8 @@ Four top-level folders under `frontend/src/`:
 | Component | Renders |
 |-----------|---------|
 | `PageFrame` | Banner with brand and navigation (`aria-current="page"` marks the current link), `<main>` for the view. |
-| `SortableTable<Row>` | Semantic `<table>`; a column is `text`, `number` or `timestamp`; a header click sorts, a second click reverses. |
+| `Link` | An `<a href>` that reports a **plain** click to its `onFollow` and leaves a modified or middle click to the browser, so in-app navigation costs no reload while bookmarking and open-in-new-tab keep working. `PageFrame` and a `link` column render through it. |
+| `SortableTable<Row>` | Semantic `<table>`; a column is `text`, `number`, `timestamp` or `link`; a header click sorts, a second click reverses. |
 | `StatusPanel` | The `loading` / `empty` / `error` states; `role="alert"` for the error, `role="status"` otherwise. |
 
 - `format.ts` carries the German domain notation: gold with `de-DE` grouping, instants as Berlin

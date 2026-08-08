@@ -2,13 +2,21 @@ import type { MouseEvent, ReactNode } from 'react'
 
 export interface LinkProps {
   readonly href: string
-  readonly onFollow: (href: string) => void
+  readonly onFollow?: (href: string) => void
+  readonly className?: string
+  readonly current?: boolean
   readonly children: ReactNode
 }
 
-export function Link({ href, onFollow, children }: LinkProps) {
+export function Link({
+  href,
+  onFollow,
+  className,
+  current,
+  children,
+}: LinkProps) {
   const followHere = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (opensElsewhere(event)) {
+    if (onFollow === undefined || opensElsewhere(event)) {
       return
     }
 
@@ -17,7 +25,12 @@ export function Link({ href, onFollow, children }: LinkProps) {
   }
 
   return (
-    <a href={href} onClick={followHere}>
+    <a
+      href={href}
+      className={className}
+      aria-current={current === true ? 'page' : undefined}
+      onClick={followHere}
+    >
       {children}
     </a>
   )

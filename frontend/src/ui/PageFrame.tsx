@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { Link } from './Link.tsx'
+
 export type NavigationLink = {
   readonly label: string
   readonly href: string
@@ -9,10 +11,16 @@ export type NavigationLink = {
 export type PageFrameProps = {
   readonly brand: string
   readonly navigation: readonly NavigationLink[]
+  readonly onFollow?: (href: string) => void
   readonly children: ReactNode
 }
 
-export function PageFrame({ brand, navigation, children }: PageFrameProps) {
+export function PageFrame({
+  brand,
+  navigation,
+  onFollow,
+  children,
+}: PageFrameProps) {
   return (
     <div className="page-frame">
       <header className="page-frame__banner">
@@ -23,13 +31,14 @@ export function PageFrame({ brand, navigation, children }: PageFrameProps) {
           <ul>
             {navigation.map((link) => (
               <li key={link.href}>
-                <a
+                <Link
                   className="page-frame__link"
                   href={link.href}
-                  aria-current={link.current ? 'page' : undefined}
+                  current={link.current}
+                  onFollow={onFollow}
                 >
                   {link.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { PageFrame } from './PageFrame.tsx'
@@ -9,9 +9,9 @@ const navigation = [
   { label: 'Lager', href: '/avatars/Bambor/storage', current: false },
 ]
 
-const renderFrame = () =>
+const renderFrame = (onFollow?: (href: string) => void) =>
   render(
-    <PageFrame brand="Gildenbank" navigation={navigation}>
+    <PageFrame brand="Gildenbank" navigation={navigation} onFollow={onFollow}>
       <p>Der Inhalt der Seite</p>
     </PageFrame>,
   )
@@ -71,5 +71,35 @@ describe('PageFrame', () => {
     expect(screen.getByTestId('page-content').textContent).toBe(
       'Der Inhalt der Seite',
     )
+  })
+})
+
+describe('PageFrame navigation', () => {
+  afterEach(cleanup)
+
+  it('reports a plain click instead of letting the browser reload the shell', () => {
+    const followed: string[] = []
+    renderFrame((href) => {
+      followed.push(href)
+    })
+
+    const notCancelled = fireEvent.click(
+      screen.getByRole('link', { name: 'Lager' }),
+    )
+
+    expect({ notCancelled, followed }).toStrictEqual({
+      notCancelled: false,
+      followed: ['/avatars/Bambor/storage'],
+    })
+  })
+
+  it('leaves the click to the browser when nobody listens', () => {
+    renderFrame()
+
+    const notCancelled = fireEvent.click(
+      screen.getByRole('link', { name: 'Lager' }),
+    )
+
+    expect(notCancelled).toBe(true)
   })
 })

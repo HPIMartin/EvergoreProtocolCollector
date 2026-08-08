@@ -327,3 +327,65 @@ describe('SortableTable without rows', () => {
     expect(screen.queryAllByTestId('data-row')).toEqual([])
   })
 })
+
+describe('SortableTable link columns', () => {
+  afterEach(cleanup)
+
+  const linkColumns: readonly Column<Member>[] = [
+    {
+      key: 'name',
+      header: 'Avatar',
+      kind: 'link',
+      value: (member) => member.name,
+      href: (member) => `/avatars/${encodeURIComponent(member.name)}/bank`,
+    },
+  ]
+
+  it('renders a link column as a link to the target of its row', () => {
+    renderTable({ columns: linkColumns })
+
+    const hrefs = screen
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'))
+
+    expect(hrefs).toStrictEqual([
+      '/avatars/Zoe/bank',
+      '/avatars/%C3%84rger/bank',
+      '/avatars/alessia/bank',
+      '/avatars/Bambor/bank',
+    ])
+  })
+
+  it('reports a plain click on a link instead of leaving the page', () => {
+    const followed: string[] = []
+    renderTable({
+      columns: linkColumns,
+      onFollow: (href) => {
+        followed.push(href)
+      },
+    })
+
+    const notCancelled = fireEvent.click(screen.getAllByRole('link')[3])
+
+    expect({ notCancelled, followed }).toStrictEqual({
+      notCancelled: false,
+      followed: ['/avatars/Bambor/bank'],
+    })
+  })
+
+  it('leaves a click to the browser when nobody listens', () => {
+    renderTable({ columns: linkColumns })
+
+    const notCancelled = fireEvent.click(screen.getAllByRole('link')[0])
+
+    expect(notCancelled).toBe(true)
+  })
+
+  it('sorts a link column by the text it shows', () => {
+    renderTable({ columns: linkColumns })
+
+    fireEvent.click(headerOf('Avatar'))
+
+    expect(cellsOf('name')).toStrictEqual(['alessia', 'Ärger', 'Bambor', 'Zoe'])
+  })
+})
