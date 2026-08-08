@@ -13,6 +13,7 @@ import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
+import kong.unirest.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -24,18 +25,11 @@ import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static dev.schoenberg.evergore.protocolParser.rest.controller.api.PageRequest.MAX_SIZE;
+import static io.micronaut.http.HttpStatus.OK;
 import static java.util.Arrays.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * On-demand check for the 1:1 verification against production (testing.md): boots the real context against a <em>copy</em> of the production snapshot and lets the real
- * {@code EvergoreDataEvaluator} recompute the meta sums, so the recompute delta can be inspected on real data before a deploy. The scraper is stubbed, so no network, no login and
- * no browser are involved.
- * <p>
- * Disabled by default because it needs a local {@code temp.sqlite}, which is gitignored and holds guild members' data: without it the check has nothing to run against, and it must
- * never become a build gate that only passes on one machine. To run it, drop the {@code @Disabled} for the run and restore it afterwards. It writes nothing outside {@code build/},
- * and never touches the snapshot itself.
- */
 @Disabled("On-demand: needs a local production snapshot at temp.sqlite (gitignored)")
 @MicronautTest
 class ProductionSnapshotRecomputeCheck {
@@ -64,22 +58,17 @@ class ProductionSnapshotRecomputeCheck {
 	}
 
 	@Test
-	void recomputesTheProductionSnapshotAndKeepsServingTheOverview() {
-		HttpResponse<String> response = Unirest.get("/overview?token=test-token").asString();
+	void recomputesTheProductionSnapshotAndKeepsServingTheSummaries() {
+		HttpResponse<String> response = Unirest.get("/api/v1/avatars?size=" + MAX_SIZE + "&token=test-token").asString();
 
-		assertThat(response.getStatus()).isBetween(200, 299);
-		RenderedTable table = RenderedTable.parse(response.getBody());
-		assertThat(table.header()).containsExactly("Avatar", "Entnommen", "Eingelagert");
-		assertThat(table.rows()).isNotEmpty();
+		assertThat(response.getStatus()).isEqualTo(OK.getCode());
+		JSONObject summaries = new JSONObject(response.getBody());
+		assertThat(summaries.getLong("totalCount")).isPositive();
+		assertThat(summaries.getJSONArray("items").length()).as("the artifact must carry every avatar, not a first page of them").isEqualTo(summaries.getInt("totalCount"));
 
-		write("overview-after-recompute.html", response.getBody());
+		write("overview-after-recompute.json", response.getBody());
 	}
 
-	/**
-	 * Exports the valuation catalog so the recomputed storage sums can be re-derived outside the application (the cross-check that proves a recompute delta is the fix landing, not
-	 * a regression). The assertion guards the lookup in {@code EvergoreDataEvaluator.findItem}, which takes the first name match: a duplicate in-game name would make a valuation
-	 * ambiguous.
-	 */
 	@Test
 	void exportsTheValuationCatalogAndKeepsItemNamesUnique() {
 		StringBuilder catalog = new StringBuilder();

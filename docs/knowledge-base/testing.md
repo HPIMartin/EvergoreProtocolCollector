@@ -16,7 +16,6 @@
 | `BankDatabaseRepositoryTest` | Repository is usable without separate init (file DB); `getAllSince(timestamp)` includes the row exactly at the boundary, excludes older rows, includes newer rows; `countFor` counts only the given avatar's rows and is zero for an unknown one (in-memory SQLite). | adapter integration |
 | `StorageDatabaseRepositoryTest` | `getAllSince(timestamp)` includes the row exactly at the boundary, excludes older rows, includes newer rows; `countFor` counts only the given avatar's rows and is zero for an unknown one (in-memory SQLite). | adapter integration |
 | `ProtocolEvaluationAcceptanceTest` | End-to-end: copies the committed synthetic fixture DB (`testdata.sqlite`) to a `build/` working copy, boots the real Micronaut `EmbeddedServer` against it, stubs the scraper (`loadData()` no-op) while the **real** `EvergoreDataEvaluator` runs via the scheduled job, then asserts the overview totals for all three avatars and the **byte-exact** bank and storage response bodies (so field names, key order, the ISO-8601 UTC instants and the `DEPOSIT`/`WITHDRAWAL` wire names are all pinned). `lastUpdated` gets one test per property (parses as an instant, is the UTC form and not an offset form, reads back in the application zone as the stored wall-clock time). Plus the paging and error contract: a page past the end is 200 with `items: []` and the true `totalCount`, an unknown avatar is 404 while a **known** avatar with an empty ledger (`Calix`, who has bank but no storage rows in the fixture) is 200 with `totalCount: 0`, and a `@ParameterizedTest` walks every out-of-bounds paging window over all three routes, each a 400. Plus storage **valuation** at the `MetaInformationRepository` bean level (no endpoint surfaces it yet, Epic E1) and an unknown endpoint answering 4xx. | `@MicronautTest` acceptance / e2e |
-| `RenderedTable` | Parses rendered HTML tables into a header + rows of cell text, tolerant to attributes/styling/wrapper tags, so UI restyling never breaks assertions. The robust successor to `TestHelper`'s Levenshtein matching; **all** markup coupling lives here alone. | helper (no `@Test`) |
 | `TestDataGenerator` | Run-on-demand writer (`./gradlew generateAcceptanceDb`) of the committed synthetic fixture `testdata.sqlite`: 3 avatars; bank in both directions; storage with quality scaling and a zero-value item. Item names reference `EvergoreItem.*.ingameName`, so values stay derived, not invented. | fixture generator (`main`) |
 | `LastRunStatusTest` | Pure unit tests: empty before any run; records a specific `Instant` and returns it; second record overwrites the first; no unknown item names initially; records the unknown item names of the last run. No framework. | pure unit |
 | `LastRunHealthIndicatorTest` | Pure unit tests (with framework dep on `micronaut-management`): reports `UNKNOWN` with no detail map before any run; reports `UP` with `lastSuccessfulRun` detail key after a run; omits the unknown-item detail when the last run had none; reports the unknown-item count **and** names when present. Subscribes to the `Publisher` inline via an anonymous `Subscriber`. | pure unit |
@@ -25,7 +24,7 @@
 | `TransferTypeTest` | Locks `TransferType.toGermanString()` for both constants (`EINLAGERUNG`→"Einlagerung", `ENTNAHME`→"Entnahme"), the single source for the enum→German mapping. | pure unit |
 | `ApplicationExceptionHandlerTest` | Unit tests asserting each `ProtocolParserException` subclass maps to its HTTP status via the visitor, plus the `onUnknown` branch, plus that the logged path carries **no** token query parameter, plus the log severity per mapped status (client error → one `info` line, server error → `error` with the exception) and that a failing response mapping is still logged with its trace before it propagates. `accept` is `abstract`, so a new exception subclass is a compile error rather than a silent fallback. | pure unit |
 | `ApplicationExceptionHandlerHttpTest` | Boots the server against its own fixture DB copy and drives the not-found path through the **real Netty write**, which the pure unit test cannot reach: an unknown avatar answers 404 with the default `Not Found` reason phrase (no echo of the requested name), and an unknown avatar whose percent-encoded name carries `CRLF` still answers 404 instead of the 500 that a control character in the reason phrase used to cause. | `@MicronautTest` integration |
-| `ProductionSnapshotRecomputeCheck` | **`@Disabled`, on-demand**: boots the real context against a *copy* of a local production snapshot (`temp.sqlite`, gitignored) with the scraper stubbed, so the real `EvergoreDataEvaluator` recomputes the meta sums on real data and the delta can be inspected before a deploy; also exports the valuation catalog and asserts item names are unique (`findItem` takes the first name match). Details: [1:1 against the production instance](#11-against-the-production-instance). | `@MicronautTest` on-demand check |
+| `ProductionSnapshotRecomputeCheck` | **`@Disabled`, on-demand**: boots the real context against a *copy* of a local production snapshot (`temp.sqlite`, gitignored) with the scraper stubbed, so the real `EvergoreDataEvaluator` recomputes the meta sums on real data and the delta can be inspected before a deploy. Writes the summaries response verbatim to `build/tmp/prodSnapshot/overview-after-recompute.json` (decision 2026-08-08) and asserts the artifact carries every avatar rather than a first page of them, which holds up to the API's `MAX_SIZE` of 1000 avatars and fails rather than truncates beyond it; also exports the valuation catalog and asserts item names are unique (`findItem` takes the first name match). Details: [1:1 against the production instance](#11-against-the-production-instance). | `@MicronautTest` on-demand check |
 | `RateLimitCounterTest` | Pure unit tests for `RateLimitCounter`: the block lifts deterministically after `block-duration` (injected `Clock`, no `sleep`), stays active before expiry, and 20 concurrent `block()` calls leave consistent state. | pure unit |
 | `RateLimitFilterTest` | Boots the server in the `ratelimit` environment (`rebuildContext = true`) against its own fixture DB copy: `/favicon.ico` is blocked with 429 once the configured limit is exceeded, while `/`, `/index.html` and a **bundled** asset (resolved from the packaged `assets/` dir, not hard-coded) stay repeatedly reachable without a token. A `//probe` is counted like any other path instead of being skipped as the SPA root, so its third request hits 429 rather than a third 401. A burst of malformed targets is answered 400 throughout and never reaches the counter, which characterizes the framework rather than our filter (**C10**). | `@MicronautTest` integration |
 | `SpaHistoryFallbackTest` | Boots the server against its own fixture DB copy and pins the fallback in **both** directions: an unknown navigation path and a client route carrying a dot (in a middle segment and in the last one) return 200 with the byte-identical bundled `index.html` and `Cache-Control: no-cache`, while a missing asset (dotted **and** dotless), a missing swagger path, an unknown `/api` path and a traversal resolving below `/assets` keep the default 404. | `@MicronautTest` integration |
@@ -124,9 +123,13 @@ but `@Disabled`, because the snapshot it needs carries guild members' data (PII)
 
 ## 1:1 against the production instance
 
-The release gate before deploying: render the **same database** through the candidate build and
-through the live instance, then diff. It catches rendering drift that the synthetic fixture cannot,
-because it uses the real data volume, the real item mix and the real avatar set.
+The release gate before deploying: read the **same database** through the candidate build and
+through the live instance, then compare the numbers per avatar. It catches drift that the synthetic
+fixture cannot, because it uses the real data volume, the real item mix and the real avatar set.
+
+The two sides no longer speak the same format: the candidate answers JSON, the live instance still
+renders HTML. So the comparison is **value-wise, not byte-wise** (decision 2026-08-08); a byte diff
+was possible only while both sides rendered the same pages.
 
 ### Procedure
 
@@ -134,13 +137,16 @@ because it uses the real data volume, the real item mix and the real avatar set.
 2. Run the distribution from an **isolated working directory** holding a *copy* of the production
    snapshot at `database/temp.sqlite`, with `EVERGORE_SECURITY_API_TOKEN` set. Never point a run at
    the original snapshot file: a first run recomputes the meta sums in place and is not reversible.
-3. Fetch `/overview` plus `/avatars/{avatar}/bank` and `/avatars/{avatar}/storage` for every avatar,
-   from **both** instances. Sweep pages 0 **and** 1: page 1 is the more interesting case, because
-   `getAllFor(avatar, page, size)` throws `NoElementFound` on an empty result, so any avatar with
-   fewer than `PAGE_SIZE` entries answers **404** there. That 404 pattern is part of the contract
-   and must match too.
-4. Diff after LF normalisation only. Explain every remaining difference; do not widen the
-   normalisation until the diff is empty.
+3. Fetch `/api/v1/avatars?size=1000` plus `/api/v1/avatars/{avatar}/bank|storage` for every avatar
+   from the candidate, and the matching `/overview` and `/avatars/{avatar}/bank|storage` pages from
+   the live instance.
+4. Compare **per avatar**: the bank totals (`withdrawn`/`deposited` against the overview table's
+   "Entnommen"/"Eingelagert" cells) and each ledger's entries (timestamp, amount or
+   quantity/name/quality, transfer direction). Explain every difference; a recompute delta is
+   expected and is validated against the independent SQL recomputation below, never waved through.
+5. The status contract differs by design and is **not** compared: an empty page is 200 with
+   `totalCount: 0` on the candidate and 404 on the live instance (the 404-vs-empty decision in
+   [frontend.md](frontend.md)), and `/health` is anonymous only on the candidate.
 
 - **Pace the sweep.** Both sides enforce 5 requests per 10 s and then block the client IP for 1
   minute (hard-coded before, `evergore.rate-limit.*` now, same numbers). The filter increments the
@@ -150,19 +156,20 @@ because it uses the real data volume, the real item mix and the real avatar set.
   handler catches it, the app keeps serving, and the database stays untouched, so the check is
   unaffected.
 
-### Current result
+### Parity evidence on record
 
-Full sweep over the whole avatar set, 165 responses per side, against one identical snapshot:
+The evidence is one full sweep over the whole avatar set, 165 responses per side, against one
+identical snapshot, taken while both sides still rendered HTML:
 
-- **Every status code matches**, including the 404s from the empty page-1 requests.
-- `/overview` is **byte-identical** after LF normalisation.
-- The detail pages differ in **exactly one line**, the same line in every one of them: the live
-  instance still ships the client-side paging script with the literal placeholder
-  `?token=secret_token`, the candidate reads the token from the current URL instead. That is the
-  intended fix that came with the config-driven API token (the old page's paging control navigated
-  with a bogus token). **No rendered data differs.**
-- `/health` is the one endpoint that answers differently by design: token-exempt and anonymous in
-  the candidate, token-gated in the live instance.
+- Every status code matches, including the 404s from the empty page-1 requests.
+- `/overview` is byte-identical after LF normalisation.
+- The detail pages carry **one** differing line each, the same line in all of them: the live
+  instance ships the client-side paging script with the literal placeholder `?token=secret_token`,
+  the candidate reads the token from the current URL. That is the intended fix that came with the
+  config-driven API token. No rendered data differs.
+
+What it does **not** cover: the JSON surface, because a byte diff was only possible while both
+sides rendered the same pages. The next sweep is value-wise per the procedure above.
 
 ### Recompute delta on real data
 
@@ -187,8 +194,10 @@ production snapshot via the gitignored harness described below:
 
 `ProductionSnapshotRecomputeCheck` boots the real context against a **copy** of the snapshot, stubs
 the scraper, and lets the real `EvergoreDataEvaluator` run through the scheduled job, mirroring
-`ProtocolEvaluationAcceptanceTest`'s mock-bean set. It also exports the valuation catalog, which is
-what makes the storage cross-check above possible.
+`ProtocolEvaluationAcceptanceTest`'s mock-bean set. It writes the recomputed summaries to
+`build/tmp/prodSnapshot/overview-after-recompute.json`, which is the candidate side of the value
+comparison, and exports the valuation catalog, which is what makes the storage cross-check above
+possible.
 
 - The class itself holds **no production data**: the PII sits in `temp.sqlite`, which stays
   gitignored. So the harness is committed and reviewable, and only the snapshot it feeds on is
@@ -242,5 +251,3 @@ configuration-time `check` fails the build if it is ever set again.
   N gold and crafted items worth M, when I view the overview, then their guild value is N+M."*
   The whole collect→evaluate→overview flow is now covered by `ProtocolEvaluationAcceptanceTest`
   (scraper stubbed, real evaluation, asserted via HTTP + the meta repo).
-- `RenderedTable` provides the structured, restyle-proof HTML assertions that should replace
-  `SmokeTest`'s brittle Levenshtein matching (`TestHelper`) when `SmokeTest` is next reworked.
