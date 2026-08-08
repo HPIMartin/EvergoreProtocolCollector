@@ -116,6 +116,10 @@ Four top-level folders under `frontend/src/`:
 - **Tests reach no network.** The faked seam is `HttpGet`, answering a real `Response`, so status
   handling and URL building are exercised for real. Asynchronous assertions flush microtasks with
   `act`; no test uses a timer, a `waitFor` poll or a wall-clock wait.
+- **The one test that does run the real thing** is on the Java side: `DashboardBrowserSmokeTest`
+  drives headless Firefox against the booted server and reads the painted rows back through the
+  `data-testid` hooks, so "the bundle reaches the API and shows its data" is proven somewhere
+  (`testing.md`). It is the reason the hooks are a contract, not a convenience.
 
 ## The JSON API the SPA reads
 
