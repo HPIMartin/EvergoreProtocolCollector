@@ -1,6 +1,6 @@
 # 14: Frontend
 
-- The dashboard rebuild (Epic E5, decision 2026-07-04) replaces the server-rendered HTML-string
+- The dashboard rebuild (decision 2026-07-04) replaces the server-rendered HTML-string
   templates with a JSON API + a React single-page app (SPA).
 - This doc covers both the SPA and the JSON API it reads from.
 
@@ -120,8 +120,8 @@ Four top-level folders under `frontend/src/`:
 ## The JSON API the SPA reads
 
 Shape and field names decided 2026-08-04 (open-questions.md). The controllers live in
-`rest/controller/api/`, the published contract types in `rest/controller/api/wire/`; the HTML
-controllers are untouched legacy.
+`rest/controller/api/`, the published contract types in `rest/controller/api/wire/`; it is the
+service's only read surface.
 
 | Route | Answers |
 |-------|---------|
@@ -143,7 +143,7 @@ controllers are untouched legacy.
 - **Timestamps** are ISO-8601 UTC and **`transferType`** is one of `DEPOSIT` / `WITHDRAWAL`; the
   client localizes both. The wire names come from `TransferTypeWireNames`, a visitor over the domain
   enum, so the German domain constants (`EINLAGERUNG`/`ENTNAHME`) never reach the contract and stay
-  renameable. `toGermanString()` stays with the HTML pages.
+  renameable. `toGermanString()` now serves only the database adapter's German column strings.
 - **No field name is derived from a Java identifier.** Every wire record component carries an explicit
   `@JsonProperty`, so renaming a component cannot change the contract, and `RenameSafetyTest` fails
   the build if one is missing. The same rule covers the DB side: every `@DatabaseField` names its
@@ -158,8 +158,7 @@ controllers are untouched legacy.
   activity" from "no such member" without a second request. A page past the last entry is likewise a
   valid empty window. "Known" means **the avatar has a ledger row somewhere**, deliberately not "the
   meta information mentions it": today the evaluator only writes meta keys for avatars that have rows,
-  so the two coincide, and pinning the contract to the ledgers keeps it true if that ever diverges. The
-  legacy HTML pages still 404 in that case and keep that quirk until they are deleted.
+  so the two coincide, and pinning the contract to the ledgers keeps it true if that ever diverges.
 - **Errors carry no envelope**: 401 (missing or wrong token) and 404 answer with an empty body;
   400 (a paging constraint violated) and 405 answer with Micronaut's own JSON error shape. The SPA
   codes against the status, not against a body.
@@ -187,8 +186,8 @@ controllers are untouched legacy.
 - **Dev server against a running application:** `npm run dev` serves the SPA on 5173 and proxies
   `/api` to `http://localhost:8080` (`server.proxy` in `vite.config.ts`), so the SPA can be driven
   against real data with hot reload. Deep links work there because Vite answers unknown paths with
-  `index.html`; in the packaged application the legacy HTML pages still own the three dashboard
-  paths, so the shell is reached at `/` (decision 2026-08-07 in open-questions.md).
+  `index.html`, and in the packaged application because no controller owns the three dashboard paths
+  any more, so the history fallback answers them with the shell.
 - Run `vitest`/`eslint` from `frontend/`: the Vitest config (jsdom environment) lives in
   `frontend/vite.config.ts`, and a run started from the repo root silently uses none of it.
 - The built SPA reaches the main jar via a **`frontendDist` Gradle configuration**:

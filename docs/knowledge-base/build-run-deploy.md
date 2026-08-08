@@ -5,7 +5,7 @@
 - **Tool:** Gradle (Kotlin DSL, `build.gradle.kts`), `io.micronaut.application` plugin, Micronaut
   platform `4.10.3`, **Java 25** (Gradle toolchain, auto-provisioned via the foojay resolver),
   runtime Netty. Main class `…​.Application`. Build and test: `./gradlew build`.
-- **Key deps:** Selenium 4.7.2, ORMLite-JDBC 6.1, sqlite-jdbc 3.41.2.2, commons-text 1.10,
+- **Key deps:** Selenium 4.7.2, ORMLite-JDBC 6.1, sqlite-jdbc 3.41.2.2,
   micronaut-openapi (Swagger/RapiDoc/ReDoc), `micronaut-management` (health endpoint + indicators),
   snakeyaml (Micronaut 4 no longer bundles it). Test only: micronaut-test-junit5, JUnit 5 (+
   `junit-platform-launcher`), unirest-java 3.11.11 (used by `SmokeTest`), AssertJ 3.27.7, ArchUnit
@@ -282,9 +282,7 @@ red if a framework upgrade changes it.
 | `GET /api/v1/avatars` | JSON overview: per-avatar bank totals + `lastUpdated`. Contract in [frontend.md](frontend.md). |
 | `GET /api/v1/avatars/{avatar}/bank?page=N&size=M` | JSON bank entries for one avatar, newest first. |
 | `GET /api/v1/avatars/{avatar}/storage?page=N&size=M` | JSON storage entries for one avatar, newest first. |
-| `GET /overview` | Legacy HTML table of per-avatar bank metrics + last-updated; still owns this path, its deletion is open. |
-| `GET /avatars/{avatar}/bank?page=N` | Legacy HTML, paged (100/page) bank entries for one avatar. |
-| `GET /avatars/{avatar}/storage?page=N` | Legacy HTML, paged storage entries for one avatar. |
+| `GET /overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage` | SPA client routes. No controller owns them: with a token they fall through to the shell, so a deep link or a bookmark works. |
 | `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle. **Public**: no token, no rate limit, no audit log entry (decision 2026-08-04). An unknown navigation path **with a token** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
 | `GET /favicon.ico` | Favicon: public, but rate-limited and logged like any other request. |
 | `GET /health` | Micronaut management health endpoint: token-exempt, anonymous. Reports UNKNOWN (no run yet) or UP + `lastSuccessfulRun` timestamp; when the last run hit unknown catalog items, the `lastRun` detail also carries `unknownItemCount` and the distinct `unknownItemNames`. Use as a liveness/last-run monitor hook. |

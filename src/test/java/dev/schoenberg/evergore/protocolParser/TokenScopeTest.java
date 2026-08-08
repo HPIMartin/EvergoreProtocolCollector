@@ -69,14 +69,14 @@ class TokenScopeTest {
 	}
 
 	@Test
-	void rejectsTheLegacyOverviewPageWithoutAToken() {
+	void rejectsTheOverviewDeepLinkWithoutAToken() {
 		int status = statusWithoutToken("/overview");
 
 		assertThat(status).isEqualTo(UNAUTHORIZED.getCode());
 	}
 
 	@Test
-	void rejectsTheLegacyAvatarPageWithoutAToken() {
+	void rejectsAnAvatarDeepLinkWithoutAToken() {
 		int status = statusWithoutToken("/avatars/Aurora/bank");
 
 		assertThat(status).isEqualTo(UNAUTHORIZED.getCode());
@@ -133,8 +133,8 @@ class TokenScopeTest {
 	}
 
 	@Test
-	void servesTheLegacyOverviewPageWithAValidToken() {
-		int status = statusOf(Unirest.get("/overview?token=test-token").asString());
+	void servesTheOverviewDeepLinkWithAValidToken() {
+		int status = statusOf(Unirest.get("/overview?token=test-token").header("Accept", "text/html").asString());
 
 		assertThat(status).isEqualTo(OK.getCode());
 	}

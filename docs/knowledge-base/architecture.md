@@ -29,8 +29,9 @@
         ▼
    PostCollectionHook   (no-op in prod; test seam)
 
-Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ OverviewController / AvatarController
-                        ▶ read MetaInformation / repositories ▶ OutputFormatter ▶ HTML
+Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ AvatarSummariesController /
+                        AvatarEntriesController ▶ read MetaInformation / repositories
+                        ▶ wire records ▶ JSON
 
 Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut management
                         ▶ LastRunHealthIndicator ▶ reports UNKNOWN (no run yet) or UP + lastSuccessfulRun
@@ -62,9 +63,7 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 - **REST:** `controller/api/*` (the JSON API under `/api/v1`: `AvatarSummariesController`,
   `AvatarEntriesController`, and `controller/api/wire/*` holding the published contract types plus
   `TransferTypeWireNames`; contract in
-  [frontend.md](frontend.md)) · the legacy HTML pages `OverviewController` (`/overview`) and
-  `AvatarController` (`/avatars/{a}/bank|storage`) with `OutputFormatter` (HTML table builder,
-  escapes cells), both superseded by the SPA but still owning their paths · `FaviconController` ·
+  [frontend.md](frontend.md)) · `FaviconController` ·
   `SpaHistoryFallbackController` (serves the SPA shell for unknown navigation paths;
   `SpaNavigationPaths` decides which 404s it may answer) · filters `BrowserLoggingFilter` (per-IP
   rate limit) + `TokenValidationFilter` (`?token=`) · `ApplicationExceptionHandler` (dispatches via
@@ -109,7 +108,7 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 | File / driver access (`FileLoader`) | ✅ Exists, done right |
 | Logging (`Logger`) | ✅ Exists, done right |
 | **Page source (scrape raw protocol)** | ✅ `PageSource` interface in `dataExtraction`; `EvergoreDataExtractor` depends on it; `SeleniumPageSource` implements it with injected `Driver`. |
-| Output / presentation | 🟡 Partial (`OutputFormatter`), emits HTML directly. |
+| Output / presentation | 🟡 Partial: the `api` controllers map repository records to `wire` records in place; no outbound presentation port. The rendering itself now sits outside the service, in the SPA. |
 
 ### Top violations to fix (detail in [../backlog.md](../backlog.md))
 

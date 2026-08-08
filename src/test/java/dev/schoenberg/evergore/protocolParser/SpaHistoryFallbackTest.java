@@ -14,6 +14,8 @@ import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
@@ -67,6 +69,15 @@ class SpaHistoryFallbackTest {
 	@Test
 	void servesTheSpaShellForAClientRouteWhoseLastSegmentCarriesANonExtensionDot() {
 		HttpResponse<String> response = getHtml("/avatars/Dr.Who");
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getBody()).isEqualTo(bundledIndexHtml());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"/overview", "/avatars/Aurora/bank", "/avatars/Aurora/storage"})
+	void servesTheSpaShellForADashboardDeepLink(String dashboardPath) {
+		HttpResponse<String> response = getHtml(dashboardPath);
 
 		assertThat(response.getStatus()).isEqualTo(200);
 		assertThat(response.getBody()).isEqualTo(bundledIndexHtml());

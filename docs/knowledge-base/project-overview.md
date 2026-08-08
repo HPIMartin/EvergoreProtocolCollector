@@ -27,7 +27,7 @@
   4. Aggregates per Avatar: total paid into the bank, taken out, value deposited to storage,
      value withdrawn, and from those the member's **erzeugter Gildenmehrwert** ("generated guild
      value").
-  5. Persists results to SQLite; exposes a small token-protected HTML/REST view.
+  5. Persists results to SQLite; exposes a small token-protected JSON API that a React SPA reads.
 
 ## Who it's for
 
