@@ -1,9 +1,8 @@
-import type { AvatarSummary } from '../domain'
-import { berlinTimestampOf } from '../domain'
 import type { ProtocolApi } from '../api'
 import { FIRST_PAGE } from '../api'
-import type { AvatarSummaryRow } from '../ui'
-import { AvatarSummaryTable } from '../ui'
+import type { AvatarSummary } from '../domain'
+import type { Column } from '../ui'
+import { SortableTable, formatTimestamp } from '../ui'
 
 import { LoadedView } from './LoadedView.tsx'
 import { requestKeyOf } from './requestKey.ts'
@@ -30,19 +29,14 @@ export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
         {(overview) => (
           <>
             <p data-testid="last-updated">{`Stand: ${freshnessOf(overview.lastUpdated)}`}</p>
-            {overview.totalCount === 0 ? (
-              <p data-testid="view-empty" role="status">
-                Noch kein Avatar erfasst.
-              </p>
-            ) : (
-              <>
-                <p data-testid="avatar-count">{`${String(overview.items.length)} von ${String(overview.totalCount)} Avataren`}</p>
-                <AvatarSummaryTable
-                  rows={rowsOf(overview.items, token)}
-                  onFollow={onFollow}
-                />
-              </>
-            )}
+            <SortableTable
+              caption={`${String(overview.items.length)} von ${String(overview.totalCount)} Avataren`}
+              columns={columnsLinkedWith(token)}
+              rows={overview.items}
+              rowKey={(summary) => summary.avatar}
+              emptyMessage="Noch kein Avatar erfasst."
+              onFollow={onFollow}
+            />
           </>
         )}
       </LoadedView>
@@ -53,16 +47,40 @@ export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
 function freshnessOf(lastUpdated: Date | null): string {
   return lastUpdated === null
     ? 'noch kein Abgleich gelaufen'
-    : berlinTimestampOf(lastUpdated)
+    : formatTimestamp(lastUpdated.toISOString())
 }
 
-function rowsOf(
-  summaries: readonly AvatarSummary[],
+function columnsLinkedWith(
   token: string | null,
-): AvatarSummaryRow[] {
-  return summaries.map((summary) => ({
-    summary,
-    bankHref: hrefOf(bankPath(summary.avatar), token),
-    storageHref: hrefOf(storagePath(summary.avatar), token),
-  }))
+): readonly Column<AvatarSummary>[] {
+  return [
+    {
+      key: 'avatar',
+      header: 'Avatar',
+      kind: 'link',
+      value: (summary) => summary.avatar,
+      href: (summary) => hrefOf(bankPath(summary.avatar), token),
+    },
+    {
+      key: 'withdrawn',
+      header: 'Entnommen',
+      kind: 'number',
+      tone: 'debit',
+      value: (summary) => summary.withdrawn,
+    },
+    {
+      key: 'deposited',
+      header: 'Eingelagert',
+      kind: 'number',
+      tone: 'credit',
+      value: (summary) => summary.deposited,
+    },
+    {
+      key: 'storage',
+      header: 'Lager',
+      kind: 'link',
+      value: () => 'öffnen',
+      href: (summary) => hrefOf(storagePath(summary.avatar), token),
+    },
+  ]
 }

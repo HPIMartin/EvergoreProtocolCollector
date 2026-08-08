@@ -2,12 +2,18 @@ import type { ReactNode } from 'react'
 
 import type { HttpGet } from '../api'
 import { httpProtocolApi } from '../api'
+import type { NavigationLink } from '../ui'
+import { PageFrame, StatusPanel } from '../ui'
 
 import { BankLedgerView } from './BankLedgerView.tsx'
 import { OverviewView } from './OverviewView.tsx'
 import { StorageLedgerView } from './StorageLedgerView.tsx'
-import type { RouteVisitor } from './route.ts'
+import type { Route, RouteVisitor } from './route.ts'
+import { bankPath, overviewPath, storagePath } from './route.ts'
+import { hrefOf } from './token.ts'
 import { useRouting } from './useRouting.ts'
+
+const BRAND = 'Evergore Protocol Collector'
 
 export interface AppProps {
   readonly get: HttpGet
@@ -20,32 +26,63 @@ export function App({ get }: AppProps) {
   const view: RouteVisitor<ReactNode> = {
     overview: () => <OverviewView api={api} token={token} onFollow={follow} />,
     bank: (avatar) => (
-      <BankLedgerView
-        api={api}
-        avatar={avatar}
-        token={token}
-        onFollow={follow}
-      />
+      <BankLedgerView api={api} avatar={avatar} token={token} />
     ),
     storage: (avatar) => (
-      <StorageLedgerView
-        api={api}
-        avatar={avatar}
-        token={token}
-        onFollow={follow}
-      />
+      <StorageLedgerView api={api} avatar={avatar} token={token} />
     ),
     unknownPath: (path) => (
-      <p data-testid="view-unknown-path" role="alert">
-        {`Für ${path} gibt es keine Ansicht.`}
-      </p>
+      <StatusPanel
+        variant="error"
+        message={`Für ${path} gibt es keine Ansicht.`}
+      />
     ),
   }
 
   return (
-    <>
-      <h1 data-testid="app-title">Evergore Protocol Collector</h1>
+    <PageFrame
+      brand={BRAND}
+      navigation={navigationOf(route, token)}
+      onFollow={follow}
+    >
       {route.accept(view)}
-    </>
+    </PageFrame>
   )
+}
+
+function navigationOf(
+  route: Route,
+  token: string | null,
+): readonly NavigationLink[] {
+  const overview: NavigationLink = {
+    label: 'Übersicht',
+    href: hrefOf(overviewPath(), token),
+    current: false,
+  }
+
+  return route.accept<readonly NavigationLink[]>({
+    overview: () => [{ ...overview, current: true }],
+    bank: (avatar) => [overview, ...ledgersOf(avatar, token, 'bank')],
+    storage: (avatar) => [overview, ...ledgersOf(avatar, token, 'storage')],
+    unknownPath: () => [overview],
+  })
+}
+
+function ledgersOf(
+  avatar: string,
+  token: string | null,
+  shown: 'bank' | 'storage',
+): readonly NavigationLink[] {
+  return [
+    {
+      label: 'Bank',
+      href: hrefOf(bankPath(avatar), token),
+      current: shown === 'bank',
+    },
+    {
+      label: 'Lager',
+      href: hrefOf(storagePath(avatar), token),
+      current: shown === 'storage',
+    },
+  ]
 }

@@ -90,8 +90,24 @@ async function shellAt(address: string, server: FakeServer): Promise<void> {
   await act(async () => undefined)
 }
 
-function textsIn(testId: string): string[] {
-  return screen.getAllByTestId(testId).map((row) => row.textContent ?? '')
+function rowTexts(): string[] {
+  return screen.getAllByTestId('data-row').map((row) => row.textContent ?? '')
+}
+
+function headerTexts(): string[] {
+  return screen
+    .getAllByTestId('column-label')
+    .map((header) => header.textContent ?? '')
+}
+
+function tonesOf(columnKey: string): (string | undefined)[] {
+  return screen
+    .getAllByTestId(`cell-${columnKey}`)
+    .map((cell) => cell.dataset.tone)
+}
+
+function shownStatus(): string {
+  return screen.getByTestId('status-panel').textContent ?? ''
 }
 
 describe('App', () => {
@@ -104,7 +120,7 @@ describe('App', () => {
   it('names the application', async () => {
     await shellAt(`/?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(screen.getByTestId('app-title').textContent).toBe(
+    expect(screen.getByTestId('page-brand').textContent).toBe(
       'Evergore Protocol Collector',
     )
   })
@@ -112,10 +128,63 @@ describe('App', () => {
   it('shows the overview at the address the shell is served from', async () => {
     await shellAt(`/?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(textsIn('avatar-summary-row')).toStrictEqual([
-      'Calix12003400BankLager',
-      'Erde-Eibenlanze050BankLager',
+    expect(rowTexts()).toStrictEqual([
+      'Calix1.2003.400öffnen',
+      'Erde-Eibenlanze050öffnen',
     ])
+  })
+
+  it('names the overview columns in German', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect(headerTexts()).toStrictEqual([
+      'Avatar',
+      'Entnommen',
+      'Eingelagert',
+      'Lager',
+    ])
+  })
+
+  it('names the bank ledger columns in German', async () => {
+    await shellAt(
+      `/avatars/Calix/bank?token=${TOKEN}`,
+      alwaysServing(200, BANK_BODY),
+    )
+
+    expect(headerTexts()).toStrictEqual([
+      'Zeitpunkt',
+      'Avatar',
+      'Betrag',
+      'Vorgang',
+    ])
+  })
+
+  it('names the storage ledger columns in German', async () => {
+    await shellAt(
+      `/avatars/Calix/storage?token=${TOKEN}`,
+      alwaysServing(200, STORAGE_BODY),
+    )
+
+    expect(headerTexts()).toStrictEqual([
+      'Zeitpunkt',
+      'Avatar',
+      'Menge',
+      'Gegenstand',
+      'Qualität',
+      'Vorgang',
+    ])
+  })
+
+  it('tells what an avatar took out from what it put in', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect({
+      withdrawn: tonesOf('withdrawn'),
+      deposited: tonesOf('deposited'),
+    }).toStrictEqual({
+      withdrawn: ['debit', 'neutral'],
+      deposited: ['credit', 'credit'],
+    })
   })
 
   it('carries the token of the deep link into every request', async () => {
@@ -163,17 +232,15 @@ describe('App', () => {
 
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, body))
 
-    expect(screen.getByTestId('view-empty').textContent).toBe(
-      'Noch kein Avatar erfasst.',
-    )
+    expect(shownStatus()).toBe('Noch kein Avatar erfasst.')
   })
 
   it('counts the avatars of the window against the whole guild', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(screen.getByTestId('avatar-count').textContent).toBe(
-      '2 von 2 Avataren',
-    )
+    expect(
+      screen.queryByRole('table', { name: '2 von 2 Avataren' }),
+    ).not.toBeNull()
   })
 
   it('shows the bank ledger the path names', async () => {
@@ -182,9 +249,7 @@ describe('App', () => {
       alwaysServing(200, BANK_BODY),
     )
 
-    expect(textsIn('bank-entry-row')).toStrictEqual([
-      '05.08.2026 12:15Calix500Einlagerung',
-    ])
+    expect(rowTexts()).toStrictEqual(['05.08.2026 12:15Calix500Einlagerung'])
   })
 
   it('shows the storage ledger the path names', async () => {
@@ -193,7 +258,7 @@ describe('App', () => {
       alwaysServing(200, STORAGE_BODY),
     )
 
-    expect(textsIn('storage-entry-row')).toStrictEqual([
+    expect(rowTexts()).toStrictEqual([
       '05.08.2026 12:15Calix3Erde-Eibenlanze7Entnahme',
     ])
   })
@@ -214,9 +279,7 @@ describe('App', () => {
       alwaysServing(200, EMPTY_LEDGER_BODY),
     )
 
-    expect(screen.getByTestId('view-empty').textContent).toBe(
-      'Für Calix ist hier kein Vorgang gespeichert.',
-    )
+    expect(shownStatus()).toBe('Für Calix ist hier kein Vorgang gespeichert.')
   })
 
   it('says that an avatar is unknown, which is not the same as an empty ledger', async () => {
@@ -225,15 +288,13 @@ describe('App', () => {
       alwaysServing(404, null),
     )
 
-    expect(screen.getByTestId('view-unknown-avatar').textContent).toBe(
-      'Kein Avatar mit dem Namen Nobody.',
-    )
+    expect(shownStatus()).toBe('Kein Avatar mit dem Namen Nobody.')
   })
 
   it('shows a refused token instead of an empty page', async () => {
     await shellAt('/overview?token=a-wrong-token', alwaysServing(401, null))
 
-    expect(screen.getByTestId('view-unauthorized').textContent).toBe(
+    expect(shownStatus()).toBe(
       'Kein gültiges Token: der Link braucht ein token in der Adresse.',
     )
   })
@@ -243,10 +304,7 @@ describe('App', () => {
 
     await shellAt('/overview', server)
 
-    expect({
-      askedFor: server.askedFor,
-      shown: screen.getByTestId('view-unauthorized').textContent,
-    }).toStrictEqual({
+    expect({ askedFor: server.askedFor, shown: shownStatus() }).toStrictEqual({
       askedFor: ['/api/v1/avatars?page=0&size=100'],
       shown: 'Kein gültiges Token: der Link braucht ein token in der Adresse.',
     })
@@ -255,9 +313,7 @@ describe('App', () => {
   it('shows a failure of the API with its reason', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(500, null))
 
-    expect(screen.getByTestId('view-failed').textContent).toBe(
-      'Fehler: The API answered 500',
-    )
+    expect(shownStatus()).toBe('Fehler: The API answered 500')
   })
 
   it('is loading before the first answer arrives', () => {
@@ -266,57 +322,13 @@ describe('App', () => {
 
     render(<App get={server.get} />)
 
-    expect(screen.getByTestId('view-loading').textContent).toBe('Wird geladen…')
+    expect(shownStatus()).toBe('Wird geladen…')
   })
 
   it('has no view for a path it does not know', async () => {
     await shellAt(`/nonsense?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(screen.getByTestId('view-unknown-path').textContent).toBe(
-      'Für /nonsense gibt es keine Ansicht.',
-    )
-  })
-
-  it('follows an avatar link to that avatar ledger without leaving the shell', async () => {
-    const server = serving((path) =>
-      path === '/api/v1/avatars'
-        ? { status: 200, body: OVERVIEW_BODY }
-        : { status: 200, body: BANK_BODY },
-    )
-    await shellAt(`/overview?token=${TOKEN}`, server)
-
-    await act(async () => {
-      fireEvent.click(screen.getAllByRole('link', { name: 'Bank' })[0])
-    })
-
-    expect({
-      shown: textsIn('bank-entry-row'),
-      address: window.location.pathname + window.location.search,
-      lastAsked: server.askedFor.at(-1),
-    }).toStrictEqual({
-      shown: ['05.08.2026 12:15Calix500Einlagerung'],
-      address: '/avatars/Calix/bank?token=a-test-token',
-      lastAsked:
-        '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100',
-    })
-  })
-
-  it('gets back to the overview from a ledger', async () => {
-    const server = serving((path) =>
-      path === '/api/v1/avatars'
-        ? { status: 200, body: OVERVIEW_BODY }
-        : { status: 200, body: BANK_BODY },
-    )
-    await shellAt(`/avatars/Calix/bank?token=${TOKEN}`, server)
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('link', { name: 'Zur Übersicht' }))
-    })
-
-    expect({
-      shown: textsIn('avatar-summary-row').length,
-      address: window.location.pathname + window.location.search,
-    }).toStrictEqual({ shown: 2, address: '/overview?token=a-test-token' })
+    expect(shownStatus()).toBe('Für /nonsense gibt es keine Ansicht.')
   })
 
   it('asks again with the token of the address the browser moved to', async () => {
@@ -342,7 +354,7 @@ describe('App', () => {
     )
     await shellAt(`/overview?token=${TOKEN}`, server)
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('link', { name: 'Bank' })[0])
+      fireEvent.click(screen.getAllByRole('link', { name: 'Calix' })[0])
     })
 
     await act(async () => {
@@ -379,7 +391,7 @@ describe('App', () => {
     expect({
       askedFor: server.askedFor,
       heading: screen.getByTestId('view-title').textContent,
-      rows: textsIn('storage-entry-row'),
+      rows: rowTexts(),
     }).toStrictEqual({
       askedFor: [
         '/api/v1/avatars/%C3%96de%2FGr%C3%BC%C3%9Fe/storage?token=a-test-token&page=0&size=100',
@@ -401,9 +413,9 @@ describe('App', () => {
     await act(async () => undefined)
 
     expect({
-      rows: textsIn('avatar-summary-row').length,
-      counts: screen.getAllByTestId('avatar-count').length,
-    }).toStrictEqual({ rows: 2, counts: 1 })
+      rows: rowTexts().length,
+      tables: screen.getAllByRole('table').length,
+    }).toStrictEqual({ rows: 2, tables: 1 })
   })
 
   it('counts the entries of the window against the whole ledger', async () => {
@@ -426,8 +438,112 @@ describe('App', () => {
       alwaysServing(200, body),
     )
 
-    expect(screen.getByTestId('entry-count').textContent).toBe(
-      '1 von 340 Einträgen',
+    expect(
+      screen.queryByRole('table', { name: '1 von 340 Einträgen' }),
+    ).not.toBeNull()
+  })
+
+  it('follows an avatar link to that avatar ledger without leaving the shell', async () => {
+    const server = serving((path) =>
+      path === '/api/v1/avatars'
+        ? { status: 200, body: OVERVIEW_BODY }
+        : { status: 200, body: BANK_BODY },
     )
+    await shellAt(`/overview?token=${TOKEN}`, server)
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('link', { name: 'Calix' })[0])
+    })
+
+    expect({
+      shown: rowTexts(),
+      address: window.location.pathname + window.location.search,
+      lastAsked: server.askedFor.at(-1),
+    }).toStrictEqual({
+      shown: ['05.08.2026 12:15Calix500Einlagerung'],
+      address: '/avatars/Calix/bank?token=a-test-token',
+      lastAsked:
+        '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100',
+    })
+  })
+
+  it("follows the storage link of the overview to that avatar's storage ledger", async () => {
+    const server = serving((path) =>
+      path === '/api/v1/avatars'
+        ? { status: 200, body: OVERVIEW_BODY }
+        : { status: 200, body: STORAGE_BODY },
+    )
+    await shellAt(`/overview?token=${TOKEN}`, server)
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('link', { name: 'öffnen' })[0])
+    })
+
+    expect({
+      shown: rowTexts(),
+      address: window.location.pathname + window.location.search,
+      lastAsked: server.askedFor.at(-1),
+    }).toStrictEqual({
+      shown: ['05.08.2026 12:15Calix3Erde-Eibenlanze7Entnahme'],
+      address: '/avatars/Calix/storage?token=a-test-token',
+      lastAsked:
+        '/api/v1/avatars/Calix/storage?token=a-test-token&page=0&size=100',
+    })
+  })
+
+  it('marks only the ledger it shows as the current page in the navigation', async () => {
+    await shellAt(
+      `/avatars/Calix/storage?token=${TOKEN}`,
+      alwaysServing(200, STORAGE_BODY),
+    )
+
+    const marked = screen.getAllByRole('link').map((link) => ({
+      name: link.textContent,
+      current: link.getAttribute('aria-current'),
+    }))
+
+    expect(marked).toStrictEqual([
+      { name: 'Übersicht', current: null },
+      { name: 'Bank', current: null },
+      { name: 'Lager', current: 'page' },
+    ])
+  })
+
+  it('gets back to the overview from a ledger', async () => {
+    const server = serving((path) =>
+      path === '/api/v1/avatars'
+        ? { status: 200, body: OVERVIEW_BODY }
+        : { status: 200, body: BANK_BODY },
+    )
+    await shellAt(`/avatars/Calix/bank?token=${TOKEN}`, server)
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Übersicht' }))
+    })
+
+    expect({
+      rows: rowTexts().length,
+      address: window.location.pathname + window.location.search,
+    }).toStrictEqual({ rows: 2, address: '/overview?token=a-test-token' })
+  })
+
+  it('offers the ledgers of the avatar it shows in its navigation', async () => {
+    await shellAt(
+      `/avatars/Calix/bank?token=${TOKEN}`,
+      alwaysServing(200, BANK_BODY),
+    )
+
+    const navigation = screen
+      .getAllByRole('link')
+      .map(
+        (link) =>
+          `${link.textContent ?? ''} ${link.getAttribute('href') ?? ''}`,
+      )
+
+    expect(navigation).toStrictEqual([
+      'Übersicht /overview?token=a-test-token',
+      'Bank /avatars/Calix/bank?token=a-test-token',
+      'Lager /avatars/Calix/storage?token=a-test-token',
+    ])
   })
 })

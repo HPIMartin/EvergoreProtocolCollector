@@ -33,7 +33,8 @@ Four top-level folders under `frontend/src/`:
     `Ledger` visitor, the German and Berlin-local wording).
   - `api`: the `ProtocolApi` port and its `fetch` adapter, which validates every wire body before
     translating it into domain types; `HttpGet` is the seam the tests fake.
-  - `ui`: presentational tables and links; props in, callbacks out, no knowledge of routes or HTTP.
+  - `ui`: the theme and the presentational primitives; props in, callbacks out, no knowledge of
+    routes or HTTP.
   - `app`: the composition root: routing, each view's load state, and the shell that wires the
     adapter into the views.
 - **`Ledger<E>` and `Route` are visitors** (an `accept` taking one object with a method per case),
@@ -104,10 +105,14 @@ Four top-level folders under `frontend/src/`:
   credential and closing the tab ends the session.
 - A view asks for `page=0&size=100` and shows `items.length` of `totalCount`; **paging controls do
   not exist yet** (decision 2026-08-07 in open-questions.md).
-- Timestamps are shown as Berlin wall-clock (`dd.MM.yyyy HH:mm`) and transfer types as
-  `Einlagerung`/`Entnahme`; the tables' column headers are German, like the sheet's.
-- **Links are real `<a href>`s** with an intercepted plain click: a modified or middle click stays
-  the browser's business, so bookmarking and open-in-new-tab keep working.
+- **The views own their columns, the primitives own the rendering.** A view declares its
+  `Column` list and hands `SortableTable` the domain rows; timestamps go in as ISO strings, which is
+  what the column kind reads, and `format.ts` is the one place that turns them into Berlin
+  wall-clock. Transfer types are shown as `Einlagerung`/`Entnahme` from the domain, and the headers
+  are German, like the sheet's.
+- **Navigation lives in the frame and in one table column.** `PageFrame` carries "Übersicht" plus,
+  on a ledger, that avatar's "Bank" and "Lager"; the overview's avatar column links into the bank and
+  a "Lager" column into the storage. Both go through `Link`, so the shell is never reloaded.
 - **Tests reach no network.** The faked seam is `HttpGet`, answering a real `Response`, so status
   handling and URL building are exercised for real. Asynchronous assertions flush microtasks with
   `act`; no test uses a timer, a `waitFor` poll or a wall-clock wait.

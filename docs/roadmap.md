@@ -29,7 +29,8 @@ HTML-string templates.
       carried across every route and every in-app link.
 - [x] Every view TDD-built with Vitest/RTL (`data-testid`, semantic tables); the frontend layer
       rules hold at lint time ([frontend.md](knowledge-base/frontend.md)).
-- [x] Visual style recreated without copying game assets (decision 2026-07-04), sortable columns.
+- [x] Visual style recreated without copying game assets (decision 2026-07-04); the views render
+      through the shared frame, table and status panel, with sortable columns.
 - [ ] The legacy HTML pages deleted, so the three paths reach the shell on a deep link too
       (decision 2026-08-07).
 - [ ] All columns the service already stores are visible; the full sheet handover completes with M5.

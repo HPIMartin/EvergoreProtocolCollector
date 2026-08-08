@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { StatusPanel } from '../ui'
+
 import type { Load } from './useLoad.ts'
 
 export interface LoadedViewProps<T> {
@@ -9,19 +11,16 @@ export interface LoadedViewProps<T> {
 
 export function LoadedView<T>({ load, children }: LoadedViewProps<T>) {
   return load.accept<ReactNode>({
-    loading: () => (
-      <p data-testid="view-loading" role="status">
-        Wird geladen…
-      </p>
-    ),
+    loading: () => <StatusPanel variant="loading" message="Wird geladen…" />,
     loaded: (value) => children(value),
     unauthorized: () => (
-      <p data-testid="view-unauthorized" role="alert">
-        Kein gültiges Token: der Link braucht ein token in der Adresse.
-      </p>
+      <StatusPanel
+        variant="error"
+        message="Kein gültiges Token: der Link braucht ein token in der Adresse."
+      />
     ),
     failed: (reason) => (
-      <p data-testid="view-failed" role="alert">{`Fehler: ${reason}`}</p>
+      <StatusPanel variant="error" message={`Fehler: ${reason}`} />
     ),
   })
 }

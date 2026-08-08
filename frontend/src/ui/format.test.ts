@@ -24,6 +24,8 @@ describe('formatTimestamp', () => {
     { instant: '2022-07-10T22:30:00Z', expected: '11.07.2022 00:30' },
     { instant: '2022-03-27T00:59:00Z', expected: '27.03.2022 01:59' },
     { instant: '2022-03-27T01:00:00Z', expected: '27.03.2022 03:00' },
+    { instant: '2022-10-30T00:30:00Z', expected: '30.10.2022 02:30' },
+    { instant: '2022-10-30T01:30:00Z', expected: '30.10.2022 02:30' },
     { instant: '2022-07-10T15:23:00+05:00', expected: '10.07.2022 12:23' },
   ])('renders $instant as $expected', ({ instant, expected }) => {
     const rendered = formatTimestamp(instant)
