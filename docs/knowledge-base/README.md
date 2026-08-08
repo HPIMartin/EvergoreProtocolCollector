@@ -36,7 +36,7 @@ contribution metrics, automating a hand-maintained Google Sheet.
 | 11 | [multi-agent-playbook.md](multi-agent-playbook.md) | The agent team: Planner · Implementer · Falsifier panel · Doc reviewer · Reviewer; pipeline, roles, invocation |
 | 12 | [dev-environment.md](dev-environment.md) | Fully-virtualized dev: the devcontainer, the in-container rule, JDK single-source & upgrade |
 | 13 | [agent-entry-template.md](agent-entry-template.md) | Per-tool session-bootstrap template: SHARED rules + TOOL-SPECIFIC skeleton + template version |
-| 14 | [frontend.md](frontend.md) | The React/TypeScript SPA and the JSON API it reads (Epic E5): stack, module structure & dependency rule, the wire contract, TDD conventions, Gradle/Docker/vulnScan wiring |
+| 14 | [frontend.md](frontend.md) | The React/TypeScript SPA and the JSON API it reads: stack, module structure & dependency rule, the wire contract, TDD conventions, Gradle/Docker/vulnScan wiring |
 
 ## Living documents (outside this folder)
 

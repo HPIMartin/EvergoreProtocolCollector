@@ -13,13 +13,13 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M3 | Dashboard views (strands `spa-look` + `spa-data-shell`) | E5 | The officer-visible payoff of the dashboard rebuild |
+| M3 | Dashboard views (strands `spa-look`, `spa-data-shell`, `spa-legacy-out`) | The SPA over the JSON API | The officer-visible payoff of the dashboard rebuild |
 | M4 | Ingest & test robustness | B16, B17 | Small hardening set, deliberately behind the dashboard strands (decision 2026-07-17) |
 | M5 | Sheet parity, confirmed columns | E1, E2 | The headline metric lands on integrity-fixed data and a real dashboard |
 | M6 | Real-browser integration tests | H2, H6 | Scrape coverage without host Firefox; the test split gates on the Selenium service |
 | M7 | Micronaut 5 | H9 | Deferred deliberately until 1:1 is re-proven through the nets built in M3-M6 |
 
-## M3: Dashboard views (strands `spa-look` + `spa-data-shell`)
+## M3: Dashboard views (strands `spa-look`, `spa-data-shell`, `spa-legacy-out`)
 
 Slice: a guild officer reads the overview and avatar details in the SPA instead of the
 HTML-string templates.
@@ -31,11 +31,12 @@ HTML-string templates.
       rules hold at lint time ([frontend.md](knowledge-base/frontend.md)).
 - [x] Visual style recreated without copying game assets (decision 2026-07-04); the views render
       through the shared frame, table and status panel, with sortable columns.
-- [ ] The legacy HTML pages deleted, so the three paths reach the shell on a deep link too
+- [x] The legacy HTML pages deleted, so the three paths reach the shell on a deep link too
       (decision 2026-08-07).
 - [ ] All columns the service already stores are visible; the full sheet handover completes with M5.
 
-Track: worktree strands `spa-look` (theme and primitives) and `spa-data-shell` (wire types, fetching, routing).
+Track: worktree strands `spa-look` (theme and primitives), `spa-data-shell` (wire types, fetching,
+routing) and `spa-legacy-out` (the HTML pages out, the acceptance net on the JSON API).
 
 ## M4: Ingest & test robustness
 
