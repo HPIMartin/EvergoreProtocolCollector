@@ -38,11 +38,15 @@ local-only Docker → home-server deploy.)*
 - **React-hook lint:** no `eslint-plugin-react-hooks` is declared, so nothing enforces `rules-of-hooks` or
   `exhaustive-deps` on the SPA's hooks. Adding it needs a call on `useLoad`, whose effect depends on the
   request key alone **on purpose** (the key is the request's full identity), which `exhaustive-deps` flags.
-- **Row identity:** the entry tables key rows by position, which holds while a whole page is replaced at
-  once; sorting or paging inside a loaded page needs a stable identity per entry first.
-- **Test-helper duplication:** the three `ui` table tests and `App.test.tsx` each carry their own copy of
-  the same cell/header text helpers. One shared helper needs a home that is not production code without a
+- **Test-helper duplication:** `tonesOf` stands byte-identical in `frontend/src/ui/SortableTable.test.tsx`
+  and `frontend/src/app/App.test.tsx`. A shared helper needs a home that is not production code without a
   test of its own (same shape of problem as the duplicated test boot setup).
+- **A column that offers sorting must be able to sort:** the overview's `Lager` column is a link column
+  whose text is the same word in every row, so its header renders a sort button that can never reorder
+  anything. Either `Column` gains a way to opt out of sorting, or such a column sorts by another field.
+- **Row identity:** an entry carries no id on the wire, so a ledger row is keyed by its position in the
+  loaded page. That holds while a page is replaced as a whole (sorting reorders the same objects), but
+  paging **inside** a loaded page needs a real identity per entry first, which is a contract question.
 - **Hook hardening:** the pre-commit host-path scan can be prefix-squatted (`/home/<allowed>/home/<real>/…`
   slips past `grep -oE`): relates to **G7** / **G13**. The `/home/app` Dockerfile exemption (commit `cc75a2e`)
   itself was reviewed as necessary and correct.
