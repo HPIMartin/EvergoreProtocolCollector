@@ -4,9 +4,8 @@
 
 | Test | Scope | Style |
 |------|-------|-------|
-| `SmokeTest` | Boots the real Micronaut `EmbeddedServer`; mocks Selenium (`TestEvergoreDataExtractor extends EvergoreDataExtractor` with `super(null,…)`); points DB at `build/tmp/smokeTest.sqlite` (under the build directory, so rewriting it per run cannot invalidate the `processTestResources` inputs); sets job delay 0; asserts app starts + the job runs, `/overview` & `/avatars/{a}/bank\|storage` return seeded HTML (fuzzy via Levenshtein), unknown path → 4xx, and that the `PageSource` bean resolves to the `SeleniumPageSource` adapter. `@MockBean` for `Configuration`, the hooks, task-exception-handler. | `@MicronautTest` integration / smoke |
+| `SmokeTest` | Boots the real Micronaut `EmbeddedServer`; mocks Selenium (`TestEvergoreDataExtractor extends EvergoreDataExtractor` with `super(null,…)`); points DB at `build/tmp/smokeTest.sqlite` (under the build directory, so rewriting it per run cannot invalidate the `processTestResources` inputs); **resets that file, and its `-journal`/`-wal`/`-shm` sidecars, from `TestConfiguration`'s static initializer**, next to the one place that names the path; sets job delay 0; asserts app starts + the job runs, a row seeded through each repository reads back byte-exact through `/api/v1/avatars` & `/api/v1/avatars/{a}/bank\|storage` (one avatar name per test, so the class is order-independent), unknown path → 4xx, and that the `PageSource` bean resolves to the `SeleniumPageSource` adapter. `@MockBean` for `Configuration`, the hooks, task-exception-handler. | `@MicronautTest` integration / smoke |
 | `DockerBrowserSmokeTest` | Starts the browser for the **configured** mode (`Configuration.browser` → `Browser.fromString`), loads a `data:` URL and reads an element back, so the scrape path's driver half is covered without the network or the live game. Selenium Manager resolves the driver itself (`~/.cache/selenium`, geckodriver 0.37.1 against Firefox ESR 140); a browser on the `PATH` is the only prerequisite. `assumeTrue`-skipped where none exists — the production image's build stage runs `check` on `eclipse-temurin:25-jdk` and must not gain a browser dependency. | integration (real browser, no server) |
-| `TestHelper` | Levenshtein "closest line" helper for fuzzy HTML assertions. | helper (no `@Test`) |
 | `MetaInformationTest` | `MetaInformation<T>` delegates serialize/deserialize to its `MetaInformationKey<T>`. | pure unit |
 | `EntryFactoryTest` | `deduplicates()`: 3 raw lines collapse to 1 item by name+quality; a timestamped headline with no known transfer type is dropped **with a warning**. | pure unit (thin) |
 | `EntityParserContractTest` | The parser contract, pinned line by line: headline → entry, `Einzahlung`→`EINLAGERUNG`, withdrawal entries, quality defaulting to 100 when absent, the value-neutral `+1` modifier (ignored, and merged with its unmodified counterpart), quantity merging for same name+quality, separation when quality differs, the `Impressum` terminator, one entry per headline, empty protocol → no entries, and the malformed/out-of-range-date paths (skipped without aborting the ingest, neighbouring entries still parsed, the malformed headline's items **not** folded into the preceding entry, a warning when a typed headline is dropped). | pure unit |
@@ -67,6 +66,9 @@
   precondition, not a per-test arrange (handbook §6). `SmokeTest.applicationIsStarting` is the
   exception: there the collection completing *is* the behaviour under test, so the await stays in
   the test body.
+- `SmokeTest` awaits it in `@BeforeEach` too, for the tests that seed rows: the collector's **full
+  recompute overwrites the meta sums**, so a seed written while the run is still going would be
+  replaced, and the order of the two writes is otherwise undefined.
 
 ## Coverage map
 
@@ -88,7 +90,7 @@ the SPA seam: history fallback vs. 404 in both directions (`SpaHistoryFallbackTe
 `BankEntry`/`StorageEntry` value equality (load-bearing for the window dedup) ·
 `SeleniumPageSource`'s driver lifecycle (quit on success and failure, failure logging) ·
 `BootSignalRecorder` (the boot-signal seam itself) ·
-and *indirectly* via `SmokeTest`: controllers, filters, repositories, the job, `OutputFormatter`.
+and *indirectly* via `SmokeTest`: controllers, filters, repositories, the job.
 
 **Most important UNTESTED logic:**
 1. **`SeleniumPageSource`'s scrape itself**: navigation, pagination and login against the live site

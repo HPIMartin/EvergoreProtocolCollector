@@ -115,7 +115,6 @@ language**, given/when/then:
 - **Many** fast unit tests (domain values, parser, evaluator math).
 - **Some** adapter/integration tests (repositories vs `:memory:` SQLite).
 - **Few** acceptance tests (collect→evaluate→overview via fakes) and a thin smoke test for wiring.
-- Replace brittle assertions (the Levenshtein HTML matching) once output is behind a clean port.
 - **Deterministic, never wall-clock-dependent**: must pass on any hardware (a first-gen Raspberry
   Pi may just take longer); correctness never hinges on a `sleep`/`timeout` threshold. Wait on a
   real signal (`CountDownLatch.await()` without timeout, a future, a condition), released on both

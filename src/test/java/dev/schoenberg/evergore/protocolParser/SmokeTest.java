@@ -4,8 +4,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.Month;
 import java.util.List;
 
 import jakarta.inject.Inject;
@@ -32,13 +30,10 @@ import dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInfor
 import dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
-import static dev.schoenberg.evergore.protocolParser.TestHelper.calculateLevenshteinDistance;
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.EINLAGERUNG;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
-import static dev.schoenberg.evergore.protocolParser.rest.controller.OutputFormatter.NEWLINE;
 import static java.time.Instant.EPOCH;
 import static java.util.Arrays.asList;
 import static kong.unirest.Unirest.config;
@@ -49,13 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @MicronautTest
 class SmokeTest {
 	private static final Path TEST_DATABASE_PATH = Paths.get("build", "tmp", "smokeTest.sqlite");
-
-	static {
-		silentThrow(() -> {
-			Files.createDirectories(TEST_DATABASE_PATH.getParent());
-			Files.deleteIfExists(TEST_DATABASE_PATH);
-		});
-	}
+	private static final Instant SEEDED_TIME = Instant.parse("1900-05-04T12:37:00Z");
 
 	private @Inject EmbeddedServer server;
 	private @Inject Configuration config;
@@ -66,6 +55,7 @@ class SmokeTest {
 	public void setup() {
 		config().verifySsl(false);
 		config().defaultBaseUrl("http://localhost:" + server.getPort());
+		signals.awaitCollection();
 	}
 
 	@Test
@@ -80,45 +70,39 @@ class SmokeTest {
 
 	@Test
 	void retrieveDataViaBankEndpoint() {
-		Instant time = LocalDateTime.of(1900, Month.MAY, 4, 13, 37).atZone(APP_ZONE).toInstant();
-		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(time, "TestAvatar", 42, EINLAGERUNG)));
+		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(SEEDED_TIME, "BankTestAvatar", 42, EINLAGERUNG)));
 
-		HttpResponse<String> response = get("/avatars/TestAvatar/bank");
+		HttpResponse<String> response = get("/api/v1/avatars/BankTestAvatar/bank");
 
 		assertTrue(response.getStatus() >= 200 && response.getStatus() < 300, "Status code was: " + response.getStatus());
-		String content = response.getBody();
-		assertClosest(content, "<th>TimeStamp</th><th>Avatar</th><th>Amount</th><th>TransferType</th>");
-		assertClosest(content, "<td>04.05.1900 13:37</td><td>TestAvatar</td><td>42</td><td>Einlagerung</td>");
+		assertEquals("{\"page\":0,\"size\":100,\"totalCount\":1,\"items\":["
+				+ "{\"timestamp\":\"1900-05-04T12:37:00Z\",\"avatar\":\"BankTestAvatar\",\"amount\":42,\"transferType\":\"DEPOSIT\"}]}", response.getBody());
 	}
 
 	@Test
 	void retrieveDataViaStorageEndpoint() {
-		Instant time = LocalDateTime.of(1900, Month.MAY, 4, 13, 37).atZone(APP_ZONE).toInstant();
-		StorageDatabaseRepository.get(config, logger, () -> {}).add(asList(new StorageEntry(time, "TestAvatar", 1, "TestItem", 42, EINLAGERUNG)));
+		StorageDatabaseRepository.get(config, logger, () -> {}).add(asList(new StorageEntry(SEEDED_TIME, "StorageTestAvatar", 1, "TestItem", 42, EINLAGERUNG)));
 
-		HttpResponse<String> response = get("/avatars/TestAvatar/storage");
+		HttpResponse<String> response = get("/api/v1/avatars/StorageTestAvatar/storage");
 
 		assertTrue(response.getStatus() >= 200 && response.getStatus() < 300, "Status code was: " + response.getStatus());
-		String content = response.getBody();
-
-		assertClosest(content, "<th>TimeStamp</th><th>Avatar</th><th>Quantity</th><th>Name</th><th>Quality</th><th>TransferType</th>");
-		assertClosest(content, "<td>04.05.1900 13:37</td><td>TestAvatar</td><td>1</td><td>TestItem</td><td>42</td><td>Einlagerung</td>");
+		assertEquals("{\"page\":0,\"size\":100,\"totalCount\":1,\"items\":["
+				+ "{\"timestamp\":\"1900-05-04T12:37:00Z\",\"avatar\":\"StorageTestAvatar\",\"quantity\":1,\"name\":\"TestItem\",\"quality\":42,\"transferType\":\"DEPOSIT\"}]}",
+				response.getBody());
 	}
 
 	@Test
 	void retrieveDataViaOverviewEndpoint() {
-		String avatar = "TestAvatar";
+		String avatar = "OverviewTestAvatar";
 		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(EPOCH, avatar, 0, EINLAGERUNG)));
 		MetaInformation<Long> placement = new MetaInformation<>(getBankPlacement(avatar), 1337L);
 		MetaInformation<Long> withdrawl = new MetaInformation<>(getBankWithdrawl(avatar), 42L);
 		MetaInformationDatabaseRepository.get(config, logger, () -> {}).add(asList(placement, withdrawl));
 
-		HttpResponse<String> response = get("/overview");
+		HttpResponse<String> response = get("/api/v1/avatars");
 
 		assertTrue(response.getStatus() >= 200 && response.getStatus() < 300, "Status code was: " + response.getStatus());
-		String content = response.getBody();
-		assertClosest(content, "<th>Avatar</th><th>Entnommen</th><th>Eingelagert</th>");
-		assertClosest(content, "<td>TestAvatar</td><td>42</td><td>1337</td>");
+		assertTrue(response.getBody().contains("{\"avatar\":\"OverviewTestAvatar\",\"withdrawn\":42,\"deposited\":1337}"), "Body was: " + response.getBody());
 	}
 
 	@Test
@@ -133,14 +117,6 @@ class SmokeTest {
 		PageSource pageSource = server.getApplicationContext().getBean(PageSource.class);
 
 		assertTrue(pageSource instanceof SeleniumPageSource, "Expected SeleniumPageSource but was " + pageSource.getClass());
-	}
-
-	private void assertClosest(String content, String expected) {
-		if (!content.contains(expected)) {
-			List<String> contenLines = asList(content.split(NEWLINE));
-			String closest = findClosestString(contenLines, expected);
-			assertEquals(expected.trim(), closest.trim());
-		}
 	}
 
 	@MockBean(PreDatabaseConnectionHook.class)
@@ -177,6 +153,15 @@ class SmokeTest {
 	}
 
 	public static class TestConfiguration extends Configuration {
+		static {
+			silentThrow(() -> {
+				Files.createDirectories(TEST_DATABASE_PATH.getParent());
+				for (String suffix : List.of("", "-journal", "-wal", "-shm")) {
+					Files.deleteIfExists(Paths.get(TEST_DATABASE_PATH + suffix));
+				}
+			});
+		}
+
 		@Override
 		public String getDatabasePath() {
 			return TEST_DATABASE_PATH.toString();
@@ -209,20 +194,5 @@ class SmokeTest {
 
 	private HttpResponse<String> get(String endpoint) {
 		return Unirest.get(endpoint + "?token=test-token").asString();
-	}
-
-	private String findClosestString(List<String> strings, String target) {
-		int minDistance = Integer.MAX_VALUE;
-		String closestString = null;
-
-		for (String str : strings) {
-			int distance = calculateLevenshteinDistance(str, target);
-			if (distance < minDistance) {
-				minDistance = distance;
-				closestString = str;
-			}
-		}
-
-		return closestString;
 	}
 }
