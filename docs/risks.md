@@ -16,7 +16,7 @@
 
 | Risk | L | I | Countermeasure |
 |------|---|---|----------------|
-| An Evergore HTML/layout change breaks parser or scraper; a silent failure burns the 30-day window | M | H | Fail-loud scraping stays in scope (backlog F1); the last ingest-aborting parser gap closes in roadmap M4 (backlog B17); a push/alert channel (backlog F3) would surface silence |
+| An Evergore HTML/layout change breaks parser or scraper; a silent failure burns the 30-day window | M | H | Fail-loud scraping stays in scope (backlog F1); no single malformed protocol line can abort the ingest any more, and every dropped block head is logged; a push/alert channel (backlog F3) would surface silence |
 | The login flow changes (bot protection) or the game shuts down | L | H | Accepted (hobby project): the DB remains as archive |
 | ToS/PII stance for scraping and storing other members' activity is undecided (open question D-11) | L | M | Decide and log before any exposure beyond the guild; data stays token-protected |
 
