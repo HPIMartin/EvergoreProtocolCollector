@@ -25,7 +25,11 @@ The *how* lives in the KB ([architecture](knowledge-base/architecture.md) ·
 the code is the source of truth for the rest. A one-off conformance audit (2026-06-27) filed its
 remaining finding as **D9**.
 
-**Next action:** **B16**/**B20** finish M4, then **E1**/**E2**, then **H2**+**H6**; **B19** comes
+**Next action:** the **v0.1.0 deploy** is planned for the week of 2026-08-10, and its last blocker is
+closed: the live-vs-recompute gap is drift in the old incremental totals, so the release ships the
+lowered numbers and announces them (decision 2026-08-09). What remains for it is tag → image build →
+deploy per [build-run-deploy.md](knowledge-base/build-run-deploy.md). Then
+**B16**/**B20** finish M4, then **E1**/**E2**, then **H2**+**H6**; **B19** comes
 before **H9**, which also waits on 1:1 being re-proven. Milestone
 cuts + acceptance: [roadmap.md](roadmap.md); risk register: [risks.md](risks.md). Plan via the agent
 pipeline (planner → implementer → falsifier panel → reviewer). *(A4/CI stays deprioritized:
