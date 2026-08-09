@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
+import java.security.*;
+
 import jakarta.inject.*;
 
 import io.micronaut.http.*;
@@ -10,6 +12,8 @@ import org.reactivestreams.*;
 import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.exceptions.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.SecurityConfiguration;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Singleton
 @Filter("/**")
@@ -40,11 +44,19 @@ public class TokenValidationFilter implements HttpServerFilter {
 		}
 
 		String token = request.getParameters().get(TOKEN_PARAMETER_NAME, String.class).orElseThrow(this::reject);
-		if (!token.equals(securityConfiguration.apiToken())) {
+		if (!matchesApiToken(token)) {
 			throw reject();
 		}
 
 		return chain.proceed(request);
+	}
+
+	private boolean matchesApiToken(String presented) {
+		String expected = securityConfiguration.apiToken();
+		if (expected == null || expected.isBlank()) {
+			return false;
+		}
+		return MessageDigest.isEqual(presented.getBytes(UTF_8), expected.getBytes(UTF_8));
 	}
 
 	private AccessNotAllowed reject() {
