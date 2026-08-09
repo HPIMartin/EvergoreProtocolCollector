@@ -43,6 +43,8 @@ public class EntryFactory {
 		if (!matcher.find()) {
 			if (TIMESTAMPED_HEADLINE.matcher(headline).matches()) {
 				logger.warn("Dropping protocol entry: unmatched transfer type in headline: " + headline);
+			} else {
+				logger.warn("Dropping protocol entry: malformed headline: " + headline);
 			}
 			return Optional.empty();
 		}

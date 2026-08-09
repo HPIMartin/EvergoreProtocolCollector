@@ -169,6 +169,15 @@ class EntityParserContractTest {
 	}
 
 	@Test
+	void warnsWhenABlockHeadFailingTheStrictHeadlineMatchIsDropped() {
+		String headline = "11.12X2001 13:37 Bad Einlagerung";
+
+		EntryFactory.parseContent(List.of(headline, "5 Ghost"), logger);
+
+		assertThat(logger.warnMessages()).containsExactly("Dropping protocol entry: malformed headline: " + headline);
+	}
+
+	@Test
 	void warnsWhenATypedHeadlineWithAnOutOfRangeDateIsDropped() {
 		EntryFactory.parseContent(List.of("31.13.2001 25:99 Bad Einlagerung", "5 Ghost"), logger);
 

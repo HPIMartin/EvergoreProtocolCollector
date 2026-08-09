@@ -29,6 +29,8 @@ All domain types live framework-free under `…/domain` and `…/businessLogic`.
 - A recognized entry whose item lines all fail the item regex (e.g. a thousands separator,
   `1.000 Gold`) is kept and logged, not dropped: it contributes nothing downstream, so the warning
   is the only trace it leaves.
+- Every dropped block head is logged, whichever way it failed (unknown transfer type vs. malformed
+  headline): a block head loud enough to open an entry must never vanish silently.
 
 ## EvergoreItem: the item catalog
 
