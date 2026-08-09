@@ -8,6 +8,7 @@ WORKDIR $APP_HOME
 
 COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
 COPY gradle ./gradle
+COPY config ./config
 COPY src ./src
 COPY frontend ./frontend
 

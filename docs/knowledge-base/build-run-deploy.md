@@ -173,10 +173,19 @@ remains the gate for landing on `main`.
 ## Run via Docker (primary path)
 
 - **`Dockerfile`** is multi-stage:
-  - *build stage* `eclipse-temurin:25-jdk`: copies `frontend/` and `gradle.properties` (needed for
-    the pinned `nodeVersion`) alongside the Java sources, then runs
+  - *build stage* `eclipse-temurin:25-jdk`: copies `frontend/`, `gradle.properties` (needed for
+    the pinned `nodeVersion`) and **`config/`** alongside the Java sources, then runs
     `./gradlew clean check installDist` (not `clean test installDist`: `test` matches nothing
     under `:frontend`, so `check` is what gates the image on the frontend's tests and lint too).
+    `config/` is not optional: `check` runs Checkstyle and Spotless, which read
+    `config/checkstyle/checkstyle.xml` and `config/eclipse/formatter.xml`, and both fail the image
+    build with "Unable to create Root Module" / "File signature can only be created for existing
+    regular files" when the directory is missing.
+  - The build stage has **no Gradle cache**, so every image build downloads the Gradle distribution
+    and all dependencies again (measured: ~4 min for the Gradle leg alone). The wrapper makes
+    exactly **one** download attempt with a 10 s read timeout, so a slow network fails the build
+    with `Downloading …/gradle-9.5.1-bin.zip failed: timeout (10000ms)` / `Attempt 1/1 failed`.
+    That is transient — repeat the build.
   - *runtime stage* `selenium/standalone-firefox:109.0` (Firefox + geckodriver for the `DOCKER`
     browser mode) with the **JDK 25 copied from the build stage** (Ubuntu base has no
     openjdk-25), the distribution copied to `/opt/protocolParser`, **`COPY zugang.txt /`** (still
@@ -194,19 +203,37 @@ remains the gate for landing on `main`.
   image** is still built by the host's Dev Containers extension, so `.devcontainer/` changes only
   land on the next rebuild. The new-stack **app behaviour is verified 1:1** by running the
   distribution against the production DB (see testing.md).
+- **Build context vs. mount source (the devcontainer trap):** the two are resolved by *different*
+  filesystems. The **build context** is read by the `docker` CLI, so `docker build .` inside the
+  devcontainer sends the devcontainer's files and works as expected. A **`-v` source** is resolved
+  by the **daemon**, which does not know the devcontainer's `/workspaces/...` paths: it silently
+  creates a new empty directory there instead of failing, and the app then starts against an **empty
+  database** and begins collecting from scratch. So from the devcontainer the mount source must be
+  the workspace path **as the Docker host sees it** (a Windows path here), and the pre-flight check
+  below is not optional.
+- **The runtime does not run as root:** `selenium/standalone-firefox` runs as `seluser`, **uid 1200**.
+  The mounted `database/` directory *and* `temp.sqlite` inside it must be writable by that uid, or
+  SQLite cannot write. A directory created by another user (the devcontainer's `vscode`, uid 1000,
+  writes `755`/`644`) is readable but not writable, which is why the check below writes rather than
+  reads.
 
 ## Versioning & release tags
 
 - **One number in three places:** `version` in `build.gradle.kts` is the source, the git tag is
-  `v<version>`, the image tag is `protocolParser:<version>`. So a running container's image tag
-  names its source commit: `git checkout v<that tag>`.
+  `v<version>`, the image tag is `evergore-protocol-collector:<version>`. So a running container's
+  image tag names its source commit: `git checkout v<that tag>`.
+- **The image name is lowercase and therefore not `rootProject.name`:** a Docker repository name may
+  not contain uppercase letters (`invalid tag "protocolParser:…": repository name must be
+  lowercase`), so the image and the container are named `evergore-protocol-collector` after the
+  repository, while the Gradle project and the distribution keep `protocolParser`.
 - **SemVer, no `-SNAPSHOT`:** nothing is published to an artifact repository, so a snapshot suffix
   would gate nothing. `version` holds the number of the **next** release; the commit that sets that
   number *is* the release commit and is the commit that gets tagged. One version commit per release.
 - **Consequence — a build off an untagged `main` commit is not identified by its version alone**
   (between releases `version` still names the release being prepared). Such a build is tagged
-  `protocolParser:<version>-<short sha>`; a **bare** `protocolParser:<version>` tag is reserved for
-  the tagged release commit, so it always means exactly one source state.
+  `evergore-protocol-collector:<version>-<short sha>`; a **bare**
+  `evergore-protocol-collector:<version>` tag is reserved for the tagged release commit, so it
+  always means exactly one source state.
 - **Tagging is the author's act at release time, on the release commit** (agents document it, never
   run it):
 
@@ -220,26 +247,26 @@ remains the gate for landing on `main`.
   machine-specific, so this is the contract it implements:
 
   ```sh
-  docker build -t protocolParser:0.1.0 \
+  docker build -t evergore-protocol-collector:0.1.0 \
     --label org.opencontainers.image.version=0.1.0 \
     --label org.opencontainers.image.revision=$(git rev-parse HEAD) .
   ```
 
-  The labels answer "which stand runs" even for an interim image, where the tag alone cannot.
+  The labels answer "which stand runs" even for an interim image, where the tag alone cannot. The
+  base image contributes an empty `authors` label of its own; ignore it.
 - **Never delete the previous release's image** on the home server — it *is* the rollback target.
   `docker image prune -a` and `docker rmi` on the old tag remove the ability to roll back.
 
 ## Which stand is running?
 
 ```sh
-docker inspect -f '{{.Config.Image}}' protocolParser
-docker inspect -f '{{index .Config.Labels "org.opencontainers.image.version"}}
-{{index .Config.Labels "org.opencontainers.image.revision"}}' protocolParser
-docker images protocolParser                 # which tags are available to roll back to
+docker inspect -f '{{.Config.Image}}' evergore-protocol-collector
+docker inspect -f '{{index .Config.Labels "org.opencontainers.image.version"}} {{index .Config.Labels "org.opencontainers.image.revision"}}' evergore-protocol-collector
+docker images evergore-protocol-collector    # which tags are available to roll back to
 ```
 
-- The container runs under the fixed name `protocolParser` (see the deploy steps), so every command
-  here and in the rollback needs no container id.
+- The container runs under the fixed name `evergore-protocol-collector` (see the deploy steps), so
+  every command here and in the rollback needs no container id.
 - The `revision` label is the authoritative answer: it is a commit sha and survives any tag
   confusion. An image built before the labels existed reports empty labels — that alone dates it as
   pre-`0.1.0`.
@@ -253,22 +280,39 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    `database/temp.sqlite` is the only history. A first run recomputes the meta sums from all stored
    entries and ingests still-visible entries missing from the database, both in place and not
    reversible: `cp database/temp.sqlite database/temp.sqlite.bak-<yyyymmdd>`.
+   - Copy it with the container **stopped**. One file is enough: the database runs in rollback-journal
+     mode, so no `-wal`/`-shm` sidecar outlives a write and there is no second file to keep
+     consistent with it.
 2. **Secure the rollback target:** confirm the currently running image carries a tag you can start
-   again (`docker inspect -f '{{.Config.Image}}' protocolParser`). If it is untagged, `<none>`, or a
-   tag the next build overwrites, tag it now, e.g. `docker tag <image id> protocolParser:pre-0.1.0`
-   — an image the build orphans is still startable by id, but nothing left on the host says what it
-   was. **This is the situation at the `0.1.0` release**, whose predecessor was built before the
-   tagging scheme existed.
-3. **Build the image** on the Docker host (`buildAndRun.bat`, gitignored and machine-specific) with
-   the tag and labels from "Versioning & release tags". The build context needs `zugang.txt`, which
-   is baked into the image (backlog C3).
-4. **Replace the container:**
+   again (`docker inspect -f '{{.Config.Image}}' evergore-protocol-collector`). If it is untagged,
+   `<none>`, or a tag the next build overwrites, tag it now, e.g.
+   `docker tag <image id> evergore-protocol-collector:pre-0.1.0` — an image the build orphans is
+   still startable by id, but nothing left on the host says what it was. **This is the situation at
+   the `0.1.0` release**, whose predecessor was built before the tagging scheme existed.
+3. **Check the mount before starting anything** — both failures below are silent, and both leave a
+   *running, healthy-looking* container serving wrong data:
 
    ```sh
-   docker stop protocolParser && docker rm protocolParser
-   docker run -d --name protocolParser -p 8080:8080 \
+   docker run --rm --entrypoint /bin/bash -v "<host>/database:/database" \
+     evergore-protocol-collector:<version> -c 'ls -l /database; touch /database/.probe && \
+     echo DIR-OK && rm /database/.probe; : > /database/temp.sqlite && echo FILE-OK'
+   ```
+
+   - `temp.sqlite` must be **listed**. An empty listing means the mount source did not resolve (see
+     the devcontainer trap above) and the app would start on an empty database.
+   - `DIR-OK` and `FILE-OK` must both appear. Without them the runtime user (`seluser`, uid 1200)
+     cannot write and SQLite fails; fix the mode on the host (`chmod 777 database`,
+     `chmod 666 database/temp.sqlite`) rather than starting the app to find out.
+4. **Build the image** on the Docker host (`buildAndRun.bat`, gitignored and machine-specific) with
+   the tag and labels from "Versioning & release tags". The build context needs `zugang.txt`, which
+   is baked into the image (backlog C3).
+5. **Replace the container:**
+
+   ```sh
+   docker stop evergore-protocol-collector && docker rm evergore-protocol-collector
+   docker run -d --name evergore-protocol-collector -p 8080:8080 \
      -e EVERGORE_SECURITY_API_TOKEN=<token> -e TZ=UTC \
-     -v "<host>/database:/database" protocolParser:0.1.0
+     -v "<host>/database:/database" evergore-protocol-collector:0.1.0
    ```
 
    - The token is **mandatory**: a blank or unset value makes the app refuse to boot
@@ -278,23 +322,51 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      pins it.
    - The fixed `--name` is what makes every command in "Which stand is running?" and in the
      rollback runnable as written.
-5. **Verify**, in order: `GET /health` is anonymous and reports `UNKNOWN` until the first
-   collection finishes, then `UP` with `lastSuccessfulRun`; `GET /` serves the SPA shell without a
-   token; `GET /api/v1/avatars?token=<token>` answers the overview JSON, and the same request
-   without a token returns **401**. Cross-check the deployed version against the intended one with
-   the `Which stand is running?` commands.
-6. **Rollback** — the previous release's tag (`docker images protocolParser` lists the candidates):
+   - **Timeline** (measured): the server answers after ~1.5 s, the first collection starts 30 s
+     after startup (`getCollectorInitialDelaySeconds`), extraction takes ~25 s and the evaluation
+     ~90 s. So `/health` turns `UP` roughly **2.5 minutes** after the container starts; `UNKNOWN`
+     before that is the documented state, not a failure.
+6. **Verify**, in order — `<token>` is the same value passed in step 5:
 
    ```sh
-   docker stop protocolParser && docker rm protocolParser
-   cp database/temp.sqlite.bak-<yyyymmdd> database/temp.sqlite
-   docker run -d --name protocolParser -p 8080:8080 \
-     -e EVERGORE_SECURITY_API_TOKEN=<token> -e TZ=UTC \
-     -v "<host>/database:/database" protocolParser:<previous version>
+   curl -s -o /dev/null -w '%{http_code}\n' http://<host>:8080/health          # 200
+   curl -s -o /dev/null -w '%{http_code}\n' http://<host>:8080/                # 200, no token
+   curl -s -o /dev/null -w '%{http_code}\n' "http://<host>:8080/api/v1/avatars?token=<token>"
+   curl -s -o /dev/null -w '%{http_code}\n' http://<host>:8080/api/v1/avatars  # 401
    ```
 
-   Restore the backup **before** starting the old image: the new version may have written entries or
-   meta sums the old one does not expect, and that write is not reversible.
+   - `/health` is anonymous. It reports `UNKNOWN` until the first collection finishes, then `UP`;
+     the run's timestamp sits at **`details.lastRun.details.lastSuccessfulRun`**, next to
+     `unknownItemCount` and `unknownItemNames` (a three-digit `unknownItemCount` is normal — those
+     are unvalued item names, not errors).
+   - `/` serves the SPA shell without a token (~480 bytes, `text/html`, carrying `<div id="root">`
+     and the bundle `<script>`); the SPA then fetches the API with the token from its URL.
+   - `/api/v1/avatars?token=…` answers `{lastUpdated, page, size, totalCount, items[]}` with
+     `{avatar, deposited, withdrawn}` per item. Check `lastUpdated` and `totalCount` against what
+     the previous stand served — that is the cheapest proof the mounted database is the intended
+     one and not an empty new file.
+   - **Rate limit:** 5 requests per 10 s per client IP, then a 1-minute block that a retry *extends*.
+     `/`, `/index.html` and `/assets/**` are exempt from counting, so the four checks above cost
+     **three** counted requests and fit in one window. Polling `/health` while waiting for the first
+     collection must stay slower than one request per 2 s.
+7. **Rollback** — the previous release's tag (`docker images evergore-protocol-collector` lists the
+   candidates):
+
+   ```sh
+   docker stop evergore-protocol-collector && docker rm evergore-protocol-collector
+   cp database/temp.sqlite.bak-<yyyymmdd> database/temp.sqlite
+   docker run -d --name evergore-protocol-collector -p 8080:8080 \
+     -e EVERGORE_SECURITY_API_TOKEN=<token> -e TZ=UTC \
+     -v "<host>/database:/database" evergore-protocol-collector:<previous version>
+   ```
+
+   - Restore the backup **before** starting the old image: the new version may have written entries
+     or meta sums the old one does not expect, and that write is not reversible.
+   - `cp` onto an existing `temp.sqlite` keeps that file's mode, but a `cp` that *creates* the file
+     takes the backup's mode, which can be non-writable for uid 1200 again — re-run the step 3 check
+     after restoring.
+   - The restored state is only observable in the **first 30 seconds**: the collection then runs
+     again and writes the restored database forward. Verify `lastUpdated` right after startup.
 
 A scrape failure is contained: Micronaut's task exception handler logs it, the app keeps serving,
 and the database is left untouched, so a broken scrape degrades to stale data rather than downtime.
