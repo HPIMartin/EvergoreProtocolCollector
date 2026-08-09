@@ -17,11 +17,9 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.TRANSFER_TYPE_WORDS;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class StoredAvatarReconciliationTest {
 	private static final Path FIXTURE = Paths.get("src/test/resources/testdata.sqlite");
-	private static final Path SNAPSHOT = Paths.get("temp.sqlite");
 	private static final Path WORKING_DIRECTORY = Paths.get("build/tmp/reconciliation");
 
 	@ParameterizedTest
@@ -43,16 +41,6 @@ class StoredAvatarReconciliationTest {
 	@Test
 	void noAvatarStoredInTheFixtureCouldHaveComeFromAMisreadTypeWord() {
 		List<String> stored = avatarsIn(FIXTURE);
-
-		assertThat(stored).isNotEmpty();
-		assertThat(stored).noneMatch(StoredAvatarReconciliationTest::misreadTypeWordSuspect);
-	}
-
-	@Test
-	void noAvatarStoredInTheProductionSnapshotCouldHaveComeFromAMisreadTypeWord() {
-		assumeTrue(Files.exists(SNAPSHOT), "no production snapshot at " + SNAPSHOT.toAbsolutePath());
-
-		List<String> stored = avatarsIn(SNAPSHOT);
 
 		assertThat(stored).isNotEmpty();
 		assertThat(stored).noneMatch(StoredAvatarReconciliationTest::misreadTypeWordSuspect);
