@@ -25,6 +25,10 @@ final class RecordingWebDriver implements WebDriver {
 		redirects.put(from, to);
 	}
 
+	void stopRedirecting() {
+		redirects.clear();
+	}
+
 	void failOnNavigate(RuntimeException failure) {
 		navigateFailure = failure;
 	}

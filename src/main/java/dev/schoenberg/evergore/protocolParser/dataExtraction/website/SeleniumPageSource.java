@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction.website;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,6 +9,7 @@ import jakarta.inject.Singleton;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.support.ui.Sleeper;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
@@ -19,6 +22,7 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.LAG
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.SERVER;
 import static java.nio.file.Files.exists;
 import static java.nio.file.Files.readAllLines;
+import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofMinutes;
 import static java.util.Arrays.asList;
 import static org.openqa.selenium.By.id;
@@ -28,13 +32,20 @@ import static org.openqa.selenium.support.ui.ExpectedConditions.urlToBe;
 @Singleton
 public class SeleniumPageSource implements PageSource {
 
+	private static final Duration WAIT_TIMEOUT = ofMinutes(1);
+	private static final Duration WAIT_POLL_INTERVAL = ofMillis(500);
+
 	private final Configuration config;
 	private final Driver driver;
+	private final Clock clock;
+	private final Sleeper sleeper;
 	private final Logger logger;
 
-	public SeleniumPageSource(Configuration config, Driver driver, Logger logger) {
+	public SeleniumPageSource(Configuration config, Driver driver, Clock clock, Sleeper sleeper, Logger logger) {
 		this.config = config;
 		this.driver = driver;
+		this.clock = clock;
+		this.sleeper = sleeper;
 		this.logger = logger;
 	}
 
@@ -126,6 +137,6 @@ public class SeleniumPageSource implements PageSource {
 
 	private void wait(WebDriver driver, String url) {
 		logger.info("Waiting for: " + url);
-		new WebDriverWait(driver, ofMinutes(1)).until(urlToBe(url));
+		new WebDriverWait(driver, WAIT_TIMEOUT, WAIT_POLL_INTERVAL, clock, sleeper).until(urlToBe(url));
 	}
 }

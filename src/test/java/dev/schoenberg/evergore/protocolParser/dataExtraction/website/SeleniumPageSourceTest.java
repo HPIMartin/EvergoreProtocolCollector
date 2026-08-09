@@ -1,8 +1,16 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction.website;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.support.ui.Sleeper;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageContents;
@@ -18,12 +26,14 @@ class SeleniumPageSourceTest {
 	private final Configuration config = new Configuration();
 	private final LoggerSpy logger = new LoggerSpy();
 	private final RecordingWebDriver webDriver = new RecordingWebDriver();
+	private final MutableClock clock = new MutableClock();
+	private final CountingSleeper sleeper = new CountingSleeper(clock);
 	private SeleniumPageSource tested;
 
 	@BeforeEach
 	void setup() {
 		webDriver.redirect(SERVER + "/login", SERVER + "/" + config.server);
-		tested = new SeleniumPageSource(config, new FakeDriver(webDriver), logger);
+		tested = new SeleniumPageSource(config, new FakeDriver(webDriver), clock, sleeper, logger);
 	}
 
 	@Test
@@ -66,6 +76,58 @@ class SeleniumPageSourceTest {
 
 		assertThat(result).isNotNull();
 		assertThat(logger.errorMessages()).containsExactly("Failed to quit the WebDriver");
+	}
+
+	@Test
+	void timesOutWithoutTouchingRealTimeWhenUrlNeverMatches() {
+		webDriver.stopRedirecting();
+
+		Throwable thrown = catchThrowable(tested::load);
+
+		assertThat(thrown).isInstanceOf(TimeoutException.class);
+		assertThat(sleeper.callCount()).isGreaterThanOrEqualTo(100);
+	}
+
+	private static final class MutableClock extends Clock {
+		private Instant now = Instant.EPOCH;
+
+		@Override
+		public Instant instant() {
+			return now;
+		}
+
+		@Override
+		public ZoneId getZone() {
+			return ZoneOffset.UTC;
+		}
+
+		@Override
+		public Clock withZone(ZoneId zone) {
+			throw new UnsupportedOperationException();
+		}
+
+		void advanceBy(Duration duration) {
+			now = now.plus(duration);
+		}
+	}
+
+	private static final class CountingSleeper implements Sleeper {
+		private final MutableClock clock;
+		private int callCount;
+
+		private CountingSleeper(MutableClock clock) {
+			this.clock = clock;
+		}
+
+		@Override
+		public void sleep(Duration duration) {
+			callCount++;
+			clock.advanceBy(duration);
+		}
+
+		int callCount() {
+			return callCount;
+		}
 	}
 
 	private static final class FakeDriver extends Driver {

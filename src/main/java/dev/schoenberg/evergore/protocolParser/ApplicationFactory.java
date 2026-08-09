@@ -5,6 +5,7 @@ import java.time.*;
 import jakarta.inject.*;
 
 import io.micronaut.context.annotation.Factory;
+import org.openqa.selenium.support.ui.Sleeper;
 
 import dev.schoenberg.evergore.protocolParser.application.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
@@ -70,5 +71,10 @@ public class ApplicationFactory {
 	@Singleton
 	public Clock clock() {
 		return Clock.system(Constants.APP_ZONE);
+	}
+
+	@Singleton
+	public Sleeper sleeper() {
+		return Sleeper.SYSTEM_SLEEPER;
 	}
 }
