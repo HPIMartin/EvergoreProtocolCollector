@@ -31,6 +31,14 @@ All domain types live framework-free under `…/domain` and `…/businessLogic`.
   is the only trace it leaves.
 - Every dropped block head is logged, whichever way it failed (unknown transfer type vs. malformed
   headline): a block head loud enough to open an entry must never vanish silently.
+- The transfer type is recognized only as a whitespace-delimited token, so the greedy avatar group
+  cannot backtrack into a type word inside an avatar name: `… Entnahmefreund Auszahlung`,
+  `… Anna Entnahmeübersicht` and `… XX-Entnahme-XX` are unknown types and get dropped instead of
+  minting an `Entnahme` by the wrong avatar. A character-class boundary is not enough for this:
+  `\b` counts an umlaut as a boundary and a "no letter or digit follows" check counts punctuation
+  as one, so either lets a fenced type word through. An avatar name may still contain a type word.
+- The recognized type words live once, in `Constants.TRANSFER_TYPE_WORDS`; the headline regex is
+  built from that list, so nothing can hold a second, drifting copy of them.
 
 ## EvergoreItem: the item catalog
 

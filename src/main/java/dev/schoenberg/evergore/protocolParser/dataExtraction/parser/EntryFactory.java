@@ -16,6 +16,7 @@ import dev.schoenberg.evergore.protocolParser.domain.Entry;
 import dev.schoenberg.evergore.protocolParser.domain.Item;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.ENTNAHME_TYPE_WORD;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.GROUP_NAME_AVATAR;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.GROUP_NAME_DATE;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.GROUP_NAME_TYPE;
@@ -58,7 +59,7 @@ public class EntryFactory {
 			return Optional.empty();
 		}
 
-		if ("Entnahme".equals(matcher.group(GROUP_NAME_TYPE))) {
+		if (ENTNAHME_TYPE_WORD.equals(matcher.group(GROUP_NAME_TYPE))) {
 			return Optional.of(new Entry(avatar.trim(), date, items, TransferType.ENTNAHME));
 		}
 		return Optional.of(new Entry(avatar.trim(), date, items, TransferType.EINLAGERUNG));

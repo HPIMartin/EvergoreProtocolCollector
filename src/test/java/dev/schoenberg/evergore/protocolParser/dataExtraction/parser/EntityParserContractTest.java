@@ -2,9 +2,12 @@ package dev.schoenberg.evergore.protocolParser.dataExtraction.parser;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
@@ -166,6 +169,34 @@ class EntityParserContractTest {
 		EntryFactory.parseContent(List.of("01.01.2000 00:00 Name Einlagerung", "1.000 Gold"), logger);
 
 		assertThat(logger.warnMessages()).containsExactly("Protocol entry yielded no parseable items: 01.01.2000 00:00 Name Einlagerung");
+	}
+
+	@Test
+	void doesNotMintAnEntryFromATypeWordInsideAnAvatarName() {
+		List<Entry> entries = EntityParser
+				.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "02.02.2002 12:00 Entnahmefreund Auszahlung", "5 Ghost", "03.03.2003 12:00 Bert Entnahme", "2 Other"),
+						logger);
+
+		assertThat(entries).hasSize(2);
+		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
+		assertEntry(entries.get(1), "Bert", ENTNAHME, new Item(2, "Other", 100));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"01.01.2000 00:00 Entnahmefreund Auszahlung", "01.01.2000 00:00 Anna Entnahmeübersicht", "01.01.2000 00:00 XX-Entnahme-XX",
+			"01.01.2000 00:00 BobEntnahme"})
+	void dropsAHeadlineWhoseTypeWordIsNoWhitespaceDelimitedToken(String headline) {
+		Optional<Entry> entry = EntryFactory.parseContent(List.of(headline, "5 Ghost"), logger);
+
+		assertThat(entry).isEmpty();
+		assertThat(logger.warnMessages()).containsExactly("Dropping protocol entry: unmatched transfer type in headline: " + headline);
+	}
+
+	@Test
+	void keepsAnAvatarNameThatContainsATypeWord() {
+		Entry entry = parse("01.01.2000 00:00 Entnahmefreund Einlagerung", "1 Item");
+
+		assertEntry(entry, "Entnahmefreund", EINLAGERUNG, new Item(1, "Item", 100));
 	}
 
 	@Test
