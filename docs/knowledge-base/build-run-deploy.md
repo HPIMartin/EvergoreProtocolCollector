@@ -187,29 +187,88 @@ remains the gate for landing on `main`.
     `frontend/node_modules`, `frontend/build` and `frontend/.gradle`.
 - **`buildAndRun.bat`** (gitignored, machine-specific): `docker build` → `docker run -p 8080:8080
   -v "<host>/database:/database"`. The container serves on **8080** and persists SQLite to a
-  mounted host `database/` dir.
+  mounted host `database/` dir. Being gitignored, it cannot carry the tagging rules: the image tag
+  and the OCI labels it has to pass are specified in "Versioning & release tags" below.
 - *Note:* the production image **can** be built from inside the devcontainer — the
   `docker-outside-of-docker` feature puts a `docker` CLI on the host daemon. The **devcontainer's own
   image** is still built by the host's Dev Containers extension, so `.devcontainer/` changes only
   land on the next rebuild. The new-stack **app behaviour is verified 1:1** by running the
   distribution against the production DB (see testing.md).
 
+## Versioning & release tags
+
+- **One number in three places:** `version` in `build.gradle.kts` is the source, the git tag is
+  `v<version>`, the image tag is `protocolParser:<version>`. So a running container's image tag
+  names its source commit: `git checkout v<that tag>`.
+- **SemVer, no `-SNAPSHOT`:** nothing is published to an artifact repository, so a snapshot suffix
+  would gate nothing. `version` holds the number of the **next** release; the commit that sets that
+  number *is* the release commit and is the commit that gets tagged. One version commit per release.
+- **Consequence — a build off an untagged `main` commit is not identified by its version alone**
+  (between releases `version` still names the release being prepared). Such a build is tagged
+  `protocolParser:<version>-<short sha>`; a **bare** `protocolParser:<version>` tag is reserved for
+  the tagged release commit, so it always means exactly one source state.
+- **Tagging is the author's act at release time, on the release commit** (agents document it, never
+  run it):
+
+  ```sh
+  git tag -a v0.1.0 -m "Release 0.1.0"
+  git push origin v0.1.0      # a push is the author's decision alone, tags included
+  ```
+
+  Annotated, not lightweight, so the tag carries its own author and date.
+- **The image build bakes version and commit in as OCI labels.** `buildAndRun.bat` is gitignored and
+  machine-specific, so this is the contract it implements:
+
+  ```sh
+  docker build -t protocolParser:0.1.0 \
+    --label org.opencontainers.image.version=0.1.0 \
+    --label org.opencontainers.image.revision=$(git rev-parse HEAD) .
+  ```
+
+  The labels answer "which stand runs" even for an interim image, where the tag alone cannot.
+- **Never delete the previous release's image** on the home server — it *is* the rollback target.
+  `docker image prune -a` and `docker rmi` on the old tag remove the ability to roll back.
+
+## Which stand is running?
+
+```sh
+docker inspect -f '{{.Config.Image}}' protocolParser
+docker inspect -f '{{index .Config.Labels "org.opencontainers.image.version"}}
+{{index .Config.Labels "org.opencontainers.image.revision"}}' protocolParser
+docker images protocolParser                 # which tags are available to roll back to
+```
+
+- The container runs under the fixed name `protocolParser` (see the deploy steps), so every command
+  here and in the rollback needs no container id.
+- The `revision` label is the authoritative answer: it is a commit sha and survives any tag
+  confusion. An image built before the labels existed reports empty labels — that alone dates it as
+  pre-`0.1.0`.
+
 ## Deploy to the home server
 
 Runs against the Docker host daemon — from a host shell or from the devcontainer, whose `docker`
-CLI targets that same daemon.
+CLI targets that same daemon. Steps 1–3 must be done **before** the running container is replaced.
 
 1. **Back up the live database first.** Evergore serves only the last 30 days of logs, so
    `database/temp.sqlite` is the only history. A first run recomputes the meta sums from all stored
    entries and ingests still-visible entries missing from the database, both in place and not
    reversible: `cp database/temp.sqlite database/temp.sqlite.bak-<yyyymmdd>`.
-2. **Build the image** on the Docker host (`buildAndRun.bat`, gitignored and machine-specific). The
-   build context needs `zugang.txt`, which is baked into the image (backlog C3).
-3. **Run** with the API token in the environment and a fixed timezone:
+2. **Secure the rollback target:** confirm the currently running image carries a tag you can start
+   again (`docker inspect -f '{{.Config.Image}}' protocolParser`). If it is untagged, `<none>`, or a
+   tag the next build overwrites, tag it now, e.g. `docker tag <image id> protocolParser:pre-0.1.0`
+   — an image the build orphans is still startable by id, but nothing left on the host says what it
+   was. **This is the situation at the `0.1.0` release**, whose predecessor was built before the
+   tagging scheme existed.
+3. **Build the image** on the Docker host (`buildAndRun.bat`, gitignored and machine-specific) with
+   the tag and labels from "Versioning & release tags". The build context needs `zugang.txt`, which
+   is baked into the image (backlog C3).
+4. **Replace the container:**
 
    ```sh
-   docker run -p 8080:8080 -e EVERGORE_SECURITY_API_TOKEN=<token> -e TZ=UTC \
-     -v "<host>/database:/database" <image>
+   docker stop protocolParser && docker rm protocolParser
+   docker run -d --name protocolParser -p 8080:8080 \
+     -e EVERGORE_SECURITY_API_TOKEN=<token> -e TZ=UTC \
+     -v "<host>/database:/database" protocolParser:0.1.0
    ```
 
    - The token is **mandatory**: a blank or unset value makes the app refuse to boot
@@ -217,11 +276,25 @@ CLI targets that same daemon.
    - `TZ=UTC` keeps the runtime off a DST zone while timestamps persist as default-timezone
      wall-clock text (backlog D14). The container default is already UTC; setting it explicitly
      pins it.
-4. **Verify**, in order: `GET /health` is anonymous and reports `UNKNOWN` until the first
+   - The fixed `--name` is what makes every command in "Which stand is running?" and in the
+     rollback runnable as written.
+5. **Verify**, in order: `GET /health` is anonymous and reports `UNKNOWN` until the first
    collection finishes, then `UP` with `lastSuccessfulRun`; `GET /` serves the SPA shell without a
    token; `GET /api/v1/avatars?token=<token>` answers the overview JSON, and the same request
-   without a token returns **401**.
-5. **Rollback:** stop the container, restore the backup copy, start the previous image tag.
+   without a token returns **401**. Cross-check the deployed version against the intended one with
+   the `Which stand is running?` commands.
+6. **Rollback** — the previous release's tag (`docker images protocolParser` lists the candidates):
+
+   ```sh
+   docker stop protocolParser && docker rm protocolParser
+   cp database/temp.sqlite.bak-<yyyymmdd> database/temp.sqlite
+   docker run -d --name protocolParser -p 8080:8080 \
+     -e EVERGORE_SECURITY_API_TOKEN=<token> -e TZ=UTC \
+     -v "<host>/database:/database" protocolParser:<previous version>
+   ```
+
+   Restore the backup **before** starting the old image: the new version may have written entries or
+   meta sums the old one does not expect, and that write is not reversible.
 
 A scrape failure is contained: Micronaut's task exception handler logs it, the app keeps serving,
 and the database is left untouched, so a broken scrape degrades to stale data rather than downtime.
