@@ -28,7 +28,7 @@ public class EntryFactory {
 	private EntryFactory() {}
 
 	public static Optional<Entry> parseContent(List<String> rawContent, Logger logger) {
-		List<Item> items = parseItems(rawContent.subList(1, rawContent.size()));
+		List<Item> items = parseItems(rawContent.subList(1, rawContent.size()), logger);
 		return generateEntry(rawContent.get(0), items, logger);
 	}
 
@@ -57,7 +57,7 @@ public class EntryFactory {
 		return Optional.of(new Entry(avatar.trim(), date, items, TransferType.EINLAGERUNG));
 	}
 
-	private static List<Item> parseItems(List<String> rawItems) {
+	private static List<Item> parseItems(List<String> rawItems, Logger logger) {
 		String amount = "amount";
 		String itemName = "name";
 		String itemQuality = "quality";
@@ -77,11 +77,24 @@ public class EntryFactory {
 			}
 			Matcher matcher = pattern.matcher(item);
 			if (matcher.find()) {
-				items.add(new Item(Integer.parseInt(matcher.group(amount)), matcher.group(itemName).trim(), parseQuality(matcher.group(itemQuality))));
+				Optional<Item> parsed = toItem(matcher.group(amount), matcher.group(itemName), matcher.group(itemQuality));
+				if (parsed.isEmpty()) {
+					logger.warn("Skipping item line with an unparseable number: " + item);
+				} else {
+					items.add(parsed.get());
+				}
 			}
 		}
 
 		return deduplicate(items);
+	}
+
+	private static Optional<Item> toItem(String amount, String itemName, String itemQuality) {
+		try {
+			return Optional.of(new Item(Integer.parseInt(amount), itemName.trim(), parseQuality(itemQuality)));
+		} catch (NumberFormatException e) {
+			return Optional.empty();
+		}
 	}
 
 	private static List<Item> deduplicate(List<Item> items) {

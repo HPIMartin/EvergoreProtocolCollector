@@ -132,6 +132,36 @@ class EntityParserContractTest {
 	}
 
 	@Test
+	void skipsAnItemLineWithoutAnAmountAndKeepsTheOtherItems() {
+		Entry entry = parse("01.01.2000 00:00 Name Einlagerung", " Ghost", "2 Item");
+
+		assertThat(entry.items()).containsExactly(new Item(2, "Item", 100));
+	}
+
+	@Test
+	void skipsAnItemLineWhoseQualityExceedsTheNumberRangeAndKeepsTheOtherItems() {
+		Entry entry = parse("01.01.2000 00:00 Name Einlagerung", "1 Ghost (99999999999)", "2 Item");
+
+		assertThat(entry.items()).containsExactly(new Item(2, "Item", 100));
+	}
+
+	@Test
+	void warnsAboutASkippedItemLineWithoutAnAmount() {
+		EntryFactory.parseContent(List.of("01.01.2000 00:00 Name Einlagerung", " Ghost", "2 Item"), logger);
+
+		assertThat(logger.warnMessages()).containsExactly("Skipping item line with an unparseable number:  Ghost");
+	}
+
+	@Test
+	void doesNotAbortTheIngestOnAnItemLineWithoutAnAmount() {
+		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", " Ghost", "02.02.2002 12:00 Bert Entnahme", "2 Other"), logger);
+
+		assertThat(entries).hasSize(2);
+		assertEntry(entries.get(0), "Anna", EINLAGERUNG);
+		assertEntry(entries.get(1), "Bert", ENTNAHME, new Item(2, "Other", 100));
+	}
+
+	@Test
 	void warnsWhenATypedHeadlineWithAnOutOfRangeDateIsDropped() {
 		EntryFactory.parseContent(List.of("31.13.2001 25:99 Bad Einlagerung", "5 Ghost"), logger);
 

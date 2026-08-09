@@ -24,6 +24,8 @@ All domain types live framework-free under `…/domain` and `…/businessLogic`.
 - The parser strips a trailing `+1` off an item line before dedup, so `3 X +1` and `5 X` merge into
   one `Item(8, "X", 100)`: a `+1` item is value-equal to its base, so merging loses nothing
   (decision 2026-07-17).
+- An item line whose amount or quality is no parseable number (empty, or beyond `int`) is skipped
+  and logged, never thrown: a single corrupt line must not abort the whole ingest.
 
 ## EvergoreItem: the item catalog
 
