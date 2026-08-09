@@ -28,8 +28,13 @@ public class EntryFactory {
 	private EntryFactory() {}
 
 	public static Optional<Entry> parseContent(List<String> rawContent, Logger logger) {
+		String headline = rawContent.get(0);
 		List<Item> items = parseItems(rawContent.subList(1, rawContent.size()), logger);
-		return generateEntry(rawContent.get(0), items, logger);
+		Optional<Entry> entry = generateEntry(headline, items, logger);
+		if (entry.isPresent() && items.isEmpty()) {
+			logger.warn("Protocol entry yielded no parseable items: " + headline);
+		}
+		return entry;
 	}
 
 	private static Optional<Entry> generateEntry(String headline, List<Item> items, Logger logger) {

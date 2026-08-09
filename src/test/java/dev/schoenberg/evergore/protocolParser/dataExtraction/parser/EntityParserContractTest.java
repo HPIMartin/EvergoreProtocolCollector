@@ -162,6 +162,13 @@ class EntityParserContractTest {
 	}
 
 	@Test
+	void warnsWhenARecognizedEntryYieldsNoParseableItems() {
+		EntryFactory.parseContent(List.of("01.01.2000 00:00 Name Einlagerung", "1.000 Gold"), logger);
+
+		assertThat(logger.warnMessages()).containsExactly("Protocol entry yielded no parseable items: 01.01.2000 00:00 Name Einlagerung");
+	}
+
+	@Test
 	void warnsWhenATypedHeadlineWithAnOutOfRangeDateIsDropped() {
 		EntryFactory.parseContent(List.of("31.13.2001 25:99 Bad Einlagerung", "5 Ghost"), logger);
 

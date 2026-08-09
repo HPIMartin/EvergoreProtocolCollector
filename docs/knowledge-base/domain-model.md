@@ -26,6 +26,9 @@ All domain types live framework-free under `…/domain` and `…/businessLogic`.
   (decision 2026-07-17).
 - An item line whose amount or quality is no parseable number (empty, or beyond `int`) is skipped
   and logged, never thrown: a single corrupt line must not abort the whole ingest.
+- A recognized entry whose item lines all fail the item regex (e.g. a thousands separator,
+  `1.000 Gold`) is kept and logged, not dropped: it contributes nothing downstream, so the warning
+  is the only trace it leaves.
 
 ## EvergoreItem: the item catalog
 
