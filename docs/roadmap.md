@@ -14,7 +14,7 @@
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
 | M3 | Dashboard views (strands `spa-look`, `spa-data-shell`, `spa-legacy-out`) | The SPA over the JSON API | The officer-visible payoff of the dashboard rebuild |
-| M4 | Ingest & test robustness | B16, B20 | Small hardening set, deliberately behind the dashboard strands (decision 2026-07-17) |
+| M4 | Ingest & test robustness | B20 | Small hardening set, deliberately behind the dashboard strands (decision 2026-07-17) |
 | M5 | Sheet parity, confirmed columns | E1, E2 | The headline metric lands on integrity-fixed data and a real dashboard |
 | M6 | Real-browser integration tests | H2, H6 | Scrape coverage without host Firefox; the test split gates on the Selenium service |
 | M7 | Micronaut 5 | H9 | Deferred deliberately until 1:1 is re-proven through the nets built in M3-M6 |
@@ -47,8 +47,8 @@ dependency.
       silently: an unparseable item number skips its own line, an entry with no parseable items is
       logged, every dropped block head is logged, and the greedy avatar group can no longer latch
       onto a type word inside an avatar name.
-- [ ] The `SeleniumPageSource` wait has no wall-clock dependency in tests; a both-fail test pins
-      "scrape exception propagates, both failures logged" (backlog B16).
+- [x] The `SeleniumPageSource` wait has no wall-clock dependency in tests; a both-fail test pins
+      "scrape exception propagates, both failures logged".
 - [ ] The frontend vitest worker pool/timeout hardened (the deferred test-hygiene follow-up in the
       backlog status section).
 

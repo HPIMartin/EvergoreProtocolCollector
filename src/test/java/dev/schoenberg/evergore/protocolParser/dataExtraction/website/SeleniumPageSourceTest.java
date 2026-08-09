@@ -79,6 +79,30 @@ class SeleniumPageSourceTest {
 	}
 
 	@Test
+	void propagatesScrapeFailureWhenQuitAlsoFails() {
+		RuntimeException scrapeFailure = new RuntimeException("scrape failed");
+		webDriver.failOnNavigate(scrapeFailure);
+		webDriver.failOnQuit(new RuntimeException("quit failed"));
+
+		Throwable thrown = catchThrowable(() -> tested.load());
+
+		assertThat(thrown).isSameAs(scrapeFailure);
+	}
+
+	@Test
+	void logsBothFailuresWhenQuitAlsoFails() {
+		RuntimeException scrapeFailure = new RuntimeException("scrape failed");
+		RuntimeException quitFailure = new RuntimeException("quit failed");
+		webDriver.failOnNavigate(scrapeFailure);
+		webDriver.failOnQuit(quitFailure);
+
+		catchThrowable(() -> tested.load());
+
+		assertThat(logger.errorMessages()).containsExactly("Failed to scrape Evergore", "Failed to quit the WebDriver");
+		assertThat(logger.errorThrowables()).containsExactly(scrapeFailure, quitFailure);
+	}
+
+	@Test
 	void timesOutWithoutTouchingRealTimeWhenUrlNeverMatches() {
 		webDriver.stopRedirecting();
 
