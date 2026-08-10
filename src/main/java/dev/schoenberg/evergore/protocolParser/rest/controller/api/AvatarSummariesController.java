@@ -3,7 +3,6 @@ package dev.schoenberg.evergore.protocolParser.rest.controller.api;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Stream;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -16,9 +15,8 @@ import io.micronaut.http.annotation.QueryValue;
 import io.micronaut.validation.Validated;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
-import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationRepository;
-import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummary;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummaryPage;
 
@@ -39,14 +37,12 @@ public class AvatarSummariesController {
 	public static final String PATH = "/api/v1/avatars";
 
 	private final MetaInformationRepository metaRepo;
-	private final BankRepository bankRepo;
-	private final StorageRepository storageRepo;
+	private final KnownAvatars knownAvatars;
 	private final Logger logger;
 
-	public AvatarSummariesController(MetaInformationRepository metaRepo, BankRepository bankRepo, StorageRepository storageRepo, Logger logger) {
+	public AvatarSummariesController(MetaInformationRepository metaRepo, KnownAvatars knownAvatars, Logger logger) {
 		this.metaRepo = metaRepo;
-		this.bankRepo = bankRepo;
-		this.storageRepo = storageRepo;
+		this.knownAvatars = knownAvatars;
 		this.logger = logger;
 	}
 
@@ -55,7 +51,7 @@ public class AvatarSummariesController {
 	public AvatarSummaryPage summaries(@QueryValue(value = PAGE, defaultValue = DEFAULT_PAGE) @Min(0) int page,
 			@QueryValue(value = SIZE, defaultValue = DEFAULT_SIZE) @Positive @Max(MAX_SIZE) int size) {
 		PageRequest window = new PageRequest(page, size);
-		List<String> avatars = Stream.concat(bankRepo.getAllDifferentAvatars().stream(), storageRepo.getAllDifferentAvatars().stream()).distinct().sorted().toList();
+		List<String> avatars = knownAvatars.sortedByName();
 
 		logger.debug("Providing information for " + avatars.size() + " avatars.");
 

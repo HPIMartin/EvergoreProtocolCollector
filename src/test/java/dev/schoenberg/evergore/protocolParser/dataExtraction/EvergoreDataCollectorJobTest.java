@@ -92,7 +92,7 @@ class EvergoreDataCollectorJobTest {
 		List<String> unknownItems = List.of();
 
 		FailableEvaluator() {
-			super(new FakeMetaInformationRepository(), new StorageRepositoryStub(), new BankRepositoryStub(), Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
+			super(new FakeMetaInformationRepository(), new StorageRepositoryStub(), new BankRepositoryStub(), null, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
 		}
 
 		@Override

@@ -5,6 +5,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
+import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.FakeMetaInformationRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
@@ -19,7 +20,7 @@ class AvatarSummariesControllerTest {
 	private final FakeMetaInformationRepository metaRepo = new FakeMetaInformationRepository();
 	private final BankRepositoryStub bankRepo = new BankRepositoryStub();
 	private final StorageRepositoryStub storageRepo = new StorageRepositoryStub();
-	private final AvatarSummariesController tested = new AvatarSummariesController(metaRepo, bankRepo, storageRepo, new LoggerSpy());
+	private final AvatarSummariesController tested = new AvatarSummariesController(metaRepo, new KnownAvatars(bankRepo, storageRepo), new LoggerSpy());
 
 	@Test
 	void listsAnAvatarThatOnlyEverMovedItems() {
@@ -32,43 +33,13 @@ class AvatarSummariesControllerTest {
 	}
 
 	@Test
-	void namesAnAvatarPresentInBothLedgersOnlyOnce() {
-		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
-		storageRepo.seedAvatars(List.of("Aurora"));
-
-		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
-
-		assertThat(avatarsOf(page)).containsExactly("Aurora", "Boreas");
-	}
-
-	@Test
-	void sortsTheUnionAsAWholeRatherThanAppendingTheStorageAvatars() {
-		bankRepo.seedAvatars(List.of("Aurora", "Calix"));
-		storageRepo.seedAvatars(List.of("Brynja"));
-
-		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
-
-		assertThat(avatarsOf(page)).containsExactly("Aurora", "Brynja", "Calix");
-	}
-
-	@Test
-	void countsTheUnionRatherThanOneLedgerWhenAPageShowsPartOfIt() {
+	void countsEveryKnownAvatarWhileAPageShowsOnlyPartOfThem() {
 		bankRepo.seedAvatars(List.of("Aurora", "Calix"));
 		storageRepo.seedAvatars(List.of("Brynja"));
 
 		AvatarSummaryPage page = tested.summaries(0, 1);
 
 		assertThat(page.totalCount()).isEqualTo(3);
-	}
-
-	@Test
-	void countsAnAvatarPresentInBothLedgersOnlyOnce() {
-		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
-		storageRepo.seedAvatars(List.of("Aurora"));
-
-		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
-
-		assertThat(page.totalCount()).isEqualTo(2);
 	}
 
 	@Test

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.ApplicationFactory;
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
+import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.FakeMetaInformationRepository;
@@ -49,7 +50,7 @@ class EvergoreDataEvaluatorTest {
 		bankRepo = new BankRepositoryStub();
 		storageRepo = new StorageRepositoryStub();
 		logger = new LoggerSpy();
-		tested = new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
+		tested = new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, new KnownAvatars(bankRepo, storageRepo), Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
 	}
 
 	@Test
@@ -158,7 +159,8 @@ class EvergoreDataEvaluatorTest {
 		flakyStorage.seedEntries(AVATAR, List.of(storagePlacement(LEINENTUCH.ingameName, 1, 100)));
 		flakyStorage.seedAvatars(List.of(AVATAR));
 		bankRepo.seedAvatars(List.of());
-		EvergoreDataEvaluator flakyEvaluator = new EvergoreDataEvaluator(metaRepo, flakyStorage, bankRepo, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
+		EvergoreDataEvaluator flakyEvaluator = new EvergoreDataEvaluator(metaRepo, flakyStorage, bankRepo, new KnownAvatars(bankRepo, flakyStorage),
+				Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
 		flakyStorage.failOnNextCall = true;
 
 		assertThatThrownBy(flakyEvaluator::evaluateData).isInstanceOf(RuntimeException.class);
@@ -173,7 +175,8 @@ class EvergoreDataEvaluatorTest {
 		FlakyStorageRepositoryStub flakyStorage = new FlakyStorageRepositoryStub();
 		flakyStorage.seedAvatars(List.of(AVATAR));
 		bankRepo.seedAvatars(List.of());
-		EvergoreDataEvaluator flakyEvaluator = new EvergoreDataEvaluator(metaRepo, flakyStorage, bankRepo, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
+		EvergoreDataEvaluator flakyEvaluator = new EvergoreDataEvaluator(metaRepo, flakyStorage, bankRepo, new KnownAvatars(bankRepo, flakyStorage),
+				Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
 		flakyStorage.failOnNextCall = true;
 
 		assertThatThrownBy(flakyEvaluator::evaluateData).isInstanceOf(RuntimeException.class);
@@ -199,7 +202,7 @@ class EvergoreDataEvaluatorTest {
 	@Test
 	void writesLastUpdatedInBerlinWallClockNotUtcAfterASuccessfulRun() {
 		Instant nearMidnightUtc = Instant.parse("2026-06-21T23:30:00Z");
-		tested = new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, Clock.fixed(nearMidnightUtc, APP_ZONE), logger);
+		tested = new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, new KnownAvatars(bankRepo, storageRepo), Clock.fixed(nearMidnightUtc, APP_ZONE), logger);
 		bankRepo.seedAvatars(List.of());
 		storageRepo.seedAvatars(List.of());
 

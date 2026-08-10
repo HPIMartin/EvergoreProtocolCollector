@@ -4,9 +4,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.Function;
@@ -14,6 +12,7 @@ import java.util.function.LongConsumer;
 import java.util.function.ToDoubleFunction;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
+import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.TransferTypeVisitor;
@@ -36,13 +35,16 @@ public class EvergoreDataEvaluator {
 	private final MetaInformationRepository metaRepo;
 	private final BankRepository bankRepo;
 	private final StorageRepository storageRepo;
+	private final KnownAvatars knownAvatars;
 	private final Clock clock;
 	private final Logger logger;
 
-	public EvergoreDataEvaluator(MetaInformationRepository metaRepo, StorageRepository storageRepo, BankRepository bankRepo, Clock clock, Logger logger) {
+	public EvergoreDataEvaluator(MetaInformationRepository metaRepo, StorageRepository storageRepo, BankRepository bankRepo, KnownAvatars knownAvatars, Clock clock,
+			Logger logger) {
 		this.metaRepo = metaRepo;
 		this.bankRepo = bankRepo;
 		this.storageRepo = storageRepo;
+		this.knownAvatars = knownAvatars;
 		this.clock = clock;
 		this.logger = logger;
 	}
@@ -55,10 +57,7 @@ public class EvergoreDataEvaluator {
 	}
 
 	private void updateAvatarInformation(List<String> unknownItemNames) {
-		Set<String> avatars = new HashSet<>(bankRepo.getAllDifferentAvatars());
-		avatars.addAll(storageRepo.getAllDifferentAvatars());
-
-		avatars.forEach(avatar -> updateInformation(avatar, unknownItemNames));
+		knownAvatars.sortedByName().forEach(avatar -> updateInformation(avatar, unknownItemNames));
 	}
 
 	private void updateInformation(String avatar, List<String> unknownItemNames) {

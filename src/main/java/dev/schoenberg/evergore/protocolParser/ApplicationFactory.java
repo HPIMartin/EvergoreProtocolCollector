@@ -9,6 +9,7 @@ import org.openqa.selenium.support.ui.Sleeper;
 
 import dev.schoenberg.evergore.protocolParser.application.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
+import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
@@ -34,8 +35,14 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public EvergoreDataEvaluator evergoreDataEvaluator(MetaInformationRepository metaRepo, StorageRepository storageRepo, BankRepository bankRepo, Clock clock, Logger logger) {
-		return new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, clock, logger);
+	public KnownAvatars knownAvatars(BankRepository bankRepo, StorageRepository storageRepo) {
+		return new KnownAvatars(bankRepo, storageRepo);
+	}
+
+	@Singleton
+	public EvergoreDataEvaluator evergoreDataEvaluator(MetaInformationRepository metaRepo, StorageRepository storageRepo, BankRepository bankRepo, KnownAvatars knownAvatars,
+			Clock clock, Logger logger) {
+		return new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, knownAvatars, clock, logger);
 	}
 
 	@Singleton
