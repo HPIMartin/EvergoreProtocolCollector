@@ -64,7 +64,7 @@ public class TestDataGenerator {
 	}
 
 	private static List<StorageEntry> brynjaStorageEntries() {
-		return asList(new StorageEntry(ts(2024, 2, 6, 10, 0), "Brynja", 4, KUPFERERZ.ingameName, 100, EINLAGERUNG));
+		return asList(new StorageEntry(ts(2024, 2, 6, 10, 0), "Brynja", 4, MAGISCHE_AETHERBINDE.ingameName, 100, EINLAGERUNG));
 	}
 
 	private static Instant ts(int year, int month, int day, int hour, int minute) {

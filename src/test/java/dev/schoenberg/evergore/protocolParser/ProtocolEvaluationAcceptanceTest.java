@@ -189,6 +189,8 @@ class ProtocolEvaluationAcceptanceTest {
 		assertThat(metaRepo.<Double>get(getStorageWithdrawl("Aurora"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(300.0, within(1e-6)));
 
 		assertThat(metaRepo.<Double>get(getStoragePlacement("Boreas"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(46.26, within(1e-6)));
+
+		assertThat(metaRepo.<Double>get(getStoragePlacement("Brynja"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(370.08, within(1e-6)));
 	}
 
 	@Test
