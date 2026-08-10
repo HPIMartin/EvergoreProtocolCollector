@@ -64,17 +64,17 @@ class ProtocolEvaluationAcceptanceTest {
 	}
 
 	@Test
-	void avatarSummariesCarryTheBankTotalsOfAllThreeAvatars() {
+	void avatarSummariesCarryTheBankTotalsOfEveryAvatarOfBothLedgers() {
 		HttpResponse<String> response = get("/api/v1/avatars");
 
 		assertThat(response.getStatus()).isEqualTo(OK.getCode());
 		JSONObject body = new JSONObject(response.getBody());
 		assertThat(body.getInt("page")).isZero();
 		assertThat(body.getInt("size")).isEqualTo(100);
-		assertThat(body.getLong("totalCount")).isEqualTo(3);
+		assertThat(body.getLong("totalCount")).isEqualTo(4);
 		assertThat(body.getJSONArray("items").toString())
 				.isEqualTo("[{\"avatar\":\"Aurora\",\"withdrawn\":200,\"deposited\":1500}," + "{\"avatar\":\"Boreas\",\"withdrawn\":0,\"deposited\":750},"
-						+ "{\"avatar\":\"Calix\",\"withdrawn\":300,\"deposited\":0}]");
+						+ "{\"avatar\":\"Brynja\",\"withdrawn\":0,\"deposited\":0}," + "{\"avatar\":\"Calix\",\"withdrawn\":300,\"deposited\":0}]");
 	}
 
 	@Test
@@ -125,11 +125,11 @@ class ProtocolEvaluationAcceptanceTest {
 	}
 
 	@Test
-	void aSecondSummaryPageCarriesTheRemainingAvatarAndTheTotalCount() {
+	void aSecondSummaryPageCarriesTheRemainingAvatarsAndTheTotalCount() {
 		HttpResponse<String> response = get("/api/v1/avatars?page=1&size=2");
 
 		assertThat(response.getStatus()).isEqualTo(OK.getCode());
-		assertThat(response.getBody()).contains("\"page\":1", "\"size\":2", "\"totalCount\":3", "\"items\":[{\"avatar\":\"Calix\"");
+		assertThat(response.getBody()).contains("\"page\":1", "\"size\":2", "\"totalCount\":4", "\"items\":[{\"avatar\":\"Brynja\"");
 	}
 
 	@Test
@@ -143,6 +143,14 @@ class ProtocolEvaluationAcceptanceTest {
 	@Test
 	void aKnownAvatarWithoutStorageRowsGetsAnEmptyPageRatherThanA404() {
 		HttpResponse<String> response = get("/api/v1/avatars/Calix/storage");
+
+		assertThat(response.getStatus()).isEqualTo(OK.getCode());
+		assertThat(response.getBody()).isEqualTo("{\"page\":0,\"size\":100,\"totalCount\":0,\"items\":[]}");
+	}
+
+	@Test
+	void anAvatarWithoutBankRowsGetsAnEmptyPageRatherThanA404() {
+		HttpResponse<String> response = get("/api/v1/avatars/Brynja/bank");
 
 		assertThat(response.getStatus()).isEqualTo(OK.getCode());
 		assertThat(response.getBody()).isEqualTo("{\"page\":0,\"size\":100,\"totalCount\":0,\"items\":[]}");

@@ -62,7 +62,9 @@ class DashboardBrowserSmokeTest {
 	void theOverviewShowsEveryAvatarWithItsRecomputedBankTotals() {
 		List<List<String>> rows = renderedRowsOf("/overview");
 
-		assertThat(rows).containsExactly(List.of("Aurora", "200", "1.500", "öffnen"), List.of("Boreas", "0", "750", "öffnen"), List.of("Calix", "300", "0", "öffnen"));
+		assertThat(rows)
+				.containsExactly(List.of("Aurora", "200", "1.500", "öffnen"), List.of("Boreas", "0", "750", "öffnen"), List.of("Brynja", "0", "0", "öffnen"),
+						List.of("Calix", "300", "0", "öffnen"));
 	}
 
 	@Test

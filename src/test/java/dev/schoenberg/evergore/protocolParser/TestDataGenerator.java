@@ -37,6 +37,7 @@ public class TestDataGenerator {
 		StorageDatabaseRepository storage = StorageDatabaseRepository.get(config, logger, () -> {});
 		storage.add(auroraStorageEntries());
 		storage.add(boreasStorageEntries());
+		storage.add(brynjaStorageEntries());
 	}
 
 	private static List<BankEntry> auroraBankEntries() {
@@ -60,6 +61,10 @@ public class TestDataGenerator {
 
 	private static List<StorageEntry> boreasStorageEntries() {
 		return asList(new StorageEntry(ts(2024, 2, 5, 9, 0), "Boreas", 1, MAGISCHE_AETHERBINDE.ingameName, 50, EINLAGERUNG));
+	}
+
+	private static List<StorageEntry> brynjaStorageEntries() {
+		return asList(new StorageEntry(ts(2024, 2, 6, 10, 0), "Brynja", 4, KUPFERERZ.ingameName, 100, EINLAGERUNG));
 	}
 
 	private static Instant ts(int year, int month, int day, int hour, int minute) {
