@@ -27,6 +27,7 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static io.micronaut.http.HttpStatus.BAD_REQUEST;
 import static io.micronaut.http.HttpStatus.OK;
+import static io.micronaut.http.HttpStatus.REQUEST_ENTITY_TOO_LARGE;
 import static io.micronaut.http.HttpStatus.TOO_MANY_REQUESTS;
 import static io.micronaut.http.HttpStatus.UNAUTHORIZED;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,6 +37,7 @@ class RateLimitFilterTest {
 
 	private static final Path WORKING_DB = Paths.get("build/tmp/rateLimit/rateLimit.sqlite");
 	private static final int REQUESTS_PER_BURST = 3;
+	private static final int TARGET_LONGER_THAN_THE_SERVER_ACCEPTS = 5000;
 
 	static {
 		silentThrow(() -> {
@@ -63,26 +65,26 @@ class RateLimitFilterTest {
 	}
 
 	@Test
-	void allowsRepeatedTokenlessRequestsToTheSpaShellRoot() {
+	void countsTokenlessRequestsToTheSpaShellRoot() {
 		List<Integer> statuses = statusesOfThreeRequestsTo("/");
 
-		assertThat(statuses).containsOnly(OK.getCode());
+		assertThat(statuses).as("the limit is global, the shell has no exemption").containsExactly(OK.getCode(), OK.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
 
 	@Test
-	void allowsRepeatedTokenlessRequestsToIndexHtml() {
+	void countsTokenlessRequestsToIndexHtml() {
 		List<Integer> statuses = statusesOfThreeRequestsTo("/index.html");
 
-		assertThat(statuses).containsOnly(OK.getCode());
+		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
 
 	@Test
-	void allowsRepeatedTokenlessRequestsToBundledAssets() {
+	void countsTokenlessRequestsToBundledAssets() {
 		String assetPath = bundledAssetPath();
 
 		List<Integer> statuses = statusesOfThreeRequestsTo(assetPath);
 
-		assertThat(statuses).containsOnly(OK.getCode());
+		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
 
 	@Test
@@ -93,12 +95,24 @@ class RateLimitFilterTest {
 	}
 
 	@Test
-	void doesNotCountAMalformedRequestTargetBecauseTheFrameworkAnswersItFirst() {
+	void countsAMalformedRequestTargetLikeAnyOther() {
 		RawHttpClient rawClient = new RawHttpClient(server.getPort());
 
 		List<Integer> statuses = IntStream.range(0, REQUESTS_PER_BURST).mapToObj(request -> rawClient.statusOf("/overview%zz")).toList();
 
-		assertThat(statuses).as("Micronaut answers a malformed target itself, so the counter never sees it; a 429 would mean it did").containsOnly(BAD_REQUEST.getCode());
+		assertThat(statuses)
+				.as("the filters run before anything answers the invalid escape, so a malformed burst earns a 429 like any other")
+				.containsExactly(BAD_REQUEST.getCode(), BAD_REQUEST.getCode(), TOO_MANY_REQUESTS.getCode());
+	}
+
+	@Test
+	void answersAnOversizedRequestTargetWithoutCountingIt() {
+		RawHttpClient rawClient = new RawHttpClient(server.getPort());
+		String oversizedTarget = "/" + "a".repeat(TARGET_LONGER_THAN_THE_SERVER_ACCEPTS);
+
+		List<Integer> statuses = IntStream.range(0, REQUESTS_PER_BURST).mapToObj(request -> rawClient.statusOf(oversizedTarget)).toList();
+
+		assertThat(statuses).as("a 429 on the third request would mean the counter saw them; 413 throughout means it did not").containsOnly(REQUEST_ENTITY_TOO_LARGE.getCode());
 	}
 
 	private List<Integer> statusesOfThreeRequestsTo(String path) {

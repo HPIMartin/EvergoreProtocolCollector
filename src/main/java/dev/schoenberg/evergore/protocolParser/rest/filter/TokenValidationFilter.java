@@ -34,7 +34,7 @@ public class TokenValidationFilter implements HttpServerFilter {
 
 	@Override
 	public int getOrder() {
-		return 2;
+		return FilterOrder.TOKEN_VALIDATION.position();
 	}
 
 	@Override

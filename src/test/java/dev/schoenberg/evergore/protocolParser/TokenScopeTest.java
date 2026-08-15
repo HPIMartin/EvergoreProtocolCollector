@@ -126,10 +126,12 @@ class TokenScopeTest {
 
 	@ParameterizedTest
 	@ValueSource(strings = {"/overview%zz", "/overview%", "/overview%2", "/api/v1/avatars%zz", "/avatars/Aurora%zz/bank"})
-	void answersAMalformedRequestTargetBeforeTheTokenFilterCanSeeIt(String requestTarget) {
+	void answersAMalformedRequestTargetWith400InsteadOf401(String requestTarget) {
 		int status = new RawHttpClient(server.getPort()).statusOf(requestTarget);
 
-		assertThat(status).as("Micronaut rejects a malformed target itself; reaching the filter would make this a 401").isEqualTo(BAD_REQUEST.getCode());
+		assertThat(status)
+				.as("the invalid escape breaks the request URI, so no path-based decision exists and the token filter never gets to reject it")
+				.isEqualTo(BAD_REQUEST.getCode());
 	}
 
 	@Test

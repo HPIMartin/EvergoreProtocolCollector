@@ -5,3 +5,4 @@ evergore:
     max-requests-per-interval: 100000
     interval: 10s
     block-duration: 1m
+    max-tracked-clients: 10000

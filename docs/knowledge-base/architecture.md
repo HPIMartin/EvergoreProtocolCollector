@@ -29,7 +29,7 @@
         ▼
    PostCollectionHook   (no-op in prod; test seam)
 
-Independent read path:  HTTP ▶ filters (rate-limit, token) ▶ AvatarSummariesController /
+Independent read path:  HTTP ▶ filters (audit log, rate limit, token) ▶ AvatarSummariesController /
                         AvatarEntriesController ▶ read MetaInformation / repositories
                         ▶ wire records ▶ JSON
 
@@ -65,8 +65,9 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   `TransferTypeWireNames`; contract in
   [frontend.md](frontend.md)) · `FaviconController` ·
   `SpaHistoryFallbackController` (serves the SPA shell for unknown navigation paths;
-  `SpaNavigationPaths` decides which 404s it may answer) · filters `BrowserLoggingFilter` (per-IP
-  rate limit) + `TokenValidationFilter` (`?token=`) · `ApplicationExceptionHandler` (dispatches via
+  `SpaNavigationPaths` decides which 404s it may answer) · filters `RequestAuditLogFilter` (one
+  `info` line per request) + `RateLimitFilter` (per-IP counters, held by `RateLimitCounters`) +
+  `TokenValidationFilter` (`?token=`) · `ApplicationExceptionHandler` (dispatches via
   the `TransferType`/exception visitors, no `instanceof`; the mapped status picks the log severity,
   so an expected client error is one `info` line and only a server error logs its stack trace).
 - **The token scope is default-deny** (author decision 2026-08-04): **every** path needs a token
@@ -75,11 +76,18 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   the moment it exists; nobody has to remember to add it to a list. An empty or missing
   configuration protects everything (fail closed).
 - Every path-based decision runs on the **canonicalized** path (`PathCanonicalizer`), so a `..`
-  segment cannot make a protected path look static and a leading `//` cannot be read as an authority.
+  segment cannot make a protected path look public and a leading `//` cannot be read as an authority.
   The filter therefore stays mapped on `/**`: a narrower `@Filter` pattern is matched against the raw
-  path and would never reach the canonicalizing code. `PathCanonicalizer`, `PublicPaths`,
-  `SpaNavigationPaths` and `SpaStaticResourcePaths` are injected `@Singleton`s, not static utilities
-  (handbook §1).
+  path and would never reach the canonicalizing code. `PathCanonicalizer`, `PublicPaths` and
+  `SpaNavigationPaths` are injected `@Singleton`s, not static utilities (handbook §1).
+- **The audit log and the rate limit know no exception** (author decision 2026-08-14): both filters
+  run for every path, so there is exactly one public surface, the configured `public-paths`, and no
+  second list of paths that skip counting or logging. `RateLimitCounters` **owns** the per-IP map and
+  bounds it: it forgets a client whose interval elapsed and is not blocked, and beyond
+  `evergore.rate-limit.max-tracked-clients` the least recently seen client, so the bound holds
+  against any number of distinct IPs. A `RateLimitCounter` never leaves that class, and the whole
+  decision (count the request, block on exceeding the budget, answer whether to reject) is **one**
+  `synchronized` call, so no client can be evicted between exceeding its budget and being blocked.
 - **Monitoring:** `monitoring/LastRunHealthIndicator` (adapter implementing `HealthIndicator`,
   exposed at `GET /health` via `micronaut-management`; UNKNOWN before the first run, then UP +
   `lastSuccessfulRun` detail). Fed by `application/LastRunStatus` (above).

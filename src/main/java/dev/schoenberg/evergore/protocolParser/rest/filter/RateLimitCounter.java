@@ -22,24 +22,32 @@ class RateLimitCounter {
 		this.lastReset = clock.instant();
 	}
 
-	public synchronized long increment() {
+	synchronized long increment() {
 		resetIfNecessary();
 		return ++count;
 	}
 
-	public synchronized boolean isBlocked() {
+	synchronized boolean isBlocked() {
 		return clock.instant().isBefore(blockedUntil);
 	}
 
-	public synchronized void block() {
+	synchronized void block() {
 		blockedUntil = clock.instant().plus(blockDuration);
 		count = 0;
 	}
 
+	synchronized boolean isIdle() {
+		return !isBlocked() && intervalElapsed();
+	}
+
 	private void resetIfNecessary() {
-		if (between(lastReset, clock.instant()).compareTo(interval) >= 0) {
+		if (intervalElapsed()) {
 			count = 0;
 			lastReset = clock.instant();
 		}
+	}
+
+	private boolean intervalElapsed() {
+		return between(lastReset, clock.instant()).compareTo(interval) >= 0;
 	}
 }

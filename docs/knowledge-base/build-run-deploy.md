@@ -345,10 +345,9 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      `{avatar, deposited, withdrawn}` per item. Check `lastUpdated` and `totalCount` against what
      the previous stand served — that is the cheapest proof the mounted database is the intended
      one and not an empty new file.
-   - **Rate limit:** 5 requests per 10 s per client IP, then a 1-minute block that a retry *extends*.
-     `/`, `/index.html` and `/assets/**` are exempt from counting, so the four checks above cost
-     **three** counted requests and fit in one window. Polling `/health` while waiting for the first
-     collection must stay slower than one request per 2 s.
+   - **Rate limit:** 30 requests per 10 s per client IP, then a 1-minute block. Nothing is exempt,
+     so the four checks above cost **four** counted requests and fit in one window. A renewed burst
+     while blocked pushes the block out again, so back off after a 429 instead of retrying.
 7. **Rollback** — the previous release's tag (`docker images evergore-protocol-collector` lists the
    candidates):
 
@@ -389,7 +388,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 | DB path | `database/temp.sqlite` (or `:memory:` if `useInMemory`) | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
 | Auth token | `evergore.security.api-token`, **required**, env-injected as `EVERGORE_SECURITY_API_TOKEN` (bound by the `SecurityConfiguration` `@ConfigurationProperties` bean) | **Every** request needs `?token=<configured token>` except the configured public paths below. **Mandatory at startup**: a blank/unset token makes the app refuse to boot (`ApiTokenStartupValidator` logs an error and throws). No token value lives in the repo. |
 | Public paths | `evergore.security.public-paths` in `application.yml`: `/`, `/index.html`, `/assets/**`, `/favicon.ico`, `/health`, `/swagger/**`, `/swagger-ui/**`, `/redoc/**`, `/rapidoc/**` (same `SecurityConfiguration` bean) | The **only** token-free surface; Ant patterns, matched against the canonicalized path by `PublicPaths`. Everything not listed needs a token, so a new controller is protected by default. Empty or unset ⇒ everything is protected (fail closed), which makes a misconfiguration a visible 401 on `/` rather than a silent hole. |
-| Rate limit | `evergore.rate-limit.*`: `max-requests-per-interval` `5`, `interval` `10s`, `block-duration` `1m` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `BrowserLoggingFilter` (filter order 1, ahead of the token filter); exceeding the limit within `interval` blocks that IP for `block-duration` → **429** (`TooManyRequests`). Config-driven, no hard-coded constants; the test profile raises the limit so the suite isn't throttled. |
+| Rate limit | `evergore.rate-limit.*`: `max-requests-per-interval` `30`, `interval` `10s`, `block-duration` `1m`, `max-tracked-clients` `10000` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `RateLimitFilter` (filter order 2, behind the audit log and ahead of the token filter); exceeding the limit within `interval` blocks that IP for `block-duration` → **429** (`TooManyRequests`). Applies to **every** path. The limit carries a full page load (shell + bundle + favicon + API call ≈ 5 requests) several times over; below ~10 the SPA would throttle itself. `max-tracked-clients` bounds the counter map (see `RateLimitCounters` below). `RateLimitStartupValidator` refuses to boot on any value that would silently disable the throttle: a request budget or client budget below `1`, or a non-positive `interval`/`block-duration`. Config-driven, no hard-coded constants; the test profile raises the limit so the suite isn't throttled. |
 
 - **`application.yml`** holds Micronaut concerns (app name, Swagger static routes, Netty
   `max-order: 3`) plus the **rate-limit defaults** (`evergore.rate-limit.*`, bound to
@@ -399,7 +398,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
   `EVERGORE_SECURITY_API_TOKEN`, via the `@ConfigurationProperties` bean `SecurityConfiguration`;
   no value lives in the repo.
 - **`logback.xml`**: single colored STDOUT appender, root level `info`. Nothing logs a request URI's
-  query string, so the `?token=…` credential never reaches the log: the request filter logs only
+  query string, so the `?token=…` credential never reaches the log: `RequestAuditLogFilter` logs only
   client IP and user-agent, and the exception handler logs `request.getPath()`, which excludes the
   query (pinned by `ApplicationExceptionHandlerTest`). An expected client error (401, 404, 429) is
   one `info` line; only a server error logs at `error` with its stack trace, so probing the token
@@ -413,14 +412,32 @@ on the **canonicalized** path (`PathCanonicalizer`), so `/assets/../overview` is
 `/overview`. Consequence for the SPA: a deep link opened without a token answers **401**, the shell
 loads from `/` and the client carries `?token=` across its routes.
 
-Public and unthrottled are **not** the same set. The rate limiter and request log skip only the SPA
-static surface (`/`, `/index.html`, `/assets/**`, via `SpaStaticResourcePaths`); the remaining public
-paths are token-free but still counted and logged.
+**Public means token-free, nothing else** (author decision 2026-08-14, superseding the static-surface
+exemption of 2026-08-04): the rate limit and the audit log apply to every path, so
+`evergore.security.public-paths` is the *only* list of paths with a special status. There is no second,
+code-side list that could drift out of sync with it.
 
-One class of request never reaches either filter: a **malformed request target** (an invalid
-percent-escape such as `/overview%zz`) is answered **400 by Micronaut itself**, ahead of the filter
-chain, so it is neither counted nor logged. Tracked as backlog **C10** and pinned by a test that goes
-red if a framework upgrade changes it.
+The per-IP counter map is bounded by `RateLimitCounters`: a client whose `interval` elapsed and that is
+not blocked is forgotten (its counter would reset anyway, so nothing is lost), and once
+`max-tracked-clients` is reached the least recently seen client is dropped. A running block therefore
+survives normally and yields only to the configured bound, which takes that many distinct IPs to
+reach. Counters never leave the map, and `RateLimitFilter` asks a single question per request
+(`blocks(clientIp)`), which counts, blocks and answers under one lock: an offender cannot be evicted
+between exceeding its budget and being blocked, and no request lands on an already-evicted counter.
+
+A **malformed request target** (an invalid percent-escape such as `/overview%zz`) reaches the filters
+and is answered **400** only afterwards: the invalid escape breaks the request URI, so no path-based
+decision can be made and the token filter never gets to answer 401. Neither the audit log nor the rate
+limiter reads the path, which is why both still see the request. That it is **counted** is measured
+(2026-08-14) and pinned by `RateLimitFilterTest`; that it is **logged** follows from filter order (the
+audit filter sits at order 1, ahead of the counter that demonstrably runs) plus the audit line being
+built from client IP and user-agent only, pinned literally by `RequestAuditLogFilterTest`. A framework
+upgrade that answers such a target ahead of the filter chain turns that test red.
+
+What the filters really cannot see is a request the **server** answers on its own: an oversized request
+target (5000 characters) is answered **413** and never reaches them, measured 2026-08-14 by three such
+requests in a row not earning a 429. That gap needs a Netty-level seam and is tracked as backlog
+**C10**; `RateLimitFilterTest` pins the current behaviour so an upgrade that changes it shows up.
 
 | Method · Path | Purpose |
 |---|---|
@@ -428,7 +445,7 @@ red if a framework upgrade changes it.
 | `GET /api/v1/avatars/{avatar}/bank?page=N&size=M` | JSON bank entries for one avatar, newest first. |
 | `GET /api/v1/avatars/{avatar}/storage?page=N&size=M` | JSON storage entries for one avatar, newest first. |
 | `GET /overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage` | SPA client routes. No controller owns them: with a token they fall through to the shell, so a deep link or a bookmark works. |
-| `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle. **Public**: no token, no rate limit, no audit log entry (decision 2026-08-04). An unknown navigation path **with a token** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
+| `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle. **Public** (no token), but rate-limited and logged like any other request. An unknown navigation path **with a token** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
 | `GET /favicon.ico` | Favicon: public, but rate-limited and logged like any other request. |
 | `GET /health` | Micronaut management health endpoint: token-exempt, anonymous. Reports UNKNOWN (no run yet) or UP + `lastSuccessfulRun` timestamp; when the last run hit unknown catalog items, the `lastRun` detail also carries `unknownItemCount` and the distinct `unknownItemNames`. Use as a liveness/last-run monitor hook. |
 | `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: public, but rate-limited and logged. |

@@ -5,4 +5,4 @@ import java.time.Duration;
 import io.micronaut.context.annotation.ConfigurationProperties;
 
 @ConfigurationProperties("evergore.rate-limit")
-public record RateLimitConfiguration(long maxRequestsPerInterval, Duration interval, Duration blockDuration) {}
+public record RateLimitConfiguration(long maxRequestsPerInterval, Duration interval, Duration blockDuration, int maxTrackedClients) {}

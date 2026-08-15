@@ -44,6 +44,7 @@ evergore:
       - /redoc/**
       - /rapidoc/**
   rate-limit:
-    max-requests-per-interval: 5
+    max-requests-per-interval: 30
     interval: 10s
     block-duration: 1m
+    max-tracked-clients: 10000
