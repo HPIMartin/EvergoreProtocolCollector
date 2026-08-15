@@ -27,7 +27,7 @@ class FilterChainOrderTest {
 	void logsBeforeItThrottlesAndThrottlesBeforeItChecksTheToken() {
 		List<Integer> orders = List.of(auditLogFilter().getOrder(), rateLimitFilter().getOrder(), tokenValidationFilter().getOrder());
 
-		assertThat(orders).as("a throttled request must already be logged, and an unauthenticated flood must be throttled before it is rejected").containsExactly(1, 2, 3);
+		assertThat(orders).containsExactly(1, 2, 3);
 	}
 
 	private RequestAuditLogFilter auditLogFilter() {

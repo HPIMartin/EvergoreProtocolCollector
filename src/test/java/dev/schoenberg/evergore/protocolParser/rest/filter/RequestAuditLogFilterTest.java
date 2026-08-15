@@ -21,14 +21,12 @@ class RequestAuditLogFilterTest {
 	private final RecordingChain chain = new RecordingChain();
 
 	@Test
-	void logsTheClientIpAndTheUserAgentOfARequest() {
+	void logsOnlyTheClientIpAndTheUserAgentOfARequest() {
 		HttpRequest<?> request = requestTo("/api/v1/avatars");
 
 		tested.doFilter(request, chain);
 
-		assertThat(logger.infoMessages())
-				.as("the line is built from client and agent only; adding the path would lose the requests whose path cannot be read")
-				.containsExactly("Client IP: " + CLIENT_IP + " Agent: " + USER_AGENT);
+		assertThat(logger.infoMessages()).containsExactly("Client IP: " + CLIENT_IP + " Agent: " + USER_AGENT);
 	}
 
 	@Test
@@ -37,7 +35,7 @@ class RequestAuditLogFilterTest {
 
 		tested.doFilter(request, chain);
 
-		assertThat(logger.infoMessages()).as("there is no unlogged surface").containsExactly("Client IP: " + CLIENT_IP + " Agent: " + USER_AGENT);
+		assertThat(logger.infoMessages()).containsExactly("Client IP: " + CLIENT_IP + " Agent: " + USER_AGENT);
 	}
 
 	@Test
@@ -46,7 +44,7 @@ class RequestAuditLogFilterTest {
 
 		tested.doFilter(request, chain);
 
-		assertThat(logger.infoMessages()).as("there is no unlogged surface").containsExactly("Client IP: " + CLIENT_IP + " Agent: " + USER_AGENT);
+		assertThat(logger.infoMessages()).containsExactly("Client IP: " + CLIENT_IP + " Agent: " + USER_AGENT);
 	}
 
 	@Test

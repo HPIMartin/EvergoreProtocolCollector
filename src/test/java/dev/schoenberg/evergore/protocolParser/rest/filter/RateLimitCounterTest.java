@@ -47,7 +47,7 @@ class RateLimitCounterTest {
 
 		boolean idle = tested.isIdle();
 
-		assertThat(idle).as("the count would reset on the next request, so the counter carries no state worth keeping").isTrue();
+		assertThat(idle).isTrue();
 	}
 
 	@Test
@@ -67,7 +67,7 @@ class RateLimitCounterTest {
 
 		boolean idle = tested.isIdle();
 
-		assertThat(idle).as("a running block must survive, otherwise the client regains its budget").isFalse();
+		assertThat(idle).isFalse();
 	}
 
 	@Test
@@ -108,6 +108,6 @@ class RateLimitCounterTest {
 		done.await();
 		pool.shutdown();
 
-		assertThat(counted).as("a lost update would hand two requests the same count").doesNotHaveDuplicates().hasSize(threadCount * requestsPerThread);
+		assertThat(counted).doesNotHaveDuplicates().hasSize(threadCount * requestsPerThread);
 	}
 }

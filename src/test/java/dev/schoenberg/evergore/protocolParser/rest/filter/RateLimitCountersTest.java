@@ -41,7 +41,7 @@ class RateLimitCountersTest {
 
 		boolean blocked = tested.blocks(FIRST_CLIENT);
 
-		assertThat(blocked).as("a known client keeps its counter, otherwise its budget resets per request").isTrue();
+		assertThat(blocked).isTrue();
 	}
 
 	@Test
@@ -87,7 +87,7 @@ class RateLimitCountersTest {
 
 		List<String> tracked = tested.trackedClients();
 
-		assertThat(tracked).as("an elapsed interval means the counter would reset anyway").containsExactly(SECOND_CLIENT);
+		assertThat(tracked).containsExactly(SECOND_CLIENT);
 	}
 
 	@Test
@@ -100,7 +100,7 @@ class RateLimitCountersTest {
 
 		List<String> tracked = tested.trackedClients();
 
-		assertThat(tracked).as("forgetting a blocked client would hand it a fresh budget").containsExactly(FIRST_CLIENT, SECOND_CLIENT);
+		assertThat(tracked).containsExactly(FIRST_CLIENT, SECOND_CLIENT);
 	}
 
 	@Test
@@ -117,7 +117,7 @@ class RateLimitCountersTest {
 	}
 
 	@Test
-	void countsAKnownClientAsRecentlyUsedAgain() {
+	void forgetsTheClientThatWentLongestWithoutARequest() {
 		RateLimitCounters tested = countersFor(TWO_CLIENTS);
 		tested.blocks(FIRST_CLIENT);
 		tested.blocks(SECOND_CLIENT);
@@ -127,7 +127,7 @@ class RateLimitCountersTest {
 
 		List<String> tracked = tested.trackedClients();
 
-		assertThat(tracked).as("the second client became the least recently used one").containsExactly(FIRST_CLIENT, THIRD_CLIENT);
+		assertThat(tracked).containsExactly(FIRST_CLIENT, THIRD_CLIENT);
 	}
 
 	@Test
@@ -139,7 +139,7 @@ class RateLimitCountersTest {
 
 		List<String> tracked = tested.trackedClients();
 
-		assertThat(tracked).as("the configured bound wins over a running block").containsExactly(SECOND_CLIENT);
+		assertThat(tracked).containsExactly(SECOND_CLIENT);
 	}
 
 	@Test

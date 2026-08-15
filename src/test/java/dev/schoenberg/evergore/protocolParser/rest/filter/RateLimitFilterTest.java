@@ -68,7 +68,7 @@ class RateLimitFilterTest {
 	void countsTokenlessRequestsToTheSpaShellRoot() {
 		List<Integer> statuses = statusesOfThreeRequestsTo("/");
 
-		assertThat(statuses).as("the limit is global, the shell has no exemption").containsExactly(OK.getCode(), OK.getCode(), TOO_MANY_REQUESTS.getCode());
+		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
 
 	@Test
@@ -100,9 +100,7 @@ class RateLimitFilterTest {
 
 		List<Integer> statuses = IntStream.range(0, REQUESTS_PER_BURST).mapToObj(request -> rawClient.statusOf("/overview%zz")).toList();
 
-		assertThat(statuses)
-				.as("the filters run before anything answers the invalid escape, so a malformed burst earns a 429 like any other")
-				.containsExactly(BAD_REQUEST.getCode(), BAD_REQUEST.getCode(), TOO_MANY_REQUESTS.getCode());
+		assertThat(statuses).containsExactly(BAD_REQUEST.getCode(), BAD_REQUEST.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
 
 	@Test
