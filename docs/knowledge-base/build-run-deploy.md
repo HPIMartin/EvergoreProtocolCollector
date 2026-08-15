@@ -390,6 +390,11 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 | Public paths | `evergore.security.public-paths` in `application.yml`: `/`, `/index.html`, `/assets/**`, `/favicon.ico`, `/health`, `/swagger/**`, `/swagger-ui/**`, `/redoc/**`, `/rapidoc/**` (same `SecurityConfiguration` bean) | The **only** token-free surface; Ant patterns, matched against the canonicalized path by `PublicPaths`. Everything not listed needs a token, so a new controller is protected by default. Empty or unset ⇒ everything is protected (fail closed), which makes a misconfiguration a visible 401 on `/` rather than a silent hole. |
 | Rate limit | `evergore.rate-limit.*`: `max-requests-per-interval` `30`, `interval` `10s`, `block-duration` `1m`, `max-tracked-clients` `10000` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `RateLimitFilter` (filter order 2, behind the audit log and ahead of the token filter); exceeding the limit within `interval` blocks that IP for `block-duration` → **429** (`TooManyRequests`). Applies to **every** path. The limit carries a full page load (shell + bundle + favicon + API call ≈ 5 requests) several times over; below ~10 the SPA would throttle itself. `max-tracked-clients` bounds the counter map (see `RateLimitCounters` below). `RateLimitStartupValidator` refuses to boot on any value that would silently disable the throttle: a request budget or client budget below `1`, or a non-positive `interval`/`block-duration`. Config-driven, no hard-coded constants; the test profile raises the limit so the suite isn't throttled. |
 
+- **Environment YAMLs hold overrides only** (author decision 2026-08-15). Micronaut merges the
+  property sources, so `application-<env>.yml` is an overlay on `application.yml`, not a replacement:
+  a key it repeats with the same value is duplication that silently rots when the base changes.
+  `application-test.yml` therefore carries the test token and the raised request budget,
+  `application-ratelimit.yml` the lowered one, and nothing else.
 - **`application.yml`** holds Micronaut concerns (app name, Swagger static routes, Netty
   `max-order: 3`) plus the **rate-limit defaults** (`evergore.rate-limit.*`, bound to
   `RateLimitConfiguration`) and the **public-path list** (`evergore.security.public-paths`, next to

@@ -253,6 +253,11 @@ configuration-time `check` fails the build if it is ever set again.
   A custom assert helper (`assertCanonical`, `assertPublic`) is the other allowed shape, and it holds
   the same structure inside. Where several inputs share one behaviour, use `@ParameterizedTest`
   (`junit-jupiter-params`) rather than repeating the assertion.
+- **The test name carries the intent, not an assertion message** (author decision 2026-08-15).
+  `.as(...)`, `.describedAs(...)` and their equivalents are for the exception: an assertion whose
+  failure output would leave the reader guessing which of several inputs failed, or one that proves
+  something by absence. Everywhere else the name states the behaviour and the message is redundant
+  narration. A message that says something the name does not is a name that needs rewriting.
 - **BDD (PO perspective):** capture the use cases as scenarios, e.g. *"Given a member deposited
   N gold and crafted items worth M, when I view the overview, then their guild value is N+M."*
   The whole collect→evaluate→overview flow is now covered by `ProtocolEvaluationAcceptanceTest`

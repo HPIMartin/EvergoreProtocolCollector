@@ -143,6 +143,18 @@ language**, given/when/then:
 - One logical change per commit; cohesion test: group parts only if reverting/cherry-picking one
   alone would break the build or leave the tree inconsistent. Keep `main` releasable; local
   `./gradlew build` green before committing.
+- **Slice the commits before the first edit** (author decision 2026-08-15). The plan names the
+  commits it will produce, in order, each one green on its own and reviewable in one sitting. A
+  commit that renames, changes behaviour, moves config and carries unrelated doc work at once is bad
+  style however green it is: **35 changed files is a smell, not an achievement**. Rules of thumb:
+  a rename or move is its own commit; a behaviour change is its own commit; documentation describing
+  a code change rides with it, unrelated documentation gets its own `[doc]` commit; a finding that
+  falls out along the way is its own commit rather than a passenger. Where a slice cannot stand
+  green alone, that is the signal to reorder, not to merge it into a bigger one.
+- **A track's shape follows the work, not the plan it started with** (author decision 2026-08-15).
+  "Small track, one commit on `main`" is an estimate. When the work turns out to need several
+  commits, switch to a worktree and the rebase gateway below; never inflate one commit to honour the
+  original estimate. Clean code covers the history too.
 - **No secrets, no personal/host data, ever (hard rule); the repo is a public showcase.** Never
   commit passwords, tokens, API keys, private keys/keystores
   (`*.pfx`/`*.p12`/`*.jks`/`*.pem`/`*.key`), credentials, real personal/work emails or usernames,
