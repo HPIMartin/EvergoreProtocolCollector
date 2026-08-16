@@ -227,14 +227,20 @@ remains the gate for landing on `main`.
   lowercase`), so the image and the container are named `evergore-protocol-collector` after the
   repository, while the Gradle project and the distribution keep `protocolParser`.
 - **SemVer, no `-SNAPSHOT`:** nothing is published to an artifact repository, so a snapshot suffix
-  would gate nothing. `version` holds the number of the **next** release; the commit that sets that
-  number *is* the release commit and is the commit that gets tagged. One version commit per release.
+  would gate nothing. `version` holds the number of the **next** release, and the commit that sets
+  that number only *declares* it. One version commit per release.
+- **The tagged commit is the released state, not the version commit:** the tag goes on the **tip of
+  `main` at release time** — the stand that passed the release gate (green
+  `clean build --no-build-cache`, buildable image, 1:1 check) and whose image is deployed. The
+  version commit may sit far behind that tip and carry none of it. Tagging it instead would name a
+  stand nobody built or ran (the `0.1.0` case: the version commit's image build was broken and its
+  credential handling superseded).
 - **Consequence — a build off an untagged `main` commit is not identified by its version alone**
   (between releases `version` still names the release being prepared). Such a build is tagged
   `evergore-protocol-collector:<version>-<short sha>`; a **bare**
   `evergore-protocol-collector:<version>` tag is reserved for the tagged release commit, so it
   always means exactly one source state.
-- **Tagging is the author's act at release time, on the release commit** (agents document it, never
+- **Tagging is the author's act at release time, on the released tip** (agents document it, never
   run it):
 
   ```sh
