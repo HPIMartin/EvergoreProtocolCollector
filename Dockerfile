@@ -25,7 +25,6 @@ ENV JAVA_HOME=/opt/java/openjdk
 ENV PATH="$JAVA_HOME/bin:$PATH"
 
 COPY --from=build /home/app/build/install/protocolParser /opt/protocolParser
-COPY zugang.txt /zugang.txt
 
 WORKDIR /
 ENTRYPOINT ["/opt/protocolParser/bin/protocolParser"]

@@ -4,6 +4,7 @@ build
 target
 database
 *.sqlite
+zugang.txt
 src/test/resources/benchmark
 .devcontainer
 .claude

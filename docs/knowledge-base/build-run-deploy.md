@@ -188,10 +188,10 @@ remains the gate for landing on `main`.
     That is transient — repeat the build.
   - *runtime stage* `selenium/standalone-firefox:109.0` (Firefox + geckodriver for the `DOCKER`
     browser mode) with the **JDK 25 copied from the build stage** (Ubuntu base has no
-    openjdk-25), the distribution copied to `/opt/protocolParser`, **`COPY zugang.txt /`** (still
-    bakes credentials into the image; injecting them instead is deferred, backlog C3),
+    openjdk-25), the distribution copied to `/opt/protocolParser`,
     `ENTRYPOINT /opt/protocolParser/bin/protocolParser`, `WORKDIR /` so the SQLite path
-    `database/temp.sqlite` and `zugang.txt` resolve as before.
+    `database/temp.sqlite` resolves against the mounted `/database`. The image holds **no secret**:
+    both the API token and the Evergore login arrive as environment variables at `docker run`.
   - `.dockerignore` keeps the build context lean: excludes DBs / the gitignored benchmark, plus
     `frontend/node_modules`, `frontend/build` and `frontend/.gradle`.
 - **`buildAndRun.bat`** (gitignored, machine-specific): `docker build` → `docker run -p 8080:8080
@@ -304,19 +304,28 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      cannot write and SQLite fails; fix the mode on the host (`chmod 777 database`,
      `chmod 666 database/temp.sqlite`) rather than starting the app to find out.
 4. **Build the image** on the Docker host (`buildAndRun.bat`, gitignored and machine-specific) with
-   the tag and labels from "Versioning & release tags". The build context needs `zugang.txt`, which
-   is baked into the image (backlog C3).
+   the tag and labels from "Versioning & release tags". The build context carries **no credentials**;
+   the image is secret-free and the same image runs with any account.
 5. **Replace the container:**
 
    ```sh
    docker stop evergore-protocol-collector && docker rm evergore-protocol-collector
    docker run -d --name evergore-protocol-collector -p 8080:8080 \
-     -e EVERGORE_SECURITY_API_TOKEN=<token> -e TZ=UTC \
+     -e EVERGORE_SECURITY_API_TOKEN=<token> \
+     -e EVERGORE_CREDENTIALS_USERNAME=<evergore login> \
+     -e EVERGORE_CREDENTIALS_PASSWORD=<evergore password> -e TZ=UTC \
      -v "<host>/database:/database" evergore-protocol-collector:0.1.0
    ```
 
    - The token is **mandatory**: a blank or unset value makes the app refuse to boot
      (`ApiTokenStartupValidator`). Keeping the value stable keeps existing bookmark URLs valid.
+   - The **Evergore login is mandatory too**, and for the same reason: either variable unset or
+     blank and the app refuses to boot (`CredentialsStartupValidator`), instead of starting healthy
+     and scraping logged-out 30 seconds later. Neither value has a default; both must be set
+     explicitly, and they are the credentials of the game account the scraper signs in with.
+   - The three secrets are the **only** thing separating an image from a running stand. They are
+     visible in `docker inspect` and in the shell history of this command, which is accepted here
+     (single-admin home server); nothing writes them to the log.
    - `TZ=UTC` keeps the runtime off a DST zone while timestamps persist as default-timezone
      wall-clock text (backlog D14). The container default is already UTC; setting it explicitly
      pins it.
@@ -355,9 +364,15 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    docker stop evergore-protocol-collector && docker rm evergore-protocol-collector
    cp database/temp.sqlite.bak-<yyyymmdd> database/temp.sqlite
    docker run -d --name evergore-protocol-collector -p 8080:8080 \
-     -e EVERGORE_SECURITY_API_TOKEN=<token> -e TZ=UTC \
+     -e EVERGORE_SECURITY_API_TOKEN=<token> \
+     -e EVERGORE_CREDENTIALS_USERNAME=<evergore login> \
+     -e EVERGORE_CREDENTIALS_PASSWORD=<evergore password> -e TZ=UTC \
      -v "<host>/database:/database" evergore-protocol-collector:<previous version>
    ```
+
+   - **An image built before the credentials moved out** carries `zugang.txt` inside and ignores the
+     two variables, so passing them to such a rollback target is harmless but pointless. Rolling
+     *forward* again without them fails at startup, which is the intended noise.
 
    - Restore the backup **before** starting the old image: the new version may have written entries
      or meta sums the old one does not expect, and that write is not reversible.
@@ -383,7 +398,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 |---------|---------------|-------|
 | `browser` | `"docker"` | Selenium driver selection (`Browser` enum: FIREFOX/CHROME/EDGE/DOCKER). |
 | `server` | `"zyrthania"` | **Target game world.** Scrape URL = `https://evergore.de/<server>?page=…` (`Constants.SERVER`). Switching worlds = change this. |
-| `credentials` | `"zugang.txt"` | **Evergore login**: line 1 = username, line 2 = password. Read by `SeleniumPageSource.tryToLogin`. Not in the repo; supplied at image build. |
+| Evergore login | `evergore.credentials.username` / `.password`, **both required**, env-injected as `EVERGORE_CREDENTIALS_USERNAME` / `EVERGORE_CREDENTIALS_PASSWORD` (bound by the `CredentialsConfiguration` `@ConfigurationProperties` record) | The game account `SeleniumPageSource.tryToLogin` signs in with. **Mandatory at startup**: either value unset or blank and the app refuses to boot (`CredentialsStartupValidator` logs an error naming the variable and throws), so a missing login cannot degrade into a silent logged-out scrape. No value lives in the repo or in the image. |
 | `evergoreFolder` | `c:\evergore` | Windows path; unused on the Linux container scrape path. |
 | DB path | `database/temp.sqlite` (or `:memory:` if `useInMemory`) | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
 | Auth token | `evergore.security.api-token`, **required**, env-injected as `EVERGORE_SECURITY_API_TOKEN` (bound by the `SecurityConfiguration` `@ConfigurationProperties` bean) | **Every** request needs `?token=<configured token>` except the configured public paths below. **Mandatory at startup**: a blank/unset token makes the app refuse to boot (`ApiTokenStartupValidator` logs an error and throws). No token value lives in the repo. |
@@ -398,10 +413,13 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 - **`application.yml`** holds Micronaut concerns (app name, Swagger static routes, Netty
   `max-order: 3`) plus the **rate-limit defaults** (`evergore.rate-limit.*`, bound to
   `RateLimitConfiguration`) and the **public-path list** (`evergore.security.public-paths`, next to
-  the static-resource mappings it mirrors), **no `server.port`** → defaults to **8080**. The one setting bound
-  from the *environment* is the **API token**: `evergore.security.api-token` ←
-  `EVERGORE_SECURITY_API_TOKEN`, via the `@ConfigurationProperties` bean `SecurityConfiguration`;
-  no value lives in the repo.
+  the static-resource mappings it mirrors), **no `server.port`** → defaults to **8080**. The settings bound
+  from the *environment* are the three secrets: the **API token** (`evergore.security.api-token` ←
+  `EVERGORE_SECURITY_API_TOKEN`, via `SecurityConfiguration`) and the **Evergore login**
+  (`evergore.credentials.username` / `.password` ← `EVERGORE_CREDENTIALS_USERNAME` /
+  `EVERGORE_CREDENTIALS_PASSWORD`, via `CredentialsConfiguration`). None of them has a value in
+  `application.yml`, so none lives in the repo; `application-test.yml` carries dummy values because
+  every boot test would otherwise fail the startup validation.
 - **`logback.xml`**: single colored STDOUT appender, root level `info`. Nothing logs a request URI's
   query string, so the `?token=…` credential never reaches the log: `RequestAuditLogFilter` logs only
   client IP and user-agent, and the exception handler logs `request.getPath()`, which excludes the
@@ -479,5 +497,6 @@ requests in a row not earning a 429. That gap needs a Netty-level seam and is tr
 - Scraping depends on live evergore.de markup/selectors and a valid login → brittle by nature.
 - Bundled `gecko-*-win.exe` drivers are Windows-only and version-pinned (recently upgraded in the
   working tree); the container uses its own Firefox/driver. Consider Selenium Manager / WebDriverManager.
-- The Evergore login credentials are read from a file that is baked into the image; injecting them
-  instead is still open (backlog C3).
+- A login that is *present but wrong* (typo, rotated password) still passes the startup check, which
+  only tests for a value. It then fails at scrape time: the login wait times out, `tryToLogin` logs
+  one `warn` naming the login, and the outer wait fails the run with `Failed to scrape Evergore`.

@@ -125,7 +125,8 @@ Java version pinned in places that must stay in sync (**currently `25`**):
   the application distribution at `/opt/protocolParser`.
 - No `dos2unix`/jar-name hacks (LF enforced via `.gitattributes`; version-independent distribution
   dir name); `.dockerignore` keeps the context lean.
-- Still **bakes `zugang.txt` (secrets) into the image**; secret injection is backlog **C3**.
+- **Carries no secret**: API token and Evergore login are injected as environment variables at
+  `docker run` (build-run-deploy.md), so the image is the same for every account.
 - Buildable **from inside the devcontainer** since the `docker-outside-of-docker` feature returned:
   the `docker` CLI targets the host daemon, so `docker build` / `docker run` need no host shell.
   (The devcontainer image itself is still built by the host's Dev Containers extension, so changes

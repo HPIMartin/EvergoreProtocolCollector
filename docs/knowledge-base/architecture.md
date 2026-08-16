@@ -121,10 +121,8 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 ### Top violations to fix (detail in [../backlog.md](../backlog.md))
 
 1. **`Configuration` is config in name only:** hard-coded Java fields (browser, server, paths,
-   in-memory toggle); ignores `application.yml`/env.
-2. **Secrets in source/image:** the API token is env-injected (`evergore.security.api-token` via
-   `SecurityConfiguration`, required at startup), but Evergore credentials still live in `zugang.txt`
-   baked into the Docker image.
+   in-memory toggle); ignores `application.yml`/env. The secrets are the exception and are already
+   bound from the environment (`SecurityConfiguration`, `CredentialsConfiguration`).
 
 ## Target structure (proposed, hexagonal)
 
