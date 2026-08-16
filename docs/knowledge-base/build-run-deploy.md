@@ -379,10 +379,12 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      answers the **restart policy** (`{{.HostConfig.RestartPolicy.Name}}`), which this command does
      not set: the home server runs with `no`, so the service does not come back by itself after a
      host reboot.
-   - **Timeline** (measured): the server answers after ~1.5 s, the first collection starts 30 s
-     after startup (`getCollectorInitialDelaySeconds`), extraction takes ~25 s and the evaluation
-     ~90 s. So `/health` turns `UP` roughly **2.5 minutes** after the container starts; `UNKNOWN`
-     before that is the documented state, not a failure.
+   - **Timeline** (measured 2026-08-16 on both machines): the server answers after ~1 s, the first
+     collection starts 30 s after startup (`getCollectorInitialDelaySeconds`), and extraction plus
+     evaluation together took **16 s** on the work machine and **42 s** on the home server. So
+     `/health` turned `UP` **46 s** and **71 s** after container start — the older "~2.5 minutes"
+     is a conservative upper bound, not the expected value. `UNKNOWN` before that is the documented
+     state, not a failure; past ~3 minutes, read the log instead of waiting.
 6. **Verify**, in order — `<token>` is the same value passed in step 5:
 
    ```sh
