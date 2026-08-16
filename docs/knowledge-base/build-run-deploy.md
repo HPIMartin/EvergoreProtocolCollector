@@ -382,8 +382,11 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
 
    - `/health` is anonymous. It reports `UNKNOWN` until the first collection finishes, then `UP`;
      the run's timestamp sits at **`details.lastRun.details.lastSuccessfulRun`**, next to
-     `unknownItemCount` and `unknownItemNames` (a three-digit `unknownItemCount` is normal — those
-     are unvalued item names, not errors).
+     `unknownItemCount` and `unknownItemNames`. Neither is an error: they are the catalog gap
+     (testing.md). **`unknownItemCount` counts occurrences, `unknownItemNames` distinct names**, so
+     the two differ by an order of magnitude — measured on the production snapshot 2026-08-16:
+     **1674 occurrences over 123 names**, and the 1674 matches the snapshot's own row count for
+     those names exactly. A four-digit count is normal at this volume.
    - `/` serves the SPA shell without a token (~480 bytes, `text/html`, carrying `<div id="root">`
      and the bundle `<script>`); the SPA then fetches the API with the token from its URL.
    - `/api/v1/avatars?token=…` answers `{lastUpdated, page, size, totalCount, items[]}` with
