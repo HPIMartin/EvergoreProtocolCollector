@@ -178,7 +178,31 @@ identical snapshot, taken while both sides still rendered HTML:
   config-driven API token. No rendered data differs.
 
 What it does **not** cover: the JSON surface, because a byte diff was only possible while both
-sides rendered the same pages. The next sweep is value-wise per the procedure above.
+sides rendered the same pages.
+
+**Value-wise sweep, JSON vs. HTML (2026-08-16, the `0.1.0` release gate).** Candidate = the release
+image on a copy of the production snapshot; live = the old stand on the home server. Five avatars,
+chosen for what the synthetic fixture cannot reach: the largest ledger pair (`Feonir`, 14.4k
+entries), the **storage-only** avatar (`Gauß`, the 42nd in the union), an umlaut name with data on
+both ledgers (`Zwölf`), a name with spaces whose storage meta is exactly `0.0` despite 1653 rows
+(`Thyla Vom Moos`), and the asymmetric meta case (`Valtan Glutherz`, placement `0.0` / withdrawl
+`354000.0`).
+
+- **Every entry matches**, in both directions, for all seven fully compared ledgers (bank 850/43/461/1,
+  storage 2019/1653/3): timestamp, amount or quantity/name/quality, and direction, as multisets.
+  `totalCount` matches the live row count for each of them.
+- The two ledgers too large to fetch whole (`Feonir` storage 136 pages, `Zwölf` storage 79) were
+  **sampled** at first, middle and last page: all 537 live rows are present in the candidate.
+- **The wire mapping is pinned by real data:** the candidate's UTC instant converted to
+  `Europe/Berlin` equals the live wall-clock string exactly, `DEPOSIT`/`WITHDRAWAL` equal
+  `Einlagerung`/`Entnahme`, and both sides sort newest-first.
+- **The recompute delta reproduces:** 31 of 41 overview rows changed, **every one downward**, 10
+  identical — the same shape as the measurement below, on which the ship-the-lowered-numbers
+  decision rests.
+- The live instance's own drift (it kept scraping) turned out to be **zero** here: both sides had
+  ingested the same new entries, so the comparison holds with and without a cutoff at the snapshot's
+  newest timestamp.
+- Not covered: the other 37 avatars, and the interior pages of the two sampled ledgers.
 
 ### Recompute delta on real data
 
