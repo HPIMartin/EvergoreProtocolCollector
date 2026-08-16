@@ -47,7 +47,7 @@
 | `BootSignalRecorderTest` | `awaitCollection()` unblocks both on `recordCollectionFinished()` and on `recordException()` (real threads, no timeouts), and the `dataLoaded`/`exceptionOccurred` queries flip false→true. Pins the boot-signal seam itself. | pure unit (concurrency) |
 | `NoApplicationTextInHttpStatusTest` | ArchUnit guard, one rule: no class calls a reason-phrase-carrying `status(…)` overload. Covers all **six** that micronaut-http's response API offers, enumerated from the jar: `HttpResponse.status(HttpStatus\|int, String)`, `MutableHttpResponse.status(HttpStatus\|int, CharSequence)` and the `HttpResponseFactory.status(HttpStatus\|int, String)` the static helpers delegate to (missing that pair leaves a reachable bypass). `HttpStatus` is an enum and has no reason setter, so those six are the complete set. Each leg verified non-vacuous by a temporary probe calling all six; the rule flags every call by file and line. | architecture guard (ArchUnit + JUnit 5) |
 | `BankEntryEqualityTest` / `StorageEntryEqualityTest` | Value equality of the two entry records: equal when all fields match, different for each single field in turn (timestamp, avatar, amount/quantity, name, quality, transfer type). The window-dedup in `EvergoreDataExtractor` compares entries by value, so this is load-bearing, not record boilerplate. | pure unit |
-| `SeleniumPageSourceTest` | Drives `SeleniumPageSource` against a `RecordingWebDriver` fake, using **injected `Clock` and `Sleeper`** so wait timeouts never touch real time: the driver is quit after a successful scrape **and** after a failing one (try/finally), the scrape failure propagates and is logged, both-fail contract is pinned (scrape failure propagates; both failures logged), and a timeout waits deterministically without real-time dependency. | pure unit (fake driver, injected clock/sleeper) |
+| `SeleniumPageSourceTest` | Drives `SeleniumPageSource` against a `RecordingWebDriver` fake, using **injected `Clock` and `Sleeper`** so wait timeouts never touch real time: the driver is quit after a successful scrape **and** after a failing one (try/finally), the scrape failure propagates and is logged, both-fail contract is pinned (scrape failure propagates; both failures logged), and a timeout waits deterministically without real-time dependency. The login is covered too: the configured username and password reach the login form's fields, and a failing login logs exactly one `warn` that names the login and carries neither credential. | pure unit (fake driver, injected clock/sleeper) |
 | Fakes & stubs | `LoggerSpy` (records info/warn/error messages), `FakeMetaInformationRepository` (in-memory map), `BankRepositoryStub` / `StorageRepositoryStub`, `RecordingWebDriver` (scriptable Selenium `WebDriver`). Hand-written, no mocking framework. | helpers (no `@Test`) |
 
 ## Boot-signal seam
@@ -93,13 +93,15 @@ the reason phrase staying free of the requested value, through the real Netty wr
 `ApiTokenStartupValidator` (startup aborts on an unset/blank token), `RateLimitStartupValidator` (startup aborts on any rate-limit value that would disable the throttle) and `CredentialsStartupValidator` (startup aborts on an unset/blank Evergore login, pinned through a real context boot) ·
 the SPA seam: history fallback vs. 404 in both directions (`SpaHistoryFallbackTest`, `SpaNavigationPathsTest`), bundle packaging (`SpaBundlePackagingTest`) and the bundled SPA painting real API data in a real browser (`DashboardBrowserSmokeTest`) ·
 `BankEntry`/`StorageEntry` value equality (load-bearing for the window dedup) ·
-`SeleniumPageSource`'s driver lifecycle (quit on success and failure, failure logging, deterministic wait timeout via injected clock/sleeper) ·
+`SeleniumPageSource`'s driver lifecycle (quit on success and failure, failure logging, deterministic wait timeout via injected clock/sleeper) and its login against the fake driver (the configured credentials reach the form; a failed login warns without leaking them) ·
 `BootSignalRecorder` (the boot-signal seam itself) ·
 and *indirectly* via `SmokeTest`: controllers, filters, repositories, the job.
 
 **Most important UNTESTED logic:**
-1. **`SeleniumPageSource`'s scrape itself**: navigation, pagination and login against the live site
-   (inherently hard). The driver *lifecycle* around it is covered by `SeleniumPageSourceTest`.
+1. **`SeleniumPageSource`'s scrape itself**: navigation and pagination against the live site
+   (inherently hard), and whether the login the form submits is actually *accepted* there. The driver
+   *lifecycle* and the login *form interaction* around it are covered by `SeleniumPageSourceTest`
+   against the fake driver; only the live round trip is not.
 2. **Repositories**: paging, `getAllFor(avatar)`. Only incidental smoke coverage (`getAllSince` has adapter tests).
 
 ## Migration verification: Gradle / Java 25 / Micronaut 4.10 (2026-06-16)

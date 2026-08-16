@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction.website;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,18 +16,23 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
 final class RecordingWebDriver implements WebDriver {
-	private final Map<String, String> redirects = new HashMap<>();
+	private final Map<By, String> clickTargets = new HashMap<>();
+	private final Map<By, List<String>> sentKeys = new HashMap<>();
 	private RuntimeException navigateFailure;
 	private RuntimeException quitFailure;
 	private String currentUrl = "";
 	private boolean quitCalled;
 
-	void redirect(String from, String to) {
-		redirects.put(from, to);
+	void navigateOnClick(By locator, String target) {
+		clickTargets.put(locator, target);
 	}
 
-	void stopRedirecting() {
-		redirects.clear();
+	void stopNavigating() {
+		clickTargets.clear();
+	}
+
+	List<String> keysSentTo(By locator) {
+		return sentKeys.getOrDefault(locator, List.of());
 	}
 
 	void failOnNavigate(RuntimeException failure) {
@@ -56,7 +62,18 @@ final class RecordingWebDriver implements WebDriver {
 
 	@Override
 	public WebElement findElement(By by) {
-		return new StubWebElement();
+		return new StubWebElement(by, this);
+	}
+
+	private void clicked(By locator) {
+		String target = clickTargets.get(locator);
+		if (target != null) {
+			currentUrl = target;
+		}
+	}
+
+	private void keysSent(By locator, CharSequence... keys) {
+		sentKeys.computeIfAbsent(locator, ignored -> new ArrayList<>()).add(String.join("", keys));
 	}
 
 	@Override
@@ -67,7 +84,7 @@ final class RecordingWebDriver implements WebDriver {
 				if (navigateFailure != null) {
 					throw navigateFailure;
 				}
-				currentUrl = redirects.getOrDefault(url, url);
+				currentUrl = url;
 			}
 
 			@Override
@@ -138,8 +155,18 @@ final class RecordingWebDriver implements WebDriver {
 	}
 
 	private static final class StubWebElement implements WebElement {
+		private final By locator;
+		private final RecordingWebDriver driver;
+
+		private StubWebElement(By locator, RecordingWebDriver driver) {
+			this.locator = locator;
+			this.driver = driver;
+		}
+
 		@Override
-		public void click() {}
+		public void click() {
+			driver.clicked(locator);
+		}
 
 		@Override
 		public String getText() {
@@ -153,7 +180,7 @@ final class RecordingWebDriver implements WebDriver {
 
 		@Override
 		public void sendKeys(CharSequence... keysToSend) {
-			throw new UnsupportedOperationException();
+			driver.keysSent(locator, keysToSend);
 		}
 
 		@Override

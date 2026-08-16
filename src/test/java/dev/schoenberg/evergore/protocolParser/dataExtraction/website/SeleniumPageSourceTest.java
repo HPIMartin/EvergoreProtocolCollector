@@ -15,15 +15,22 @@ import org.openqa.selenium.support.ui.Sleeper;
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageContents;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
+import dev.schoenberg.evergore.protocolParser.helper.config.CredentialsConfiguration;
 import dev.schoenberg.evergore.protocolParser.helper.selenium.Driver;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.SERVER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.openqa.selenium.By.id;
+import static org.openqa.selenium.By.xpath;
 
 class SeleniumPageSourceTest {
+	private static final String USERNAME = "the-username";
+	private static final String PASSWORD = "the-password";
+
 	private final Configuration config = new Configuration();
+	private final CredentialsConfiguration credentials = new CredentialsConfiguration(USERNAME, PASSWORD);
 	private final LoggerSpy logger = new LoggerSpy();
 	private final RecordingWebDriver webDriver = new RecordingWebDriver();
 	private final MutableClock clock = new MutableClock();
@@ -32,8 +39,41 @@ class SeleniumPageSourceTest {
 
 	@BeforeEach
 	void setup() {
-		webDriver.redirect(SERVER + "/login", SERVER + "/" + config.server);
-		tested = new SeleniumPageSource(config, new FakeDriver(webDriver), clock, sleeper, logger);
+		webDriver.navigateOnClick(xpath("//input[@type=\"submit\"]"), SERVER + "/portal");
+		webDriver.navigateOnClick(xpath("//button[@type=\"submit\"]"), SERVER + "/" + config.server);
+		tested = new SeleniumPageSource(config, credentials, new FakeDriver(webDriver), clock, sleeper, logger);
+	}
+
+	@Test
+	void sendsTheConfiguredUsernameToTheLoginForm() {
+		tested.load();
+
+		assertThat(webDriver.keysSentTo(id("nameInput"))).containsExactly(USERNAME);
+	}
+
+	@Test
+	void sendsTheConfiguredPasswordToTheLoginForm() {
+		tested.load();
+
+		assertThat(webDriver.keysSentTo(id("pwInput"))).containsExactly(PASSWORD);
+	}
+
+	@Test
+	void namesTheLoginWhenItFailsSoTheScrapeErrorIsAttributable() {
+		webDriver.stopNavigating();
+
+		catchThrowable(tested::load);
+
+		assertThat(logger.warnMessages()).singleElement().asString().contains("Evergore login failed");
+	}
+
+	@Test
+	void neitherCredentialAppearsInTheLoginFailureWarning() {
+		webDriver.stopNavigating();
+
+		catchThrowable(tested::load);
+
+		assertThat(logger.warnMessages()).noneMatch(message -> message.contains(USERNAME) || message.contains(PASSWORD));
 	}
 
 	@Test
@@ -104,7 +144,7 @@ class SeleniumPageSourceTest {
 
 	@Test
 	void timesOutWithoutTouchingRealTimeWhenUrlNeverMatches() {
-		webDriver.stopRedirecting();
+		webDriver.stopNavigating();
 
 		Throwable thrown = catchThrowable(tested::load);
 

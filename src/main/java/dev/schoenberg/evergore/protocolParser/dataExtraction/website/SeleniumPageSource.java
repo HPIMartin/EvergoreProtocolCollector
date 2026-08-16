@@ -16,12 +16,11 @@ import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageContents;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
+import dev.schoenberg.evergore.protocolParser.helper.config.CredentialsConfiguration;
 import dev.schoenberg.evergore.protocolParser.helper.selenium.Driver;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.LAGER_EINTRAG_START;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.SERVER;
-import static java.nio.file.Files.exists;
-import static java.nio.file.Files.readAllLines;
 import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofMinutes;
 import static java.util.Arrays.asList;
@@ -36,13 +35,15 @@ public class SeleniumPageSource implements PageSource {
 	private static final Duration WAIT_POLL_INTERVAL = ofMillis(500);
 
 	private final Configuration config;
+	private final CredentialsConfiguration credentials;
 	private final Driver driver;
 	private final Clock clock;
 	private final Sleeper sleeper;
 	private final Logger logger;
 
-	public SeleniumPageSource(Configuration config, Driver driver, Clock clock, Sleeper sleeper, Logger logger) {
+	public SeleniumPageSource(Configuration config, CredentialsConfiguration credentials, Driver driver, Clock clock, Sleeper sleeper, Logger logger) {
 		this.config = config;
+		this.credentials = credentials;
 		this.driver = driver;
 		this.clock = clock;
 		this.sleeper = sleeper;
@@ -116,22 +117,16 @@ public class SeleniumPageSource implements PageSource {
 	}
 
 	private void tryToLogin(WebDriver driver) {
-		if (exists(config.credentials)) {
-			try {
-				List<String> content = readAllLines(config.credentials);
-				String username = content.get(0);
-				String password = content.get(1);
+		try {
+			driver.findElement(id("nameInput")).sendKeys(credentials.username());
+			driver.findElement(id("pwInput")).sendKeys(credentials.password());
 
-				driver.findElement(id("nameInput")).sendKeys(username);
-				driver.findElement(id("pwInput")).sendKeys(password);
+			driver.findElement(xpath("//input[@type=\"submit\"]")).click();
 
-				driver.findElement(xpath("//input[@type=\"submit\"]")).click();
-
-				wait(driver, SERVER + "/" + "portal");
-				driver.findElement(xpath("//button[@type=\"submit\"]")).click();
-			} catch (Exception e) {
-				logger.debug("Login attempt failed; continuing unauthenticated: " + e.getMessage());
-			}
+			wait(driver, SERVER + "/" + "portal");
+			driver.findElement(xpath("//button[@type=\"submit\"]")).click();
+		} catch (Exception e) {
+			logger.warn("Evergore login failed; the scrape continues unauthenticated and will find no protocol entries: " + e.getMessage());
 		}
 	}
 
