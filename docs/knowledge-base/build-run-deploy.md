@@ -346,7 +346,7 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
 
    ```sh
    docker stop epc && docker rm epc
-   docker run -d --name epc -p 8080:8080 \
+   docker run -d --name epc -p 80:8080 \
      -e EVERGORE_SECURITY_API_TOKEN=<token> \
      -e EVERGORE_CREDENTIALS_USERNAME=<evergore login> \
      -e EVERGORE_CREDENTIALS_PASSWORD=<evergore password> -e TZ=UTC \
@@ -371,6 +371,14 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      pins it.
    - The fixed `--name` is what makes every command in "Which stand is running?" and in the
      rollback runnable as written.
+   - **The published port is the target machine's choice, and it is not `8080` here.** The home
+     server maps **`-p 80:8080`** (the container always serves on 8080 inside), and the router
+     forwards the external port onto that 80. Read it off the running container **before** replacing
+     it — `docker inspect --type container -f '{{json .HostConfig.PortBindings}}' epc` — because a
+     wrong host port yields a healthy container that every existing URL misses. The same inspection
+     answers the **restart policy** (`{{.HostConfig.RestartPolicy.Name}}`), which this command does
+     not set: the home server runs with `no`, so the service does not come back by itself after a
+     host reboot.
    - **Timeline** (measured): the server answers after ~1.5 s, the first collection starts 30 s
      after startup (`getCollectorInitialDelaySeconds`), extraction takes ~25 s and the evaluation
      ~90 s. So `/health` turns `UP` roughly **2.5 minutes** after the container starts; `UNKNOWN`
@@ -378,10 +386,10 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
 6. **Verify**, in order — `<token>` is the same value passed in step 5:
 
    ```sh
-   curl -s -o /dev/null -w '%{http_code}\n' http://<host>:8080/health          # 200
-   curl -s -o /dev/null -w '%{http_code}\n' http://<host>:8080/                # 200, no token
-   curl -s -o /dev/null -w '%{http_code}\n' "http://<host>:8080/api/v1/avatars?token=<token>"
-   curl -s -o /dev/null -w '%{http_code}\n' http://<host>:8080/api/v1/avatars  # 401
+   curl -s -o /dev/null -w '%{http_code}\n' http://<host>/health          # 200
+   curl -s -o /dev/null -w '%{http_code}\n' http://<host>/                # 200, no token
+   curl -s -o /dev/null -w '%{http_code}\n' "http://<host>/api/v1/avatars?token=<token>"
+   curl -s -o /dev/null -w '%{http_code}\n' http://<host>/api/v1/avatars  # 401
    ```
 
    - `/health` is anonymous. It reports `UNKNOWN` until the first collection finishes, then `UP`;
@@ -406,7 +414,7 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    ```sh
    docker stop epc && docker rm epc
    cp database/temp.sqlite.bak-<yyyymmdd> database/temp.sqlite
-   docker run -d --name epc -p 8080:8080 \
+   docker run -d --name epc -p 80:8080 \
      -e EVERGORE_SECURITY_API_TOKEN=<token> \
      -e EVERGORE_CREDENTIALS_USERNAME=<evergore login> \
      -e EVERGORE_CREDENTIALS_PASSWORD=<evergore password> -e TZ=UTC \
