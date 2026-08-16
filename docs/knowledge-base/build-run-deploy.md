@@ -224,8 +224,9 @@ remains the gate for landing on `main`.
   image tag names its source commit: `git checkout v<that tag>`.
 - **The image name is lowercase and therefore not `rootProject.name`:** a Docker repository name may
   not contain uppercase letters (`invalid tag "protocolParser:…": repository name must be
-  lowercase`), so the image and the container are named `evergore-protocol-collector` after the
-  repository, while the Gradle project and the distribution keep `protocolParser`.
+  lowercase`), so the image is named `evergore-protocol-collector` after the repository, while the
+  Gradle project and the distribution keep `protocolParser` and the container on the home server
+  runs as `epc`.
 - **SemVer, no `-SNAPSHOT`:** nothing is published to an artifact repository, so a snapshot suffix
   would gate nothing. `version` holds the number of the **next** release, and the commit that sets
   that number only *declares* it. One version commit per release.
@@ -266,16 +267,28 @@ remains the gate for landing on `main`.
 ## Which stand is running?
 
 ```sh
-docker inspect -f '{{.Config.Image}}' evergore-protocol-collector
-docker inspect -f '{{index .Config.Labels "org.opencontainers.image.version"}} {{index .Config.Labels "org.opencontainers.image.revision"}}' evergore-protocol-collector
+docker inspect --type container -f '{{.Config.Image}}' epc
+docker inspect --type container -f '{{index .Config.Labels "org.opencontainers.image.version"}} {{index .Config.Labels "org.opencontainers.image.revision"}}' epc
 docker images evergore-protocol-collector    # which tags are available to roll back to
 ```
 
-- The container runs under the fixed name `evergore-protocol-collector` (see the deploy steps), so
-  every command here and in the rollback needs no container id.
+- The container runs under the fixed name **`epc`** on the home server (see the deploy steps), so
+  every command here and in the rollback needs no container id. The image keeps the long name; only
+  the container is short.
+- **`--type container` is not decoration.** `docker inspect` resolves a name against containers
+  **first and images second**, and the home server has an *image* named after the service too. So a
+  typo'd or renamed container does not fail: the command answers about the image and looks like a
+  valid reply. The tells are an **empty** `.Config.Image` and an `.Id` carrying a `sha256:` prefix —
+  a container's `.Id` is bare hex. Cost a snapshot in the `0.1.0` deploy: the `stop` that should have
+  preceded it failed with `No such container` while the inspect before it had "answered".
+- `.Config.Image` is the reference the container was **started with** (a name, possibly untagged);
+  `.Image` is the resolved image **ID**. Read the first to learn what it claims to run, the second
+  when you need something `docker tag` can take.
 - The `revision` label is the authoritative answer: it is a commit sha and survives any tag
   confusion. An image built before the labels existed reports empty labels — that alone dates it as
   pre-`0.1.0`.
+- On a host where the invoking user is not in the `docker` group, every command in this file needs
+  `sudo`.
 
 ## Deploy to the home server
 
@@ -286,15 +299,27 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    `database/temp.sqlite` is the only history. A first run recomputes the meta sums from all stored
    entries and ingests still-visible entries missing from the database, both in place and not
    reversible: `cp database/temp.sqlite database/temp.sqlite.bak-<yyyymmdd>`.
-   - Copy it with the container **stopped**. One file is enough: the database runs in rollback-journal
-     mode, so no `-wal`/`-shm` sidecar outlives a write and there is no second file to keep
-     consistent with it.
+   - Copy it with the container **stopped**, and prove the stop rather than assuming it: `docker stop`
+     must echo the name, and `docker ps --filter name=epc` must come back empty. A `No such container`
+     is easy to read past, and the copy then runs against a live database.
+   - One file is enough: the database runs in rollback-journal mode, so no `-wal`/`-shm` sidecar
+     outlives a write and there is no second file to keep consistent with it.
 2. **Secure the rollback target:** confirm the currently running image carries a tag you can start
-   again (`docker inspect -f '{{.Config.Image}}' evergore-protocol-collector`). If it is untagged,
-   `<none>`, or a tag the next build overwrites, tag it now, e.g.
-   `docker tag <image id> evergore-protocol-collector:pre-0.1.0` — an image the build orphans is
-   still startable by id, but nothing left on the host says what it was. **This is the situation at
-   the `0.1.0` release**, whose predecessor was built before the tagging scheme existed.
+   again (`docker inspect --type container -f '{{.Config.Image}}' epc`). If it is untagged,
+   `<none>`, or a tag the next build overwrites, tag it now — the tag goes into the **repository the
+   image already has**, not the one the next release uses:
+
+   ```sh
+   docker tag "$(docker inspect --type container -f '{{.Image}}' epc)" <its repository>:pre-0.1.0
+   ```
+
+   An image the build orphans is still startable by id, but nothing left on the host says what it
+   was. **This is the situation at the `0.1.0` release**, whose predecessor was built before the
+   tagging scheme existed: it runs as the bare, untagged `evergore_protocol_collector`
+   (**underscores** — the pre-`0.1.0` name), so its rollback tag is
+   `evergore_protocol_collector:pre-0.1.0` while the release image is
+   `evergore-protocol-collector:0.1.0`. The two names sit in different repositories, which is what
+   keeps the new build from overwriting the rollback target.
 3. **Check the mount before starting anything** — both failures below are silent, and both leave a
    *running, healthy-looking* container serving wrong data:
 
@@ -315,8 +340,8 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
 5. **Replace the container:**
 
    ```sh
-   docker stop evergore-protocol-collector && docker rm evergore-protocol-collector
-   docker run -d --name evergore-protocol-collector -p 8080:8080 \
+   docker stop epc && docker rm epc
+   docker run -d --name epc -p 8080:8080 \
      -e EVERGORE_SECURITY_API_TOKEN=<token> \
      -e EVERGORE_CREDENTIALS_USERNAME=<evergore login> \
      -e EVERGORE_CREDENTIALS_PASSWORD=<evergore password> -e TZ=UTC \
@@ -364,12 +389,12 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      so the four checks above cost **four** counted requests and fit in one window. A renewed burst
      while blocked pushes the block out again, so back off after a 429 instead of retrying.
 7. **Rollback** — the previous release's tag (`docker images evergore-protocol-collector` lists the
-   candidates):
+   candidates; the pre-`0.1.0` predecessor lists under `evergore_protocol_collector`, see step 2):
 
    ```sh
-   docker stop evergore-protocol-collector && docker rm evergore-protocol-collector
+   docker stop epc && docker rm epc
    cp database/temp.sqlite.bak-<yyyymmdd> database/temp.sqlite
-   docker run -d --name evergore-protocol-collector -p 8080:8080 \
+   docker run -d --name epc -p 8080:8080 \
      -e EVERGORE_SECURITY_API_TOKEN=<token> \
      -e EVERGORE_CREDENTIALS_USERNAME=<evergore login> \
      -e EVERGORE_CREDENTIALS_PASSWORD=<evergore password> -e TZ=UTC \
