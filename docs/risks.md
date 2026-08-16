@@ -25,7 +25,6 @@
 | Risk | L | I | Countermeasure |
 |------|---|---|----------------|
 | A secret or host detail lands in the public showcase repo | L | H | Hard no-secrets rule (handbook §7), deny-listed secret reads, gitignored `*.local.*`/`zugang.txt`; staged-content scan hooks (backlog G13); leak protocol: purge and rotate |
-| Credentials are baked into the Docker image | M | M | Image stays local-only until env/secret injection lands (backlog C3, before any deployment beyond the home server) |
 | The 2023 `selenium/standalone-firefox:109.0` image carries browser/OS CVEs | M | M | Dependabot `docker` ecosystem plus one refresh pass (backlog H11) |
 
 ## Process: solo, AI-assisted

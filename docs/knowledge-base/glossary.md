@@ -14,7 +14,7 @@
 | Gildenbank / Bank | Guild bank (holds gold) |
 | (Gilden)Lager | Guild storage / warehouse (holds items) |
 | Welt / Server (z.B. "zyrthania") | Game world / server shard |
-| Zugang (`zugang.txt`) | Access / login credentials |
+| Zugang | Access / login credentials (the game account the scraper signs in with) |
 | Impressum | "Imprint": page footer; used by the parser as an end-of-content marker |
 
 ## Transactions
