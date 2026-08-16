@@ -9,7 +9,7 @@ node_modules/
 .project
 /.settings
 zugang.txt
-temp.sqlite
+temp.sqlite*
 memory
 .factorypath
 /.apt_generated/
