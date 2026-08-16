@@ -354,7 +354,11 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    ```
 
    - The token is **mandatory**: a blank or unset value makes the app refuse to boot
-     (`ApiTokenStartupValidator`). Keeping the value stable keeps existing bookmark URLs valid.
+     (`ApiTokenStartupValidator`). Keeping the value stable keeps existing bookmark URLs valid — but
+     stability is not a reason to keep a **known** value. The pre-`0.1.0` stand ran with
+     `secret_token`, the literal placeholder its own paging script shipped inside every detail page,
+     on an internet-reachable instance; it was rotated with this release (`openssl rand -hex 24`).
+     A token that appears in a served page is public, and the bookmarks are the cheaper loss.
    - The **Evergore login is mandatory too**, and for the same reason: either variable unset or
      blank and the app refuses to boot (`CredentialsStartupValidator`), instead of starting healthy
      and scraping logged-out 30 seconds later. Neither value has a default; both must be set
