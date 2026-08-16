@@ -240,6 +240,24 @@ configuration-time `check` fails the build if it is ever set again.
   2026-06-20, 2026-08-01). The check is configuration-time on purpose: `forkEvery` is not a tracked
   task input, so a re-add leaves `test` UP-TO-DATE and an execution-time check would never run.
 
+## Proving a run really executed
+
+The gateway build is **`./gradlew clean build --no-build-cache`**. All three parts are load-bearing:
+
+- **`clean` alone does not force execution.** It deletes the outputs, but `org.gradle.caching` is on
+  and the local build cache is shared by every worktree (build-run-deploy.md), so Gradle restores
+  `:test` and `:frontend:npmTest` `FROM-CACHE` and *rewrites the result XMLs from that entry*.
+  Measured 2026-08-16: exit `0`, a full-looking `build/test-results/test/`, and not a single test
+  executed. Neither the exit code nor the XML count can tell that run from a real one.
+- **`--no-build-cache` is the mechanism that forces execution**; the task lines are the evidence.
+  A run counts only when the lines for `:test` and `:frontend:npmTest` stand **bare** — no
+  `FROM-CACHE`, no `UP-TO-DATE` marker — and the XML count under `build/test-results/test/` is read
+  alongside them.
+- **Why it matters beyond bookkeeping:** the load-sensitive failures (the Vitest worker starvation in
+  [frontend.md](frontend.md), backlog **B20**) only appear when the suites really run, and a cache
+  hit hides exactly that class reliably. Two consecutive runs stay the bar for a load-sensitive
+  change, and a cached second run is not one of them.
+
 ## Testing direction for the rebuild (TDD/BDD)
 
 - **The unit under test is named `tested`** (author decision 2026-08-05), one name across the whole
