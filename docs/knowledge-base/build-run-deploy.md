@@ -326,7 +326,7 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    ```sh
    docker run --rm --entrypoint /bin/bash -v "<host>/database:/database" \
      evergore-protocol-collector:<version> -c 'ls -l /database; touch /database/.probe && \
-     echo DIR-OK && rm /database/.probe; : > /database/temp.sqlite && echo FILE-OK'
+     echo DIR-OK && rm /database/.probe; : >> /database/temp.sqlite && echo FILE-OK'
    ```
 
    - `temp.sqlite` must be **listed**. An empty listing means the mount source did not resolve (see
@@ -334,6 +334,11 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    - `DIR-OK` and `FILE-OK` must both appear. Without them the runtime user (`seluser`, uid 1200)
      cannot write and SQLite fails; fix the mode on the host (`chmod 777 database`,
      `chmod 666 database/temp.sqlite`) rather than starting the app to find out.
+   - **The redirection is `>>`, never `>`.** Both prove the same write permission, but `: >` opens
+     the file with `O_TRUNC` and empties the live database **while printing `FILE-OK`** — the check
+     would destroy exactly what it is run to protect, and the printed line would report success.
+     Measured 2026-08-16 (23 bytes → 0); the version of this step carrying `>` was never run against
+     a populated database. `: >>` opens for append and writes nothing: size and mtime stay put.
 4. **Build the image** on the Docker host (`buildAndRun.bat`, gitignored and machine-specific) with
    the tag and labels from "Versioning & release tags". The build context carries **no credentials**;
    the image is secret-free and the same image runs with any account.
