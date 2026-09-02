@@ -9,8 +9,22 @@ const overviewBody = {
   size: 100,
   totalCount: 2,
   items: [
-    { avatar: 'Calix', bankWithdrawn: 1200, bankDeposited: 3400 },
-    { avatar: 'Erde-Eibenlanze', bankWithdrawn: 0, bankDeposited: 50 },
+    {
+      avatar: 'Calix',
+      bankWithdrawn: 1200,
+      bankDeposited: 3400,
+      storageWithdrawn: 200,
+      storageDeposited: 500,
+      net: 2500,
+    },
+    {
+      avatar: 'Erde-Eibenlanze',
+      bankWithdrawn: 200,
+      bankDeposited: 50,
+      storageWithdrawn: 0,
+      storageDeposited: 0,
+      net: -150,
+    },
   ],
 }
 
@@ -44,6 +58,14 @@ const storageBody = {
   ],
 }
 
+function summaryWithout(field: string): Record<string, unknown> {
+  const complete = overviewBody.items[0] as Record<string, unknown>
+
+  return Object.fromEntries(
+    Object.entries(complete).filter(([name]) => name !== field),
+  )
+}
+
 describe('the overview wire shape', () => {
   it('reads the freshness of the numbers as an instant', () => {
     const overview = overviewFrom(overviewBody)
@@ -70,14 +92,30 @@ describe('the overview wire shape', () => {
     expect(overview.totalCount).toBe(2)
   })
 
-  it('reads each summary with its bank sums', () => {
+  it('reads each summary with all four ledger sums and its net', () => {
     const overview = overviewFrom(overviewBody)
 
     expect(overview.items[0]).toStrictEqual({
       avatar: 'Calix',
       bankWithdrawn: 1200,
       bankDeposited: 3400,
+      storageWithdrawn: 200,
+      storageDeposited: 500,
+      net: 2500,
     })
+  })
+
+  it.each([
+    'bankWithdrawn',
+    'bankDeposited',
+    'storageWithdrawn',
+    'storageDeposited',
+    'net',
+  ])('refuses a summary without its %s', (field) => {
+    const reading = () =>
+      overviewFrom({ ...overviewBody, items: [summaryWithout(field)] })
+
+    expect(reading).toThrow(MalformedResponse)
   })
 
   it('refuses a summary whose sums are strings', () => {
@@ -85,7 +123,14 @@ describe('the overview wire shape', () => {
       overviewFrom({
         ...overviewBody,
         items: [
-          { avatar: 'Calix', bankWithdrawn: '1200', bankDeposited: '3400' },
+          {
+            avatar: 'Calix',
+            bankWithdrawn: '1200',
+            bankDeposited: '3400',
+            storageWithdrawn: 200,
+            storageDeposited: 500,
+            net: 2500,
+          },
         ],
       })
 

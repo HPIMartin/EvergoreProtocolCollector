@@ -14,8 +14,22 @@ const OVERVIEW_BODY = JSON.stringify({
   size: 100,
   totalCount: 2,
   items: [
-    { avatar: 'Calix', bankWithdrawn: 1200, bankDeposited: 3400 },
-    { avatar: 'Erde-Eibenlanze', bankWithdrawn: 0, bankDeposited: 50 },
+    {
+      avatar: 'Calix',
+      bankWithdrawn: 1200,
+      bankDeposited: 3400,
+      storageWithdrawn: 200,
+      storageDeposited: 500,
+      net: 2500,
+    },
+    {
+      avatar: 'Erde-Eibenlanze',
+      bankWithdrawn: 200,
+      bankDeposited: 50,
+      storageWithdrawn: 0,
+      storageDeposited: 0,
+      net: -150,
+    },
   ],
 })
 
@@ -143,8 +157,8 @@ describe('App', () => {
     await shellAt(`/?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
     expect(rowTexts()).toStrictEqual([
-      'Calix1.2003.400öffnen',
-      'Erde-Eibenlanze050öffnen',
+      'Calix3.4001.2005002002.500öffnen',
+      'Erde-Eibenlanze5020000-150öffnen',
     ])
   })
 
@@ -153,8 +167,11 @@ describe('App', () => {
 
     expect(headerTexts()).toStrictEqual([
       'Avatar',
-      'Entnommen',
-      'Eingelagert',
+      'Bank-Einzahlung',
+      'Bank-Auszahlung',
+      'Einlagerung',
+      'Entnahme',
+      'Gildenmehrwert',
       'Lager',
     ])
   })
@@ -189,16 +206,26 @@ describe('App', () => {
     ])
   })
 
-  it('tells what an avatar took out from what it put in', async () => {
+  it('tells what an avatar took out from what it put in, per ledger', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
     expect({
       bankWithdrawn: tonesOf('bankWithdrawn'),
       bankDeposited: tonesOf('bankDeposited'),
+      storageWithdrawn: tonesOf('storageWithdrawn'),
+      storageDeposited: tonesOf('storageDeposited'),
     }).toStrictEqual({
-      bankWithdrawn: ['debit', 'neutral'],
+      bankWithdrawn: ['debit', 'debit'],
       bankDeposited: ['credit', 'credit'],
+      storageWithdrawn: ['debit', 'neutral'],
+      storageDeposited: ['credit', 'neutral'],
     })
+  })
+
+  it('marks a negative guild value as taken from the guild', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect(tonesOf('net')).toStrictEqual(['neutral', 'debit'])
   })
 
   it('carries the token of the deep link into every request', async () => {

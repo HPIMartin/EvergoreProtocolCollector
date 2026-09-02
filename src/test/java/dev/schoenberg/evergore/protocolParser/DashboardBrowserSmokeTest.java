@@ -63,8 +63,8 @@ class DashboardBrowserSmokeTest {
 		List<List<String>> rows = renderedRowsOf("/overview");
 
 		assertThat(rows)
-				.containsExactly(List.of("Aurora", "200", "1.500", "öffnen"), List.of("Boreas", "0", "750", "öffnen"), List.of("Brynja", "0", "0", "öffnen"),
-						List.of("Calix", "300", "0", "öffnen"));
+				.containsExactly(List.of("Aurora", "1.500", "200", "185", "300", "1.185", "öffnen"), List.of("Boreas", "750", "0", "46", "0", "796", "öffnen"),
+						List.of("Brynja", "0", "0", "370", "0", "370", "öffnen"), List.of("Calix", "0", "300", "0", "0", "-300", "öffnen"));
 	}
 
 	@Test

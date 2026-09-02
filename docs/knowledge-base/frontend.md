@@ -116,6 +116,11 @@ Four top-level folders under `frontend/src/`:
   what the column kind reads, and `format.ts` is the one place that turns them into Berlin
   wall-clock. Transfer types are shown as `Einlagerung`/`Entnahme` from the domain, and the headers
   are German, like the sheet's.
+- **The overview's columns are the sheet's, in the sheet's order:** `Bank-Einzahlung`,
+  `Bank-Auszahlung`, `Einlagerung`, `Entnahme` and `Gildenmehrwert` beside the avatar, so a member
+  reconciles his own row against the sheet column by column. Deposits carry the credit tone,
+  withdrawals the debit tone, and the net carries neither until it turns negative, which
+  `SortableTable`'s tone rule already does for every number column.
 - **Navigation lives in the frame and in one table column.** `PageFrame` carries "Übersicht" plus,
   on a ledger, that avatar's "Bank" and "Lager"; the overview's avatar column links into the bank and
   a "Lager" column into the storage. Both go through `Link`, so the shell is never reloaded.

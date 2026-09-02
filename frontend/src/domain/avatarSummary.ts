@@ -4,6 +4,9 @@ export interface AvatarSummary {
   readonly avatar: string
   readonly bankWithdrawn: number
   readonly bankDeposited: number
+  readonly storageWithdrawn: number
+  readonly storageDeposited: number
+  readonly net: number
 }
 
 export interface Overview extends Page<AvatarSummary> {
