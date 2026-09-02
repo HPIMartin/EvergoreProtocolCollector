@@ -228,6 +228,18 @@ a:hover {
   border: 0;
 }
 
+.pagination {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.pagination__next {
+  margin-left: auto;
+}
+
 .status-panel {
   margin: 0;
   padding: var(--space-5) var(--space-4);
