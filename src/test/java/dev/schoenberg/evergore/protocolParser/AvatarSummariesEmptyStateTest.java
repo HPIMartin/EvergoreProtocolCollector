@@ -44,7 +44,9 @@ class AvatarSummariesEmptyStateTest {
 	void theOverviewOfAnUncollectedDatabaseKeepsEveryContractFieldVisible() {
 		String body = Unirest.get("/api/v1/avatars?token=test-token").asString().getBody();
 
-		assertThat(body).isEqualTo("{\"lastUpdated\":null,\"page\":0,\"size\":100,\"totalCount\":0,\"items\":[]}");
+		assertThat(body)
+				.isEqualTo("{\"lastUpdated\":null,\"page\":0,\"size\":100,\"totalCount\":0,"
+						+ "\"totals\":{\"bankWithdrawn\":0,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":0},\"items\":[]}");
 	}
 
 	@MockBean(Configuration.class)

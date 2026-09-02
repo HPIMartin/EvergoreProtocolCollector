@@ -140,7 +140,11 @@ service's only read surface.
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first. |
 
 - **One envelope for every collection**: `page`, `size`, `totalCount`, `items`. `/api/v1/avatars`
-  adds `lastUpdated`; it is the only view that states how fresh the numbers are.
+  adds `lastUpdated` and `totals`; it is the only view that states how fresh the numbers are.
+- **`totals` sums every known avatar, not the served page** (decision 2026-09-02), the reading
+  `totalCount` already has. It carries the same five numbers as a row, so the SPA renders its total
+  row without arithmetic of its own, and neither paging nor a later time window can turn a guild
+  total into a page total behind the reader's back.
 - **Paging**: `?page=` (zero-based, `@Min(0)`) and `?size=` (default 100, `1..1000`); a violation is
   a **400**, not a clamp, so a client bug stays visible. `totalCount` is the unpaged total, so the
   SPA can size its navigation instead of inferring the end from a short page.

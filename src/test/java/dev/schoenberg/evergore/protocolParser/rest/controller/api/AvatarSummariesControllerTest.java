@@ -75,6 +75,43 @@ class AvatarSummariesControllerTest {
 		assertThat(summary.net()).isEqualTo(1185);
 	}
 
+	@Test
+	void totalsEveryKnownAvatarRatherThanOnlyTheAvatarsOfTheServedPage() {
+		bankRepo.seedAvatars(List.of("Aurora", "Calix"));
+		metaRepo.put(getBankPlacement("Aurora"), 1500L);
+		metaRepo.put(getBankPlacement("Calix"), 500L);
+
+		AvatarSummaryPage page = tested.summaries(0, 1);
+
+		assertThat(page.items()).hasSize(1);
+		assertThat(page.totals().bankDeposited()).isEqualTo(2000);
+	}
+
+	@Test
+	void totalsTheWholeGoldNetOfEveryKnownAvatarAcrossBothLedgers() {
+		bankRepo.seedAvatars(List.of("Aurora"));
+		storageRepo.seedAvatars(List.of("Brynja"));
+		metaRepo.put(getBankPlacement("Aurora"), 1500L);
+		metaRepo.put(getStorageWithdrawl("Aurora"), 300.0);
+		metaRepo.put(getStoragePlacement("Brynja"), 370.08);
+
+		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
+
+		assertThat(page.totals().net()).isEqualTo(1570);
+	}
+
+	@Test
+	void totalsTheRoundedContributionsRatherThanRoundingTheGuildsTrueSum() {
+		bankRepo.seedAvatars(List.of("Aurora", "Boreas", "Calla"));
+		metaRepo.put(getStoragePlacement("Aurora"), 100.4);
+		metaRepo.put(getStoragePlacement("Boreas"), 100.4);
+		metaRepo.put(getStoragePlacement("Calla"), 100.4);
+
+		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
+
+		assertThat(page.totals().storageDeposited()).isEqualTo(300);
+	}
+
 	private static List<String> avatarsOf(AvatarSummaryPage page) {
 		return page.items().stream().map(AvatarSummary::avatar).toList();
 	}

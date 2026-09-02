@@ -135,6 +135,24 @@ class ProtocolEvaluationAcceptanceTest {
 	}
 
 	@Test
+	void theSummariesCarryTheGuildWideTotalsOverEveryAvatarOfBothLedgers() {
+		JSONObject totals = new JSONObject(get("/api/v1/avatars").getBody()).getJSONObject("totals");
+
+		assertThat(totals.getLong("bankDeposited")).isEqualTo(2250);
+		assertThat(totals.getLong("bankWithdrawn")).isEqualTo(500);
+		assertThat(totals.getLong("storageDeposited")).isEqualTo(601);
+		assertThat(totals.getLong("storageWithdrawn")).isEqualTo(300);
+		assertThat(totals.getLong("net")).isEqualTo(2051);
+	}
+
+	@Test
+	void theGuildWideTotalsStayTheSameOnAPageThatShowsTwoAvatars() {
+		JSONObject totals = new JSONObject(get("/api/v1/avatars?page=1&size=2").getBody()).getJSONObject("totals");
+
+		assertThat(totals.getLong("net")).isEqualTo(2051);
+	}
+
+	@Test
 	void aBankPageBeyondTheLastEntryIsEmptyButStillReportsTheTotalCount() {
 		HttpResponse<String> response = get("/api/v1/avatars/Aurora/bank?page=9&size=2");
 

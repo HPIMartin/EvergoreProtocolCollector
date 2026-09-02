@@ -21,6 +21,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.Contrib
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationRepository;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummary;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummaryPage;
+import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.GuildTotals;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
@@ -56,7 +57,13 @@ public class AvatarSummariesController {
 		logger.debug("Providing information for " + guild.size() + " avatars.");
 
 		List<AvatarSummary> items = guild.stream().skip(window.offset()).limit(window.size()).map(AvatarSummariesController::summaryOf).toList();
-		return new AvatarSummaryPage(lastUpdated(), window.page(), window.size(), guild.size(), items);
+		return new AvatarSummaryPage(lastUpdated(), window.page(), window.size(), guild.size(), totalsOf(guild), items);
+	}
+
+	private static GuildTotals totalsOf(List<AvatarContribution> guild) {
+		Contribution total = Contribution.sumOf(guild.stream().map(avatar -> avatar.contribution().inWholeGold()).toList());
+
+		return new GuildTotals(total.bankWithdrawn(), total.bankDeposited(), (long) total.storageWithdrawn(), (long) total.storageDeposited(), (long) total.net());
 	}
 
 	private static AvatarSummary summaryOf(AvatarContribution avatar) {
