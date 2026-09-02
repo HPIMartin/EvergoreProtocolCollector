@@ -113,8 +113,18 @@ This makes evaluation **idempotent** (a second run yields identical sums) and **
 correctly from the stored entries regardless of what a prior failed run wrote).
 
 This maps directly to the Google Sheet's columns 1–4 (see [02-google-sheet.md](google-sheet.md)).
-The net **erzeugter Gildenmehrwert** (col 5) is `placement − withdrawl` summed across bank + storage,
-derivable but not yet stored as a single metric.
+Column 5, the net **erzeugter Gildenmehrwert**, is **derived on the read side and never stored**
+(decision 2026-09-02): a fifth meta key would persist what its four summands already say and drift
+from them on any partial recompute.
+
+- `businessLogic/contribution/Contribution` carries the four sums and answers
+  `net() = bankDeposited − bankWithdrawn + storageDeposited − storageWithdrawn`, the formula the
+  sheet's own column 5 was verified against.
+- `AvatarContribution` names the avatar behind one such record; `Contribution.sumOf` adds a
+  collection of contributions into the guild's own, which is what the overview's total row shows.
+- `businessLogic/contribution/AvatarContributions` assembles one record per **known** avatar
+  (`KnownAvatars`, German collation) out of the stored keys, a missing key counting as zero, so an
+  avatar who only ever moved items keeps his row.
 
 ## Identity / equality quirks
 
