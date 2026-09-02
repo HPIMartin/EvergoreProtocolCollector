@@ -2,8 +2,8 @@ import type { Page } from './page.ts'
 
 export interface AvatarSummary {
   readonly avatar: string
-  readonly withdrawn: number
-  readonly deposited: number
+  readonly bankWithdrawn: number
+  readonly bankDeposited: number
 }
 
 export interface Overview extends Page<AvatarSummary> {

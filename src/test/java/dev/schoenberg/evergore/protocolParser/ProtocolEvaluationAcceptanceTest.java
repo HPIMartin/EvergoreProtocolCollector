@@ -73,8 +73,8 @@ class ProtocolEvaluationAcceptanceTest {
 		assertThat(body.getInt("size")).isEqualTo(100);
 		assertThat(body.getLong("totalCount")).isEqualTo(4);
 		assertThat(body.getJSONArray("items").toString())
-				.isEqualTo("[{\"avatar\":\"Aurora\",\"withdrawn\":200,\"deposited\":1500}," + "{\"avatar\":\"Boreas\",\"withdrawn\":0,\"deposited\":750},"
-						+ "{\"avatar\":\"Brynja\",\"withdrawn\":0,\"deposited\":0}," + "{\"avatar\":\"Calix\",\"withdrawn\":300,\"deposited\":0}]");
+				.isEqualTo("[{\"avatar\":\"Aurora\",\"bankWithdrawn\":200,\"bankDeposited\":1500}," + "{\"avatar\":\"Boreas\",\"bankWithdrawn\":0,\"bankDeposited\":750},"
+						+ "{\"avatar\":\"Brynja\",\"bankWithdrawn\":0,\"bankDeposited\":0}," + "{\"avatar\":\"Calix\",\"bankWithdrawn\":300,\"bankDeposited\":0}]");
 	}
 
 	@Test

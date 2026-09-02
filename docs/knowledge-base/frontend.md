@@ -135,7 +135,7 @@ service's only read surface.
 
 | Route | Answers |
 |-------|---------|
-| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, `withdrawn`, `deposited`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
+| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, `bankWithdrawn`, `bankDeposited`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
 | `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first. |
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first. |
 

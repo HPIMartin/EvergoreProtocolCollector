@@ -62,18 +62,18 @@ function columnsLinkedWith(
       href: (summary) => hrefOf(bankPath(summary.avatar), token),
     },
     {
-      key: 'withdrawn',
+      key: 'bankWithdrawn',
       header: 'Entnommen',
       kind: 'number',
       tone: 'debit',
-      value: (summary) => summary.withdrawn,
+      value: (summary) => summary.bankWithdrawn,
     },
     {
-      key: 'deposited',
+      key: 'bankDeposited',
       header: 'Eingelagert',
       kind: 'number',
       tone: 'credit',
-      value: (summary) => summary.deposited,
+      value: (summary) => summary.bankDeposited,
     },
     {
       key: 'storage',

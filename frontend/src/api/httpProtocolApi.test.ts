@@ -14,7 +14,7 @@ const OVERVIEW_BODY = JSON.stringify({
   page: 0,
   size: 100,
   totalCount: 1,
-  items: [{ avatar: 'Calix', withdrawn: 1200, deposited: 3400 }],
+  items: [{ avatar: 'Calix', bankWithdrawn: 1200, bankDeposited: 3400 }],
 })
 
 const BANK_BODY = JSON.stringify({

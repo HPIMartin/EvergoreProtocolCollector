@@ -44,8 +44,8 @@ function summaryFrom(item: unknown): AvatarSummary {
 
   return {
     avatar: stringFrom(summary, 'avatar'),
-    withdrawn: numberFrom(summary, 'withdrawn'),
-    deposited: numberFrom(summary, 'deposited'),
+    bankWithdrawn: numberFrom(summary, 'bankWithdrawn'),
+    bankDeposited: numberFrom(summary, 'bankDeposited'),
   }
 }
 

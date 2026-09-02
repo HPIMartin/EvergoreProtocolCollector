@@ -404,7 +404,7 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    - `/` serves the SPA shell without a token (~480 bytes, `text/html`, carrying `<div id="root">`
      and the bundle `<script>`); the SPA then fetches the API with the token from its URL.
    - `/api/v1/avatars?token=…` answers `{lastUpdated, page, size, totalCount, items[]}` with
-     `{avatar, deposited, withdrawn}` per item. Check `lastUpdated` and `totalCount` against what
+     `{avatar, bankDeposited, bankWithdrawn}` per item. Check `lastUpdated` and `totalCount` against what
      the previous stand served — that is the cheapest proof the mounted database is the intended
      one and not an empty new file.
    - **Rate limit:** 30 requests per 10 s per client IP, then a 1-minute block. Nothing is exempt,

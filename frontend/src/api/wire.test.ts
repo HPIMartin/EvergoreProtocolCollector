@@ -9,8 +9,8 @@ const overviewBody = {
   size: 100,
   totalCount: 2,
   items: [
-    { avatar: 'Calix', withdrawn: 1200, deposited: 3400 },
-    { avatar: 'Erde-Eibenlanze', withdrawn: 0, deposited: 50 },
+    { avatar: 'Calix', bankWithdrawn: 1200, bankDeposited: 3400 },
+    { avatar: 'Erde-Eibenlanze', bankWithdrawn: 0, bankDeposited: 50 },
   ],
 }
 
@@ -70,13 +70,13 @@ describe('the overview wire shape', () => {
     expect(overview.totalCount).toBe(2)
   })
 
-  it('reads each summary with its withdrawn and deposited sums', () => {
+  it('reads each summary with its bank sums', () => {
     const overview = overviewFrom(overviewBody)
 
     expect(overview.items[0]).toStrictEqual({
       avatar: 'Calix',
-      withdrawn: 1200,
-      deposited: 3400,
+      bankWithdrawn: 1200,
+      bankDeposited: 3400,
     })
   })
 
@@ -84,7 +84,9 @@ describe('the overview wire shape', () => {
     const reading = () =>
       overviewFrom({
         ...overviewBody,
-        items: [{ avatar: 'Calix', withdrawn: '1200', deposited: '3400' }],
+        items: [
+          { avatar: 'Calix', bankWithdrawn: '1200', bankDeposited: '3400' },
+        ],
       })
 
     expect(reading).toThrow(MalformedResponse)

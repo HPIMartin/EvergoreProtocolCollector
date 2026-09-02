@@ -14,8 +14,8 @@ const OVERVIEW_BODY = JSON.stringify({
   size: 100,
   totalCount: 2,
   items: [
-    { avatar: 'Calix', withdrawn: 1200, deposited: 3400 },
-    { avatar: 'Erde-Eibenlanze', withdrawn: 0, deposited: 50 },
+    { avatar: 'Calix', bankWithdrawn: 1200, bankDeposited: 3400 },
+    { avatar: 'Erde-Eibenlanze', bankWithdrawn: 0, bankDeposited: 50 },
   ],
 })
 
@@ -193,11 +193,11 @@ describe('App', () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
     expect({
-      withdrawn: tonesOf('withdrawn'),
-      deposited: tonesOf('deposited'),
+      bankWithdrawn: tonesOf('bankWithdrawn'),
+      bankDeposited: tonesOf('bankDeposited'),
     }).toStrictEqual({
-      withdrawn: ['debit', 'neutral'],
-      deposited: ['credit', 'credit'],
+      bankWithdrawn: ['debit', 'neutral'],
+      bankDeposited: ['credit', 'credit'],
     })
   })
 
