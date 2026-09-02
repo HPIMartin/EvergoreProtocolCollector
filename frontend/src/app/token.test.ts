@@ -50,4 +50,28 @@ describe('token', () => {
 
     expect(href).toBe('/overview?token=a%26b%3Dc')
   })
+
+  it('omits the page when none is given, unchanged from before paging existed', () => {
+    const href = hrefOf('/avatars/Calix/bank', 'a-test-token')
+
+    expect(href).toBe('/avatars/Calix/bank?token=a-test-token')
+  })
+
+  it('omits the page when it is the first page, for a clean URL', () => {
+    const href = hrefOf('/avatars/Calix/bank', 'a-test-token', 0)
+
+    expect(href).toBe('/avatars/Calix/bank?token=a-test-token')
+  })
+
+  it('names a page beyond the first in the built link', () => {
+    const href = hrefOf('/avatars/Calix/bank', 'a-test-token', 2)
+
+    expect(href).toBe('/avatars/Calix/bank?token=a-test-token&page=2')
+  })
+
+  it('names a page beyond the first in a link built without a token', () => {
+    const href = hrefOf('/avatars/Calix/bank', null, 2)
+
+    expect(href).toBe('/avatars/Calix/bank?page=2')
+  })
 })
