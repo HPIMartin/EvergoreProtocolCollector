@@ -176,8 +176,8 @@ describe('App', () => {
     await shellAt(`/?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
     expect(rowTexts()).toStrictEqual([
-      'Calix3.4001.2005002002.50005.08.2026 12:1504.08.2026 11:30öffnen',
-      'Erde-Eibenlanze5020000-15031.07.2026 23:05–öffnen',
+      'Calix3.4001.2005002002.50005.08.2026 12:1504.08.2026 11:30',
+      'Erde-Eibenlanze5020000-15031.07.2026 23:05–',
     ])
   })
 
@@ -193,7 +193,6 @@ describe('App', () => {
       'Gildenmehrwert',
       'Letzte Lageraktivität',
       'Letzte Bankaktivität',
-      'Lager',
     ])
   })
 
@@ -247,7 +246,7 @@ describe('App', () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
     expect(screen.getByTestId('total-row').textContent).toBe(
-      'Gilde3.4501.4005002002.350–––',
+      'Gilde3.4501.4005002002.350––',
     )
   })
 
@@ -706,7 +705,9 @@ describe('App', () => {
     await shellAt(`/overview?token=${TOKEN}`, server)
 
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('link', { name: 'öffnen' })[0])
+      fireEvent.click(
+        screen.getAllByRole('link', { name: '05.08.2026 12:15' })[0],
+      )
     })
 
     expect({

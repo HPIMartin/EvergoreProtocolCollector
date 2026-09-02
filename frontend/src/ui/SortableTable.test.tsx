@@ -328,6 +328,62 @@ describe('SortableTable without rows', () => {
   })
 })
 
+describe('SortableTable timestamp links', () => {
+  afterEach(cleanup)
+
+  const linkedTimestamps: readonly Column<Member>[] = [
+    {
+      key: 'lastActivity',
+      header: 'Letzte Aktivität',
+      kind: 'timestamp',
+      value: (member) => member.lastActivity,
+      href: (member) => `/avatars/${member.name}/storage`,
+    },
+  ]
+
+  it('renders a timestamp as a link to the ledger behind it', () => {
+    renderTable({ columns: linkedTimestamps })
+
+    const links = screen
+      .getAllByRole('link')
+      .map(
+        (link) =>
+          `${link.textContent ?? ''} ${link.getAttribute('href') ?? ''}`,
+      )
+
+    expect(links).toStrictEqual([
+      '10.07.2022 14:00 /avatars/Zoe/storage',
+      '10.07.2022 12:00 /avatars/Ärger/storage',
+      '10.07.2022 16:00 /avatars/Bambor/storage',
+    ])
+  })
+
+  it('links no missing timestamp, because nothing happened there', () => {
+    renderTable({
+      columns: linkedTimestamps,
+      rows: [{ name: 'alessia', deposited: null, lastActivity: null }],
+    })
+
+    expect({
+      links: screen.queryAllByRole('link').length,
+      shown: screen.getByTestId('cell-lastActivity').textContent,
+    }).toStrictEqual({ links: 0, shown: '–' })
+  })
+
+  it('still sorts a linked timestamp column by its instant', () => {
+    renderTable({ columns: linkedTimestamps })
+
+    fireEvent.click(headerOf('Letzte Aktivität'))
+
+    expect(cellsOf('lastActivity')).toStrictEqual([
+      '10.07.2022 12:00',
+      '10.07.2022 14:00',
+      '10.07.2022 16:00',
+      '–',
+    ])
+  })
+})
+
 describe('SortableTable total row', () => {
   afterEach(cleanup)
 

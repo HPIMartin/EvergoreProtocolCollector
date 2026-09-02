@@ -31,6 +31,7 @@ export type Column<Row> =
   | (ColumnHead & {
       readonly kind: 'timestamp'
       readonly value: (row: Row) => string | null
+      readonly href?: (row: Row) => string
     })
   | (ColumnHead & {
       readonly kind: 'link'
@@ -134,10 +135,13 @@ const cellOf = <Row,>(column: Column<Row>, row: Row): Cell => {
     }
     case 'timestamp': {
       const timestamp = column.value(row)
+      if (timestamp === null) {
+        return { text: missingValue, tone: 'neutral', href: null }
+      }
       return {
-        text: timestamp === null ? missingValue : formatTimestamp(timestamp),
+        text: formatTimestamp(timestamp),
         tone: 'neutral',
-        href: null,
+        href: column.href?.(row) ?? null,
       }
     }
     case 'link':

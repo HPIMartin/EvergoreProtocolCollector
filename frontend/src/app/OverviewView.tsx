@@ -111,19 +111,14 @@ function columnsLinkedWith(
       header: 'Letzte Lageraktivität',
       kind: 'timestamp',
       value: (summary) => summary.lastStorageActivity?.toISOString() ?? null,
+      href: (summary) => hrefOf(storagePath(summary.avatar), token),
     },
     {
       key: 'lastBankActivity',
       header: 'Letzte Bankaktivität',
       kind: 'timestamp',
       value: (summary) => summary.lastBankActivity?.toISOString() ?? null,
-    },
-    {
-      key: 'storage',
-      header: 'Lager',
-      kind: 'link',
-      value: () => 'öffnen',
-      href: (summary) => hrefOf(storagePath(summary.avatar), token),
+      href: (summary) => hrefOf(bankPath(summary.avatar), token),
     },
   ]
 }
