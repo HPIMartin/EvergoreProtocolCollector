@@ -1,6 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic;
 
+import java.text.Collator;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Stream;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
@@ -16,6 +18,10 @@ public class KnownAvatars {
 	}
 
 	public List<String> sortedByName() {
-		return Stream.concat(bankRepo.getAllDifferentAvatars().stream(), storageRepo.getAllDifferentAvatars().stream()).distinct().sorted().toList();
+		return Stream
+				.concat(bankRepo.getAllDifferentAvatars().stream(), storageRepo.getAllDifferentAvatars().stream())
+				.distinct()
+				.sorted(Collator.getInstance(Locale.GERMANY)::compare)
+				.toList();
 	}
 }

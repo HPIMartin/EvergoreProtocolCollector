@@ -45,6 +45,16 @@ class KnownAvatarsTest {
 	}
 
 	@Test
+	void sortsAnUmlautNameWhereGermanCollationPutsItRatherThanBehindZ() {
+		bankRepo.seedAvatars(List.of("Zorn", "Ärger", "Anna"));
+		storageRepo.seedAvatars(List.of());
+
+		List<String> known = tested.sortedByName();
+
+		assertThat(known).containsExactly("Anna", "Ärger", "Zorn");
+	}
+
+	@Test
 	void namesNobodyWhileNeitherLedgerHasRows() {
 		bankRepo.seedAvatars(List.of());
 		storageRepo.seedAvatars(List.of());
