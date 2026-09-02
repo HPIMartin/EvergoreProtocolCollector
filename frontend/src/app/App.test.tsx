@@ -80,6 +80,20 @@ function serving(answerFor: (path: string) => Answer): FakeServer {
   }
 }
 
+function servingByUrl(answerFor: (url: string) => Answer): FakeServer {
+  const askedFor: string[] = []
+
+  return {
+    askedFor,
+    get: (url) => {
+      askedFor.push(url)
+      const answer = answerFor(url)
+
+      return Promise.resolve(new Response(answer.body, answer))
+    },
+  }
+}
+
 function alwaysServing(status: number, body: string | null): FakeServer {
   return serving(() => ({ status, body }))
 }
@@ -441,6 +455,138 @@ describe('App', () => {
     expect(
       screen.queryByRole('table', { name: '1 von 340 Einträgen' }),
     ).not.toBeNull()
+  })
+
+  it('offers the next page when more entries follow, but no way back on the first page', async () => {
+    const body = JSON.stringify({
+      page: 0,
+      size: 100,
+      totalCount: 340,
+      items: [
+        {
+          timestamp: '2026-08-05T10:15:00Z',
+          avatar: 'Calix',
+          amount: 500,
+          transferType: 'DEPOSIT',
+        },
+      ],
+    })
+
+    await shellAt(
+      `/avatars/Calix/bank?token=${TOKEN}`,
+      alwaysServing(200, body),
+    )
+
+    expect({
+      previous: screen.queryByTestId('pagination-previous'),
+      next: screen.getByTestId('pagination-next').getAttribute('href'),
+    }).toStrictEqual({
+      previous: null,
+      next: '/avatars/Calix/bank?token=a-test-token&page=1',
+    })
+  })
+
+  it('offers no next page once the last page is reached', async () => {
+    const body = JSON.stringify({
+      page: 3,
+      size: 100,
+      totalCount: 340,
+      items: [
+        {
+          timestamp: '2026-08-05T10:15:00Z',
+          avatar: 'Calix',
+          amount: 500,
+          transferType: 'DEPOSIT',
+        },
+      ],
+    })
+
+    await shellAt(
+      `/avatars/Calix/bank?token=${TOKEN}&page=3`,
+      alwaysServing(200, body),
+    )
+
+    expect({
+      previous: screen.getByTestId('pagination-previous').getAttribute('href'),
+      next: screen.queryByTestId('pagination-next'),
+    }).toStrictEqual({
+      previous: '/avatars/Calix/bank?token=a-test-token&page=2',
+      next: null,
+    })
+  })
+
+  it('offers no next page when the last page exactly fills the count', async () => {
+    const body = JSON.stringify({
+      page: 3,
+      size: 100,
+      totalCount: 400,
+      items: [
+        {
+          timestamp: '2026-08-05T10:15:00Z',
+          avatar: 'Calix',
+          amount: 500,
+          transferType: 'DEPOSIT',
+        },
+      ],
+    })
+
+    await shellAt(
+      `/avatars/Calix/bank?token=${TOKEN}&page=3`,
+      alwaysServing(200, body),
+    )
+
+    expect(screen.queryByTestId('pagination-next')).toBeNull()
+  })
+
+  it('follows the next-page link to a bookmarkable address and re-fetches', async () => {
+    const server = servingByUrl((url) => {
+      const body = url.includes('page=1')
+        ? JSON.stringify({
+            page: 1,
+            size: 100,
+            totalCount: 340,
+            items: [
+              {
+                timestamp: '2026-08-05T10:15:00Z',
+                avatar: 'Calix',
+                amount: 700,
+                transferType: 'WITHDRAWAL',
+              },
+            ],
+          })
+        : JSON.stringify({
+            page: 0,
+            size: 100,
+            totalCount: 340,
+            items: [
+              {
+                timestamp: '2026-08-05T10:15:00Z',
+                avatar: 'Calix',
+                amount: 500,
+                transferType: 'DEPOSIT',
+              },
+            ],
+          })
+
+      return { status: 200, body }
+    })
+
+    await shellAt(`/avatars/Calix/bank?token=${TOKEN}`, server)
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('pagination-next'))
+    })
+
+    expect({
+      shown: rowTexts(),
+      address: window.location.pathname + window.location.search,
+      lastAsked: server.askedFor.at(-1),
+    }).toStrictEqual({
+      shown: ['05.08.2026 12:15Calix700Entnahme'],
+      address: '/avatars/Calix/bank?token=a-test-token&page=1',
+      lastAsked:
+        '/api/v1/avatars/Calix/bank?token=a-test-token&page=1&size=100',
+    })
   })
 
   it('follows an avatar link to that avatar ledger without leaving the shell', async () => {

@@ -2,9 +2,10 @@ import type { ReactNode } from 'react'
 
 import type { Ledger, Page } from '../domain'
 import type { Column } from '../ui'
-import { SortableTable, StatusPanel } from '../ui'
+import { Pagination, SortableTable, StatusPanel } from '../ui'
 
 import { LoadedView } from './LoadedView.tsx'
+import { hrefOf } from './token.ts'
 import type { Load } from './useLoad.ts'
 
 export interface LedgerViewProps<E> {
@@ -22,6 +23,9 @@ export function LedgerView<E>({
   avatar,
   load,
   columns,
+  token,
+  pathOf,
+  onFollow,
 }: LedgerViewProps<E>) {
   return (
     <section>
@@ -29,7 +33,8 @@ export function LedgerView<E>({
       <LoadedView load={load}>
         {(ledger) =>
           ledger.accept<ReactNode>({
-            entries: (page) => entryTable(page, columns, avatar),
+            entries: (page) =>
+              entryTable(page, columns, avatar, token, pathOf, onFollow),
             unknownAvatar: (name) => (
               <StatusPanel
                 variant="error"
@@ -47,14 +52,30 @@ function entryTable<E>(
   page: Page<E>,
   columns: readonly Column<E>[],
   avatar: string,
+  token: string | null,
+  pathOf: (avatar: string) => string,
+  onFollow: (href: string) => void,
 ): ReactNode {
   return (
-    <SortableTable
-      caption={`${String(page.items.length)} von ${String(page.totalCount)} Einträgen`}
-      columns={columns}
-      rows={page.items}
-      rowKey={(entry) => String(page.items.indexOf(entry))}
-      emptyMessage={`Für ${avatar} ist hier kein Vorgang gespeichert.`}
-    />
+    <>
+      <SortableTable
+        caption={`${String(page.items.length)} von ${String(page.totalCount)} Einträgen`}
+        columns={columns}
+        rows={page.items}
+        rowKey={(entry) => String(page.items.indexOf(entry))}
+        emptyMessage={`Für ${avatar} ist hier kein Vorgang gespeichert.`}
+      />
+      <Pagination
+        previousHref={
+          page.page === 0 ? null : hrefOf(pathOf(avatar), token, page.page - 1)
+        }
+        nextHref={
+          (page.page + 1) * page.size >= page.totalCount
+            ? null
+            : hrefOf(pathOf(avatar), token, page.page + 1)
+        }
+        onFollow={onFollow}
+      />
+    </>
   )
 }
