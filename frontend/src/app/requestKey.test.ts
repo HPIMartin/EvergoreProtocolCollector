@@ -43,4 +43,18 @@ describe('requestKey', () => {
 
     expect(asked).toBe(requestKeyOf('bank', 'Calix', 'a-test-token'))
   })
+
+  it('tells two pages of the same ledger apart', () => {
+    const first = requestKeyOf('bank', 'Calix', 'a-test-token', 0)
+    const second = requestKeyOf('bank', 'Calix', 'a-test-token', 1)
+
+    expect(first).not.toBe(second)
+  })
+
+  it('treats an omitted page as the first page', () => {
+    const omitted = requestKeyOf('bank', 'Calix', 'a-test-token')
+    const explicit = requestKeyOf('bank', 'Calix', 'a-test-token', 0)
+
+    expect(omitted).toBe(explicit)
+  })
 })
