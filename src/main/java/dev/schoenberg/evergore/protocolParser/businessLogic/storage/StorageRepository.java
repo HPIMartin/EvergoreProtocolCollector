@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser.businessLogic.storage;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 public interface StorageRepository {
 	void add(List<StorageEntry> newEntries);
@@ -15,4 +16,6 @@ public interface StorageRepository {
 	List<StorageEntry> getAllSince(Instant timestampInclusive);
 
 	List<String> getAllDifferentAvatars();
+
+	Map<String, Instant> latestTimestampPerAvatar();
 }

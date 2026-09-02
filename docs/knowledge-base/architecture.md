@@ -58,7 +58,18 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 - **Business logic (framework-free):** ports `BankRepository`, `StorageRepository`,
   `MetaInformationRepository` · records `BankEntry`, `StorageEntry`, `MetaInformation` ·
   `TransferType` + visitor · `MetaInformationKey` (typed: `DateTimeKey`/`LongKey`/`DoubleKey`) ·
-  `Constants`.
+  `contribution/{Contribution,AvatarContribution,AvatarContributions}` (the four ledger sums, their
+  net and the guild total, assembled per known avatar) · `Constants`.
+- **Last activity comes from the ledgers, not from the meta store** (decision 2026-09-02): both
+  ledger ports answer `latestTimestampPerAvatar()` with **one grouped query** per ledger
+  (`MAX(timeStamp) GROUP BY avatar`), so the overview materializes one row per avatar instead of one
+  per ledger entry. SQLite still scans the table for it: neither `avatar` nor `timeStamp` is indexed,
+  and adding an index is DDL that waits on the migration framework (**D10**), so this is the
+  remaining scaling ceiling of the read path. The domain types are real instants, so nothing here reintroduces
+  `MetaInformationKey.DateTimeKey`'s ambiguity and no key family joins the pending schema migration.
+  The ledger's **storage** format is a separate matter: it persists wall-clock text, so these
+  columns inherit **D14**'s DST fall-back defect until the epoch/UTC format lands, and today only
+  the container's UTC default keeps them right.
 - **Domain (framework-free):** `Entry`, `Item`, `EvergoreItem` (catalog + value math).
 - **REST:** `controller/api/*` (the JSON API under `/api/v1`: `AvatarSummariesController`,
   `AvatarEntriesController`, and `controller/api/wire/*` holding the published contract types plus

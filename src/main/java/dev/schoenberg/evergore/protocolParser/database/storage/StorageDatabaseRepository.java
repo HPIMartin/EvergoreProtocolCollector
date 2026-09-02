@@ -2,8 +2,10 @@ package dev.schoenberg.evergore.protocolParser.database.storage;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.dao.GenericRawResults;
 import com.j256.ormlite.support.ConnectionSource;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
@@ -19,6 +21,7 @@ import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDat
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static java.sql.Timestamp.from;
+import static java.util.stream.Collectors.toMap;
 
 public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> implements StorageRepository {
 	private final Dao<StorageDatabaseEntry, String> storage;
@@ -76,6 +79,21 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	public List<String> getAllDifferentAvatars() {
 		List<StorageDatabaseEntry> avatars = silentThrow(() -> storage.queryBuilder().distinct().selectColumns(AVATAR_COLUMN).query());
 		return avatars.stream().map(bde -> bde.avatar).toList();
+	}
+
+	@Override
+	public Map<String, Instant> latestTimestampPerAvatar() {
+		String newestPerAvatar = "SELECT " + AVATAR_COLUMN + ", MAX(" + TIMESTAMP_COLUMN + ") AS " + TIMESTAMP_COLUMN + " FROM " + StorageDatabaseEntry.TABLE + " GROUP BY "
+				+ AVATAR_COLUMN;
+
+		return silentThrow(() -> {
+			GenericRawResults<StorageDatabaseEntry> rows = storage.queryRaw(newestPerAvatar, storage.getRawRowMapper());
+			try {
+				return rows.getResults().stream().collect(toMap(row -> row.avatar, row -> row.timeStamp.toInstant()));
+			} finally {
+				rows.close();
+			}
+		});
 	}
 
 	private List<StorageEntry> convert(List<StorageDatabaseEntry> dbEntries) {

@@ -6,6 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.util.Comparator.naturalOrder;
+import static java.util.stream.Collectors.toMap;
+
 public class BankRepositoryStub implements BankRepository {
 	private final Map<String, List<BankEntry>> entriesByAvatar = new HashMap<>();
 	private List<String> avatars = new ArrayList<>();
@@ -31,6 +34,15 @@ public class BankRepositoryStub implements BankRepository {
 	@Override
 	public List<String> getAllDifferentAvatars() {
 		return avatars;
+	}
+
+	@Override
+	public Map<String, Instant> latestTimestampPerAvatar() {
+		return entriesByAvatar
+				.entrySet()
+				.stream()
+				.filter(byAvatar -> !byAvatar.getValue().isEmpty())
+				.collect(toMap(Map.Entry::getKey, byAvatar -> byAvatar.getValue().stream().map(BankEntry::timeStamp).max(naturalOrder()).orElseThrow()));
 	}
 
 	@Override

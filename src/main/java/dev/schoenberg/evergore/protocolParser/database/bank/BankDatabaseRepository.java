@@ -2,8 +2,10 @@ package dev.schoenberg.evergore.protocolParser.database.bank;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.dao.GenericRawResults;
 import com.j256.ormlite.support.ConnectionSource;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
@@ -19,6 +21,7 @@ import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseE
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static java.sql.Timestamp.from;
+import static java.util.stream.Collectors.toMap;
 
 public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implements BankRepository {
 	private final Dao<BankDatabaseEntry, String> bank;
@@ -77,6 +80,21 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 	public List<String> getAllDifferentAvatars() {
 		List<BankDatabaseEntry> avatars = silentThrow(() -> bank.queryBuilder().distinct().selectColumns(AVATAR_COLUMN).query());
 		return avatars.stream().map(bde -> bde.avatar).toList();
+	}
+
+	@Override
+	public Map<String, Instant> latestTimestampPerAvatar() {
+		String newestPerAvatar = "SELECT " + AVATAR_COLUMN + ", MAX(" + TIMESTAMP_COLUMN + ") AS " + TIMESTAMP_COLUMN + " FROM " + BankDatabaseEntry.TABLE + " GROUP BY "
+				+ AVATAR_COLUMN;
+
+		return silentThrow(() -> {
+			GenericRawResults<BankDatabaseEntry> rows = bank.queryRaw(newestPerAvatar, bank.getRawRowMapper());
+			try {
+				return rows.getResults().stream().collect(toMap(row -> row.avatar, row -> row.timeStamp.toInstant()));
+			} finally {
+				rows.close();
+			}
+		});
 	}
 
 	private List<BankEntry> convert(List<BankDatabaseEntry> dbEntries) {

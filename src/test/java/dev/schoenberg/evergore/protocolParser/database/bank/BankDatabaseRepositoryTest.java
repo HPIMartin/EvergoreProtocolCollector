@@ -4,6 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,6 +88,23 @@ class BankDatabaseRepositoryTest {
 		long count = repo.countFor("Nobody");
 
 		assertThat(count).isZero();
+	}
+
+	@Test
+	void namesTheLatestTimestampOfEveryAvatarThatHasRows() {
+		BankDatabaseRepository repo = repositoryInMemory();
+		repo.add(List.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1), bankEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 2), bankEntry("Boreas", BOUNDARY, 3)));
+
+		Map<String, Instant> latest = repo.latestTimestampPerAvatar();
+
+		assertThat(latest).containsExactlyInAnyOrderEntriesOf(Map.of("Aurora", ONE_MINUTE_AFTER_BOUNDARY, "Boreas", BOUNDARY));
+	}
+
+	@Test
+	void namesNobodyWhileTheLedgerHasNoRowAtAll() {
+		Map<String, Instant> latest = repositoryInMemory().latestTimestampPerAvatar();
+
+		assertThat(latest).isEmpty();
 	}
 
 	private static BankEntry bankEntry(String avatar, Instant timeStamp, int amount) {
