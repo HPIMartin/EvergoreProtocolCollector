@@ -18,7 +18,7 @@ import dev.schoenberg.evergore.protocolParser.exceptions.NoElementFound;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.AVATAR_COLUMN;
-import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.TIMESTAMP_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static java.sql.Timestamp.from;
 import static java.util.stream.Collectors.toMap;
@@ -66,7 +66,7 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 
 	@Override
 	public List<BankEntry> getAllSince(Instant timestampInclusive) {
-		List<BankDatabaseEntry> result = silentThrow(() -> bank.queryBuilder().where().ge(BankDatabaseEntry.TIMESTAMP_COLUMN, from(timestampInclusive)).query());
+		List<BankDatabaseEntry> result = silentThrow(() -> bank.queryBuilder().where().ge(TIMESTAMP_COLUMN, from(timestampInclusive)).query());
 
 		return convert(result);
 	}
