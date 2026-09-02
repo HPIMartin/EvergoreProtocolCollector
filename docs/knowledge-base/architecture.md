@@ -42,8 +42,8 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 
 - **Entry/lifecycle:** `Application` (boots Micronaut) · `ApplicationFactory` (`@Factory` composition
   root: builds the un-annotated repositories, the framework-free `application` use-cases,
-  `FileLoader`, no-op hooks) · `EvergoreDataCollectorJob` (`@Scheduled`) ·
-  `DatabaseStartupInitialization` (creates tables at startup).
+  `FileLoader`, no-op hooks) · `EvergoreDataCollectorJob` (`@Scheduled`); each `Repository` creates
+  its own table lazily, on first use (`ensureTable()`), rather than at a dedicated startup step.
 - **Application use-cases (framework-free):** `application/{EvergoreDataExtractor,EvergoreDataEvaluator}`
   (collect + evaluate coordinators) · `application/LastRunStatus` (monitoring seam: records the
   `Instant` of the last successful run). Plain objects, wired in `ApplicationFactory`.
