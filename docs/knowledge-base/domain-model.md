@@ -120,6 +120,12 @@ from them on any partial recompute.
 - `businessLogic/contribution/Contribution` carries the four sums and answers
   `net() = bankDeposited − bankWithdrawn + storageDeposited − storageWithdrawn`, the formula the
   sheet's own column 5 was verified against.
+- `Contribution.inWholeGold()` rounds both storage sums to whole gold, and the read surface takes
+  the net and the guild total from the **rounded** record, so every served row adds up and a total is
+  the exact column sum of its rows (decision 2026-09-02). The unrounded record stays the domain's
+  truth; only the read surface rounds. Rounding per avatar rather than once over the whole guild is
+  what makes a row addable, at the price of up to half a gold piece per avatar against the unrounded
+  total.
 - `AvatarContribution` names the avatar behind one such record; `Contribution.sumOf` adds a
   collection of contributions into the guild's own, which is what the overview's total row shows.
 - `businessLogic/contribution/AvatarContributions` assembles one record per **known** avatar

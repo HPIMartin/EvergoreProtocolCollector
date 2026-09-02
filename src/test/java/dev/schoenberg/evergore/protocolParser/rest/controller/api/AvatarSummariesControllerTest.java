@@ -7,11 +7,16 @@ import org.junit.jupiter.api.Test;
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
+import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContributions;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.FakeMetaInformationRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummary;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummaryPage;
 
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AvatarSummariesControllerTest {
@@ -20,7 +25,8 @@ class AvatarSummariesControllerTest {
 	private final FakeMetaInformationRepository metaRepo = new FakeMetaInformationRepository();
 	private final BankRepositoryStub bankRepo = new BankRepositoryStub();
 	private final StorageRepositoryStub storageRepo = new StorageRepositoryStub();
-	private final AvatarSummariesController tested = new AvatarSummariesController(metaRepo, new KnownAvatars(bankRepo, storageRepo), new LoggerSpy());
+	private final AvatarSummariesController tested = new AvatarSummariesController(metaRepo, new AvatarContributions(new KnownAvatars(bankRepo, storageRepo), metaRepo),
+			new LoggerSpy());
 
 	@Test
 	void listsAnAvatarThatOnlyEverMovedItems() {
@@ -43,13 +49,30 @@ class AvatarSummariesControllerTest {
 	}
 
 	@Test
-	void carriesZeroGoldForAnAvatarThatOnlyEverMovedItems() {
+	void carriesZerosForAnAvatarWithoutAnyStoredSum() {
 		bankRepo.seedAvatars(List.of());
 		storageRepo.seedAvatars(List.of("Brynja"));
 
 		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
 
-		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", 0, 0));
+		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", 0, 0, 0, 0, 0));
+	}
+
+	@Test
+	void servesBothStorageSumsAndTheNetAsWholeGoldBesideTheBankSums() {
+		bankRepo.seedAvatars(List.of("Aurora"));
+		metaRepo.put(getBankPlacement("Aurora"), 1500L);
+		metaRepo.put(getBankWithdrawl("Aurora"), 200L);
+		metaRepo.put(getStoragePlacement("Aurora"), 185.04);
+		metaRepo.put(getStorageWithdrawl("Aurora"), 300.0);
+
+		AvatarSummary summary = tested.summaries(0, WHOLE_PAGE).items().get(0);
+
+		assertThat(summary.bankDeposited()).isEqualTo(1500);
+		assertThat(summary.bankWithdrawn()).isEqualTo(200);
+		assertThat(summary.storageDeposited()).isEqualTo(185);
+		assertThat(summary.storageWithdrawn()).isEqualTo(300);
+		assertThat(summary.net()).isEqualTo(1185);
 	}
 
 	private static List<String> avatarsOf(AvatarSummaryPage page) {

@@ -64,7 +64,7 @@ class ProtocolEvaluationAcceptanceTest {
 	}
 
 	@Test
-	void avatarSummariesCarryTheBankTotalsOfEveryAvatarOfBothLedgers() {
+	void avatarSummariesCarryAllFourLedgerSumsAndTheNetOfEveryAvatar() {
 		HttpResponse<String> response = get("/api/v1/avatars");
 
 		assertThat(response.getStatus()).isEqualTo(OK.getCode());
@@ -73,8 +73,10 @@ class ProtocolEvaluationAcceptanceTest {
 		assertThat(body.getInt("size")).isEqualTo(100);
 		assertThat(body.getLong("totalCount")).isEqualTo(4);
 		assertThat(body.getJSONArray("items").toString())
-				.isEqualTo("[{\"avatar\":\"Aurora\",\"bankWithdrawn\":200,\"bankDeposited\":1500}," + "{\"avatar\":\"Boreas\",\"bankWithdrawn\":0,\"bankDeposited\":750},"
-						+ "{\"avatar\":\"Brynja\",\"bankWithdrawn\":0,\"bankDeposited\":0}," + "{\"avatar\":\"Calix\",\"bankWithdrawn\":300,\"bankDeposited\":0}]");
+				.isEqualTo("[{\"avatar\":\"Aurora\",\"bankWithdrawn\":200,\"bankDeposited\":1500,\"storageWithdrawn\":300,\"storageDeposited\":185,\"net\":1185},"
+						+ "{\"avatar\":\"Boreas\",\"bankWithdrawn\":0,\"bankDeposited\":750,\"storageWithdrawn\":0,\"storageDeposited\":46,\"net\":796},"
+						+ "{\"avatar\":\"Brynja\",\"bankWithdrawn\":0,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":370,\"net\":370},"
+						+ "{\"avatar\":\"Calix\",\"bankWithdrawn\":300,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":-300}]");
 	}
 
 	@Test

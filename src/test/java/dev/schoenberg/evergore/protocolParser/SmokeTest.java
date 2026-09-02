@@ -102,7 +102,11 @@ class SmokeTest {
 		HttpResponse<String> response = get("/api/v1/avatars");
 
 		assertTrue(response.getStatus() >= 200 && response.getStatus() < 300, "Status code was: " + response.getStatus());
-		assertTrue(response.getBody().contains("{\"avatar\":\"OverviewTestAvatar\",\"bankWithdrawn\":42,\"bankDeposited\":1337}"), "Body was: " + response.getBody());
+		assertTrue(
+				response
+						.getBody()
+						.contains("{\"avatar\":\"OverviewTestAvatar\",\"bankWithdrawn\":42,\"bankDeposited\":1337,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":1295}"),
+				"Body was: " + response.getBody());
 	}
 
 	@Test

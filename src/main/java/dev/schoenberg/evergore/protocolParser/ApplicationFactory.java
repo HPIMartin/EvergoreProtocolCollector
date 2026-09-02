@@ -11,6 +11,7 @@ import dev.schoenberg.evergore.protocolParser.application.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
@@ -37,6 +38,11 @@ public class ApplicationFactory {
 	@Singleton
 	public KnownAvatars knownAvatars(BankRepository bankRepo, StorageRepository storageRepo) {
 		return new KnownAvatars(bankRepo, storageRepo);
+	}
+
+	@Singleton
+	public AvatarContributions avatarContributions(KnownAvatars knownAvatars, MetaInformationRepository metaRepo) {
+		return new AvatarContributions(knownAvatars, metaRepo);
 	}
 
 	@Singleton

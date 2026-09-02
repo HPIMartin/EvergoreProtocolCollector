@@ -15,14 +15,14 @@ import io.micronaut.http.annotation.QueryValue;
 import io.micronaut.validation.Validated;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
-import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
+import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContribution;
+import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContributions;
+import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.Contribution;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationRepository;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummary;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummaryPage;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
-import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
-import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.api.PageRequest.DEFAULT_PAGE;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.api.PageRequest.DEFAULT_SIZE;
@@ -37,12 +37,12 @@ public class AvatarSummariesController {
 	public static final String PATH = "/api/v1/avatars";
 
 	private final MetaInformationRepository metaRepo;
-	private final KnownAvatars knownAvatars;
+	private final AvatarContributions contributions;
 	private final Logger logger;
 
-	public AvatarSummariesController(MetaInformationRepository metaRepo, KnownAvatars knownAvatars, Logger logger) {
+	public AvatarSummariesController(MetaInformationRepository metaRepo, AvatarContributions contributions, Logger logger) {
 		this.metaRepo = metaRepo;
-		this.knownAvatars = knownAvatars;
+		this.contributions = contributions;
 		this.logger = logger;
 	}
 
@@ -51,16 +51,19 @@ public class AvatarSummariesController {
 	public AvatarSummaryPage summaries(@QueryValue(value = PAGE, defaultValue = DEFAULT_PAGE) @Min(0) int page,
 			@QueryValue(value = SIZE, defaultValue = DEFAULT_SIZE) @Positive @Max(MAX_SIZE) int size) {
 		PageRequest window = new PageRequest(page, size);
-		List<String> avatars = knownAvatars.sortedByName();
+		List<AvatarContribution> guild = contributions.ofEveryKnownAvatar();
 
-		logger.debug("Providing information for " + avatars.size() + " avatars.");
+		logger.debug("Providing information for " + guild.size() + " avatars.");
 
-		List<AvatarSummary> items = avatars.stream().skip(window.offset()).limit(window.size()).map(this::summaryOf).toList();
-		return new AvatarSummaryPage(lastUpdated(), window.page(), window.size(), avatars.size(), items);
+		List<AvatarSummary> items = guild.stream().skip(window.offset()).limit(window.size()).map(AvatarSummariesController::summaryOf).toList();
+		return new AvatarSummaryPage(lastUpdated(), window.page(), window.size(), guild.size(), items);
 	}
 
-	private AvatarSummary summaryOf(String avatar) {
-		return new AvatarSummary(avatar, metaRepo.get(getBankWithdrawl(avatar)).orElse(0L), metaRepo.get(getBankPlacement(avatar)).orElse(0L));
+	private static AvatarSummary summaryOf(AvatarContribution avatar) {
+		Contribution whole = avatar.contribution().inWholeGold();
+
+		return new AvatarSummary(avatar.avatar(), whole.bankWithdrawn(), whole.bankDeposited(), (long) whole.storageWithdrawn(), (long) whole.storageDeposited(),
+				(long) whole.net());
 	}
 
 	private Instant lastUpdated() {

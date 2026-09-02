@@ -58,8 +58,8 @@ Each row: avatar name plus 11 value columns. Headers are merged/German; mapping 
 | Sheet concept | Software status |
 |---------------|-----------------|
 | Bank-Einzahlung / -Auszahlung (col1/2) | ✅ Computed by `EvergoreDataEvaluator` (bank placement / withdrawl), stored in `MetaInformation`, shown in `/overview`. |
-| Einlagerung / Entnahme value (col3/4) | 🟡 **In progress**: this is exactly the uncommitted feature (storage value calc in `EvergoreDataEvaluator` + `EvergoreItem.getStorageValue/getWithdrawlValue`). Not yet shown in UI. |
-| erzeugter Gildenmehrwert (col5) | ❌ Not yet computed as a single net metric (would be a trivial sum once col3/4 land). |
+| Einlagerung / Entnahme value (col3/4) | ✅ Computed by `EvergoreDataEvaluator` (storage placement / withdrawl, quality-scaled), stored in `MetaInformation`, served as `storageDeposited` / `storageWithdrawn`. |
+| erzeugter Gildenmehrwert (col5) | ✅ Derived per request by `Contribution.net()` over the four sums and served as `net`; stored nowhere, so it cannot drift from its summands. |
 | geschätzte Jagdeinlagerungen + % (col6/7/8) | ❌ Not implemented. `EvergoreItem` *has* a `JAGDBEUTEN` (hunt-loot) category, so the data exists to compute it. |
 | count (col9) | ❌ Meaning unknown; not implemented. |
 | letzte Lager-/Bankaktivität (col10/11) | 🟡 Per-entry timestamps are stored; a "last activity per avatar" is derivable but not surfaced as such. |

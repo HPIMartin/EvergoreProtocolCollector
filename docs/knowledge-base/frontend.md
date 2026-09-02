@@ -135,7 +135,7 @@ service's only read surface.
 
 | Route | Answers |
 |-------|---------|
-| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, `bankWithdrawn`, `bankDeposited`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
+| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, and the derived `net`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
 | `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first. |
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first. |
 
@@ -144,6 +144,12 @@ service's only read surface.
 - **Paging**: `?page=` (zero-based, `@Min(0)`) and `?size=` (default 100, `1..1000`); a violation is
   a **400**, not a clamp, so a client bug stays visible. `totalCount` is the unpaged total, so the
   SPA can size its navigation instead of inferring the end from a short page.
+- **The four sums are the sheet's columns 1 to 4, `net` its column 5, and all five are whole gold**
+  (`long`, decision 2026-09-02): serving the raw `double` would put every value from 10^7 upward,
+  where the real sums sit, on the wire in exponential notation. `net` is **derived per request** and
+  stored nowhere. The rounding rule behind the numbers, and why a served row adds up while the total
+  row is the exact column sum of the rows above it, lives in
+  [domain-model.md](domain-model.md).
 - **`lastUpdated: null`** means no collection run has completed. A sentinel instant is not an option:
   Java 25 throws when converting an extreme instant into `java.sql.Timestamp`.
 - **`lastUpdated` is display-only and up to an hour off inside the DST fall-back hour.** It is stored
