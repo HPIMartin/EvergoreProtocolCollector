@@ -4,11 +4,14 @@ const OVERVIEW = 'overview'
 const BANK = 'bank'
 const STORAGE = 'storage'
 const LEDGER_SEGMENT_COUNT = 3
+const DEFAULT_PAGE = 0
+
+export const PAGE = 'page'
 
 export interface RouteVisitor<R> {
   overview: () => R
-  bank: (avatar: string) => R
-  storage: (avatar: string) => R
+  bank: (avatar: string, page: number) => R
+  storage: (avatar: string, page: number) => R
   unknownPath: (path: string) => R
 }
 
@@ -28,23 +31,32 @@ export function storagePath(avatar: string): string {
   return ledgerPath(avatar, STORAGE)
 }
 
-export function routeOf(path: string): Route {
+export function routeOf(path: string, search: string): Route {
   const segments = path.split(SEPARATOR).filter((segment) => segment !== '')
   if (segments.length === 0 || onlyTheOverview(segments)) {
     return OVERVIEW_ROUTE
   }
 
-  return ledgerRouteOf(segments) ?? unknownPathRoute(path)
+  return ledgerRouteOf(segments, pageIn(search)) ?? unknownPathRoute(path)
 }
 
 const OVERVIEW_ROUTE: Route = { accept: (visitor) => visitor.overview() }
 
-function bankRoute(avatar: string): Route {
-  return { accept: (visitor) => visitor.bank(avatar) }
+function bankRoute(avatar: string, page: number): Route {
+  return { accept: (visitor) => visitor.bank(avatar, page) }
 }
 
-function storageRoute(avatar: string): Route {
-  return { accept: (visitor) => visitor.storage(avatar) }
+function storageRoute(avatar: string, page: number): Route {
+  return { accept: (visitor) => visitor.storage(avatar, page) }
+}
+
+function pageIn(search: string): number {
+  const raw = new URLSearchParams(search).get(PAGE)
+  if (raw === null) {
+    return DEFAULT_PAGE
+  }
+
+  return raw.trim() === '' ? Number.NaN : Number(raw)
 }
 
 function unknownPathRoute(path: string): Route {
@@ -59,7 +71,10 @@ function onlyTheOverview(segments: readonly string[]): boolean {
   return segments.length === 1 && segments[0] === OVERVIEW
 }
 
-function ledgerRouteOf(segments: readonly string[]): Route | null {
+function ledgerRouteOf(
+  segments: readonly string[],
+  page: number,
+): Route | null {
   if (segments.length !== LEDGER_SEGMENT_COUNT || segments[0] !== AVATARS) {
     return null
   }
@@ -69,10 +84,10 @@ function ledgerRouteOf(segments: readonly string[]): Route | null {
     return null
   }
   if (segments[2] === BANK) {
-    return bankRoute(avatar)
+    return bankRoute(avatar, page)
   }
   if (segments[2] === STORAGE) {
-    return storageRoute(avatar)
+    return storageRoute(avatar, page)
   }
 
   return null

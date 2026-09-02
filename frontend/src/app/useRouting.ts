@@ -36,7 +36,7 @@ export function useRouting(): Routing {
   }, [])
 
   return {
-    route: routeOf(address.path),
+    route: routeOf(address.path, address.search),
     token: tokenIn(address.search),
     follow,
   }
