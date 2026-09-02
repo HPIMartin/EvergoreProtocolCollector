@@ -183,7 +183,10 @@ service's only read surface.
 - **`lastUpdated` is display-only and up to an hour off inside the DST fall-back hour.** It is stored
   as a Berlin wall-clock time, so the instant behind it is unrecoverable while the local hour repeats
   and the conversion resolves to the earlier offset. The epoch/UTC storage format fixes this at the
-  root; entry timestamps are unaffected because they are real instants.
+  root. **Entry timestamps are not exempt** (falsifier proof 2026-09-02): they are real instants in
+  the domain but persist as wall-clock text too, so two entries an hour apart inside the fall-back
+  hour store the same text and both read back as the later one. Only the container's UTC default
+  keeps every timestamp the API serves correct today (backlog D14).
 - **Timestamps** are ISO-8601 UTC and **`transferType`** is one of `DEPOSIT` / `WITHDRAWAL`; the
   client localizes both. The wire names come from `TransferTypeWireNames`, a visitor over the domain
   enum, so the German domain constants (`EINLAGERUNG`/`ENTNAHME`) never reach the contract and stay
