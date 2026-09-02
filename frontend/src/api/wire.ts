@@ -71,6 +71,8 @@ function summaryFrom(item: unknown): AvatarSummary {
     storageWithdrawn: numberFrom(summary, 'storageWithdrawn'),
     storageDeposited: numberFrom(summary, 'storageDeposited'),
     net: numberFrom(summary, 'net'),
+    lastBankActivity: optionalInstantFrom(summary, 'lastBankActivity'),
+    lastStorageActivity: optionalInstantFrom(summary, 'lastStorageActivity'),
   }
 }
 

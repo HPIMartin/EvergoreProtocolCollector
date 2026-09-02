@@ -46,7 +46,12 @@ export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
 }
 
 function guildRowOf(totals: GuildTotals): AvatarSummary {
-  return { avatar: 'Gilde', ...totals }
+  return {
+    avatar: 'Gilde',
+    ...totals,
+    lastBankActivity: null,
+    lastStorageActivity: null,
+  }
 }
 
 function freshnessOf(lastUpdated: Date | null): string {
@@ -100,6 +105,18 @@ function columnsLinkedWith(
       kind: 'number',
       tone: 'neutral',
       value: (summary) => summary.net,
+    },
+    {
+      key: 'lastStorageActivity',
+      header: 'Letzte Lageraktivität',
+      kind: 'timestamp',
+      value: (summary) => summary.lastStorageActivity?.toISOString() ?? null,
+    },
+    {
+      key: 'lastBankActivity',
+      header: 'Letzte Bankaktivität',
+      kind: 'timestamp',
+      value: (summary) => summary.lastBankActivity?.toISOString() ?? null,
     },
     {
       key: 'storage',

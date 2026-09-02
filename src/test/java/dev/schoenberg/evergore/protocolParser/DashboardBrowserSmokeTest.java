@@ -64,15 +64,17 @@ class DashboardBrowserSmokeTest {
 		List<List<String>> rows = renderedRowsOf("/overview");
 
 		assertThat(rows)
-				.containsExactly(List.of("Aurora", "1.500", "200", "185", "300", "1.185", "öffnen"), List.of("Boreas", "750", "0", "46", "0", "796", "öffnen"),
-						List.of("Brynja", "0", "0", "370", "0", "370", "öffnen"), List.of("Calix", "0", "300", "0", "0", "-300", "öffnen"));
+				.containsExactly(List.of("Aurora", "1.500", "200", "185", "300", "1.185", "17.01.2024 12:00", "12.01.2024 12:00", "öffnen"),
+						List.of("Boreas", "750", "0", "46", "0", "796", "05.02.2024 09:00", "01.02.2024 09:00", "öffnen"),
+						List.of("Brynja", "0", "0", "370", "0", "370", "06.02.2024 10:00", "–", "öffnen"),
+						List.of("Calix", "0", "300", "0", "0", "-300", "–", "01.03.2024 08:00", "öffnen"));
 	}
 
 	@Test
 	void theOverviewClosesWithTheGuildWideTotalRow() {
 		List<String> total = renderedTotalOf("/overview");
 
-		assertThat(total).containsExactly("Gilde", "2.250", "500", "601", "300", "2.051", "–");
+		assertThat(total).containsExactly("Gilde", "2.250", "500", "601", "300", "2.051", "–", "–", "–");
 	}
 
 	@Test

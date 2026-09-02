@@ -28,6 +28,8 @@ const OVERVIEW_BODY = JSON.stringify({
       storageWithdrawn: 200,
       storageDeposited: 500,
       net: 2500,
+      lastBankActivity: '2026-08-04T09:30:00Z',
+      lastStorageActivity: '2026-08-05T10:15:00Z',
     },
     {
       avatar: 'Erde-Eibenlanze',
@@ -36,6 +38,8 @@ const OVERVIEW_BODY = JSON.stringify({
       storageWithdrawn: 0,
       storageDeposited: 0,
       net: -150,
+      lastBankActivity: null,
+      lastStorageActivity: '2026-07-31T21:05:00Z',
     },
   ],
 })
@@ -172,8 +176,8 @@ describe('App', () => {
     await shellAt(`/?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
     expect(rowTexts()).toStrictEqual([
-      'Calix3.4001.2005002002.500öffnen',
-      'Erde-Eibenlanze5020000-150öffnen',
+      'Calix3.4001.2005002002.50005.08.2026 12:1504.08.2026 11:30öffnen',
+      'Erde-Eibenlanze5020000-15031.07.2026 23:05–öffnen',
     ])
   })
 
@@ -187,6 +191,8 @@ describe('App', () => {
       'Einlagerung',
       'Entnahme',
       'Gildenmehrwert',
+      'Letzte Lageraktivität',
+      'Letzte Bankaktivität',
       'Lager',
     ])
   })
@@ -241,8 +247,18 @@ describe('App', () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
     expect(screen.getByTestId('total-row').textContent).toBe(
-      'Gilde3.4501.4005002002.350–',
+      'Gilde3.4501.4005002002.350–––',
     )
+  })
+
+  it('says when an avatar never used one of the two ledgers', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect(
+      screen
+        .getAllByTestId('cell-lastBankActivity')
+        .map((cell) => cell.textContent),
+    ).toStrictEqual(['04.08.2026 11:30', '–'])
   })
 
   it('marks a negative guild value as taken from the guild', async () => {

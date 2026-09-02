@@ -23,6 +23,8 @@ const overviewBody = {
       storageWithdrawn: 200,
       storageDeposited: 500,
       net: 2500,
+      lastBankActivity: '2026-08-04T09:30:00Z',
+      lastStorageActivity: '2026-08-05T10:15:00Z',
     },
     {
       avatar: 'Erde-Eibenlanze',
@@ -31,6 +33,8 @@ const overviewBody = {
       storageWithdrawn: 0,
       storageDeposited: 0,
       net: -150,
+      lastBankActivity: null,
+      lastStorageActivity: '2026-07-31T21:05:00Z',
     },
   ],
 }
@@ -133,7 +137,23 @@ describe('the overview wire shape', () => {
       storageWithdrawn: 200,
       storageDeposited: 500,
       net: 2500,
+      lastBankActivity: new Date('2026-08-04T09:30:00Z'),
+      lastStorageActivity: new Date('2026-08-05T10:15:00Z'),
     })
+  })
+
+  it('reads the last activity of both ledgers as instants', () => {
+    const overview = overviewFrom(overviewBody)
+
+    expect(overview.items[0]?.lastBankActivity).toStrictEqual(
+      new Date('2026-08-04T09:30:00Z'),
+    )
+  })
+
+  it('reads a ledger the avatar never used as no activity at all', () => {
+    const overview = overviewFrom(overviewBody)
+
+    expect(overview.items[1]?.lastBankActivity).toBeNull()
   })
 
   it.each([
@@ -142,6 +162,8 @@ describe('the overview wire shape', () => {
     'storageWithdrawn',
     'storageDeposited',
     'net',
+    'lastBankActivity',
+    'lastStorageActivity',
   ])('refuses a summary without its %s', (field) => {
     const reading = () =>
       overviewFrom({ ...overviewBody, items: [summaryWithout(field)] })

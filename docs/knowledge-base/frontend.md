@@ -121,8 +121,10 @@ Four top-level folders under `frontend/src/`:
   wall-clock. Transfer types are shown as `Einlagerung`/`Entnahme` from the domain, and the headers
   are German, like the sheet's.
 - **The overview's columns are the sheet's, in the sheet's order:** `Bank-Einzahlung`,
-  `Bank-Auszahlung`, `Einlagerung`, `Entnahme` and `Gildenmehrwert` beside the avatar, so a member
-  reconciles his own row against the sheet column by column. Deposits carry the credit tone,
+  `Bank-Auszahlung`, `Einlagerung`, `Entnahme`, `Gildenmehrwert` and then the sheet's two
+  right-hand columns `Letzte Lageraktivität` and `Letzte Bankaktivität`, so a member reconciles his
+  own row against the sheet column by column. A ledger the avatar never used shows the
+  missing-value dash, not a fabricated date. Deposits carry the credit tone,
   withdrawals the debit tone, and the net carries neither until it turns negative, which
   `SortableTable`'s tone rule already does for every number column.
 - **The guild-wide total row comes from the envelope, not from the loaded rows** (decision

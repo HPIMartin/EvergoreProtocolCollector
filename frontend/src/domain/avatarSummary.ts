@@ -7,6 +7,8 @@ export interface AvatarSummary {
   readonly storageWithdrawn: number
   readonly storageDeposited: number
   readonly net: number
+  readonly lastBankActivity: Date | null
+  readonly lastStorageActivity: Date | null
 }
 
 export interface GuildTotals {
