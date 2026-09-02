@@ -5,6 +5,7 @@ export interface LinkProps {
   readonly onFollow?: (href: string) => void
   readonly className?: string
   readonly current?: boolean
+  readonly testId?: string
   readonly children: ReactNode
 }
 
@@ -13,6 +14,7 @@ export function Link({
   onFollow,
   className,
   current,
+  testId,
   children,
 }: LinkProps) {
   const followHere = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -29,6 +31,7 @@ export function Link({
       href={href}
       className={className}
       aria-current={current === true ? 'page' : undefined}
+      data-testid={testId}
       onClick={followHere}
     >
       {children}

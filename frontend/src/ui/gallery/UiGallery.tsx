@@ -1,5 +1,6 @@
 import type { NavigationLink } from '../PageFrame.tsx'
 import { PageFrame } from '../PageFrame.tsx'
+import { Pagination } from '../Pagination.tsx'
 import type { Column } from '../SortableTable.tsx'
 import { SortableTable } from '../SortableTable.tsx'
 import { StatusPanel } from '../StatusPanel.tsx'
@@ -139,6 +140,13 @@ export function UiGallery() {
           rows={[]}
           rowKey={(row) => row.id}
           emptyMessage="Für diesen Zeitraum sind keine Bewegungen verzeichnet."
+        />
+      </section>
+      <section className="page-section" data-testid="gallery-pagination">
+        <h2>Seitennavigation</h2>
+        <Pagination
+          previousHref="/avatars/Bambor/bank"
+          nextHref="/avatars/Bambor/bank?page=2"
         />
       </section>
     </PageFrame>

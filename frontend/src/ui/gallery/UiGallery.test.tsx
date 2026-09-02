@@ -19,7 +19,9 @@ describe('UiGallery', () => {
   it('frames the page with the navigation', () => {
     render(<UiGallery />)
 
-    const labels = screen.getAllByRole('link').map((link) => link.textContent)
+    const labels = within(screen.getByLabelText('Hauptnavigation'))
+      .getAllByRole('link')
+      .map((link) => link.textContent)
 
     expect(labels).toEqual(['Übersicht', 'Bank', 'Lager'])
   })
