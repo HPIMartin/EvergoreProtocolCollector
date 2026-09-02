@@ -70,7 +70,7 @@ Four top-level folders under `frontend/src/`:
 |-----------|---------|
 | `PageFrame` | Banner with brand and navigation (`aria-current="page"` marks the current link), `<main>` for the view. |
 | `Link` | An `<a href>` that reports a **plain** click to its `onFollow` and leaves a modified or middle click to the browser, so in-app navigation costs no reload while bookmarking and open-in-new-tab keep working. `PageFrame` and a `link` column render through it. |
-| `SortableTable<Row>` | Semantic `<table>`; a column is `text`, `number`, `timestamp` or `link`; a header click sorts, a second click reverses. |
+| `SortableTable<Row>` | Semantic `<table>`; a column is `text`, `number`, `timestamp` or `link`; a header click sorts, a second click reverses; an optional `total` adds a `tfoot` row. |
 | `StatusPanel` | The `loading` / `empty` / `error` states; `role="alert"` for the error, `role="status"` otherwise. |
 
 - `format.ts` carries the German domain notation: gold with `de-DE` grouping, instants as Berlin
@@ -82,6 +82,10 @@ Four top-level folders under `frontend/src/`:
   `initialSort` renders the order it was handed, which is the API's newest-first.
 - **Tone**: a number column declares itself `credit`, `debit` or `neutral`; a negative value is always
   `debit` and a zero always `neutral`, so "nothing moved" stays uncoloured.
+- **The total row**: an optional `total` (`{label, row}`) renders one `tfoot` row, outside the sorted
+  body, so a sum can never be mistaken for a member or reordered into the middle of the table. Its
+  first column carries the label, number columns carry their total, and any other kind carries the
+  missing-value dash: a link or a timestamp has no total.
 - An `initialSort` naming a column the table does not have **throws**, for the reason the API answers
   400 instead of clamping a bad page size: a client bug stays visible.
 - **The gallery**: `gallery.html` plus `src/ui/gallery/` shows every primitive with fixture rows modeled
@@ -121,6 +125,9 @@ Four top-level folders under `frontend/src/`:
   reconciles his own row against the sheet column by column. Deposits carry the credit tone,
   withdrawals the debit tone, and the net carries neither until it turns negative, which
   `SortableTable`'s tone rule already does for every number column.
+- **The guild-wide total row comes from the envelope, not from the loaded rows** (decision
+  2026-09-02): the overview hands `totals` to the table's `total` prop and does no arithmetic, so the
+  row keeps meaning the guild once the overview pages or a time window narrows the body.
 - **Navigation lives in the frame and in one table column.** `PageFrame` carries "Übersicht" plus,
   on a ledger, that avatar's "Bank" and "Lager"; the overview's avatar column links into the bank and
   a "Lager" column into the storage. Both go through `Link`, so the shell is never reloaded.

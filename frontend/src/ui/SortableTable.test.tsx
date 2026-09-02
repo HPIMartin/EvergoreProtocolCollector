@@ -328,6 +328,108 @@ describe('SortableTable without rows', () => {
   })
 })
 
+describe('SortableTable total row', () => {
+  afterEach(cleanup)
+
+  const guild: Member = {
+    name: 'Gilde',
+    deposited: 1109,
+    lastActivity: null,
+  }
+
+  it('renders no total row when none is given', () => {
+    renderTable()
+
+    expect(screen.queryByTestId('total-row')).toBeNull()
+  })
+
+  it('renders no total row while there are no rows to total', () => {
+    renderTable({ rows: [], total: { label: 'Gilde', row: guild } })
+
+    expect({
+      total: screen.queryByTestId('total-row'),
+      empty: screen.getByTestId('status-panel').textContent,
+    }).toStrictEqual({ total: null, empty: 'Keine Einträge' })
+  })
+
+  it('labels the total row in its first column, whatever kind that column is', () => {
+    renderTable({
+      columns: [
+        {
+          key: 'deposited',
+          header: 'Eingezahlt',
+          kind: 'number',
+          tone: 'credit',
+          value: (member) => member.deposited,
+        },
+        {
+          key: 'name',
+          header: 'Avatar',
+          kind: 'text',
+          value: (member) => member.name,
+        },
+      ],
+      total: { label: 'Gilde', row: { ...guild, deposited: 999 } },
+    })
+
+    expect(screen.getByTestId('total-deposited').textContent).toBe('Gilde')
+  })
+
+  it("marks the label of the total row as that row's header", () => {
+    renderTable({ total: { label: 'Gilde', row: guild } })
+
+    expect(screen.getByTestId('total-name').getAttribute('scope')).toBe('row')
+  })
+
+  it('renders the given total below the rows, formatted like a cell', () => {
+    renderTable({
+      total: { label: 'Gilde', row: { ...guild, deposited: 1234567 } },
+    })
+
+    expect(screen.getByTestId('total-row').textContent).toBe('Gilde1.234.567–')
+  })
+
+  it('leaves the total row out of the sorting', () => {
+    renderTable({ total: { label: 'Gilde', row: guild } })
+
+    fireEvent.click(headerOf('Avatar'))
+
+    expect({
+      rows: cellsOf('name'),
+      total: screen.getByTestId('total-name').textContent,
+    }).toStrictEqual({
+      rows: ['alessia', 'Ärger', 'Bambor', 'Zoe'],
+      total: 'Gilde',
+    })
+  })
+
+  it('tones the total of a number column like the column, and a negative one as a debit', () => {
+    renderTable({ total: { label: 'Gilde', row: { ...guild, deposited: -5 } } })
+
+    expect(screen.getByTestId('total-deposited').dataset.tone).toBe('debit')
+  })
+
+  it('shows no link in the total row, because the guild has no ledger of its own', () => {
+    renderTable({
+      columns: [
+        {
+          key: 'name',
+          header: 'Avatar',
+          kind: 'link',
+          value: (member) => member.name,
+          href: (member) => `/avatars/${member.name}/bank`,
+        },
+      ],
+      total: { label: 'Gilde', row: guild },
+    })
+
+    expect({
+      links: screen.getAllByRole('link').length,
+      total: screen.getByTestId('total-name').textContent,
+    }).toStrictEqual({ links: 4, total: 'Gilde' })
+  })
+})
+
 describe('SortableTable link columns', () => {
   afterEach(cleanup)
 

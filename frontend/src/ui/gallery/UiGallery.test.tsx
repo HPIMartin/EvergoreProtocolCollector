@@ -65,6 +65,18 @@ describe('UiGallery', () => {
     ])
   })
 
+  it('closes the overview with the guild-wide total row', () => {
+    render(<UiGallery />)
+
+    const total = within(screen.getByTestId('gallery-overview')).getByTestId(
+      'total-row',
+    )
+
+    expect(total.textContent).toBe(
+      'Gilde161.565247.0531.722.4102.688.891-1.051.969––',
+    )
+  })
+
   it('shows the ledger with its newest entry first', () => {
     render(<UiGallery />)
 

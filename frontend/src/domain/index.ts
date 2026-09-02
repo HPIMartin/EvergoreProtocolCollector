@@ -1,4 +1,4 @@
-export type { AvatarSummary, Overview } from './avatarSummary.ts'
+export type { AvatarSummary, GuildTotals, Overview } from './avatarSummary.ts'
 export type { BankEntry } from './bankEntry.ts'
 export type { Ledger, LedgerVisitor } from './ledger.ts'
 export { entriesOf, unknownAvatar } from './ledger.ts'

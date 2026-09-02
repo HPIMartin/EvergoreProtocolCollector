@@ -5,7 +5,7 @@ import type { Column } from '../SortableTable.tsx'
 import { SortableTable } from '../SortableTable.tsx'
 import { StatusPanel } from '../StatusPanel.tsx'
 import type { LedgerRow, OverviewRow } from './fixtures.ts'
-import { ledgerRows, overviewRows } from './fixtures.ts'
+import { ledgerRows, overviewRows, overviewTotal } from './fixtures.ts'
 
 const navigation: readonly NavigationLink[] = [
   { label: 'Übersicht', href: '/overview', current: true },
@@ -107,6 +107,7 @@ export function UiGallery() {
           rows={overviewRows}
           rowKey={(row) => row.avatar}
           emptyMessage="Es ist noch kein Mitglied erfasst."
+          total={{ label: 'Gilde', row: overviewTotal }}
           initialSort={{ columnKey: 'avatar', direction: 'ascending' }}
         />
       </section>

@@ -11,6 +11,7 @@ export type {
   Sort,
   SortableTableProps,
   SortDirection,
+  Total,
 } from './SortableTable.tsx'
 export { StatusPanel } from './StatusPanel.tsx'
 export type { StatusPanelProps, StatusVariant } from './StatusPanel.tsx'

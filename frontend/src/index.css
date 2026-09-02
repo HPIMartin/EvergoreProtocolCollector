@@ -223,6 +223,12 @@ a:hover {
   color: var(--color-negative);
 }
 
+.data-table__total {
+  border-top: var(--border-width) solid var(--color-border-strong);
+  background-color: var(--color-surface-raised);
+  font-weight: 600;
+}
+
 .data-table__empty {
   padding: var(--space-4) 0;
   border: 0;

@@ -13,6 +13,13 @@ const OVERVIEW_BODY = JSON.stringify({
   page: 0,
   size: 100,
   totalCount: 2,
+  totals: {
+    bankWithdrawn: 1400,
+    bankDeposited: 3450,
+    storageWithdrawn: 200,
+    storageDeposited: 500,
+    net: 2350,
+  },
   items: [
     {
       avatar: 'Calix',
@@ -32,6 +39,14 @@ const OVERVIEW_BODY = JSON.stringify({
     },
   ],
 })
+
+const NO_TOTALS = {
+  bankWithdrawn: 0,
+  bankDeposited: 0,
+  storageWithdrawn: 0,
+  storageDeposited: 0,
+  net: 0,
+}
 
 const BANK_BODY = JSON.stringify({
   page: 0,
@@ -222,6 +237,14 @@ describe('App', () => {
     })
   })
 
+  it('shows the guild-wide total row the server computed', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect(screen.getByTestId('total-row').textContent).toBe(
+      'Gilde3.4501.4005002002.350–',
+    )
+  })
+
   it('marks a negative guild value as taken from the guild', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
@@ -252,6 +275,7 @@ describe('App', () => {
       page: 0,
       size: 100,
       totalCount: 0,
+      totals: NO_TOTALS,
       items: [],
     })
 
@@ -268,6 +292,7 @@ describe('App', () => {
       page: 0,
       size: 100,
       totalCount: 0,
+      totals: NO_TOTALS,
       items: [],
     })
 
@@ -349,6 +374,22 @@ describe('App', () => {
       askedFor: ['/api/v1/avatars?page=0&size=100'],
       shown: 'Kein gültiges Token: der Link braucht ein token in der Adresse.',
     })
+  })
+
+  it('surfaces a malformed overview body as a failure, not a blank page', async () => {
+    const body = JSON.stringify({
+      lastUpdated: null,
+      page: 0,
+      size: 100,
+      totalCount: 0,
+      items: [],
+    })
+
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, body))
+
+    expect(shownStatus()).toBe(
+      'Fehler: The API answered an envelope without guild-wide totals',
+    )
   })
 
   it('shows a failure of the API with its reason', async () => {

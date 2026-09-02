@@ -14,6 +14,13 @@ const OVERVIEW_BODY = JSON.stringify({
   page: 0,
   size: 100,
   totalCount: 1,
+  totals: {
+    bankWithdrawn: 1200,
+    bankDeposited: 3400,
+    storageWithdrawn: 200,
+    storageDeposited: 500,
+    net: 2500,
+  },
   items: [
     {
       avatar: 'Calix',

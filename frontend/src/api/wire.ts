@@ -1,6 +1,7 @@
 import type {
   AvatarSummary,
   BankEntry,
+  GuildTotals,
   Overview,
   Page,
   StorageEntry,
@@ -16,7 +17,28 @@ export function overviewFrom(body: unknown): Overview {
   const envelope = objectFrom(body)
   const page = pageFrom(envelope, summaryFrom)
 
-  return { ...page, lastUpdated: optionalInstantFrom(envelope, 'lastUpdated') }
+  return {
+    ...page,
+    lastUpdated: optionalInstantFrom(envelope, 'lastUpdated'),
+    totals: totalsFrom(envelope['totals']),
+  }
+}
+
+function totalsFrom(value: unknown): GuildTotals {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new MalformedResponse(
+      'The API answered an envelope without guild-wide totals',
+    )
+  }
+  const totals = value as WireObject
+
+  return {
+    bankWithdrawn: numberFrom(totals, 'bankWithdrawn'),
+    bankDeposited: numberFrom(totals, 'bankDeposited'),
+    storageWithdrawn: numberFrom(totals, 'storageWithdrawn'),
+    storageDeposited: numberFrom(totals, 'storageDeposited'),
+    net: numberFrom(totals, 'net'),
+  }
 }
 
 export function bankPageFrom(body: unknown): Page<BankEntry> {

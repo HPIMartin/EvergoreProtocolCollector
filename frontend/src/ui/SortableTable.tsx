@@ -38,12 +38,18 @@ export type Column<Row> =
       readonly href: (row: Row) => string
     })
 
+export type Total<Row> = {
+  readonly label: string
+  readonly row: Row
+}
+
 export type SortableTableProps<Row> = {
   readonly caption: string
   readonly columns: readonly Column<Row>[]
   readonly rows: readonly Row[]
   readonly rowKey: (row: Row) => string
   readonly emptyMessage: string
+  readonly total?: Total<Row>
   readonly initialSort?: Sort
   readonly onFollow?: (href: string) => void
 }
@@ -143,6 +149,11 @@ const cellOf = <Row,>(column: Column<Row>, row: Row): Cell => {
   }
 }
 
+const totalCellOf = <Row,>(column: Column<Row>, total: Total<Row>): Cell =>
+  column.kind === 'number'
+    ? cellOf(column, total.row)
+    : { text: missingValue, tone: 'neutral', href: null }
+
 const columnOf = <Row,>(
   columns: readonly Column<Row>[],
   columnKey: string,
@@ -177,6 +188,7 @@ export function SortableTable<Row>({
   rows,
   rowKey,
   emptyMessage,
+  total,
   initialSort,
   onFollow,
 }: SortableTableProps<Row>) {
@@ -255,6 +267,35 @@ export function SortableTable<Row>({
           ))
         )}
       </tbody>
+      {total === undefined || visibleRows.length === 0 ? null : (
+        <tfoot>
+          <tr className="data-table__total" data-testid="total-row">
+            {columns.map((column, index) =>
+              index === 0 ? (
+                <th
+                  key={column.key}
+                  scope="row"
+                  className="data-table__cell"
+                  data-kind={column.kind}
+                  data-testid={`total-${column.key}`}
+                >
+                  {total.label}
+                </th>
+              ) : (
+                <td
+                  key={column.key}
+                  className="data-table__cell"
+                  data-kind={column.kind}
+                  data-tone={totalCellOf(column, total).tone}
+                  data-testid={`total-${column.key}`}
+                >
+                  {totalCellOf(column, total).text}
+                </td>
+              ),
+            )}
+          </tr>
+        </tfoot>
+      )}
     </table>
   )
 }

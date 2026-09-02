@@ -8,6 +8,13 @@ const overviewBody = {
   page: 0,
   size: 100,
   totalCount: 2,
+  totals: {
+    bankWithdrawn: 1400,
+    bankDeposited: 3450,
+    storageWithdrawn: 200,
+    storageDeposited: 500,
+    net: 2350,
+  },
   items: [
     {
       avatar: 'Calix',
@@ -58,6 +65,12 @@ const storageBody = {
   ],
 }
 
+function envelopeWithout(field: string): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(overviewBody).filter(([name]) => name !== field),
+  )
+}
+
 function summaryWithout(field: string): Record<string, unknown> {
   const complete = overviewBody.items[0] as Record<string, unknown>
 
@@ -82,6 +95,24 @@ describe('the overview wire shape', () => {
   it('refuses a body whose freshness field is absent', () => {
     const reading = () =>
       overviewFrom({ page: 0, size: 100, totalCount: 0, items: [] })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it('reads the guild-wide totals of the envelope', () => {
+    const overview = overviewFrom(overviewBody)
+
+    expect(overview.totals).toStrictEqual({
+      bankWithdrawn: 1400,
+      bankDeposited: 3450,
+      storageWithdrawn: 200,
+      storageDeposited: 500,
+      net: 2350,
+    })
+  })
+
+  it('refuses a body without the guild-wide totals', () => {
+    const reading = () => overviewFrom(envelopeWithout('totals'))
 
     expect(reading).toThrow(MalformedResponse)
   })

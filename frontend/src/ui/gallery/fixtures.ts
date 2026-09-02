@@ -71,6 +71,17 @@ export const overviewRows: readonly OverviewRow[] = [
   },
 ]
 
+export const overviewTotal: OverviewRow = {
+  avatar: 'Gilde',
+  bankDeposited: 161565,
+  bankWithdrawn: 247053,
+  stored: 1722410,
+  retrieved: 2688891,
+  guildValue: -1051969,
+  lastStorageActivity: null,
+  lastBankActivity: null,
+}
+
 export const ledgerRows: readonly LedgerRow[] = [
   {
     id: 'ledger-1',

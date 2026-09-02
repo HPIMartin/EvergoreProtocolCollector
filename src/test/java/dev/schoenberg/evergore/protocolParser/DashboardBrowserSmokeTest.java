@@ -37,6 +37,7 @@ class DashboardBrowserSmokeTest {
 	private static final Path WORKING_DB = Paths.get("build/tmp/dashboardBrowser/dashboardBrowser.sqlite");
 	private static final Duration RENDER_GUARD = Duration.ofSeconds(30);
 	private static final By DATA_ROW = By.cssSelector("[data-testid='data-row']");
+	private static final By TOTAL_ROW = By.cssSelector("[data-testid='total-row']");
 
 	static {
 		silentThrow(() -> {
@@ -68,6 +69,13 @@ class DashboardBrowserSmokeTest {
 	}
 
 	@Test
+	void theOverviewClosesWithTheGuildWideTotalRow() {
+		List<String> total = renderedTotalOf("/overview");
+
+		assertThat(total).containsExactly("Gilde", "2.250", "500", "601", "300", "2.051", "–");
+	}
+
+	@Test
 	void aBankDeepLinkShowsThatAvatarsEntriesNewestFirst() {
 		List<List<String>> rows = renderedRowsOf("/avatars/Aurora/bank");
 
@@ -76,20 +84,28 @@ class DashboardBrowserSmokeTest {
 						List.of("10.01.2024 10:00", "Aurora", "1.000", "Einlagerung"));
 	}
 
+	private List<String> renderedTotalOf(String clientRoute) {
+		return renderedRowsOf(clientRoute, TOTAL_ROW).getFirst();
+	}
+
 	private List<List<String>> renderedRowsOf(String clientRoute) {
+		return renderedRowsOf(clientRoute, DATA_ROW);
+	}
+
+	private List<List<String>> renderedRowsOf(String clientRoute, By rowSelector) {
 		WebDriver driver = Browser.fromString(config.browser).getDriver(config);
 		try {
 			driver.get("http://localhost:" + server.getPort() + clientRoute + "?token=test-token");
-			new WebDriverWait(driver, RENDER_GUARD).until(browser -> !browser.findElements(DATA_ROW).isEmpty());
+			new WebDriverWait(driver, RENDER_GUARD).until(browser -> !browser.findElements(rowSelector).isEmpty());
 
-			return driver.findElements(DATA_ROW).stream().map(DashboardBrowserSmokeTest::cellsOf).toList();
+			return driver.findElements(rowSelector).stream().map(DashboardBrowserSmokeTest::cellsOf).toList();
 		} finally {
 			driver.quit();
 		}
 	}
 
 	private static List<String> cellsOf(WebElement row) {
-		return row.findElements(By.tagName("td")).stream().map(WebElement::getText).toList();
+		return row.findElements(By.cssSelector("th, td")).stream().map(WebElement::getText).toList();
 	}
 
 	private static boolean browserIsOnPath() {

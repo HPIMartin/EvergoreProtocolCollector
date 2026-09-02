@@ -1,6 +1,6 @@
 import type { ProtocolApi } from '../api'
 import { FIRST_PAGE } from '../api'
-import type { AvatarSummary } from '../domain'
+import type { AvatarSummary, GuildTotals } from '../domain'
 import type { Column } from '../ui'
 import { SortableTable, formatTimestamp } from '../ui'
 
@@ -35,6 +35,7 @@ export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
               rows={overview.items}
               rowKey={(summary) => summary.avatar}
               emptyMessage="Noch kein Avatar erfasst."
+              total={{ label: 'Gilde', row: guildRowOf(overview.totals) }}
               onFollow={onFollow}
             />
           </>
@@ -42,6 +43,10 @@ export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
       </LoadedView>
     </section>
   )
+}
+
+function guildRowOf(totals: GuildTotals): AvatarSummary {
+  return { avatar: 'Gilde', ...totals }
 }
 
 function freshnessOf(lastUpdated: Date | null): string {

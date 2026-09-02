@@ -9,6 +9,15 @@ export interface AvatarSummary {
   readonly net: number
 }
 
+export interface GuildTotals {
+  readonly bankWithdrawn: number
+  readonly bankDeposited: number
+  readonly storageWithdrawn: number
+  readonly storageDeposited: number
+  readonly net: number
+}
+
 export interface Overview extends Page<AvatarSummary> {
   readonly lastUpdated: Date | null
+  readonly totals: GuildTotals
 }
