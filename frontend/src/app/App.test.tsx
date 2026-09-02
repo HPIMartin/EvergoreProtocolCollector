@@ -527,6 +527,52 @@ describe('App', () => {
     }).toStrictEqual({ rows: 2, address: '/overview?token=a-test-token' })
   })
 
+  it('asks the bank route for the page the address names', async () => {
+    const server = alwaysServing(200, BANK_BODY)
+
+    await shellAt(`/avatars/Calix/bank?token=${TOKEN}&page=1`, server)
+
+    expect(server.askedFor).toStrictEqual([
+      '/api/v1/avatars/Calix/bank?token=a-test-token&page=1&size=100',
+    ])
+  })
+
+  it('renders the empty state for a page past the end, not an error', async () => {
+    await shellAt(
+      `/avatars/Calix/bank?token=${TOKEN}&page=50`,
+      alwaysServing(200, EMPTY_LEDGER_BODY),
+    )
+
+    expect(shownStatus()).toBe('Für Calix ist hier kein Vorgang gespeichert.')
+  })
+
+  it('surfaces an unclamped invalid page as a visible failure', async () => {
+    const body = '{"message":"page: must be at least 0"}'
+    const server = alwaysServing(400, body)
+
+    await shellAt(`/avatars/Calix/bank?token=${TOKEN}&page=-1`, server)
+
+    expect({
+      shown: shownStatus(),
+      askedFor: server.askedFor,
+    }).toStrictEqual({
+      shown: 'Fehler: The API answered 400',
+      askedFor: [
+        '/api/v1/avatars/Calix/bank?token=a-test-token&page=-1&size=100',
+      ],
+    })
+  })
+
+  it('passes a blank page value through to the API unchanged, not defaulted', async () => {
+    const server = alwaysServing(400, '{"message":"page: must not be null"}')
+
+    await shellAt(`/avatars/Calix/bank?token=${TOKEN}&page=`, server)
+
+    expect(server.askedFor).toStrictEqual([
+      '/api/v1/avatars/Calix/bank?token=a-test-token&page=NaN&size=100',
+    ])
+  })
+
   it('offers the ledgers of the avatar it shows in its navigation', async () => {
     await shellAt(
       `/avatars/Calix/bank?token=${TOKEN}`,

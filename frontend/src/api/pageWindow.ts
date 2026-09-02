@@ -4,3 +4,7 @@ export interface PageWindow {
 }
 
 export const FIRST_PAGE: PageWindow = { page: 0, size: 100 }
+
+export function windowOf(page: number): PageWindow {
+  return { page, size: FIRST_PAGE.size }
+}

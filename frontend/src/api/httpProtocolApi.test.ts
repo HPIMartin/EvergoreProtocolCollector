@@ -244,6 +244,9 @@ describe('the HTTP protocol API', () => {
     const reading = tested.bankEntries('Calix', { page: -1, size: 100 })
 
     await expect(reading).rejects.toThrow('The API answered 400')
+    expect(fetched.urls).toStrictEqual([
+      '/api/v1/avatars/Calix/bank?token=a-test-token&page=-1&size=100',
+    ])
   })
 
   it('keeps the token out of what it reports about a failure', async () => {

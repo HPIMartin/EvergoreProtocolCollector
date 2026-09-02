@@ -1,17 +1,20 @@
 import type { ProtocolApi } from '../api'
-import { FIRST_PAGE } from '../api'
+import { windowOf } from '../api'
 import type { StorageEntry } from '../domain'
 import { germanNameOf } from '../domain'
 import type { Column } from '../ui'
 
 import { LedgerView } from './LedgerView.tsx'
 import { requestKeyOf } from './requestKey.ts'
+import { storagePath } from './route.ts'
 import { useLoad } from './useLoad.ts'
 
 export interface StorageLedgerViewProps {
   readonly api: ProtocolApi
   readonly avatar: string
   readonly token: string | null
+  readonly page: number
+  readonly onFollow: (href: string) => void
 }
 
 const columns: readonly Column<StorageEntry>[] = [
@@ -59,10 +62,12 @@ export function StorageLedgerView({
   api,
   avatar,
   token,
+  page,
+  onFollow,
 }: StorageLedgerViewProps) {
   const load = useLoad(
-    () => api.storageEntries(avatar, FIRST_PAGE),
-    requestKeyOf('storage', avatar, token),
+    () => api.storageEntries(avatar, windowOf(page)),
+    requestKeyOf('storage', avatar, token, page),
   )
 
   return (
@@ -71,6 +76,9 @@ export function StorageLedgerView({
       avatar={avatar}
       load={load}
       columns={columns}
+      token={token}
+      pathOf={storagePath}
+      onFollow={onFollow}
     />
   )
 }

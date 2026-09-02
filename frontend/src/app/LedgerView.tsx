@@ -12,6 +12,9 @@ export interface LedgerViewProps<E> {
   readonly avatar: string
   readonly load: Load<Ledger<E>>
   readonly columns: readonly Column<E>[]
+  readonly token: string | null
+  readonly pathOf: (avatar: string) => string
+  readonly onFollow: (href: string) => void
 }
 
 export function LedgerView<E>({
