@@ -15,7 +15,7 @@
 |---|-----------|-------|-------------------|
 | M3 | Dashboard views (strands `spa-look`, `spa-data-shell`, `spa-legacy-out`) | The SPA over the JSON API | The officer-visible payoff of the dashboard rebuild |
 | M4 | Ingest & test robustness | B20 | Small hardening set, deliberately behind the dashboard strands (decision 2026-07-17) |
-| M5 | Sheet parity, confirmed columns | E1, E2 | The headline metric lands on integrity-fixed data and a real dashboard |
+| M5 | Overview truth | E1, E2, E8, E11 | The headline metric lands on integrity-fixed data and a real dashboard; three of the six user requests of 2026-09-02 land here |
 | M6 | Real-browser integration tests | H2, H6 | Scrape coverage without host Firefox; the test split gates on the Selenium service |
 | M7 | Micronaut 5 | H9 | Deferred deliberately until 1:1 is re-proven through the nets built in M3-M6 |
 
@@ -49,18 +49,24 @@ dependency.
       onto a type word inside an avatar name.
 - [x] The `SeleniumPageSource` wait has no wall-clock dependency in tests; a both-fail test pins
       "scrape exception propagates, both failures logged".
-- [ ] The frontend vitest worker pool/timeout hardened (the deferred test-hygiene follow-up in the
-      backlog status section).
+- [x] The frontend vitest worker fan-out bounded and ordered after the Java suite
+      (`mustRunAfter(":test")`, `test.maxWorkers: 2`; decision 2026-08-07).
 
-## M5: Sheet parity, confirmed columns
+## M5: Overview truth
 
-Slice: the headline metric and the activity columns reach the dashboard end to end.
+Slice: the overview answers "what did this member contribute" completely, instead of showing gold
+only.
 
 - [ ] Erzeugter Gildenmehrwert per avatar (deposits minus withdrawals across bank and storage, the
       verified formula in [google-sheet.md](knowledge-base/google-sheet.md)) computed, stored,
       served in the overview JSON and rendered in the SPA; the acceptance net asserts it against
       the synthetic fixture (backlog E1).
 - [ ] Last bank/storage activity per avatar surfaced in the overview (backlog E2).
+- [ ] Bank in/out and storage in/out as four separate columns plus a guild-wide total row; the
+      corrected storage sums go live with it and are announced in the guild (backlog E11,
+      decisions 2026-09-02).
+- [ ] The overview's names sort by German collation, so an umlaut-named member no longer sits last
+      on the first paint (backlog E8).
 - [ ] Values match the sheet on a real sample (author check).
 
 ## M6: Real-browser integration tests
@@ -95,5 +101,8 @@ Slice: the framework moves to the current major without losing 1:1.
   (G10), agent-environment polish (G11), wildcard-import ban (G17, only between strands),
   KB accuracy sweep and citation guard (G18, G19), BDD tooling
   decision (G4), case study (G5), static-analysis gate (G6).
-- **Product growth:** hunt-loot estimate (E3, gated on the D-4 valuation rule), date-range
-  reporting (E4), history/time-series (E6), delivery channel (F3), multi-guild (F4), public API (F5).
+- **Product growth:** ledger paging, so entries past 100 are reachable at all (E10); the windowed
+  aggregation and time filter, including the date-range reporting it absorbs (E12), with
+  "Gildenmitglied des Monats" on top of it (E13); hunt-loot estimate (E3, gated on the D-4
+  valuation rule), history/time-series (E6), delivery channel (F3), multi-guild (F4),
+  public API (F5).
