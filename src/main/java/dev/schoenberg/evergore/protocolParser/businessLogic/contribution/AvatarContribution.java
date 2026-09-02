@@ -1,3 +1,5 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.contribution;
 
-public record AvatarContribution(String avatar, Contribution contribution) {}
+import java.time.Instant;
+
+public record AvatarContribution(String avatar, Contribution contribution, Instant lastBankActivity, Instant lastStorageActivity) {}

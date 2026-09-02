@@ -147,7 +147,7 @@ service's only read surface.
 
 | Route | Answers |
 |-------|---------|
-| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, and the derived `net`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
+| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, plus `lastBankActivity` and `lastStorageActivity`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
 | `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first. |
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first. |
 
@@ -166,6 +166,13 @@ service's only read surface.
   stored nowhere. The rounding rule behind the numbers, and why a served row adds up while the total
   row is the exact column sum of the rows above it, lives in
   [domain-model.md](domain-model.md).
+- **`lastBankActivity` / `lastStorageActivity` are `null` when the avatar never appeared in that
+  ledger**, which is the case the sheet leaves blank. They are read from the ledger rows rather than
+  from the meta store, so they are as fresh as the last ingest instead of as fresh as the last
+  evaluation; why they come from there is in [architecture.md](architecture.md) (decision
+  2026-09-02). They inherit the ledger's storage format, so like `lastUpdated` they can read back an
+  hour late for an activity inside the Berlin DST fall-back hour until the epoch/UTC storage format
+  lands (backlog D14).
 - **`lastUpdated: null`** means no collection run has completed. A sentinel instant is not an option:
   Java 25 throws when converting an extreme instant into `java.sql.Timestamp`.
 - **`lastUpdated` is display-only and up to an hour off inside the DST fall-back hour.** It is stored

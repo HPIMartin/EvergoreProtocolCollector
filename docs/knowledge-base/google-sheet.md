@@ -62,12 +62,12 @@ Each row: avatar name plus 11 value columns. Headers are merged/German; mapping 
 | erzeugter Gildenmehrwert (col5) | ✅ Derived per request by `Contribution.net()` over the four sums and served as `net`; stored nowhere, so it cannot drift from its summands. |
 | geschätzte Jagdeinlagerungen + % (col6/7/8) | ❌ Not implemented. `EvergoreItem` *has* a `JAGDBEUTEN` (hunt-loot) category, so the data exists to compute it. |
 | count (col9) | ❌ Meaning unknown; not implemented. |
-| letzte Lager-/Bankaktivität (col10/11) | 🟡 Per-entry timestamps are stored; a "last activity per avatar" is derivable but not surfaced as such. |
+| letzte Lager-/Bankaktivität (col10/11) | ✅ Queried from the ledger rows per avatar (`latestTimestampPerAvatar`) and served as `lastStorageActivity` / `lastBankActivity`; `null` for a ledger the avatar never used, the case the sheet leaves blank. |
 | Date-range filter (Datum von/bis) | ❌ Software recomputes sums from all stored entries each run; no arbitrary date-range reporting yet. |
 
-**Bottom line:** software reproduces the bank-totals third; storage-value third in progress.
-Full parity = remaining storage metrics + Gildenmehrwert + hunt-loot estimates + last-activity
-surfacing + date-range queries.
+**Bottom line:** software reproduces the sheet's columns 1 to 5 and 10/11, per avatar and as a
+guild-wide total row. Full parity = hunt-loot estimates (col6/7/8), the still unexplained count
+(col9) and date-range queries.
 
 ## Unknowns to confirm with the author
 

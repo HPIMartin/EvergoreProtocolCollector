@@ -25,8 +25,8 @@ class AvatarSummariesControllerTest {
 	private final FakeMetaInformationRepository metaRepo = new FakeMetaInformationRepository();
 	private final BankRepositoryStub bankRepo = new BankRepositoryStub();
 	private final StorageRepositoryStub storageRepo = new StorageRepositoryStub();
-	private final AvatarSummariesController tested = new AvatarSummariesController(metaRepo, new AvatarContributions(new KnownAvatars(bankRepo, storageRepo), metaRepo),
-			new LoggerSpy());
+	private final AvatarContributions contributions = new AvatarContributions(new KnownAvatars(bankRepo, storageRepo), metaRepo, bankRepo, storageRepo);
+	private final AvatarSummariesController tested = new AvatarSummariesController(metaRepo, contributions, new LoggerSpy());
 
 	@Test
 	void listsAnAvatarThatOnlyEverMovedItems() {
@@ -55,7 +55,7 @@ class AvatarSummariesControllerTest {
 
 		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
 
-		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", 0, 0, 0, 0, 0));
+		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", 0, 0, 0, 0, 0, null, null));
 	}
 
 	@Test

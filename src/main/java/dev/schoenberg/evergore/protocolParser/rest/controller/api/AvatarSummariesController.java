@@ -70,7 +70,7 @@ public class AvatarSummariesController {
 		Contribution whole = avatar.contribution().inWholeGold();
 
 		return new AvatarSummary(avatar.avatar(), whole.bankWithdrawn(), whole.bankDeposited(), (long) whole.storageWithdrawn(), (long) whole.storageDeposited(),
-				(long) whole.net());
+				(long) whole.net(), avatar.lastBankActivity(), avatar.lastStorageActivity());
 	}
 
 	private Instant lastUpdated() {

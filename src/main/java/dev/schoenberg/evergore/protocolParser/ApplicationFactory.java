@@ -41,8 +41,8 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public AvatarContributions avatarContributions(KnownAvatars knownAvatars, MetaInformationRepository metaRepo) {
-		return new AvatarContributions(knownAvatars, metaRepo);
+	public AvatarContributions avatarContributions(KnownAvatars knownAvatars, MetaInformationRepository metaRepo, BankRepository bankRepo, StorageRepository storageRepo) {
+		return new AvatarContributions(knownAvatars, metaRepo, bankRepo, storageRepo);
 	}
 
 	@Singleton
