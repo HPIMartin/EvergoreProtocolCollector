@@ -103,8 +103,14 @@ Four top-level folders under `frontend/src/`:
 - **The token is read once from the address** (`?token=`) and carried into every request and every
   in-app link; it is kept nowhere else (no cookie, no `localStorage`), so a link is the whole
   credential and closing the tab ends the session.
-- A view asks for `page=0&size=100` and shows `items.length` of `totalCount`; **paging controls do
-  not exist yet** (decision 2026-08-07 in open-questions.md).
+- **Ledger paging is server-side and bookmarkable.** A ledger view fetches `windowOf(page)`
+  (`?page=&size=100`) and shows `items.length` of `totalCount`; the page number round-trips through
+  the address (`route.ts`'s `PAGE` param), so `Pagination` (`ui/Pagination.tsx`) can build "Zurück"/
+  "Weiter" links from it via `hrefOf`. A page past the end is not a failure: the API answers 200 with
+  `items: []`, rendered as the existing empty state. An invalid page (negative or non-numeric) is
+  passed through **unclamped**, so the API's `@Min(0)` violation answers 400 and surfaces as the
+  existing generic failure, because clamping it client-side would hide a bad link instead of
+  showing it.
 - **The views own their columns, the primitives own the rendering.** A view declares its
   `Column` list and hands `SortableTable` the domain rows; timestamps go in as ISO strings, which is
   what the column kind reads, and `format.ts` is the one place that turns them into Berlin

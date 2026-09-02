@@ -101,7 +101,7 @@ Slice: the framework moves to the current major without losing 1:1.
   (G10), agent-environment polish (G11), wildcard-import ban (G17, only between strands),
   KB accuracy sweep and citation guard (G18, G19), BDD tooling
   decision (G4), case study (G5), static-analysis gate (G6).
-- **Product growth:** ledger paging, so entries past 100 are reachable at all (E10); the windowed
+- **Product growth:** the windowed
   aggregation and time filter, including the date-range reporting it absorbs (E12), with
   "Gildenmitglied des Monats" on top of it (E13); hunt-loot estimate (E3, gated on the D-4
   valuation rule), history/time-series (E6), delivery channel (F3), multi-guild (F4),
