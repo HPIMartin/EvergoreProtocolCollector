@@ -17,7 +17,9 @@ rows' prose and across the docs), so no dangling code is left behind (handbook �
 **Where we are:** the rebuild's core is in place on an up-to-date stack (Gradle / Java 25 / Micronaut
 4.10), verified **1:1** against the production DB; single public `main` branch. The framework-free core
 is ArchUnit-guarded, style is enforced from one place, an offline acceptance test covers
-evaluate→overview against a synthetic committed fixture, startup and boot tests are deterministic
+evaluate→overview against a synthetic committed fixture, the overview answers the sheet's columns 1
+to 5 and 10/11 per avatar plus a guild-wide total row
+([google-sheet.md](knowledge-base/google-sheet.md)), startup and boot tests are deterministic
 (no-timeout latch), and observability (anonymous `/health`, config-driven rate-limiting) is in place.
 The *how* lives in the KB ([architecture](knowledge-base/architecture.md) ·
 [testing](knowledge-base/testing.md) · [build-run-deploy](knowledge-base/build-run-deploy.md) ·
@@ -31,12 +33,10 @@ value-wise on the JSON surface (testing.md), API token rotated, the deployed sta
 with `totalCount 42`. The deploy also corrected four defects on its own path — a truncating
 pre-flight check, an inspect that answered about an image, a container name and a published port the
 docs had wrong — filed as **F6**'s acceptance criteria. Next (author decision 2026-09-02, from a
-backlog review that also took in six user feature requests): the **overview truth cut**,
-**E1**+**E2**+**E11**+**E8** as one track, so the overview serves all four ledger sums, the net per
-avatar, a guild-wide total row and German name collation. Then **E12** (windowed aggregation and the
-time filter) with **E13** on top of it. **B20** no longer leads: it blocks nothing and M4 is otherwise
-done. **B19** still comes
-before **H9**, which also waits on 1:1 being re-proven; **H2**+**H6** follow the overview cut. Milestone
+backlog review that also took in six user feature requests): **E12** (windowed aggregation and the
+time filter) with **E13** on top of it. **B20** no longer leads: it blocks nothing and M4 is
+otherwise done. **B19** still comes
+before **H9**, which also waits on 1:1 being re-proven; **H2**+**H6** are the next milestone cut. Milestone
 cuts + acceptance: [roadmap.md](roadmap.md); risk register: [risks.md](risks.md). Plan via the agent
 pipeline (planner → implementer → falsifier panel → reviewer). *(A4/CI stays deprioritized:
 local-only Docker → home-server deploy.)*
@@ -48,9 +48,6 @@ local-only Docker → home-server deploy.)*
 - **Test-helper duplication:** `tonesOf` stands byte-identical in `frontend/src/ui/SortableTable.test.tsx`
   and `frontend/src/app/App.test.tsx`. A shared helper needs a home that is not production code without a
   test of its own (same shape of problem as the duplicated test boot setup).
-- **A column that offers sorting must be able to sort:** the overview's `Lager` column is a link column
-  whose text is the same word in every row, so its header renders a sort button that can never reorder
-  anything. Either `Column` gains a way to opt out of sorting, or such a column sorts by another field.
 - **Row identity:** an entry carries no id on the wire, so a ledger row is keyed by its position in the
   loaded page. That holds while a page is replaced as a whole (sorting reorders the same objects, and
   ledger paging is server-side, so each fetch replaces the array), but paging **inside** a loaded page
@@ -153,15 +150,11 @@ SOLID / hexagonal §1–§3, TDD §4, BDD §5, Definition of Done §8); not rest
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **E1** | Compute & store **erzeugter Gildenmehrwert** per avatar (bank+storage net) | Sheet col 5, the headline metric | Overview shows net value; matches the verified formula | S |
-| **E2** | Surface **last bank/storage activity** per avatar (sheet col 10/11) | Easy parity win from stored timestamps | Overview/avatar view shows last-activity | S |
 | **E3** | Implement **geschätzte Jagdeinlagerungen** + percentage(s) (sheet col 6/7/8) | Needs the hunt-loot valuation rule resolved first (D-4) | Values reproduce sheet within tolerance on a sample | M |
 | **E6** | **History / time-series**: snapshot metrics over time for trends per avatar | The sheet is a point-in-time; trends are more useful | Stored snapshots; a trend view | L |
-| **E8** | **The overview's avatar order is code-point order, not German collation** (falsifier finding 2026-08-10): `KnownAvatars.sortedByName()` sorts by `String`'s natural order, so `Ärger` lands behind `Zorn`, while [frontend.md](knowledge-base/frontend.md) pins the table's own text sorting to `Intl.Collator('de-DE')`. The overview renders without `initialSort`, so its first paint **is** the API's order and an umlaut-named member sits at the end until a header is clicked | The guild's names are German; a member sorted after `Z` reads as missing at first glance, and a wrong report is what the overview must not produce | `/api/v1/avatars` sorts by German collation; a test pins `Anna` < `Ärger` < `Zorn` | S |
 | **E9** | **The union matches avatar names exactly** (reviewer finding 2026-08-10): `KnownAvatars` compares with `String.equals`, so the same member spelled differently in the two ledgers would appear twice. Folding the case in `KnownAvatars` **alone** is worse than the duplicate row: `getAllFor`/`countFor` query the exact name (ORMLite `eq` against a BINARY-collated column) and `MetaInformationKey` builds its key from it, so the merged-away spelling's entries are never read and that member's storage half drops out of the totals silently | Both ledgers come from the same parse, which trims the name, so the mismatch is hypothetical today; it stops being hypothetical as soon as a second writer feeds the ledgers | Name matching folds case in the ledger lookups and the meta keys as well as in the union, pinned by a failing-first evaluator test on the merged member's totals | M |
-| **E11** | **The overview shows gold only, and no total** (user requests 2026-09-02, author decisions the same day): `/api/v1/avatars` serves the two **bank** meta keys, so the storage half of every member's contribution is invisible although the evaluator computes and stores it (`storage_placement`/`storage_withdrawl`) on every run. The overview grows to the sheet's columns 1-5: bank in/out and storage in/out as four separate columns, the per-avatar net from **E1**, and a guild-wide total row over every column. The corrected storage sums go live with it and are announced in the guild (decision 2026-09-02, closing the 2026-08-09 detail question). Lands with **E1**, **E2** and **E8** as one cut | The dashboard replaces a sheet whose headline question is "what did this member contribute", and two of the four numbers that answer it are stored but never served; a guild-wide balance exists nowhere at all, and a member cannot reconcile his own row against the sheet from a net alone | The overview serves and renders all four ledger sums plus the net per avatar, and a total row over all avatars; the acceptance net pins every column against the synthetic fixture | M |
 | **E12** | **A time filter over all views, on a windowed aggregation** (user request 2026-09-02; **absorbs the former date-range reporting item**, whose arbitrary `[from,to]` is its second half and ships in the same cut): the meta store holds **all-time** sums only, recomputed per run, so no window can be answered from it — this needs an aggregation over the ledger rows inside `[from,to]` (`getAllSince` is the existing half of that query). Author decisions 2026-09-02: presets are **mixed rolling and calendar-aligned** (last 24 hours and last 7 days rolling, this week from Monday 00:00, this month from the 1st, all time the default); the filter state is **one** parameter pair `?from=`/`?to=` in which `from` may be **relative** (`-24h`, `-7d`) and `to` may be `now`, resolved server-side, so a preset bookmark stays rolling instead of freezing on the window it was created in; the filter applies to the overview and to both ledger views | Every question the guild actually asks is windowed ("who was active this week"), and the all-time sums answer none of them; the same aggregation is what **E13** and the sheet's date-range reporting need, so it gets built once | A windowed aggregation answers the per-avatar sums for an arbitrary `[from,to]`; the relative forms resolve server-side and an unparseable duration is a **400**, not a clamp; the filter round-trips through the URL on all three views; all time stays the default when no parameter is given | L |
-| **E13** | **"Gildenmitglied des Monats", four awards from the stored data** (user request 2026-09-02, deliberately an easter egg): *Materialsammler* (summed deposited `quantity`, every category), *Jäger* (the same over `Category.JAGDBEUTEN` only), *Goldgeber* (summed bank deposits) and *Wertschöpfer* (the highest net over the month, i.e. **E1**'s metric on a window). Shown for the **last completed month** as the standing title **and** for the running month as the current standing (author decision 2026-09-02). Needs no schema change: `StorageEntry` carries `quantity`/`name`/`quality` and the catalog gives the category. Gate on **E12**'s windowed aggregation | Two of the four awards honour exactly what the value model rates at zero — raw materials and hunt loot are `NOT_CRAFTABLE`, so their storage value is 0 — which means the members carrying the guild's gathering appear nowhere in the contribution numbers | The four awards are computed per calendar month from stored entries and shown for the last completed and the running month; the two item-count awards need no valuation rule, so **D-4** does not gate them | M |
+| **E13** | **"Gildenmitglied des Monats", four awards from the stored data** (user request 2026-09-02, deliberately an easter egg): *Materialsammler* (summed deposited `quantity`, every category), *Jäger* (the same over `Category.JAGDBEUTEN` only), *Goldgeber* (summed bank deposits) and *Wertschöpfer* (the highest net over both ledgers on a window). Shown for the **last completed month** as the standing title **and** for the running month as the current standing (author decision 2026-09-02). Needs no schema change: `StorageEntry` carries `quantity`/`name`/`quality` and the catalog gives the category. Gate on **E12**'s windowed aggregation | Two of the four awards honour exactly what the value model rates at zero — raw materials and hunt loot are `NOT_CRAFTABLE`, so their storage value is 0 — which means the members carrying the guild's gathering appear nowhere in the contribution numbers | The four awards are computed per calendar month from stored entries and shown for the last completed and the running month; the two item-count awards need no valuation rule, so **D-4** does not gate them | M |
 
 ## Epic F: Ops, robustness & creative growth `P3`
 

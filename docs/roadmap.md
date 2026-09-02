@@ -15,7 +15,7 @@
 |---|-----------|-------|-------------------|
 | M3 | Dashboard views (strands `spa-look`, `spa-data-shell`, `spa-legacy-out`) | The SPA over the JSON API | The officer-visible payoff of the dashboard rebuild |
 | M4 | Ingest & test robustness | B20 | Small hardening set, deliberately behind the dashboard strands (decision 2026-07-17) |
-| M5 | Overview truth | E1, E2, E8, E11 | The headline metric lands on integrity-fixed data and a real dashboard; three of the six user requests of 2026-09-02 land here |
+| M5 | Overview truth | author check open | The headline metric lands on integrity-fixed data and a real dashboard; three of the six user requests of 2026-09-02 land here |
 | M6 | Real-browser integration tests | H2, H6 | Scrape coverage without host Firefox; the test split gates on the Selenium service |
 | M7 | Micronaut 5 | H9 | Deferred deliberately until 1:1 is re-proven through the nets built in M3-M6 |
 
@@ -57,16 +57,15 @@ dependency.
 Slice: the overview answers "what did this member contribute" completely, instead of showing gold
 only.
 
-- [ ] Erzeugter Gildenmehrwert per avatar (deposits minus withdrawals across bank and storage, the
-      verified formula in [google-sheet.md](knowledge-base/google-sheet.md)) computed, stored,
-      served in the overview JSON and rendered in the SPA; the acceptance net asserts it against
-      the synthetic fixture (backlog E1).
-- [ ] Last bank/storage activity per avatar surfaced in the overview (backlog E2).
-- [ ] Bank in/out and storage in/out as four separate columns plus a guild-wide total row; the
-      corrected storage sums go live with it and are announced in the guild (backlog E11,
-      decisions 2026-09-02).
-- [ ] The overview's names sort by German collation, so an umlaut-named member no longer sits last
-      on the first paint (backlog E8).
+- [x] Erzeugter Gildenmehrwert per avatar (deposits minus withdrawals across bank and storage, the
+      verified formula in [google-sheet.md](knowledge-base/google-sheet.md)) derived on the read
+      side, served in the overview JSON and rendered in the SPA; the acceptance net asserts every
+      column against the synthetic fixture.
+- [x] Last bank/storage activity per avatar surfaced in the overview, queried from the ledgers.
+- [x] Bank in/out and storage in/out as four separate columns plus a guild-wide total row.
+- [x] The overview's names sort by German collation, so an umlaut-named member no longer sits last
+      on the first paint.
+- [ ] The corrected storage sums are announced in the guild (author step, decision 2026-09-02).
 - [ ] Values match the sheet on a real sample (author check).
 
 ## M6: Real-browser integration tests
