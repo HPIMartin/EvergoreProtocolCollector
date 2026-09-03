@@ -422,7 +422,9 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      (single-admin home server); nothing writes them to the log.
    - `TZ=UTC` keeps the runtime off a DST zone while timestamps persist as default-timezone
      wall-clock text (backlog D14). The container default is already UTC; setting it explicitly
-     pins it.
+     pins it. `TimezoneStartupValidator` (backlog D22) backs this up: it aborts boot if the
+     effective zone is not a fixed offset, so a dropped or wrong `TZ` fails fast instead of
+     silently reintroducing the DST defect.
    - The fixed `--name` is what makes every command in "Which stand is running?" and in the
      rollback runnable as written.
    - **The published port is the target machine's choice, and it is not `8080` here.** The home
