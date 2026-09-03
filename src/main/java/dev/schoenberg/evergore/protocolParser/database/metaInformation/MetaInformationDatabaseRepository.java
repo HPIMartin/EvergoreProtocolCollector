@@ -1,24 +1,21 @@
 package dev.schoenberg.evergore.protocolParser.database.metaInformation;
 
 import java.util.List;
-import java.util.Optional;
 
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.support.ConnectionSource;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation;
-import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationSnapshot;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
 import dev.schoenberg.evergore.protocolParser.database.Repository;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation.fromSerializedValue;
 import static dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationEntry.KEY_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
+import static java.util.stream.Collectors.toMap;
 
 public class MetaInformationDatabaseRepository extends Repository<MetaInformationEntry> implements MetaInformationRepository {
 	private final Dao<MetaInformationEntry, String> meta;
@@ -36,14 +33,10 @@ public class MetaInformationDatabaseRepository extends Repository<MetaInformatio
 	}
 
 	@Override
-	public <T> Optional<T> get(MetaInformationKey<T> key) {
-		List<MetaInformationEntry> result = getAllFor(key.id);
+	public MetaInformationSnapshot snapshot() {
+		List<MetaInformationEntry> all = silentThrow(() -> meta.queryForAll());
 
-		if (result.isEmpty()) {
-			return empty();
-		}
-
-		return of(convert(key, result.get(0)).value());
+		return new MetaInformationSnapshot(all.stream().filter(entry -> entry.value != null).collect(toMap(entry -> entry.key, entry -> entry.value)));
 	}
 
 	@Override
@@ -65,10 +58,6 @@ public class MetaInformationDatabaseRepository extends Repository<MetaInformatio
 		} else {
 			silentThrow(() -> meta.update(existing.get(0).changeValue(metainformation.getSerializedValue())));
 		}
-	}
-
-	private <T> MetaInformation<T> convert(MetaInformationKey<T> key, MetaInformationEntry dbEntry) {
-		return fromSerializedValue(key, dbEntry.value);
 	}
 
 	private <T> MetaInformationEntry convert(MetaInformation<T> entry) {

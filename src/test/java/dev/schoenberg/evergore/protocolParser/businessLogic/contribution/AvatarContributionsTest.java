@@ -29,6 +29,15 @@ class AvatarContributionsTest {
 	private static final Instant LATER = Instant.parse("2024-01-12T11:00:00Z");
 
 	@Test
+	void readsTheWholeGuildFromASingleSnapshotOfTheStore() {
+		bankRepo.seedAvatars(List.of("Aurora", "Brynja", "Calix"));
+
+		tested.ofEveryKnownAvatar();
+
+		assertThat(metaRepo.takenSnapshots()).isEqualTo(1);
+	}
+
+	@Test
 	void readsAllFourStoredSumsOfAKnownAvatar() {
 		bankRepo.seedAvatars(List.of("Aurora"));
 		metaRepo.put(getBankPlacement("Aurora"), 1500L);
@@ -36,7 +45,7 @@ class AvatarContributionsTest {
 		metaRepo.put(getStoragePlacement("Aurora"), 185.04);
 		metaRepo.put(getStorageWithdrawl("Aurora"), 300.0);
 
-		List<AvatarContribution> all = tested.ofEveryKnownAvatar();
+		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
 		assertThat(all).containsExactly(new AvatarContribution("Aurora", new Contribution(1500, 200, 185.04, 300.0), null, null));
 	}
@@ -45,7 +54,7 @@ class AvatarContributionsTest {
 	void countsAnAvatarWithoutAnyStoredSumAsZeroRatherThanLeavingHimOut() {
 		storageRepo.seedAvatars(List.of("Brynja"));
 
-		List<AvatarContribution> all = tested.ofEveryKnownAvatar();
+		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
 		assertThat(all).containsExactly(new AvatarContribution("Brynja", Contribution.NOTHING, null, null));
 	}
@@ -56,7 +65,7 @@ class AvatarContributionsTest {
 		bankRepo.seedEntries("Aurora", List.of(new BankEntry(EARLIER, "Aurora", 100, EINLAGERUNG), new BankEntry(LATER, "Aurora", 200, EINLAGERUNG)));
 		storageRepo.seedEntries("Aurora", List.of(new StorageEntry(EARLIER, "Aurora", 1, "Kupfererz", 100, EINLAGERUNG)));
 
-		AvatarContribution aurora = tested.ofEveryKnownAvatar().getFirst();
+		AvatarContribution aurora = tested.ofEveryKnownAvatar().avatars().getFirst();
 
 		assertThat(aurora.lastBankActivity()).isEqualTo(LATER);
 		assertThat(aurora.lastStorageActivity()).isEqualTo(EARLIER);
@@ -67,7 +76,7 @@ class AvatarContributionsTest {
 		storageRepo.seedAvatars(List.of("Brynja"));
 		storageRepo.seedEntries("Brynja", List.of(new StorageEntry(EARLIER, "Brynja", 4, "Magische Ätherbinde", 100, EINLAGERUNG)));
 
-		AvatarContribution brynja = tested.ofEveryKnownAvatar().getFirst();
+		AvatarContribution brynja = tested.ofEveryKnownAvatar().avatars().getFirst();
 
 		assertThat(brynja.lastBankActivity()).isNull();
 		assertThat(brynja.lastStorageActivity()).isEqualTo(EARLIER);
@@ -77,7 +86,7 @@ class AvatarContributionsTest {
 	void keepsTheGermanCollationOrderOfTheKnownAvatars() {
 		bankRepo.seedAvatars(List.of("Zorn", "Ärger", "Anna"));
 
-		List<String> named = tested.ofEveryKnownAvatar().stream().map(AvatarContribution::avatar).toList();
+		List<String> named = tested.ofEveryKnownAvatar().avatars().stream().map(AvatarContribution::avatar).toList();
 
 		assertThat(named).containsExactly("Anna", "Ärger", "Zorn");
 	}

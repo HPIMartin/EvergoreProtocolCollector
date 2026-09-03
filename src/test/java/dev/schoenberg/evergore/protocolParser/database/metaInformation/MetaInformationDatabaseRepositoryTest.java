@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationSnapshot;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
@@ -55,7 +56,27 @@ class MetaInformationDatabaseRepositoryTest {
 
 		assertThatThrownBy(() -> repo.add(batch)).isInstanceOf(RuntimeException.class);
 
-		assertThat(repo.get(new IntegerKey("first"))).contains(1);
+		assertThat(repo.snapshot().get(new IntegerKey("first"))).contains(1);
+	}
+
+	@Test
+	void readsAKeyWhoseStoredValueIsNullAsAbsentInsteadOfFailingTheSnapshot() {
+		MetaInformationDatabaseRepository repo = repositoryOnAFreshFile();
+		repo.add(List.of(entry("intact", 7)));
+		insertRowWithoutValue("broken");
+
+		MetaInformationSnapshot snapshot = repo.snapshot();
+
+		assertThat(snapshot.get(new IntegerKey("intact"))).contains(7);
+		assertThat(snapshot.get(new IntegerKey("broken"))).isEmpty();
+	}
+
+	private static void insertRowWithoutValue(String key) {
+		silentThrow(() -> {
+			try (Connection con = DriverManager.getConnection("jdbc:sqlite:" + FRESH_DB_PATH); Statement statement = con.createStatement()) {
+				statement.executeUpdate("INSERT INTO " + MetaInformationEntry.TABLE + " (\"" + MetaInformationEntry.KEY_COLUMN + "\", value) VALUES ('" + key + "', NULL)");
+			}
+		});
 	}
 
 	private static MetaInformation<Integer> entry(String id, int value) {

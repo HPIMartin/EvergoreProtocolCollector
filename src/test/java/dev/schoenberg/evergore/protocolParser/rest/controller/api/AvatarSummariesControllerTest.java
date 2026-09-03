@@ -26,7 +26,7 @@ class AvatarSummariesControllerTest {
 	private final BankRepositoryStub bankRepo = new BankRepositoryStub();
 	private final StorageRepositoryStub storageRepo = new StorageRepositoryStub();
 	private final AvatarContributions contributions = new AvatarContributions(new KnownAvatars(bankRepo, storageRepo), metaRepo, bankRepo, storageRepo);
-	private final AvatarSummariesController tested = new AvatarSummariesController(metaRepo, contributions, new LoggerSpy());
+	private final AvatarSummariesController tested = new AvatarSummariesController(contributions, new LoggerSpy());
 
 	@Test
 	void listsAnAvatarThatOnlyEverMovedItems() {

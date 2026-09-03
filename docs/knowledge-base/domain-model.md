@@ -121,6 +121,13 @@ Column 5, the net **erzeugter Gildenmehrwert**, is **derived on the read side an
 (decision 2026-09-02): a fifth meta key would persist what its four summands already say and drift
 from them on any partial recompute.
 
+The read side takes **one `MetaInformationSnapshot` per response** (`MetaInformationRepository.snapshot()`,
+one statement over the whole store) and answers every avatar's four sums, the derived net, the
+guild-wide total **and** `last_updated` out of it. Together with the recompute's single transaction
+this makes the page one consistent state of the store rather than up to four reads per avatar that a
+concurrent recompute could interleave (decision 2026-09-03). There is deliberately **no** per-key
+read on the port: the shape that could tear no longer exists.
+
 - `businessLogic/contribution/Contribution` carries the four sums and answers
   `net() = bankDeposited − bankWithdrawn + storageDeposited − storageWithdrawn`, the formula the
   sheet's own column 5 was verified against.

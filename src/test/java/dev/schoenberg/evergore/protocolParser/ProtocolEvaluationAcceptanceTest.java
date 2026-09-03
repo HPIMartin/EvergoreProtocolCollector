@@ -208,13 +208,13 @@ class ProtocolEvaluationAcceptanceTest {
 	void storageValuationIsCorrectAtBeanLevel() {
 		MetaInformationRepository metaRepo = server.getApplicationContext().getBean(MetaInformationRepository.class);
 
-		assertThat(metaRepo.<Double>get(getStoragePlacement("Aurora"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(185.04, within(1e-6)));
+		assertThat(metaRepo.snapshot().get(getStoragePlacement("Aurora"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(185.04, within(1e-6)));
 
-		assertThat(metaRepo.<Double>get(getStorageWithdrawl("Aurora"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(300.0, within(1e-6)));
+		assertThat(metaRepo.snapshot().get(getStorageWithdrawl("Aurora"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(300.0, within(1e-6)));
 
-		assertThat(metaRepo.<Double>get(getStoragePlacement("Boreas"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(46.26, within(1e-6)));
+		assertThat(metaRepo.snapshot().get(getStoragePlacement("Boreas"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(46.26, within(1e-6)));
 
-		assertThat(metaRepo.<Double>get(getStoragePlacement("Brynja"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(370.08, within(1e-6)));
+		assertThat(metaRepo.snapshot().get(getStoragePlacement("Brynja"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(370.08, within(1e-6)));
 	}
 
 	@Test
@@ -288,7 +288,7 @@ class ProtocolEvaluationAcceptanceTest {
 	}
 
 	private LocalDateTime storedLastUpdated() {
-		return server.getApplicationContext().getBean(MetaInformationRepository.class).get(getLastUpdatedKey()).orElseThrow();
+		return server.getApplicationContext().getBean(MetaInformationRepository.class).snapshot().get(getLastUpdatedKey()).orElseThrow();
 	}
 
 	private static int statusOfGet(String endpoint) {
