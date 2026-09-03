@@ -46,8 +46,8 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   `FileLoader`, no-op hooks) · `EvergoreDataCollectorJob` (`@Scheduled`); each `Repository` creates
   its own table lazily, on first use (`ensureTable()`), rather than at a dedicated startup step.
 - **Application use-cases (framework-free):** `application/{EvergoreDataExtractor,EvergoreDataEvaluator}`
-  (collect + evaluate coordinators) · `application/LastRunStatus` (monitoring seam: records the
-  `Instant` of the last successful run). Plain objects, wired in `ApplicationFactory`.
+  (collect + evaluate coordinators) · `application/LastRunStatus` (monitoring seam: what the
+  last run reached, see the pipeline above). Plain objects, wired in `ApplicationFactory`.
 - **Extraction pipeline:** `helper/selenium/{Browser,Driver,FileLoader}` ·
   `dataExtraction/website/SeleniumPageSource` (Selenium adapter: login, cookie banner, pagination;
   implements `PageSource`) · `PageContents` (DTO) · `parser/{EntityParser,EntryFactory}` (text ▶
@@ -101,8 +101,8 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   decision (count the request, block on exceeding the budget, answer whether to reject) is **one**
   `synchronized` call, so no client can be evicted between exceeding its budget and being blocked.
 - **Monitoring:** `monitoring/LastRunHealthIndicator` (adapter implementing `HealthIndicator`,
-  exposed at `GET /health` via `micronaut-management`; UNKNOWN before the first run, then UP +
-  `lastSuccessfulRun` detail). Fed by `application/LastRunStatus` (above).
+  exposed at `GET /health` via `micronaut-management`; UNKNOWN before the first run, then UP with
+  the `lastRun` details listed in the pipeline above). Fed by `application/LastRunStatus` (above).
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.

@@ -99,8 +99,9 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   `unknownItemCount` + distinct `unknownItemNames`, so a catalog gap is loud, not silent; since
   evaluation is a full recompute, this count is unknown-item rows across **the entire stored
   history of every avatar the run could read**, recomputed each run, not just those new since the
-  previous run; an avatar whose ledger read throws reports none, because the read fails before any
-  item is resolved), then add
+  previous run; an avatar whose ledger read throws reports none, because both ledger
+  adapters materialise their result before returning it, so the throw precedes every item lookup;
+  the repository interface does not require that), then add
   `itemValue × quantity × (quality / 100)` into `placement` / `withdrawl`, where `itemValue` is
   `getStorageValue()` for deposits and `getWithdrawlValue()` for withdrawals
   (`TransferTypeStorageEntryVisitor`). **Quality scales value linearly.**
