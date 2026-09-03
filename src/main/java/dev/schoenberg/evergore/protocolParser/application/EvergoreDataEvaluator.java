@@ -62,10 +62,8 @@ public class EvergoreDataEvaluator {
 	}
 
 	private void collectInformationOf(String avatar, List<MetaInformation<?>> recomputed, List<String> unknownItemNames, List<String> failedAvatarNames) {
-		List<String> unknownItemNamesOfThisAvatar = new ArrayList<>();
 		try {
-			recomputed.addAll(informationOf(avatar, unknownItemNamesOfThisAvatar));
-			unknownItemNames.addAll(unknownItemNamesOfThisAvatar);
+			recomputed.addAll(informationOf(avatar, unknownItemNames));
 		} catch (RuntimeException failure) {
 			logger.error("Unable to recompute the sums of " + avatar + "; keeping the stored ones.", failure);
 			failedAvatarNames.add(avatar);
