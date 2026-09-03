@@ -2,6 +2,9 @@ package dev.schoenberg.evergore.protocolParser.database.bank;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +101,38 @@ class BankDatabaseRepositoryTest {
 		Map<String, Instant> latest = repo.latestTimestampPerAvatar();
 
 		assertThat(latest).containsExactlyInAnyOrderEntriesOf(Map.of("Aurora", ONE_MINUTE_AFTER_BOUNDARY, "Boreas", BOUNDARY));
+	}
+
+	@Test
+	void skipsAnAvatarWhoseOnlyRowCarriesNoTimestamp() {
+		BankDatabaseRepository repo = repositoryOnAFreshFile();
+		repo.add(List.of(bankEntry("Aurora", BOUNDARY, 1)));
+		insertRowWithoutTimestamp("Boreas");
+
+		Map<String, Instant> latest = repo.latestTimestampPerAvatar();
+
+		assertThat(latest).containsExactlyInAnyOrderEntriesOf(Map.of("Aurora", BOUNDARY));
+	}
+
+	@Test
+	void namesTheLatestRealTimestampWhileOneRowOfThatAvatarCarriesNone() {
+		BankDatabaseRepository repo = repositoryOnAFreshFile();
+		repo.add(List.of(bankEntry("Aurora", BOUNDARY, 1)));
+		insertRowWithoutTimestamp("Aurora");
+
+		Map<String, Instant> latest = repo.latestTimestampPerAvatar();
+
+		assertThat(latest).containsExactlyInAnyOrderEntriesOf(Map.of("Aurora", BOUNDARY));
+	}
+
+	private static void insertRowWithoutTimestamp(String avatar) {
+		silentThrow(() -> {
+			try (Connection con = DriverManager.getConnection("jdbc:sqlite:" + FRESH_DB_PATH); Statement statement = con.createStatement()) {
+				statement
+						.executeUpdate("INSERT INTO " + BankDatabaseEntry.TABLE + " (" + BankDatabaseEntry.ID_COLUMN + ", " + BankDatabaseEntry.TIMESTAMP_COLUMN + ", "
+								+ BankDatabaseEntry.AVATAR_COLUMN + ", amount, type) VALUES ('" + avatar + "-no-timestamp', NULL, '" + avatar + "', 1, 'EINLAGERUNG')");
+			}
+		});
 	}
 
 	@Test

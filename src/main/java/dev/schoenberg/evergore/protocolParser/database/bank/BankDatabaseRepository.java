@@ -90,7 +90,7 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 		return silentThrow(() -> {
 			GenericRawResults<BankDatabaseEntry> rows = bank.queryRaw(newestPerAvatar, bank.getRawRowMapper());
 			try {
-				return rows.getResults().stream().collect(toMap(row -> row.avatar, row -> row.timeStamp.toInstant()));
+				return rows.getResults().stream().filter(row -> row.timeStamp != null).collect(toMap(row -> row.avatar, row -> row.timeStamp.toInstant()));
 			} finally {
 				rows.close();
 			}
