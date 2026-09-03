@@ -102,11 +102,15 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   `itemValue × quantity × (quality / 100)` into `placement` / `withdrawl`, where `itemValue` is
   `getStorageValue()` for deposits and `getWithdrawlValue()` for withdrawals
   (`TransferTypeStorageEntryVisitor`). **Quality scales value linearly.**
-- Results are written per-Avatar to `MetaInformationRepository` under typed keys
-  (`getBankPlacement(avatar)`, `getBankWithdrawl`, `getStoragePlacement`, `getStorageWithdrawl`).
-- The `last_updated` key is **display-only** (the overview's "last updated" timestamp): written
-  **once**, after every avatar updated successfully, as `LocalDateTime.now(clock)`; a failed run
-  (an avatar's repository call throws) writes nothing, so a retry starts clean and self-heals.
+- Results are keyed per avatar (`getBankPlacement(avatar)`, `getBankWithdrawl`,
+  `getStoragePlacement`, `getStorageWithdrawl`) and handed to `MetaInformationRepository.add` as
+  **one batch for the whole run**, which the adapter writes in **one transaction**: a reader can
+  see the state before the recompute or the state after it, never a mixture of both. The run
+  computes first and writes last, so the transaction spans the write alone and no reader is blocked
+  for the duration of the aggregation.
+- The `last_updated` key is **display-only** (the overview's "last updated" timestamp): part of that
+  same batch, as `LocalDateTime.now(clock)`; a failed run (an avatar's repository call throws)
+  writes nothing, so a retry starts clean and self-heals.
 
 This makes evaluation **idempotent** (a second run yields identical sums) and **self-healing**
 (a failed run never leaves a partial watermark advance behind; the next successful run recomputes

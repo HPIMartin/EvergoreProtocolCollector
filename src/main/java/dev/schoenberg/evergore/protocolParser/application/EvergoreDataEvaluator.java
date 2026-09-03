@@ -51,33 +51,32 @@ public class EvergoreDataEvaluator {
 
 	public EvaluationResult evaluateData() {
 		List<String> unknownItemNames = new ArrayList<>();
-		updateAvatarInformation(unknownItemNames);
-		metaRepo.add(asList(new MetaInformation<>(getLastUpdatedKey(), LocalDateTime.now(clock))));
+		List<MetaInformation<?>> recomputed = new ArrayList<>();
+
+		knownAvatars.sortedByName().forEach(avatar -> recomputed.addAll(informationOf(avatar, unknownItemNames)));
+		recomputed.add(new MetaInformation<>(getLastUpdatedKey(), LocalDateTime.now(clock)));
+		metaRepo.add(recomputed);
+
 		return new EvaluationResult(List.copyOf(unknownItemNames));
 	}
 
-	private void updateAvatarInformation(List<String> unknownItemNames) {
-		knownAvatars.sortedByName().forEach(avatar -> updateInformation(avatar, unknownItemNames));
+	private List<MetaInformation<?>> informationOf(String avatar, List<String> unknownItemNames) {
+		List<MetaInformation<?>> information = new ArrayList<>(bankInformationOf(avatar));
+		information.addAll(storageInformationOf(avatar, unknownItemNames));
+		return information;
 	}
 
-	private void updateInformation(String avatar, List<String> unknownItemNames) {
-		updateBankInformation(avatar);
-		updateStorageInformation(avatar, unknownItemNames);
-	}
-
-	private void updateBankInformation(String avatar) {
+	private List<MetaInformation<Long>> bankInformationOf(String avatar) {
 		MetaInformationKey<Long> bankPlacementKey = getBankPlacement(avatar);
 		MetaInformationKey<Long> bankWithdrawlKey = getBankWithdrawl(avatar);
 
 		BankStatus bank = new BankStatus(0L, 0L);
 		bankRepo.getAllFor(avatar).forEach(e -> e.type().accept(bankVisitor).accept(bank, e));
 
-		MetaInformation<Long> updatedBankPlacement = new MetaInformation<>(bankPlacementKey, bank.placement);
-		MetaInformation<Long> updatedBankWithdrawl = new MetaInformation<>(bankWithdrawlKey, bank.withdrawl);
-		metaRepo.add(asList(updatedBankPlacement, updatedBankWithdrawl));
+		return asList(new MetaInformation<>(bankPlacementKey, bank.placement), new MetaInformation<>(bankWithdrawlKey, bank.withdrawl));
 	}
 
-	private void updateStorageInformation(String avatar, List<String> unknownItemNames) {
+	private List<MetaInformation<Double>> storageInformationOf(String avatar, List<String> unknownItemNames) {
 		MetaInformationKey<Double> storagePlacementKey = getStoragePlacement(avatar);
 		MetaInformationKey<Double> storageWithdrawlKey = getStorageWithdrawl(avatar);
 
@@ -88,9 +87,7 @@ public class EvergoreDataEvaluator {
 				.map(e -> new StorageEntryItem(e, findItem(e, unknownItemNames)))
 				.forEach(e -> e.entry().type().accept(storageEntryVisitor).accept(storage, e));
 
-		MetaInformation<Double> updatedStoragePlacement = new MetaInformation<>(storagePlacementKey, storage.placement);
-		MetaInformation<Double> updatedStorageWithdrawl = new MetaInformation<>(storageWithdrawlKey, storage.withdrawl);
-		metaRepo.add(asList(updatedStoragePlacement, updatedStorageWithdrawl));
+		return asList(new MetaInformation<>(storagePlacementKey, storage.placement), new MetaInformation<>(storageWithdrawlKey, storage.withdrawl));
 	}
 
 	private static class StorageStatus {

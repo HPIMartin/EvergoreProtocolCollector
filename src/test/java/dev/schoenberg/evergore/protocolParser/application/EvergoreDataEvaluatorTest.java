@@ -54,6 +54,23 @@ class EvergoreDataEvaluatorTest {
 	}
 
 	@Test
+	void writesEveryAvatarsSumsAndTheRunTimestampAsOneBatch() {
+		bankRepo.seedEntries(AVATAR, List.of(bankPlacement(100)));
+		bankRepo.seedEntries(BANK_ONLY_AVATAR, List.of(bankPlacement(7)));
+		bankRepo.seedAvatars(List.of(AVATAR, BANK_ONLY_AVATAR));
+		storageRepo.seedAvatars(List.of(STORAGE_ONLY_AVATAR));
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.writtenBatches()).hasSize(1);
+		assertThat(metaRepo.writtenBatches().get(0))
+				.containsExactlyInAnyOrder(getBankPlacement(AVATAR).id, getBankWithdrawl(AVATAR).id, getStoragePlacement(AVATAR).id, getStorageWithdrawl(AVATAR).id,
+						getBankPlacement(BANK_ONLY_AVATAR).id, getBankWithdrawl(BANK_ONLY_AVATAR).id, getStoragePlacement(BANK_ONLY_AVATAR).id,
+						getStorageWithdrawl(BANK_ONLY_AVATAR).id, getBankPlacement(STORAGE_ONLY_AVATAR).id, getBankWithdrawl(STORAGE_ONLY_AVATAR).id,
+						getStoragePlacement(STORAGE_ONLY_AVATAR).id, getStorageWithdrawl(STORAGE_ONLY_AVATAR).id, getLastUpdatedKey().id);
+	}
+
+	@Test
 	void aggregatesBankPlacementAndWithdrawlForOneAvatar() {
 		bankRepo.seedEntries(AVATAR, List.of(bankPlacement(100), bankPlacement(200), bankWithdrawl(50)));
 		bankRepo.seedAvatars(List.of(AVATAR));

@@ -47,8 +47,11 @@ public class MetaInformationDatabaseRepository extends Repository<MetaInformatio
 	}
 
 	@Override
-	public <T> void add(List<MetaInformation<T>> meta) {
-		meta.forEach(this::storeInformation);
+	public void add(List<? extends MetaInformation<?>> meta) {
+		inTransaction(() -> {
+			meta.forEach(this::storeInformation);
+			return null;
+		});
 	}
 
 	private List<MetaInformationEntry> getAllFor(String key) {

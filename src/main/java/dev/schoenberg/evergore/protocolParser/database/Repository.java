@@ -1,9 +1,11 @@
 package dev.schoenberg.evergore.protocolParser.database;
 
 import java.nio.file.Path;
+import java.util.concurrent.Callable;
 
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.jdbc.JdbcConnectionSource;
+import com.j256.ormlite.misc.TransactionManager;
 import com.j256.ormlite.support.ConnectionSource;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
@@ -41,6 +43,10 @@ public abstract class Repository<T> {
 
 	protected static <T> Dao<T, String> getDao(ConnectionSource con, Class<T> type) {
 		return silentThrow(() -> createDao(con, type));
+	}
+
+	protected <R> R inTransaction(Callable<R> work) {
+		return silentThrow(() -> TransactionManager.callInTransaction(con, work));
 	}
 
 	protected void ensureTable() {
