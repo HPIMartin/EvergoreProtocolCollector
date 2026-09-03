@@ -29,13 +29,13 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformati
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.ERDE_EIBENLANZE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.LEINENTUCH;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class EvergoreDataEvaluatorTest {
 
 	private static final String AVATAR = "avatar_a";
 	private static final String BANK_ONLY_AVATAR = "bank_only";
 	private static final String STORAGE_ONLY_AVATAR = "storage_only";
+	private static final String UNREADABLE_AVATAR = "zzz_unreadable";
 	private static final Instant FIXED_NOW = Instant.parse("2026-06-21T12:00:00Z");
 
 	private FakeMetaInformationRepository metaRepo;
@@ -51,6 +51,42 @@ class EvergoreDataEvaluatorTest {
 		storageRepo = new StorageRepositoryStub();
 		logger = new LoggerSpy();
 		tested = new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, new KnownAvatars(bankRepo, storageRepo), Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
+	}
+
+	@Test
+	void keepsRefreshingEveryHealthyAvatarWhileOneAvatarsLedgerCannotBeRead() {
+		bankRepo.seedEntries(AVATAR, List.of(bankPlacement(100)));
+		bankRepo.seedAvatars(List.of(AVATAR));
+		storageRepo.seedAvatars(List.of(UNREADABLE_AVATAR));
+		storageRepo.failOn(UNREADABLE_AVATAR);
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(metaRepo.<Long>get(getBankPlacement(AVATAR))).contains(100L);
+		assertThat(result.failedAvatarNames()).containsExactly(UNREADABLE_AVATAR);
+	}
+
+	@Test
+	void leavesTheStoredSumsOfAnAvatarWhoseLedgerCannotBeReadUntouched() {
+		metaRepo.put(getBankPlacement(UNREADABLE_AVATAR), 4200L);
+		bankRepo.seedAvatars(List.of(UNREADABLE_AVATAR));
+		storageRepo.seedAvatars(List.of());
+		bankRepo.failOn(UNREADABLE_AVATAR);
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Long>get(getBankPlacement(UNREADABLE_AVATAR))).contains(4200L);
+	}
+
+	@Test
+	void reportsAnAvatarWhoseLedgerCannotBeReadAsAnError() {
+		bankRepo.seedAvatars(List.of(UNREADABLE_AVATAR));
+		storageRepo.seedAvatars(List.of());
+		bankRepo.failOn(UNREADABLE_AVATAR);
+
+		tested.evaluateData();
+
+		assertThat(logger.errorMessages()).anySatisfy(message -> assertThat(message).contains(UNREADABLE_AVATAR));
 	}
 
 	@Test
@@ -180,7 +216,7 @@ class EvergoreDataEvaluatorTest {
 				Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
 		flakyStorage.failOnNextCall = true;
 
-		assertThatThrownBy(flakyEvaluator::evaluateData).isInstanceOf(RuntimeException.class);
+		assertThat(flakyEvaluator.evaluateData().failedAvatarNames()).containsExactly(AVATAR);
 		flakyEvaluator.evaluateData();
 
 		double expected = LEINENTUCH.getStorageValue() * 1 * 1.0;
@@ -188,7 +224,7 @@ class EvergoreDataEvaluatorTest {
 	}
 
 	@Test
-	void doesNotWriteLastUpdatedWhenARunFails() {
+	void doesNotAdvanceLastUpdatedWhileAnyAvatarFailedToRecompute() {
 		FlakyStorageRepositoryStub flakyStorage = new FlakyStorageRepositoryStub();
 		flakyStorage.seedAvatars(List.of(AVATAR));
 		bankRepo.seedAvatars(List.of());
@@ -196,7 +232,7 @@ class EvergoreDataEvaluatorTest {
 				Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
 		flakyStorage.failOnNextCall = true;
 
-		assertThatThrownBy(flakyEvaluator::evaluateData).isInstanceOf(RuntimeException.class);
+		assertThat(flakyEvaluator.evaluateData().failedAvatarNames()).containsExactly(AVATAR);
 
 		assertThat(metaRepo.<LocalDateTime>get(getLastUpdatedKey())).isEmpty();
 	}

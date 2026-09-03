@@ -108,9 +108,18 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   see the state before the recompute or the state after it, never a mixture of both. The run
   computes first and writes last, so the transaction spans the write alone and no reader is blocked
   for the duration of the aggregation.
+- **One avatar's failure costs that avatar, not the guild** (decision 2026-09-03): a repository call
+  that throws while an avatar is being recomputed is caught per avatar, logged at `error`, and the
+  avatar's name is collected into the `EvaluationResult` and surfaced via `/health`'s `lastRun`
+  detail as `failedAvatarCount` + `failedAvatarNames`, the same way an unknown item is. That avatar
+  keeps its previously stored sums; every healthy avatar still refreshes in the same batch. Writing
+  the whole run as one batch would otherwise have widened one bad ledger row from "one avatar goes
+  stale" to "no avatar ever updates again", since a single unguarded `timeStamp` dereference in
+  `getAllFor(avatar)` throws before the batch is written.
 - The `last_updated` key is **display-only** (the overview's "last updated" timestamp): part of that
-  same batch, as `LocalDateTime.now(clock)`; a failed run (an avatar's repository call throws)
-  writes nothing, so a retry starts clean and self-heals.
+  same batch, as `LocalDateTime.now(clock)`, but **only on a run in which every avatar recomputed**.
+  While any avatar failed it stays at its previous value, so the page never claims a freshness it
+  does not have for one of its rows; the next clean run advances it and self-heals.
 
 This makes evaluation **idempotent** (a second run yields identical sums) and **self-healing**
 (a failed run never leaves a partial watermark advance behind; the next successful run recomputes
@@ -124,9 +133,13 @@ from them on any partial recompute.
 The read side takes **one `MetaInformationSnapshot` per response** (`MetaInformationRepository.snapshot()`,
 one statement over the whole store) and answers every avatar's four sums, the derived net, the
 guild-wide total **and** `last_updated` out of it. Together with the recompute's single transaction
-this makes the page one consistent state of the store rather than up to four reads per avatar that a
-concurrent recompute could interleave (decision 2026-09-03). There is deliberately **no** per-key
-read on the port: the shape that could tear no longer exists.
+this makes the **computed sums** one consistent state of the meta store rather than up to four reads
+per avatar that a concurrent recompute could interleave (decision 2026-09-03). There is deliberately
+**no** per-key read on the port: the shape that could tear no longer exists. The scope of that
+guarantee is the meta store only: the two **last-activity** columns are separate live queries against
+the ledger tables (`latestTimestampPerAvatar`), so a ledger write landing between the snapshot and
+those queries can show an activity timestamp newer than the sums beside it. The columns are
+independent readings by design, and no figure is derived from both.
 
 - `businessLogic/contribution/Contribution` carries the four sums and answers
   `net() = bankDeposited − bankWithdrawn + storageDeposited − storageWithdrawn`, the formula the

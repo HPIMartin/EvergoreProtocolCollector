@@ -55,6 +55,12 @@ public class LastRunHealthIndicator implements HealthIndicator {
 			details.put("unknownItemNames", unknownItemNames.stream().distinct().sorted().toList());
 		}
 
+		List<String> failedAvatarNames = lastRunStatus.failedAvatarNames();
+		if (!failedAvatarNames.isEmpty()) {
+			details.put("failedAvatarCount", failedAvatarNames.size());
+			details.put("failedAvatarNames", failedAvatarNames.stream().distinct().sorted().toList());
+		}
+
 		return details;
 	}
 }

@@ -35,7 +35,8 @@ Independent read path:  HTTP ▶ filters (audit log, rate limit, token) ▶ Avat
 
 Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut management
                         ▶ LastRunHealthIndicator ▶ reports UNKNOWN (no run yet) or UP + lastSuccessfulRun
-                        timestamp + unknownItemCount/unknownItemNames when the last run hit unknown items
+                        timestamp + unknownItemCount/unknownItemNames when the last run hit unknown
+                        items, + failedAvatarCount/failedAvatarNames when an avatar could not be recomputed
 ```
 
 ## Layers & responsibilities (condensed)

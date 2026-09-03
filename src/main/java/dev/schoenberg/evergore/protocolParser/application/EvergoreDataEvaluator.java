@@ -51,13 +51,27 @@ public class EvergoreDataEvaluator {
 
 	public EvaluationResult evaluateData() {
 		List<String> unknownItemNames = new ArrayList<>();
+		List<String> failedAvatarNames = new ArrayList<>();
 		List<MetaInformation<?>> recomputed = new ArrayList<>();
 
-		knownAvatars.sortedByName().forEach(avatar -> recomputed.addAll(informationOf(avatar, unknownItemNames)));
-		recomputed.add(new MetaInformation<>(getLastUpdatedKey(), LocalDateTime.now(clock)));
+		knownAvatars.sortedByName().forEach(avatar -> collectInformationOf(avatar, recomputed, unknownItemNames, failedAvatarNames));
+		if (failedAvatarNames.isEmpty()) {
+			recomputed.add(new MetaInformation<>(getLastUpdatedKey(), LocalDateTime.now(clock)));
+		}
 		metaRepo.add(recomputed);
 
-		return new EvaluationResult(List.copyOf(unknownItemNames));
+		return new EvaluationResult(List.copyOf(unknownItemNames), List.copyOf(failedAvatarNames));
+	}
+
+	private void collectInformationOf(String avatar, List<MetaInformation<?>> recomputed, List<String> unknownItemNames, List<String> failedAvatarNames) {
+		List<String> unknownItemNamesOfThisAvatar = new ArrayList<>();
+		try {
+			recomputed.addAll(informationOf(avatar, unknownItemNamesOfThisAvatar));
+			unknownItemNames.addAll(unknownItemNamesOfThisAvatar);
+		} catch (RuntimeException failure) {
+			logger.error("Unable to recompute the sums of " + avatar + "; keeping the stored ones.", failure);
+			failedAvatarNames.add(avatar);
+		}
 	}
 
 	private List<MetaInformation<?>> informationOf(String avatar, List<String> unknownItemNames) {

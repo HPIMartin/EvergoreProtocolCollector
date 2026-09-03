@@ -523,7 +523,7 @@ requests in a row not earning a 429. That gap needs a Netty-level seam and is tr
 | `GET /overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage` | SPA client routes. No controller owns them: with a token they fall through to the shell, so a deep link or a bookmark works. |
 | `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle. **Public** (no token), but rate-limited and logged like any other request. An unknown navigation path **with a token** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
 | `GET /favicon.ico` | Favicon: public, but rate-limited and logged like any other request. |
-| `GET /health` | Micronaut management health endpoint: token-exempt, anonymous. Reports UNKNOWN (no run yet) or UP + `lastSuccessfulRun` timestamp; when the last run hit unknown catalog items, the `lastRun` detail also carries `unknownItemCount` and the distinct `unknownItemNames`. Use as a liveness/last-run monitor hook. |
+| `GET /health` | Micronaut management health endpoint: token-exempt, anonymous. Reports UNKNOWN (no run yet) or UP + `lastSuccessfulRun` timestamp; when the last run hit unknown catalog items, the `lastRun` detail also carries `unknownItemCount` and the distinct `unknownItemNames`; when an avatar's ledger could not be read, `failedAvatarCount` and `failedAvatarNames` name it, and `lastSuccessfulRun` deliberately does **not** advance on such a run. Use as a liveness/last-run monitor hook. |
 | `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: public, but rate-limited and logged. |
 
 ## Scheduled job

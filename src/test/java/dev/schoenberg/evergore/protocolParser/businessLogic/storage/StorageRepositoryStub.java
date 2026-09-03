@@ -3,8 +3,10 @@ package dev.schoenberg.evergore.protocolParser.businessLogic.storage;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static java.util.Comparator.naturalOrder;
 import static java.util.stream.Collectors.toMap;
@@ -12,6 +14,7 @@ import static java.util.stream.Collectors.toMap;
 public class StorageRepositoryStub implements StorageRepository {
 	private final Map<String, List<StorageEntry>> entriesByAvatar = new HashMap<>();
 	private List<String> avatars = new ArrayList<>();
+	private final Set<String> unreadableAvatars = new HashSet<>();
 
 	public void seedEntries(String avatar, List<StorageEntry> entries) {
 		entriesByAvatar.put(avatar, entries);
@@ -23,7 +26,14 @@ public class StorageRepositoryStub implements StorageRepository {
 
 	@Override
 	public List<StorageEntry> getAllFor(String avatar) {
+		if (unreadableAvatars.contains(avatar)) {
+			throw new IllegalStateException("the ledger of " + avatar + " cannot be read");
+		}
 		return entriesByAvatar.getOrDefault(avatar, List.of());
+	}
+
+	public void failOn(String avatar) {
+		unreadableAvatars.add(avatar);
 	}
 
 	@Override
