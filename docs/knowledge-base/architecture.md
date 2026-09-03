@@ -23,9 +23,9 @@
    EvergoreDataEvaluator.evaluateData()
         │  per avatar, full recompute from ALL stored entries (no cutoff): sum bank + value storage
         │  (TransferType visitor + EvergoreItem); overwrites MetaInformationRepository
-        │  last_updated (display-only) written once, after every avatar succeeds
+        │  a failing avatar is caught, named and skipped; last_updated stamped on every completed run
         ▼
-   LastRunStatus.recordSuccessfulRun(clock.instant()) + recordUnknownItems(...)   (monitoring seam)
+   LastRunStatus.recordSuccessfulRun(...) + recordUnknownItems(...) + recordFailedAvatars(...)   (monitoring seam)
         ▼
    PostCollectionHook   (no-op in prod; test seam)
 

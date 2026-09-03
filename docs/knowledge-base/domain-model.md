@@ -98,7 +98,9 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   `EvaluationResult` returned by `evaluateData()` and surfaced via `/health`'s `lastRun` detail as
   `unknownItemCount` + distinct `unknownItemNames`, so a catalog gap is loud, not silent; since
   evaluation is a full recompute, this count is unknown-item rows across **the entire stored
-  history**, recomputed each run, not just those new since the previous run), then add
+  history of every avatar the run could read**, recomputed each run, not just those new since the
+  previous run; an avatar whose ledger read throws reports none, because the read fails before any
+  item is resolved), then add
   `itemValue × quantity × (quality / 100)` into `placement` / `withdrawl`, where `itemValue` is
   `getStorageValue()` for deposits and `getWithdrawlValue()` for withdrawals
   (`TransferTypeStorageEntryVisitor`). **Quality scales value linearly.**
@@ -119,8 +121,10 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   guild-wide total then adds a stale contribution to current ones, and that avatar's row can show a
   **last activity newer than its own sums**, because the activity columns are read live from the
   ledger while the sums come from the last recompute that reached him. Confining that to one row is
-  the point, since before the batched write a single unreadable row left all 42 rows in exactly this
-  state. `/health` names the avatar; surfacing the staleness per row is **D20**.
+  the point: when the evaluator still wrote each avatar immediately, an unreadable row aborted the
+  run where it stood, leaving that avatar **and every avatar after him in collation order** stale
+  while the earlier ones were already current (falsifier probe against the pre-change code,
+  2026-09-03). `/health` names the avatar; surfacing the staleness per row is **D20**.
 - The `last_updated` key records **when data was last collected from the game**, not how complete the
   recompute was (author clarification 2026-09-03). It is part of the same batch, as
   `LocalDateTime.now(clock)`, and is written on **every** run that completed, including one in which
@@ -128,9 +132,11 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   freshness claim; the question "how current is this member's row" is answered by that row's own two
   **last-activity** columns. Moving it off the overview onto an admin page is a backlog item.
 
-This makes evaluation **idempotent** (a second run yields identical sums) and **self-healing**
-(a failed run never leaves a partial watermark advance behind; the next successful run recomputes
-correctly from the stored entries regardless of what a prior failed run wrote).
+This makes evaluation **idempotent** (a second run yields identical sums) and **self-healing per
+avatar**: a failing avatar's own sums are withheld and recomputed cleanly on the next run that
+reaches him, whatever a prior run wrote. It is not self-healing at the guild level, because the
+collection timestamp advances on every completed run while that avatar's sums do not: what the run
+did and did not refresh is answered by `/health`'s `failedAvatarNames`, not by the timestamp.
 
 This maps directly to the Google Sheet's columns 1–4 (see [02-google-sheet.md](google-sheet.md)).
 Column 5, the net **erzeugter Gildenmehrwert**, is **derived on the read side and never stored**
