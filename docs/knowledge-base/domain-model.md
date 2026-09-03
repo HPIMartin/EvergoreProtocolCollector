@@ -115,7 +115,12 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   keeps its previously stored sums; every healthy avatar still refreshes in the same batch. Writing
   the whole run as one batch would otherwise have widened one bad ledger row from "one avatar goes
   stale" to "no avatar ever updates again", since a single unguarded `timeStamp` dereference in
-  `getAllFor(avatar)` throws before the batch is written.
+  `getAllFor(avatar)` throws before the batch is written. Two consequences, both deliberate: the
+  guild-wide total then adds a stale contribution to current ones, and that avatar's row can show a
+  **last activity newer than its own sums**, because the activity columns are read live from the
+  ledger while the sums come from the last recompute that reached him. Confining that to one row is
+  the point, since before the batched write a single unreadable row left all 42 rows in exactly this
+  state. `/health` names the avatar; surfacing the staleness per row is **D20**.
 - The `last_updated` key records **when data was last collected from the game**, not how complete the
   recompute was (author clarification 2026-09-03). It is part of the same batch, as
   `LocalDateTime.now(clock)`, and is written on **every** run that completed, including one in which
