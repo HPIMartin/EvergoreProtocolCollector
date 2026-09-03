@@ -90,4 +90,9 @@ public class ApplicationFactory {
 	public Sleeper sleeper() {
 		return Sleeper.SYSTEM_SLEEPER;
 	}
+
+	@Singleton
+	public ZoneId effectiveZone() {
+		return ZoneId.systemDefault();
+	}
 }
