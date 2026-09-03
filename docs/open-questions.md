@@ -135,6 +135,16 @@ second copy.
 - **D-4 (Hunt-loot valuation rule):** the sheet estimates hunt-deposit value (col 6) but code gives
   `JAGDBEUTEN` storage value 0. What's the intended rule? (gates E3; `Category.storage` was removed as
   dead, see the Decisions entry, so the hunt-loot estimate is the remaining, separate question.)
+- **D-12 (How the overview shows the levy):** the total row adds measured bank gold to modelled
+  material value and therefore reads `−80.545.764` while the guild's treasury stands at `+119.562.181`;
+  the gap is the guild's own levy (`219.202.477`). Three variants were mocked up 2026-09-03, author
+  choice open (gates **E15**): **(A, recommended)** a stat header — treasury / material balance / levy
+  collected — plus a Beitrag↔Saldo switch, leaving the table's column count and density untouched;
+  **(B)** a ninth column "Abgabe" between contribution and balance, which widens the table; **(C)**
+  split only the total row into gold and material, the smallest change, which fixes the misleading
+  statement but explains nothing. Renaming *Gildenmehrwert* to *Beitrag* / *Saldo* rides along in all
+  three. Separate from **D-4**, which asks what raw deposits should be *worth*; this one asks how the
+  resulting levy is *shown*.
 - **D-9 (BDD tooling):** plain JUnit given/when/then, or a framework (Cucumber)? Assumed plain unless asked.
 - **D-11 (ToS / PII, enterprise-audit Pitfall #7):** the tool scrapes evergore.de and stores *other*
   guild members' bank/storage activity. No production pressure (Q2), but a deliberate stance is due:
