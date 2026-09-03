@@ -116,10 +116,12 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   the whole run as one batch would otherwise have widened one bad ledger row from "one avatar goes
   stale" to "no avatar ever updates again", since a single unguarded `timeStamp` dereference in
   `getAllFor(avatar)` throws before the batch is written.
-- The `last_updated` key is **display-only** (the overview's "last updated" timestamp): part of that
-  same batch, as `LocalDateTime.now(clock)`, but **only on a run in which every avatar recomputed**.
-  While any avatar failed it stays at its previous value, so the page never claims a freshness it
-  does not have for one of its rows; the next clean run advances it and self-heals.
+- The `last_updated` key records **when data was last collected from the game**, not how complete the
+  recompute was (author clarification 2026-09-03). It is part of the same batch, as
+  `LocalDateTime.now(clock)`, and is written on **every** run that completed, including one in which
+  an avatar failed: a scrape happened either way. It is an operator's datum rather than a per-row
+  freshness claim; the question "how current is this member's row" is answered by that row's own two
+  **last-activity** columns. Moving it off the overview onto an admin page is a backlog item.
 
 This makes evaluation **idempotent** (a second run yields identical sums) and **self-healing**
 (a failed run never leaves a partial watermark advance behind; the next successful run recomputes

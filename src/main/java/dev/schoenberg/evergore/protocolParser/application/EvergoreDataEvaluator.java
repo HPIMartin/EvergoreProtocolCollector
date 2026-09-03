@@ -55,9 +55,7 @@ public class EvergoreDataEvaluator {
 		List<MetaInformation<?>> recomputed = new ArrayList<>();
 
 		knownAvatars.sortedByName().forEach(avatar -> collectInformationOf(avatar, recomputed, unknownItemNames, failedAvatarNames));
-		if (failedAvatarNames.isEmpty()) {
-			recomputed.add(new MetaInformation<>(getLastUpdatedKey(), LocalDateTime.now(clock)));
-		}
+		recomputed.add(new MetaInformation<>(getLastUpdatedKey(), LocalDateTime.now(clock)));
 		metaRepo.add(recomputed);
 
 		return new EvaluationResult(List.copyOf(unknownItemNames), List.copyOf(failedAvatarNames));

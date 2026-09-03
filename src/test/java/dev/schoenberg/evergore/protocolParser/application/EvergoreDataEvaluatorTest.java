@@ -224,7 +224,7 @@ class EvergoreDataEvaluatorTest {
 	}
 
 	@Test
-	void doesNotAdvanceLastUpdatedWhileAnyAvatarFailedToRecompute() {
+	void stampsTheCollectionTimestampEvenWhileOneAvatarFailedToRecompute() {
 		FlakyStorageRepositoryStub flakyStorage = new FlakyStorageRepositoryStub();
 		flakyStorage.seedAvatars(List.of(AVATAR));
 		bankRepo.seedAvatars(List.of());
@@ -234,7 +234,7 @@ class EvergoreDataEvaluatorTest {
 
 		assertThat(flakyEvaluator.evaluateData().failedAvatarNames()).containsExactly(AVATAR);
 
-		assertThat(metaRepo.<LocalDateTime>get(getLastUpdatedKey())).isEmpty();
+		assertThat(metaRepo.<LocalDateTime>get(getLastUpdatedKey())).contains(LocalDateTime.ofInstant(FIXED_NOW, ZoneOffset.UTC));
 	}
 
 	@Test
