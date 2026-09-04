@@ -2,7 +2,7 @@ import type { ProtocolApi } from '../api'
 import { FIRST_PAGE } from '../api'
 import type { AvatarSummary, GuildTotals } from '../domain'
 import type { Column } from '../ui'
-import { SortableTable, formatTimestamp } from '../ui'
+import { SortableTable } from '../ui'
 
 import { LoadedView } from './LoadedView.tsx'
 import { requestKeyOf } from './requestKey.ts'
@@ -27,18 +27,15 @@ export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
       <h2 data-testid="view-title">Übersicht</h2>
       <LoadedView load={load}>
         {(overview) => (
-          <>
-            <p data-testid="last-updated">{`Stand: ${freshnessOf(overview.lastUpdated)}`}</p>
-            <SortableTable
-              caption={`${String(overview.items.length)} von ${String(overview.totalCount)} Avataren`}
-              columns={columnsLinkedWith(token)}
-              rows={overview.items}
-              rowKey={(summary) => summary.avatar}
-              emptyMessage="Noch kein Avatar erfasst."
-              total={{ label: 'Gilde', row: guildRowOf(overview.totals) }}
-              onFollow={onFollow}
-            />
-          </>
+          <SortableTable
+            caption={`${String(overview.items.length)} von ${String(overview.totalCount)} Avataren`}
+            columns={columnsLinkedWith(token)}
+            rows={overview.items}
+            rowKey={(summary) => summary.avatar}
+            emptyMessage="Noch kein Avatar erfasst."
+            total={{ label: 'Gilde', row: guildRowOf(overview.totals) }}
+            onFollow={onFollow}
+          />
         )}
       </LoadedView>
     </section>
@@ -52,12 +49,6 @@ function guildRowOf(totals: GuildTotals): AvatarSummary {
     lastBankActivity: null,
     lastStorageActivity: null,
   }
-}
-
-function freshnessOf(lastUpdated: Date | null): string {
-  return lastUpdated === null
-    ? 'noch kein Abgleich gelaufen'
-    : formatTimestamp(lastUpdated.toISOString())
 }
 
 function columnsLinkedWith(

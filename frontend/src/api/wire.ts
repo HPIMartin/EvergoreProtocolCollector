@@ -19,7 +19,6 @@ export function overviewFrom(body: unknown): Overview {
 
   return {
     ...page,
-    lastUpdated: optionalInstantFrom(envelope, 'lastUpdated'),
     totals: totalsFrom(envelope['totals']),
   }
 }

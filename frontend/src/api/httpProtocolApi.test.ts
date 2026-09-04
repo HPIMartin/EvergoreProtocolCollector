@@ -10,7 +10,6 @@ import { FIRST_PAGE } from './pageWindow.ts'
 const TOKEN = 'a-test-token'
 
 const OVERVIEW_BODY = JSON.stringify({
-  lastUpdated: '2026-08-05T10:15:00Z',
   page: 0,
   size: 100,
   totalCount: 1,

@@ -1,7 +1,5 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller.api;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import jakarta.validation.constraints.Max;
@@ -18,12 +16,10 @@ import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContribution;
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContributions;
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.Contribution;
-import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.GuildContributions;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummary;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummaryPage;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.GuildTotals;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.api.PageRequest.DEFAULT_PAGE;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.api.PageRequest.DEFAULT_SIZE;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.api.PageRequest.MAX_SIZE;
@@ -49,13 +45,12 @@ public class AvatarSummariesController {
 	public AvatarSummaryPage summaries(@QueryValue(value = PAGE, defaultValue = DEFAULT_PAGE) @Min(0) int page,
 			@QueryValue(value = SIZE, defaultValue = DEFAULT_SIZE) @Positive @Max(MAX_SIZE) int size) {
 		PageRequest window = new PageRequest(page, size);
-		GuildContributions recompute = contributions.ofEveryKnownAvatar();
-		List<AvatarContribution> guild = recompute.avatars();
+		List<AvatarContribution> guild = contributions.ofEveryKnownAvatar().avatars();
 
 		logger.debug("Providing information for " + guild.size() + " avatars.");
 
 		List<AvatarSummary> items = guild.stream().skip(window.offset()).limit(window.size()).map(AvatarSummariesController::summaryOf).toList();
-		return new AvatarSummaryPage(lastUpdated(recompute), window.page(), window.size(), guild.size(), totalsOf(guild), items);
+		return new AvatarSummaryPage(window.page(), window.size(), guild.size(), totalsOf(guild), items);
 	}
 
 	private static GuildTotals totalsOf(List<AvatarContribution> guild) {
@@ -69,13 +64,5 @@ public class AvatarSummariesController {
 
 		return new AvatarSummary(avatar.avatar(), whole.bankWithdrawn(), whole.bankDeposited(), (long) whole.storageWithdrawn(), (long) whole.storageDeposited(),
 				(long) whole.net(), avatar.lastBankActivity(), avatar.lastStorageActivity());
-	}
-
-	private static Instant lastUpdated(GuildContributions recompute) {
-		return recompute.lastUpdated().map(AvatarSummariesController::toInstant).orElse(null);
-	}
-
-	private static Instant toInstant(LocalDateTime lastUpdated) {
-		return lastUpdated.atZone(APP_ZONE).toInstant();
 	}
 }

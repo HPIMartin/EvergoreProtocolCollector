@@ -85,21 +85,21 @@ class ProtocolEvaluationAcceptanceTest {
 
 	@Test
 	void avatarSummariesCarryTheLastUpdatedInstantOfTheCompletedRun() {
-		String lastUpdated = lastUpdatedOfSummaries();
+		String lastUpdated = lastUpdatedOfAdminStatus();
 
 		assertThatCode(() -> Instant.parse(lastUpdated)).as("lastUpdated must be an ISO-8601 instant, was " + lastUpdated).doesNotThrowAnyException();
 	}
 
 	@Test
 	void lastUpdatedIsSerializedInTheUtcFormRatherThanAnOffsetForm() {
-		String lastUpdated = lastUpdatedOfSummaries();
+		String lastUpdated = lastUpdatedOfAdminStatus();
 
 		assertThat(lastUpdated).endsWith("Z");
 	}
 
 	@Test
 	void lastUpdatedReadBackInTheApplicationZoneIsTheStoredWallClockTime() {
-		String lastUpdated = lastUpdatedOfSummaries();
+		String lastUpdated = lastUpdatedOfAdminStatus();
 
 		LocalDateTime inApplicationZone = Instant.parse(lastUpdated).atZone(APP_ZONE).toLocalDateTime();
 
@@ -283,8 +283,8 @@ class ProtocolEvaluationAcceptanceTest {
 		}
 	}
 
-	private String lastUpdatedOfSummaries() {
-		return new JSONObject(get("/api/v1/avatars").getBody()).getString("lastUpdated");
+	private String lastUpdatedOfAdminStatus() {
+		return new JSONObject(get("/api/v1/admin/status").getBody()).getString("lastUpdated");
 	}
 
 	private LocalDateTime storedLastUpdated() {

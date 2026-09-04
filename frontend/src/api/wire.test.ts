@@ -4,7 +4,6 @@ import { bankPageFrom, overviewFrom, storagePageFrom } from './wire.ts'
 import { MalformedResponse } from './apiErrors.ts'
 
 const overviewBody = {
-  lastUpdated: '2026-08-05T10:15:00Z',
   page: 0,
   size: 100,
   totalCount: 2,
@@ -84,25 +83,6 @@ function summaryWithout(field: string): Record<string, unknown> {
 }
 
 describe('the overview wire shape', () => {
-  it('reads the freshness of the numbers as an instant', () => {
-    const overview = overviewFrom(overviewBody)
-
-    expect(overview.lastUpdated).toStrictEqual(new Date('2026-08-05T10:15:00Z'))
-  })
-
-  it('reads a missing collection run as no freshness at all', () => {
-    const overview = overviewFrom({ ...overviewBody, lastUpdated: null })
-
-    expect(overview.lastUpdated).toBeNull()
-  })
-
-  it('refuses a body whose freshness field is absent', () => {
-    const reading = () =>
-      overviewFrom({ page: 0, size: 100, totalCount: 0, items: [] })
-
-    expect(reading).toThrow(MalformedResponse)
-  })
-
   it('reads the guild-wide totals of the envelope', () => {
     const overview = overviewFrom(overviewBody)
 

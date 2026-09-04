@@ -9,7 +9,6 @@ import { App } from './App.tsx'
 const TOKEN = 'a-test-token'
 
 const OVERVIEW_BODY = JSON.stringify({
-  lastUpdated: '2026-08-05T10:15:00Z',
   page: 0,
   size: 100,
   totalCount: 2,
@@ -276,34 +275,8 @@ describe('App', () => {
     ])
   })
 
-  it('says how fresh the numbers are', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
-
-    expect(screen.getByTestId('last-updated').textContent).toBe(
-      'Stand: 05.08.2026 12:15',
-    )
-  })
-
-  it('says when no collection run has finished yet', async () => {
-    const body = JSON.stringify({
-      lastUpdated: null,
-      page: 0,
-      size: 100,
-      totalCount: 0,
-      totals: NO_TOTALS,
-      items: [],
-    })
-
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, body))
-
-    expect(screen.getByTestId('last-updated').textContent).toBe(
-      'Stand: noch kein Abgleich gelaufen',
-    )
-  })
-
   it('says that no avatar has been collected yet', async () => {
     const body = JSON.stringify({
-      lastUpdated: null,
       page: 0,
       size: 100,
       totalCount: 0,
@@ -393,7 +366,6 @@ describe('App', () => {
 
   it('surfaces a malformed overview body as a failure, not a blank page', async () => {
     const body = JSON.stringify({
-      lastUpdated: null,
       page: 0,
       size: 100,
       totalCount: 0,

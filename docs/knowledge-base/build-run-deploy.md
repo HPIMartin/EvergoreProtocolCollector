@@ -461,10 +461,10 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      those names exactly. A four-digit count is normal at this volume.
    - `/` serves the SPA shell without a token (~480 bytes, `text/html`, carrying `<div id="root">`
      and the bundle `<script>`); the SPA then fetches the API with the token from its URL.
-   - `/api/v1/avatars?token=…` answers `{lastUpdated, page, size, totalCount, items[]}` with
-     `{avatar, bankDeposited, bankWithdrawn}` per item. Check `lastUpdated` and `totalCount` against what
-     the previous stand served — that is the cheapest proof the mounted database is the intended
-     one and not an empty new file.
+   - `/api/v1/avatars?token=…` answers `{page, size, totalCount, items[]}` with
+     `{avatar, bankDeposited, bankWithdrawn}` per item. Check `totalCount` against what the previous
+     stand served, and `lastUpdated` from `/api/v1/admin/status`; that is the cheapest proof the
+     mounted database is the intended one and not an empty new file.
    - **Rate limit:** 30 requests per 10 s per client IP, then a 1-minute block. Nothing is exempt,
      so the four checks above cost **four** counted requests and fit in one window. A renewed burst
      while blocked pushes the block out again, so back off after a 429 instead of retrying.
@@ -491,7 +491,8 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      takes the backup's mode, which can be non-writable for uid 1200 again — re-run the step 3 check
      after restoring.
    - The restored state is only observable in the **first 30 seconds**: the collection then runs
-     again and writes the restored database forward. Verify `lastUpdated` right after startup.
+     again and writes the restored database forward. Verify `/api/v1/admin/status`'s `lastUpdated`
+     right after startup.
 
 A scrape failure is contained: Micronaut's task exception handler logs it, the app keeps serving,
 and the database is left untouched, so a broken scrape degrades to stale data rather than downtime.
@@ -575,7 +576,7 @@ requests in a row not earning a 429. That gap needs a Netty-level seam and is tr
 
 | Method · Path | Purpose |
 |---|---|
-| `GET /api/v1/avatars` | JSON overview: per-avatar bank totals + `lastUpdated`. Contract in [frontend.md](frontend.md). |
+| `GET /api/v1/avatars` | JSON overview: per-avatar bank totals. Contract in [frontend.md](frontend.md). |
 | `GET /api/v1/avatars/{avatar}/bank?page=N&size=M` | JSON bank entries for one avatar, newest first. |
 | `GET /api/v1/avatars/{avatar}/storage?page=N&size=M` | JSON storage entries for one avatar, newest first. |
 | `GET /overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage` | SPA client routes. No controller owns them: with a token they fall through to the shell, so a deep link or a bookmark works. |

@@ -20,6 +20,5 @@ export interface GuildTotals {
 }
 
 export interface Overview extends Page<AvatarSummary> {
-  readonly lastUpdated: Date | null
   readonly totals: GuildTotals
 }
