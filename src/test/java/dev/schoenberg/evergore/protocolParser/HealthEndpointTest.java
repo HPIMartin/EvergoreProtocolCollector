@@ -57,7 +57,7 @@ class HealthEndpointTest {
 		HttpResponse<String> response = Unirest.get("/health").asString();
 
 		assertThat(response.getBody()).contains("lastRun");
-		assertThat(response.getBody()).contains("lastSuccessfulRun");
+		assertThat(response.getBody()).contains("lastSuccessfulRecompute");
 	}
 
 	@Test

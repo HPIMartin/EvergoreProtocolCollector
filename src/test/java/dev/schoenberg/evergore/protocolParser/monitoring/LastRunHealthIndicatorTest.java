@@ -32,9 +32,9 @@ class LastRunHealthIndicatorTest {
 	}
 
 	@Test
-	void reportsUpWithTimestampDetailAfterSuccessfulRun() {
+	void reportsUpWithTimestampDetailAfterSuccessfulRecompute() {
 		Instant recorded = Instant.parse("2026-06-21T12:00:00Z");
-		lastRunStatus.recordSuccessfulRun(recorded);
+		lastRunStatus.recordSuccessfulRecompute(recorded);
 
 		HealthResult result = singleResult();
 
@@ -42,13 +42,13 @@ class LastRunHealthIndicatorTest {
 		assertThat(result.getDetails()).isInstanceOf(Map.class);
 		@SuppressWarnings("unchecked")
 		Map<String, Object> details = (Map<String, Object>) result.getDetails();
-		assertThat(details).containsKey("lastSuccessfulRun");
-		assertThat(details.get("lastSuccessfulRun")).isEqualTo(recorded.toString());
+		assertThat(details).containsKey("lastSuccessfulRecompute");
+		assertThat(details.get("lastSuccessfulRecompute")).isEqualTo(recorded.toString());
 	}
 
 	@Test
 	void omitsUnknownItemDetailWhenNoneOccurredInLastRun() {
-		lastRunStatus.recordSuccessfulRun(Instant.parse("2026-06-21T12:00:00Z"));
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"));
 
 		HealthResult result = singleResult();
 
@@ -59,7 +59,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsUnknownItemCountAndNamesWhenPresentInLastRun() {
-		lastRunStatus.recordSuccessfulRun(Instant.parse("2026-06-21T12:00:00Z"));
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"));
 		lastRunStatus.recordUnknownItems(List.of("Unobtainium", "Unobtainium"));
 
 		HealthResult result = singleResult();
@@ -68,6 +68,47 @@ class LastRunHealthIndicatorTest {
 		Map<String, Object> details = (Map<String, Object>) result.getDetails();
 		assertThat(details).containsEntry("unknownItemCount", 2);
 		assertThat(details).containsEntry("unknownItemNames", List.of("Unobtainium"));
+	}
+
+	@Test
+	void reportsScrapeFailureButNotRecomputeFailureAfterASuccessfulRecomputeFollowedByAFailedScrape() {
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"));
+		lastRunStatus.recordScrapeFailure(Instant.parse("2026-06-22T12:00:00Z"));
+
+		HealthResult result = singleResult();
+
+		assertThat(result.getStatus()).isEqualTo(HealthStatus.UP);
+		@SuppressWarnings("unchecked")
+		Map<String, Object> details = (Map<String, Object>) result.getDetails();
+		assertThat(details).containsKey("lastScrapeFailure");
+		assertThat(details).doesNotContainKey("lastRecomputeFailure");
+	}
+
+	@Test
+	void reportsDownWithRecomputeFailureAfterASuccessfulRecomputeFollowedByAFailedRecompute() {
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"));
+		lastRunStatus.recordRecomputeFailure(Instant.parse("2026-06-22T12:00:00Z"));
+
+		HealthResult result = singleResult();
+
+		assertThat(result.getStatus()).isEqualTo(HealthStatus.DOWN);
+		@SuppressWarnings("unchecked")
+		Map<String, Object> details = (Map<String, Object>) result.getDetails();
+		assertThat(details).containsKey("lastRecomputeFailure");
+		assertThat(details).doesNotContainKey("lastScrapeFailure");
+	}
+
+	@Test
+	void reportsDownWithOnlyTheFailureDetailWhenTheFirstEverRecomputeAttemptFails() {
+		lastRunStatus.recordRecomputeFailure(Instant.parse("2026-06-22T12:00:00Z"));
+
+		HealthResult result = singleResult();
+
+		assertThat(result.getStatus()).isEqualTo(HealthStatus.DOWN);
+		@SuppressWarnings("unchecked")
+		Map<String, Object> details = (Map<String, Object>) result.getDetails();
+		assertThat(details).containsKey("lastRecomputeFailure");
+		assertThat(details).doesNotContainKey("lastSuccessfulRecompute");
 	}
 
 	private HealthResult singleResult() {

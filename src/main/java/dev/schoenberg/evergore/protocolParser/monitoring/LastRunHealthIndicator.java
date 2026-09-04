@@ -39,15 +39,21 @@ public class LastRunHealthIndicator implements HealthIndicator {
 	}
 
 	private HealthResult buildResult() {
-		return lastRunStatus
-				.lastSuccessfulRun()
-				.map(instant -> HealthResult.builder(NAME, HealthStatus.UP).details(details(instant)).build())
-				.orElseGet(() -> HealthResult.builder(NAME, HealthStatus.UNKNOWN).build());
+		boolean recomputeAttempted = lastRunStatus.lastSuccessfulRecompute().isPresent() || lastRunStatus.lastRecomputeFailure().isPresent();
+		if (!recomputeAttempted) {
+			return HealthResult.builder(NAME, HealthStatus.UNKNOWN).build();
+		}
+		HealthStatus status = lastRunStatus.recomputeHealthy() ? HealthStatus.UP : HealthStatus.DOWN;
+		return HealthResult.builder(NAME, status).details(details()).build();
 	}
 
-	private Map<String, Object> details(Instant instant) {
+	private Map<String, Object> details() {
 		Map<String, Object> details = new HashMap<>();
-		details.put("lastSuccessfulRun", instant.toString());
+		lastRunStatus.lastSuccessfulRecompute().ifPresent(instant -> details.put("lastSuccessfulRecompute", instant.toString()));
+
+		lastRunStatus.lastSuccessfulScrape().ifPresent(scrape -> details.put("lastSuccessfulScrape", scrape.toString()));
+		lastRunStatus.lastScrapeFailure().ifPresent(failure -> details.put("lastScrapeFailure", failure.toString()));
+		lastRunStatus.lastRecomputeFailure().ifPresent(failure -> details.put("lastRecomputeFailure", failure.toString()));
 
 		List<String> unknownItemNames = lastRunStatus.unknownItemNames();
 		if (!unknownItemNames.isEmpty()) {
