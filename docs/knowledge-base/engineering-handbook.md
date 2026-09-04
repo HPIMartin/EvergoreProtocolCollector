@@ -175,7 +175,13 @@ language**, given/when/then:
   checkout. `commit-msg` enforces the message rules above; `pre-commit` runs the fast format gate
   (`spotlessCheck` + `checkstyleMain`/`checkstyleTest`) and a staged-content secrets/host-data
   scan. Tests and full build are deliberately excluded (keeps the TDD micro-commit loop fast;
-  commits are already green). Safety net, not substitute; `--no-verify` only for genuine
+  commits are already green). **git asks `pre-commit` only for `git commit`**, so every commit the
+  sequencer creates (rebase, `cherry-pick`, `revert`) is ungated at the moment it is made;
+  `post-rewrite` and `post-commit` record it afterwards, and a recorded commit blocks every further
+  commit until it is gone. `git am` and a merge commit are refused
+  outright, by `pre-applypatch` and `pre-merge-commit`, which run before their commit exists. A `--no-verify` commit
+  is left alone, so the emergency valve stays one. `hooks/self-test` proves the hooks block rather than report, and `pre-commit` runs it on
+  every commit that touches `hooks/`. Safety net, not substitute; `--no-verify` only for genuine
   emergencies. Details: [build-run-deploy.md](build-run-deploy.md).
 - **`[wip]` parking commits (pause only)**: `/pause` may autonomously park uncommitted work as ONE
   local commit `[wip] <one-line state>` via `git commit --no-verify` (WIP legitimately fails the

@@ -5,74 +5,27 @@
 set -eu
 
 cd "$(git rev-parse --show-toplevel)"
+hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 reject() {
 	printf '\n[pre-commit] %s\n' "$1" >&2
 	exit 1
 }
 
-# Staged additions/modifications, excluding this hooks/ directory so the scan never matches the
-# detection patterns that live in the hook scripts themselves.
-staged=$(git diff --cached --name-only --diff-filter=ACM -- . ':(exclude)hooks/*' || true)
+"$hooks_dir/breach-guard"
 
-keystore_files=$(printf '%s\n' "$staged" | grep -iE '\.(pfx|p12|jks|pem|key)$' || true)
-[ -z "$keystore_files" ] || reject "refusing to commit key/keystore file(s):
-$keystore_files
-Keys and credentials belong in a gitignored *.local.* file or a secret store, never the repo."
+"$hooks_dir/content-gate" --staged
 
-pem_re='-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----'
-aws_re='AKIA[0-9A-Z]{16}'
-cred_re="(password|passwd|secret|api[_-]?key)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{3,}"
-email_re='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
-email_allow='@(example|test|invalid|localhost)\.[A-Za-z]+$|@localhost$'
-host_re="(/home/|/Users/)[A-Za-z0-9._-]+/|[Cc]:\\\\+Users"
-host_allow='/home/vscode/|/home/app/'
-# Hard-coded auth tokens — scanned only under src/main below (tests legitimately use a non-secret test token).
-token_url='\?token=[A-Za-z0-9._-]+'
-token_assign="(valid[_-]?token|api[_-]?token|auth[_-]?token|access[_-]?token|secret[_-]?token|bearer[_-]?token)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{3,}"
-
-findings=""
-smells=""
-oldifs=$IFS
-IFS='
-'
-for f in $staged; do
-	IFS=$oldifs
-	case "$f" in
-		*.png|*.ico|*.jar|*.exe|*.sqlite|*.gz|*.zip|*.jks|*.p12|*.pfx|*.woff|*.woff2|*.ttf) IFS='
-'; continue ;;
-	esac
-	blob=$(git show ":$f" 2>/dev/null) || { IFS='
-'; continue; }
-	hits=$(printf '%s\n' "$blob" | grep -nIE -e "$pem_re" -e "$aws_re" -e "$cred_re" || true)
-	hosts=$(printf '%s\n' "$blob" | grep -nIoE "$host_re" | grep -viE "$host_allow" || true)
-	emails=$(printf '%s\n' "$blob" | grep -nIoE "$email_re" | grep -viE "$email_allow" || true)
-	tokens=""
-	case "$f" in
-		src/main/*) tokens=$(printf '%s\n' "$blob" | grep -niIE -e "$token_url" -e "$token_assign" || true) ;;
-	esac
-	if [ -n "$hits$hosts$emails$tokens" ]; then
-		findings=$(printf '%s\n--- %s ---\n%s\n%s\n%s\n%s\n' "$findings" "$f" "$hits" "$hosts" "$emails" "$tokens")
-	fi
-	code=""
-	case "$f" in
-		*.java) code=$(printf '%s\n' "$blob" | grep -nIE -e 'System\.(out|err)\.' -e 'printStackTrace' -e '(TODO|FIXME)' || true) ;;
-	esac
-	if [ -n "$code" ]; then
-		smells=$(printf '%s\n--- %s ---\n%s\n' "$smells" "$f" "$code")
-	fi
-	IFS='
-'
-done
-IFS=$oldifs
-[ -z "$(printf '%s' "$findings" | tr -d '[:space:]')" ] || reject "possible secret or personal/host data in staged content:
-$findings
-If this is real, remove it (use a gitignored *.local.* file or a secret store, injected at runtime)."
-
-[ -z "$(printf '%s' "$smells" | tr -d '[:space:]')" ] || reject "forbidden in committed Java — use the project Logger, and track TODO/FIXME in the backlog, not code:
-$smells"
-
-printf '[pre-commit] spotlessCheck + checkstyle...\n'
-if ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then
-	reject "formatting/brace gate failed. Run './gradlew spotlessApply', add any missing braces, then restage."
+if git diff --cached --name-only --diff-filter=ACMD -- 'hooks/*' | grep -q .; then
+	printf '[pre-commit] hook self-test...\n'
+	"$hooks_dir/self-test" >/dev/null 2>&1 || reject "hooks/self-test fails, so the gate no longer blocks what it claims to block. Run 'hooks/self-test' and read its output."
 fi
+
+if [ -x ./gradlew ]; then
+	printf '[pre-commit] spotlessCheck + checkstyle...\n'
+	if ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then
+		reject "formatting/brace gate failed. Run './gradlew spotlessApply', add any missing braces, then restage."
+	fi
+fi
+
+git write-tree > "$(git rev-parse --git-dir)/gate-stamp"

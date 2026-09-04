@@ -1,0 +1,66 @@
+#!/bin/sh
+# git creates the commits of a rebase, cherry-pick or revert itself and asks no pre-commit hook,
+# so the gate cannot refuse them. It runs here instead, after the refs have already moved, and
+# records what it finds; pre-commit then refuses to grow history on top of a recorded commit.
+# git ignores this hook's exit status: the record, not the status, is what blocks.
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+# The record lives in the common dir so it follows the commit into every worktree of the
+# repository; the stamp is the private worktree's own note about what it just approved.
+stamp="$(git rev-parse --git-dir)/gate-stamp"
+gated() {
+	[ -f "$stamp" ] && [ "$(cat "$stamp")" = "$(git rev-parse "$1^{tree}")" ]
+}
+breach="$(git rev-parse --git-common-dir)/gate-breach"
+
+# The pre-image's findings with the commit label and the line numbers taken off, so a commit whose
+# violations are replayed unchanged is exempt while one that adds a violation of its own is not.
+bare_findings() {
+	printf '%s\n' "$1" \
+		| sed -e 's/^\[gate\] commit [0-9a-f][0-9a-f]*:/[gate]/' \
+			-e 's/^\([^:][^:]*\):[0-9][0-9]*:/\1:/' \
+			-e 's/^[0-9][0-9]*:/:/' \
+		| sort
+}
+found="$breach.new"
+: > "$found"
+report=""
+
+while read -r old new _rest; do
+	[ -n "${new:-}" ] || continue
+	git rev-parse --verify --quiet "$new^{commit}" >/dev/null || continue
+	if gated "$new"; then continue; fi
+	if finding=$("$hooks_dir/content-gate" --commit "$new" 2>&1); then
+		continue
+	fi
+	if [ -n "${old:-}" ] && git rev-parse --verify --quiet "$old^{commit}" >/dev/null 2>&1; then
+		carried=$("$hooks_dir/content-gate" --commit "$old" 2>&1 || true)
+		if [ "$(bare_findings "$carried")" = "$(bare_findings "$finding")" ]; then
+			continue
+		fi
+	fi
+	printf '%s\n' "$new" >> "$found"
+	report="$report$finding
+"
+done
+
+if [ -x ./gradlew ] && ! gated HEAD && ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then
+	git rev-parse HEAD >> "$found"
+	report="$report
+[gate] the rewritten tree fails spotlessCheck/checkstyle. Run './gradlew spotlessApply' and amend.
+"
+fi
+
+if [ -s "$found" ]; then
+	cat "$found" >> "$breach"
+	sort -u -o "$breach" "$breach"
+	rm -f "$found"
+	printf '\n[post-rewrite] this %s created commit(s) no pre-commit hook ever saw, and they fail the gate:\n%s\n' "${1:-rewrite}" "$report" >&2
+	printf '[post-rewrite] every further commit is refused until they are gone.\n' >&2
+	exit 1
+fi
+
+rm -f "$found"

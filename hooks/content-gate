@@ -1,0 +1,107 @@
+#!/bin/sh
+# Content checks over one revision of the tree, shared by pre-commit (the staged content) and
+# post-rewrite (a commit the sequencer created without asking a hook).
+set -eu
+
+usage() {
+	printf 'usage: content-gate --staged | content-gate --commit <sha>\n' >&2
+	exit 2
+}
+
+[ $# -ge 1 ] || usage
+mode=$1
+case "$mode" in
+	--staged) [ $# -eq 1 ] || usage; label='staged content' ;;
+	--commit) [ $# -eq 2 ] || usage; sha=$2; label="commit $(git rev-parse --short "$sha")" ;;
+	*) usage ;;
+esac
+
+cd "$(git rev-parse --show-toplevel)"
+
+# Every category is collected and reported together. Stopping at the first one would let a commit
+# hide a new violation behind an older one of a category that is checked earlier.
+problems=""
+note() {
+	problems=$(printf '%s\n%s\n' "$problems" "$1")
+}
+
+verdict() {
+	[ -n "$(printf '%s' "$problems" | tr -d '[:space:]')" ] || return 0
+	printf '\n[gate] %s:%s\n' "$label" "$problems" >&2
+	exit 1
+}
+
+changed_files() {
+	case "$mode" in
+		--staged) git diff --cached --name-only --diff-filter=ACM -- . ':(exclude)hooks/*' ;;
+		--commit) git diff-tree -r --root --no-commit-id --name-only --diff-merges=first-parent --diff-filter=ACM "$sha" -- . ':(exclude)hooks/*' ;;
+	esac
+}
+
+file_content() {
+	case "$mode" in
+		--staged) git show ":$1" ;;
+		--commit) git show "$sha:$1" ;;
+	esac
+}
+
+staged=$(changed_files || true)
+
+keystore_files=$(printf '%s\n' "$staged" | grep -iE '\.(pfx|p12|jks|pem|key)$' || true)
+[ -z "$keystore_files" ] || note "refusing to commit key/keystore file(s):
+$keystore_files
+Keys and credentials belong in a gitignored *.local.* file or a secret store, never the repo."
+
+pem_re='-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----'
+aws_re='AKIA[0-9A-Z]{16}'
+cred_re="(password|passwd|secret|api[_-]?key)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{3,}"
+email_re='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+email_allow='@(example|test|invalid|localhost)\.[A-Za-z]+$|@localhost$'
+host_re="(/home/|/Users/)[A-Za-z0-9._-]+/|[Cc]:\\\\+Users"
+host_allow='/home/vscode/|/home/app/'
+# Hard-coded auth tokens are scanned only under src/main below (tests legitimately use a non-secret test token).
+token_url='\?token=[A-Za-z0-9._-]+'
+token_assign="(valid[_-]?token|api[_-]?token|auth[_-]?token|access[_-]?token|secret[_-]?token|bearer[_-]?token)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{3,}"
+
+findings=""
+smells=""
+oldifs=$IFS
+IFS='
+'
+for f in $staged; do
+	IFS=$oldifs
+	case "$f" in
+		*.png|*.ico|*.jar|*.exe|*.sqlite|*.gz|*.zip|*.jks|*.p12|*.pfx|*.woff|*.woff2|*.ttf) IFS='
+'; continue ;;
+	esac
+	blob=$(file_content "$f" 2>/dev/null) || { IFS='
+'; continue; }
+	hits=$(printf '%s\n' "$blob" | grep -nIE -e "$pem_re" -e "$aws_re" -e "$cred_re" || true)
+	hosts=$(printf '%s\n' "$blob" | grep -nIoE "$host_re" | grep -viE "$host_allow" || true)
+	emails=$(printf '%s\n' "$blob" | grep -nIoE "$email_re" | grep -viE "$email_allow" || true)
+	tokens=""
+	case "$f" in
+		src/main/*) tokens=$(printf '%s\n' "$blob" | grep -niIE -e "$token_url" -e "$token_assign" || true) ;;
+	esac
+	if [ -n "$hits$hosts$emails$tokens" ]; then
+		findings=$(printf '%s\n--- %s ---\n%s\n%s\n%s\n%s\n' "$findings" "$f" "$hits" "$hosts" "$emails" "$tokens")
+	fi
+	code=""
+	case "$f" in
+		*.java) code=$(printf '%s\n' "$blob" | grep -nIE -e 'System\.(out|err)\.' -e 'printStackTrace' -e '(TODO|FIXME)' || true) ;;
+	esac
+	if [ -n "$code" ]; then
+		smells=$(printf '%s\n--- %s ---\n%s\n' "$smells" "$f" "$code")
+	fi
+	IFS='
+'
+done
+IFS=$oldifs
+[ -z "$(printf '%s' "$findings" | tr -d '[:space:]')" ] || note "possible secret or personal/host data:
+$findings
+If this is real, remove it (use a gitignored *.local.* file or a secret store, injected at runtime)."
+
+[ -z "$(printf '%s' "$smells" | tr -d '[:space:]')" ] || note "forbidden in committed Java - use the project Logger, and track TODO/FIXME in the backlog, not code:
+$smells"
+
+verdict

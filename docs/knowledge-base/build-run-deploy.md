@@ -150,25 +150,70 @@ The devcontainer `postCreate` runs this automatically, but it only applies on th
 rebuild** (the devcontainer image is built outside the devcontainer; see
 [dev-environment.md](dev-environment.md)), so run it once by hand in an existing checkout.
 
-- **`pre-commit`**: the fast quality gate.
-  - Runs `./gradlew spotlessCheck checkstyleMain checkstyleTest` (formatting + brace gate).
-  - Scans **staged content** for: private-key blocks, AWS-style access keys, credential literals,
-    real e-mail addresses, absolute user-home paths, and committed key/keystore files
-    (`.pfx`/`.p12`/`.jks`/`.pem`/`.key`).
-  - **Under `src/main` only**: rejects hard-coded auth tokens (a literal `?token=…` or a
-    `…token = "…"` assignment; tests legitimately use a non-secret test token).
-  - Rejects, in committed `.java`, `System.out`/`System.err`, `printStackTrace`, and leftover
-    `TODO`/`FIXME`: use the project `Logger`, and track follow-ups in the backlog, not code
-    comments.
-  - The `hooks/` directory itself is excluded from the scan (the scripts hold the detection
-    patterns).
+- **`content-gate`**: not a hook, the shared content check. `--staged` reads the index, `--commit
+  <sha>` reads one commit. Scans for: private-key blocks, AWS-style access keys, credential
+  literals, real e-mail addresses, absolute user-home paths, and committed key/keystore files
+  (`.pfx`/`.p12`/`.jks`/`.pem`/`.key`); **under `src/main` only**, hard-coded auth tokens (a literal
+  `?token=…` or a `…token = "…"` assignment; tests legitimately use a non-secret test token); and in
+  `.java`, `System.out`/`System.err`, `printStackTrace` and leftover `TODO`/`FIXME` (use the project
+  `Logger`, and track follow-ups in the backlog, not in code). The `hooks/` directory itself is
+  excluded (the scripts hold the detection patterns). **Every category is reported together**, not
+  just the first that hits: stopping early would let a commit hide a new violation behind an older
+  one of a category checked before it.
+- **`pre-commit`**: the fast quality gate on the staged content.
+  - Refuses while a breach is recorded (see `post-rewrite`), then runs `content-gate --staged`.
+  - Runs `./gradlew spotlessCheck checkstyleMain checkstyleTest` (formatting + brace gate), skipped
+    where the checkout has no `gradlew` (a throwaway repo in the self-test).
+  - Runs `hooks/self-test` whenever the commit touches `hooks/`, so a weakened gate cannot land.
   - Excludes the test run and the full build, to keep the TDD micro-commit loop fast.
+- **The recorded breach**, the gate for the commits `pre-commit` structurally cannot see.
+  **git runs `pre-commit` only for `git commit`**: every commit the sequencer builds itself, a
+  rebase replaying a pick, `git rebase --continue` after an `edit` or conflict stop, `cherry-pick`,
+  `revert`, is created with no `pre-commit` hook at all. Because git has already moved the refs by
+  the time any later hook runs, and ignores those hooks' exit status, they **record** the offending
+  shas in `.git/gate-breach` instead of refusing. `pre-commit` then refuses every further commit
+  while a recorded sha is still reachable from `HEAD`, and the record clears itself once it is not,
+  so the reset-free fold is a valid way out. The recording hooks only ever append; **`pre-commit` is
+  the only place the record is pruned, and only by reachability**, so a later clean rewrite cannot
+  wipe an older finding that is still in history.
+  - **`post-rewrite`** covers amend and rebase. It compares the rewritten commit's findings with
+    the **pre-image's**, with the commit label and line numbers taken off: identical findings are
+    replayed history rather than a breach, so rebasing over old commits raises nothing, while a
+    commit that adds a violation of its own is recorded even when the pre-image was already
+    failing.
+  - **`post-commit`** covers `cherry-pick` and `revert`, which fire no `post-rewrite` at all. It
+    tells the paths apart by the reflog (`cherry-pick:`, `revert:`), and deliberately leaves a
+    plain or amended `git commit` alone: `pre-commit` either ran or was bypassed with `--no-verify`,
+    which stays the documented emergency valve rather than becoming a trap. A repository with
+    reflogs disabled loses this leg.
+  - `pre-commit` stamps the tree it approved in `.git/gate-stamp`, so a commit it just gated is not
+    re-checked and an amend does not pay a second format run.
+  - `hooks/breach-guard` is the shared refusal, called by `pre-commit` and `pre-applypatch`.
+  - The record lives in the **common** git dir, so it follows the commit into every worktree of the
+    repository; the stamp lives in the private one, being that worktree's own note.
+- **`pre-applypatch`** and **`pre-merge-commit`**: the gates for `git am` and for a merge commit,
+  both of which git builds without asking any of the commit hooks. These two run on the applied or
+  resolved index **before** their commit exists, so they refuse outright instead of recording after
+  the fact. `pre-merge-commit` guards the merge somebody makes by mistake: the sanctioned landing is
+  `git merge --ff-only` (handbook §7), which fast-forwards and creates no commit to gate.
 - **`commit-msg`**: enforces the §7 message rules: one single line, a present-tense verb first
   (optional leading `[doc] ` tag), and no body / `Co-Authored-By` / tool footer.
+- **`self-test`**: `hooks/self-test` proves the hooks **block**. Each case asserts the resulting
+  history, a commit count, a sha, a recorded breach, never the text a hook printed, and it needs no
+  Gradle of its own, so a host session can run it. It covers each bypass end to end. For `rebase
+  --continue`, `cherry-pick` and `revert` the poisoned commit lands, the breach is recorded and the
+  next commit is refused; for `git am` and a `--no-ff` merge no commit is created at all. The format leg is exercised against a stub `gradlew` that exits 1 and one
+  that exits 0, so both the leg and its `[ -x ./gradlew ]` guard are asserted behaviourally.
+  It **unsets every `GIT_*` variable first**: git exports `GIT_DIR` and `GIT_INDEX_FILE` to the
+  hooks it runs, so an unscrubbed throwaway repo commits into the repo being gated instead. A case
+  asserts the surrounding repository's `HEAD` and branch are where they were.
 
-`--no-verify` bypasses both; reserve it for genuine emergencies. The hooks are a git-level safety
-net complementing the harness-level checks (`.claude/`); the full `./gradlew build` (with tests)
-remains the gate for landing on `main`.
+A merge commit is read against its first parent, so its content is not invisible to
+`content-gate --commit`.
+
+`--no-verify` bypasses the hooks; reserve it for genuine emergencies. The hooks are a git-level
+safety net complementing the harness-level checks (`.claude/`); the full `./gradlew build` (with
+tests) remains the gate for landing on `main`.
 
 ## Run via Docker (primary path)
 

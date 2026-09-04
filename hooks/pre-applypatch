@@ -1,0 +1,19 @@
+#!/bin/sh
+# `git am` applies its patch and commits it without running any of the commit hooks, so this is
+# where the gate gets its say: pre-applypatch runs on the applied index before the commit exists,
+# and a non-zero exit refuses it outright rather than recording it after the fact.
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+"$hooks_dir/breach-guard"
+"$hooks_dir/content-gate" --staged
+
+if [ -x ./gradlew ]; then
+	printf '[pre-applypatch] spotlessCheck + checkstyle...\n'
+	if ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then
+		printf '\n[pre-applypatch] formatting/brace gate failed. Fix the patch and apply it again.\n' >&2
+		exit 1
+	fi
+fi

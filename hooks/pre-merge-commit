@@ -1,0 +1,21 @@
+#!/bin/sh
+# git builds a merge commit itself and asks pre-commit for none of them, so a merge gets its own
+# hook. It runs on the resolved index before the merge commit exists, so like pre-applypatch it
+# refuses outright rather than recording after the fact. The sanctioned landing is
+# `git merge --ff-only` (handbook §7), which fast-forwards and creates no commit at all; this
+# guards the merge somebody makes by mistake.
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+"$hooks_dir/breach-guard"
+"$hooks_dir/content-gate" --staged
+
+if [ -x ./gradlew ]; then
+	printf '[pre-merge-commit] spotlessCheck + checkstyle...\n'
+	if ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then
+		printf '\n[pre-merge-commit] formatting/brace gate failed on the merge result.\n' >&2
+		exit 1
+	fi
+fi

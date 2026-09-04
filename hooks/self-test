@@ -1,0 +1,289 @@
+#!/bin/sh
+# Proves the hooks block. Every case asserts the resulting history - a commit count, a sha, a
+# recorded breach - and never the text the hooks printed, because a printed rejection is what the
+# gate-bypass finding was made of. Runs without Gradle, so it works in a host session too.
+set -eu
+
+hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+# git exports GIT_DIR, GIT_INDEX_FILE and friends to every hook it runs, so a throwaway repo below
+# would otherwise operate on the repo whose commit is being gated.
+for leaked in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do
+	unset "$leaked"
+done
+
+outer_head=$(git -C "$hooks_dir" rev-parse HEAD 2>/dev/null || echo none)
+outer_branch=$(git -C "$hooks_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo none)
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+failures=0
+
+check() {
+	if [ "$2" -eq 0 ]; then
+		printf '  ok   %s\n' "$1"
+	else
+		printf '  FAIL %s\n' "$1"
+		failures=$((failures + 1))
+	fi
+}
+
+new_repo() {
+	repo="$work/$1"
+	mkdir -p "$repo"
+	cd "$repo"
+	git init -q .
+	git config user.email gate@example.com
+	git config user.name Gate
+	git config core.hooksPath "$hooks_dir"
+	n=1
+	while [ "$n" -le 3 ]; do
+		printf 'class Seed%s {\n}\n' "$n" > "Seed$n.java"
+		git add -A
+		git commit -q --no-verify -m "Add seed $n"
+		n=$((n + 1))
+	done
+}
+
+commits() { git rev-list --count HEAD; }
+
+clean_file() { printf 'class %s {\n}\n' "$1" > "$1.java"; }
+secret_file() { printf 'api_key = "not-a-real-value"\n' > "$1"; }
+smelly_file() { printf 'class %s {\n\tvoid run() {\n\t\tSystem.out.println("x");\n\t}\n}\n' "$1" > "$1.java"; }
+
+printf 'hook self-test\n'
+
+new_repo control
+clean_file Clean
+git add -A
+before=$(commits)
+git commit -q -m "Add clean class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+check "a clean change commits" "$r"
+
+new_repo secret
+secret_file config.txt
+git add -A
+before=$(commits)
+git commit -q -m "Add config" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "a staged credential literal leaves no commit behind" "$r"
+if "$hooks_dir/content-gate" --staged >/dev/null 2>&1; then r=1; else r=0; fi
+check "the content gate itself is what refused the credential literal" "$r"
+
+new_repo smell
+smelly_file Loud
+git add -A
+before=$(commits)
+git commit -q -m "Add loud class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "staged System.out leaves no commit behind" "$r"
+if "$hooks_dir/content-gate" --staged >/dev/null 2>&1; then r=1; else r=0; fi
+check "the content gate itself is what refused System.out" "$r"
+
+new_repo amend
+smelly_file Loud
+git add -A
+before=$(git rev-parse HEAD)
+git commit -q --amend --no-edit >/dev/null 2>&1 || true
+if [ "$(git rev-parse HEAD)" = "$before" ]; then r=0; else r=1; fi
+check "an amend carrying a violation does not move HEAD" "$r"
+
+new_repo sequencer
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~2 >/dev/null 2>&1
+smelly_file Loud
+git add Loud.java
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+if git log --oneline --all -- Loud.java | grep -q .; then r=0; else r=1; fi
+check "rebase --continue commits without asking a hook (the bypass itself)" "$r"
+if [ -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "post-rewrite records the ungated commit" "$r"
+clean_file Next
+git add Next.java
+before=$(commits)
+git commit -q -m "Add next class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "the next commit is refused while the ungated commit is reachable" "$r"
+recorded=$(head -n 1 "$(git rev-parse --git-dir)/gate-breach")
+git checkout -q -b clean-line "$(git rev-list --max-parents=0 HEAD)"
+clean_file Fresh
+git add Fresh.java
+before=$(commits)
+git commit -q -m "Add fresh class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ] && ! git merge-base --is-ancestor "$recorded" HEAD 2>/dev/null; then r=0; else r=1; fi
+check "the record clears itself once the ungated commit is unreachable" "$r"
+
+new_repo replay
+smelly_file Legacy
+git add -A
+git commit -q --no-verify -m "Add legacy class"
+clean_file Later
+git add -A
+git commit -q --no-verify -m "Add later class"
+GIT_SEQUENCE_EDITOR=true git rebase -i --no-ff HEAD~2 >/dev/null 2>&1 || true
+if [ -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=1; else r=0; fi
+check "replaying a pre-existing violation raises no breach" "$r"
+
+new_repo merge
+git checkout -q -b topic
+smelly_file Loud
+git add -A
+git commit -q --no-verify -m "Add loud class"
+git checkout -q -
+clean_file Other
+git add -A
+git commit -q --no-verify -m "Add other class"
+before=$(commits)
+git merge --no-ff --no-edit --no-verify topic >/dev/null 2>&1 || true
+if [ "$(git rev-list --count HEAD)" -gt "$before" ] && ! "$hooks_dir/content-gate" --commit HEAD >/dev/null 2>&1; then r=0; else r=1; fi
+check "the commit gate can read a merge commit's content" "$r"
+
+new_repo cleanmerge
+git checkout -q -b topic
+smelly_file Loud
+git add -A
+git commit -q --no-verify -m "Add loud class"
+git checkout -q -
+clean_file Other
+git add -A
+git commit -q --no-verify -m "Add other class"
+before=$(commits)
+git merge --no-ff --no-edit topic >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "a --no-ff merge carrying a violation leaves no commit behind" "$r"
+
+new_repo sibling
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~1 >/dev/null 2>&1
+smelly_file Loud
+git add Loud.java
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+poisoned=$(git rev-parse HEAD)
+git worktree add -q -b sibling-line "$work/sibling-line" >/dev/null 2>&1
+cd "$work/sibling-line"
+git merge -q --ff-only "$poisoned" >/dev/null 2>&1 || true
+clean_file Fresh
+git add Fresh.java
+before=$(commits)
+git commit -q -m "Add fresh class" >/dev/null 2>&1 || true
+if git merge-base --is-ancestor "$poisoned" HEAD 2>/dev/null && [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "a sibling worktree carrying the same recorded commit is refused too" "$r"
+
+new_repo newontop
+printf 'class Legacy {\n\t// an older comment nobody touched\n}\n' > Legacy.java
+git add -A
+git commit -q --no-verify -m "Add legacy class"
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~1 >/dev/null 2>&1
+printf 'class Legacy {\n\t// an older comment nobody touched\n\tvoid run() {\n\t\tSystem.out.println("x");\n\t}\n}\n' > Legacy.java
+git add Legacy.java
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+if [ -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a rewrite adding a new violation on top of an old one is recorded" "$r"
+
+new_repo applypatch
+donor="$work/applypatch-donor"
+mkdir -p "$donor"
+cd "$donor"
+git init -q .
+git config user.email gate@example.com
+git config user.name Gate
+printf 'class Seed1 {\n}\n' > Seed1.java
+git add -A
+git commit -q --no-verify -m "Add seed 1"
+smelly_file Loud
+git add -A
+git commit -q --no-verify -m "Add loud class"
+git format-patch -1 -o "$donor/patches" >/dev/null 2>&1
+cd "$repo"
+before=$(commits)
+git am "$donor/patches/"*.patch >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "git am of a violating patch leaves no commit behind" "$r"
+git am --abort >/dev/null 2>&1 || true
+
+new_repo persist
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~2 >/dev/null 2>&1
+smelly_file Loud
+git add Loud.java
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+violator=$(git log --format=%H --all -- Loud.java | tail -n 1)
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~1 >/dev/null 2>&1
+clean_file Harmless
+git add Harmless.java
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+if git merge-base --is-ancestor "$violator" HEAD 2>/dev/null && [ -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a later clean rewrite does not clear a still-reachable record" "$r"
+clean_file Beyond
+git add Beyond.java
+before=$(commits)
+git commit -q -m "Add beyond class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "the next commit is still refused after that later rewrite" "$r"
+
+new_repo cherry
+git checkout -q -b donor
+smelly_file Loud
+git add -A
+git commit -q --no-verify -m "Add loud class"
+git checkout -q -
+git cherry-pick donor >/dev/null 2>&1 || true
+if [ -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a cherry-picked violation is recorded" "$r"
+clean_file After
+git add After.java
+before=$(commits)
+git commit -q -m "Add after class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "the next commit is refused after a cherry-picked violation" "$r"
+
+new_repo revert
+smelly_file Loud
+git add -A
+git commit -q --no-verify -m "Add loud class"
+git rm -q Loud.java
+git commit -q --no-verify -m "Remove the loud class"
+git revert --no-edit HEAD >/dev/null 2>&1 || true
+if [ -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a revert that puts a violation back is recorded" "$r"
+
+new_repo valve
+smelly_file Loud
+git add -A
+before=$(commits)
+git commit -q --no-verify -m "Add loud class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ] && [ ! -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "--no-verify stays the deliberate valve and is not recorded" "$r"
+
+new_repo formatleg_red
+printf '#!/bin/sh\nexit 1\n' > gradlew
+chmod +x gradlew
+git add -A
+git commit -q --no-verify -m "Add the build wrapper"
+clean_file Formatted
+git add Formatted.java
+before=$(commits)
+git commit -q -m "Add formatted class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "a failing format leg leaves no commit behind" "$r"
+
+new_repo formatleg_green
+printf '#!/bin/sh\nexit 0\n' > gradlew
+chmod +x gradlew
+git add -A
+git commit -q --no-verify -m "Add the build wrapper"
+clean_file Formatted
+git add Formatted.java
+before=$(commits)
+git commit -q -m "Add formatted class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+check "a passing format leg lets the commit through" "$r"
+
+
+if [ "$outer_head" = "$(git -C "$hooks_dir" rev-parse HEAD 2>/dev/null || echo none)" ] \
+	&& [ "$outer_branch" = "$(git -C "$hooks_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo none)" ]; then r=0; else r=1; fi
+check "the cases left the surrounding repository's HEAD and branch untouched" "$r"
+
+if [ "$failures" -eq 0 ]; then
+	printf 'hook self-test: all cases pass\n'
+else
+	printf 'hook self-test: %s case(s) FAILED\n' "$failures" >&2
+fi
+exit "$failures"
