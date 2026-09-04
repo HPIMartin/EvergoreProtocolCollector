@@ -47,6 +47,13 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
                         "could not recompute", + unknownItemCount/unknownItemNames when the last run hit
                         unknown items, + failedAvatarCount/failedAvatarNames when an avatar could not be
                         recomputed
+
+Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ AdminStatusController
+                        ▶ lastUpdated read from AvatarContributions/MetaInformationRepository (persisted,
+                        stamped on the last completed evaluation) + the four scrape/recompute outcome
+                        instants and unknownItemNames/failedAvatarNames read from LastRunStatus
+                        (in-memory, the same source /health uses). It serves the facts; /health keeps the
+                        UP/DOWN verdict derived from them
 ```
 
 ## Layers & responsibilities (condensed)
@@ -86,7 +93,9 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   silently reintroducing the DST defect.
 - **Domain (framework-free):** `Entry`, `Item`, `EvergoreItem` (catalog + value math).
 - **REST:** `controller/api/*` (the JSON API under `/api/v1`: `AvatarSummariesController`,
-  `AvatarEntriesController`, and `controller/api/wire/*` holding the published contract types plus
+  `AvatarEntriesController`, `AdminStatusController` (anonymous, `/api/v1/admin/status`: the
+  operational facts an operator needs, separate from the token-protected member-facing overview),
+  and `controller/api/wire/*` holding the published contract types plus
   `TransferTypeWireNames`; contract in
   [frontend.md](frontend.md)) · `FaviconController` ·
   `SpaHistoryFallbackController` (serves the SPA shell for unknown navigation paths;
