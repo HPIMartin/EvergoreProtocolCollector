@@ -5,7 +5,6 @@ import java.util.*;
 
 public class LastRunStatus {
 
-	private volatile Instant lastSuccessfulRunInstant;
 	private volatile Instant lastSuccessfulScrapeInstant;
 	private volatile Instant lastScrapeFailureInstant;
 	private volatile Instant lastSuccessfulRecomputeInstant;
@@ -13,14 +12,6 @@ public class LastRunStatus {
 	private volatile boolean recomputeHealthy = false;
 	private volatile List<String> unknownItemNames = List.of();
 	private volatile List<String> failedAvatarNames = List.of();
-
-	public void recordSuccessfulRun(Instant when) {
-		lastSuccessfulRunInstant = when;
-	}
-
-	public Optional<Instant> lastSuccessfulRun() {
-		return Optional.ofNullable(lastSuccessfulRunInstant);
-	}
 
 	public void recordSuccessfulScrape(Instant when) {
 		lastSuccessfulScrapeInstant = when;
