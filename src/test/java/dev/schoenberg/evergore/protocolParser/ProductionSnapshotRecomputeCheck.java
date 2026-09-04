@@ -4,6 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 
 import jakarta.inject.Inject;
 
@@ -15,8 +16,8 @@ import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
@@ -30,11 +31,13 @@ import static io.micronaut.http.HttpStatus.OK;
 import static java.util.Arrays.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Disabled("On-demand: needs a local production snapshot at temp.sqlite (gitignored)")
+@EnabledIfSystemProperty(named = "prodSnapshot.check", matches = "true", disabledReason = "on-demand: run with -DprodSnapshot.check=true and a local production snapshot")
 @MicronautTest
 class ProductionSnapshotRecomputeCheck {
-	private static final Path SNAPSHOT = Paths.get("temp.sqlite");
+	private static final Path SNAPSHOT = Paths.get(System.getProperty("prodSnapshot.file", "temp.sqlite"));
 	private static final Path WORKING_DB = Paths.get("build/tmp/prodSnapshot/temp.sqlite");
+
+	private static StoredMetaSums sumsBeforeRecompute = new StoredMetaSums(Map.of());
 
 	static {
 		silentThrow(() -> {
@@ -44,6 +47,7 @@ class ProductionSnapshotRecomputeCheck {
 			Files.createDirectories(WORKING_DB.getParent());
 			Files.deleteIfExists(WORKING_DB);
 			Files.copy(SNAPSHOT, WORKING_DB);
+			sumsBeforeRecompute = StoredMetaSums.readFrom(WORKING_DB);
 		});
 	}
 

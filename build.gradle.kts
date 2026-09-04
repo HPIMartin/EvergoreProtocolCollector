@@ -99,6 +99,13 @@ tasks.named<JavaCompile>("compileJava") {
 tasks.withType<Test> {
 	useJUnitPlatform()
 	jvmArgs("--enable-native-access=ALL-UNNAMED")
+
+	// `ProductionSnapshotRecomputeCheck` is opt-in rather than disabled, so both properties have to
+	// reach the test JVM. The opt-in is always set - an absent one would leave the check unrunnable
+	// with no way to tell that from a passing run - while the snapshot path only overrides the
+	// check's own default when given. See the production-snapshot harness in testing.md.
+	systemProperty("prodSnapshot.check", providers.systemProperty("prodSnapshot.check").getOrElse("false"))
+	providers.systemProperty("prodSnapshot.file").orNull?.let { systemProperty("prodSnapshot.file", it) }
 }
 
 // The active rules are not type-aware, so Checkstyle needs no compiled classpath. Emptying it drops
