@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
 import type { RouteVisitor } from './route.ts'
-import { bankPath, overviewPath, routeOf, storagePath } from './route.ts'
+import {
+  adminPath,
+  bankPath,
+  overviewPath,
+  routeOf,
+  storagePath,
+} from './route.ts'
 
 const describingVisitor: RouteVisitor<string> = {
   overview: () => 'the overview',
+  admin: () => 'the admin status page',
   bank: (avatar, page) => `the bank of ${avatar} at page ${String(page)}`,
   storage: (avatar, page) => `the storage of ${avatar} at page ${String(page)}`,
   unknownPath: (path) => `no view for ${path}`,
@@ -27,6 +34,12 @@ describe('route', () => {
     const described = routeOf('/overview/', '').accept(describingVisitor)
 
     expect(described).toBe('the overview')
+  })
+
+  it('shows the admin status page at its own path', () => {
+    const described = routeOf('/admin', '').accept(describingVisitor)
+
+    expect(described).toBe('the admin status page')
   })
 
   it('shows one avatar bank ledger at page 0 when the address names none', () => {
@@ -104,6 +117,12 @@ describe('route', () => {
     const path = overviewPath()
 
     expect(path).toBe('/overview')
+  })
+
+  it('names the path the admin status page is reached at', () => {
+    const path = adminPath()
+
+    expect(path).toBe('/admin')
   })
 
   it('names the path a bank ledger is reached at', () => {

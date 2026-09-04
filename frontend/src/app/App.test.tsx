@@ -88,6 +88,36 @@ const EMPTY_LEDGER_BODY = JSON.stringify({
   items: [],
 })
 
+const ADMIN_STATUS_BODY = JSON.stringify({
+  lastUpdated: '2026-08-05T10:15:00Z',
+  lastSuccessfulScrape: '2026-08-05T10:15:20Z',
+  lastScrapeFailure: null,
+  lastSuccessfulRecompute: '2026-08-05T10:15:30Z',
+  lastRecomputeFailure: null,
+  unknownItemNames: ['Unobtainium'],
+  failedAvatarNames: ['Zwerg'],
+})
+
+const FAILED_RUN_ADMIN_STATUS_BODY = JSON.stringify({
+  lastUpdated: '2026-08-05T10:15:00Z',
+  lastSuccessfulScrape: null,
+  lastScrapeFailure: '2026-08-05T10:15:20Z',
+  lastSuccessfulRecompute: '2026-08-05T10:15:30Z',
+  lastRecomputeFailure: null,
+  unknownItemNames: [],
+  failedAvatarNames: [],
+})
+
+const NEVER_COLLECTED_ADMIN_STATUS_BODY = JSON.stringify({
+  lastUpdated: null,
+  lastSuccessfulScrape: null,
+  lastScrapeFailure: null,
+  lastSuccessfulRecompute: null,
+  lastRecomputeFailure: null,
+  unknownItemNames: [],
+  failedAvatarNames: [],
+})
+
 interface Answer {
   readonly status: number
   readonly body: string | null
@@ -392,6 +422,74 @@ describe('App', () => {
     render(<App get={server.get} />)
 
     expect(shownStatus()).toBe('Wird geladen…')
+  })
+
+  it('shows the admin status page at its own address, without a token', async () => {
+    const server = alwaysServing(200, ADMIN_STATUS_BODY)
+
+    await shellAt('/admin', server)
+
+    expect({
+      askedFor: server.askedFor,
+      unknownItemNames: screen.getByTestId('unknown-item-names').textContent,
+      failedAvatarNames: screen.getByTestId('failed-avatar-names').textContent,
+    }).toStrictEqual({
+      askedFor: ['/api/v1/admin/status'],
+      unknownItemNames: 'Unbekannte Items: Unobtainium',
+      failedAvatarNames: 'Nicht aktualisierte Avatare: Zwerg',
+    })
+  })
+
+  it('shows a failure of the admin status request with its reason', async () => {
+    await shellAt('/admin', alwaysServing(500, null))
+
+    expect(shownStatus()).toBe('Fehler: The API answered 500')
+  })
+
+  it('shows the admin status page before any collection has run', async () => {
+    await shellAt(
+      '/admin',
+      alwaysServing(200, NEVER_COLLECTED_ADMIN_STATUS_BODY),
+    )
+
+    expect({
+      lastUpdated: screen.getByTestId('last-updated').textContent,
+      lastSuccessfulScrape: screen.getByTestId('last-successful-scrape')
+        .textContent,
+      lastSuccessfulRecompute: screen.getByTestId('last-successful-recompute')
+        .textContent,
+      lastScrapeFailure: screen.queryByTestId('last-scrape-failure'),
+      lastRecomputeFailure: screen.queryByTestId('last-recompute-failure'),
+      unknownItemNames: screen.queryByTestId('unknown-item-names'),
+      failedAvatarNames: screen.queryByTestId('failed-avatar-names'),
+    }).toStrictEqual({
+      lastUpdated: 'Stand: noch kein Abgleich gelaufen',
+      lastSuccessfulScrape: 'Letzter Scrape: noch kein Scrape gelaufen',
+      lastSuccessfulRecompute:
+        'Letzte Neuberechnung: noch keine Neuberechnung gelaufen',
+      lastScrapeFailure: null,
+      lastRecomputeFailure: null,
+      unknownItemNames: null,
+      failedAvatarNames: null,
+    })
+  })
+
+  it('tells a failed scrape apart from the recompute that still ran', async () => {
+    await shellAt('/admin', alwaysServing(200, FAILED_RUN_ADMIN_STATUS_BODY))
+
+    expect({
+      lastSuccessfulScrape: screen.getByTestId('last-successful-scrape')
+        .textContent,
+      lastScrapeFailure: screen.getByTestId('last-scrape-failure').textContent,
+      lastSuccessfulRecompute: screen.getByTestId('last-successful-recompute')
+        .textContent,
+      lastRecomputeFailure: screen.queryByTestId('last-recompute-failure'),
+    }).toStrictEqual({
+      lastSuccessfulScrape: 'Letzter Scrape: noch kein Scrape gelaufen',
+      lastScrapeFailure: 'Letzter Scrape-Fehler: 05.08.2026 12:15',
+      lastSuccessfulRecompute: 'Letzte Neuberechnung: 05.08.2026 12:15',
+      lastRecomputeFailure: null,
+    })
   })
 
   it('has no view for a path it does not know', async () => {

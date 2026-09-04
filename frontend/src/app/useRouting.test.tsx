@@ -6,6 +6,7 @@ import { useRouting } from './useRouting.ts'
 
 const describingVisitor: RouteVisitor<string> = {
   overview: () => 'the overview',
+  admin: () => 'the admin status page',
   bank: (avatar) => `the bank of ${avatar}`,
   storage: (avatar) => `the storage of ${avatar}`,
   unknownPath: (path) => `no view for ${path}`,

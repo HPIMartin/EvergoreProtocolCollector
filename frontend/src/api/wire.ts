@@ -1,4 +1,5 @@
 import type {
+  AdminStatus,
   AvatarSummary,
   BankEntry,
   GuildTotals,
@@ -38,6 +39,37 @@ function totalsFrom(value: unknown): GuildTotals {
     storageDeposited: numberFrom(totals, 'storageDeposited'),
     net: numberFrom(totals, 'net'),
   }
+}
+
+export function adminStatusFrom(body: unknown): AdminStatus {
+  const envelope = objectFrom(body)
+
+  return {
+    lastUpdated: optionalInstantFrom(envelope, 'lastUpdated'),
+    lastSuccessfulScrape: optionalInstantFrom(envelope, 'lastSuccessfulScrape'),
+    lastScrapeFailure: optionalInstantFrom(envelope, 'lastScrapeFailure'),
+    lastSuccessfulRecompute: optionalInstantFrom(
+      envelope,
+      'lastSuccessfulRecompute',
+    ),
+    lastRecomputeFailure: optionalInstantFrom(envelope, 'lastRecomputeFailure'),
+    unknownItemNames: stringArrayFrom(envelope, 'unknownItemNames'),
+    failedAvatarNames: stringArrayFrom(envelope, 'failedAvatarNames'),
+  }
+}
+
+function stringArrayFrom(source: WireObject, field: string): string[] {
+  const value = source[field]
+  if (
+    !Array.isArray(value) ||
+    value.some((entry) => typeof entry !== 'string')
+  ) {
+    throw new MalformedResponse(
+      `The API answered a ${field} that is not an array of strings`,
+    )
+  }
+
+  return value
 }
 
 export function bankPageFrom(body: unknown): Page<BankEntry> {

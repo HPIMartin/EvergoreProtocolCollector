@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { bankPageFrom, overviewFrom, storagePageFrom } from './wire.ts'
+import {
+  adminStatusFrom,
+  bankPageFrom,
+  overviewFrom,
+  storagePageFrom,
+} from './wire.ts'
 import { MalformedResponse } from './apiErrors.ts'
 
 const overviewBody = {
@@ -268,6 +273,68 @@ describe('the storage entry wire shape', () => {
         ...storageBody,
         items: [{ ...storageBody.items[0], name: null }],
       })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+})
+
+const adminStatusBody = {
+  lastUpdated: '2026-08-05T10:15:00Z',
+  lastSuccessfulScrape: '2026-08-05T10:15:20Z',
+  lastScrapeFailure: '2026-08-04T10:15:20Z',
+  lastSuccessfulRecompute: '2026-08-05T10:15:30Z',
+  lastRecomputeFailure: '2026-08-04T10:15:30Z',
+  unknownItemNames: ['Unobtainium'],
+  failedAvatarNames: ['Alrik', 'Zwerg'],
+}
+
+describe('the admin status wire shape', () => {
+  it('reads the stamp, all four outcome instants and both name lists', () => {
+    const status = adminStatusFrom(adminStatusBody)
+
+    expect(status).toStrictEqual({
+      lastUpdated: new Date('2026-08-05T10:15:00Z'),
+      lastSuccessfulScrape: new Date('2026-08-05T10:15:20Z'),
+      lastScrapeFailure: new Date('2026-08-04T10:15:20Z'),
+      lastSuccessfulRecompute: new Date('2026-08-05T10:15:30Z'),
+      lastRecomputeFailure: new Date('2026-08-04T10:15:30Z'),
+      unknownItemNames: ['Unobtainium'],
+      failedAvatarNames: ['Alrik', 'Zwerg'],
+    })
+  })
+
+  it('reads a database that never ran a collection as no facts at all', () => {
+    const status = adminStatusFrom({
+      lastUpdated: null,
+      lastSuccessfulScrape: null,
+      lastScrapeFailure: null,
+      lastSuccessfulRecompute: null,
+      lastRecomputeFailure: null,
+      unknownItemNames: [],
+      failedAvatarNames: [],
+    })
+
+    expect(status).toStrictEqual({
+      lastUpdated: null,
+      lastSuccessfulScrape: null,
+      lastScrapeFailure: null,
+      lastSuccessfulRecompute: null,
+      lastRecomputeFailure: null,
+      unknownItemNames: [],
+      failedAvatarNames: [],
+    })
+  })
+
+  it('refuses a body whose unknown item names are not strings', () => {
+    const reading = () =>
+      adminStatusFrom({ ...adminStatusBody, unknownItemNames: [1] })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it('refuses a body whose failed avatar names are not strings', () => {
+    const reading = () =>
+      adminStatusFrom({ ...adminStatusBody, failedAvatarNames: [null] })
 
     expect(reading).toThrow(MalformedResponse)
   })

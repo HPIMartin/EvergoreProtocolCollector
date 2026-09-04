@@ -71,6 +71,16 @@ const EMPTY_LEDGER_BODY = JSON.stringify({
   items: [],
 })
 
+const ADMIN_STATUS_BODY = JSON.stringify({
+  lastUpdated: '2026-08-05T10:15:00Z',
+  lastSuccessfulScrape: '2026-08-05T10:15:20Z',
+  lastScrapeFailure: null,
+  lastSuccessfulRecompute: '2026-08-05T10:15:30Z',
+  lastRecomputeFailure: null,
+  unknownItemNames: ['Unobtainium'],
+  failedAvatarNames: [],
+})
+
 interface RecordingFetch {
   readonly urls: string[]
   readonly get: HttpGet
@@ -167,6 +177,21 @@ describe('the HTTP protocol API', () => {
     const overview = await tested.overview(FIRST_PAGE)
 
     expect(overview.items[0]?.avatar).toBe('Calix')
+  })
+
+  it('reads the admin status without asking for a token', async () => {
+    const fetched = answering(200, ADMIN_STATUS_BODY)
+    const tested = httpProtocolApi(fetched.get, TOKEN)
+
+    const status = await tested.adminStatus()
+
+    expect({
+      urls: fetched.urls,
+      unknownItemNames: status.unknownItemNames,
+    }).toStrictEqual({
+      urls: ['/api/v1/admin/status'],
+      unknownItemNames: ['Unobtainium'],
+    })
   })
 
   it('reads a bank ledger as the entries of a known avatar', async () => {

@@ -5,6 +5,7 @@ import { httpProtocolApi } from '../api'
 import type { NavigationLink } from '../ui'
 import { PageFrame, StatusPanel } from '../ui'
 
+import { AdminView } from './AdminView.tsx'
 import { BankLedgerView } from './BankLedgerView.tsx'
 import { OverviewView } from './OverviewView.tsx'
 import { StorageLedgerView } from './StorageLedgerView.tsx'
@@ -25,6 +26,7 @@ export function App({ get }: AppProps) {
 
   const view: RouteVisitor<ReactNode> = {
     overview: () => <OverviewView api={api} token={token} onFollow={follow} />,
+    admin: () => <AdminView api={api} />,
     bank: (avatar, page) => (
       <BankLedgerView
         api={api}
@@ -74,6 +76,7 @@ function navigationOf(
 
   return route.accept<readonly NavigationLink[]>({
     overview: () => [{ ...overview, current: true }],
+    admin: () => [overview],
     bank: (avatar) => [overview, ...ledgersOf(avatar, token, 'bank')],
     storage: (avatar) => [overview, ...ledgersOf(avatar, token, 'storage')],
     unknownPath: () => [overview],

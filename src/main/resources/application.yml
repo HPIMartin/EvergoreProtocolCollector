@@ -38,6 +38,7 @@ evergore:
       - /index.html
       - /assets/**
       - /favicon.ico
+      - /admin
       - /api/v1/admin/status
       - /health
       - /swagger/**

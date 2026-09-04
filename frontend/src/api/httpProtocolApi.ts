@@ -4,11 +4,17 @@ import { entriesOf, unknownAvatar } from '../domain'
 import { MalformedResponse, RequestFailed, Unauthorized } from './apiErrors.ts'
 import type { PageWindow } from './pageWindow.ts'
 import type { ProtocolApi } from './protocolApi.ts'
-import { bankPageFrom, overviewFrom, storagePageFrom } from './wire.ts'
+import {
+  adminStatusFrom,
+  bankPageFrom,
+  overviewFrom,
+  storagePageFrom,
+} from './wire.ts'
 
 export type HttpGet = (url: string) => Promise<Response>
 
 const AVATARS = '/api/v1/avatars'
+const ADMIN_STATUS = '/api/v1/admin/status'
 const UNAUTHORIZED = 401
 const NOT_FOUND = 404
 
@@ -60,6 +66,8 @@ export function httpProtocolApi(
   return {
     overview: async (window) =>
       overviewFrom(await bodyOf(await get(urlOf('', window)))),
+    adminStatus: async () =>
+      adminStatusFrom(await bodyOf(await get(ADMIN_STATUS))),
     bankEntries: (avatar, window) =>
       ledgerOf('bank', avatar, window, bankPageFrom),
     storageEntries: (avatar, window) =>
