@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.atomic.*;
 
 import org.junit.jupiter.api.*;
 
@@ -21,6 +22,7 @@ class EvergoreDataCollectorJobTest {
 	private LastRunStatus lastRunStatus;
 	private FailableExtractor extractor;
 	private FailableEvaluator evaluator;
+	private AtomicInteger hookRunCount;
 	private EvergoreDataCollectorJob tested;
 
 	@BeforeEach
@@ -28,14 +30,17 @@ class EvergoreDataCollectorJobTest {
 		lastRunStatus = new LastRunStatus();
 		extractor = new FailableExtractor();
 		evaluator = new FailableEvaluator();
-		tested = new EvergoreDataCollectorJob(new ZeroDelayConfiguration(), extractor, evaluator, () -> {}, lastRunStatus, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
+		hookRunCount = new AtomicInteger();
+		tested = new EvergoreDataCollectorJob(new ZeroDelayConfiguration(), extractor, evaluator, hookRunCount::incrementAndGet, lastRunStatus,
+				Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
 	}
 
 	@Test
-	void recordsLastSuccessfulRunAfterSuccessfulCollection() {
+	void recordsSuccessfulScrapeAndRecomputeAfterASuccessfulRun() {
 		tested.scheduleEvery24Hours();
 
-		assertThat(lastRunStatus.lastSuccessfulRun()).contains(FIXED_NOW);
+		assertThat(lastRunStatus.lastSuccessfulScrape()).contains(FIXED_NOW);
+		assertThat(lastRunStatus.lastSuccessfulRecompute()).contains(FIXED_NOW);
 	}
 
 	@Test
@@ -56,7 +61,27 @@ class EvergoreDataCollectorJobTest {
 
 		assertThatThrownBy(() -> tested.scheduleEvery24Hours()).isInstanceOf(RuntimeException.class);
 
-		assertThat(lastRunStatus.lastSuccessfulRun()).isEmpty();
+		assertThat(lastRunStatus.lastSuccessfulScrape()).contains(FIXED_NOW);
+		assertThat(lastRunStatus.lastRecomputeFailure()).contains(FIXED_NOW);
+		assertThat(lastRunStatus.lastSuccessfulRecompute()).isEmpty();
+	}
+
+	@Test
+	void doesNotRunTheHookWhenRecomputeFails() {
+		evaluator.failOnEvaluate = true;
+
+		assertThatThrownBy(() -> tested.scheduleEvery24Hours()).isInstanceOf(RuntimeException.class);
+
+		assertThat(hookRunCount.get()).isZero();
+	}
+
+	@Test
+	void runsTheHookAfterAFailedScrapeButASuccessfulRecompute() {
+		extractor.failOnLoad = true;
+
+		tested.scheduleEvery24Hours();
+
+		assertThat(hookRunCount.get()).isEqualTo(1);
 	}
 
 	@Test

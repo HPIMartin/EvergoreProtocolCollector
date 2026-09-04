@@ -37,16 +37,35 @@ public class EvergoreDataCollectorJob {
 	@Scheduled(fixedDelay = "24h")
 	void scheduleEvery24Hours() {
 		initialDelay();
-		logger.info("Scheduled extraction started...");
-		dataExtractor.loadData();
-		logger.info("Scheduled extraction finished!");
-		logger.info("Evaluate Data...");
-		EvaluationResult result = evaluation.evaluateData();
-		logger.info("Data evaluation done!");
-		lastRunStatus.recordUnknownItems(result.unknownItemNames());
-		lastRunStatus.recordFailedAvatars(result.failedAvatarNames());
-		lastRunStatus.recordSuccessfulRun(clock.instant());
+		scrape();
+		recompute();
 		hook.run();
+	}
+
+	private void scrape() {
+		logger.info("Scheduled extraction started...");
+		try {
+			dataExtractor.loadData();
+			lastRunStatus.recordSuccessfulScrape(clock.instant());
+			logger.info("Scheduled extraction finished!");
+		} catch (RuntimeException e) {
+			logger.error("Scrape failed; the recompute still runs on the stored rows.", e);
+			lastRunStatus.recordScrapeFailure(clock.instant());
+		}
+	}
+
+	private void recompute() {
+		logger.info("Evaluate Data...");
+		try {
+			EvaluationResult result = evaluation.evaluateData();
+			lastRunStatus.recordUnknownItems(result.unknownItemNames());
+			lastRunStatus.recordFailedAvatars(result.failedAvatarNames());
+			lastRunStatus.recordSuccessfulRecompute(clock.instant());
+			logger.info("Data evaluation done!");
+		} catch (RuntimeException e) {
+			lastRunStatus.recordRecomputeFailure(clock.instant());
+			throw e;
+		}
 	}
 
 	private void initialDelay() {
