@@ -31,6 +31,13 @@ verdict() {
 	exit 1
 }
 
+added_lines() {
+	case "$mode" in
+		--staged) git diff --cached -U0 --diff-filter=ACM -- '*.java' '*.ts' '*.tsx' ;;
+		--commit) git show -U0 --format= --diff-merges=first-parent --diff-filter=ACM "$sha" -- '*.java' '*.ts' '*.tsx' ;;
+	esac
+}
+
 changed_files() {
 	case "$mode" in
 		--staged) git diff --cached --name-only --diff-filter=ACM -- . ':(exclude)hooks/*' ;;
@@ -103,5 +110,87 @@ If this is real, remove it (use a gitignored *.local.* file or a secret store, i
 
 [ -z "$(printf '%s' "$smells" | tr -d '[:space:]')" ] || note "forbidden in committed Java - use the project Logger, and track TODO/FIXME in the backlog, not code:
 $smells"
+
+# Added lines are intersected with the comment lines a scanner finds in the post-image of the file,
+# so a // inside a string, a template literal or a Java text block is never read as a comment; a
+# check with false positives gets switched off. Known residue: a TypeScript regular-expression
+# literal containing // is read as a comment.
+scan_comments='
+	BEGIN { state = 0 }
+	{
+		if (state == 5) { print path "\t" NR }
+		i = 1
+		n = length($0)
+		while (i <= n) {
+			c = substr($0, i, 1)
+			if (state == 0) {
+				if (substr($0, i, 3) == "\"\"\"") { state = 4; i += 3; continue }
+				if (substr($0, i, 2) == "//") { print path "\t" NR; break }
+				if (substr($0, i, 2) == "/*") { print path "\t" NR; state = 5; i += 2; continue }
+				if (c == "\"") { state = 1; i++; continue }
+				if (c == "\047") { state = 2; i++; continue }
+				if (c == "`") { state = 3; i++; continue }
+				i++
+			} else if (state == 1) {
+				if (c == "\\") { i += 2; continue }
+				if (c == "\"") { state = 0 }
+				i++
+			} else if (state == 2) {
+				if (c == "\\") { i += 2; continue }
+				if (c == "\047") { state = 0 }
+				i++
+			} else if (state == 3) {
+				if (c == "\\") { i += 2; continue }
+				if (c == "`") { state = 0 }
+				i++
+			} else if (state == 4) {
+				if (substr($0, i, 3) == "\"\"\"") { state = 0; i += 3; continue }
+				i++
+			} else {
+				if (substr($0, i, 2) == "*/") { state = 0; i += 2; continue }
+				i++
+			}
+		}
+		if (state == 1 || state == 2) { state = 0 }
+	}
+'
+
+scan_added='
+	/^\+\+\+ / { path = substr($0, 7); next }
+	/^--- / { next }
+	/^@@/ {
+		match($0, /\+[0-9]+/)
+		line = substr($0, RSTART + 1, RLENGTH - 1) + 0
+		next
+	}
+	/^\+/ { print path "\t" line; line++ }
+'
+
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
+added_lines 2>/dev/null | awk "$scan_added" | sort -u > "$scratch/added"
+cut -f1 "$scratch/added" | sort -u > "$scratch/paths"
+: > "$scratch/comments"
+while IFS= read -r path; do
+	[ -n "$path" ] || continue
+	file_content "$path" 2>/dev/null | awk -v path="$path" "$scan_comments" >> "$scratch/comments"
+done < "$scratch/paths"
+sort -u "$scratch/comments" > "$scratch/comments.sorted"
+
+comm -12 "$scratch/added" "$scratch/comments.sorted" > "$scratch/hits"
+
+comments=""
+while IFS= read -r hit; do
+	[ -n "$hit" ] || continue
+	path=${hit%%	*}
+	line=${hit##*	}
+	body=$(file_content "$path" 2>/dev/null | sed -n "${line}p")
+	comments=$(printf '%s\n%s:%s:%s' "$comments" "$path" "$line" "$body")
+done < "$scratch/hits"
+
+[ -z "$(printf '%s' "$comments" | tr -d '[:space:]')" ] || note "explanatory comment(s) added:
+$comments
+Javadoc and // are an absolute no-go: put the knowledge in a name, a test name or the knowledge
+base. There is no opt-out for this check."
 
 verdict

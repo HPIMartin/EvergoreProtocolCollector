@@ -123,6 +123,65 @@ GIT_SEQUENCE_EDITOR=true git rebase -i --no-ff HEAD~2 >/dev/null 2>&1 || true
 if [ -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=1; else r=0; fi
 check "replaying a pre-existing violation raises no breach" "$r"
 
+new_repo comment
+printf 'class Noted {\n\t// why this exists\n}\n' > Noted.java
+git add -A
+before=$(commits)
+git commit -q -m "Add noted class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "an added // comment leaves no commit behind" "$r"
+
+new_repo javadoc
+printf 'class Documented {\n\t/** what it does */\n\tvoid run() {\n\t}\n}\n' > Documented.java
+git add -A
+before=$(commits)
+git commit -q -m "Add documented class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "an added Javadoc block leaves no commit behind" "$r"
+
+new_repo literal
+printf 'class Addresses {\n\tString home = "https://evergore.de";\n\tString node = "//input[@type=1]";\n}\n' > Addresses.java
+git add -A
+before=$(commits)
+git commit -q -m "Add addresses class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+check "a // inside a string literal is not read as a comment" "$r"
+
+new_repo stock
+printf 'class Legacy {\n\t// an older comment nobody touched\n}\n' > Legacy.java
+git add -A
+git commit -q --no-verify -m "Add legacy class"
+printf 'class Legacy {\n\t// an older comment nobody touched\n\tint added = 1;\n}\n' > Legacy.java
+git add -A
+before=$(commits)
+git commit -q -m "Add a field to the legacy class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+check "an untouched existing comment does not block the file's next commit" "$r"
+
+new_repo scope
+printf '// a build script comment\nplugins {\n}\n' > build.gradle.kts
+git add -A
+before=$(commits)
+git commit -q -m "Add build script" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+check "the check stays out of files that are not java, ts or tsx" "$r"
+
+new_repo template
+printf 'export const endpoint = `https://example.com/api`;\n' > client.ts
+git add -A
+before=$(commits)
+git commit -q -m "Add the endpoint constant" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+check "a TypeScript template literal is not read as a comment" "$r"
+
+new_repo textblock
+printf 'class Selector {\n\tString path = """\n\t\t//div[@id=1]\n\t\t""";\n}\n' > Selector.java
+git add -A
+before=$(commits)
+git commit -q -m "Add the selector class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+check "a Java text block holding an XPath is not read as a comment" "$r"
+
 new_repo merge
 git checkout -q -b topic
 smelly_file Loud
@@ -150,6 +209,17 @@ before=$(commits)
 git merge --no-ff --no-edit topic >/dev/null 2>&1 || true
 if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
 check "a --no-ff merge carrying a violation leaves no commit behind" "$r"
+
+new_repo swallowed
+smelly_file Loud
+git add -A
+git commit -q --no-verify -m "Add loud class"
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~1 >/dev/null 2>&1
+printf 'class Loud {\n\tvoid run() {\n\t\tSystem.out.println("x");\n\t}\n\t// a brand new comment beside the old smell\n}\n' > Loud.java
+git add Loud.java
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+if [ -f "$(git rev-parse --git-common-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a new violation of a later-checked category is recorded beside an older one" "$r"
 
 new_repo sibling
 GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~1 >/dev/null 2>&1

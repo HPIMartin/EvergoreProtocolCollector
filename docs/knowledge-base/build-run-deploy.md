@@ -160,6 +160,15 @@ rebuild** (the devcontainer image is built outside the devcontainer; see
   excluded (the scripts hold the detection patterns). **Every category is reported together**, not
   just the first that hits: stopping early would let a commit hide a new violation behind an older
   one of a category checked before it.
+  - **Added comment lines** in `.java`, `.ts` and `.tsx`, which is what makes the "Javadoc and `//`
+    are an absolute no-go" rule (handbook §1) mechanical instead of a reviewing habit. A scanner
+    reads the file's post-image and marks the lines that carry a comment outside every literal
+    (`"…"`, `'…'`, a backtick template, a `"""` text block, and the continuation lines of a block
+    comment); the marked lines are intersected with the lines the diff **adds**. Working off the
+    post-image rather than the `+` line alone is what keeps a URL or an XPath (`"//input[…]"`, or
+    the same inside a text block) from being read as a comment. Only added lines are read, so the
+    existing stock stands until a commit edits it. There is **no opt-out**, hook-side or otherwise.
+    Known residue: a TypeScript regular-expression literal containing `//`.
 - **`pre-commit`**: the fast quality gate on the staged content.
   - Refuses while a breach is recorded (see `post-rewrite`), then runs `content-gate --staged`.
   - Runs `./gradlew spotlessCheck checkstyleMain checkstyleTest` (formatting + brace gate), skipped

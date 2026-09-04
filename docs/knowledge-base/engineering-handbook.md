@@ -60,7 +60,10 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
 - **Javadoc is an absolute no-go** (author decision 2026-08-04) and counts as a comment, not as
   documentation: no `/** */` on classes, methods, records or fields. Non-obvious knowledge goes into
   an expressive name, a **test name**, the KB, or `open-questions.md`. Reviewers flag every doc
-  comment and every explanatory comment the diff adds, not only the "unnecessary" ones.
+  comment and every explanatory comment the diff adds, not only the "unnecessary" ones, and
+  `pre-commit` refuses any diff that adds a `//` or `/*` line to a `.java`, `.ts` or `.tsx` file
+  (no opt-out; the existing stock is untouched until a commit edits it). Details:
+  [build-run-deploy.md](build-run-deploy.md).
 - **No dead code, no undeclared dependencies** (an unused class importing a library absent from
   `build.gradle.kts`: delete it).
 - **Code/build is the single source of truth; docs never duplicate volatile facts.** Versions
