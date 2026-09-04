@@ -74,6 +74,21 @@ class ProductionSnapshotRecomputeCheck {
 	}
 
 	@Test
+	void holdsEveryStoredMetaSumAgainstTheOneRecomputedFromTheSameRows() {
+		assertThat(SNAPSHOT).as("the opt-in was given but no snapshot is there to measure").exists();
+
+		MetaSumComparison comparison = new MetaSumComparison(sumsBeforeRecompute, StoredMetaSums.readFrom(WORKING_DB));
+
+		write("metaSums-stored-vs-recomputed.tsv", comparison.asReport());
+
+		assertThat(sumsBeforeRecompute.values()).as("a snapshot with no stored sums would make any diff vacuously empty").isNotEmpty();
+		assertThat(comparison.comparedKeyCount())
+				.as("every stored key must be held against a recomputed one, or the diff is measuring a failed read")
+				.isEqualTo(sumsBeforeRecompute.values().size());
+		assertThat(comparison.keysTheRecomputeNoLongerHolds()).as("the recompute must not drop a key it found stored").isEmpty();
+	}
+
+	@Test
 	void exportsTheValuationCatalogAndKeepsItemNamesUnique() {
 		StringBuilder catalog = new StringBuilder();
 		for (EvergoreItem item : EvergoreItem.values()) {
