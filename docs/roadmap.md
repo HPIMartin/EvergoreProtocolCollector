@@ -41,10 +41,8 @@ so when it did not.
 - [ ] A production DB taken after the `0.1.0` deploy reproduces its own stored sums when recomputed
       from its rows; the automated comparison harness that proves it is committed, not a one-off
       (backlog B24 at `P0`). The author pulls the database; the stop must be **proven**, per
-      build-run-deploy.md. **B19 is not part of this** (correction 2026-09-04): B24 recomputes a
-      database from its own rows, which is idempotent, so it needs no independent counter-calculation
-      and cannot supply one - a shared error between code and store leaves its diff empty. B19 moved
-      to the test-suite hygiene list.
+      build-run-deploy.md. **B19 is not part of this**: it is a separate item on the test-suite
+      hygiene list; see open-questions.md 2026-09-04 for why.
 - [ ] A failed scrape still runs the recompute, and `/health` tells "could not scrape" from "could
       not recompute" (backlog D21).
 - [ ] The collection timestamp moves to an admin surface, so the overview stops carrying a
@@ -128,10 +126,9 @@ reaches its current major.
   strand), agent-environment polish including the shared probe result directory that makes
   concurrent falsifier runs flaky (G11), the SessionStart hook that injects the lessons
   deterministically (G10) — the learnings repeatedly show a session forgetting a written rule.
-- **Test-suite hygiene:** the scripted 1:1 value comparison (B19, out of M6 on 2026-09-04 - it is
-  the *independent* check B24 structurally cannot be), repository tests (B4), style alignment (B8),
-  the shared boot fixture (B18), the two parser residuals (B21, B22), deterministic fixture ids
-  (B23), the unexplained load-sensitive failure (B20), AssertJ in `SmokeTest` (B7).
+- **Test-suite hygiene:** the scripted 1:1 value comparison (B19), repository tests (B4), style
+  alignment (B8), the shared boot fixture (B18), the two parser residuals (B21, B22), deterministic
+  fixture ids (B23), the unexplained load-sensitive failure (B20), AssertJ in `SmokeTest` (B7).
 - **Docs & code hygiene:** KB in lockstep with code (G3), KB accuracy sweep (G18), the parser
   entrypoints made injectable (D15),
   exception/logging hygiene and dead code (D11).

@@ -31,7 +31,7 @@
 | `TransferTypeTest` | Locks `TransferType.toGermanString()` for both constants (`EINLAGERUNG`→"Einlagerung", `ENTNAHME`→"Entnahme"), the single source for the enum→German mapping. | pure unit |
 | `ApplicationExceptionHandlerTest` | Unit tests asserting each `ProtocolParserException` subclass maps to its HTTP status via the visitor, plus the `onUnknown` branch, plus that the logged path carries **no** token query parameter, plus the log severity per mapped status (client error → one `info` line, server error → `error` with the exception) and that a failing response mapping is still logged with its trace before it propagates. `accept` is `abstract`, so a new exception subclass is a compile error rather than a silent fallback. | pure unit |
 | `ApplicationExceptionHandlerHttpTest` | Boots the server against its own fixture DB copy and drives the not-found path through the **real Netty write**, which the pure unit test cannot reach: an unknown avatar answers 404 with the default `Not Found` reason phrase (no echo of the requested name), and an unknown avatar whose percent-encoded name carries `CRLF` still answers 404 instead of the 500 that a control character in the reason phrase used to cause. | `@MicronautTest` integration |
-| `ProductionSnapshotRecomputeCheck` | **Opt-in, on-demand** (`-DprodSnapshot.check=true`): boots the real context against a *copy* of a local production snapshot (`temp.sqlite`, gitignored) with the scraper stubbed, so the real `EvergoreDataEvaluator` recomputes the meta sums on real data and the delta can be inspected before a deploy. Writes the summaries response verbatim to `build/tmp/prodSnapshot/overview-after-recompute.json` (decision 2026-08-08) and asserts the artifact carries every avatar rather than a first page of them, which holds up to the API's `MAX_SIZE` of 1000 avatars and fails rather than truncates beyond it; also exports the valuation catalog and asserts item names are unique (`findItem` takes the first name match). Holds every meta sum the snapshot stored against the one recomputed from the same rows and writes the pair to `metaSums-stored-vs-recomputed.tsv`; it asserts that every stored key was compared and that none was dropped, so a failed read cannot pass as an empty diff, but it does **not** assert equality - the diff is the measurement, not a gate. Details: [1:1 against the production instance](#11-against-the-production-instance). | `@MicronautTest` on-demand check |
+| `ProductionSnapshotRecomputeCheck` | **Opt-in, on-demand** (`-DprodSnapshot.check=true`): boots the real context against a *copy* of a local production snapshot (`temp.sqlite`, gitignored) with the scraper stubbed, so the real `EvergoreDataEvaluator` recomputes the meta sums on real data and the delta can be inspected before a deploy. Writes the summaries response verbatim to `build/tmp/prodSnapshot/overview-after-recompute.json` (decision 2026-08-08) and asserts the artifact carries every avatar rather than a first page of them, which holds up to the API's `MAX_SIZE` of 1000 avatars and fails rather than truncates beyond it; also exports the valuation catalog and asserts item names are unique (`findItem` takes the first name match). Holds every meta sum the snapshot stored against the one recomputed from the same rows and writes the pair to `metaSums-stored-vs-recomputed.tsv`; it asserts that every stored key was compared and that none was dropped, so a failed read cannot pass as an empty diff. It does **not** assert equality: the diff is the measurement, not a gate. Details: [1:1 against the production instance](#11-against-the-production-instance). | `@MicronautTest` on-demand check |
 | `MetaSumComparisonTest` | Pure unit tests over the snapshot comparison tool: `StoredMetaSums` reads every `metaInformation` key of a database **read-only** and leaves out a key stored as `NULL`; `MetaSumComparison` calls a key unchanged when its *number* is unchanged even if its text differs, carries both sides plus their ratio for a changed one, reports no ratio where the stored value was `0`, and counts only the keys both sides hold. Hand-built maps plus one throwaway SQLite file under `build/tmp/test/` | pure unit |
 | `ProductionSnapshotCheckOptInTest` | Pins the on-demand check's switch in one place: the build really forwards `prodSnapshot.check` into the test JVM (an absent property would leave the check unrunnable with nothing to distinguish that from a passing run), the check carries that same property as its `@EnabledIfSystemProperty` condition, and an ordinary run leaves it off | pure unit |
 | `RateLimitCounterTest` | Pure unit tests for `RateLimitCounter`: the block lifts deterministically after `block-duration` (injected `Clock`, no `sleep`), stays active before expiry, and `isIdle()` answers the eviction question — true once the interval elapsed, false while it runs, false while a block is still active, true again once the block expired. The concurrency case is a **lost-update** test: 20 threads × 50 `increment()` calls must hand out 1000 distinct counts, and it fails without the `synchronized` counter. Concurrent `block()` calls on a frozen clock would prove nothing, since every thread writes the same instant. | pure unit |
@@ -247,7 +247,7 @@ recomputed value per key.
 
 - The `0.1.0` deploy is 2026-08-16. Both snapshots that diverge were taken **before** it; the one
   taken **after** it reproduces every stored sum exactly. Only `last_updated` moves there, which the
-  recompute rewrites - and that is what proves the recompute ran rather than the diff being vacuous.
+  recompute rewrites. That is what proves the recompute ran rather than the diff being vacuous.
 - The pre-deploy divergence is a **frozen absolute amount, not a growing one**: `Fugger`'s
   `storage_withdrawl` sits `+27 922 355.4` below the recompute in *both* pre-deploy snapshots, two
   months and 10 000 storage rows apart. It is `0` in the post-deploy one.
@@ -268,8 +268,9 @@ recomputed value per key.
 - **Not reproducible:** B24's per-avatar ratio band of `0.12`-`1.33`. No quantity tried (per key, per
   family, gross, deposits, withdrawals, net) yields a `0.12` lower bound on any surviving snapshot;
   per-avatar `net` ratios are unbounded because `net` crosses zero. The file B24 names
-  (`last_updated` 31.07.2026) is no longer on disk - the root snapshot was replaced on 2026-09-03 -
-  so that band cannot be re-derived. Its Fugger figures do reconcile: `66 141 289` → `94 063 645` is
+  (`last_updated` 31.07.2026) is no longer on disk, the root snapshot having been replaced on
+  2026-09-03, so that band cannot be re-derived. Its Fugger figures do reconcile:
+  `66 141 289` → `94 063 645` is
   the **same** `+27 922 356` gap measured above.
 
 ### The production-snapshot harness
@@ -288,7 +289,7 @@ possible.
   "true")`. Without the opt-in it has nothing to run against, and a check that passes on one machine
   only must not become a build gate; with it, nothing has to be edited to take a measurement.
   `tasks.withType<Test>` forwards `prodSnapshot.check` **always** (defaulting to `false`) and
-  `prodSnapshot.file` only when given, so a missing forward cannot masquerade as a passing run -
+  `prodSnapshot.file` only when given, so a missing forward cannot masquerade as a passing run.
   `ProductionSnapshotCheckOptInTest` pins that. It still compiles under `-Werror`, so a refactor
   cannot rot it unnoticed.
 - **To run it:**
