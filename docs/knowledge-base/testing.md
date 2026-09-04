@@ -252,7 +252,8 @@ recomputed value per key.
   `storage_withdrawl` sits `+27 922 355.4` below the recompute in *both* pre-deploy snapshots, two
   months and 10 000 storage rows apart. It is `0` in the post-deploy one.
 - Same shape as the delta above: in the 15.08 snapshot bank deposits changed for 31 of 42 avatars
-  and **every changed one moves down** (ratios `0.722`-`1.000`), storage withdrawals for all 42.
+  and **every changed one moves down**, by at least 0.5 % (ratios `0.722` to `0.995`; the other 11
+  are untouched at exactly `1.000`). Storage withdrawals changed for all 42.
 - **The eight avatars stored at `0` beside real ledger rows share one trait, without exception:**
   their last storage row is in **2023** (`Gauß` 2023-01-24, `Ivory` and `Malak Almawet` 2023-05-08,
   `Mightypanda` 2023-06-07, `Maesch` 2023-06-19, `Koma` 2023-08-15, `Thyla Vom Moos` 2023-10-24,
