@@ -42,5 +42,5 @@
 | Risk | L | I | Countermeasure |
 |------|---|---|----------------|
 | Duplicated Bank/Storage repositories with a cross-imported column constant; three unclosed connection sources on one SQLite file | M | M | Unify the base, one managed connection source with `busy_timeout` (backlog D12) |
-| Micronaut 5 jump regressions | M | M | Deferred until 1:1 is re-proven; the acceptance net gates it (backlog H9, roadmap M7) |
+| Micronaut 5 jump regressions | M | M | Deferred until 1:1 is re-proven; the acceptance net gates it (backlog H9, roadmap M11) |
 | Pending Dependabot major PRs (TypeScript, Vite, ESLint) rot unmerged | M | L | One refresh pass through the acceptance and frontend nets (backlog H11); merging stays the author's call |

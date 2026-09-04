@@ -8,100 +8,143 @@
 > the agent pipeline and the review gateway
 > ([multi-agent-playbook.md](knowledge-base/multi-agent-playbook.md), handbook §7); landings stay
 > author-serialized.
+>
+> **Order re-cut 2026-09-04** (author decisions that day, see open-questions.md): correctness
+> before product, the two dependency bottlenecks before the product build-out, and a parked set
+> that is explicitly not in this stage.
 
 ## Order
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M3 | Dashboard views (strands `spa-look`, `spa-data-shell`, `spa-legacy-out`) | The SPA over the JSON API | The officer-visible payoff of the dashboard rebuild |
-| M4 | Ingest & test robustness | B20 | Small hardening set, deliberately behind the dashboard strands (decision 2026-07-17) |
-| M5 | Overview truth | author check open | The headline metric lands on integrity-fixed data and a real dashboard; three of the six user requests of 2026-09-02 land here |
-| M6 | Real-browser integration tests | H2, H6 | Scrape coverage without host Firefox; the test split gates on the Selenium service |
-| M7 | Micronaut 5 | H9 | Deferred deliberately until 1:1 is re-proven through the nets built in M3-M6 |
-
-## M3: Dashboard views (strands `spa-look`, `spa-data-shell`, `spa-legacy-out`)
-
-Slice: a guild officer reads the overview and avatar details in the SPA instead of the
-HTML-string templates.
-
-- [x] Overview table plus avatar bank/storage views on the existing client routes (`/overview`,
-      `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`), reading the JSON API with the token
-      carried across every route and every in-app link.
-- [x] Every view TDD-built with Vitest/RTL (`data-testid`, semantic tables); the frontend layer
-      rules hold at lint time ([frontend.md](knowledge-base/frontend.md)).
-- [x] Visual style recreated without copying game assets (decision 2026-07-04); the views render
-      through the shared frame, table and status panel, with sortable columns.
-- [x] The legacy HTML pages deleted, so the three paths reach the shell on a deep link too
-      (decision 2026-08-07).
-- [ ] All columns the service already stores are visible; the full sheet handover completes with M5.
-
-Track: worktree strands `spa-look` (theme and primitives), `spa-data-shell` (wire types, fetching,
-routing) and `spa-legacy-out` (the HTML pages out, the acceptance net on the JSON API).
-
-## M4: Ingest & test robustness
-
-Slice: no single malformed protocol line aborts an ingest; the suite carries no wall-clock
-dependency.
-
-- [x] No single malformed protocol line aborts the ingest, mis-attributes items or vanishes
-      silently: an unparseable item number skips its own line, an entry with no parseable items is
-      logged, every dropped block head is logged, and the greedy avatar group can no longer latch
-      onto a type word inside an avatar name.
-- [x] The `SeleniumPageSource` wait has no wall-clock dependency in tests; a both-fail test pins
-      "scrape exception propagates, both failures logged".
-- [x] The frontend vitest worker fan-out bounded and ordered after the Java suite
-      (`mustRunAfter(":test")`, `test.maxWorkers: 2`; decision 2026-08-07).
+| M5 | Overview truth | author steps only | Closing out; the code landed, two author checks remain |
+| M6 | Numbers you can trust | B24+B19, D21, E14, D20, D19 | Every feature stands on these numbers; B24 is the only `P0` |
+| M7 | The overview states the guild's actual position | E15, E16 | The most visible defect: the total row says the opposite of the truth |
+| M8 | Clear the two bottlenecks | D12, D10 | Two `M` items that release five others; the longer they wait, the more piles up |
+| M9 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
+| M10 | Product build-out | E12→E13, E9, E3, E6 | E12 inherits D18's query shape, so it follows it |
+| M11 | Ops, security & environment | F6, F1, H11, C1, C8, C10, C11, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
 
 ## M5: Overview truth
 
 Slice: the overview answers "what did this member contribute" completely, instead of showing gold
-only.
+only. **Code complete; only author steps remain.**
 
-- [x] Erzeugter Gildenmehrwert per avatar (deposits minus withdrawals across bank and storage, the
-      verified formula in [google-sheet.md](knowledge-base/google-sheet.md)) derived on the read
-      side, served in the overview JSON and rendered in the SPA; the acceptance net asserts every
-      column against the synthetic fixture.
-- [x] Last bank/storage activity per avatar surfaced in the overview, queried from the ledgers.
-- [x] Bank in/out and storage in/out as four separate columns plus a guild-wide total row.
-- [x] The overview's names sort by German collation, so an umlaut-named member no longer sits last
-      on the first paint.
 - [ ] The corrected storage sums are announced in the guild (author step, decision 2026-09-02).
 - [ ] Values match the sheet on a real sample (author check).
 
-## M6: Real-browser integration tests
+## M6: Numbers you can trust
 
-Slice: scraping is exercised by tests on any machine, with no host Firefox.
+Slice: every number the overview shows is verified, refreshes independently of the scrape, and says
+so when it did not.
 
-- [ ] docker-compose provides a `selenium/standalone-firefox` service; an integration test scrapes
-      via `RemoteWebDriver`; the devcontainer regains `docker-outside-of-docker` (backlog H2).
-- [ ] Server-booting/browser tests split into a Gradle integration-test set; the fast unit loop
-      stays fast; [testing.md](knowledge-base/testing.md) updated in the same change (backlog H6).
+- [ ] A production DB taken after the `0.1.0` deploy reproduces its own stored sums when recomputed
+      from its rows; the automated comparison harness that proves it is committed, not a one-off
+      (backlog B24 at `P0`, absorbing B19). The author pulls the database; the stop must be
+      **proven**, per build-run-deploy.md.
+- [ ] A failed scrape still runs the recompute, and `/health` tells "could not scrape" from "could
+      not recompute" (backlog D21).
+- [ ] The collection timestamp moves to an admin surface, so the overview stops carrying a
+      guild-wide number that reads like a per-row freshness claim (backlog E14).
+- [ ] A row whose sums did not refresh is marked as such on the wire and in the table, and the
+      guild total states that it contains one (backlog D20, gated on E14).
+- [ ] No read path dereferences a ledger `timeStamp` unguarded; an unreadable timestamp degrades
+      one entry or one avatar by an explicit, tested rule (backlog D19).
 
-## M7: Micronaut 5
+## M7: The overview states the guild's actual position
 
-Slice: the framework moves to the current major without losing 1:1.
+Slice: the overview stops adding measured gold to modelled material, and the roster puts the
+members who matter above the fold.
 
-- [ ] `./gradlew build` green on Micronaut 5; endpoints 1:1 against the prod snapshot; the offline
-      acceptance net green (backlog H9).
-- [ ] Precondition: M3-M6 landed (their nets are the safety for this jump).
+- [ ] The levy is named rather than hidden inside a number shaped like a balance: a stat header
+      (treasury / material balance / levy collected) plus a Beitrag↔Saldo switch, leaving the
+      table's density untouched (backlog E15; variant A of D-12, decided 2026-09-04).
+- [ ] The roster splits into active and dormant, cut against the data's own timestamp and never
+      against the viewer's clock (backlog E16, after E15 because both rebuild the same view).
 
-## Later (unordered; pull between milestones when they fit)
+## M8: Clear the two bottlenecks
 
-- **Security & config good practice:** real bound `Configuration` (C1), `vulnScan` to zero then
-  gated (C8).
-- **Schema migrations, then renames:** migration framework (D10) gates the
-  `withdrawl` → `withdrawal` key migration (D9); repository unification (D12), exception/logging
-  hygiene (D11), catalog refactor (D6); full repackaging (D3) last,
-  on top of a tested core.
-- **Ops & repo slimming:** drop the bundled webdrivers (F1; the author rewrites history
-  afterwards), Dependabot ecosystems plus one refresh pass
-  including the pending major PRs (H11).
-- **Showcase & workflow:** enforcement hooks (G7, G13), `/commit` command (G8), SessionStart hook
-  (G10), agent-environment polish (G11), wildcard-import ban (G17, only between strands),
-  KB accuracy sweep and citation guard (G18, G19), BDD tooling
-  decision (G4), case study (G5), static-analysis gate (G6).
-- **Product growth:** the windowed
-  aggregation and time filter, including the date-range reporting it absorbs (E12), with
-  "Gildenmitglied des Monats" on top of it (E13); hunt-loot estimate (E3, gated on the D-4
-  valuation rule), history/time-series (E6), delivery channel (F3), multi-guild (F4),
-  public API (F5).
+Slice: the two items that every later query and every schema change waits on.
+
+- [ ] The duplicated bank/storage repositories are unified, one managed connection source, no
+      cross-entity constant use (backlog D12). **Before** D18 and E12, or the same query lands
+      duplicated a fourth and fifth time.
+- [ ] A schema-migration framework is wired and historical data provably survives it (backlog
+      D10). It gates D17, D14 and D9; `createTableIfNotExists` skips an existing table, so nothing
+      declarative reaches the live database without it.
+
+## M9: What the bottlenecks release
+
+Slice: the measured costs come down and the timezone hazard is fixed at its root.
+
+- [ ] Both ledgers carry an index on `(avatar, timeStamp)`, reaching an existing database through a
+      migration; the query plans show `SEARCH … USING INDEX` (backlog D17). Two of the three
+      affected queries sit in the request path.
+- [ ] The recompute reads pre-grouped sums instead of loading whole ledgers into the JVM; per-avatar
+      values stay identical on the production snapshot (backlog D18).
+- [ ] Timestamps and `last_updated` round-trip timezone-independently as instants (backlog D14),
+      retiring the interim startup guard (backlog D22).
+- [ ] The `withdrawl` → `withdrawal` rename runs as a migration, values preserved 1:1 (backlog D9).
+
+## M10: Product build-out
+
+Slice: the dashboard answers windowed questions, and the work the value model rates at zero gets
+its due.
+
+- [ ] A windowed aggregation answers per-avatar sums for an arbitrary `[from,to]`; the filter
+      round-trips through the URL on all three views (backlog E12, absorbing the date-range
+      reporting). It shares its query shape with D18, which is why it follows it.
+- [ ] "Gildenmitglied des Monats": four awards per calendar month, last completed month and running
+      standing (backlog E13).
+- [ ] Avatar name matching folds case in the ledger lookups and the meta keys, not only in the union
+      (backlog E9).
+- [ ] Hunt-loot estimate (backlog E3) — gated on the D-4 valuation rule, still open.
+- [ ] History / time-series per avatar (backlog E6).
+
+## M11: Ops, security & environment
+
+Slice: the stand deploys, scans and authenticates the way a showcase should, and the framework
+reaches its current major.
+
+- [ ] A committed deploy script drives a full deploy and rollback over ssh, carrying every check
+      that caught the `0.1.0` defects (backlog F6).
+- [ ] The bundled webdriver binaries and the local-browser machinery are gone (backlog F1); the
+      author's history rewrite follows, once **no** worktree is open.
+- [ ] Dependabot covers all three ecosystems and one refresh pass has run (backlog H11).
+- [ ] `Configuration` is real and immutable (C1); `vulnScan` is at zero and gated (C8); every
+      request is counted and logged whatever its target looks like (C10).
+- [ ] Auth, session and rate limiting move to JWT, so no credential travels in a URL (backlog C11).
+- [ ] A `selenium/standalone-firefox` service backs an integration test (H2), and the
+      server-booting tests split into their own Gradle set (H6).
+- [ ] Micronaut 5, endpoints 1:1 against the prod snapshot (H9). Precondition: the nets above.
+
+## Ongoing (no milestone; pull into any gap)
+
+- **Mechanical error prevention, the showcase's thesis:** enforcement hooks (G7), the git-hook
+  gate-bypass root cause (G13), the wildcard-import ban (G17, only in a gap with **no** open
+  strand), agent-environment polish including the shared probe result directory that makes
+  concurrent falsifier runs flaky (G11), the SessionStart hook that injects the lessons
+  deterministically (G10) — the learnings repeatedly show a session forgetting a written rule.
+- **Test-suite hygiene:** repository tests (B4), style alignment (B8), the shared boot fixture
+  (B18), the two parser residuals (B21, B22), deterministic fixture ids (B23), the unexplained
+  load-sensitive failure (B20), AssertJ in `SmokeTest` (B7).
+- **Docs & code hygiene:** KB in lockstep with code (G3), KB accuracy sweep (G18), the parser
+  entrypoints made injectable (D15),
+  exception/logging hygiene and dead code (D11).
+- **Craftsmanship, when a gap allows:** catalog refactor (D6), full repackaging (D3) last, on top
+  of a tested core.
+- **Creative:** weekly guild report / delivery channel (F3).
+
+## Parked — explicitly not in this stage (decision 2026-09-04)
+
+Kept in the backlog with their rationale, not deleted; revisit only on a new reason.
+
+- **A4** CI (GitHub Actions) — local-only deploy, no shared PRs to guard (already deprioritized
+  2026-06-15).
+- **G6** static-analysis / Sonar gate — waits on a condition that is not arriving.
+- **F4** multi-guild / multi-world and **F5** public read-only API — speculative: there is one
+  guild and no second consumer.
+- **G5** case study — worth writing once there is something finished to tell.
+- **G4** BDD tooling — "plain JUnit unless asked" has held since June and blocks nothing.
+- **G8** `/commit` slash command and **G9** the WebFetch doc convention — neither prevents an error
+  mechanically, which is the bar this stage applies to the G epic.
