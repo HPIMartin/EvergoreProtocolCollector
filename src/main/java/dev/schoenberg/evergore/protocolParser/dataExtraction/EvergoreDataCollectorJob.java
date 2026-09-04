@@ -10,7 +10,6 @@ import dev.schoenberg.evergore.protocolParser.*;
 import dev.schoenberg.evergore.protocolParser.application.*;
 import dev.schoenberg.evergore.protocolParser.helper.config.*;
 
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
 import static java.util.concurrent.TimeUnit.*;
 
 @Singleton
@@ -69,6 +68,11 @@ public class EvergoreDataCollectorJob {
 	}
 
 	private void initialDelay() {
-		silentThrow(() -> SECONDS.sleep(config.getCollectorInitialDelaySeconds()));
+		try {
+			SECONDS.sleep(config.getCollectorInitialDelaySeconds());
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new RuntimeException(e);
+		}
 	}
 }
