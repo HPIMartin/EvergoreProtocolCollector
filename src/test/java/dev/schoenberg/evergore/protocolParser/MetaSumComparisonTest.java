@@ -56,6 +56,13 @@ class MetaSumComparisonTest {
 	}
 
 	@Test
+	void reportsAKeyThatIsNotANumberOnEitherSideAsUnchanged() {
+		MetaSumComparison comparison = comparing(sums("storage_placement_Ada", "NaN"), sums("storage_placement_Ada", "NaN"));
+
+		assertThat(comparison.differences()).isEmpty();
+	}
+
+	@Test
 	void reportsAKeyThatOnlyOneSideHolds() {
 		MetaSumComparison comparison = comparing(sums("only_before", "1"), sums("only_after", "2"));
 

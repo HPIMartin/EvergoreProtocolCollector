@@ -51,7 +51,7 @@ public record MetaSumComparison(StoredMetaSums stored, StoredMetaSums recomputed
 		Optional<Double> storedNumber = asNumber(difference.stored());
 		Optional<Double> recomputedNumber = asNumber(difference.recomputed());
 		if (storedNumber.isPresent() && recomputedNumber.isPresent()) {
-			return storedNumber.get().doubleValue() == recomputedNumber.get().doubleValue();
+			return sameNumber(storedNumber.get(), recomputedNumber.get());
 		}
 		return difference.stored().equals(difference.recomputed());
 	}
@@ -66,6 +66,10 @@ public record MetaSumComparison(StoredMetaSums stored, StoredMetaSums recomputed
 			return null;
 		}
 		return recomputedNumber.get() / storedNumber.get();
+	}
+
+	private static boolean sameNumber(double stored, double recomputed) {
+		return stored == recomputed || Double.isNaN(stored) && Double.isNaN(recomputed);
 	}
 
 	private static Optional<Double> asNumber(String value) {
