@@ -39,12 +39,15 @@ class EvergoreDataCollectorJobTest {
 	}
 
 	@Test
-	void doesNotRecordWhenLoadDataThrows() {
+	void recomputeStillRunsAfterAFailedScrape() {
 		extractor.failOnLoad = true;
 
-		assertThatThrownBy(() -> tested.scheduleEvery24Hours()).isInstanceOf(RuntimeException.class);
+		tested.scheduleEvery24Hours();
 
-		assertThat(lastRunStatus.lastSuccessfulRun()).isEmpty();
+		assertThat(evaluator.evaluateCalled).isTrue();
+		assertThat(lastRunStatus.lastScrapeFailure()).contains(FIXED_NOW);
+		assertThat(lastRunStatus.lastSuccessfulScrape()).isEmpty();
+		assertThat(lastRunStatus.lastSuccessfulRecompute()).contains(FIXED_NOW);
 	}
 
 	@Test
@@ -89,6 +92,7 @@ class EvergoreDataCollectorJobTest {
 
 	private static class FailableEvaluator extends EvergoreDataEvaluator {
 		boolean failOnEvaluate;
+		boolean evaluateCalled;
 		List<String> unknownItems = List.of();
 
 		FailableEvaluator() {
@@ -97,6 +101,7 @@ class EvergoreDataCollectorJobTest {
 
 		@Override
 		public EvaluationResult evaluateData() {
+			evaluateCalled = true;
 			if (failOnEvaluate) {
 				throw new RuntimeException("evaluateData failed");
 			}
