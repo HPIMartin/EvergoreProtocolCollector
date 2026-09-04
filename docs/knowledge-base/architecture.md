@@ -20,23 +20,33 @@
         │     scrape failed to store, regardless of how old it is relative to the stored max
         │  5. persist via BankRepository / StorageRepository
         ▼
+   (scrape success ▶ LastRunStatus.recordSuccessfulScrape(...); scrape failure ▶ recordScrapeFailure(...),
+    logged, not rethrown, so the recompute below runs regardless)
+        ▼
    EvergoreDataEvaluator.evaluateData()
         │  per avatar, full recompute from ALL stored entries (no cutoff): sum bank + value storage
         │  (TransferType visitor + EvergoreItem); overwrites MetaInformationRepository
         │  a failing avatar is caught, named and skipped; last_updated stamped on every completed run
         ▼
-   LastRunStatus.recordSuccessfulRun(...) + recordUnknownItems(...) + recordFailedAvatars(...)   (monitoring seam)
+   LastRunStatus.recordSuccessfulRecompute(...) + recordUnknownItems(...) + recordFailedAvatars(...)
+   (recompute failure ▶ recordRecomputeFailure(...), rethrown)   (monitoring seam)
         ▼
-   PostCollectionHook   (no-op in prod; test seam)
+   PostCollectionHook   (no-op in prod; test seam, runs only after a successful recompute)
 
 Independent read path:  HTTP ▶ filters (audit log, rate limit, token) ▶ AvatarSummariesController /
                         AvatarEntriesController ▶ read MetaInformation / repositories
                         ▶ wire records ▶ JSON
 
 Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut management
-                        ▶ LastRunHealthIndicator ▶ reports UNKNOWN (no run yet) or UP + lastSuccessfulRun
-                        timestamp + unknownItemCount/unknownItemNames when the last run hit unknown
-                        items, + failedAvatarCount/failedAvatarNames when an avatar could not be recomputed
+                        ▶ LastRunHealthIndicator ▶ reports UNKNOWN (no recompute attempted yet), UP
+                        (the latest recompute succeeded) or DOWN (the latest recompute failed, even
+                        after an earlier success) + lastSuccessfulRecompute timestamp; scrape and
+                        recompute outcomes are tracked independently, so the details also carry
+                        lastSuccessfulScrape/lastScrapeFailure/lastRecomputeFailure when present,
+                        telling "could not scrape" apart from
+                        "could not recompute", + unknownItemCount/unknownItemNames when the last run hit
+                        unknown items, + failedAvatarCount/failedAvatarNames when an avatar could not be
+                        recomputed
 ```
 
 ## Layers & responsibilities (condensed)
@@ -104,8 +114,9 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
   decision (count the request, block on exceeding the budget, answer whether to reject) is **one**
   `synchronized` call, so no client can be evicted between exceeding its budget and being blocked.
 - **Monitoring:** `monitoring/LastRunHealthIndicator` (adapter implementing `HealthIndicator`,
-  exposed at `GET /health` via `micronaut-management`; UNKNOWN before the first run, then UP with
-  the `lastRun` details listed in the pipeline above). Fed by `application/LastRunStatus` (above).
+  exposed at `GET /health` via `micronaut-management`; UNKNOWN before any recompute is attempted,
+  then UP or DOWN depending on whether the latest recompute succeeded, with the `lastRun` details
+  listed in the pipeline above). Fed by `application/LastRunStatus` (above).
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.

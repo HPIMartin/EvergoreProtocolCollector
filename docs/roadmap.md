@@ -18,7 +18,7 @@
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
 | M5 | Overview truth | author steps only | Closing out; the code landed, two author checks remain |
-| M6 | Numbers you can trust | B24, D21, E14, D20, D19 | Every feature stands on these numbers; B24 is the only `P0` |
+| M6 | Numbers you can trust | B24, E14, D20, D19 | Every feature stands on these numbers; B24 is the only `P0` |
 | M7 | The overview states the guild's actual position | E15, E16 | The most visible defect: the total row says the opposite of the truth |
 | M8 | Clear the two bottlenecks | D12, D10 | Two `M` items that release five others; the longer they wait, the more piles up |
 | M9 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
@@ -43,8 +43,6 @@ so when it did not.
       (backlog B24 at `P0`). The author pulls the database; the stop must be **proven**, per
       build-run-deploy.md. **B19 is not part of this**: it is a separate item on the test-suite
       hygiene list; see open-questions.md 2026-09-04 for why.
-- [ ] A failed scrape still runs the recompute, and `/health` tells "could not scrape" from "could
-      not recompute" (backlog D21).
 - [ ] The collection timestamp moves to an admin surface, so the overview stops carrying a
       guild-wide number that reads like a per-row freshness claim (backlog E14).
 - [ ] A row whose sums did not refresh is marked as such on the wire and in the table, and the
@@ -69,7 +67,7 @@ Slice: the two items that every later query and every schema change waits on.
 
 - [ ] The duplicated bank/storage repositories are unified, one managed connection source, no
       cross-entity constant use (backlog D12). **Before** D18 and E12, or the same query lands
-      duplicated a fourth and fifth time.
+      duplicated a fourth and fifth time. Also gates the bank+storage ingest transaction (D24).
 - [ ] A schema-migration framework is wired and historical data provably survives it (backlog
       D10). It gates D17, D14 and D9; `createTableIfNotExists` skips an existing table, so nothing
       declarative reaches the live database without it.

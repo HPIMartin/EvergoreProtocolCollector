@@ -450,8 +450,10 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    curl -s -o /dev/null -w '%{http_code}\n' http://<host>/api/v1/avatars  # 401
    ```
 
-   - `/health` is anonymous. It reports `UNKNOWN` until the first collection finishes, then `UP`;
-     the run's timestamp sits at **`details.lastRun.details.lastSuccessfulRun`**, next to
+   - `/health` is anonymous. It reports `UNKNOWN` until a recompute is first attempted, `UP` once
+     the latest recompute succeeded, and `DOWN` if the latest recompute failed (even after an
+     earlier success); the recompute's timestamp sits at
+     **`details.lastRun.details.lastSuccessfulRecompute`**, next to
      `unknownItemCount` and `unknownItemNames`. Neither is an error: they are the catalog gap
      (testing.md). **`unknownItemCount` counts occurrences, `unknownItemNames` distinct names**, so
      the two differ by an order of magnitude. Measured on the production snapshot 2026-09-03:
@@ -579,15 +581,17 @@ requests in a row not earning a 429. That gap needs a Netty-level seam and is tr
 | `GET /overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage` | SPA client routes. No controller owns them: with a token they fall through to the shell, so a deep link or a bookmark works. |
 | `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle. **Public** (no token), but rate-limited and logged like any other request. An unknown navigation path **with a token** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
 | `GET /favicon.ico` | Favicon: public, but rate-limited and logged like any other request. |
-| `GET /health` | Micronaut management health endpoint: token-exempt, anonymous. Reports UNKNOWN (no run yet) or UP + `lastSuccessfulRun` timestamp; when the last run hit unknown catalog items, the `lastRun` detail also carries `unknownItemCount` and the distinct `unknownItemNames`; when an avatar's ledger could not be read, `failedAvatarCount` and `failedAvatarNames` name it. `lastSuccessfulRun` still advances on such a run: it reports that a collection ran, not that every avatar recomputed, and the failed names beside it carry that second question. Use as a liveness/last-run monitor hook. |
+| `GET /health` | Micronaut management health endpoint: token-exempt, anonymous. Reports UNKNOWN (no recompute attempted yet), UP (the latest recompute succeeded) or DOWN (the latest recompute failed, even after an earlier success), + `lastSuccessfulRecompute` timestamp. A scrape and a recompute are tracked independently: a failed scrape no longer blocks the recompute that follows it, so the `lastRun` detail also carries `lastSuccessfulScrape`/`lastScrapeFailure`/`lastRecomputeFailure` when present, telling "could not scrape" apart from "could not recompute"; when the last run hit unknown catalog items, it also carries `unknownItemCount` and the distinct `unknownItemNames`; when an avatar's ledger could not be read, `failedAvatarCount` and `failedAvatarNames` name it. `lastSuccessfulRecompute` still advances on such an avatar failure: it reports that a recompute ran, not that every avatar's sums refreshed, and the failed names beside it carry that second question. Use as a liveness/last-run monitor hook. |
 | `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: public, but rate-limited and logged. |
 
 ## Scheduled job
 
 - `EvergoreDataCollectorJob`: `@Scheduled(fixedDelay = "24h")`, configurable initial delay
   (`Configuration.getCollectorInitialDelaySeconds()`).
-- Runs `EvergoreDataExtractor.loadData()` then `EvergoreDataEvaluator.evaluateData()`, then records
-  the completion time in `LastRunStatus` (injected `Clock`).
+- Runs `EvergoreDataExtractor.loadData()` then `EvergoreDataEvaluator.evaluateData()`, recording each
+  step's own outcome in `LastRunStatus` (injected `Clock`) independently: a scrape failure is logged
+  and does not stop the recompute that follows it, but a recompute failure is rethrown, so the
+  `PostCollectionHook` only runs after a successful recompute.
 - Tests set the delay to 0 via a `ZeroDelayConfiguration` subclass.
 
 ## CI / dev environment
