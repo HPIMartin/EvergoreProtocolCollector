@@ -85,6 +85,20 @@ class EvergoreDataCollectorJobTest {
 	}
 
 	@Test
+	void restoresInterruptFlagWhenInitialDelayIsInterrupted() {
+		EvergoreDataCollectorJob interruptibleJob = new EvergoreDataCollectorJob(new PositiveDelayConfiguration(), extractor, evaluator, () -> {}, lastRunStatus,
+				Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
+		Thread.currentThread().interrupt();
+		try {
+			assertThatThrownBy(() -> interruptibleJob.scheduleEvery24Hours()).isInstanceOf(RuntimeException.class);
+
+			assertThat(Thread.currentThread().isInterrupted()).isTrue();
+		} finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
 	void forwardsTheRunsUnknownItemsToLastRunStatus() {
 		evaluator.unknownItems = List.of("Unobtainium");
 
@@ -97,6 +111,13 @@ class EvergoreDataCollectorJobTest {
 		@Override
 		public int getCollectorInitialDelaySeconds() {
 			return 0;
+		}
+	}
+
+	private static class PositiveDelayConfiguration extends Configuration {
+		@Override
+		public int getCollectorInitialDelaySeconds() {
+			return 5;
 		}
 	}
 
