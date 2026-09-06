@@ -229,6 +229,9 @@ production snapshot via the gitignored harness described below:
   new ones for none. The delta is the fix landing, not a regression.
 - **Catalog gap, pre-existing:** the snapshot holds storage rows whose item name is not in
   `EvergoreItem`; they value at zero and are reported through `/health`'s `unknownItemNames`.
+  Measured on the 03.09.2026 snapshot: **124 of its 513 distinct storage item names**, covering
+  **1 684 of 243 443 rows** (0.69 %) and 129 062 units moved. Backlog **D23** holds the question of
+  which of them should carry a value at all.
 - **Not covered by this check:** the re-ingest of still-visible entries missing from the database
   needs a live scrape, so it is only exercised by `EvergoreDataExtractorTest`.
 
@@ -265,7 +268,8 @@ recomputed value per key.
   sides.
 - **Not measured, and not claimable from this:** whether the recompute computes the *right* number.
   Code and store carrying the same error would leave this diff empty by construction. That is
-  **B19**'s purpose and stays a separate item.
+  **B19**'s purpose and stays a separate item. The catalog gap above is a known instance: both sides
+  value an unknown item at zero, so it reproduces perfectly and this check stays silent on it.
 - **Not reproducible:** B24's per-avatar ratio band of `0.12`-`1.33`. No quantity tried (per key, per
   family, gross, deposits, withdrawals, net) yields a `0.12` lower bound on any surviving snapshot;
   per-avatar `net` ratios are unbounded because `net` crosses zero. The file B24 names
