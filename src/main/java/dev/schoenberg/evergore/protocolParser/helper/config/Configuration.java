@@ -15,11 +15,10 @@ public class Configuration {
 	public final String server = ZYRTHANIA;
 	public final Path evergoreFolder = get("c:", "evergore");
 
-	public boolean useInMemory = false;
 	public String DATABASE_TEMP_SQLITE = "database/temp.sqlite";
 
 	public String getDatabasePath() {
-		return useInMemory ? ":memory:" : DATABASE_TEMP_SQLITE;
+		return DATABASE_TEMP_SQLITE;
 	}
 
 	public int getCollectorInitialDelaySeconds() {
