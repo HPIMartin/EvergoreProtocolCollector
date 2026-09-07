@@ -5,11 +5,11 @@
 - **Tool:** Gradle (Kotlin DSL, `build.gradle.kts`), `io.micronaut.application` plugin, Micronaut
   platform `4.10.3`, **Java 25** (Gradle toolchain, auto-provisioned via the foojay resolver),
   runtime Netty. Main class `…​.Application`. Build and test: `./gradlew build`.
-- **Key deps:** Selenium 4.7.2, ORMLite-JDBC 6.1, sqlite-jdbc 3.41.2.2,
-  micronaut-openapi (Swagger/RapiDoc/ReDoc), `micronaut-management` (health endpoint + indicators),
-  snakeyaml (Micronaut 4 no longer bundles it). Test only: micronaut-test-junit5, JUnit 5 (+
-  `junit-platform-launcher`), unirest-java 3.11.11 (used by `SmokeTest`), AssertJ 3.27.7, ArchUnit
-  1.4.1 (reads Java 25 bytecode).
+- **Key deps:** Selenium 4.7.2, ORMLite-JDBC 6.1, sqlite-jdbc 3.41.2.2, flyway-core 11.20.3 (schema
+  migrations), micronaut-openapi (Swagger/RapiDoc/ReDoc), `micronaut-management` (health endpoint +
+  indicators), snakeyaml (Micronaut 4 no longer bundles it). Test only: micronaut-test-junit5, JUnit
+  5 (+ `junit-platform-launcher`), unirest-java 3.11.11 (used by `SmokeTest`), AssertJ 3.27.7,
+  ArchUnit 1.4.1 (reads Java 25 bytecode).
 - **Entry point / deployable:** the Gradle wrapper (`./gradlew`, distribution pinned in
   `gradle/wrapper/`) is the single entry point, no host toolchain needed beyond a JDK. Deployable
   is the application distribution (`./gradlew installDist` →
@@ -499,8 +499,31 @@ and the database is left untouched, so a broken scrape degrades to stale data ra
 
 **Database compatibility:** the `bankEntries` / `storageEntries` columns and the `last_updated`,
 `bank_placement_<avatar>` and `bank_withdrawl_<avatar>` meta keys are stable, and the
-`storage_placement_<avatar>` / `storage_withdrawl_<avatar>` keys are additive, so deploying needs no
-schema migration (a migration framework is backlog D10).
+`storage_placement_<avatar>` / `storage_withdrawl_<avatar>` keys are additive.
+
+**Schema migrations (Flyway):** `Repository.getCon` runs `src/main/resources/db/migration` before it
+opens the connection, so the first start of a new version migrates the live database. `V1` creates
+the pre-Flyway tables `IF NOT EXISTS`, so it is a no-op on a database that already has them and
+still repairs one that is missing a table; `V2` rebuilds all three tables with `NOT NULL` on every
+column, copying every row into the new table. What this means for a deploy:
+
+- **Take the backup first** (step 1 of the deploy already does), because `V2` rewrites all three
+  tables rather than altering them in place.
+- The rebuild copies ~250k rows and runs in seconds, inside one transaction: it either completes or
+  leaves the database as it was.
+- A row that carries a `NULL` in any column **aborts the boot** instead of being dropped. That is
+  the intended strict behaviour (engineering-handbook §3), and the production snapshot holds no such
+  row in any of the three tables (ledgers measured 2026-09-06, `metaInformation` 2026-09-07). The
+  abort rolls back whole, so fixing the row and restarting migrates cleanly with no `flyway repair`
+  in between.
+- Rolling back to a pre-Flyway image is safe: the old code ignores the `flyway_schema_history` table
+  and the `NOT NULL` constraints only reject writes it never makes.
+- The first boot migrates from whichever thread gets there first, the scheduled collector or an
+  early request; `migrate()` serializes them, so the rebuild runs once and the other threads wait.
+- If `V2` does refuse, the log names the column. Find the rows on the backup with
+  `SELECT * FROM bankEntries WHERE id IS NULL OR timeStamp IS NULL OR avatar IS NULL OR amount IS
+  NULL OR type IS NULL;` (the same shape for the other two tables), decide per row whether it is
+  repairable or junk, fix it in the live file and start again.
 
 ## Runtime configuration & secrets
 
@@ -512,7 +535,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 | `server` | `"zyrthania"` | **Target game world.** Scrape URL = `https://evergore.de/<server>?page=…` (`Constants.SERVER`). Switching worlds = change this. |
 | Evergore login | `evergore.credentials.username` / `.password`, **both required**, env-injected as `EVERGORE_CREDENTIALS_USERNAME` / `EVERGORE_CREDENTIALS_PASSWORD` (bound by the `CredentialsConfiguration` `@ConfigurationProperties` record) | The game account `SeleniumPageSource.tryToLogin` signs in with. **Mandatory at startup**: either value unset or blank and the app refuses to boot (`CredentialsStartupValidator` logs an error naming the variable and throws), so a missing login cannot degrade into a silent logged-out scrape. No value lives in the repo or in the image. |
 | `evergoreFolder` | `c:\evergore` | Windows path; unused on the Linux container scrape path. |
-| DB path | `database/temp.sqlite` (or `:memory:` if `useInMemory`) | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
+| DB path | `database/temp.sqlite` | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
 | Auth token | `evergore.security.api-token`, **required**, env-injected as `EVERGORE_SECURITY_API_TOKEN` (bound by the `SecurityConfiguration` `@ConfigurationProperties` bean) | **Every** request needs `?token=<configured token>` except the configured public paths below. **Mandatory at startup**: a blank/unset token makes the app refuse to boot (`ApiTokenStartupValidator` logs an error and throws). No token value lives in the repo. |
 | Public paths | `evergore.security.public-paths` in `application.yml`: `/`, `/index.html`, `/assets/**`, `/favicon.ico`, `/admin`, `/api/v1/admin/status`, `/health`, `/swagger/**`, `/swagger-ui/**`, `/redoc/**`, `/rapidoc/**` (same `SecurityConfiguration` bean) | The **only** token-free surface; Ant patterns, matched against the canonicalized path by `PublicPaths`. Everything not listed needs a token, so a new controller is protected by default. Empty or unset ⇒ everything is protected (fail closed), which makes a misconfiguration a visible 401 on `/` rather than a silent hole. |
 | Rate limit | `evergore.rate-limit.*`: `max-requests-per-interval` `30`, `interval` `10s`, `block-duration` `1m`, `max-tracked-clients` `10000` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `RateLimitFilter` (filter order 2, behind the audit log and ahead of the token filter); exceeding the limit within `interval` blocks that IP for `block-duration` → **429** (`TooManyRequests`). Applies to **every** path. The limit carries a full page load (shell + bundle + favicon + API call ≈ 5 requests) several times over; below ~10 the SPA would throttle itself. `max-tracked-clients` bounds the counter map (see `RateLimitCounters` below). `RateLimitStartupValidator` refuses to boot on any value that would silently disable the throttle: a request budget or client budget below `1`, or a non-positive `interval`/`block-duration`. Config-driven, no hard-coded constants; the test profile raises the limit so the suite isn't throttled. |

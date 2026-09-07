@@ -43,8 +43,15 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
   shortcode in prose only as optional pointer to a **still-live** item. Completing an item removes
   its row **and** every shortcode reference repo-wide (no `git` archaeology to resolve references).
 - Small methods, early returns, no deep nesting; no commented-out code in commits.
-- **No logic in constructors; field assignment only** (no IO, no `init()`/`ensureTable()`-style
-  calls); construct + initialize via static **factory method** (the `Repository` subclass
+- **Strict data instead of defensive reads (author rule 2026-09-06).** Every database column is
+  `NOT NULL`; a value that cannot be absent is declared so at the type, not checked at each read.
+  Read paths therefore carry no null branches for states the schema forbids. Whoever wants to allow
+  a nullable column owns the handling of that null everywhere it can surface, and says so. The rule
+  exists because the quiet failures are worse than the loud ones: ORMLite reads a SQL `NULL` into a
+  primitive `int` as **0** without an exception, so a nullable `amount` would not crash, it would
+  silently change a member's sums.
+- **No logic in constructors; field assignment only** (no IO, no `init()`-style calls);
+  construct + initialize via static **factory method** (the `Repository` subclass
   `get(...)` methods, Effective Java Item 1) or a lifecycle hook. Constructor logic breaks
   testability and SRP.
 - **`static` is a smell, mutable static state above all**: hidden cross-instance/cross-test
@@ -108,15 +115,15 @@ language**, given/when/then:
    intent before implementation).
 2. Re-activate, implement green via the §4 TDD cycle → **commit** when green.
 
-- Scenarios run as acceptance tests at the application boundary, through ports with **in-memory
-  fakes** (fake `PageSource`, `:memory:` SQLite): no browser, no live site.
+- Scenarios run as acceptance tests at the application boundary, through ports with **test-double
+  fakes** (fake `PageSource`, a throwaway SQLite file): no browser, no live site.
 - Tooling default: plain JUnit given/when/then helpers; Cucumber `.feature` files only for
   non-developer-readable living docs (open question D-9, backlog G4).
 
 ## 6. Test strategy (pyramid)
 
 - **Many** fast unit tests (domain values, parser, evaluator math).
-- **Some** adapter/integration tests (repositories vs `:memory:` SQLite).
+- **Some** adapter/integration tests (repositories vs a throwaway SQLite file).
 - **Few** acceptance tests (collect→evaluate→overview via fakes) and a thin smoke test for wiring.
 - **Deterministic, never wall-clock-dependent**: must pass on any hardware (a first-gen Raspberry
   Pi may just take longer); correctness never hinges on a `sleep`/`timeout` threshold. Wait on a

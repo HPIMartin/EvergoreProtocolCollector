@@ -60,8 +60,9 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 
 - **Entry/lifecycle:** `Application` (boots Micronaut) · `ApplicationFactory` (`@Factory` composition
   root: builds the un-annotated repositories, the framework-free `application` use-cases,
-  `FileLoader`, no-op hooks) · `EvergoreDataCollectorJob` (`@Scheduled`); each `Repository` creates
-  its own table lazily, on first use (`ensureTable()`), rather than at a dedicated startup step.
+  `FileLoader`, no-op hooks) · `EvergoreDataCollectorJob` (`@Scheduled`). The schema belongs to
+  Flyway: `Repository.getCon` runs the versioned migrations in `src/main/resources/db/migration`
+  before it opens the connection, so no caller can reach an unmigrated database.
 - **Application use-cases (framework-free):** `application/{EvergoreDataExtractor,EvergoreDataEvaluator}`
   (collect + evaluate coordinators) · `application/LastRunStatus` (monitoring seam: what the
   last run reached, see the pipeline above). Plain objects, wired in `ApplicationFactory`.
@@ -82,7 +83,7 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   ledger ports answer `latestTimestampPerAvatar()` with **one grouped query** per ledger
   (`MAX(timeStamp) GROUP BY avatar`), so the overview materializes one row per avatar instead of one
   per ledger entry. SQLite still scans the table for it: neither `avatar` nor `timeStamp` is indexed,
-  and adding an index is DDL that waits on the migration framework (**D10**), so this is the
+  and adding an index is DDL that now goes through a Flyway migration, so this is the
   remaining scaling ceiling of the read path. The domain types are real instants, so nothing here reintroduces
   `MetaInformationKey.DateTimeKey`'s ambiguity and no key family joins the pending schema migration.
   The ledger's **storage** format is a separate matter: it persists wall-clock text, so these
@@ -155,8 +156,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 
 ### Top violations to fix (detail in [../backlog.md](../backlog.md))
 
-1. **`Configuration` is config in name only:** hard-coded Java fields (browser, server, paths,
-   in-memory toggle); ignores `application.yml`/env. The secrets are the exception and are already
+1. **`Configuration` is config in name only:** hard-coded Java fields (browser, server, paths);
+   ignores `application.yml`/env. The secrets are the exception and are already
    bound from the environment (`SecurityConfiguration`, `CredentialsConfiguration`).
 
 ## Target structure (proposed, hexagonal)

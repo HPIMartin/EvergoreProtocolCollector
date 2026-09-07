@@ -18,9 +18,9 @@
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
 | M5 | Overview truth | author steps only | Closing out; the code landed, two author checks remain |
-| M6 | Numbers you can trust | B24, D20, D19 | Every feature stands on these numbers; B24 is the only `P0` |
+| M6 | Numbers you can trust | B24, D20 | Every feature stands on these numbers; B24 is the only `P0` |
 | M7 | The overview states the guild's actual position | E15, E16 | The most visible defect: the total row says the opposite of the truth |
-| M8 | Clear the two bottlenecks | D12, D10 | Two `M` items that release five others; the longer they wait, the more piles up |
+| M8 | Clear the last bottleneck | D12 | The `M` item that still gates the repeated read method; the migration framework landed |
 | M9 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
 | M10 | Product build-out | E12→E13, E9, E3, E6 | E12 inherits D18's query shape, so it follows it |
 | M11 | Ops, security & environment | F6, F1, H11, C1, C8, C10, C11, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
@@ -47,8 +47,8 @@ so when it did not.
       overview no longer carries a guild-wide number that reads like a per-row freshness claim.
 - [ ] A row whose sums did not refresh is marked as such on the wire and in the table, and the
       guild total states that it contains one (backlog D20).
-- [ ] No read path dereferences a ledger `timeStamp` unguarded; an unreadable timestamp degrades
-      one entry or one avatar by an explicit, tested rule (backlog D19).
+- [x] No read path dereferences a ledger `timeStamp` unguarded: the column is `NOT NULL` in the
+      database, so an entry without a timestamp cannot be stored in the first place.
 
 ## M7: The overview states the guild's actual position
 
@@ -61,16 +61,16 @@ members who matter above the fold.
 - [ ] The roster splits into active and dormant, cut against the data's own timestamp and never
       against the viewer's clock (backlog E16, after E15 because both rebuild the same view).
 
-## M8: Clear the two bottlenecks
+## M8: Clear the last bottleneck
 
-Slice: the two items that every later query and every schema change waits on.
+Slice: the item that every later read method waits on.
 
 - [ ] The duplicated bank/storage repositories are unified, one managed connection source, no
       cross-entity constant use (backlog D12). **Before** D18 and E12, or the same query lands
       duplicated a fourth and fifth time. Also gates the bank+storage ingest transaction (D24).
-- [ ] A schema-migration framework is wired and historical data provably survives it (backlog
-      D10). It gates D17, D14 and D9; `createTableIfNotExists` skips an existing table, so nothing
-      declarative reaches the live database without it.
+- [x] A schema-migration framework is wired and historical data provably survives it: Flyway owns
+      the schema, `V1` records the pre-Flyway tables and `V2` rebuilds all three with `NOT NULL` on
+      every column, proven row-for-row on an existing database.
 
 ## M9: What the bottlenecks release
 
