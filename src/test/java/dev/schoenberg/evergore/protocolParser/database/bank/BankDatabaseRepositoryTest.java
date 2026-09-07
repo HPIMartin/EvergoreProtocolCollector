@@ -2,9 +2,6 @@ package dev.schoenberg.evergore.protocolParser.database.bank;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.Statement;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +30,7 @@ class BankDatabaseRepositoryTest {
 
 	@Test
 	void freshlyConstructedRepositoryIsImmediatelyUsableWithoutSeparateInit() {
-		BankDatabaseRepository repo = repositoryOnAFreshFile();
+		BankDatabaseRepository repo = repository();
 		BankEntry stored = bankEntry("Aurora", BOUNDARY, 1000);
 		repo.add(List.of(stored));
 
@@ -44,7 +41,7 @@ class BankDatabaseRepositoryTest {
 
 	@Test
 	void getAllSinceIncludesTheRowExactlyAtTheGivenTimestamp() {
-		BankDatabaseRepository repo = repositoryInMemory();
+		BankDatabaseRepository repo = repository();
 		BankEntry atBoundary = bankEntry("Aurora", BOUNDARY, 100);
 		repo.add(List.of(atBoundary));
 
@@ -55,7 +52,7 @@ class BankDatabaseRepositoryTest {
 
 	@Test
 	void getAllSinceExcludesRowsOlderThanTheGivenTimestamp() {
-		BankDatabaseRepository repo = repositoryInMemory();
+		BankDatabaseRepository repo = repository();
 		repo.add(List.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 5)));
 
 		List<BankEntry> result = repo.getAllSince(BOUNDARY);
@@ -65,7 +62,7 @@ class BankDatabaseRepositoryTest {
 
 	@Test
 	void getAllSinceIncludesRowsNewerThanTheGivenTimestamp() {
-		BankDatabaseRepository repo = repositoryInMemory();
+		BankDatabaseRepository repo = repository();
 		BankEntry newer = bankEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 100);
 		repo.add(List.of(newer));
 
@@ -76,7 +73,7 @@ class BankDatabaseRepositoryTest {
 
 	@Test
 	void countForCountsOnlyTheRowsOfTheGivenAvatar() {
-		BankDatabaseRepository repo = repositoryInMemory();
+		BankDatabaseRepository repo = repository();
 		repo.add(List.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 100), bankEntry("Aurora", BOUNDARY, 200), bankEntry("Boreas", ONE_MINUTE_AFTER_BOUNDARY, 300)));
 
 		long count = repo.countFor("Aurora");
@@ -86,7 +83,7 @@ class BankDatabaseRepositoryTest {
 
 	@Test
 	void countForReturnsZeroForAnAvatarWithoutRows() {
-		BankDatabaseRepository repo = repositoryInMemory();
+		BankDatabaseRepository repo = repository();
 
 		long count = repo.countFor("Nobody");
 
@@ -95,7 +92,7 @@ class BankDatabaseRepositoryTest {
 
 	@Test
 	void namesTheLatestTimestampOfEveryAvatarThatHasRows() {
-		BankDatabaseRepository repo = repositoryInMemory();
+		BankDatabaseRepository repo = repository();
 		repo.add(List.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1), bankEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 2), bankEntry("Boreas", BOUNDARY, 3)));
 
 		Map<String, Instant> latest = repo.latestTimestampPerAvatar();
@@ -104,54 +101,14 @@ class BankDatabaseRepositoryTest {
 	}
 
 	@Test
-	void skipsAnAvatarWhoseOnlyRowCarriesNoTimestamp() {
-		BankDatabaseRepository repo = repositoryOnAFreshFile();
-		repo.add(List.of(bankEntry("Aurora", BOUNDARY, 1)));
-		insertRowWithoutTimestamp("Boreas");
-
-		Map<String, Instant> latest = repo.latestTimestampPerAvatar();
-
-		assertThat(latest).containsExactlyInAnyOrderEntriesOf(Map.of("Aurora", BOUNDARY));
-	}
-
-	@Test
-	void namesTheLatestRealTimestampWhileOneRowOfThatAvatarCarriesNone() {
-		BankDatabaseRepository repo = repositoryOnAFreshFile();
-		repo.add(List.of(bankEntry("Aurora", BOUNDARY, 1)));
-		insertRowWithoutTimestamp("Aurora");
-
-		Map<String, Instant> latest = repo.latestTimestampPerAvatar();
-
-		assertThat(latest).containsExactlyInAnyOrderEntriesOf(Map.of("Aurora", BOUNDARY));
-	}
-
-	private static void insertRowWithoutTimestamp(String avatar) {
-		silentThrow(() -> {
-			try (Connection con = DriverManager.getConnection("jdbc:sqlite:" + FRESH_DB_PATH); Statement statement = con.createStatement()) {
-				statement
-						.executeUpdate("INSERT INTO " + BankDatabaseEntry.TABLE + " (" + BankDatabaseEntry.ID_COLUMN + ", " + BankDatabaseEntry.TIMESTAMP_COLUMN + ", "
-								+ BankDatabaseEntry.AVATAR_COLUMN + ", amount, type) VALUES ('" + avatar + "-no-timestamp', NULL, '" + avatar + "', 1, 'EINLAGERUNG')");
-			}
-		});
-	}
-
-	@Test
 	void namesNobodyWhileTheLedgerHasNoRowAtAll() {
-		Map<String, Instant> latest = repositoryInMemory().latestTimestampPerAvatar();
+		Map<String, Instant> latest = repository().latestTimestampPerAvatar();
 
 		assertThat(latest).isEmpty();
 	}
 
 	private static BankEntry bankEntry(String avatar, Instant timeStamp, int amount) {
 		return new BankEntry(timeStamp, avatar, amount, TransferType.EINLAGERUNG);
-	}
-
-	private static BankDatabaseRepository repositoryOnAFreshFile() {
-		return BankDatabaseRepository.get(configurationFor(FRESH_DB_PATH), new LoggerSpy(), () -> {});
-	}
-
-	private static BankDatabaseRepository repositoryInMemory() {
-		return BankDatabaseRepository.get(configurationFor(":memory:"), new LoggerSpy(), () -> {});
 	}
 
 	private static Configuration configurationFor(String databasePath) {
@@ -161,5 +118,9 @@ class BankDatabaseRepositoryTest {
 				return databasePath;
 			}
 		};
+	}
+
+	private static BankDatabaseRepository repository() {
+		return BankDatabaseRepository.get(configurationFor(FRESH_DB_PATH), new LoggerSpy(), () -> {});
 	}
 }

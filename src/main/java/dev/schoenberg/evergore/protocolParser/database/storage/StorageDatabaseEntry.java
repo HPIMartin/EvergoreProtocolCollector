@@ -14,25 +14,25 @@ public class StorageDatabaseEntry {
 	public static final String TIMESTAMP_COLUMN = "timeStamp";
 	public static final String ID_COLUMN = "id";
 
-	@DatabaseField(columnName = ID_COLUMN, generatedId = true, allowGeneratedIdInsert = true)
+	@DatabaseField(columnName = ID_COLUMN, generatedId = true, allowGeneratedIdInsert = true, canBeNull = false)
 	public UUID id;
 
-	@DatabaseField(columnName = TIMESTAMP_COLUMN, dataType = DataType.DATE_STRING)
+	@DatabaseField(columnName = TIMESTAMP_COLUMN, dataType = DataType.DATE_STRING, canBeNull = false)
 	public Date timeStamp;
 
-	@DatabaseField(columnName = AVATAR_COLUMN)
+	@DatabaseField(columnName = AVATAR_COLUMN, canBeNull = false)
 	public String avatar;
 
-	@DatabaseField(columnName = "quantity")
+	@DatabaseField(columnName = "quantity", canBeNull = false, throwIfNull = true)
 	public int quantity;
 
-	@DatabaseField(columnName = "name")
+	@DatabaseField(columnName = "name", canBeNull = false)
 	public String name;
 
-	@DatabaseField(columnName = "quality")
+	@DatabaseField(columnName = "quality", canBeNull = false, throwIfNull = true)
 	public int quality;
 
-	@DatabaseField(columnName = "type")
+	@DatabaseField(columnName = "type", canBeNull = false)
 	public String type;
 
 	public StorageDatabaseEntry(Date timeStamp, String avatar, int quantity, String name, int quality, String type) {

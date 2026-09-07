@@ -30,12 +30,11 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 	public static StorageDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
 		ConnectionSource con = getCon(config, logger, hook);
 		StorageDatabaseRepository repository = new StorageDatabaseRepository(con, logger, getDao(con, StorageDatabaseEntry.class));
-		repository.ensureTable();
 		return repository;
 	}
 
 	private StorageDatabaseRepository(ConnectionSource con, Logger logger, Dao<StorageDatabaseEntry, String> bank) {
-		super(con, logger, StorageDatabaseEntry.class);
+		super(con, logger);
 		storage = bank;
 	}
 
@@ -89,7 +88,7 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 		return silentThrow(() -> {
 			GenericRawResults<StorageDatabaseEntry> rows = storage.queryRaw(newestPerAvatar, storage.getRawRowMapper());
 			try {
-				return rows.getResults().stream().filter(row -> row.timeStamp != null).collect(toMap(row -> row.avatar, row -> row.timeStamp.toInstant()));
+				return rows.getResults().stream().collect(toMap(row -> row.avatar, row -> row.timeStamp.toInstant()));
 			} finally {
 				rows.close();
 			}

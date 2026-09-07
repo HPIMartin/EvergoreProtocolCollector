@@ -23,12 +23,11 @@ public class MetaInformationDatabaseRepository extends Repository<MetaInformatio
 	public static MetaInformationDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
 		ConnectionSource con = getCon(config, logger, hook);
 		MetaInformationDatabaseRepository repository = new MetaInformationDatabaseRepository(con, logger, getDao(con, MetaInformationEntry.class));
-		repository.ensureTable();
 		return repository;
 	}
 
 	private MetaInformationDatabaseRepository(ConnectionSource con, Logger logger, Dao<MetaInformationEntry, String> meta) {
-		super(con, logger, MetaInformationEntry.class);
+		super(con, logger);
 		this.meta = meta;
 	}
 
@@ -36,7 +35,7 @@ public class MetaInformationDatabaseRepository extends Repository<MetaInformatio
 	public MetaInformationSnapshot snapshot() {
 		List<MetaInformationEntry> all = silentThrow(() -> meta.queryForAll());
 
-		return new MetaInformationSnapshot(all.stream().filter(entry -> entry.value != null).collect(toMap(entry -> entry.key, entry -> entry.value)));
+		return new MetaInformationSnapshot(all.stream().collect(toMap(entry -> entry.key, entry -> entry.value)));
 	}
 
 	@Override

@@ -2,9 +2,6 @@ package dev.schoenberg.evergore.protocolParser.database.storage;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.Statement;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +30,7 @@ class StorageDatabaseRepositoryTest {
 
 	@Test
 	void getAllSinceIncludesTheRowExactlyAtTheGivenTimestamp() {
-		StorageDatabaseRepository repo = repositoryInMemory();
+		StorageDatabaseRepository repo = repository();
 		StorageEntry atBoundary = storageEntry("Aurora", BOUNDARY, 3);
 		repo.add(List.of(atBoundary));
 
@@ -44,7 +41,7 @@ class StorageDatabaseRepositoryTest {
 
 	@Test
 	void getAllSinceExcludesRowsOlderThanTheGivenTimestamp() {
-		StorageDatabaseRepository repo = repositoryInMemory();
+		StorageDatabaseRepository repo = repository();
 		repo.add(List.of(storageEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1)));
 
 		List<StorageEntry> result = repo.getAllSince(BOUNDARY);
@@ -54,7 +51,7 @@ class StorageDatabaseRepositoryTest {
 
 	@Test
 	void getAllSinceIncludesRowsNewerThanTheGivenTimestamp() {
-		StorageDatabaseRepository repo = repositoryInMemory();
+		StorageDatabaseRepository repo = repository();
 		StorageEntry newer = storageEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 3);
 		repo.add(List.of(newer));
 
@@ -65,7 +62,7 @@ class StorageDatabaseRepositoryTest {
 
 	@Test
 	void countForCountsOnlyTheRowsOfTheGivenAvatar() {
-		StorageDatabaseRepository repo = repositoryInMemory();
+		StorageDatabaseRepository repo = repository();
 		repo.add(List.of(storageEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1), storageEntry("Aurora", BOUNDARY, 2), storageEntry("Boreas", ONE_MINUTE_AFTER_BOUNDARY, 3)));
 
 		long count = repo.countFor("Aurora");
@@ -75,7 +72,7 @@ class StorageDatabaseRepositoryTest {
 
 	@Test
 	void countForReturnsZeroForAnAvatarWithoutRows() {
-		StorageDatabaseRepository repo = repositoryInMemory();
+		StorageDatabaseRepository repo = repository();
 
 		long count = repo.countFor("Nobody");
 
@@ -84,7 +81,7 @@ class StorageDatabaseRepositoryTest {
 
 	@Test
 	void namesTheLatestTimestampOfEveryAvatarThatHasRows() {
-		StorageDatabaseRepository repo = repositoryInMemory();
+		StorageDatabaseRepository repo = repository();
 		repo.add(List.of(storageEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1), storageEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 2), storageEntry("Boreas", BOUNDARY, 3)));
 
 		Map<String, Instant> latest = repo.latestTimestampPerAvatar();
@@ -93,55 +90,14 @@ class StorageDatabaseRepositoryTest {
 	}
 
 	@Test
-	void skipsAnAvatarWhoseOnlyRowCarriesNoTimestamp() {
-		StorageDatabaseRepository repo = repositoryOnAFreshFile();
-		repo.add(List.of(storageEntry("Aurora", BOUNDARY, 1)));
-		insertRowWithoutTimestamp("Boreas");
-
-		Map<String, Instant> latest = repo.latestTimestampPerAvatar();
-
-		assertThat(latest).containsExactlyInAnyOrderEntriesOf(Map.of("Aurora", BOUNDARY));
-	}
-
-	@Test
-	void namesTheLatestRealTimestampWhileOneRowOfThatAvatarCarriesNone() {
-		StorageDatabaseRepository repo = repositoryOnAFreshFile();
-		repo.add(List.of(storageEntry("Aurora", BOUNDARY, 1)));
-		insertRowWithoutTimestamp("Aurora");
-
-		Map<String, Instant> latest = repo.latestTimestampPerAvatar();
-
-		assertThat(latest).containsExactlyInAnyOrderEntriesOf(Map.of("Aurora", BOUNDARY));
-	}
-
-	private static void insertRowWithoutTimestamp(String avatar) {
-		silentThrow(() -> {
-			try (Connection con = DriverManager.getConnection("jdbc:sqlite:" + FRESH_DB_PATH); Statement statement = con.createStatement()) {
-				statement
-						.executeUpdate("INSERT INTO " + StorageDatabaseEntry.TABLE + " (" + StorageDatabaseEntry.ID_COLUMN + ", " + StorageDatabaseEntry.TIMESTAMP_COLUMN + ", "
-								+ StorageDatabaseEntry.AVATAR_COLUMN + ", quantity, name, quality, type) VALUES ('" + avatar + "-no-timestamp', NULL, '" + avatar
-								+ "', 1, 'Drachenhaut', 80, 'EINLAGERUNG')");
-			}
-		});
-	}
-
-	private static StorageDatabaseRepository repositoryOnAFreshFile() {
-		return StorageDatabaseRepository.get(configurationFor(FRESH_DB_PATH), new LoggerSpy(), () -> {});
-	}
-
-	@Test
 	void namesNobodyWhileTheLedgerHasNoRowAtAll() {
-		Map<String, Instant> latest = repositoryInMemory().latestTimestampPerAvatar();
+		Map<String, Instant> latest = repository().latestTimestampPerAvatar();
 
 		assertThat(latest).isEmpty();
 	}
 
 	private static StorageEntry storageEntry(String avatar, Instant timeStamp, int quantity) {
 		return new StorageEntry(timeStamp, avatar, quantity, "Drachenhaut", 80, TransferType.EINLAGERUNG);
-	}
-
-	private static StorageDatabaseRepository repositoryInMemory() {
-		return StorageDatabaseRepository.get(configurationFor(":memory:"), new LoggerSpy(), () -> {});
 	}
 
 	private static Configuration configurationFor(String databasePath) {
@@ -151,5 +107,9 @@ class StorageDatabaseRepositoryTest {
 				return databasePath;
 			}
 		};
+	}
+
+	private static StorageDatabaseRepository repository() {
+		return StorageDatabaseRepository.get(configurationFor(FRESH_DB_PATH), new LoggerSpy(), () -> {});
 	}
 }

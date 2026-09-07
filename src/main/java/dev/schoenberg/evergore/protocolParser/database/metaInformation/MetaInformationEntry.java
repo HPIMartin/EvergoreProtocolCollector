@@ -8,10 +8,10 @@ public class MetaInformationEntry {
 	public static final String TABLE = "metaInformation";
 	public static final String KEY_COLUMN = "key";
 
-	@DatabaseField(id = true, columnName = KEY_COLUMN)
+	@DatabaseField(id = true, columnName = KEY_COLUMN, canBeNull = false)
 	public String key;
 
-	@DatabaseField(columnName = "value")
+	@DatabaseField(columnName = "value", canBeNull = false)
 	public String value;
 
 	public MetaInformationEntry(String key, String value) {

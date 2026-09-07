@@ -14,19 +14,19 @@ public class BankDatabaseEntry {
 	public static final String TIMESTAMP_COLUMN = "timeStamp";
 	public static final String ID_COLUMN = "id";
 
-	@DatabaseField(columnName = ID_COLUMN, generatedId = true, allowGeneratedIdInsert = true)
+	@DatabaseField(columnName = ID_COLUMN, generatedId = true, allowGeneratedIdInsert = true, canBeNull = false)
 	public UUID id;
 
-	@DatabaseField(columnName = TIMESTAMP_COLUMN, dataType = DataType.DATE_STRING)
+	@DatabaseField(columnName = TIMESTAMP_COLUMN, dataType = DataType.DATE_STRING, canBeNull = false)
 	public Date timeStamp;
 
-	@DatabaseField(columnName = AVATAR_COLUMN)
+	@DatabaseField(columnName = AVATAR_COLUMN, canBeNull = false)
 	public String avatar;
 
-	@DatabaseField(columnName = "amount")
+	@DatabaseField(columnName = "amount", canBeNull = false, throwIfNull = true)
 	public int amount;
 
-	@DatabaseField(columnName = "type")
+	@DatabaseField(columnName = "type", canBeNull = false)
 	public String type;
 
 	public BankDatabaseEntry(Date timeStamp, String avatar, int amount, String type) {

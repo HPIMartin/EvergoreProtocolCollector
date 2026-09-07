@@ -31,12 +31,11 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 	public static BankDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
 		ConnectionSource con = getCon(config, logger, hook);
 		BankDatabaseRepository repository = new BankDatabaseRepository(con, logger, getDao(con, BankDatabaseEntry.class));
-		repository.ensureTable();
 		return repository;
 	}
 
 	private BankDatabaseRepository(ConnectionSource con, Logger logger, Dao<BankDatabaseEntry, String> bank) {
-		super(con, logger, BankDatabaseEntry.class);
+		super(con, logger);
 		this.bank = bank;
 	}
 
@@ -90,7 +89,7 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 		return silentThrow(() -> {
 			GenericRawResults<BankDatabaseEntry> rows = bank.queryRaw(newestPerAvatar, bank.getRawRowMapper());
 			try {
-				return rows.getResults().stream().filter(row -> row.timeStamp != null).collect(toMap(row -> row.avatar, row -> row.timeStamp.toInstant()));
+				return rows.getResults().stream().collect(toMap(row -> row.avatar, row -> row.timeStamp.toInstant()));
 			} finally {
 				rows.close();
 			}
