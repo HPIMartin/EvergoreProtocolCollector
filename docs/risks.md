@@ -33,7 +33,7 @@
 |------|---|---|----------------|
 | Long hobby pauses lose context between sessions | H | M | `/pause` parks state as `[wip]` and updates the backlog status; `/continue` reorients from repo and git; the KB carries the knowledge |
 | Fake-green tests or hallucinated APIs pass a solo review | M | H | Independent falsifier panel and reviewer gate (caught the round-1 fake-greens, see process-learnings 2026-07-09); doc-grounded WebFetch for thin-training-data libraries (backlog G9); escalated gates for risky domains |
-| KB drift misleads KB-first agents | M | M | Rotating doc-reviewer sweep at every gate; accuracy sweep and citation guard (backlog G18, G19) |
+| KB drift misleads KB-first agents | M | M | Rotating doc-reviewer sweep at every gate; accuracy sweep (backlog G18) and the committed citation guard |
 | The planned history rewrite (after backlog F1) breaks clones and dangles commit-hash references in durable docs | H | L | Author-only and announced; doc hash references (e.g. `cc75a2e`) become symbol references beforehand (folded into the backlog F1 acceptance) |
 | Parallel worktree strands collide on shared files (build scripts, settings) | M | L | Strand scoping and serialized landings via the gateway; repo-wide reformats only between strands (backlog G17) |
 

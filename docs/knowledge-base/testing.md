@@ -242,7 +242,7 @@ production snapshot via the gitignored harness described below:
 ### Does a production database reproduce its own stored sums?
 
 Measured 2026-09-04 with the opt-in check, once per local snapshot, each recomputed **from its own
-rows** (backlog **B24**). The recompute is idempotent, so the code is its own reference here; the
+rows**. The recompute is idempotent, so the code is its own reference here; the
 committed comparison is `MetaSumComparison` over the `metaInformation` table, stored value against
 recomputed value per key.
 
@@ -274,9 +274,9 @@ recomputed value per key.
   Code and store carrying the same error would leave this diff empty by construction. That is
   **B19**'s purpose and stays a separate item. The catalog gap above is a known instance: both sides
   value an unknown item at zero, so it reproduces perfectly and this check stays silent on it.
-- **Not reproducible:** B24's per-avatar ratio band of `0.12`-`1.33`. No quantity tried (per key, per
+- **Not reproducible:** the per-avatar ratio band of `0.12`-`1.33` first reported from the 31.07.2026 file. No quantity tried (per key, per
   family, gross, deposits, withdrawals, net) yields a `0.12` lower bound on any surviving snapshot;
-  per-avatar `net` ratios are unbounded because `net` crosses zero. The file B24 names
+  per-avatar `net` ratios are unbounded because `net` crosses zero. The file that band came from
   (`last_updated` 31.07.2026) is no longer on disk, the root snapshot having been replaced on
   2026-09-03, so that band cannot be re-derived. Its Fugger figures do reconcile:
   `66 141 289` → `94 063 645` is

@@ -18,12 +18,12 @@
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
 | M5 | Overview truth | author steps only | Closing out; the code landed, two author checks remain |
-| M6 | Numbers you can trust | B24, D20 | Every feature stands on these numbers; B24 is the only `P0` |
-| M7 | The overview states the guild's actual position | E15, E16 | The most visible defect: the total row says the opposite of the truth |
+| M6 | Numbers you can trust | D20, B25 | Every feature stands on these numbers, and on a status surface that reports one run |
+| M7 | The overview states the guild's actual position | E15, E16, F6 | The most visible defect: the total row says the opposite of the truth. **M6 plus M7 is the `0.2.0` cut**, and F6 drives its deploy (decision 2026-09-07) |
 | M8 | Clear the last bottleneck | D12 | The `M` item that still gates the repeated read method; the migration framework landed |
 | M9 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
 | M10 | Product build-out | E12→E13, E9, E3, E6 | E12 inherits D18's query shape, so it follows it |
-| M11 | Ops, security & environment | F6, F1, H11, C1, C8, C10, C11, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
+| M11 | Ops, security & environment | F1, H11, C1, C8, C10, C11, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
 
 ## M5: Overview truth
 
@@ -38,15 +38,16 @@ only. **Code complete; only author steps remain.**
 Slice: every number the overview shows is verified, refreshes independently of the scrape, and says
 so when it did not.
 
-- [ ] A production DB taken after the `0.1.0` deploy reproduces its own stored sums when recomputed
-      from its rows; the automated comparison harness that proves it is committed, not a one-off
-      (backlog B24 at `P0`). The author pulls the database; the stop must be **proven**, per
-      build-run-deploy.md. **B19 is not part of this**: it is a separate item on the test-suite
-      hygiene list; see open-questions.md 2026-09-04 for why.
+- [x] A production DB taken after the `0.1.0` deploy reproduces its own stored sums when recomputed
+      from its rows: the 03.09.2026 snapshot matches on all 42 avatars, measured with the committed
+      opt-in comparison rather than a one-off. **B19 is not part of this**: it is a separate item on
+      the test-suite hygiene list; see open-questions.md 2026-09-04 for why.
 - [x] The collection timestamp moved to the anonymous `/api/v1/admin/status` surface, so the
       overview no longer carries a guild-wide number that reads like a per-row freshness claim.
 - [ ] A row whose sums did not refresh is marked as such on the wire and in the table, and the
       guild total states that it contains one (backlog D20).
+- [ ] `/health` and `/api/v1/admin/status` answer from one atomic snapshot, so no reader mixes two
+      runs' fields (backlog B25).
 - [x] No read path dereferences a ledger `timeStamp` unguarded: the column is `NOT NULL` in the
       database, so an entry without a timestamp cannot be stored in the first place.
 
@@ -57,9 +58,12 @@ members who matter above the fold.
 
 - [ ] The levy is named rather than hidden inside a number shaped like a balance: a stat header
       (treasury / material balance / levy collected) plus a Beitrag↔Saldo switch, leaving the
-      table's density untouched (backlog E15; variant A of D-12, decided 2026-09-04).
+      table's density untouched (backlog E15; variant A of three, decided 2026-09-04).
 - [ ] The roster splits into active and dormant, cut against the data's own timestamp and never
       against the viewer's clock (backlog E16, after E15 because both rebuild the same view).
+- [ ] A committed deploy script drives a full deploy and rollback over ssh, carrying every check that
+      caught the `0.1.0` defects (backlog F6). It runs this release rather than being written after
+      it, so `0.2.0` is the first deploy nobody types by hand.
 
 ## M8: Clear the last bottleneck
 
@@ -105,8 +109,6 @@ its due.
 Slice: the stand deploys, scans and authenticates the way a showcase should, and the framework
 reaches its current major.
 
-- [ ] A committed deploy script drives a full deploy and rollback over ssh, carrying every check
-      that caught the `0.1.0` defects (backlog F6).
 - [ ] The bundled webdriver binaries and the local-browser machinery are gone (backlog F1); the
       author's history rewrite follows, once **no** worktree is open.
 - [ ] Dependabot covers all three ecosystems and one refresh pass has run (backlog H11).
