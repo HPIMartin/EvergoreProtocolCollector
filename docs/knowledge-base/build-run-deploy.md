@@ -509,8 +509,17 @@ column, copying every row into the new table. What this means for a deploy:
 
 - **Take the backup first** (step 1 of the deploy already does), because `V2` rewrites all three
   tables rather than altering them in place.
-- The rebuild copies ~250k rows and runs in seconds, inside one transaction: it either completes or
-  leaves the database as it was.
+- The rebuild copies every row inside one transaction: it either completes or leaves the database as
+  it was. `ProductionSnapshotMigrationCheck` proves that against a copy of the real snapshot and is
+  the step to repeat before **every** deploy that carries a new migration:
+  `./gradlew test --tests '*ProductionSnapshotMigrationCheck*' -DprodSnapshot.check=true
+  -DprodSnapshot.file=<snapshot>`. Measured 2026-09-07 on 7,285 bank + 230,084 storage + 169 meta
+  rows: counts unchanged, the SHA-256 over every row of every table identical before and after,
+  `V1`/`V2` both recorded successful, a second run a no-op.
+- **Budget minutes, not seconds, on a slow mount.** The copy is fsync-heavy: the same rebuild took
+  ~1 s on a local disk and **~4 min** on this devcontainer's `/workspaces` bind mount. The first
+  boot blocks until it finishes, so do not kill the container because it looks hung; killing it is
+  safe (the transaction rolls back) but buys nothing.
 - A row that carries a `NULL` in any column **aborts the boot** instead of being dropped. That is
   the intended strict behaviour (engineering-handbook §3), and the production snapshot holds no such
   row in any of the three tables (ledgers measured 2026-09-06, `metaInformation` 2026-09-07). The

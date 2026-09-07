@@ -9,7 +9,7 @@
 
 | Risk | L | I | Countermeasure |
 |------|---|---|----------------|
-| The game serves only ~30 days of logs; DB loss or a >30-day scrape outage is irreversible | M | H | Monthly manual backup by the author (decision 2026-07-17: no automation); a prompt restore re-scrapes the 30-day window, bounding the gap. Migrations must prove 1:1, which the Flyway setup pins with a row-for-row test |
+| The game serves only ~30 days of logs; DB loss or a >30-day scrape outage is irreversible | M | H | Monthly manual backup by the author (decision 2026-07-17: no automation); a prompt restore re-scrapes the 30-day window, bounding the gap. Migrations must prove 1:1, which the Flyway setup pins with a row-for-row test and, for `V2`, a measured run over a copy of the production snapshot (2026-09-07: 237,538 rows, identical SHA-256 per table before and after) |
 | The production DB file is named `temp.sqlite`, inviting careless deletion | L | H | Rename once config is really bindable (backlog C1); until then a known trap |
 
 ## External dependency: the game
