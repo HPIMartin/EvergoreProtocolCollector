@@ -59,7 +59,9 @@ Four top-level folders under `frontend/src/`:
 - Token groups: `--color-*`, `--font-*`, `--space-*`, plus `--radius`, `--border-width`,
   `--content-width`. The look they encode (dark tavern climate, compact rows, serif display type over
   a sans body) is the 2026-08-07 decision in [open-questions.md](../open-questions.md).
-- `theme.test.ts` guards the stylesheet rather than the pixels: every `var()` resolves, every declared
+- `theme.test.ts` guards the stylesheet rather than the pixels: no rule may set a longhand and then
+  reset it with a later shorthand (`border-top` before `border` silently loses the longhand, and
+  jsdom computes no layout, so no component test can see it); every `var()` resolves, every declared
   token is used, no token is declared twice, no literal colour stands outside the token block, and every
   colour-bearing property is painted from a token, so a CSS keyword colour cannot slip past the literal
   check. Together they keep "one place" true as the sheet grows.

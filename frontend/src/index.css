@@ -264,9 +264,8 @@ a:hover {
 
 .data-table__mark-hint {
   position: absolute;
-  top: 100%;
+  top: calc(100% + var(--space-2));
   left: 0;
-  border-top: var(--space-2) solid transparent;
   z-index: 1;
   width: max-content;
   max-width: 250px;
@@ -283,6 +282,15 @@ a:hover {
   opacity: 0;
   pointer-events: none;
   transition: opacity 90ms ease-out;
+}
+
+.data-table__mark-hint::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: var(--space-2);
 }
 
 .data-table__mark:hover .data-table__mark-hint,

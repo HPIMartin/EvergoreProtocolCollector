@@ -43,6 +43,23 @@ const paintedValues = (source: string): string[] =>
     new RegExp(`^ +(?:${colourProperties.join('|')}): ([^;]+);$`, 'gm'),
   )
 
+const shorthands = ['border', 'background', 'outline', 'font']
+
+const ruleBodies = (source: string): string[] =>
+  matchesOf(source, /\{([^{}]*)\}/g)
+
+const shorthandsResettingAnEarlierLonghand = (body: string): string[] => {
+  const properties = matchesOf(body, /^ +([a-z-]+):/gm)
+
+  return shorthands.filter((shorthand) => {
+    const shorthandAt = properties.indexOf(shorthand)
+    const longhandAt = properties.findIndex((property) =>
+      property.startsWith(`${shorthand}-`),
+    )
+    return shorthandAt !== -1 && longhandAt !== -1 && longhandAt < shorthandAt
+  })
+}
+
 describe('the theme stylesheet', () => {
   it('groups its tokens into colour, typography and spacing', () => {
     const groups = ['--color-', '--font-', '--space-']
@@ -76,6 +93,16 @@ describe('the theme stylesheet', () => {
     )
 
     expect(duplicates).toEqual([])
+  })
+
+  it('never resets a longhand it already set with a later shorthand', () => {
+    const collisions = ruleBodies(tested).flatMap((body) =>
+      shorthandsResettingAnEarlierLonghand(body).map(
+        (shorthand) => `${shorthand} in ${body.trim().split('\n')[0] ?? ''}`,
+      ),
+    )
+
+    expect(collisions).toEqual([])
   })
 
   it('keeps every literal colour inside the token block', () => {
