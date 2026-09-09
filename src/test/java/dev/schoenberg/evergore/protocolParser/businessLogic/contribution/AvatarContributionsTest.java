@@ -17,7 +17,9 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformati
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getSumsRecomputedAt;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class AvatarContributionsTest {
 	private final FakeMetaInformationRepository metaRepo = new FakeMetaInformationRepository();
@@ -38,6 +40,65 @@ class AvatarContributionsTest {
 	}
 
 	@Test
+	void reportsNoStaleSumsWhileEveryAvatarWasRecomputedInTheSameRun() {
+		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
+		metaRepo.put(getSumsRecomputedAt("Aurora"), LATER);
+		metaRepo.put(getSumsRecomputedAt("Brynja"), LATER);
+
+		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
+
+		assertThat(all).extracting(AvatarContribution::staleSumsFrom).containsOnlyNulls();
+	}
+
+	@Test
+	void reportsTheStoredInstantOfAnAvatarWhoseSumsAreOlderThanTheLastCollection() {
+		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
+		metaRepo.put(getSumsRecomputedAt("Aurora"), EARLIER);
+		metaRepo.put(getSumsRecomputedAt("Brynja"), LATER);
+
+		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
+
+		assertThat(all).extracting(AvatarContribution::avatar, AvatarContribution::staleSumsFrom).containsExactly(tuple("Aurora", EARLIER), tuple("Brynja", null));
+	}
+
+	@Test
+	void reportsNoStaleSumsWhileNoAvatarCarriesARecomputeInstant() {
+		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
+
+		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
+
+		assertThat(all).extracting(AvatarContribution::staleSumsFrom).containsOnlyNulls();
+	}
+
+	@Test
+	void reportsNoStaleSumsForAnAvatarThatCarriesNoRecomputeInstantAtAll() {
+		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
+		metaRepo.put(getSumsRecomputedAt("Brynja"), LATER);
+
+		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
+
+		assertThat(all).extracting(AvatarContribution::avatar, AvatarContribution::staleSumsFrom).containsExactly(tuple("Aurora", null), tuple("Brynja", null));
+	}
+
+	@Test
+	void statesThatTheGuildContainsStaleSumsWhenOneAvatarLagsBehindTheLastCollection() {
+		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
+		metaRepo.put(getSumsRecomputedAt("Aurora"), EARLIER);
+		metaRepo.put(getSumsRecomputedAt("Brynja"), LATER);
+
+		assertThat(tested.ofEveryKnownAvatar().containsStaleSums()).isTrue();
+	}
+
+	@Test
+	void statesThatTheGuildContainsNoStaleSumsWhileEveryAvatarIsCurrent() {
+		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
+		metaRepo.put(getSumsRecomputedAt("Aurora"), LATER);
+		metaRepo.put(getSumsRecomputedAt("Brynja"), LATER);
+
+		assertThat(tested.ofEveryKnownAvatar().containsStaleSums()).isFalse();
+	}
+
+	@Test
 	void readsAllFourStoredSumsOfAKnownAvatar() {
 		bankRepo.seedAvatars(List.of("Aurora"));
 		metaRepo.put(getBankPlacement("Aurora"), 1500L);
@@ -47,7 +108,7 @@ class AvatarContributionsTest {
 
 		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
-		assertThat(all).containsExactly(new AvatarContribution("Aurora", new Contribution(1500, 200, 185.04, 300.0), null, null));
+		assertThat(all).containsExactly(new AvatarContribution("Aurora", new Contribution(1500, 200, 185.04, 300.0), null, null, null));
 	}
 
 	@Test
@@ -56,7 +117,7 @@ class AvatarContributionsTest {
 
 		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
-		assertThat(all).containsExactly(new AvatarContribution("Brynja", Contribution.NOTHING, null, null));
+		assertThat(all).containsExactly(new AvatarContribution("Brynja", Contribution.NOTHING, null, null, null));
 	}
 
 	@Test
