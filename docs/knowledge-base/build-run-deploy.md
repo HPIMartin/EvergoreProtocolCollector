@@ -173,7 +173,8 @@ rebuild** (the devcontainer image is built outside the devcontainer; see
   - Refuses while a breach is recorded (see `post-rewrite`), then runs `content-gate --staged`.
   - Runs `./gradlew spotlessCheck checkstyleMain checkstyleTest` (formatting + brace gate), skipped
     where the checkout has no `gradlew` (a throwaway repo in the self-test).
-  - Runs `hooks/self-test` whenever the commit touches `hooks/`, so a weakened gate cannot land.
+  - Runs `hooks/self-test` whenever the commit touches `hooks/`, and `deploy/self-test` whenever it
+    touches `deploy/`, so neither a weakened gate nor a weakened deploy check can land.
   - Excludes the test run and the full build, to keep the TDD micro-commit loop fast.
 - **The recorded breach**, the gate for the commits `pre-commit` structurally cannot see.
   **git runs `pre-commit` only for `git commit`**: every commit the sequencer builds itself, a
@@ -346,6 +347,43 @@ docker images evergore-protocol-collector    # which tags are available to roll 
 
 ## Deploy to the home server
 
+`deploy/epc-deploy` drives a release from the work machine over ssh. The numbered steps below are
+its specification: each check it carries is there because that step once failed silently.
+
+```sh
+EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDENTIALS_PASSWORD=… \
+  deploy/epc-deploy deploy --host <host> --ssh-user <user> --container <name> \
+  --database-dir <the directory mounted at /database> --image evergore-protocol-collector:<version>
+```
+
+- **Nothing machine-specific is committed:** host, ssh user, container name, mount directory, image
+  tag and the three secrets are parameters or environment variables, and a missing one stops the run
+  before it reaches any machine. The repository is public.
+- **`--backup` and `--database-file` are file names, not paths.** They are concatenated onto the
+  mount directory, so a value carrying a slash or a `..` would let a rollback copy a file from
+  outside the mount over the live database.
+- **The secrets never enter a command line** on either machine: they travel over the ssh channel
+  into a 0600 file on the host and are removed again once the container is up (step 5).
+- **`--dry-run` is a rehearsal, not a print-out.** Every read really runs: container, port, policy,
+  mount, and the write probe, which appends nothing. Every mutation is printed with its resolved
+  arguments and skipped. The probe uses the image already on the host, since the release image has
+  not been transferred.
+- **Order:** build with the labels → read the running container → transfer and compare ids → secure
+  the rollback tag → mount pre-flight → prove the stop → back up → replace → verify.
+- **Rollback** is `deploy/epc-deploy rollback … --image <the pre- tag> --backup <name> --yes`. The
+  deploy prints that exact line both when it finishes and when it fails; the rollback prints what
+  each of its two halves means (step 7) and refuses without `--yes`.
+- **The verification runs over ssh against `localhost:<published port>`**, so it does not depend on
+  the work machine reaching the service. It does not prove the externally forwarded path.
+- **`deploy/self-test` proves the checks still bite.** `docker`, `curl` and `ssh` are stubs and a
+  real file stands in for the database; each check gets a good state that passes and a faked bad
+  state that fails the run before it can do damage. Assertions read the journal of commands that
+  reached the remote, the bytes of that file and the backup on disk, never what the script printed.
+  `pre-commit` runs it for any commit touching `deploy/`, so a weakened check cannot land.
+- **What the self-test does not prove:** the transport, the real filesystem permissions and real
+  Docker semantics are stubbed, because the home server is not reachable from the work machine's
+  agent session. A `--dry-run` against the actual host is what shortens the first real run.
+
 Runs against the Docker host daemon — from a host shell or from the devcontainer, whose `docker`
 CLI targets that same daemon. Steps 1–3 must be done **before** the running container is replaced.
 
@@ -358,6 +396,10 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      is easy to read past, and the copy then runs against a live database.
    - One file is enough: the database runs in rollback-journal mode, so no `-wal`/`-shm` sidecar
      outlives a write and there is no second file to keep consistent with it.
+   - The script names the copy `<database>.bak-<yyyymmdd>`, verifies its size against the source,
+     and **refuses an existing file of that name** instead of overwriting it: a second run on the
+     same day would otherwise replace the only pre-migration copy with an already migrated one.
+     There is no option that skips the backup.
 2. **Secure the rollback target:** confirm the currently running image carries a tag you can start
    again (`docker inspect --type container -f '{{.Config.Image}}' epc`). If it is untagged,
    `<none>`, or a tag the next build overwrites, tag it now — the tag goes into the **repository the
@@ -393,9 +435,13 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      would destroy exactly what it is run to protect, and the printed line would report success.
      Measured 2026-08-16 (23 bytes → 0); the version of this step carrying `>` was never run against
      a populated database. `: >>` opens for append and writes nothing: size and mtime stay put.
-4. **Build the image** on the Docker host (`buildAndRun.bat`, gitignored and machine-specific) with
-   the tag and labels from "Versioning & release tags". The build context carries **no credentials**;
-   the image is secret-free and the same image runs with any account.
+4. **Build the image and get it onto the host.** The script builds on the work machine with the tag
+   and labels from "Versioning & release tags", ships it with `docker save | ssh … docker load`, and
+   then compares the id the host reports for that tag against the id the build produced; a mismatch
+   stops the deploy while the old container is still running. Building on the Docker host by hand
+   (`buildAndRun.bat`, gitignored and machine-specific) is the alternative, and then there is no
+   transfer to verify. The build context carries **no credentials**; the image is secret-free and
+   the same image runs with any account.
 5. **Replace the container:**
 
    ```sh
@@ -419,7 +465,9 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      explicitly, and they are the credentials of the game account the scraper signs in with.
    - The three secrets are the **only** thing separating an image from a running stand. They are
      visible in `docker inspect` and in the shell history of this command, which is accepted here
-     (single-admin home server); nothing writes them to the log.
+     (single-admin home server); nothing writes them to the log. The script keeps them out of the
+     shell history half of that by passing a 0600 `--env-file` instead of `-e VAR=value`, and
+     deletes that file once the container is up; `docker inspect` still shows the values.
    - `TZ=UTC` keeps the runtime off a DST zone while timestamps persist as default-timezone
      wall-clock text (backlog D14). The container default is already UTC; setting it explicitly
      pins it. `TimezoneStartupValidator` (backlog D22) backs this up: it aborts boot if the
@@ -485,8 +533,16 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      two variables, so passing them to such a rollback target is harmless but pointless. Rolling
      *forward* again without them fails at startup, which is the intended noise.
 
+   - **A rollback moves two things back, and they are separate decisions.** The *image* going back
+     is safe against a database this release has migrated (see "Schema migrations" below). The
+     *database* going back puts the schema to what it was before the `V2` rebuild and discards every
+     row written since the copy was taken, and a later deploy of this release runs `V2` over the
+     restored file again. The script prints both halves and will not act without `--yes`.
    - Restore the backup **before** starting the old image: the new version may have written entries
      or meta sums the old one does not expect, and that write is not reversible.
+   - The script copies the database it is about to overwrite to
+     `<database>.superseded-<yyyymmddHHMMSS>` first. Those rows are in no backup, and a rollback
+     decided in a hurry is exactly when they get lost.
    - `cp` onto an existing `temp.sqlite` keeps that file's mode, but a `cp` that *creates* the file
      takes the backup's mode, which can be non-writable for uid 1200 again — re-run the step 3 check
      after restoring.

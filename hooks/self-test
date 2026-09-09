@@ -322,6 +322,49 @@ git commit -q --no-verify -m "Add loud class" >/dev/null 2>&1 || true
 if [ "$(commits)" -eq $((before + 1)) ] && [ ! -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=0; else r=1; fi
 check "--no-verify stays the deliberate valve and is not recorded" "$r"
 
+new_repo deployleg_red
+mkdir -p deploy
+printf '#!/bin/sh\nexit 1\n' > deploy/self-test
+git add -A
+git commit -q --no-verify -m "Add the deploy self-test"
+printf '#!/bin/sh\nexit 1\n' > deploy/epc-deploy
+git add deploy/epc-deploy
+before=$(commits)
+git commit -q -m "Add the deploy script" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "a failing deploy self-test leaves no commit behind" "$r"
+
+new_repo deployleg_deleted
+mkdir -p deploy
+printf '#!/bin/sh\nexit 0\n' > deploy/self-test
+git add -A
+git commit -q --no-verify -m "Add the deploy self-test"
+git rm -q deploy/self-test
+before=$(commits)
+git commit -q -m "Remove the deploy self-test" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "deleting the deploy self-test cannot disable its own gate" "$r"
+
+new_repo deployleg_green
+mkdir -p deploy
+printf '#!/bin/sh\nexit 0\n' > deploy/self-test
+git add -A
+git commit -q --no-verify -m "Add the deploy self-test"
+printf '#!/bin/sh\nexit 0\n' > deploy/epc-deploy
+git add deploy/epc-deploy
+before=$(commits)
+git commit -q -m "Add the deploy script" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+check "a passing deploy self-test lets the commit through" "$r"
+
+new_repo deployleg_untouched
+clean_file Elsewhere
+git add -A
+before=$(commits)
+git commit -q -m "Add elsewhere class" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+check "a commit that does not touch deploy runs no deploy self-test" "$r"
+
 new_repo formatleg_red
 printf '#!/bin/sh\nexit 1\n' > gradlew
 chmod +x gradlew

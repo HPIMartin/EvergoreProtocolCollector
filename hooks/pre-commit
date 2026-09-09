@@ -21,6 +21,11 @@ if git diff --cached --name-only --diff-filter=ACMD -- 'hooks/*' | grep -q .; th
 	"$hooks_dir/self-test" >/dev/null 2>&1 || reject "hooks/self-test fails, so the gate no longer blocks what it claims to block. Run 'hooks/self-test' and read its output."
 fi
 
+if git diff --cached --name-only --diff-filter=ACMD -- 'deploy/*' | grep -q .; then
+	printf '[pre-commit] deploy self-test...\n'
+	sh ./deploy/self-test >/dev/null 2>&1 || reject "deploy/self-test fails or is gone, so the deploy no longer refuses what it claims to refuse. Run 'sh deploy/self-test' and read its output."
+fi
+
 if [ -x ./gradlew ]; then
 	printf '[pre-commit] spotlessCheck + checkstyle...\n'
 	if ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then

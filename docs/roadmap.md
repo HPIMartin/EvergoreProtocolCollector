@@ -62,8 +62,9 @@ members who matter above the fold.
 - [ ] The roster splits into active and dormant, cut against the data's own timestamp and never
       against the viewer's clock (backlog E16, after E15 because both rebuild the same view).
 - [ ] A committed deploy script drives a full deploy and rollback over ssh, carrying every check that
-      caught the `0.1.0` defects (backlog F6). It runs this release rather than being written after
-      it, so `0.2.0` is the first deploy nobody types by hand.
+      caught the `0.1.0` defects, with a self-test that fails each of them against a faked bad state.
+      The script and its self-test have landed; the box closes when it has driven this release and a
+      rollback against the home server (backlog F6), so `0.2.0` is the first deploy nobody types by hand.
 
 ## M8: Clear the last bottleneck
 

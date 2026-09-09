@@ -1,0 +1,548 @@
+#!/bin/sh
+set -eu
+
+deploy_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+script="$deploy_dir/epc-deploy"
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+stub_bin="$work/bin"
+mkdir -p "$stub_bin"
+failures=0
+
+check() {
+	if [ "$2" -eq 0 ]; then
+		printf '  ok   %s\n' "$1"
+	else
+		printf '  FAIL %s\n' "$1"
+		failures=$((failures + 1))
+	fi
+}
+
+cat > "$stub_bin/docker" <<'DOCKER_STUB'
+#!/bin/sh
+set -e
+side=${EPC_STUB_SIDE:-local}
+line="$side docker"
+for argument in "$@"; do line="$line $argument"; done
+printf '%s\n' "$line" >> "$EPC_STUB_JOURNAL"
+
+target=
+for argument in "$@"; do target=$argument; done
+sanitise() { printf '%s' "$1" | tr '/:' '__'; }
+
+case ${1:-} in
+	build) exit 0 ;;
+	save) printf 'fake-image-stream\n'; exit 0 ;;
+	load) cat >/dev/null; printf 'Loaded image: %s\n' "$target"; exit 0 ;;
+	rm) exit 0 ;;
+	tag)
+		[ "${EPC_STUB_TAG_STATUS:-0}" -eq 0 ] || exit "$EPC_STUB_TAG_STATUS"
+		printf '%s' "$2" > "$EPC_STUB_STATE/tagged-$(sanitise "$target")"
+		exit 0 ;;
+	stop)
+		if [ -n "${EPC_STUB_STOP_ECHO:-}" ]; then
+			printf '%s\n' "$EPC_STUB_STOP_ECHO"
+		elif [ -z "${EPC_STUB_STOP_SILENT:-}" ]; then
+			printf '%s\n' "$target"
+		fi
+		exit "${EPC_STUB_STOP_STATUS:-0}" ;;
+	ps)
+		[ -z "${EPC_STUB_PS:-}" ] || printf '%s\n' "$EPC_STUB_PS"
+		exit 0 ;;
+	inspect)
+		kind=unpinned
+		case " $* " in
+			*" --type container "*) kind=container ;;
+			*" --type image "*) kind=image ;;
+		esac
+		format=
+		previous=
+		for argument in "$@"; do
+			if [ "$previous" = -f ]; then format=$argument; fi
+			previous=$argument
+		done
+		case $kind in
+			unpinned)
+				printf '%s\n' 'sha256:imagefallback||sha256:imagefallback|||'
+				exit 0 ;;
+			container)
+				if [ -n "${EPC_STUB_CONTAINER_MISSING:-}" ]; then
+					printf 'Error: No such container: %s\n' "$target" >&2
+					exit 1
+				fi
+				case $format in
+					*RestartPolicy*) printf '%s\n' "$EPC_STUB_CONTAINER" ;;
+					*) printf '%s\n' "${EPC_STUB_STARTED_IMAGE:-$EPC_STUB_REMOTE_IMAGE_ID}" ;;
+				esac
+				exit 0 ;;
+			image)
+				if [ "$side" = local ]; then
+					[ -z "${EPC_STUB_LOCAL_IMAGE_MISSING:-}" ] || exit 1
+					printf '%s\n' "$EPC_STUB_LOCAL_IMAGE_ID"
+					exit 0
+				fi
+				case $target in
+					*:pre-*)
+						tagged="$EPC_STUB_STATE/tagged-$(sanitise "$target")"
+						if [ -f "$tagged" ]; then
+							cat "$tagged"
+							printf '\n'
+							exit 0
+						fi
+						[ -n "${EPC_STUB_ROLLBACK_TAG_ID:-}" ] || exit 1
+						printf '%s\n' "$EPC_STUB_ROLLBACK_TAG_ID"
+						exit 0 ;;
+				esac
+				[ -z "${EPC_STUB_REMOTE_IMAGE_MISSING:-}" ] || exit 1
+				printf '%s\n' "$EPC_STUB_REMOTE_IMAGE_ID"
+				exit 0 ;;
+		esac ;;
+	run)
+		case " $* " in
+			*" --entrypoint "*)
+				mount=
+				body=
+				previous=
+				for argument in "$@"; do
+					if [ "$previous" = -v ]; then mount=$argument; fi
+					if [ "$previous" = -c ]; then body=$argument; fi
+					previous=$argument
+				done
+				source_directory=${mount%%:*}
+				body=$(printf '%s' "$body" | sed "s#/database#$source_directory#g")
+				if [ -n "${EPC_STUB_PROBE_TRUNCATE:-}" ]; then
+					body=$(printf '%s' "$body" | sed 's#: >>#: >#')
+				fi
+				output=$(sh -c "$body" 2>&1) || true
+				if [ -n "${EPC_STUB_PROBE_SUPPRESS:-}" ]; then
+					output=$(printf '%s\n' "$output" | grep -v "$EPC_STUB_PROBE_SUPPRESS" || true)
+				fi
+				printf '%s\n' "$output"
+				exit "${EPC_STUB_PROBE_STATUS:-0}" ;;
+		esac
+		previous=
+		for argument in "$@"; do
+			if [ "$previous" = --env-file ]; then cp "$argument" "$EPC_STUB_STATE/env-file"; fi
+			previous=$argument
+		done
+		: > "$EPC_STUB_STATE/started"
+		printf 'fake-container-id\n'
+		exit 0 ;;
+esac
+printf 'docker stub: unhandled %s\n' "$*" >&2
+exit 90
+DOCKER_STUB
+
+cat > "$stub_bin/curl" <<'CURL_STUB'
+#!/bin/sh
+set -e
+line="curl"
+for argument in "$@"; do line="$line $argument"; done
+printf '%s\n' "$line" >> "$EPC_STUB_JOURNAL"
+case " $* " in
+	*" -K "*) printf '%s' "${EPC_STUB_TOKEN_CODE:-200}" ;;
+	*/health*) printf '%s' "$EPC_STUB_HEALTH" ;;
+	*/api/v1/avatars*) printf '%s' "${EPC_STUB_UNAUTH_CODE:-401}" ;;
+	*) printf '%s' "${EPC_STUB_ROOT_CODE:-200}" ;;
+esac
+CURL_STUB
+
+cat > "$stub_bin/git" <<'GIT_STUB'
+#!/bin/sh
+set -e
+line="git"
+for argument in "$@"; do line="$line $argument"; done
+printf '%s\n' "$line" >> "$EPC_STUB_JOURNAL"
+case " $* " in
+	*" rev-parse "*) printf '%s\n' "$EPC_STUB_REVISION" ;;
+	*) exit 0 ;;
+esac
+GIT_STUB
+
+cat > "$stub_bin/fake-ssh" <<'SSH_STUB'
+#!/bin/sh
+set -e
+if [ $# -ne 2 ]; then
+	printf 'fake-ssh: the remote command must arrive as one argument, got %s: %s\n' "$#" "$*" >&2
+	exit 97
+fi
+if [ "$1" != "$EPC_STUB_EXPECT_TARGET" ]; then
+	printf 'fake-ssh: wrong target %s\n' "$1" >&2
+	exit 98
+fi
+printf 'remote %s\n' "$2" >> "$EPC_STUB_JOURNAL"
+EPC_STUB_SIDE=remote
+export EPC_STUB_SIDE
+exec sh -c "$2"
+SSH_STUB
+
+chmod +x "$stub_bin/docker" "$stub_bin/curl" "$stub_bin/git" "$stub_bin/fake-ssh"
+
+host_name=example.invalid
+ssh_account=deployer
+container_name=epc-test
+image_reference=evergore-protocol-collector:0.2.0
+rollback_reference=evergore_protocol_collector:pre-0.2.0
+seed_text='the stored history nobody can re-fetch'
+
+EVERGORE_SECURITY_API_TOKEN=self-test-only-not-a-real-value
+EVERGORE_CREDENTIALS_USERNAME=self-test-only-login
+EVERGORE_CREDENTIALS_PASSWORD=self-test-only-passphrase
+export EVERGORE_SECURITY_API_TOKEN EVERGORE_CREDENTIALS_USERNAME EVERGORE_CREDENTIALS_PASSWORD
+
+EPC_DEPLOY_SSH="$stub_bin/fake-ssh"
+EPC_DEPLOY_HEALTH_INTERVAL=1
+EPC_DEPLOY_HEALTH_TIMEOUT=2
+export EPC_DEPLOY_SSH EPC_DEPLOY_HEALTH_INTERVAL EPC_DEPLOY_HEALTH_TIMEOUT
+
+case_number=0
+
+new_case() {
+	case_number=$((case_number + 1))
+	case_dir="$work/case$case_number"
+	database_dir="$case_dir/database"
+	state_dir="$case_dir/state"
+	mkdir -p "$database_dir" "$state_dir"
+	printf '%s\n' "$seed_text" > "$database_dir/temp.sqlite"
+	journal="$case_dir/journal"
+	: > "$journal"
+	backup_path="$database_dir/temp.sqlite.bak-$(date +%Y%m%d)"
+
+	EPC_STUB_JOURNAL=$journal
+	EPC_STUB_STATE=$state_dir
+	EPC_STUB_EXPECT_TARGET="$ssh_account@$host_name"
+	EPC_STUB_CONTAINER="abc123def456|evergore_protocol_collector|sha256:old|unless-stopped|0|8080/tcp=80,|$database_dir"
+	EPC_STUB_LOCAL_IMAGE_ID=sha256:new
+	EPC_STUB_REMOTE_IMAGE_ID=sha256:new
+	EPC_STUB_STARTED_IMAGE=
+	EPC_STUB_HEALTH='{"status":"UP"}'
+	EPC_STUB_CONTAINER_MISSING=
+	EPC_STUB_LOCAL_IMAGE_MISSING=
+	EPC_STUB_REMOTE_IMAGE_MISSING=
+	EPC_STUB_ROLLBACK_TAG_ID=
+	EPC_STUB_TAG_STATUS=0
+	EPC_STUB_STOP_ECHO=
+	EPC_STUB_STOP_SILENT=
+	EPC_STUB_STOP_STATUS=0
+	EPC_STUB_PS=
+	EPC_STUB_PROBE_TRUNCATE=
+	EPC_STUB_PROBE_SUPPRESS=
+	EPC_STUB_PROBE_STATUS=0
+	EPC_STUB_TOKEN_CODE=200
+	EPC_STUB_UNAUTH_CODE=401
+	EPC_STUB_ROOT_CODE=200
+	EPC_STUB_REVISION=1234567890abcdef1234567890abcdef12345678
+	export EPC_STUB_REVISION
+	export EPC_STUB_JOURNAL EPC_STUB_STATE EPC_STUB_EXPECT_TARGET EPC_STUB_CONTAINER \
+		EPC_STUB_LOCAL_IMAGE_ID EPC_STUB_REMOTE_IMAGE_ID EPC_STUB_STARTED_IMAGE EPC_STUB_HEALTH \
+		EPC_STUB_CONTAINER_MISSING EPC_STUB_LOCAL_IMAGE_MISSING EPC_STUB_REMOTE_IMAGE_MISSING \
+		EPC_STUB_ROLLBACK_TAG_ID EPC_STUB_TAG_STATUS EPC_STUB_STOP_ECHO EPC_STUB_STOP_SILENT \
+		EPC_STUB_STOP_STATUS EPC_STUB_PS EPC_STUB_PROBE_TRUNCATE EPC_STUB_PROBE_SUPPRESS \
+		EPC_STUB_PROBE_STATUS EPC_STUB_TOKEN_CODE EPC_STUB_UNAUTH_CODE EPC_STUB_ROOT_CODE
+}
+
+run_epc() {
+	set +e
+	output=$(PATH="$stub_bin:$PATH" "$script" "$@" 2>&1)
+	status=$?
+	set -e
+}
+
+run_deploy() {
+	run_epc deploy --host "$host_name" --ssh-user "$ssh_account" --container "$container_name" \
+		--database-dir "$database_dir" --image "$image_reference" "$@"
+}
+
+run_rollback() {
+	run_epc rollback --host "$host_name" --ssh-user "$ssh_account" --container "$container_name" \
+		--database-dir "$database_dir" --image "$rollback_reference" "$@"
+}
+
+journal_has() { grep -qF -- "$1" "$journal"; }
+journal_line() { grep -nF -- "$1" "$journal" | head -n 1 | cut -d: -f1; }
+started_line() { grep -F -- 'docker run -d' "$journal" | tail -n 1; }
+database_intact() { [ "$(cat "$database_dir/temp.sqlite")" = "$seed_text" ]; }
+nothing_destructive() {
+	! grep -qE 'docker (stop|rm|run -d)' "$journal" && ! grep -qF -- 'cp ' "$journal"
+}
+
+printf 'deploy self-test\n'
+
+new_case
+run_deploy
+if [ "$status" -eq 0 ]; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a deploy against a healthy home server runs to the end" "$r"
+if journal_has "docker run -d --name '$container_name' -p 80:8080 --restart unless-stopped"; then r=0; else r=1; fi
+check "the replacement carries the port and the policy read off the old container" "$r"
+if [ -f "$backup_path" ] && [ "$(cat "$backup_path")" = "$seed_text" ]; then r=0; else r=1; fi
+check "the backup holds what the database held" "$r"
+if database_intact; then r=0; else r=1; fi
+check "the live database still holds its bytes after the whole run" "$r"
+if journal_has "docker tag 'sha256:old' '$rollback_reference'"; then r=0; else r=1; fi
+check "the running image is tagged as the rollback target before it can be overwritten" "$r"
+if grep -F 'docker inspect' "$journal" | grep -qv -- '--type '; then r=1; else r=0; fi
+check "every single container or image inspection pins a --type" "$r"
+if grep -qF -e "$EVERGORE_SECURITY_API_TOKEN" -e "$EVERGORE_CREDENTIALS_PASSWORD" "$journal"; then r=1; else r=0; fi
+check "no secret reaches any command line the remote sees" "$r"
+if printf '%s' "$output" | grep -qF -e "$EVERGORE_SECURITY_API_TOKEN" -e "$EVERGORE_CREDENTIALS_PASSWORD"; then r=1; else r=0; fi
+check "no secret reaches the output either" "$r"
+if [ -f "$state_dir/env-file" ] && grep -qF "$EVERGORE_SECURITY_API_TOKEN" "$state_dir/env-file"; then r=0; else r=1; fi
+check "the secrets do reach the container, through a 0600 environment file" "$r"
+environment_file=$(grep -oE -- "--env-file '[^']*'" "$journal" | tail -n 1 | sed "s/^--env-file '//; s/'\$//")
+if [ -n "$environment_file" ] && [ ! -e "$environment_file" ]; then r=0; else r=1; fi
+check "the file holding the three secrets does not linger on the remote host" "$r"
+token_config=$(grep -oE -- " -K '[^']*'" "$journal" | tail -n 1 | sed "s/^ -K '//; s/'\$//")
+if [ -n "$token_config" ] && [ ! -e "$token_config" ]; then r=0; else r=1; fi
+check "the curl config holding the token does not linger either" "$r"
+if ls -a "$database_dir" | grep -q '^\.probe$'; then r=1; else r=0; fi
+check "the probe file is removed from the mount" "$r"
+stop_at=$(journal_line 'docker stop'); ps_at=$(journal_line 'docker ps'); copy_at=$(journal_line "cp '$database_dir/temp.sqlite'")
+if [ "$stop_at" -lt "$copy_at" ] && [ "$ps_at" -lt "$copy_at" ]; then r=0; else r=1; fi
+check "the database is copied only after the stop and the empty ps, not before" "$r"
+if printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; fi
+check "the run ends by printing the rollback command that undoes it" "$r"
+
+new_case
+EPC_STUB_PROBE_TRUNCATE=1
+run_deploy
+if [ ! -s "$database_dir/temp.sqlite" ]; then r=0; else r=1; fi
+check "control: the same probe written with : > empties the database, so the case above can fail" "$r"
+
+new_case
+EPC_STUB_CONTAINER_MISSING=1
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
+check "a missing container is not answered for by a same-named image" "$r"
+
+new_case
+EPC_STUB_CONTAINER='sha256:imagefallback||sha256:imagefallback|||'
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
+check "an image-shaped answer is refused even when the inspect was pinned" "$r"
+
+new_case
+EPC_STUB_CONTAINER="abc|evergore_protocol_collector|sha256:old|no|0|8080/tcp=8080,|$database_dir"
+run_deploy
+if journal_has "-p 8080:8080 --restart no"; then r=0; else r=1; fi
+check "a home server publishing 8080 gets 8080, so the port is read and not a constant" "$r"
+
+new_case
+EPC_STUB_CONTAINER="abc|evergore_protocol_collector|sha256:old|unless-stopped|0||$database_dir"
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
+check "a container publishing nothing does not get an invented port" "$r"
+
+new_case
+EPC_STUB_CONTAINER="abc|evergore_protocol_collector|sha256:old|unless-stopped|0|8080/tcp=80,|$database_dir/elsewhere"
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
+check "a mount the running container does not use is refused" "$r"
+
+new_case
+EPC_STUB_REMOTE_IMAGE_ID=sha256:somethingelse
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
+check "an image that arrives as a different id stops the deploy before the stop" "$r"
+
+new_case
+EPC_STUB_ROLLBACK_TAG_ID=sha256:anolderrollbacktarget
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
+check "an existing pre- tag pointing elsewhere is not clobbered" "$r"
+
+new_case
+rm "$database_dir/temp.sqlite"
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
+check "a mount without the database in it is refused before anything starts" "$r"
+
+new_case
+EPC_STUB_PROBE_SUPPRESS=DIR-OK
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive && database_intact; then r=0; else r=1; fi
+check "a mount directory the runtime user cannot write is refused" "$r"
+
+new_case
+EPC_STUB_PROBE_SUPPRESS=FILE-OK
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive && database_intact; then r=0; else r=1; fi
+check "a database file the runtime user cannot write is refused" "$r"
+
+new_case
+EPC_STUB_STOP_SILENT=1
+run_deploy
+if [ "$status" -ne 0 ] && [ ! -f "$backup_path" ] && database_intact; then r=0; else r=1; fi
+check "a stop that echoed nothing leaves the database uncopied" "$r"
+
+new_case
+EPC_STUB_STOP_ECHO=Error
+run_deploy
+if [ "$status" -ne 0 ] && [ ! -f "$backup_path" ]; then r=0; else r=1; fi
+check "a stop that echoed something other than the name leaves the database uncopied" "$r"
+
+new_case
+EPC_STUB_PS=$container_name
+run_deploy
+if [ "$status" -ne 0 ] && [ ! -f "$backup_path" ]; then r=0; else r=1; fi
+check "a container still listed by ps leaves the database uncopied" "$r"
+
+new_case
+printf 'an earlier backup from today\n' > "$backup_path"
+run_deploy
+if [ "$status" -ne 0 ] && [ "$(cat "$backup_path")" = 'an earlier backup from today' ]; then r=0; else r=1; fi
+check "today's existing backup is not replaced by an already migrated database" "$r"
+
+new_case
+run_deploy --skip-backup
+if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
+check "there is no option that skips the backup the table rebuild makes mandatory" "$r"
+
+new_case
+EPC_STUB_HEALTH='{"status":"UNKNOWN"}'
+run_deploy
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; fi
+check "a service that never reports UP fails the deploy and prints the way back" "$r"
+
+new_case
+EPC_STUB_UNAUTH_CODE=200
+run_deploy
+if [ "$status" -ne 0 ]; then r=0; else r=1; fi
+check "an unprotected api answering 200 without a token fails the deploy" "$r"
+if printf '%s' "$output" | grep -qF "rollback --host $host_name" && printf '%s' "$output" | grep -qF -- "--image $rollback_reference"; then r=0; else r=1; fi
+check "and prints the way back, because by then the old container is already gone" "$r"
+
+new_case
+EPC_STUB_STARTED_IMAGE=sha256:somethingelse
+run_deploy
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; fi
+check "a container that came up on the wrong image also prints the way back" "$r"
+
+new_case
+EPC_STUB_LOCAL_IMAGE_MISSING=1
+run_deploy --dry-run
+if [ "$status" -eq 0 ] && nothing_destructive; then r=0; else r=1; fi
+check "a rehearsal runs before the release image has ever been built" "$r"
+
+new_case
+run_deploy --backup temp.sqlite.bak-20260101
+if [ "$status" -ne 0 ] && [ ! -s "$journal" ]; then r=0; else r=1; fi
+check "--backup is refused on deploy instead of being silently dropped" "$r"
+
+new_case
+run_rollback --backup temp.sqlite.bak-20260101 --skip-build --yes
+if [ "$status" -ne 0 ] && [ ! -s "$journal" ]; then r=0; else r=1; fi
+check "--skip-build is refused on rollback instead of being silently dropped" "$r"
+
+new_case
+run_deploy --dry-run
+if [ "$status" -eq 0 ] && nothing_destructive && [ ! -f "$backup_path" ] && database_intact; then r=0; else r=1; fi
+check "a dry run mutates nothing at all" "$r"
+if printf '%s' "$output" | grep -qF "would run  docker run -d --name $container_name -p 80:8080 --restart unless-stopped --env-file <0600 file holding the three secrets and TZ=UTC> -v $database_dir:/database $image_reference"; then r=0; else r=1; fi
+check "the dry run prints the whole command it would run, with the port and the mount it read" "$r"
+if journal_has "docker inspect --type container"; then r=0; else r=1; fi
+check "the dry run still performs the reads, so it is a rehearsal and not a guess" "$r"
+if printf '%s' "$output" | grep -qF -- "--label org.opencontainers.image.version=0.2.0 --label org.opencontainers.image.revision=$EPC_STUB_REVISION"; then r=0; else r=1; fi
+check "the build bakes in the version and the commit the image was built from" "$r"
+if printf '%s' "$output" | grep -qF -e "$EVERGORE_SECURITY_API_TOKEN" -e "$EVERGORE_CREDENTIALS_PASSWORD"; then r=1; else r=0; fi
+check "the dry run prints no secret" "$r"
+
+new_case
+run_epc deploy --host "$host_name" --ssh-user "$ssh_account" --container "$container_name" --database-dir "$database_dir"
+if [ "$status" -ne 0 ] && [ ! -s "$journal" ]; then r=0; else r=1; fi
+check "a missing parameter stops the run before it reaches any machine" "$r"
+
+new_case
+run_epc deploy --host "$host_name" --ssh-user "$ssh_account" --container "$container_name" \
+	--database-dir "$database_dir" --image evergore-protocol-collector
+if [ "$status" -ne 0 ] && [ ! -s "$journal" ]; then r=0; else r=1; fi
+check "an image without an explicit tag is refused, so a deploy names one source state" "$r"
+
+new_case
+EVERGORE_SECURITY_API_TOKEN=
+run_deploy
+EVERGORE_SECURITY_API_TOKEN=self-test-only-not-a-real-value
+if [ "$status" -ne 0 ] && [ ! -s "$journal" ]; then r=0; else r=1; fi
+check "a blank api token stops the run rather than starting a container that cannot boot" "$r"
+
+new_case
+EPC_STUB_EXPECT_TARGET="somebodyelse@$host_name"
+run_deploy
+if [ "$status" -ne 0 ]; then r=0; else r=1; fi
+check "the ssh target is composed from the passed user and host" "$r"
+
+new_case
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+run_rollback --backup "$(basename "$backup_path")"
+if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
+check "a rollback without --yes changes nothing" "$r"
+if printf '%s' "$output" | grep -qF 'V2 rebuild'; then r=0; else r=1; fi
+check "and it says what restoring the backup does to the migrated schema" "$r"
+
+new_case
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+EPC_STUB_STARTED_IMAGE=sha256:old
+run_rollback --backup "$(basename "$backup_path")" --yes
+if [ "$status" -eq 0 ]; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a rollback runs to the end against a home server that has the pre- tag" "$r"
+if [ "$(cat "$database_dir/temp.sqlite")" = 'an older snapshot worth restoring' ]; then r=0; else r=1; fi
+check "the rollback put the backup back over the live database" "$r"
+superseded=$(ls "$database_dir" | grep '^temp\.sqlite\.superseded-' | head -n 1)
+if [ -n "$superseded" ] && [ "$(cat "$database_dir/$superseded")" = "$seed_text" ]; then r=0; else r=1; fi
+check "and kept a copy of the database it overwrote, which is not in any backup" "$r"
+stop_at=$(journal_line 'docker stop'); restore_at=$(journal_line "cp '$backup_path'"); probe_at=$(journal_line '--entrypoint')
+if [ "$stop_at" -lt "$restore_at" ] && [ "$restore_at" -lt "$probe_at" ]; then r=0; else r=1; fi
+check "it stops, then restores, then re-probes the mount the restore may have re-moded" "$r"
+started=$(started_line)
+case $started in
+	*"--name $container_name -p 80:8080 --restart unless-stopped"*" $rollback_reference") r=0 ;;
+	*) r=1 ;;
+esac
+check "the rollback starts the old image on the port and policy it read, not on a template" "$r"
+
+new_case
+EPC_STUB_ROLLBACK_TAG_ID=
+EPC_STUB_REMOTE_IMAGE_MISSING=
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+run_rollback --backup "$(basename "$backup_path")" --yes
+if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
+check "a rollback to an image the home server does not have stops before the stop" "$r"
+
+new_case
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+run_rollback --backup temp.sqlite.bak-nosuchday --yes
+if [ "$status" -ne 0 ] && database_intact; then r=0; else r=1; fi
+check "a rollback naming a backup that is not there leaves the live database alone" "$r"
+
+new_case
+outside_dir="$case_dir/outside-the-mount"
+mkdir -p "$outside_dir"
+printf 'a file from outside the mount\n' > "$outside_dir/secret.txt"
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+EPC_STUB_STARTED_IMAGE=sha256:old
+run_rollback --backup ../outside-the-mount/secret.txt --yes
+if [ "$status" -ne 0 ] && database_intact && nothing_destructive; then r=0; else r=1; fi
+check "a --backup value climbing out of --database-dir cannot reach the live database" "$r"
+
+new_case
+run_deploy --database-file ../temp.sqlite
+if [ "$status" -ne 0 ] && [ ! -s "$journal" ]; then r=0; else r=1; fi
+check "a --database-file value climbing out of --database-dir is refused too" "$r"
+
+new_case
+EPC_STUB_CONTAINER="abc|evergore_protocol_collector|sha256:old|on-reboot|0|8080/tcp=80,|$database_dir"
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
+check "a restart policy the script cannot reproduce stops it rather than dropping the policy" "$r"
+
+new_case
+run_epc deploy --host "$host_name" --ssh-user "$ssh_account" --container
+if [ "$status" -ne 0 ] && [ ! -s "$journal" ] && printf '%s' "$output" | grep -qF 'epc-deploy: --container needs a value'; then r=0; else r=1; fi
+check "a flag given without its value fails with the script's own message" "$r"
+
+if [ "$failures" -eq 0 ]; then
+	printf 'deploy self-test: all cases pass\n'
+else
+	printf 'deploy self-test: %s case(s) FAILED\n' "$failures" >&2
+fi
+exit "$failures"

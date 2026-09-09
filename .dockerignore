@@ -7,6 +7,7 @@ database
 zugang.txt
 src/test/resources/benchmark
 .devcontainer
+deploy
 .claude
 docs
 *.md

@@ -1,0 +1,481 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	cat >&2 <<'USAGE'
+epc-deploy deploy   --host H --ssh-user U --container N --database-dir D --image REPO:TAG
+                    [--database-file F] [--sudo] [--skip-build] [--dry-run]
+epc-deploy rollback --host H --ssh-user U --container N --database-dir D --image REPO:TAG
+                    --backup NAME [--database-file F] [--sudo] [--dry-run] --yes
+
+Nothing machine-specific is committed; every value is a parameter or an environment variable.
+  --host            EPC_DEPLOY_HOST           the Docker host to deploy onto
+  --ssh-user        EPC_DEPLOY_SSH_USER       the account ssh signs in as
+  --container       EPC_DEPLOY_CONTAINER      the container name on that host
+  --database-dir    EPC_DEPLOY_DATABASE_DIR   the host directory mounted at /database
+  --database-file   EPC_DEPLOY_DATABASE_FILE  the database inside it (default temp.sqlite)
+  --image           EPC_DEPLOY_IMAGE          repository:tag being deployed, or rolled back to
+  --backup          the backup file name inside --database-dir that rollback restores
+  --sudo            EPC_DEPLOY_SUDO=1         prefix every remote docker call with sudo
+  --dry-run         perform every read, print every mutation, execute none of them
+  --yes             rollback only: acknowledge the schema statement it prints
+
+Read from the caller's environment, never placed in any command line:
+  EVERGORE_SECURITY_API_TOKEN, EVERGORE_CREDENTIALS_USERNAME, EVERGORE_CREDENTIALS_PASSWORD
+
+Also read from the environment, with defaults:
+  EPC_DEPLOY_HEALTH_TIMEOUT   seconds to wait for the first UP, default 900, because the V2 table
+                              rebuild can take minutes on a slow mount
+  EPC_DEPLOY_HEALTH_INTERVAL  seconds between health polls, default 10, well under the rate limit
+  EPC_DEPLOY_SSH              the ssh command itself, default ssh
+USAGE
+	exit 2
+}
+
+fail() { printf 'epc-deploy: %s\n' "$1" >&2; exit 1; }
+step() { printf '\n== %s\n' "$1"; }
+note() { printf '   %s\n' "$1"; }
+
+command_name=${1:-}
+[ -n "$command_name" ] || usage
+shift
+
+host=${EPC_DEPLOY_HOST:-}
+ssh_user=${EPC_DEPLOY_SSH_USER:-}
+container=${EPC_DEPLOY_CONTAINER:-}
+database_dir=${EPC_DEPLOY_DATABASE_DIR:-}
+database_file=${EPC_DEPLOY_DATABASE_FILE:-temp.sqlite}
+image=${EPC_DEPLOY_IMAGE:-}
+backup_name=
+use_sudo=${EPC_DEPLOY_SUDO:-}
+skip_build=0
+dry_run=0
+confirmed=0
+
+while [ $# -gt 0 ]; do
+	case $1 in
+		--host|--ssh-user|--container|--database-dir|--database-file|--image|--backup)
+			[ $# -ge 2 ] || fail "$1 needs a value" ;;
+	esac
+	case $1 in
+		--host) host=${2:-}; shift 2 ;;
+		--ssh-user) ssh_user=${2:-}; shift 2 ;;
+		--container) container=${2:-}; shift 2 ;;
+		--database-dir) database_dir=${2:-}; shift 2 ;;
+		--database-file) database_file=${2:-}; shift 2 ;;
+		--image) image=${2:-}; shift 2 ;;
+		--backup) backup_name=${2:-}; shift 2 ;;
+		--sudo) use_sudo=1; shift ;;
+		--skip-build) skip_build=1; shift ;;
+		--dry-run) dry_run=1; shift ;;
+		--yes) confirmed=1; shift ;;
+		*) printf 'epc-deploy: unknown option %s\n' "$1" >&2; usage ;;
+	esac
+done
+
+require() { [ -n "$2" ] || fail "missing $1"; }
+
+plain() {
+	case $2 in
+		*[!A-Za-z0-9_.:/@-]*) fail "$1 may hold only letters, digits and _ . : / @ -" ;;
+	esac
+}
+
+segment() {
+	case $2 in
+		*/*) fail "$1 must be a file name inside --database-dir, not a path" ;;
+		.|..) fail "$1 must name a file" ;;
+	esac
+}
+
+require --host "$host"
+plain --host "$host"
+require --ssh-user "$ssh_user"
+plain --ssh-user "$ssh_user"
+require --container "$container"
+plain --container "$container"
+require --database-dir "$database_dir"
+plain --database-dir "$database_dir"
+require --database-file "$database_file"
+plain --database-file "$database_file"
+segment --database-file "$database_file"
+require --image "$image"
+plain --image "$image"
+
+case $image in
+	*:*) ;;
+	*) fail "--image must carry an explicit tag, so the deployed stand names one source state" ;;
+esac
+version=${image##*:}
+
+case $command_name in
+	deploy)
+		[ -z "$backup_name" ] || fail "--backup applies to rollback; a deploy names its own backup after the date"
+		[ "$confirmed" -eq 0 ] || fail "--yes applies to rollback only" ;;
+	rollback)
+		[ "$skip_build" -eq 0 ] || fail "--skip-build applies to deploy only" ;;
+esac
+
+ssh_command=${EPC_DEPLOY_SSH:-ssh}
+ssh_target="$ssh_user@$host"
+docker_remote=docker
+[ -z "$use_sudo" ] || docker_remote="sudo docker"
+health_timeout=${EPC_DEPLOY_HEALTH_TIMEOUT:-900}
+health_interval=${EPC_DEPLOY_HEALTH_INTERVAL:-10}
+database_path="$database_dir/$database_file"
+
+remote() { $ssh_command "$ssh_target" "$1"; }
+
+remote_temp_file() {
+	remote 'f=$(mktemp) && chmod 600 "$f" && cat > "$f" && printf %s "$f"'
+}
+
+mutate() {
+	if [ "$dry_run" -eq 1 ]; then
+		printf '   would run  %s\n' "$1"
+		return 0
+	fi
+	remote "$1"
+}
+
+inspect_format='{{.Id}}|{{.Config.Image}}|{{.Image}}|{{.HostConfig.RestartPolicy.Name}}|{{.HostConfig.RestartPolicy.MaximumRetryCount}}|{{range $p, $c := .HostConfig.PortBindings}}{{$p}}={{(index $c 0).HostPort}},{{end}}|{{range .Mounts}}{{if eq .Destination "/database"}}{{.Source}}{{end}}{{end}}'
+
+field() { printf '%s' "$1" | cut -d'|' -f"$2"; }
+
+read_running_container() {
+	step "Read the running container, never a template and never an image answering for it"
+	if ! container_line=$(remote "$docker_remote inspect --type container -f '$inspect_format' '$container' 2>/dev/null"); then
+		fail "no container named $container on $host. The inspect pinned --type container, so a same-named image could not answer in its place"
+	fi
+	current_id=$(field "$container_line" 1)
+	current_config_image=$(field "$container_line" 2)
+	current_image_id=$(field "$container_line" 3)
+	policy_name=$(field "$container_line" 4)
+	policy_retries=$(field "$container_line" 5)
+	port_bindings=$(field "$container_line" 6)
+	bind_source=$(field "$container_line" 7)
+
+	case $current_id in
+		sha256:*) fail "docker answered about an image, not a container: a container id is bare hex" ;;
+		'') fail "the inspect returned no container id" ;;
+	esac
+	[ -n "$current_config_image" ] || fail "docker answered with an empty .Config.Image, which is what an image answering for a missing container looks like"
+
+	case $port_bindings in
+		*8080/tcp=*) ;;
+		*) fail "the running container publishes no 8080/tcp binding to copy, and this deploy will not invent one" ;;
+	esac
+	host_port=${port_bindings#*8080/tcp=}
+	host_port=${host_port%%,*}
+	case $host_port in
+		''|*[!0-9]*) fail "unreadable published port in $port_bindings" ;;
+	esac
+	remaining_bindings=$(printf '%s' "$port_bindings" | sed 's#8080/tcp=[^,]*,##')
+	[ -z "$remaining_bindings" ] || fail "the running container publishes more than 8080/tcp ($port_bindings); resolve that by hand"
+
+	case $policy_name in
+		''|no) restart_flag="--restart no" ;;
+		on-failure) restart_flag="--restart on-failure:$policy_retries" ;;
+		always|unless-stopped) restart_flag="--restart $policy_name" ;;
+		*) fail "unknown restart policy $policy_name" ;;
+	esac
+
+	[ -n "$bind_source" ] || fail "the running container has no bind mounted at /database"
+	[ "$bind_source" = "$database_dir" ] || fail "the running container mounts $bind_source at /database, not the --database-dir $database_dir"
+
+	note "image reference  $current_config_image"
+	note "image id         $current_image_id"
+	note "published port   $host_port, mapped onto the container's 8080"
+	note "restart policy   ${policy_name:-no}"
+	note "database mount   $bind_source"
+}
+
+build_image() {
+	step "Build $image and read the id that must survive the transfer"
+	repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+	revision=$(git -C "$repo_root" rev-parse HEAD 2>/dev/null) || fail "$repo_root is not a git checkout, so the revision label would name no source state"
+	build_command="docker build -t $image --label org.opencontainers.image.version=$version --label org.opencontainers.image.revision=$revision $repo_root"
+	if [ "$skip_build" -eq 1 ]; then
+		note "build skipped, using the local $image as it stands"
+	elif [ "$dry_run" -eq 1 ]; then
+		printf '   would run  %s\n' "$build_command"
+	else
+		$build_command >/dev/null
+	fi
+	if built_image_id=$(docker inspect --type image -f '{{.Id}}' "$image" 2>/dev/null); then
+		note "built image id   $built_image_id"
+	elif [ "$dry_run" -eq 1 ]; then
+		built_image_id=
+		note "no local $image yet, which a rehearsal run before the first build is allowed to be"
+	else
+		fail "no local image $image to deploy"
+	fi
+}
+
+transfer_image() {
+	step "Transfer the image and prove the loaded one is the built one"
+	if [ "$dry_run" -eq 1 ]; then
+		printf '   would run  docker save %s | ssh %s %s load\n' "$image" "$ssh_target" "$docker_remote"
+		loaded_image_id=$built_image_id
+		return 0
+	fi
+	docker save "$image" | $ssh_command "$ssh_target" "$docker_remote load" >/dev/null
+	if ! loaded_image_id=$(remote "$docker_remote inspect --type image -f '{{.Id}}' '$image' 2>/dev/null"); then
+		fail "$image is not on $host after the transfer"
+	fi
+	[ "$loaded_image_id" = "$built_image_id" ] || fail "the transferred image is not the built one: $host holds $loaded_image_id, the build produced $built_image_id"
+	note "loaded image id  $loaded_image_id, identical"
+}
+
+secure_rollback_tag() {
+	step "Secure the rollback target before anything can overwrite it"
+	rollback_repository=${current_config_image%:*}
+	rollback_reference="$rollback_repository:pre-$version"
+	if existing_id=$(remote "$docker_remote inspect --type image -f '{{.Id}}' '$rollback_reference' 2>/dev/null"); then
+		[ "$existing_id" = "$current_image_id" ] || fail "$rollback_reference already names a different image ($existing_id), and retagging it would lose an older rollback target"
+		note "already tagged   $rollback_reference"
+		return 0
+	fi
+	mutate "$docker_remote tag '$current_image_id' '$rollback_reference'"
+	if [ "$dry_run" -eq 1 ]; then
+		note "would tag        $rollback_reference"
+		return 0
+	fi
+	tagged_id=$(remote "$docker_remote inspect --type image -f '{{.Id}}' '$rollback_reference' 2>/dev/null") || fail "tagging $rollback_reference did not take"
+	[ "$tagged_id" = "$current_image_id" ] || fail "$rollback_reference resolves to $tagged_id, not to the running image $current_image_id"
+	note "tagged           $rollback_reference"
+}
+
+probe_mount() {
+	probe_image=$1
+	step "Pre-flight the mount with $probe_image, appending and never truncating"
+	probe_body="ls -l /database; touch /database/.probe && echo DIR-OK && rm /database/.probe; : >> /database/$database_file && echo FILE-OK"
+	if ! probe_output=$(remote "$docker_remote run --rm --entrypoint /bin/bash -v '$database_dir:/database' '$probe_image' -c '$probe_body' 2>&1"); then
+		printf '%s\n' "$probe_output" >&2
+		fail "the mount pre-flight did not run"
+	fi
+	case $probe_output in
+		*"$database_file"*) ;;
+		*) fail "$database_file is not listed inside the mount, so the mount source did not resolve and the app would start on an empty database" ;;
+	esac
+	case $probe_output in
+		*DIR-OK*) ;;
+		*) fail "the runtime user cannot write inside the mount directory" ;;
+	esac
+	case $probe_output in
+		*FILE-OK*) ;;
+		*) fail "the runtime user cannot write $database_file" ;;
+	esac
+	note "listed, DIR-OK and FILE-OK, database untouched"
+}
+
+prove_stopped() {
+	stopped=$(remote "$docker_remote stop '$container'" 2>/dev/null) || fail "docker stop did not succeed for $container"
+	[ "$stopped" = "$container" ] || fail "docker stop echoed '$stopped' instead of '$container', so the stop did not happen and the copy would run against a live database"
+	still_running=$(remote "$docker_remote ps --filter 'name=^$container\$' --format '{{.Names}}'")
+	[ -z "$still_running" ] || fail "$container is still listed as running after the stop, so no database copy will be made"
+	note "stop echoed the name and ps came back empty"
+}
+
+copy_database() {
+	copy_source=$1
+	copy_target=$2
+	guard_target="test ! -e '$copy_target' || { echo TARGET-EXISTS; exit 1; }; "
+	[ "$3" = refuse-existing ] || guard_target=
+	copy_failed=
+	copy_output=$(remote "${guard_target}test -e '$copy_source' || { echo NO-SOURCE; exit 1; }; cp '$copy_source' '$copy_target'; printf '%s %s' \"\$(wc -c < '$copy_source')\" \"\$(wc -c < '$copy_target')\"") || copy_failed=1
+	case ${copy_output:-} in
+		*TARGET-EXISTS*) fail "$copy_target already exists. Overwriting it would replace the only pre-migration copy with an already migrated database, so move it aside and run again" ;;
+		*NO-SOURCE*) fail "$copy_source does not exist on $host" ;;
+	esac
+	[ -z "$copy_failed" ] || fail "copying $copy_source to $copy_target failed: ${copy_output:-no output}"
+	source_size=${copy_output% *}
+	target_size=${copy_output#* }
+	[ "$source_size" = "$target_size" ] || fail "$copy_target is $target_size bytes against the $source_size bytes of $copy_source"
+	note "copied $copy_source to $copy_target, $target_size bytes"
+}
+
+stop_proven() {
+	if [ "$dry_run" -eq 1 ]; then
+		printf '   would run  %s stop %s, then require the echoed name and an empty ps\n' "$docker_remote" "$container"
+		return 0
+	fi
+	prove_stopped
+}
+
+copy_or_print() {
+	if [ "$dry_run" -eq 1 ]; then
+		printf '   would run  cp %s %s\n' "$1" "$2"
+		return 0
+	fi
+	copy_database "$1" "$2" "$3"
+}
+
+stop_and_backup() {
+	step "Stop the container, prove it stopped, and only then copy the database"
+	stop_proven
+	copy_or_print "$database_path" "$backup_path" refuse-existing
+}
+
+write_environment_file() {
+	remote_env_file=$(printf 'EVERGORE_SECURITY_API_TOKEN=%s\nEVERGORE_CREDENTIALS_USERNAME=%s\nEVERGORE_CREDENTIALS_PASSWORD=%s\nTZ=UTC\n' \
+		"$api_token" "$evergore_username" "$evergore_password" | remote_temp_file)
+	[ -n "$remote_env_file" ] || fail "could not place the environment file on $host"
+}
+
+remove_environment_file() {
+	[ -z "${remote_env_file:-}" ] || remote "rm -f '$remote_env_file'"
+	remote_env_file=
+}
+
+start_container() {
+	start_image=$1
+	expected_image_id=$2
+	if [ "$dry_run" -eq 1 ]; then
+		printf '   would run  %s run -d --name %s -p %s:8080 %s --env-file <0600 file holding the three secrets and TZ=UTC> -v %s:/database %s\n' \
+			"$docker_remote" "$container" "$host_port" "$restart_flag" "$database_dir" "$start_image"
+		return 0
+	fi
+	write_environment_file
+	trap remove_environment_file EXIT INT TERM
+	remote "$docker_remote run -d --name '$container' -p $host_port:8080 $restart_flag --env-file '$remote_env_file' -v '$database_dir:/database' '$start_image'" >/dev/null
+	remove_environment_file
+	trap - EXIT INT TERM
+	started_image=$(remote "$docker_remote inspect --type container -f '{{.Image}}' '$container' 2>/dev/null") || fail_after_replacement "$container did not come up as a container"
+	[ "$started_image" = "$expected_image_id" ] || fail_after_replacement "$container runs image $started_image, not the intended $expected_image_id"
+	note "started on port $host_port with ${restart_flag#--restart }"
+}
+
+replace_container() {
+	step "Replace the container with the port and policy read off the old one"
+	mutate "$docker_remote rm '$container'"
+	start_container "$image" "$loaded_image_id"
+}
+
+verify_service() {
+	step "Verify the service"
+	if [ "$dry_run" -eq 1 ]; then
+		printf '   would poll http://localhost:%s/health until UP, then check /, the token and the 401\n' "$host_port"
+		return 0
+	fi
+	waited=0
+	while :; do
+		health=$(remote "curl -s http://localhost:$host_port/health" 2>/dev/null) || health=
+		case $health in
+			*'"status":"UP"'*) break ;;
+		esac
+		if [ "$waited" -ge "$health_timeout" ]; then
+			fail_after_replacement "the service never reported UP within ${health_timeout}s. Last answer: ${health:-none}"
+		fi
+		sleep "$health_interval"
+		waited=$((waited + health_interval))
+	done
+	note "health UP after ${waited}s"
+
+	root_code=$(remote "curl -s -o /dev/null -w '%{http_code}' http://localhost:$host_port/")
+	[ "$root_code" = 200 ] || fail_after_replacement "/ answered $root_code"
+	unauthorised_code=$(remote "curl -s -o /dev/null -w '%{http_code}' http://localhost:$host_port/api/v1/avatars")
+	[ "$unauthorised_code" = 401 ] || fail_after_replacement "/api/v1/avatars without a token answered $unauthorised_code instead of 401"
+	curl_config=$(printf 'url = "http://localhost:%s/api/v1/avatars?token=%s"\nsilent\noutput = "/dev/null"\nwrite-out = "%%{http_code}"\n' "$host_port" "$api_token" | remote_temp_file)
+	authorised_code=$(remote "curl -K '$curl_config'; rm -f '$curl_config'")
+	[ "$authorised_code" = 200 ] || fail_after_replacement "/api/v1/avatars with the token answered $authorised_code"
+	note "/ 200, token 200, no token 401"
+}
+
+fail_after_replacement() {
+	printf 'epc-deploy: %s\n' "$1" >&2
+	print_rollback_hint >&2
+	exit 1
+}
+
+print_rollback_hint() {
+	printf '\nRoll back with:\n  %s rollback --host %s --ssh-user %s --container %s --database-dir %s --image %s --backup %s --yes\n' \
+		"$(basename "$0")" "$host" "$ssh_user" "$container" "$database_dir" "${rollback_reference:-<the pre- tag printed above>}" "${backup_name:-<the backup printed above>}"
+}
+
+resolve_secrets() {
+	api_token=${EVERGORE_SECURITY_API_TOKEN:-}
+	evergore_username=${EVERGORE_CREDENTIALS_USERNAME:-}
+	evergore_password=${EVERGORE_CREDENTIALS_PASSWORD:-}
+	for secret_name in EVERGORE_SECURITY_API_TOKEN EVERGORE_CREDENTIALS_USERNAME EVERGORE_CREDENTIALS_PASSWORD; do
+		eval "secret_value=\${$secret_name:-}"
+		[ -n "$secret_value" ] || fail "$secret_name is unset or blank, and the application refuses to boot without it"
+		case $secret_value in
+			*"$newline"*) fail "$secret_name holds a newline, which no environment file can carry" ;;
+		esac
+	done
+}
+
+require_remote_tools() {
+	remote 'command -v curl >/dev/null' || fail "no curl on $host, so the deploy could not verify itself"
+}
+
+newline='
+'
+
+cmd_deploy() {
+	backup_name="$database_file.bak-$(date +%Y%m%d)"
+	backup_path="$database_dir/$backup_name"
+	resolve_secrets
+	require_remote_tools
+	build_image
+	read_running_container
+	transfer_image
+	secure_rollback_tag
+	if [ "$dry_run" -eq 1 ]; then
+		note "the rehearsal probes with $current_config_image, the image already there, since $image was not transferred"
+		probe_mount "$current_config_image"
+	else
+		probe_mount "$image"
+	fi
+	stop_and_backup
+	replace_container
+	verify_service
+	print_rollback_hint
+	printf '\ndeploy: %s runs %s on %s\n' "$container" "$image" "$host"
+}
+
+cmd_rollback() {
+	require --backup "$backup_name"
+	plain --backup "$backup_name"
+	segment --backup "$backup_name"
+	backup_path="$database_dir/$backup_name"
+	cat <<STATEMENT
+
+Rollback moves two things back, and they are not the same decision.
+
+  The image: going back to $image is safe against a database this release has already migrated.
+  The older code ignores flyway_schema_history, and the NOT NULL constraints the V2 rebuild added
+  only reject writes that code never makes.
+
+  The database: restoring $backup_name puts the schema back to what it was before the V2 rebuild
+  and discards every row written since that copy was taken. Deploying this release again afterwards
+  runs V2 over the restored file from the start.
+
+The restored state is observable for about 30 seconds; the collector then writes it forward.
+STATEMENT
+	[ "$confirmed" -eq 1 ] || fail "rollback needs --yes once the statement above is understood"
+	resolve_secrets
+	require_remote_tools
+	read_running_container
+	rolled_back_id=$(remote "$docker_remote inspect --type image -f '{{.Id}}' '$image' 2>/dev/null") || fail "$image is not on $host, so there is nothing to roll back to"
+
+	rollback_reference=$image
+	superseded_path="$database_path.superseded-$(date +%Y%m%d%H%M%S)"
+	step "Stop the container, prove it stopped, keep what the restore overwrites, then restore"
+	stop_proven
+	copy_or_print "$database_path" "$superseded_path" refuse-existing
+	copy_or_print "$backup_path" "$database_path" overwrite
+	mutate "$docker_remote rm '$container'"
+	probe_mount "$image"
+	step "Start $image with the port and policy read off the replaced container"
+	start_container "$image" "$rolled_back_id"
+	verify_service
+	printf '\nrollback: %s runs %s on %s\n' "$container" "$image" "$host"
+}
+
+case $command_name in
+	deploy) cmd_deploy ;;
+	rollback) cmd_rollback ;;
+	*) printf 'epc-deploy: unknown command %s\n' "$command_name" >&2; usage ;;
+esac
