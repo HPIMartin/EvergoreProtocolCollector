@@ -1,11 +1,13 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Long.parseLong;
 import static java.lang.String.valueOf;
+import static java.time.Instant.ofEpochMilli;
 import static java.time.LocalDateTime.parse;
 import static java.time.format.DateTimeFormatter.ofPattern;
 
@@ -42,6 +44,10 @@ public abstract class MetaInformationKey<T> {
 		return new DoubleKey("storage_withdrawl_" + avatar);
 	}
 
+	public static MetaInformationKey<Instant> getSumsRecomputedAt(String avatar) {
+		return new InstantKey("sums_recomputed_at_" + avatar);
+	}
+
 	private static class DateTimeKey extends MetaInformationKey<LocalDateTime> {
 		private static final DateTimeFormatter DATE_TIME_PATTERN = ofPattern("dd.MM.yyyy HH:mm");
 
@@ -57,6 +63,22 @@ public abstract class MetaInformationKey<T> {
 		@Override
 		public LocalDateTime deserialize(String raw) {
 			return parse(raw, DATE_TIME_PATTERN);
+		}
+	}
+
+	private static class InstantKey extends MetaInformationKey<Instant> {
+		private InstantKey(String id) {
+			super(id);
+		}
+
+		@Override
+		public String serialize(Instant value) {
+			return valueOf(value.toEpochMilli());
+		}
+
+		@Override
+		public Instant deserialize(String raw) {
+			return ofEpochMilli(parseLong(raw));
 		}
 	}
 

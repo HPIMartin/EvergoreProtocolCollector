@@ -127,11 +127,26 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   while the earlier ones were already current (falsifier probe against the pre-change code,
   2026-09-03). `/health` names the avatar; surfacing the staleness per row is **D20**.
 - The `last_updated` key records **when data was last collected from the game**, not how complete the
-  recompute was (author clarification 2026-09-03). It is part of the same batch, as
-  `LocalDateTime.now(clock)`, and is written on **every** run that completed, including one in which
+  recompute was (author clarification 2026-09-03). It is part of the same batch, derived from the
+  same instant the per-avatar recompute keys carry, and is written on **every** run that completed, including one in which
   an avatar failed: a scrape happened either way. It is an operator's datum rather than a per-row
   freshness claim; the question "how current is this member's row" is answered by that row's own two
   **last-activity** columns. Moving it off the overview onto an admin page is a backlog item.
+- The `sums_recomputed_at_<avatar>` key records **when that avatar's stored sums were last
+  recomputed**, as **epoch millis**, written in the same batch as his four sums. Epoch millis rather
+  than the wall-clock text `last_updated` uses, because that format cannot tell the two Berlin
+  fall-back hours apart (backlog **D14**) and a second wall-clock key would double the defect. An
+  avatar whose recompute fails keeps the instant of the last run that reached him; one who has no
+  such instant yet gets one at the end of the run, seeded from the **newest instant these keys
+  already held before that run**, so the key is absent only while no avatar carries one at all.
+  "Older than the last collection" is therefore decidable server-side as "older than the newest of
+  these keys", with no second run-level key to keep in step.
+- **The seed deliberately does not read `last_updated`** (falsifier probe 2026-09-09):
+  reconstructing an instant from that wall-clock text resolves the Berlin fall-back hour to the
+  earlier of its two passes, which dated a seeded avatar a full hour before the run that actually
+  produced his sums and marked him stale against an avatar stamped in that very run. The store
+  already holds the previous run exactly, in epoch millis, so the seed reads that instead and the
+  comparison never leaves the epoch-millis domain.
 
 This makes evaluation **idempotent** (a second run yields identical sums) and **self-healing per
 avatar**: a failing avatar's own sums are withheld and recomputed cleanly on the next run that

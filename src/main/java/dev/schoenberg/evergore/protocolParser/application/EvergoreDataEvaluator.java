@@ -1,10 +1,12 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.Function;
@@ -19,6 +21,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.Tr
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationSnapshot;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem;
@@ -28,6 +31,7 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformati
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getSumsRecomputedAt;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UNDEFINED;
 import static java.util.Arrays.asList;
 
@@ -53,26 +57,41 @@ public class EvergoreDataEvaluator {
 		List<String> unknownItemNames = new ArrayList<>();
 		List<String> failedAvatarNames = new ArrayList<>();
 		List<MetaInformation<?>> recomputed = new ArrayList<>();
+		MetaInformationSnapshot beforeThisRun = metaRepo.snapshot();
+		Instant runInstant = clock.instant();
+		List<String> guild = knownAvatars.sortedByName();
+		Optional<Instant> runBeforeThisOne = beforeThisRun.lastRecomputeOf(guild);
 
-		knownAvatars.sortedByName().forEach(avatar -> collectInformationOf(avatar, recomputed, unknownItemNames, failedAvatarNames));
-		recomputed.add(new MetaInformation<>(getLastUpdatedKey(), LocalDateTime.now(clock)));
+		guild.forEach(avatar -> collectInformationOf(avatar, runInstant, recomputed, unknownItemNames, failedAvatarNames));
+		failedAvatarNames.forEach(avatar -> seedRecomputeInstantOf(avatar, beforeThisRun, runBeforeThisOne, recomputed));
+		recomputed.add(new MetaInformation<>(getLastUpdatedKey(), LocalDateTime.ofInstant(runInstant, clock.getZone())));
 		metaRepo.add(recomputed);
 
 		return new EvaluationResult(List.copyOf(unknownItemNames), List.copyOf(failedAvatarNames));
 	}
 
-	private void collectInformationOf(String avatar, List<MetaInformation<?>> recomputed, List<String> unknownItemNames, List<String> failedAvatarNames) {
+	private static void seedRecomputeInstantOf(String avatar, MetaInformationSnapshot beforeThisRun, Optional<Instant> runBeforeThisOne, List<MetaInformation<?>> recomputed) {
+		MetaInformationKey<Instant> key = getSumsRecomputedAt(avatar);
+		if (beforeThisRun.get(key).isPresent()) {
+			return;
+		}
+
+		runBeforeThisOne.ifPresent(previousRun -> recomputed.add(new MetaInformation<>(key, previousRun)));
+	}
+
+	private void collectInformationOf(String avatar, Instant runInstant, List<MetaInformation<?>> recomputed, List<String> unknownItemNames, List<String> failedAvatarNames) {
 		try {
-			recomputed.addAll(informationOf(avatar, unknownItemNames));
+			recomputed.addAll(informationOf(avatar, runInstant, unknownItemNames));
 		} catch (RuntimeException failure) {
 			logger.error("Unable to recompute the sums of " + avatar + "; keeping the stored ones.", failure);
 			failedAvatarNames.add(avatar);
 		}
 	}
 
-	private List<MetaInformation<?>> informationOf(String avatar, List<String> unknownItemNames) {
+	private List<MetaInformation<?>> informationOf(String avatar, Instant runInstant, List<String> unknownItemNames) {
 		List<MetaInformation<?>> information = new ArrayList<>(bankInformationOf(avatar));
 		information.addAll(storageInformationOf(avatar, unknownItemNames));
+		information.add(new MetaInformation<>(getSumsRecomputedAt(avatar), runInstant));
 		return information;
 	}
 

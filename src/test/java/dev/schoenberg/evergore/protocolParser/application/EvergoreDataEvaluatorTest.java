@@ -3,8 +3,10 @@ package dev.schoenberg.evergore.protocolParser.application;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,8 @@ import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
+import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContribution;
+import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContributions;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.FakeMetaInformationRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
@@ -26,6 +30,7 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformati
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getSumsRecomputedAt;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.ERDE_EIBENLANZE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.LEINENTUCH;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -101,9 +106,117 @@ class EvergoreDataEvaluatorTest {
 		assertThat(metaRepo.writtenBatches()).hasSize(1);
 		assertThat(metaRepo.writtenBatches().get(0))
 				.containsExactlyInAnyOrder(getBankPlacement(AVATAR).id, getBankWithdrawl(AVATAR).id, getStoragePlacement(AVATAR).id, getStorageWithdrawl(AVATAR).id,
-						getBankPlacement(BANK_ONLY_AVATAR).id, getBankWithdrawl(BANK_ONLY_AVATAR).id, getStoragePlacement(BANK_ONLY_AVATAR).id,
-						getStorageWithdrawl(BANK_ONLY_AVATAR).id, getBankPlacement(STORAGE_ONLY_AVATAR).id, getBankWithdrawl(STORAGE_ONLY_AVATAR).id,
-						getStoragePlacement(STORAGE_ONLY_AVATAR).id, getStorageWithdrawl(STORAGE_ONLY_AVATAR).id, getLastUpdatedKey().id);
+						getSumsRecomputedAt(AVATAR).id, getBankPlacement(BANK_ONLY_AVATAR).id, getBankWithdrawl(BANK_ONLY_AVATAR).id, getStoragePlacement(BANK_ONLY_AVATAR).id,
+						getStorageWithdrawl(BANK_ONLY_AVATAR).id, getSumsRecomputedAt(BANK_ONLY_AVATAR).id, getBankPlacement(STORAGE_ONLY_AVATAR).id,
+						getBankWithdrawl(STORAGE_ONLY_AVATAR).id, getStoragePlacement(STORAGE_ONLY_AVATAR).id, getStorageWithdrawl(STORAGE_ONLY_AVATAR).id,
+						getSumsRecomputedAt(STORAGE_ONLY_AVATAR).id, getLastUpdatedKey().id);
+	}
+
+	@Test
+	void stampsTheRecomputeInstantOfEveryRefreshedAvatar() {
+		bankRepo.seedEntries(AVATAR, List.of(bankPlacement(100)));
+		bankRepo.seedAvatars(List.of(AVATAR));
+		storageRepo.seedAvatars(List.of());
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Instant>get(getSumsRecomputedAt(AVATAR))).contains(FIXED_NOW);
+	}
+
+	@Test
+	void stampsOneAndTheSameRecomputeInstantForEveryAvatarOfARunWhileTheClockKeepsTicking() {
+		bankRepo.seedAvatars(List.of(AVATAR, BANK_ONLY_AVATAR));
+		storageRepo.seedAvatars(List.of(STORAGE_ONLY_AVATAR));
+		EvergoreDataEvaluator ticking = new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, new KnownAvatars(bankRepo, storageRepo), new TickingClock(), logger);
+
+		ticking.evaluateData();
+
+		assertThat(List
+				.of(metaRepo.<Instant>get(getSumsRecomputedAt(AVATAR)), metaRepo.<Instant>get(getSumsRecomputedAt(BANK_ONLY_AVATAR)),
+						metaRepo.<Instant>get(getSumsRecomputedAt(STORAGE_ONLY_AVATAR))))
+				.containsOnly(Optional.of(FIXED_NOW));
+	}
+
+	@Test
+	void leavesTheRecomputeInstantOfAnAvatarWhoseLedgerCannotBeReadAtItsPreviousValue() {
+		Instant previousRun = FIXED_NOW.minusSeconds(86400);
+		metaRepo.put(getSumsRecomputedAt(UNREADABLE_AVATAR), previousRun);
+		bankRepo.seedAvatars(List.of(UNREADABLE_AVATAR));
+		storageRepo.seedAvatars(List.of());
+		bankRepo.failOn(UNREADABLE_AVATAR);
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Instant>get(getSumsRecomputedAt(UNREADABLE_AVATAR))).contains(previousRun);
+	}
+
+	@Test
+	void seedsTheRecomputeInstantOfAFailedAvatarWithoutOneFromTheRunThatLastReachedTheGuild() {
+		Instant runBeforeThisOne = FIXED_NOW.minusSeconds(86400);
+		metaRepo.put(getSumsRecomputedAt(AVATAR), runBeforeThisOne);
+		bankRepo.seedAvatars(List.of(AVATAR, UNREADABLE_AVATAR));
+		storageRepo.seedAvatars(List.of());
+		bankRepo.failOn(AVATAR);
+		bankRepo.failOn(UNREADABLE_AVATAR);
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Instant>get(getSumsRecomputedAt(UNREADABLE_AVATAR))).contains(runBeforeThisOne);
+	}
+
+	@Test
+	void seedsAcrossTheSecondPassOfTheBerlinFallBackHourWithoutLosingThatHour() {
+		Instant secondPassOfTheFallBack = Instant.parse("2025-10-26T01:30:00Z");
+		metaRepo.put(getSumsRecomputedAt(AVATAR), secondPassOfTheFallBack);
+		metaRepo.put(getLastUpdatedKey(), LocalDateTime.ofInstant(secondPassOfTheFallBack, APP_ZONE));
+		bankRepo.seedAvatars(List.of(AVATAR, UNREADABLE_AVATAR));
+		storageRepo.seedAvatars(List.of());
+		bankRepo.failOn(AVATAR);
+		bankRepo.failOn(UNREADABLE_AVATAR);
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Instant>get(getSumsRecomputedAt(UNREADABLE_AVATAR))).contains(secondPassOfTheFallBack);
+	}
+
+	@Test
+	void leavesASeededAvatarAsCurrentAsTheAvatarWhoseStampAnchorsTheLastCollection() {
+		Instant lastCollection = Instant.parse("2025-10-26T01:30:00Z");
+		metaRepo.put(getSumsRecomputedAt(AVATAR), lastCollection);
+		metaRepo.put(getLastUpdatedKey(), LocalDateTime.ofInstant(lastCollection, APP_ZONE));
+		bankRepo.seedAvatars(List.of(AVATAR, UNREADABLE_AVATAR));
+		storageRepo.seedAvatars(List.of());
+		bankRepo.failOn(AVATAR);
+		bankRepo.failOn(UNREADABLE_AVATAR);
+		tested.evaluateData();
+
+		List<AvatarContribution> guild = new AvatarContributions(new KnownAvatars(bankRepo, storageRepo), metaRepo, bankRepo, storageRepo).ofEveryKnownAvatar().avatars();
+
+		assertThat(guild).extracting(AvatarContribution::staleSumsFrom).containsOnlyNulls();
+	}
+
+	@Test
+	void leavesAFailedAvatarWithoutARecomputeInstantWhileNoAvatarCarriesOne() {
+		bankRepo.seedAvatars(List.of(UNREADABLE_AVATAR));
+		storageRepo.seedAvatars(List.of());
+		bankRepo.failOn(UNREADABLE_AVATAR);
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Instant>get(getSumsRecomputedAt(UNREADABLE_AVATAR))).isEmpty();
+	}
+
+	@Test
+	void stampsTheSecondRunsOwnInstantOnEveryAvatarItRefreshesAgain() {
+		bankRepo.seedAvatars(List.of(AVATAR, BANK_ONLY_AVATAR));
+		storageRepo.seedAvatars(List.of());
+		EvergoreDataEvaluator ticking = new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, new KnownAvatars(bankRepo, storageRepo), new TickingClock(), logger);
+		ticking.evaluateData();
+
+		ticking.evaluateData();
+
+		assertThat(List.of(metaRepo.<Instant>get(getSumsRecomputedAt(AVATAR)), metaRepo.<Instant>get(getSumsRecomputedAt(BANK_ONLY_AVATAR))))
+				.containsOnly(Optional.of(FIXED_NOW.plusMillis(1)));
 	}
 
 	@Test
@@ -295,6 +408,27 @@ class EvergoreDataEvaluatorTest {
 				throw new RuntimeException("storage lookup failed");
 			}
 			return super.getAllFor(avatar);
+		}
+	}
+
+	private static final class TickingClock extends Clock {
+		private Instant now = FIXED_NOW;
+
+		@Override
+		public Instant instant() {
+			Instant current = now;
+			now = now.plusMillis(1);
+			return current;
+		}
+
+		@Override
+		public ZoneId getZone() {
+			return ZoneOffset.UTC;
+		}
+
+		@Override
+		public Clock withZone(ZoneId zone) {
+			return this;
 		}
 	}
 }
