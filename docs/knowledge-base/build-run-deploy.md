@@ -382,7 +382,11 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
   `pre-commit` runs it for any commit touching `deploy/`, so a weakened check cannot land.
 - **What the self-test does not prove:** the transport, the real filesystem permissions and real
   Docker semantics are stubbed, because the home server is not reachable from the work machine's
-  agent session. A `--dry-run` against the actual host is what shortens the first real run.
+  agent session.
+- **The script has never run against the home server** (author decision 2026-09-09, in
+  open-questions.md): the `0.2.0` deploy is its first real run there, and the rollback path will not
+  have run before it. Start that deploy with `--dry-run` as its own step, and schedule it with time
+  to read a log.
 
 Runs against the Docker host daemon — from a host shell or from the devcontainer, whose `docker`
 CLI targets that same daemon. Steps 1–3 must be done **before** the running container is replaced.
