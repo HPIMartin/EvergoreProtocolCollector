@@ -552,7 +552,7 @@ describe('SortableTable row marks', () => {
   afterEach(cleanup)
 
   const staleNote =
-    'Veraltete Informationen. Letzte erfolgreiche Aktualisierung vom 08.09.2026 03:12.'
+    'Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom 08.09.2026 03:12.'
   const markOfStaleMembers = (member: Member) =>
     member.name === 'Ärger' ? staleNote : null
 

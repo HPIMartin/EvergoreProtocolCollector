@@ -289,7 +289,7 @@ describe('App', () => {
       screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
     ).toStrictEqual([undefined, 'true'])
     expect(screen.getByTestId('row-mark').textContent).toContain(
-      'Veraltete Informationen. Letzte erfolgreiche Aktualisierung vom 30.07.2026 03:12.',
+      'Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom 30.07.2026 03:12.',
     )
   })
 
@@ -301,7 +301,7 @@ describe('App', () => {
 
     expect(screen.getByTestId('total-row').dataset.stale).toBe('true')
     expect(screen.getByTestId('total-mark').textContent).toContain(
-      'Enthält mindestens eine Zeile mit veralteten Informationen.',
+      'Enthält mindestens eine Zeile mit veralteten Zahlen.',
     )
   })
 
@@ -334,7 +334,7 @@ describe('App', () => {
     expect(screen.queryByTestId('row-mark')).toBeNull()
     expect(screen.getByTestId('total-row').dataset.stale).toBe('true')
     expect(screen.getByTestId('total-mark').textContent).toContain(
-      'Enthält mindestens eine Zeile mit veralteten Informationen.',
+      'Enthält mindestens eine Zeile mit veralteten Zahlen.',
     )
   })
 

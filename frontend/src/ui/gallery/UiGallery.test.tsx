@@ -73,7 +73,7 @@ describe('UiGallery', () => {
 
     expect(marked).toHaveLength(1)
     expect(overview.getByTestId('row-mark').textContent).toContain(
-      'Veraltete Informationen. Letzte erfolgreiche Aktualisierung vom',
+      'Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom',
     )
   })
 
@@ -97,7 +97,7 @@ describe('UiGallery', () => {
     )
 
     expect(total.textContent).toBe(
-      '!Enthält mindestens eine Zeile mit veralteten Informationen.' +
+      '!Enthält mindestens eine Zeile mit veralteten Zahlen.' +
         'Gilde161.565247.0531.722.4102.688.891-1.051.969––',
     )
   })

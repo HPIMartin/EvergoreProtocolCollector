@@ -147,7 +147,7 @@ Four top-level folders under `frontend/src/`:
   `SortableTable`'s tone rule already does for every number column.
 - **A row whose sums are older than the last collection is marked, and its activity columns are
   not** (decision 2026-09-09): `staleSumsFrom` becomes `SortableTable`'s `mark`, so that row gets
-  the stripe and an `!` ahead of the avatar name reading "Veraltete Informationen. Letzte
+  the stripe and an `!` ahead of the avatar name reading "Veraltete Zahlen. Letzte
   erfolgreiche Aktualisierung vom `<Berlin wall clock>`."; `totals.containsStaleSums` becomes
   `total.mark`, so the guild row states that it contains such a row even when the served page does
   not show it. The two activity columns of a marked row keep showing what the ledger says:
