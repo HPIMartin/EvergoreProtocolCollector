@@ -87,8 +87,7 @@ class AdminStatusEndpointTest {
 
 	@Test
 	void namesEveryUnknownItemAndFailedAvatarOfTheLastRunOnceAndInOrder() {
-		lastRunStatus.recordUnknownItems(List.of("Unobtainium", "Unobtainium"));
-		lastRunStatus.recordFailedAvatars(List.of("Zwerg", "Alrik"));
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-09-06T03:00:10Z"), List.of("Unobtainium", "Unobtainium"), List.of("Zwerg", "Alrik"));
 
 		JSONObject body = adminStatus();
 

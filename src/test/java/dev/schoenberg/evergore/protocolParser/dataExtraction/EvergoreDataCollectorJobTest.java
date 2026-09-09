@@ -39,8 +39,8 @@ class EvergoreDataCollectorJobTest {
 	void recordsSuccessfulScrapeAndRecomputeAfterASuccessfulRun() {
 		tested.scheduleEvery24Hours();
 
-		assertThat(lastRunStatus.lastSuccessfulScrape()).contains(FIXED_NOW);
-		assertThat(lastRunStatus.lastSuccessfulRecompute()).contains(FIXED_NOW);
+		assertThat(lastRunStatus.snapshot().lastSuccessfulScrape()).contains(FIXED_NOW);
+		assertThat(lastRunStatus.snapshot().lastSuccessfulRecompute()).contains(FIXED_NOW);
 	}
 
 	@Test
@@ -50,9 +50,9 @@ class EvergoreDataCollectorJobTest {
 		tested.scheduleEvery24Hours();
 
 		assertThat(evaluator.evaluateCalled).isTrue();
-		assertThat(lastRunStatus.lastScrapeFailure()).contains(FIXED_NOW);
-		assertThat(lastRunStatus.lastSuccessfulScrape()).isEmpty();
-		assertThat(lastRunStatus.lastSuccessfulRecompute()).contains(FIXED_NOW);
+		assertThat(lastRunStatus.snapshot().lastScrapeFailure()).contains(FIXED_NOW);
+		assertThat(lastRunStatus.snapshot().lastSuccessfulScrape()).isEmpty();
+		assertThat(lastRunStatus.snapshot().lastSuccessfulRecompute()).contains(FIXED_NOW);
 	}
 
 	@Test
@@ -61,9 +61,9 @@ class EvergoreDataCollectorJobTest {
 
 		assertThatThrownBy(() -> tested.scheduleEvery24Hours()).isInstanceOf(RuntimeException.class);
 
-		assertThat(lastRunStatus.lastSuccessfulScrape()).contains(FIXED_NOW);
-		assertThat(lastRunStatus.lastRecomputeFailure()).contains(FIXED_NOW);
-		assertThat(lastRunStatus.lastSuccessfulRecompute()).isEmpty();
+		assertThat(lastRunStatus.snapshot().lastSuccessfulScrape()).contains(FIXED_NOW);
+		assertThat(lastRunStatus.snapshot().lastRecomputeFailure()).contains(FIXED_NOW);
+		assertThat(lastRunStatus.snapshot().lastSuccessfulRecompute()).isEmpty();
 	}
 
 	@Test
@@ -104,7 +104,7 @@ class EvergoreDataCollectorJobTest {
 
 		tested.scheduleEvery24Hours();
 
-		assertThat(lastRunStatus.unknownItemNames()).containsExactly("Unobtainium");
+		assertThat(lastRunStatus.snapshot().unknownItemNames()).containsExactly("Unobtainium");
 	}
 
 	private static class ZeroDelayConfiguration extends Configuration {

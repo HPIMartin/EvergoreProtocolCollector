@@ -18,7 +18,7 @@
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
 | M5 | Overview truth | author steps only | Closing out; the code landed, two author checks remain |
-| M6 | Numbers you can trust | D20, B25 | Every feature stands on these numbers, and on a status surface that reports one run |
+| M6 | Numbers you can trust | D20 | Every feature stands on these numbers, and on a status surface that reports one run |
 | M7 | The overview states the guild's actual position | E15, E16, F6 | The most visible defect: the total row says the opposite of the truth. **M6 plus M7 is the `0.2.0` cut**, and F6 drives its deploy (decision 2026-09-07) |
 | M8 | Clear the last bottleneck | D12 | The `M` item that still gates the repeated read method; the migration framework landed |
 | M9 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
@@ -46,8 +46,8 @@ so when it did not.
       overview no longer carries a guild-wide number that reads like a per-row freshness claim.
 - [ ] A row whose sums did not refresh is marked as such on the wire and in the table, and the
       guild total states that it contains one (backlog D20).
-- [ ] `/health` and `/api/v1/admin/status` answer from one atomic snapshot, so no reader mixes two
-      runs' fields (backlog B25).
+- [x] `/health` and `/api/v1/admin/status` answer from one atomic snapshot, so no reader mixes two
+      runs' fields.
 - [x] No read path dereferences a ledger `timeStamp` unguarded: the column is `NOT NULL` in the
       database, so an entry without a timestamp cannot be stored in the first place.
 

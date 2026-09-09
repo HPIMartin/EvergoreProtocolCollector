@@ -34,7 +34,7 @@ class LastRunHealthIndicatorTest {
 	@Test
 	void reportsUpWithTimestampDetailAfterSuccessfulRecompute() {
 		Instant recorded = Instant.parse("2026-06-21T12:00:00Z");
-		lastRunStatus.recordSuccessfulRecompute(recorded);
+		lastRunStatus.recordSuccessfulRecompute(recorded, List.of(), List.of());
 
 		HealthResult result = singleResult();
 
@@ -48,7 +48,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void omitsUnknownItemDetailWhenNoneOccurredInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"));
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of());
 
 		HealthResult result = singleResult();
 
@@ -59,8 +59,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsUnknownItemCountAndNamesWhenPresentInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"));
-		lastRunStatus.recordUnknownItems(List.of("Unobtainium", "Unobtainium"));
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of("Unobtainium", "Unobtainium"), List.of());
 
 		HealthResult result = singleResult();
 
@@ -72,7 +71,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsScrapeFailureButNotRecomputeFailureAfterASuccessfulRecomputeFollowedByAFailedScrape() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"));
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of());
 		lastRunStatus.recordScrapeFailure(Instant.parse("2026-06-22T12:00:00Z"));
 
 		HealthResult result = singleResult();
@@ -86,7 +85,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsDownWithRecomputeFailureAfterASuccessfulRecomputeFollowedByAFailedRecompute() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"));
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of());
 		lastRunStatus.recordRecomputeFailure(Instant.parse("2026-06-22T12:00:00Z"));
 
 		HealthResult result = singleResult();

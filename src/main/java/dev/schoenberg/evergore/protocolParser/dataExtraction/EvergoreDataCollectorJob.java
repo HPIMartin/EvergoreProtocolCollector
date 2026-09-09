@@ -57,9 +57,7 @@ public class EvergoreDataCollectorJob {
 		logger.info("Evaluate Data...");
 		try {
 			EvaluationResult result = evaluation.evaluateData();
-			lastRunStatus.recordUnknownItems(result.unknownItemNames());
-			lastRunStatus.recordFailedAvatars(result.failedAvatarNames());
-			lastRunStatus.recordSuccessfulRecompute(clock.instant());
+			lastRunStatus.recordSuccessfulRecompute(clock.instant(), result.unknownItemNames(), result.failedAvatarNames());
 			logger.info("Data evaluation done!");
 		} catch (RuntimeException e) {
 			lastRunStatus.recordRecomputeFailure(clock.instant());
