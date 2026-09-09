@@ -26,6 +26,7 @@
 |------|---|---|----------------|
 | A secret or host detail lands in the public showcase repo | L | H | Hard no-secrets rule (handbook §7), deny-listed secret reads, gitignored `*.local.*`/`zugang.txt`; staged-content scan hooks (backlog G13); leak protocol: purge and rotate |
 | The 2023 `selenium/standalone-firefox:109.0` image carries browser/OS CVEs | M | M | Dependabot `docker` ecosystem plus one refresh pass (backlog H11) |
+| Text the author did not write reaches an agent's context and is acted on as an instruction | L | H | Only the author's own chat turn counts as an instruction, every other source is data, and non-routine occurrences are reported rather than quietly refused ([working-with-ai-agents.md](knowledge-base/working-with-ai-agents.md), "Instruction sources"). Observed once, 2026-09-09, with a harmless payload. Nothing mechanical enforces that judgment, so the deny floor and the `ask` tier are the real backstop |
 
 ## Process: solo, AI-assisted
 
