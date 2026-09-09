@@ -93,8 +93,9 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
 1. **Red**: smallest failing test expressing the next behavior.
 2. **Green**: simplest code that passes.
 3. **Refactor**: improve design with tests green.
-4. **Commit**: one micro-cycle ≈ one commit, via the §7 protocol (propose message → confirm →
-   commit; never push).
+4. **Commit**: one full cycle = one commit, via the §7 protocol (propose message → confirm →
+   commit; never push). Red and green stay uncommitted, local steps inside the cycle; only the
+   refactored, green result is committed, so every commit is atomic and independently revertable.
 
 - Domain/application logic is unit-tested **without the framework** (plain JUnit + AssertJ, fast).
 - One behavior per test; arrange/act/assert; table-driven where inputs vary (parser, item values).
