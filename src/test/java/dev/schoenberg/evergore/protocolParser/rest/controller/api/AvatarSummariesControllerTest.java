@@ -1,5 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller.api;
 
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -17,10 +18,14 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformati
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getSumsRecomputedAt;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class AvatarSummariesControllerTest {
 	private static final int WHOLE_PAGE = 100;
+	private static final Instant THE_RUN_BEFORE = Instant.parse("2026-09-08T01:12:00Z");
+	private static final Instant LAST_COLLECTION = Instant.parse("2026-09-09T01:12:00Z");
 
 	private final FakeMetaInformationRepository metaRepo = new FakeMetaInformationRepository();
 	private final BankRepositoryStub bankRepo = new BankRepositoryStub();
@@ -55,7 +60,7 @@ class AvatarSummariesControllerTest {
 
 		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
 
-		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", 0, 0, 0, 0, 0, null, null));
+		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", 0, 0, 0, 0, 0, null, null, null));
 	}
 
 	@Test
@@ -110,6 +115,41 @@ class AvatarSummariesControllerTest {
 		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
 
 		assertThat(page.totals().storageDeposited()).isEqualTo(300);
+	}
+
+	@Test
+	void servesNoStaleInstantForARowThatTheLastCollectionRefreshed() {
+		bankRepo.seedAvatars(List.of("Aurora", "Calix"));
+		metaRepo.put(getSumsRecomputedAt("Aurora"), LAST_COLLECTION);
+		metaRepo.put(getSumsRecomputedAt("Calix"), LAST_COLLECTION);
+
+		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
+
+		assertThat(page.items()).extracting(AvatarSummary::staleSumsFrom).containsOnlyNulls();
+		assertThat(page.totals().containsStaleSums()).isFalse();
+	}
+
+	@Test
+	void servesTheInstantARowsSumsComeFromWhenTheLastCollectionMissedIt() {
+		bankRepo.seedAvatars(List.of("Aurora", "Calix"));
+		metaRepo.put(getSumsRecomputedAt("Aurora"), THE_RUN_BEFORE);
+		metaRepo.put(getSumsRecomputedAt("Calix"), LAST_COLLECTION);
+
+		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
+
+		assertThat(page.items()).extracting(AvatarSummary::avatar, AvatarSummary::staleSumsFrom).containsExactly(tuple("Aurora", THE_RUN_BEFORE), tuple("Calix", null));
+	}
+
+	@Test
+	void statesThatTheGuildTotalContainsStaleSumsEvenWhenThePageDoesNotShowThatRow() {
+		bankRepo.seedAvatars(List.of("Aurora", "Calix"));
+		metaRepo.put(getSumsRecomputedAt("Aurora"), LAST_COLLECTION);
+		metaRepo.put(getSumsRecomputedAt("Calix"), THE_RUN_BEFORE);
+
+		AvatarSummaryPage page = tested.summaries(0, 1);
+
+		assertThat(page.items()).extracting(AvatarSummary::avatar).containsExactly("Aurora");
+		assertThat(page.totals().containsStaleSums()).isTrue();
 	}
 
 	private static List<String> avatarsOf(AvatarSummaryPage page) {

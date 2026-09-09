@@ -16,6 +16,7 @@ import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContribution;
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContributions;
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.Contribution;
+import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.GuildContributions;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummary;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummaryPage;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.GuildTotals;
@@ -45,24 +46,26 @@ public class AvatarSummariesController {
 	public AvatarSummaryPage summaries(@QueryValue(value = PAGE, defaultValue = DEFAULT_PAGE) @Min(0) int page,
 			@QueryValue(value = SIZE, defaultValue = DEFAULT_SIZE) @Positive @Max(MAX_SIZE) int size) {
 		PageRequest window = new PageRequest(page, size);
-		List<AvatarContribution> guild = contributions.ofEveryKnownAvatar().avatars();
+		GuildContributions recompute = contributions.ofEveryKnownAvatar();
+		List<AvatarContribution> guild = recompute.avatars();
 
 		logger.debug("Providing information for " + guild.size() + " avatars.");
 
 		List<AvatarSummary> items = guild.stream().skip(window.offset()).limit(window.size()).map(AvatarSummariesController::summaryOf).toList();
-		return new AvatarSummaryPage(window.page(), window.size(), guild.size(), totalsOf(guild), items);
+		return new AvatarSummaryPage(window.page(), window.size(), guild.size(), totalsOf(recompute), items);
 	}
 
-	private static GuildTotals totalsOf(List<AvatarContribution> guild) {
-		Contribution total = Contribution.sumOf(guild.stream().map(avatar -> avatar.contribution().inWholeGold()).toList());
+	private static GuildTotals totalsOf(GuildContributions recompute) {
+		Contribution total = Contribution.sumOf(recompute.avatars().stream().map(avatar -> avatar.contribution().inWholeGold()).toList());
 
-		return new GuildTotals(total.bankWithdrawn(), total.bankDeposited(), (long) total.storageWithdrawn(), (long) total.storageDeposited(), (long) total.net());
+		return new GuildTotals(total.bankWithdrawn(), total.bankDeposited(), (long) total.storageWithdrawn(), (long) total.storageDeposited(), (long) total.net(),
+				recompute.containsStaleSums());
 	}
 
 	private static AvatarSummary summaryOf(AvatarContribution avatar) {
 		Contribution whole = avatar.contribution().inWholeGold();
 
 		return new AvatarSummary(avatar.avatar(), whole.bankWithdrawn(), whole.bankDeposited(), (long) whole.storageWithdrawn(), (long) whole.storageDeposited(),
-				(long) whole.net(), avatar.lastBankActivity(), avatar.lastStorageActivity());
+				(long) whole.net(), avatar.lastBankActivity(), avatar.lastStorageActivity(), avatar.staleSumsFrom());
 	}
 }

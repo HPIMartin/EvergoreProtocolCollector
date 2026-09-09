@@ -159,7 +159,7 @@ service's only read surface.
 
 | Route | Answers |
 |-------|---------|
-| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, plus `lastBankActivity` and `lastStorageActivity`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
+| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, plus `lastBankActivity`, `lastStorageActivity` and `staleSumsFrom`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
 | `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first. |
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first. |
 | `GET /api/v1/admin/status` | Anonymous, `token`-exempt (same trust level as `/health`): `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, every key always rendered. The operator-facing facts that used to sit on the overview; see below. |
@@ -169,7 +169,18 @@ service's only read surface.
 - **`totals` sums every known avatar, not the served page** (decision 2026-09-02), the reading
   `totalCount` already has. It carries the same five numbers as a row, so the SPA renders its total
   row without arithmetic of its own, and neither paging nor a later time window can turn a guild
-  total into a page total behind the reader's back.
+  total into a page total behind the reader's back. Its sixth field `containsStaleSums` is over the
+  same union, so the total row still states that it contains a stale row when the served page does
+  not show that row.
+- **`staleSumsFrom` is `null` unless the row's sums are older than the last collection**, and then it
+  is the instant they were last recomputed. One nullable field rather than a flag beside a
+  timestamp: present means both "stale" and "this old". The comparison happens **server-side**,
+  against the newest per-avatar recompute instant in the meta store, so no guild-wide collection
+  timestamp returns to this envelope; the one that used to sit here moved to
+  `/api/v1/admin/status`. A row a recompute failure skipped therefore states its own age, while
+  scrape time and the failure's own record stay operator's data on the admin surface. What the
+  instant means, and why it is stored as epoch millis, is in
+  [domain-model.md](domain-model.md).
 - **Paging**: `?page=` (zero-based, `@Min(0)`) and `?size=` (default 100, `1..1000`); a violation is
   a **400**, not a clamp, so a client bug stays visible. `totalCount` is the unpaged total, so the
   SPA can size its navigation instead of inferring the end from a short page.

@@ -74,13 +74,13 @@ class ProtocolEvaluationAcceptanceTest {
 		assertThat(body.getLong("totalCount")).isEqualTo(4);
 		assertThat(body.getJSONArray("items").toString())
 				.isEqualTo("[{\"avatar\":\"Aurora\",\"bankWithdrawn\":200,\"bankDeposited\":1500,\"storageWithdrawn\":300,\"storageDeposited\":185,\"net\":1185,"
-						+ "\"lastBankActivity\":\"2024-01-12T11:00:00Z\",\"lastStorageActivity\":\"2024-01-17T11:00:00Z\"},"
+						+ "\"lastBankActivity\":\"2024-01-12T11:00:00Z\",\"lastStorageActivity\":\"2024-01-17T11:00:00Z\",\"staleSumsFrom\":null},"
 						+ "{\"avatar\":\"Boreas\",\"bankWithdrawn\":0,\"bankDeposited\":750,\"storageWithdrawn\":0,\"storageDeposited\":46,\"net\":796,"
-						+ "\"lastBankActivity\":\"2024-02-01T08:00:00Z\",\"lastStorageActivity\":\"2024-02-05T08:00:00Z\"},"
+						+ "\"lastBankActivity\":\"2024-02-01T08:00:00Z\",\"lastStorageActivity\":\"2024-02-05T08:00:00Z\",\"staleSumsFrom\":null},"
 						+ "{\"avatar\":\"Brynja\",\"bankWithdrawn\":0,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":370,\"net\":370,"
-						+ "\"lastBankActivity\":null,\"lastStorageActivity\":\"2024-02-06T09:00:00Z\"},"
+						+ "\"lastBankActivity\":null,\"lastStorageActivity\":\"2024-02-06T09:00:00Z\",\"staleSumsFrom\":null},"
 						+ "{\"avatar\":\"Calix\",\"bankWithdrawn\":300,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":-300,"
-						+ "\"lastBankActivity\":\"2024-03-01T07:00:00Z\",\"lastStorageActivity\":null}]");
+						+ "\"lastBankActivity\":\"2024-03-01T07:00:00Z\",\"lastStorageActivity\":null,\"staleSumsFrom\":null}]");
 	}
 
 	@Test
