@@ -99,6 +99,8 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
 
 - Domain/application logic is unit-tested **without the framework** (plain JUnit + AssertJ, fast).
 - One behavior per test; arrange/act/assert; table-driven where inputs vary (parser, item values).
+  When a class's tests repeat the same act, wrap it in a short-named helper (e.g. `snapshot()`) so
+  the call itself reads as the Act, not an expression buried inside each assertion.
 - Bug fix ⇒ reproducing test first, then fix (e.g. the double `getAllDifferentAvatars`).
 - A reviewer (human or agent) may gate each commit on process + criteria adherence (§9).
 

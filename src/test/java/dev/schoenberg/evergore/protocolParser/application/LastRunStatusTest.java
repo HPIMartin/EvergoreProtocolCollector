@@ -16,9 +16,13 @@ class LastRunStatusTest {
 		tested = new LastRunStatus();
 	}
 
+	private LastRunStatus.Snapshot snapshot() {
+		return tested.snapshot();
+	}
+
 	@Test
 	void isEmptyInitiallyForScrapeAndRecomputeOutcomes() {
-		LastRunStatus.Snapshot snapshot = tested.snapshot();
+		LastRunStatus.Snapshot snapshot = snapshot();
 
 		assertThat(snapshot.lastSuccessfulScrape()).isEmpty();
 		assertThat(snapshot.lastScrapeFailure()).isEmpty();
@@ -34,7 +38,7 @@ class LastRunStatusTest {
 		tested.recordSuccessfulScrape(first);
 		tested.recordSuccessfulScrape(second);
 
-		assertThat(tested.snapshot().lastSuccessfulScrape()).contains(second);
+		assertThat(snapshot().lastSuccessfulScrape()).contains(second);
 	}
 
 	@Test
@@ -45,7 +49,7 @@ class LastRunStatusTest {
 		tested.recordScrapeFailure(first);
 		tested.recordScrapeFailure(second);
 
-		assertThat(tested.snapshot().lastScrapeFailure()).contains(second);
+		assertThat(snapshot().lastScrapeFailure()).contains(second);
 	}
 
 	@Test
@@ -56,7 +60,7 @@ class LastRunStatusTest {
 		tested.recordSuccessfulRecompute(first, List.of(), List.of());
 		tested.recordSuccessfulRecompute(second, List.of(), List.of());
 
-		assertThat(tested.snapshot().lastSuccessfulRecompute()).contains(second);
+		assertThat(snapshot().lastSuccessfulRecompute()).contains(second);
 	}
 
 	@Test
@@ -67,7 +71,7 @@ class LastRunStatusTest {
 		tested.recordRecomputeFailure(first);
 		tested.recordRecomputeFailure(second);
 
-		assertThat(tested.snapshot().lastRecomputeFailure()).contains(second);
+		assertThat(snapshot().lastRecomputeFailure()).contains(second);
 	}
 
 	@Test
@@ -82,7 +86,7 @@ class LastRunStatusTest {
 		tested.recordSuccessfulRecompute(recomputeSuccess, List.of(), List.of());
 		tested.recordRecomputeFailure(recomputeFailure);
 
-		LastRunStatus.Snapshot snapshot = tested.snapshot();
+		LastRunStatus.Snapshot snapshot = snapshot();
 		assertThat(snapshot.lastSuccessfulScrape()).contains(scrapeSuccess);
 		assertThat(snapshot.lastScrapeFailure()).contains(scrapeFailure);
 		assertThat(snapshot.lastSuccessfulRecompute()).contains(recomputeSuccess);
@@ -91,14 +95,14 @@ class LastRunStatusTest {
 
 	@Test
 	void isNotRecomputeHealthyInitially() {
-		assertThat(tested.snapshot().recomputeHealthy()).isFalse();
+		assertThat(snapshot().recomputeHealthy()).isFalse();
 	}
 
 	@Test
 	void becomesRecomputeHealthyAfterASuccessfulRecompute() {
 		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of());
 
-		assertThat(tested.snapshot().recomputeHealthy()).isTrue();
+		assertThat(snapshot().recomputeHealthy()).isTrue();
 	}
 
 	@Test
@@ -106,7 +110,7 @@ class LastRunStatusTest {
 		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of());
 		tested.recordRecomputeFailure(Instant.parse("2026-06-21T09:00:00Z"));
 
-		assertThat(tested.snapshot().recomputeHealthy()).isFalse();
+		assertThat(snapshot().recomputeHealthy()).isFalse();
 	}
 
 	@Test
@@ -115,19 +119,19 @@ class LastRunStatusTest {
 		tested.recordRecomputeFailure(Instant.parse("2026-06-21T09:00:00Z"));
 		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T10:00:00Z"), List.of(), List.of());
 
-		assertThat(tested.snapshot().recomputeHealthy()).isTrue();
+		assertThat(snapshot().recomputeHealthy()).isTrue();
 	}
 
 	@Test
 	void hasNoUnknownItemNamesInitially() {
-		assertThat(tested.snapshot().unknownItemNames()).isEmpty();
+		assertThat(snapshot().unknownItemNames()).isEmpty();
 	}
 
 	@Test
 	void recordsTheUnknownItemNamesOfTheLastRun() {
 		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of("Unobtainium", "Unobtainium"), List.of());
 
-		assertThat(tested.snapshot().unknownItemNames()).containsExactly("Unobtainium", "Unobtainium");
+		assertThat(snapshot().unknownItemNames()).containsExactly("Unobtainium", "Unobtainium");
 	}
 
 	@Test
@@ -136,7 +140,7 @@ class LastRunStatusTest {
 
 		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T09:00:00Z"), List.of(), List.of());
 
-		LastRunStatus.Snapshot snapshot = tested.snapshot();
+		LastRunStatus.Snapshot snapshot = snapshot();
 		assertThat(snapshot.unknownItemNames()).isEmpty();
 		assertThat(snapshot.failedAvatarNames()).isEmpty();
 	}
@@ -147,7 +151,7 @@ class LastRunStatusTest {
 
 		tested.recordRecomputeFailure(Instant.parse("2026-06-21T09:00:00Z"));
 
-		LastRunStatus.Snapshot snapshot = tested.snapshot();
+		LastRunStatus.Snapshot snapshot = snapshot();
 		assertThat(snapshot.lastSuccessfulRecompute()).contains(Instant.parse("2026-06-21T08:00:00Z"));
 		assertThat(snapshot.unknownItemNames()).containsExactly("Unobtainium");
 		assertThat(snapshot.failedAvatarNames()).containsExactly("Zwerg");
