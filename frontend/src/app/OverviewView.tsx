@@ -1,8 +1,9 @@
 import type { ProtocolApi } from '../api'
 import { FIRST_PAGE } from '../api'
 import type { AvatarSummary, GuildTotals } from '../domain'
+import { GUILD_STALE_SUMS_NOTE, staleSumsNoteOf } from '../domain'
 import type { Column } from '../ui'
-import { SortableTable } from '../ui'
+import { formatTimestamp, SortableTable } from '../ui'
 
 import { LoadedView } from './LoadedView.tsx'
 import { requestKeyOf } from './requestKey.ts'
@@ -33,13 +34,26 @@ export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
             rows={overview.items}
             rowKey={(summary) => summary.avatar}
             emptyMessage="Noch kein Avatar erfasst."
-            total={{ label: 'Gilde', row: guildRowOf(overview.totals) }}
+            total={{
+              label: 'Gilde',
+              row: guildRowOf(overview.totals),
+              mark: overview.totals.containsStaleSums
+                ? GUILD_STALE_SUMS_NOTE
+                : undefined,
+            }}
+            mark={markOfStaleSums}
             onFollow={onFollow}
           />
         )}
       </LoadedView>
     </section>
   )
+}
+
+function markOfStaleSums(summary: AvatarSummary): string | null {
+  return summary.staleSumsFrom === null
+    ? null
+    : staleSumsNoteOf(formatTimestamp(summary.staleSumsFrom.toISOString()))
 }
 
 function guildRowOf(totals: GuildTotals): AvatarSummary {

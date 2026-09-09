@@ -145,6 +145,16 @@ Four top-level folders under `frontend/src/`:
   missing-value dash, not a fabricated date. Deposits carry the credit tone,
   withdrawals the debit tone, and the net carries neither until it turns negative, which
   `SortableTable`'s tone rule already does for every number column.
+- **A row whose sums are older than the last collection is marked, and its activity columns are
+  not** (decision 2026-09-09): `staleSumsFrom` becomes `SortableTable`'s `mark`, so that row gets
+  the stripe and an `!` ahead of the avatar name reading "Veraltete Informationen. Letzte
+  erfolgreiche Aktualisierung vom `<Berlin wall clock>`."; `totals.containsStaleSums` becomes
+  `total.mark`, so the guild row states that it contains such a row even when the served page does
+  not show it. The two activity columns of a marked row keep showing what the ledger says:
+  suppressing a true fact to prevent a wrong inference is the wrong trade, and the marker is what
+  removes the inference. The wording lives in `domain/staleSums.ts` beside `germanNameOf`, and takes
+  an already formatted instant, so the German stays in `domain` while the Berlin wall clock stays in
+  `ui`'s `format.ts`. What the row cannot say, and why, is under the wire contract below.
 - **The guild-wide total row comes from the envelope, not from the loaded rows** (decision
   2026-09-02): the overview hands `totals` to the table's `total` prop and does no arithmetic, so the
   row keeps meaning the guild once the overview pages or a time window narrows the body.

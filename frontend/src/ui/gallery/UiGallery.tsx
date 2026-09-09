@@ -1,6 +1,8 @@
 import type { NavigationLink } from '../PageFrame.tsx'
 import { PageFrame } from '../PageFrame.tsx'
 import { Pagination } from '../Pagination.tsx'
+import { GUILD_STALE_SUMS_NOTE, staleSumsNoteOf } from '../../domain'
+import { formatTimestamp } from '../format.ts'
 import type { Column } from '../SortableTable.tsx'
 import { SortableTable } from '../SortableTable.tsx'
 import { StatusPanel } from '../StatusPanel.tsx'
@@ -95,6 +97,12 @@ const ledgerColumns: readonly Column<LedgerRow>[] = [
   },
 ]
 
+function markOfStaleSums(row: OverviewRow): string | null {
+  return row.staleSumsFrom === null
+    ? null
+    : staleSumsNoteOf(formatTimestamp(row.staleSumsFrom))
+}
+
 export function UiGallery() {
   return (
     <PageFrame brand="Evergore Gildenbank" navigation={navigation}>
@@ -107,7 +115,12 @@ export function UiGallery() {
           rows={overviewRows}
           rowKey={(row) => row.avatar}
           emptyMessage="Es ist noch kein Mitglied erfasst."
-          total={{ label: 'Gilde', row: overviewTotal }}
+          total={{
+            label: 'Gilde',
+            row: overviewTotal,
+            mark: GUILD_STALE_SUMS_NOTE,
+          }}
+          mark={markOfStaleSums}
           initialSort={{ columnKey: 'avatar', direction: 'ascending' }}
         />
       </section>

@@ -4,6 +4,7 @@ export type { BankEntry } from './bankEntry.ts'
 export type { Ledger, LedgerVisitor } from './ledger.ts'
 export { entriesOf, unknownAvatar } from './ledger.ts'
 export type { Page } from './page.ts'
+export { GUILD_STALE_SUMS_NOTE, staleSumsNoteOf } from './staleSums.ts'
 export type { StorageEntry } from './storageEntry.ts'
 export type { TransferType } from './transferType.ts'
 export {

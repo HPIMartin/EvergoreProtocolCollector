@@ -46,6 +46,71 @@ const OVERVIEW_BODY = JSON.stringify({
   ],
 })
 
+const OVERVIEW_BODY_WITH_A_STALE_ROW = JSON.stringify({
+  page: 0,
+  size: 100,
+  totalCount: 2,
+  totals: {
+    bankWithdrawn: 1400,
+    bankDeposited: 3450,
+    storageWithdrawn: 200,
+    storageDeposited: 500,
+    net: 2350,
+    containsStaleSums: true,
+  },
+  items: [
+    {
+      avatar: 'Calix',
+      bankWithdrawn: 1200,
+      bankDeposited: 3400,
+      storageWithdrawn: 200,
+      storageDeposited: 500,
+      net: 2500,
+      lastBankActivity: '2026-08-04T09:30:00Z',
+      lastStorageActivity: '2026-08-05T10:15:00Z',
+      staleSumsFrom: null,
+    },
+    {
+      avatar: 'Erde-Eibenlanze',
+      bankWithdrawn: 200,
+      bankDeposited: 50,
+      storageWithdrawn: 0,
+      storageDeposited: 0,
+      net: -150,
+      lastBankActivity: '2026-08-05T09:58:00Z',
+      lastStorageActivity: '2026-07-31T21:05:00Z',
+      staleSumsFrom: '2026-07-30T01:12:00Z',
+    },
+  ],
+})
+
+const OVERVIEW_BODY_WHOSE_STALE_ROW_IS_OFF_THE_PAGE = JSON.stringify({
+  page: 0,
+  size: 1,
+  totalCount: 2,
+  totals: {
+    bankWithdrawn: 1400,
+    bankDeposited: 3450,
+    storageWithdrawn: 200,
+    storageDeposited: 500,
+    net: 2350,
+    containsStaleSums: true,
+  },
+  items: [
+    {
+      avatar: 'Calix',
+      bankWithdrawn: 1200,
+      bankDeposited: 3400,
+      storageWithdrawn: 200,
+      storageDeposited: 500,
+      net: 2500,
+      lastBankActivity: '2026-08-04T09:30:00Z',
+      lastStorageActivity: '2026-08-05T10:15:00Z',
+      staleSumsFrom: null,
+    },
+  ],
+})
+
 const NO_TOTALS = {
   bankWithdrawn: 0,
   bankDeposited: 0,
@@ -212,6 +277,65 @@ describe('App', () => {
       'Calix3.4001.2005002002.50005.08.2026 12:1504.08.2026 11:30',
       'Erde-Eibenlanze5020000-15031.07.2026 23:05–',
     ])
+  })
+
+  it('marks the row whose sums the last collection did not refresh', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITH_A_STALE_ROW),
+    )
+
+    expect(
+      screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
+    ).toStrictEqual([undefined, 'true'])
+    expect(screen.getByTestId('row-mark').textContent).toContain(
+      'Veraltete Informationen. Letzte erfolgreiche Aktualisierung vom 30.07.2026 03:12.',
+    )
+  })
+
+  it('says on the guild row that it contains a row with stale sums', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITH_A_STALE_ROW),
+    )
+
+    expect(screen.getByTestId('total-row').dataset.stale).toBe('true')
+    expect(screen.getByTestId('total-mark').textContent).toContain(
+      'Enthält mindestens eine Zeile mit veralteten Informationen.',
+    )
+  })
+
+  it('keeps showing the live activity of a marked row rather than hiding it', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITH_A_STALE_ROW),
+    )
+
+    const marked = screen.getAllByTestId('data-row')[1]?.textContent ?? ''
+
+    expect(marked).toContain('05.08.2026 11:58')
+    expect(marked).toContain('31.07.2026 23:05')
+  })
+
+  it('marks no row and no total while the collection refreshed every row', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect(screen.queryByTestId('row-mark')).toBeNull()
+    expect(screen.queryByTestId('total-mark')).toBeNull()
+    expect(screen.getByTestId('total-row').dataset.stale).toBeUndefined()
+  })
+
+  it('says the guild contains stale sums even when that row is off the page', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WHOSE_STALE_ROW_IS_OFF_THE_PAGE),
+    )
+
+    expect(screen.queryByTestId('row-mark')).toBeNull()
+    expect(screen.getByTestId('total-row').dataset.stale).toBe('true')
+    expect(screen.getByTestId('total-mark').textContent).toContain(
+      'Enthält mindestens eine Zeile mit veralteten Informationen.',
+    )
   })
 
   it('names the overview columns in German', async () => {

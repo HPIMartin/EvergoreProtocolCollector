@@ -125,12 +125,15 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   the point: when the evaluator still wrote each avatar immediately, an unreadable row aborted the
   run where it stood, leaving that avatar **and every avatar after him in collation order** stale
   while the earlier ones were already current (falsifier probe against the pre-change code,
-  2026-09-03). `/health` names the avatar; surfacing the staleness per row is **D20**.
+  2026-09-03). `/health` names the avatar for the operator, and the row itself carries the second consequence: it
+  states that its sums are older than the last collection, and from when they are
+  ([frontend.md](frontend.md)).
 - The `last_updated` key records **when data was last collected from the game**, not how complete the
   recompute was (author clarification 2026-09-03). It is part of the same batch, derived from the
   same instant the per-avatar recompute keys carry, and is written on **every** run that completed, including one in which
   an avatar failed: a scrape happened either way. It is an operator's datum rather than a per-row
-  freshness claim; the question "how current is this member's row" is answered by that row's own two
+  freshness claim; "how current is this member's row" is answered by that row's own
+  `sums_recomputed_at_<avatar>` instant, and "when did the member last move something" by its two
   **last-activity** columns. Moving it off the overview onto an admin page is a backlog item.
 - The `sums_recomputed_at_<avatar>` key records **when that avatar's stored sums were last
   recomputed**, as **epoch millis**, written in the same batch as his four sums. Epoch millis rather
@@ -152,7 +155,8 @@ This makes evaluation **idempotent** (a second run yields identical sums) and **
 avatar**: a failing avatar's own sums are withheld and recomputed cleanly on the next run that
 reaches him, whatever a prior run wrote. It is not self-healing at the guild level, because the
 collection timestamp advances on every completed run while that avatar's sums do not: what the run
-did and did not refresh is answered by `/health`'s `failedAvatarNames`, not by the timestamp.
+did and did not refresh is answered per avatar by the recompute instants, and by name for the
+operator in `/health`'s `failedAvatarNames`, never by the timestamp.
 
 This maps directly to the Google Sheet's columns 1–4 (see [02-google-sheet.md](google-sheet.md)).
 Column 5, the net **erzeugter Gildenmehrwert**, is **derived on the read side and never stored**

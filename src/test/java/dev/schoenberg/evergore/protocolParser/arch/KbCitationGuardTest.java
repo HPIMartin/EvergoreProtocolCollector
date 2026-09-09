@@ -39,6 +39,7 @@ class KbCitationGuardTest {
 		references.add("frontend.md: LoadedView");
 		references.add("frontend.md: SortableTable");
 		references.add("frontend.md: SortableTable");
+		references.add("frontend.md: SortableTable");
 		references.add("frontend.md: PageFrame");
 		return Collections.unmodifiableList(references);
 	}

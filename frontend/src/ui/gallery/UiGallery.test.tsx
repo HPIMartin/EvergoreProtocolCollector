@@ -13,6 +13,16 @@ const cellsOf = (sectionTestId: string, columnKey: string): (string | null)[] =>
     .getAllByTestId(`cell-${columnKey}`)
     .map((cell) => cell.textContent)
 
+const ownTextsOf = (sectionTestId: string, columnKey: string): string[] =>
+  within(screen.getByTestId(sectionTestId))
+    .getAllByTestId(`cell-${columnKey}`)
+    .map((cell) =>
+      Array.from(cell.childNodes)
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent ?? '')
+        .join(''),
+    )
+
 describe('UiGallery', () => {
   afterEach(cleanup)
 
@@ -44,13 +54,27 @@ describe('UiGallery', () => {
   it('sorts the overview by avatar', () => {
     render(<UiGallery />)
 
-    expect(cellsOf('gallery-overview', 'avatar')).toEqual([
+    expect(ownTextsOf('gallery-overview', 'avatar')).toEqual([
       'Aargh',
       'Alessia',
       'Bambor',
       'Evildead',
       'Fugger',
     ])
+  })
+
+  it('shows a row whose sums the last collection did not refresh', () => {
+    render(<UiGallery />)
+
+    const overview = within(screen.getByTestId('gallery-overview'))
+    const marked = overview
+      .getAllByTestId('data-row')
+      .filter((row) => row.dataset.stale === 'true')
+
+    expect(marked).toHaveLength(1)
+    expect(overview.getByTestId('row-mark').textContent).toContain(
+      'Veraltete Informationen. Letzte erfolgreiche Aktualisierung vom',
+    )
   })
 
   it('values the overview in German gold notation', () => {
@@ -73,7 +97,8 @@ describe('UiGallery', () => {
     )
 
     expect(total.textContent).toBe(
-      'Gilde161.565247.0531.722.4102.688.891-1.051.969––',
+      '!Enthält mindestens eine Zeile mit veralteten Informationen.' +
+        'Gilde161.565247.0531.722.4102.688.891-1.051.969––',
     )
   })
 

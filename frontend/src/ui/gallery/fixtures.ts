@@ -7,6 +7,7 @@ export type OverviewRow = {
   readonly guildValue: number
   readonly lastStorageActivity: string | null
   readonly lastBankActivity: string | null
+  readonly staleSumsFrom: string | null
 }
 
 export type LedgerRow = {
@@ -28,6 +29,7 @@ export const overviewRows: readonly OverviewRow[] = [
     guildValue: -97550,
     lastStorageActivity: '2022-07-10T12:23:00Z',
     lastBankActivity: '2022-07-09T18:05:00Z',
+    staleSumsFrom: '2022-07-09T03:12:00Z',
   },
   {
     avatar: 'Bambor',
@@ -38,6 +40,7 @@ export const overviewRows: readonly OverviewRow[] = [
     guildValue: 1170,
     lastStorageActivity: '2022-07-10T07:41:00Z',
     lastBankActivity: '2022-07-08T20:15:00Z',
+    staleSumsFrom: null,
   },
   {
     avatar: 'Evildead',
@@ -48,6 +51,7 @@ export const overviewRows: readonly OverviewRow[] = [
     guildValue: 97965,
     lastStorageActivity: '2022-07-09T20:07:00Z',
     lastBankActivity: '2022-07-05T11:32:00Z',
+    staleSumsFrom: null,
   },
   {
     avatar: 'Fugger',
@@ -58,6 +62,7 @@ export const overviewRows: readonly OverviewRow[] = [
     guildValue: -1053554,
     lastStorageActivity: '2022-07-10T05:12:00Z',
     lastBankActivity: '2022-07-10T04:58:00Z',
+    staleSumsFrom: null,
   },
   {
     avatar: 'Aargh',
@@ -68,6 +73,7 @@ export const overviewRows: readonly OverviewRow[] = [
     guildValue: 0,
     lastStorageActivity: '2022-06-28T16:44:00Z',
     lastBankActivity: null,
+    staleSumsFrom: null,
   },
 ]
 
@@ -80,6 +86,7 @@ export const overviewTotal: OverviewRow = {
   guildValue: -1051969,
   lastStorageActivity: null,
   lastBankActivity: null,
+  staleSumsFrom: null,
 }
 
 export const ledgerRows: readonly LedgerRow[] = [
