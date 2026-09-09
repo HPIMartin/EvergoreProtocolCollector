@@ -18,6 +18,7 @@ const overviewBody = {
     storageWithdrawn: 200,
     storageDeposited: 500,
     net: 2350,
+    containsStaleSums: true,
   },
   items: [
     {
@@ -29,6 +30,7 @@ const overviewBody = {
       net: 2500,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
+      staleSumsFrom: null,
     },
     {
       avatar: 'Erde-Eibenlanze',
@@ -39,6 +41,7 @@ const overviewBody = {
       net: -150,
       lastBankActivity: null,
       lastStorageActivity: '2026-07-31T21:05:00Z',
+      staleSumsFrom: '2026-07-30T01:12:00Z',
     },
   ],
 }
@@ -97,6 +100,7 @@ describe('the overview wire shape', () => {
       storageWithdrawn: 200,
       storageDeposited: 500,
       net: 2350,
+      containsStaleSums: true,
     })
   })
 
@@ -124,6 +128,7 @@ describe('the overview wire shape', () => {
       net: 2500,
       lastBankActivity: new Date('2026-08-04T09:30:00Z'),
       lastStorageActivity: new Date('2026-08-05T10:15:00Z'),
+      staleSumsFrom: null,
     })
   })
 
@@ -141,6 +146,39 @@ describe('the overview wire shape', () => {
     expect(overview.items[1]?.lastBankActivity).toBeNull()
   })
 
+  it('reads the instant the stale sums of a row come from', () => {
+    const overview = overviewFrom(overviewBody)
+
+    expect(overview.items[1]?.staleSumsFrom).toStrictEqual(
+      new Date('2026-07-30T01:12:00Z'),
+    )
+  })
+
+  it('reads a row the last collection refreshed as carrying no stale sums', () => {
+    const overview = overviewFrom(overviewBody)
+
+    expect(overview.items[0]?.staleSumsFrom).toBeNull()
+  })
+
+  it('refuses totals that do not state whether they contain stale sums', () => {
+    const { containsStaleSums, ...totalsWithoutTheFlag } = overviewBody.totals
+    const reading = () =>
+      overviewFrom({ ...overviewBody, totals: totalsWithoutTheFlag })
+
+    expect(reading).toThrow(MalformedResponse)
+    expect(containsStaleSums).toBe(true)
+  })
+
+  it('refuses totals whose stale-sums statement is not a boolean', () => {
+    const reading = () =>
+      overviewFrom({
+        ...overviewBody,
+        totals: { ...overviewBody.totals, containsStaleSums: 'yes' },
+      })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
   it.each([
     'bankWithdrawn',
     'bankDeposited',
@@ -149,6 +187,7 @@ describe('the overview wire shape', () => {
     'net',
     'lastBankActivity',
     'lastStorageActivity',
+    'staleSumsFrom',
   ])('refuses a summary without its %s', (field) => {
     const reading = () =>
       overviewFrom({ ...overviewBody, items: [summaryWithout(field)] })

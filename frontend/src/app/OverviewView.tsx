@@ -48,6 +48,7 @@ function guildRowOf(totals: GuildTotals): AvatarSummary {
     ...totals,
     lastBankActivity: null,
     lastStorageActivity: null,
+    staleSumsFrom: null,
   }
 }
 

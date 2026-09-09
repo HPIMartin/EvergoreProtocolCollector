@@ -38,6 +38,7 @@ function totalsFrom(value: unknown): GuildTotals {
     storageWithdrawn: numberFrom(totals, 'storageWithdrawn'),
     storageDeposited: numberFrom(totals, 'storageDeposited'),
     net: numberFrom(totals, 'net'),
+    containsStaleSums: booleanFrom(totals, 'containsStaleSums'),
   }
 }
 
@@ -104,6 +105,7 @@ function summaryFrom(item: unknown): AvatarSummary {
     net: numberFrom(summary, 'net'),
     lastBankActivity: optionalInstantFrom(summary, 'lastBankActivity'),
     lastStorageActivity: optionalInstantFrom(summary, 'lastStorageActivity'),
+    staleSumsFrom: optionalInstantFrom(summary, 'staleSumsFrom'),
   }
 }
 
@@ -157,6 +159,17 @@ function numberFrom(source: WireObject, field: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new MalformedResponse(
       `The API answered a ${field} that is not a number`,
+    )
+  }
+
+  return value
+}
+
+function booleanFrom(source: WireObject, field: string): boolean {
+  const value = source[field]
+  if (typeof value !== 'boolean') {
+    throw new MalformedResponse(
+      `The API answered a ${field} that is not a boolean`,
     )
   }
 

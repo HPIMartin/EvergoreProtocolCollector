@@ -18,6 +18,7 @@ const OVERVIEW_BODY = JSON.stringify({
     storageWithdrawn: 200,
     storageDeposited: 500,
     net: 2350,
+    containsStaleSums: false,
   },
   items: [
     {
@@ -29,6 +30,7 @@ const OVERVIEW_BODY = JSON.stringify({
       net: 2500,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
+      staleSumsFrom: null,
     },
     {
       avatar: 'Erde-Eibenlanze',
@@ -39,6 +41,7 @@ const OVERVIEW_BODY = JSON.stringify({
       net: -150,
       lastBankActivity: null,
       lastStorageActivity: '2026-07-31T21:05:00Z',
+      staleSumsFrom: null,
     },
   ],
 })
@@ -49,6 +52,7 @@ const NO_TOTALS = {
   storageWithdrawn: 0,
   storageDeposited: 0,
   net: 0,
+  containsStaleSums: false,
 }
 
 const BANK_BODY = JSON.stringify({
