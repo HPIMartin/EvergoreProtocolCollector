@@ -27,24 +27,46 @@ class LastRunStatusTest {
 	}
 
 	@Test
-	void recordsTheRecordedInstantForEachScrapeAndRecomputeOutcome() {
+	void recordsTheSuccessfulScrapeInstant() {
 		Instant first = Instant.parse("2026-06-21T08:00:00Z");
 		Instant second = Instant.parse("2026-06-21T10:00:00Z");
 
 		tested.recordSuccessfulScrape(first);
 		tested.recordSuccessfulScrape(second);
+
 		assertThat(tested.snapshot().lastSuccessfulScrape()).contains(second);
+	}
+
+	@Test
+	void recordsTheScrapeFailureInstant() {
+		Instant first = Instant.parse("2026-06-21T08:00:00Z");
+		Instant second = Instant.parse("2026-06-21T10:00:00Z");
 
 		tested.recordScrapeFailure(first);
 		tested.recordScrapeFailure(second);
+
 		assertThat(tested.snapshot().lastScrapeFailure()).contains(second);
+	}
+
+	@Test
+	void recordsTheSuccessfulRecomputeInstant() {
+		Instant first = Instant.parse("2026-06-21T08:00:00Z");
+		Instant second = Instant.parse("2026-06-21T10:00:00Z");
 
 		tested.recordSuccessfulRecompute(first, List.of(), List.of());
 		tested.recordSuccessfulRecompute(second, List.of(), List.of());
+
 		assertThat(tested.snapshot().lastSuccessfulRecompute()).contains(second);
+	}
+
+	@Test
+	void recordsTheRecomputeFailureInstant() {
+		Instant first = Instant.parse("2026-06-21T08:00:00Z");
+		Instant second = Instant.parse("2026-06-21T10:00:00Z");
 
 		tested.recordRecomputeFailure(first);
 		tested.recordRecomputeFailure(second);
+
 		assertThat(tested.snapshot().lastRecomputeFailure()).contains(second);
 	}
 
