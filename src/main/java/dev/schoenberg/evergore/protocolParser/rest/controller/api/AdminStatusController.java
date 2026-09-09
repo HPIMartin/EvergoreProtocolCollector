@@ -32,10 +32,11 @@ public class AdminStatusController {
 	@Produces(APPLICATION_JSON)
 	public AdminStatus status() {
 		GuildContributions recompute = contributions.ofEveryKnownAvatar();
+		LastRunStatus.Snapshot snapshot = lastRunStatus.snapshot();
 
-		return new AdminStatus(lastUpdated(recompute), lastRunStatus.lastSuccessfulScrape().orElse(null), lastRunStatus.lastScrapeFailure().orElse(null),
-				lastRunStatus.lastSuccessfulRecompute().orElse(null), lastRunStatus.lastRecomputeFailure().orElse(null), distinctlySorted(lastRunStatus.unknownItemNames()),
-				distinctlySorted(lastRunStatus.failedAvatarNames()));
+		return new AdminStatus(lastUpdated(recompute), snapshot.lastSuccessfulScrape().orElse(null), snapshot.lastScrapeFailure().orElse(null),
+				snapshot.lastSuccessfulRecompute().orElse(null), snapshot.lastRecomputeFailure().orElse(null), distinctlySorted(snapshot.unknownItemNames()),
+				distinctlySorted(snapshot.failedAvatarNames()));
 	}
 
 	private static List<String> distinctlySorted(List<String> names) {

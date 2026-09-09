@@ -12,16 +12,8 @@ public class LastRunStatus {
 		current.updateAndGet(snapshot -> snapshot.withLastSuccessfulScrape(when));
 	}
 
-	public Optional<Instant> lastSuccessfulScrape() {
-		return snapshot().lastSuccessfulScrape();
-	}
-
 	public void recordScrapeFailure(Instant when) {
 		current.updateAndGet(snapshot -> snapshot.withLastScrapeFailure(when));
-	}
-
-	public Optional<Instant> lastScrapeFailure() {
-		return snapshot().lastScrapeFailure();
 	}
 
 	public void recordSuccessfulRecompute(Instant when, List<String> unknownItemNames, List<String> failedAvatarNames) {
@@ -30,28 +22,8 @@ public class LastRunStatus {
 		current.updateAndGet(snapshot -> snapshot.withSuccessfulRecompute(when, unknown, failed));
 	}
 
-	public Optional<Instant> lastSuccessfulRecompute() {
-		return snapshot().lastSuccessfulRecompute();
-	}
-
 	public void recordRecomputeFailure(Instant when) {
 		current.updateAndGet(snapshot -> snapshot.withLastRecomputeFailure(when));
-	}
-
-	public Optional<Instant> lastRecomputeFailure() {
-		return snapshot().lastRecomputeFailure();
-	}
-
-	public boolean recomputeHealthy() {
-		return snapshot().recomputeHealthy();
-	}
-
-	public List<String> unknownItemNames() {
-		return snapshot().unknownItemNames();
-	}
-
-	public List<String> failedAvatarNames() {
-		return snapshot().failedAvatarNames();
 	}
 
 	public Snapshot snapshot() {
