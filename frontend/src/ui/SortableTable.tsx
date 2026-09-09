@@ -42,6 +42,7 @@ export type Column<Row> =
 export type Total<Row> = {
   readonly label: string
   readonly row: Row
+  readonly mark?: string
 }
 
 export type SortableTableProps<Row> = {
@@ -53,9 +54,13 @@ export type SortableTableProps<Row> = {
   readonly total?: Total<Row>
   readonly initialSort?: Sort
   readonly onFollow?: (href: string) => void
+  readonly mark?: (row: Row) => string | null
 }
 
 const missingValue = '–'
+
+const shownMark = (text: string | null | undefined): string | null =>
+  text === null || text === undefined || text.trim() === '' ? null : text
 
 const collator = new Intl.Collator('de-DE')
 
@@ -186,6 +191,27 @@ const indicatorOf = (sort: Sort | null, columnKey: string): string => {
   return sort.direction === 'ascending' ? '▲' : '▼'
 }
 
+function Mark({ text, testId }: MarkProps) {
+  return (
+    <span
+      className="data-table__mark"
+      data-testid={testId}
+      tabIndex={0}
+      role="note"
+    >
+      <span className="data-table__mark-sign" aria-hidden="true">
+        !
+      </span>
+      <span className="data-table__mark-hint">{text}</span>
+    </span>
+  )
+}
+
+type MarkProps = {
+  readonly text: string
+  readonly testId: string
+}
+
 export function SortableTable<Row>({
   caption,
   columns,
@@ -195,12 +221,14 @@ export function SortableTable<Row>({
   total,
   initialSort,
   onFollow,
+  mark,
 }: SortableTableProps<Row>) {
   const [sort, setSort] = useState<Sort | null>(initialSort ?? null)
 
   const visibleRows = sort
     ? sortedBy(rows, columnOf(columns, sort.columnKey), sort.direction)
     : rows
+  const totalMark = total === undefined ? null : shownMark(total.mark)
 
   return (
     <table className="data-table">
@@ -241,39 +269,50 @@ export function SortableTable<Row>({
             </td>
           </tr>
         ) : (
-          visibleRows.map((row) => (
-            <tr
-              className="data-table__row"
-              key={rowKey(row)}
-              data-testid="data-row"
-            >
-              {columns.map((column) => {
-                const cell = cellOf(column, row)
-                return (
-                  <td
-                    key={column.key}
-                    className="data-table__cell"
-                    data-kind={column.kind}
-                    data-tone={cell.tone}
-                    data-testid={`cell-${column.key}`}
-                  >
-                    {cell.href === null ? (
-                      cell.text
-                    ) : (
-                      <Link href={cell.href} onFollow={onFollow}>
-                        {cell.text}
-                      </Link>
-                    )}
-                  </td>
-                )
-              })}
-            </tr>
-          ))
+          visibleRows.map((row) => {
+            const rowMark = shownMark(mark?.(row))
+            return (
+              <tr
+                className="data-table__row"
+                key={rowKey(row)}
+                data-testid="data-row"
+                data-stale={rowMark === null ? undefined : 'true'}
+              >
+                {columns.map((column, index) => {
+                  const cell = cellOf(column, row)
+                  return (
+                    <td
+                      key={column.key}
+                      className="data-table__cell"
+                      data-kind={column.kind}
+                      data-tone={cell.tone}
+                      data-testid={`cell-${column.key}`}
+                    >
+                      {index === 0 && rowMark !== null ? (
+                        <Mark text={rowMark} testId="row-mark" />
+                      ) : null}
+                      {cell.href === null ? (
+                        cell.text
+                      ) : (
+                        <Link href={cell.href} onFollow={onFollow}>
+                          {cell.text}
+                        </Link>
+                      )}
+                    </td>
+                  )
+                })}
+              </tr>
+            )
+          })
         )}
       </tbody>
       {total === undefined || visibleRows.length === 0 ? null : (
         <tfoot>
-          <tr className="data-table__total" data-testid="total-row">
+          <tr
+            className="data-table__total"
+            data-testid="total-row"
+            data-stale={totalMark === null ? undefined : 'true'}
+          >
             {columns.map((column, index) =>
               index === 0 ? (
                 <th
@@ -283,6 +322,9 @@ export function SortableTable<Row>({
                   data-kind={column.kind}
                   data-testid={`total-${column.key}`}
                 >
+                  {totalMark === null ? null : (
+                    <Mark text={totalMark} testId="total-mark" />
+                  )}
                   {total.label}
                 </th>
               ) : (

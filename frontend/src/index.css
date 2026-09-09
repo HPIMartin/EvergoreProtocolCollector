@@ -10,6 +10,7 @@
   --color-border-strong: #5a4430;
   --color-positive: #7fa650;
   --color-negative: #b5543a;
+  --color-warning: #c2762f;
 
   --font-display:
     'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia,
@@ -227,6 +228,73 @@ a:hover {
   border-top: var(--border-width) solid var(--color-border-strong);
   background-color: var(--color-surface-raised);
   font-weight: 600;
+}
+
+.data-table__row[data-stale='true'],
+.data-table__total[data-stale='true'] {
+  box-shadow: inset 3px 0 0 var(--color-warning);
+}
+
+.data-table__mark {
+  position: relative;
+  display: inline-block;
+  margin-right: var(--space-1);
+  cursor: help;
+}
+
+.data-table__mark-sign {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: var(--border-width) solid var(--color-warning);
+  border-radius: 50%;
+  color: var(--color-warning);
+  font-family: var(--font-display);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  line-height: 13px;
+  text-align: center;
+}
+
+.data-table__mark:hover .data-table__mark-sign,
+.data-table__mark:focus .data-table__mark-sign {
+  background-color: var(--color-warning);
+  color: var(--color-surface);
+}
+
+.data-table__mark-hint {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  border-top: var(--space-2) solid transparent;
+  z-index: 1;
+  width: max-content;
+  max-width: 250px;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-left: 3px solid var(--color-warning);
+  background-color: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  font-weight: 400;
+  line-height: var(--line-height-body);
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 90ms ease-out;
+}
+
+.data-table__mark:hover .data-table__mark-hint,
+.data-table__mark:focus .data-table__mark-hint {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .data-table__mark-hint {
+    transition: none;
+  }
 }
 
 .data-table__empty {

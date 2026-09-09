@@ -547,3 +547,129 @@ describe('SortableTable link columns', () => {
     expect(cellsOf('name')).toStrictEqual(['alessia', 'Ärger', 'Bambor', 'Zoe'])
   })
 })
+
+describe('SortableTable row marks', () => {
+  afterEach(cleanup)
+
+  const staleNote =
+    'Veraltete Informationen. Letzte erfolgreiche Aktualisierung vom 08.09.2026 03:12.'
+  const markOfStaleMembers = (member: Member) =>
+    member.name === 'Ärger' ? staleNote : null
+
+  it('marks only the rows the mark answers a text for', () => {
+    renderTable({ mark: markOfStaleMembers })
+
+    expect(
+      screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
+    ).toEqual([undefined, 'true', undefined, undefined])
+  })
+
+  it('leaves every row unmarked when no mark is given', () => {
+    renderTable()
+
+    expect(screen.queryByTestId('row-mark')).toBeNull()
+    expect(
+      screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
+    ).toEqual([undefined, undefined, undefined, undefined])
+  })
+
+  it('reads the mark before the text the first cell already shows', () => {
+    renderTable({ mark: markOfStaleMembers })
+
+    const marked = screen
+      .getAllByTestId('cell-name')
+      .find((cell) => cell.textContent?.includes('Ärger'))
+
+    expect(marked?.textContent).toBe(`!${staleNote}Ärger`)
+  })
+
+  it('puts the mark ahead of the element a first cell wraps its value in', () => {
+    renderTable({
+      columns: [
+        {
+          key: 'name',
+          header: 'Avatar',
+          kind: 'link',
+          value: (member: Member) => member.name,
+          href: (member: Member) => `/avatars/${member.name}`,
+        },
+      ],
+      mark: markOfStaleMembers,
+    })
+
+    const marked = screen
+      .getAllByTestId('cell-name')
+      .find((cell) => cell.textContent?.includes('Ärger'))
+
+    expect(
+      Array.from(marked?.children ?? []).map(
+        (child) => child.getAttribute('data-testid') ?? child.tagName,
+      ),
+    ).toEqual(['row-mark', 'A'])
+  })
+
+  it('marks every stale row, not only the first of them', () => {
+    renderTable({
+      mark: (member: Member) =>
+        member.name === 'Ärger' || member.name === 'Zoe' ? staleNote : null,
+    })
+
+    expect(screen.getAllByTestId('row-mark')).toHaveLength(2)
+    expect(
+      screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
+    ).toEqual(['true', 'true', undefined, undefined])
+  })
+
+  it('treats a blank mark as no mark rather than an empty note', () => {
+    renderTable({ mark: () => '   ' })
+
+    expect(screen.queryByTestId('row-mark')).toBeNull()
+    expect(
+      screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
+    ).toEqual([undefined, undefined, undefined, undefined])
+  })
+
+  it('treats a blank total mark as no mark either', () => {
+    renderTable({ total: { label: 'Gilde', row: members[0], mark: '' } })
+
+    expect(screen.queryByTestId('total-mark')).toBeNull()
+    expect(screen.getByTestId('total-row').dataset.stale).toBeUndefined()
+  })
+
+  it('keeps the mark text in the document rather than behind the hover', () => {
+    renderTable({ mark: markOfStaleMembers })
+
+    expect(screen.getByTestId('row-mark').textContent).toContain(staleNote)
+  })
+
+  it('reaches the mark with the keyboard and announces it as a note', () => {
+    renderTable({ mark: markOfStaleMembers })
+
+    const mark = screen.getByTestId('row-mark')
+
+    expect(mark.getAttribute('tabindex')).toBe('0')
+    expect(mark.getAttribute('role')).toBe('note')
+  })
+
+  it('marks the total row with a text of its own', () => {
+    renderTable({
+      total: {
+        label: 'Gilde',
+        row: members[0],
+        mark: 'Enthält veraltete Summen.',
+      },
+    })
+
+    expect(screen.getByTestId('total-row').dataset.stale).toBe('true')
+    expect(screen.getByTestId('total-mark').textContent).toContain(
+      'Enthält veraltete Summen.',
+    )
+  })
+
+  it('leaves the total row unmarked when it carries no mark', () => {
+    renderTable({ total: { label: 'Gilde', row: members[0] } })
+
+    expect(screen.getByTestId('total-row').dataset.stale).toBeUndefined()
+    expect(screen.queryByTestId('total-mark')).toBeNull()
+  })
+})

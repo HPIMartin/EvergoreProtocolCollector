@@ -70,7 +70,7 @@ Four top-level folders under `frontend/src/`:
 |-----------|---------|
 | `PageFrame` | Banner with brand and navigation (`aria-current="page"` marks the current link), `<main>` for the view. |
 | `Link` | An `<a href>` that reports a **plain** click to its `onFollow` and leaves a modified or middle click to the browser, so in-app navigation costs no reload while bookmarking and open-in-new-tab keep working. `PageFrame` and a `link` column render through it. |
-| `SortableTable<Row>` | Semantic `<table>`; a column is `text`, `number`, `timestamp` or `link`; a `timestamp` may carry an `href` and then links what it shows; a header click sorts, a second click reverses; an optional `total` adds a `tfoot` row. |
+| `SortableTable<Row>` | Semantic `<table>`; a column is `text`, `number`, `timestamp` or `link`; a `timestamp` may carry an `href` and then links what it shows; a header click sorts, a second click reverses; an optional `total` adds a `tfoot` row; an optional `mark` flags single rows. |
 | `StatusPanel` | The `loading` / `empty` / `error` states; `role="alert"` for the error, `role="status"` otherwise. |
 
 - `format.ts` carries the German domain notation: gold with `de-DE` grouping, instants as Berlin
@@ -82,6 +82,17 @@ Four top-level folders under `frontend/src/`:
   `initialSort` renders the order it was handed, which is the API's newest-first.
 - **Tone**: a number column declares itself `credit`, `debit` or `neutral`; a negative value is always
   `debit` and a zero always `neutral`, so "nothing moved" stays uncoloured.
+- **The row mark**: an optional `mark` (`(row) => string | null`) flags single rows without adding a
+  column. A row it answers a text for gets `data-stale` for the stripe, and an `!` in its **first**
+  cell, **ahead** of what that cell already shows; `total.mark` does the same for the `tfoot` row, so
+  a total can state something about the rows it sums. The text stands in the DOM at all times inside
+  a focusable `role="note"`, and CSS only collapses it visually until hover **or** keyboard focus:
+  a screen reader reads it while going through the row, and no hidden duplicate has to be kept in
+  step with a visible one. Revealing on `:focus` rather than `:focus-visible` keeps a tap on a
+  touch device working, where there is no hover at all, and the revealed note takes pointer events
+  back, so reading it with the mouse does not dismiss it. A mark whose text is blank counts as
+  **no** mark: an empty note would render a focusable element with no accessible name, a tab stop
+  that announces nothing.
 - **The total row**: an optional `total` (`{label, row}`) renders one `tfoot` row, outside the sorted
   body, so a sum can never be mistaken for a member or reordered into the middle of the table. Its
   first column carries the label, number columns carry their total, and any other kind carries the
