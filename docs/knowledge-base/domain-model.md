@@ -134,7 +134,7 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   an avatar failed: a scrape happened either way. It is an operator's datum rather than a per-row
   freshness claim; "how current is this member's row" is answered by that row's own
   `sums_recomputed_at_<avatar>` instant, and "when did the member last move something" by its two
-  **last-activity** columns. Moving it off the overview onto an admin page is a backlog item.
+  **last-activity** columns. It is served by `/api/v1/admin/status`, not by the overview.
 - The `sums_recomputed_at_<avatar>` key records **when that avatar's stored sums were last
   recomputed**, as **epoch millis**, written in the same batch as his four sums. Epoch millis rather
   than the wall-clock text `last_updated` uses, because that format cannot tell the two Berlin
