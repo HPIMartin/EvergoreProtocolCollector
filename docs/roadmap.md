@@ -19,7 +19,7 @@
 |---|-----------|-------|-------------------|
 | M5 | Overview truth | author steps only | Closing out; the code landed, two author checks remain |
 | M6 | Numbers you can trust | landed | Every feature stands on these numbers, and on a status surface that reports one run |
-| M7 | The overview states the guild's actual position | E15, E16, F6 | The most visible defect: the total row says the opposite of the truth. **M6 plus M7 is the `0.2.0` cut**, and F6 drives its deploy (decision 2026-09-07) |
+| M7 | The overview states the guild's actual position | E16, F6 | The most visible defect: the total row says the opposite of the truth. **M6 plus M7 is the `0.2.0` cut**, and F6 drives its deploy (decision 2026-09-07) |
 | M8 | Clear the last bottleneck | D12 | The `M` item that still gates the repeated read method; the migration framework landed |
 | M9 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
 | M10 | Product build-out | E12→E13, E9, E3, E6 | E12 inherits D18's query shape, so it follows it |
@@ -56,11 +56,14 @@ so when it did not.
 Slice: the overview stops adding measured gold to modelled material, and the roster puts the
 members who matter above the fold.
 
-- [ ] The levy is named rather than hidden inside a number shaped like a balance: a stat header
-      (treasury / material balance / levy collected) plus a Beitrag↔Saldo switch, leaving the
-      table's density untouched (backlog E15; variant A of three, decided 2026-09-04).
+- [x] What the guild keeps of a member's deposits is named rather than hidden inside a number shaped
+      like a balance: a stat header of four figures (`Gildenbank`, `Gildenlagerwert`,
+      `Gildenspende`, `Handwerkssubventionen`) plus a `Nach Abzügen` / `Vor Abzügen` switch on the
+      table's sixth column, leaving its column count and density untouched. It carried the valuation
+      rule with it, from the recipe-based stand-in to the guild's announced category rule
+      (decided 2026-09-10).
 - [ ] The roster splits into active and dormant, cut against the data's own timestamp and never
-      against the viewer's clock (backlog E16, after E15 because both rebuild the same view).
+      against the viewer's clock (backlog E16, on the view the header just rebuilt).
 - [ ] A committed deploy script drives a full deploy and rollback over ssh, carrying every check that
       caught the `0.1.0` defects, with a self-test that fails each of them against a faked bad state.
       The script and its self-test have landed; the box closes when it has driven this release and a

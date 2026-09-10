@@ -701,6 +701,19 @@ requests in a row not earning a 429. That gap needs a Netty-level seam and is tr
 
 ## Notable runtime risks
 
+- **The overview's three modelled figures answer nothing until the first recompute of a new jar
+  completes.** The two guild-share sums per avatar are written by the recompute alone, so between the
+  container starting and that run finishing (the collector's initial delay plus a full scrape)
+  `Gildenlagerwert`, `Gildenspende` and `Handwerkssubventionen` render "Noch nicht berechnet." while
+  the bank figure and every row's four ledger sums show numbers. The window is minutes; if that first
+  run throws, it lasts until the next one, up to 24 h at the job's `fixedDelay`. Nothing on the page
+  is wrong during it, and a member can still read his own row. Watch `/api/v1/admin/status` after a
+  deploy rather than the header.
+- **A meta store carries one dead key family per avatar after this release**
+  (`storage_goods_value_<avatar>`, 42 rows on the production snapshot). Nothing reads them and the
+  recompute never refreshes them, so they are inert; a **rollback to the previous jar would read
+  them and serve stale values**, frozen at the last run before the upgrade. Clear them by hand if a
+  rollback is ever kept rather than reverted.
 - Scraping depends on live evergore.de markup/selectors and a valid login → brittle by nature.
 - Bundled `gecko-*-win.exe` drivers are Windows-only and version-pinned (recently upgraded in the
   working tree); the container uses its own Firefox/driver. Consider Selenium Manager / WebDriverManager.
