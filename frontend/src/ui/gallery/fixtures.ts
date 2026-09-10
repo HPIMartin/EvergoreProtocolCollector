@@ -4,7 +4,7 @@ export type OverviewRow = {
   readonly bankWithdrawn: number
   readonly stored: number
   readonly retrieved: number
-  readonly guildValue: number
+  readonly guildValue: number | null
   readonly lastStorageActivity: string | null
   readonly lastBankActivity: string | null
   readonly staleSumsFrom: string | null
@@ -70,7 +70,7 @@ export const overviewRows: readonly OverviewRow[] = [
     bankWithdrawn: 0,
     stored: 44208,
     retrieved: 44208,
-    guildValue: 0,
+    guildValue: null,
     lastStorageActivity: '2022-06-28T16:44:00Z',
     lastBankActivity: null,
     staleSumsFrom: null,

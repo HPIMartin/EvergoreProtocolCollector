@@ -18,6 +18,8 @@ const OVERVIEW_BODY = JSON.stringify({
     storageWithdrawn: 200,
     storageDeposited: 500,
     net: 2350,
+    donation: 400,
+    craftSubsidy: 100,
     containsStaleSums: false,
   },
   items: [
@@ -28,6 +30,8 @@ const OVERVIEW_BODY = JSON.stringify({
       storageWithdrawn: 200,
       storageDeposited: 500,
       net: 2500,
+      donation: 400,
+      craftSubsidy: 100,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
@@ -39,6 +43,8 @@ const OVERVIEW_BODY = JSON.stringify({
       storageWithdrawn: 0,
       storageDeposited: 0,
       net: -150,
+      donation: 0,
+      craftSubsidy: 0,
       lastBankActivity: null,
       lastStorageActivity: '2026-07-31T21:05:00Z',
       staleSumsFrom: null,
@@ -56,6 +62,8 @@ const OVERVIEW_BODY_WITH_A_STALE_ROW = JSON.stringify({
     storageWithdrawn: 200,
     storageDeposited: 500,
     net: 2350,
+    donation: 400,
+    craftSubsidy: 100,
     containsStaleSums: true,
   },
   items: [
@@ -66,6 +74,8 @@ const OVERVIEW_BODY_WITH_A_STALE_ROW = JSON.stringify({
       storageWithdrawn: 200,
       storageDeposited: 500,
       net: 2500,
+      donation: 400,
+      craftSubsidy: 100,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
@@ -77,6 +87,8 @@ const OVERVIEW_BODY_WITH_A_STALE_ROW = JSON.stringify({
       storageWithdrawn: 0,
       storageDeposited: 0,
       net: -150,
+      donation: 0,
+      craftSubsidy: 0,
       lastBankActivity: '2026-08-05T09:58:00Z',
       lastStorageActivity: '2026-07-31T21:05:00Z',
       staleSumsFrom: '2026-07-30T01:12:00Z',
@@ -94,6 +106,8 @@ const OVERVIEW_BODY_WHOSE_STALE_ROW_IS_OFF_THE_PAGE = JSON.stringify({
     storageWithdrawn: 200,
     storageDeposited: 500,
     net: 2350,
+    donation: 400,
+    craftSubsidy: 100,
     containsStaleSums: true,
   },
   items: [
@@ -104,8 +118,85 @@ const OVERVIEW_BODY_WHOSE_STALE_ROW_IS_OFF_THE_PAGE = JSON.stringify({
       storageWithdrawn: 200,
       storageDeposited: 500,
       net: 2500,
+      donation: 400,
+      craftSubsidy: 100,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
+      staleSumsFrom: null,
+    },
+  ],
+})
+
+const OVERVIEW_BODY_WITHOUT_THE_FLOWS = JSON.stringify({
+  page: 0,
+  size: 100,
+  totalCount: 1,
+  totals: {
+    bankWithdrawn: 1400,
+    bankDeposited: 3450,
+    storageWithdrawn: 200,
+    storageDeposited: 500,
+    net: 2350,
+    donation: null,
+    craftSubsidy: null,
+    containsStaleSums: false,
+  },
+  items: [
+    {
+      avatar: 'Calix',
+      bankWithdrawn: 1200,
+      bankDeposited: 3400,
+      storageWithdrawn: 200,
+      storageDeposited: 500,
+      net: 2500,
+      donation: null,
+      craftSubsidy: null,
+      lastBankActivity: '2026-08-04T09:30:00Z',
+      lastStorageActivity: '2026-08-05T10:15:00Z',
+      staleSumsFrom: null,
+    },
+  ],
+})
+
+const TWO_ROWS_WITHOUT_FLOWS = JSON.stringify({
+  page: 0,
+  size: 100,
+  totalCount: 2,
+  totals: {
+    bankWithdrawn: 1400,
+    bankDeposited: 3450,
+    storageWithdrawn: 200,
+    storageDeposited: 500,
+    net: 2350,
+    donation: null,
+    craftSubsidy: null,
+    containsStaleSums: false,
+  },
+  items: [
+    {
+      avatar: 'Calix',
+      bankWithdrawn: 1200,
+      bankDeposited: 3400,
+      storageWithdrawn: 200,
+      storageDeposited: 500,
+      net: 2500,
+      donation: null,
+      craftSubsidy: null,
+      lastBankActivity: '2026-08-04T09:30:00Z',
+      lastStorageActivity: '2026-08-05T10:15:00Z',
+      staleSumsFrom: null,
+    },
+    {
+      avatar: 'Erde-Eibenlanze',
+      bankWithdrawn: 200,
+      bankDeposited: 50,
+      storageWithdrawn: 0,
+      storageDeposited: 0,
+      net: -150,
+      donation: null,
+      craftSubsidy: null,
+      lastBankActivity: null,
+      lastStorageActivity: '2026-07-31T21:05:00Z',
       staleSumsFrom: null,
     },
   ],
@@ -117,6 +208,8 @@ const NO_TOTALS = {
   storageWithdrawn: 0,
   storageDeposited: 0,
   net: 0,
+  donation: 0,
+  craftSubsidy: 0,
   containsStaleSums: false,
 }
 
@@ -245,6 +338,18 @@ function headerTexts(): string[] {
     .map((header) => header.textContent ?? '')
 }
 
+function statTexts(): string[] {
+  return Array.from(screen.getByTestId('stat-header').children).map(
+    (stat) => stat.textContent ?? '',
+  )
+}
+
+function statTonesOf(): (string | undefined)[] {
+  return Array.from(screen.getByTestId('stat-header').children).map(
+    (stat) => stat.querySelector('dd')?.dataset.tone,
+  )
+}
+
 function tonesOf(columnKey: string): (string | undefined)[] {
   return screen
     .getAllByTestId(`cell-${columnKey}`)
@@ -347,10 +452,261 @@ describe('App', () => {
       'Bank-Auszahlung',
       'Einlagerung',
       'Entnahme',
-      'Gildenmehrwert',
+      'Nach Abzügen',
       'Letzte Lageraktivität',
       'Letzte Bankaktivität',
     ])
+  })
+
+  it('states each figure under its own name, in the order the header reads', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect(statTexts()).toStrictEqual([
+      'Gildenbank2.050',
+      'Gildenlagerwert600',
+      'Gildenspende400',
+      'Handwerkssubventionen100',
+    ])
+  })
+
+  it('tones the bank as a credit and leaves the subsidy untoned', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect(screen.getByTestId('stat-bank').dataset.tone).toBe('credit')
+    expect(screen.getByTestId('stat-subsidy').dataset.tone).toBe('neutral')
+  })
+
+  it('names both flows in the header rather than netting them into one number shaped like a balance', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect(screen.getByText('Gildenspende')).toBeTruthy()
+    expect(screen.getByText('Handwerkssubventionen')).toBeTruthy()
+  })
+
+  it('says the header cannot answer yet while no recompute has produced the flows', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITHOUT_THE_FLOWS),
+    )
+
+    expect(screen.getByTestId('stat-donation').dataset.absent).toBe('true')
+    expect(screen.getByTestId('stat-storage').dataset.absent).toBe('true')
+  })
+
+  it('says a figure is not computed in words a reader cannot mistake for a number', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITHOUT_THE_FLOWS),
+    )
+
+    expect(screen.getByTestId('stat-donation').textContent).toBe(
+      'Noch nicht berechnet.',
+    )
+    expect(screen.getByTestId('stat-storage').textContent).not.toMatch(/[0-9]/)
+  })
+
+  it('leaves an absent figure untoned rather than painting it as a credit', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITHOUT_THE_FLOWS),
+    )
+
+    expect(screen.getByTestId('stat-donation').dataset.tone).toBe('neutral')
+  })
+
+  it('still states the measured bank while the flows are missing', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITHOUT_THE_FLOWS),
+    )
+
+    expect(screen.getByTestId('stat-bank').textContent).toBe('2.050')
+  })
+
+  it('switches the last column between the figure after and before the deductions', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(headerTexts()).toStrictEqual([
+      'Avatar',
+      'Bank-Einzahlung',
+      'Bank-Auszahlung',
+      'Einlagerung',
+      'Entnahme',
+      'Vor Abzügen',
+      'Letzte Lageraktivität',
+      'Letzte Bankaktivität',
+    ])
+  })
+
+  it('reports the picked figure back through the switch', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    const balance = screen.getByLabelText('Vor Abzügen') as HTMLInputElement
+    const contribution = screen.getByLabelText(
+      'Nach Abzügen',
+    ) as HTMLInputElement
+
+    expect([balance.checked, contribution.checked]).toStrictEqual([true, false])
+  })
+
+  it('keeps the two options in one radio group so the keyboard can switch them', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    const names = screen
+      .getAllByRole('radio')
+      .map((radio) => (radio as HTMLInputElement).name)
+
+    expect(names).toStrictEqual(['figure', 'figure'])
+  })
+
+  it('sums the guild balance in the total row of the switched column', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(screen.getByTestId('total-row').textContent).toContain('2.650')
+  })
+
+  it('tones the switched column like the contribution it replaces', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(tonesOf('figure')).toStrictEqual(['neutral', 'debit'])
+  })
+
+  it('says why a row has no figure before the deductions instead of leaving a bare dash', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITHOUT_THE_FLOWS),
+    )
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(screen.getAllByTestId('cell-mark')[0]?.textContent).toContain(
+      'Kein Saldo: für diese Zeile sind Gildenspende und Handwerkssubventionen noch nicht berechnet.',
+    )
+  })
+
+  it('says it on every row that cannot answer, not only on one', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS),
+    )
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(screen.getAllByTestId('cell-mark')).toHaveLength(
+      screen.getAllByTestId('data-row').length,
+    )
+  })
+
+  it('says it on the guild row as well, which sums rows that cannot answer', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS),
+    )
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(screen.getByTestId('total-cell-mark').textContent).toContain(
+      'Kein Saldo',
+    )
+  })
+
+  it('states all four figures word for word while nothing is computed', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS),
+    )
+
+    expect(statTexts()).toStrictEqual([
+      'Gildenbank2.050',
+      'GildenlagerwertNoch nicht berechnet.',
+      'GildenspendeNoch nicht berechnet.',
+      'HandwerkssubventionenNoch nicht berechnet.',
+    ])
+  })
+
+  it('tones each of the four figures the way its meaning asks for', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect(statTonesOf()).toStrictEqual([
+      'credit',
+      'credit',
+      'credit',
+      'neutral',
+    ])
+  })
+
+  it('names what the switch controls, which is its only accessible name', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect(
+      screen.getByTestId('switch-figure').querySelector('legend')?.textContent,
+    ).toBe('Letzte Spalte')
+  })
+
+  it('offers the figure after the deductions before the one before them', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect(
+      screen
+        .getAllByRole('radio')
+        .map((radio) => radio.parentElement?.textContent),
+    ).toStrictEqual(['Nach Abzügen', 'Vor Abzügen'])
+  })
+
+  it('carries no hint on a row whose figure before the deductions is known', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(screen.queryByTestId('cell-mark')).toBeNull()
+  })
+
+  it('shows a row before the deductions as its figure after them plus what the guild kept', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(rowTexts()[0]).toContain('2.800')
+  })
+
+  it('keeps the figure after the deductions while the switch stays on it', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect(rowTexts()[0]).toContain('2.500')
+  })
+
+  it('keeps the table usable when the reader sorts the sixth column and then switches it', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    fireEvent.click(screen.getByRole('button', { name: /Nach Abzügen/ }))
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(rowTexts().join(' ')).toContain('2.800')
+  })
+
+  it('keeps a sort on the sixth column when the switch changes what it shows', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    fireEvent.click(screen.getByRole('button', { name: /Nach Abzügen/ }))
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(rowTexts()[0]).toContain('Erde-Eibenlanze')
+  })
+
+  it('does not widen the table when the switch changes the last column', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(headerTexts()).toHaveLength(8)
   })
 
   it('names the bank ledger columns in German', async () => {
@@ -420,7 +776,7 @@ describe('App', () => {
   it('marks a negative guild value as taken from the guild', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(tonesOf('net')).toStrictEqual(['neutral', 'debit'])
+    expect(tonesOf('figure')).toStrictEqual(['neutral', 'debit'])
   })
 
   it('carries the token of the deep link into every request', async () => {

@@ -1,4 +1,10 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { UiGallery } from './UiGallery.tsx'
@@ -45,10 +51,53 @@ describe('UiGallery', () => {
       'Bank-Auszahlung',
       'Einlagerung',
       'Entnahme',
-      'Gildenmehrwert',
+      'Nach Abzügen',
       'Letzte Lageraktivität',
       'Letzte Bankaktivität',
     ])
+  })
+
+  it('shows the guild position with one figure that is not computed yet', () => {
+    render(<UiGallery />)
+
+    const stats = within(screen.getByTestId('gallery-position')).getByTestId(
+      'stat-header',
+    )
+
+    expect(
+      Array.from(stats.children).map((stat) => stat.textContent),
+    ).toStrictEqual([
+      'Gildenbank119.334.247',
+      'Gildenlagerwert20.231.794',
+      'Gildenspende104.597.124',
+      'Handwerkssubventionen39.441.922',
+      'Noch offennoch nicht berechnet',
+    ])
+  })
+
+  it('marks the figure that is not computed yet apart from a number', () => {
+    render(<UiGallery />)
+
+    expect(screen.getByTestId('stat-unknown').dataset.absent).toBe('true')
+  })
+
+  it('lets a reader work the figure switch, so its selected state is visible', () => {
+    render(<UiGallery />)
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(
+      (screen.getByLabelText('Vor Abzügen') as HTMLInputElement).checked,
+    ).toBe(true)
+  })
+
+  it('shows what a number cell says when it cannot answer', () => {
+    render(<UiGallery />)
+
+    expect(
+      within(screen.getByTestId('gallery-overview')).getByTestId('cell-mark')
+        .textContent,
+    ).toContain('Kein Wert: für diese Zeile noch nicht berechnet.')
   })
 
   it('sorts the overview by avatar', () => {
@@ -81,7 +130,7 @@ describe('UiGallery', () => {
     render(<UiGallery />)
 
     expect(cellsOf('gallery-overview', 'guildValue')).toEqual([
-      '0',
+      '!Kein Wert: für diese Zeile noch nicht berechnet.–',
       '-97.550',
       '1.170',
       '97.965',

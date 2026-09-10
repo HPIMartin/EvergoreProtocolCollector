@@ -18,6 +18,8 @@ const overviewBody = {
     storageWithdrawn: 200,
     storageDeposited: 500,
     net: 2350,
+    donation: 400,
+    craftSubsidy: 80,
     containsStaleSums: true,
   },
   items: [
@@ -28,6 +30,8 @@ const overviewBody = {
       storageWithdrawn: 200,
       storageDeposited: 500,
       net: 2500,
+      donation: 400,
+      craftSubsidy: 80,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
@@ -39,6 +43,8 @@ const overviewBody = {
       storageWithdrawn: 0,
       storageDeposited: 0,
       net: -150,
+      donation: null,
+      craftSubsidy: null,
       lastBankActivity: null,
       lastStorageActivity: '2026-07-31T21:05:00Z',
       staleSumsFrom: '2026-07-30T01:12:00Z',
@@ -100,6 +106,8 @@ describe('the overview wire shape', () => {
       storageWithdrawn: 200,
       storageDeposited: 500,
       net: 2350,
+      donation: 400,
+      craftSubsidy: 80,
       containsStaleSums: true,
     })
   })
@@ -126,6 +134,8 @@ describe('the overview wire shape', () => {
       storageWithdrawn: 200,
       storageDeposited: 500,
       net: 2500,
+      donation: 400,
+      craftSubsidy: 80,
       lastBankActivity: new Date('2026-08-04T09:30:00Z'),
       lastStorageActivity: new Date('2026-08-05T10:15:00Z'),
       staleSumsFrom: null,
@@ -144,6 +154,43 @@ describe('the overview wire shape', () => {
     const overview = overviewFrom(overviewBody)
 
     expect(overview.items[1]?.lastBankActivity).toBeNull()
+  })
+
+  it('reads both flows of a row', () => {
+    const overview = overviewFrom(overviewBody)
+
+    expect([
+      overview.items[0]?.donation,
+      overview.items[0]?.craftSubsidy,
+    ]).toStrictEqual([400, 80])
+  })
+
+  it('reads a flow no recompute has produced yet as absent', () => {
+    const overview = overviewFrom(overviewBody)
+
+    expect(overview.items[1]?.donation).toBeNull()
+  })
+
+  it('refuses a flow that is neither a number nor absent', () => {
+    const reading = () =>
+      overviewFrom({
+        ...overviewBody,
+        items: [{ ...overviewBody.items[0], donation: 'plenty' }],
+      })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it('refuses a row that carries no craft-subsidy field at all rather than reading it as absent', () => {
+    const rowWithoutAFlow: Record<string, unknown> = {
+      ...overviewBody.items[0],
+    }
+    delete rowWithoutAFlow['craftSubsidy']
+
+    const reading = () =>
+      overviewFrom({ ...overviewBody, items: [rowWithoutAFlow] })
+
+    expect(reading).toThrow(MalformedResponse)
   })
 
   it('reads the instant the stale sums of a row come from', () => {

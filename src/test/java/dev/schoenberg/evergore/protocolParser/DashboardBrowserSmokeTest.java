@@ -38,6 +38,7 @@ class DashboardBrowserSmokeTest {
 	private static final Duration RENDER_GUARD = Duration.ofSeconds(30);
 	private static final By DATA_ROW = By.cssSelector("[data-testid='data-row']");
 	private static final By TOTAL_ROW = By.cssSelector("[data-testid='total-row']");
+	private static final By STAT_HEADER = By.cssSelector("[data-testid='stat-header']");
 
 	static {
 		silentThrow(() -> {
@@ -70,6 +71,27 @@ class DashboardBrowserSmokeTest {
 	}
 
 	@Test
+	void theOverviewOpensWithTheGuildsPositionStatedInFourFigures() {
+		List<String> position = renderedPositionOf("/overview");
+
+		assertThat(position).containsExactly("1.750", "1.182", "120", "240");
+	}
+
+	@Test
+	void theOverviewNamesEveryFigureOfTheGuildsPositionInTheStylesheetsOwnCasing() {
+		List<String> labels = renderedPositionLabelsOf("/overview");
+
+		assertThat(labels).containsExactly("GILDENBANK", "GILDENLAGERWERT", "GILDENSPENDE", "HANDWERKSSUBVENTIONEN");
+	}
+
+	@Test
+	void theSwitchChangesTheSixthColumnInTheBundleTheJarShips() {
+		List<String> headersAfterSwitching = headersAfterPickingTheFigureBeforeDeductions("/overview");
+
+		assertThat(headersAfterSwitching).element(5).isEqualTo("Vor Abzügen");
+	}
+
+	@Test
 	void theOverviewClosesWithTheGuildWideTotalRow() {
 		List<String> total = renderedTotalOf("/overview");
 
@@ -87,6 +109,47 @@ class DashboardBrowserSmokeTest {
 
 	private List<String> renderedTotalOf(String clientRoute) {
 		return renderedRowsOf(clientRoute, TOTAL_ROW).getFirst();
+	}
+
+	private List<String> renderedPositionLabelsOf(String clientRoute) {
+		return textsInTheStatHeader(clientRoute, "dt");
+	}
+
+	private List<String> renderedPositionOf(String clientRoute) {
+		return textsInTheStatHeader(clientRoute, "dd");
+	}
+
+	private List<String> textsInTheStatHeader(String clientRoute, String element) {
+		WebDriver driver = Browser.fromString(config.browser).getDriver(config);
+		try {
+			openAndAwaitTheStatHeader(driver, clientRoute);
+
+			return driver.findElement(STAT_HEADER).findElements(By.cssSelector(element)).stream().map(WebElement::getText).toList();
+		} finally {
+			driver.quit();
+		}
+	}
+
+	private List<String> headersAfterPickingTheFigureBeforeDeductions(String clientRoute) {
+		WebDriver driver = Browser.fromString(config.browser).getDriver(config);
+		try {
+			openAndAwaitTheStatHeader(driver, clientRoute);
+			driver.findElements(By.cssSelector("[data-testid='switch-figure'] input")).get(1).click();
+			new WebDriverWait(driver, RENDER_GUARD).until(browser -> renderedColumnLabels(browser).contains("Vor Abzügen"));
+
+			return renderedColumnLabels(driver);
+		} finally {
+			driver.quit();
+		}
+	}
+
+	private static List<String> renderedColumnLabels(WebDriver driver) {
+		return driver.findElements(By.cssSelector("[data-testid='column-label']")).stream().map(WebElement::getText).toList();
+	}
+
+	private void openAndAwaitTheStatHeader(WebDriver driver, String clientRoute) {
+		driver.get("http://localhost:" + server.getPort() + clientRoute + "?token=test-token");
+		new WebDriverWait(driver, RENDER_GUARD).until(browser -> !browser.findElements(STAT_HEADER).isEmpty());
 	}
 
 	private List<List<String>> renderedRowsOf(String clientRoute) {

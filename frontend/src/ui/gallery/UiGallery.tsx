@@ -1,3 +1,6 @@
+import { useState } from 'react'
+
+import { OptionSwitch } from '../OptionSwitch.tsx'
 import type { NavigationLink } from '../PageFrame.tsx'
 import { PageFrame } from '../PageFrame.tsx'
 import { Pagination } from '../Pagination.tsx'
@@ -5,9 +8,49 @@ import { GUILD_STALE_SUMS_NOTE, staleSumsNoteOf } from '../../domain'
 import { formatTimestamp } from '../format.ts'
 import type { Column } from '../SortableTable.tsx'
 import { SortableTable } from '../SortableTable.tsx'
+import type { Stat } from '../StatHeader.tsx'
+import { StatHeader } from '../StatHeader.tsx'
 import { StatusPanel } from '../StatusPanel.tsx'
 import type { LedgerRow, OverviewRow } from './fixtures.ts'
 import { ledgerRows, overviewRows, overviewTotal } from './fixtures.ts'
+
+const guildPosition: readonly Stat[] = [
+  {
+    key: 'bank',
+    label: 'Gildenbank',
+    value: 119334247,
+    positiveTone: 'credit',
+    absentNote: 'noch nicht berechnet',
+  },
+  {
+    key: 'storage',
+    label: 'Gildenlagerwert',
+    value: 20231794,
+    positiveTone: 'credit',
+    absentNote: 'noch nicht berechnet',
+  },
+  {
+    key: 'donation',
+    label: 'Gildenspende',
+    value: 104597124,
+    positiveTone: 'credit',
+    absentNote: 'noch nicht berechnet',
+  },
+  {
+    key: 'subsidy',
+    label: 'Handwerkssubventionen',
+    value: 39441922,
+    positiveTone: 'neutral',
+    absentNote: 'noch nicht berechnet',
+  },
+  {
+    key: 'unknown',
+    label: 'Noch offen',
+    value: null,
+    positiveTone: 'neutral',
+    absentNote: 'noch nicht berechnet',
+  },
+]
 
 const navigation: readonly NavigationLink[] = [
   { label: 'Übersicht', href: '/overview', current: true },
@@ -47,10 +90,11 @@ const overviewColumns: readonly Column<OverviewRow>[] = [
   },
   {
     key: 'guildValue',
-    header: 'Gildenmehrwert',
+    header: 'Nach Abzügen',
     kind: 'number',
     tone: 'neutral',
     value: (row) => row.guildValue,
+    missingNote: 'Kein Wert: für diese Zeile noch nicht berechnet.',
   },
   {
     key: 'lastStorageActivity',
@@ -103,10 +147,34 @@ function markOfStaleSums(row: OverviewRow): string | null {
     : staleSumsNoteOf(formatTimestamp(row.staleSumsFrom))
 }
 
+function FigureSwitch() {
+  const [figure, setFigure] = useState<'contribution' | 'balance'>(
+    'contribution',
+  )
+
+  return (
+    <OptionSwitch
+      legend="Letzte Spalte"
+      name="gallery-figure"
+      onSelect={setFigure}
+      options={[
+        { value: 'contribution', label: 'Nach Abzügen' },
+        { value: 'balance', label: 'Vor Abzügen' },
+      ]}
+      selected={figure}
+    />
+  )
+}
+
 export function UiGallery() {
   return (
     <PageFrame brand="Evergore Gildenbank" navigation={navigation}>
       <h1>Bausteine der Oberfläche</h1>
+      <section className="page-section" data-testid="gallery-position">
+        <h2>Lage der Gilde</h2>
+        <StatHeader stats={guildPosition} />
+        <FigureSwitch />
+      </section>
       <section className="page-section" data-testid="gallery-overview">
         <h2>Übersicht</h2>
         <SortableTable

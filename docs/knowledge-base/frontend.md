@@ -103,10 +103,15 @@ Four top-level folders under `frontend/src/`:
   cannot answer itself.
 - An `initialSort` naming a column the table does not have **throws**, for the reason the API answers
   400 instead of clamping a bad page size: a client bug stays visible.
+- **`StatHeader`** renders a row of named figures, each formatted by `formatGold` and toned by the
+  shared rule; a figure of `null` renders the note the caller supplies and is marked `data-absent`,
+  so "not computed yet" can never be read as a zero.
 - **A number column may carry a `missingNote`**, and then a `null` in it renders the same `!` mark
   with a hover note that a stale row carries at its name, instead of the bare missing-value dash
   (author rule 2026-09-10). The dash keeps its single meaning, "nothing happened here": a figure the
   view cannot compute says so.
+- **`OptionSwitch`** is a radio `fieldset` over two or more labelled options, so switching a view's
+  figure needs no library and stays keyboard-reachable and announced.
 - **`tone.ts` holds the one tone rule** both the table cells and the header figures read: zero is
   neutral, a negative value is a debit, and a positive value takes the tone its caller declares.
 - **The gallery**: `gallery.html` plus `src/ui/gallery/` shows every primitive with fixture rows modeled
@@ -149,12 +154,29 @@ Four top-level folders under `frontend/src/`:
   wall-clock. Transfer types are shown as `Einlagerung`/`Entnahme` from the domain, and the headers
   are German, like the sheet's.
 - **The overview's columns are the sheet's, in the sheet's order:** `Bank-Einzahlung`,
-  `Bank-Auszahlung`, `Einlagerung`, `Entnahme`, `Gildenmehrwert` and then the sheet's two
-  right-hand columns `Letzte Lageraktivität` and `Letzte Bankaktivität`, so a member reconciles his
-  own row against the sheet column by column. A ledger the avatar never used shows the
+  `Bank-Auszahlung`, `Einlagerung`, `Entnahme`, the switched figure `Nach Abzügen`/`Vor Abzügen` and then the
+  sheet's two right-hand columns `Letzte Lageraktivität` and `Letzte Bankaktivität`, so a member
+  reconciles his own row against the sheet column by column. A ledger the avatar never used shows the
   missing-value dash, not a fabricated date. Deposits carry the credit tone,
-  withdrawals the debit tone, and the net carries neither until it turns negative, which
-  `SortableTable`'s tone rule already does for every number column.
+  withdrawals the debit tone, and the switched figure carries neither until it turns negative, which
+  the shared tone rule in `ui/tone.ts` does for every number column and for the header's figures.
+- **The guild's position is a header above the table, not a number inside it** (decision
+  2026-09-04, four figures since 2026-09-10): `StatHeader` states `Gildenbank`, `Gildenlagerwert`,
+  `Gildenspende` and `Handwerkssubventionen` side by side, so measured gold is never added to
+  modelled material and no figure has to net a donation against a payout to fit one label.
+  `OptionSwitch` toggles the table's sixth column between `Nach Abzügen`, what the guild credits the
+  member, and `Vor Abzügen`, what he moved before the guild's share is taken off; the two differ by
+  exactly that row's `donation - craftSubsidy`. The table keeps its eight columns and its density
+  either way, and the sixth column keeps **one key** (`figure`), changing only its header and value,
+  because the table remembers a sort by column key and would otherwise throw on a sort the switch
+  renamed away. `domain/guildPosition.ts` derives the figures and a row's balance from the served
+  numbers, so the view holds no arithmetic and `ui` stays presentational. A figure the flows are
+  missing for renders the note from `domain` instead of a number, marked `data-absent`, while the
+  bank still answers because it is measured rather than modelled; the note names no next run, because
+  an avatar whose recompute keeps failing would never bring one.
+- **The chosen figure is view state, not address state:** it resets to `Nach Abzügen` on a reload and on
+  a route round trip, unlike the ledger's page number, which `route.ts` round-trips on purpose. A
+  shared link therefore always opens on `Nach Abzügen`.
 - **A row whose sums are older than the last collection is marked, and its activity columns are
   not** (decision 2026-09-09): `staleSumsFrom` becomes `SortableTable`'s `mark`, so that row gets
   the stripe and an `!` ahead of the avatar name reading "Veraltete Zahlen. Letzte
@@ -190,7 +212,7 @@ service's only read surface.
 
 | Route | Answers |
 |-------|---------|
-| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, plus `lastBankActivity`, `lastStorageActivity` and `staleSumsFrom`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
+| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, the two flows `donation` and `craftSubsidy`, plus `lastBankActivity`, `lastStorageActivity` and `staleSumsFrom`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
 | `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first. |
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first. |
 | `GET /api/v1/admin/status` | Anonymous, `token`-exempt (same trust level as `/health`): `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, every key always rendered. The operator-facing facts that used to sit on the overview; see below. |
@@ -198,9 +220,9 @@ service's only read surface.
 - **One envelope for every collection**: `page`, `size`, `totalCount`, `items`. `/api/v1/avatars`
   adds `totals`.
 - **`totals` sums every known avatar, not the served page** (decision 2026-09-02), the reading
-  `totalCount` already has. It carries the same five numbers as a row, so the SPA renders its total
+  `totalCount` already has. It carries the same seven numbers as a row, so the SPA renders its total
   row without arithmetic of its own, and neither paging nor a later time window can turn a guild
-  total into a page total behind the reader's back. Its sixth field `containsStaleSums` is over the
+  total into a page total behind the reader's back. Its last field `containsStaleSums` is over the
   same union, so the total row still states that it contains a stale row when the served page does
   not show that row.
 - **`staleSumsFrom` is `null` unless the row's sums are older than the last collection**, and then it
@@ -215,12 +237,24 @@ service's only read surface.
 - **Paging**: `?page=` (zero-based, `@Min(0)`) and `?size=` (default 100, `1..1000`); a violation is
   a **400**, not a clamp, so a client bug stays visible. `totalCount` is the unpaged total, so the
   SPA can size its navigation instead of inferring the end from a short page.
-- **The four sums are the sheet's columns 1 to 4, `net` its column 5, and all five are whole gold**
+- **The four sums are the sheet's columns 1 to 4, `net` its column 5, and all of them are whole gold**
   (`long`, decision 2026-09-02): serving the raw `double` would put every value from 10^7 upward,
   where the real sums sit, on the wire in exponential notation. `net` is **derived per request** and
   stored nowhere. The rounding rule behind the numbers, and why a served row adds up while the total
   row is the exact column sum of the rows above it, lives in
   [domain-model.md](domain-model.md).
+- **`donation` and `craftSubsidy` are the two flows between what a deposit credited and what it is
+  worth to the guild** (decision 2026-09-10): what a member gave for nothing, and what the guild paid
+  above its own price for bought trader goods. They are served per avatar and in `totals`, derived
+  per request from the rounded sums and stored nowhere, and they are the two numbers the header needs
+  that the other five cannot yield. Both are **`null` while no recompute has produced them** (a fresh
+  deployment before its first run), and `null` together rather than one at a time, because the read
+  path only forms the pair when both are stored; guild-wide they are `null` as soon as they are
+  missing for a single avatar. The SPA forms the other two header figures by subtraction, the bank as
+  `bankDeposited - bankWithdrawn` and the storage value as
+  `storageDeposited + donation - craftSubsidy - storageWithdrawn`; neither is a valuation rule, which
+  is why no separate header object is served. The valuation itself, and the identity that holds
+  exactly in whole gold, live in [domain-model.md](domain-model.md).
 - **`lastBankActivity` / `lastStorageActivity` are `null` when the avatar never appeared in that
   ledger**, which is the case the sheet leaves blank. They are read from the ledger rows rather than
   from the meta store, so they are as fresh as the last ingest instead of as fresh as the last

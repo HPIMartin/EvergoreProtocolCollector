@@ -1,9 +1,18 @@
+import { useState } from 'react'
+
 import type { ProtocolApi } from '../api'
 import { FIRST_PAGE } from '../api'
 import type { AvatarSummary, GuildTotals } from '../domain'
-import { GUILD_STALE_SUMS_NOTE, staleSumsNoteOf } from '../domain'
-import type { Column } from '../ui'
-import { formatTimestamp, SortableTable } from '../ui'
+import {
+  GUILD_STALE_SUMS_NOTE,
+  UNCOMPUTED_BALANCE_NOTE,
+  UNCOMPUTED_NOTE,
+  balanceOf,
+  guildPositionOf,
+  staleSumsNoteOf,
+} from '../domain'
+import type { Column, Stat, SwitchOption } from '../ui'
+import { OptionSwitch, SortableTable, StatHeader, formatTimestamp } from '../ui'
 
 import { LoadedView } from './LoadedView.tsx'
 import { requestKeyOf } from './requestKey.ts'
@@ -17,7 +26,17 @@ export interface OverviewViewProps {
   readonly onFollow: (href: string) => void
 }
 
+type Figure = 'contribution' | 'balance'
+
+const GUILD_LABEL = 'Gilde'
+
+const FIGURES: readonly SwitchOption<Figure>[] = [
+  { value: 'contribution', label: 'Nach Abzügen' },
+  { value: 'balance', label: 'Vor Abzügen' },
+]
+
 export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
+  const [figure, setFigure] = useState<Figure>('contribution')
   const load = useLoad(
     () => api.overview(FIRST_PAGE),
     requestKeyOf('overview', null, token),
@@ -28,26 +47,70 @@ export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
       <h2 data-testid="view-title">Übersicht</h2>
       <LoadedView load={load}>
         {(overview) => (
-          <SortableTable
-            caption={`${String(overview.items.length)} von ${String(overview.totalCount)} Avataren`}
-            columns={columnsLinkedWith(token)}
-            rows={overview.items}
-            rowKey={(summary) => summary.avatar}
-            emptyMessage="Noch kein Avatar erfasst."
-            total={{
-              label: 'Gilde',
-              row: guildRowOf(overview.totals),
-              mark: overview.totals.containsStaleSums
-                ? GUILD_STALE_SUMS_NOTE
-                : undefined,
-            }}
-            mark={markOfStaleSums}
-            onFollow={onFollow}
-          />
+          <>
+            <StatHeader stats={statsOf(overview.totals)} />
+            <OptionSwitch
+              legend="Letzte Spalte"
+              name="figure"
+              onSelect={setFigure}
+              options={FIGURES}
+              selected={figure}
+            />
+            <SortableTable
+              caption={`${String(overview.items.length)} von ${String(overview.totalCount)} Avataren`}
+              columns={columnsLinkedWith(token, figure)}
+              rows={overview.items}
+              rowKey={(summary) => summary.avatar}
+              emptyMessage="Noch kein Avatar erfasst."
+              total={{
+                label: GUILD_LABEL,
+                row: guildRowOf(overview.totals),
+                mark: overview.totals.containsStaleSums
+                  ? GUILD_STALE_SUMS_NOTE
+                  : undefined,
+              }}
+              mark={markOfStaleSums}
+              onFollow={onFollow}
+            />
+          </>
         )}
       </LoadedView>
     </section>
   )
+}
+
+function statsOf(totals: GuildTotals): readonly Stat[] {
+  const position = guildPositionOf(totals)
+
+  return [
+    {
+      key: 'bank',
+      label: 'Gildenbank',
+      value: position.bank,
+      positiveTone: 'credit',
+    },
+    {
+      key: 'storage',
+      label: 'Gildenlagerwert',
+      value: position.storageValue,
+      positiveTone: 'credit',
+      absentNote: UNCOMPUTED_NOTE,
+    },
+    {
+      key: 'donation',
+      label: 'Gildenspende',
+      value: position.donation,
+      positiveTone: 'credit',
+      absentNote: UNCOMPUTED_NOTE,
+    },
+    {
+      key: 'subsidy',
+      label: 'Handwerkssubventionen',
+      value: position.craftSubsidy,
+      positiveTone: 'neutral',
+      absentNote: UNCOMPUTED_NOTE,
+    },
+  ]
 }
 
 function markOfStaleSums(summary: AvatarSummary): string | null {
@@ -58,7 +121,7 @@ function markOfStaleSums(summary: AvatarSummary): string | null {
 
 function guildRowOf(totals: GuildTotals): AvatarSummary {
   return {
-    avatar: 'Gilde',
+    avatar: GUILD_LABEL,
     ...totals,
     lastBankActivity: null,
     lastStorageActivity: null,
@@ -68,6 +131,7 @@ function guildRowOf(totals: GuildTotals): AvatarSummary {
 
 function columnsLinkedWith(
   token: string | null,
+  figure: Figure,
 ): readonly Column<AvatarSummary>[] {
   return [
     {
@@ -105,13 +169,7 @@ function columnsLinkedWith(
       tone: 'debit',
       value: (summary) => summary.storageWithdrawn,
     },
-    {
-      key: 'net',
-      header: 'Gildenmehrwert',
-      kind: 'number',
-      tone: 'neutral',
-      value: (summary) => summary.net,
-    },
+    figureColumn(figure),
     {
       key: 'lastStorageActivity',
       header: 'Letzte Lageraktivität',
@@ -127,4 +185,34 @@ function columnsLinkedWith(
       href: (summary) => hrefOf(bankPath(summary.avatar), token),
     },
   ]
+}
+
+function figureColumn(figure: Figure): Column<AvatarSummary> {
+  const header = headerOf(figure)
+  if (figure === 'balance') {
+    return {
+      key: 'figure',
+      header,
+      kind: 'number',
+      tone: 'neutral',
+      value: (summary) => balanceOf(summary),
+      missingNote: UNCOMPUTED_BALANCE_NOTE,
+    }
+  }
+
+  return {
+    key: 'figure',
+    header,
+    kind: 'number',
+    tone: 'neutral',
+    value: (summary) => summary.net,
+  }
+}
+
+function headerOf(figure: Figure): string {
+  const chosen = FIGURES.find((option) => option.value === figure)
+  if (chosen === undefined) {
+    throw new TypeError(`Unknown figure: ${figure}`)
+  }
+  return chosen.label
 }

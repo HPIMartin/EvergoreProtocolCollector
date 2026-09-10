@@ -7,6 +7,8 @@ export interface AvatarSummary {
   readonly storageWithdrawn: number
   readonly storageDeposited: number
   readonly net: number
+  readonly donation: number | null
+  readonly craftSubsidy: number | null
   readonly lastBankActivity: Date | null
   readonly lastStorageActivity: Date | null
   readonly staleSumsFrom: Date | null
@@ -18,6 +20,8 @@ export interface GuildTotals {
   readonly storageWithdrawn: number
   readonly storageDeposited: number
   readonly net: number
+  readonly donation: number | null
+  readonly craftSubsidy: number | null
   readonly containsStaleSums: boolean
 }
 

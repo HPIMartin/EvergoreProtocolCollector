@@ -38,6 +38,8 @@ function totalsFrom(value: unknown): GuildTotals {
     storageWithdrawn: numberFrom(totals, 'storageWithdrawn'),
     storageDeposited: numberFrom(totals, 'storageDeposited'),
     net: numberFrom(totals, 'net'),
+    donation: optionalNumberFrom(totals, 'donation'),
+    craftSubsidy: optionalNumberFrom(totals, 'craftSubsidy'),
     containsStaleSums: booleanFrom(totals, 'containsStaleSums'),
   }
 }
@@ -103,6 +105,8 @@ function summaryFrom(item: unknown): AvatarSummary {
     storageWithdrawn: numberFrom(summary, 'storageWithdrawn'),
     storageDeposited: numberFrom(summary, 'storageDeposited'),
     net: numberFrom(summary, 'net'),
+    donation: optionalNumberFrom(summary, 'donation'),
+    craftSubsidy: optionalNumberFrom(summary, 'craftSubsidy'),
     lastBankActivity: optionalInstantFrom(summary, 'lastBankActivity'),
     lastStorageActivity: optionalInstantFrom(summary, 'lastStorageActivity'),
     staleSumsFrom: optionalInstantFrom(summary, 'staleSumsFrom'),
@@ -200,6 +204,10 @@ function instantFrom(source: WireObject, field: string): Date {
 
 function optionalInstantFrom(source: WireObject, field: string): Date | null {
   return source[field] === null ? null : instantFrom(source, field)
+}
+
+function optionalNumberFrom(source: WireObject, field: string): number | null {
+  return source[field] === null ? null : numberFrom(source, field)
 }
 
 function transferTypeFrom(source: WireObject, field: string): TransferType {
