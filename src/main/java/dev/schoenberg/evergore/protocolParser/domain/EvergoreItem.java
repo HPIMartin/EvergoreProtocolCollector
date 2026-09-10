@@ -35,7 +35,7 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.
 import static java.util.Arrays.asList;
 
 public enum EvergoreItem {
-	UNDEFINED("undefined", 0, HANDWERKSMATERIAL, NOT_CRAFTABLE),
+	UNDEFINED("undefined", 0, ROHSTOFFE, NOT_CRAFTABLE),
 	BESCHLAEGE("Beschläge", 500, HANDWERKSMATERIAL, NOT_CRAFTABLE),
 	BOGENSALBE("Bogensalbe", 80, HANDWERKSMATERIAL, NOT_CRAFTABLE),
 	DRACHENZUNDER("Drachenzunder", 150, HANDWERKSMATERIAL, NOT_CRAFTABLE),
@@ -620,14 +620,7 @@ public enum EvergoreItem {
 	}
 
 	public double getStorageValue() {
-		return getRecipeStorageValue() / recipe.amount;
-	}
-
-	private double getRecipeStorageValue() {
-		if (recipe == NOT_CRAFTABLE) {
-			return 0L;
-		}
-		return recipe.ingredients.stream().mapToDouble(x -> x.amount * x.item.getWithdrawlValue()).sum();
+		return marketValue * category.placement;
 	}
 
 	public double getWithdrawlValue() {
@@ -635,39 +628,41 @@ public enum EvergoreItem {
 	}
 
 	public enum Category {
-		ARMBRUESTE(0.6d),
-		AEXTE(0.6d),
-		AEXTE_2H(0.6d),
-		BANDAGEN(0.6d),
-		BAUTEILE(0.6d),
-		BOEGEN(0.6d),
-		DOLCHE(0.6d),
-		EDELSTEINE(0.6d),
-		ERDSTAEBE(0.6d),
-		FEUERSTAEBE(0.6d),
-		HANDWERKSMATERIAL(0.6d),
-		JAGDBEUTEN(0.6d),
-		KEULEN(0.6d),
-		KEULEN_2H(0.6d),
-		LEICHTE_RUESTUNG_LEDER(0.6d),
-		LEICHTE_RUESTUNG_STOFF(0.6d),
-		LEICHTE_SCHILDE(0.6d),
-		LUFTSTAEBE(0.6d),
-		MUNITION_ARMBRUESTE(0.6d),
-		MUNITION_BOEGEN(0.6d),
-		MUNITION_MAGIESTAEBE(0.6d),
-		ROHSTOFFE(0.6d),
-		SCHWERTER(0.6d),
-		SCHWERTER_2H(0.6d),
-		SCHWERER_SCHILDE(0.6d),
-		SCHWERE_RUESTUNG_METALL(0.6d),
-		STANGENWAFFEN_2H(0.6d),
-		VERARBEITETE_ROHSTOFFE(0.6d),
-		WASSERSTAEBE(0.6d);
+		ARMBRUESTE(0.6d, 0.6d),
+		AEXTE(0.6d, 0.6d),
+		AEXTE_2H(0.6d, 0.6d),
+		BANDAGEN(0.6d, 0.6d),
+		BAUTEILE(0.6d, 0.6d),
+		BOEGEN(0.6d, 0.6d),
+		DOLCHE(0.6d, 0.6d),
+		EDELSTEINE(0d, 0.6d),
+		ERDSTAEBE(0.6d, 0.6d),
+		FEUERSTAEBE(0.6d, 0.6d),
+		HANDWERKSMATERIAL(1d, 0.6d),
+		JAGDBEUTEN(0d, 0.6d),
+		KEULEN(0.6d, 0.6d),
+		KEULEN_2H(0.6d, 0.6d),
+		LEICHTE_RUESTUNG_LEDER(0.6d, 0.6d),
+		LEICHTE_RUESTUNG_STOFF(0.6d, 0.6d),
+		LEICHTE_SCHILDE(0.6d, 0.6d),
+		LUFTSTAEBE(0.6d, 0.6d),
+		MUNITION_ARMBRUESTE(0.6d, 0.6d),
+		MUNITION_BOEGEN(0.6d, 0.6d),
+		MUNITION_MAGIESTAEBE(0.6d, 0.6d),
+		ROHSTOFFE(0d, 0.6d),
+		SCHWERTER(0.6d, 0.6d),
+		SCHWERTER_2H(0.6d, 0.6d),
+		SCHWERER_SCHILDE(0.6d, 0.6d),
+		SCHWERE_RUESTUNG_METALL(0.6d, 0.6d),
+		STANGENWAFFEN_2H(0.6d, 0.6d),
+		VERARBEITETE_ROHSTOFFE(0.6d, 0.6d),
+		WASSERSTAEBE(0.6d, 0.6d);
 
+		public final double placement;
 		public final double withdrawl;
 
-		Category(double withdrawl) {
+		Category(double placement, double withdrawl) {
+			this.placement = placement;
 			this.withdrawl = withdrawl;
 		}
 	}

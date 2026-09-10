@@ -13,9 +13,12 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.Fake
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummary;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummaryPage;
+import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.GuildTotals;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageCraftSubsidy;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageDonation;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getSumsRecomputedAt;
@@ -60,7 +63,91 @@ class AvatarSummariesControllerTest {
 
 		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
 
-		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", 0, 0, 0, 0, 0, null, null, null));
+		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", 0, 0, 0, 0, 0, null, null, null, null, null));
+	}
+
+	@Test
+	void roundsAFractionalStorageSumBeforeServingItRatherThanTruncatingTheNet() {
+		bankRepo.seedAvatars(List.of("Aurora"));
+		metaRepo.put(getStoragePlacement("Aurora"), 0.4);
+		metaRepo.put(getStorageWithdrawl("Aurora"), 1.0);
+
+		AvatarSummary summary = tested.summaries(0, WHOLE_PAGE).items().get(0);
+
+		assertThat(summary.net()).isEqualTo(-1L);
+	}
+
+	@Test
+	void servesBothFlowsOfTheGuildShareBesideTheLedgerSums() {
+		bankRepo.seedAvatars(List.of("Aurora"));
+		metaRepo.put(getStoragePlacement("Aurora"), 308.4);
+		metaRepo.put(getStorageWithdrawl("Aurora"), 300.0);
+		metaRepo.put(getStorageDonation("Aurora"), 140.0);
+		metaRepo.put(getStorageCraftSubsidy("Aurora"), 20.0);
+
+		AvatarSummary summary = tested.summaries(0, WHOLE_PAGE).items().get(0);
+
+		assertThat(summary.donation()).isEqualTo(140L);
+		assertThat(summary.craftSubsidy()).isEqualTo(20L);
+	}
+
+	@Test
+	void servesNeitherFlowWhileNoRecomputeHasProducedThemYet() {
+		bankRepo.seedAvatars(List.of("Aurora"));
+		metaRepo.put(getStoragePlacement("Aurora"), 308.4);
+		metaRepo.put(getStorageWithdrawl("Aurora"), 300.0);
+
+		AvatarSummary summary = tested.summaries(0, WHOLE_PAGE).items().get(0);
+
+		assertThat(summary.donation()).isNull();
+		assertThat(summary.craftSubsidy()).isNull();
+	}
+
+	@Test
+	void servesNeitherFlowWhileOnlyOneOfTheTwoWasStored() {
+		bankRepo.seedAvatars(List.of("Aurora"));
+		metaRepo.put(getStorageDonation("Aurora"), 140.0);
+
+		AvatarSummary summary = tested.summaries(0, WHOLE_PAGE).items().get(0);
+
+		assertThat(summary.donation()).isNull();
+	}
+
+	@Test
+	void servesNoGuildFlowsWhileOneAvatarIsMissingHisOwn() {
+		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
+		metaRepo.put(getStorageDonation("Aurora"), 140.0);
+		metaRepo.put(getStorageCraftSubsidy("Aurora"), 20.0);
+
+		GuildTotals totals = tested.summaries(0, WHOLE_PAGE).totals();
+
+		assertThat(totals.donation()).isNull();
+	}
+
+	@Test
+	void keepsTheGuildFlowsAndEveryRowsFlowsFromDisagreeingAboutWhatIsKnown() {
+		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
+		metaRepo.put(getStorageDonation("Aurora"), 140.0);
+		metaRepo.put(getStorageCraftSubsidy("Aurora"), 20.0);
+
+		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
+
+		assertThat(page.totals().donation()).isNull();
+		assertThat(page.items()).extracting(AvatarSummary::donation).containsExactly(140L, null);
+	}
+
+	@Test
+	void servesTheGuildFlowsAsTheSumOfEveryAvatarsOwn() {
+		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
+		metaRepo.put(getStorageDonation("Aurora"), 140.0);
+		metaRepo.put(getStorageCraftSubsidy("Aurora"), 20.0);
+		metaRepo.put(getStorageDonation("Boreas"), 60.0);
+		metaRepo.put(getStorageCraftSubsidy("Boreas"), 5.0);
+
+		GuildTotals totals = tested.summaries(0, WHOLE_PAGE).totals();
+
+		assertThat(totals.donation()).isEqualTo(200L);
+		assertThat(totals.craftSubsidy()).isEqualTo(25L);
 	}
 
 	@Test

@@ -42,7 +42,7 @@ All domain types live framework-free under `…/domain` and `…/businessLogic`.
 
 ## EvergoreItem: the item catalog
 
-A large enum (~600 entries) capturing the game's craftable + gatherable items. Each value:
+A large enum capturing the game's craftable and gatherable items, a few hundred of them. Each value:
 
 ```java
 EvergoreItem(String ingameName, int marketValue, Category category, Recipe recipe)
@@ -51,37 +51,96 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
 - **`ingameName`**: the exact German name as it appears in the scraped protocol (the parser
   matches on this).
 - **`marketValue`**: base gold value (Goldwert).
-- **`category`**: one of ~29 `Category` values (weapon/armor families, `ROHSTOFFE`,
+- **`category`**: one of the `Category` values (weapon/armor families, `ROHSTOFFE`,
   `JAGDBEUTEN` (hunt loot), `EDELSTEINE` (gems), `HANDWERKSMATERIAL`, …). Each category carries
-  one multiplier: `withdrawl`.
+  two multipliers, `placement` (what a deposit credits) and `withdrawl` (what a withdrawal costs),
+  and the category alone decides both.
 - **`recipe`**: either `Recipe.NOT_CRAFTABLE` (gathered raw item) or a `Recipe(amount, Ingredient…)`
   where each `Ingredient(amount, EvergoreItem)` references other catalog items, and `amount` is
-  how many units the recipe yields.
+  how many units the recipe yields. **The recipes are the game's production chains, not an input to
+  the valuation** (author decision 2026-09-10): no production code reads them, and the tests that
+  pin the guild's announced worked examples are their only reader.
 
 ### The value math (verified against `EvergoreItemTest`)
 
-**Withdrawal value**: what *taking an item out* is worth:
+The rule has two sources, and the difference matters. The **60 % price in both directions** and the
+**zero credit for mined, hunted and gem deposits** are the guild's own rule, announced to its members
+in 2020; the source document is the author's local copy of those announcements, deliberately outside
+the repo (gitignored beside `zugang.txt`), so the rule itself is recorded here. The **100 % credit for
+goods bought from the guild trader** and the **60 % credit for boards and bars** are author decisions
+of 2026-09-10 that knowingly depart from that announcement, each for a reason given below.
+
+**Withdrawal cost**: what *taking an item out* costs the member, for every category:
 ```
-getWithdrawlValue() = marketValue × category.withdrawl      // withdrawl multiplier is 0.6 for all categories
+getWithdrawlValue() = marketValue × category.withdrawl      // withdrawl is 0.6 everywhere
 ```
 - `KUPFERERZ`: 20 × 0.6 = **12** ✓
 - `KRISTALL` (gem): 500 × 0.6 = **300** ✓
 
-**Storage (deposit) value**: what *depositing an item* is worth:
+**Deposit credit**: what *putting an item in* credits the member, decided by its category alone:
 ```
-getStorageValue() = getRecipeStorageValue() / recipe.amount
-getRecipeStorageValue() = 0                          if NOT_CRAFTABLE
-                        = Σ ingredient.amount × ingredient.item.getWithdrawlValue()   otherwise
+getStorageValue() = marketValue × category.placement
 ```
-- Raw/gathered items (`NOT_CRAFTABLE`) have **storage value 0**: depositing raw mats counts as zero contribution.
-- A crafted item is valued at the **withdrawal-cost of its ingredients, per unit produced**.
-- `MAGISCHE_AETHERBINDE` (recipe yields 100; ingredients 14·Äthertuch + 7·Drachenleder +
-  37·Nähgarn + 17·Phasenkraut + 3·Erdenblut): (3024+1512+1776+2040+900)/100 = **92.52** ✓
 
-> **Note on hunt loot (`JAGDBEUTEN`):** all `JAGDBEUTEN` items are `NOT_CRAFTABLE`, so their
-> storage value is 0: depositing them counts as zero contribution. The Google Sheet has a
-> "geschätzte Jagdeinlagerungen" (estimated hunt-deposit value) column that values hunt loot
-> differently; that is a semantic gap between this service and the sheet, tracked separately.
+| `placement` | Categories | Source | Why |
+|---|---|---|---|
+| **0** | `ROHSTOFFE`, `JAGDBEUTEN`, `EDELSTEINE` | announced | Mined or hunted, so they cost the member only time; depositing them **is** the guild's tax, which is what lets the guild run without levying one in gold |
+| **1.0** | `HANDWERKSMATERIAL` | **departs from the announcement**, which names only raw materials and gems as exceptions | Bought from the guild trader with the member's own gold, and gold is measured 1:1, so a 60 % credit confiscates 40 % of every purchase and leaves the trader role unable to come out positive however well it haggles |
+| **0.6** | everything else | announced | The guild's price for goods, the same in both directions, so moving something out and back is neutral and crafting earns the margin between ingredients and product |
+| **0.6** | `VERARBEITETE_ROHSTOFFE` | **departs from the announcement**, which counts boards and bars as raw materials and says their gain is not credited to the character | The announcement gives two reasons for excluding them and the second is a limit of the sheet it was written for ("wir diese aktuell nicht gesondert in unserer Übersicht behandeln"), which no longer applies; their recipes also consume bought trader goods, so a zero credit would take that gold |
+
+- `MAGISCHE_AETHERBINDE` (`BANDAGEN`, market value 257): 257 × 0.6 = **154.2** ✓
+- `MAGIESPLITTER` (`HANDWERKSMATERIAL`, market value 60): 60 × 1.0 = **60** ✓
+- `EISENBARREN` (`VERARBEITETE_ROHSTOFFE`, market value 120): 120 × 0.6 = **72** ✓
+
+**Why crafting pays.** A crafting gain is always `0.6 × (the product's market value less its
+ingredients')`, because `withdrawl` is 0.6 in every category: an ingredient's credit tier changes
+what *depositing* it would earn, never what *withdrawing* it costs. The guild announced that gain
+with one worked example, which holds here to the gold:
+- 6 `BUCHENHOLZ` + 5 `FEDERN` withdrawn cost 6·12 + 5·15 = 147; the 135 `PFEILE` they craft credit
+  135 · 1.8 = 243, a gain of **96**.
+
+A second example, derived here rather than announced, pins the same rule one production step down:
+5 `EISENERZ` + 2 `STEINKOHLE` withdrawn cost 5·24 + 2·60 = 240, the 5 `EISENBARREN` credit
+5 · 72 = 360, a gain of **120**, larger only because that recipe's margin is larger.
+
+> **Note on hunt loot (`JAGDBEUTEN`):** its deposit credit of 0 is the guild's deliberate tax, not a
+> gap. The Google Sheet's "geschätzte Jagdeinlagerungen" column *estimates* what was deposited in
+> hunt loot for display; that estimate's formula is still open ([open-questions.md](../open-questions.md), D-4).
+
+**What the guild's position is made of.** The four figures the overview states, and the identity that
+makes them checkable against the table's own total row:
+
+```
+Gildenbank            = bank deposited - bank withdrawn                  (measured gold)
+Gildenlagerwert       = storage credited + donation - craftSubsidy - storage withdrawn
+Gildenspende          = donation
+Handwerkssubventionen = craftSubsidy
+Nach Abzügen (net)    = Gildenbank + Gildenlagerwert - Gildenspende + Handwerkssubventionen
+```
+
+The identity holds **exactly in whole gold**, per avatar and in the guild total, for any rounding of
+the four stored storage sums, because every derived figure is built from the same already-rounded
+values. It holds only where the figures are *known*: the two flows are stored per avatar, so an
+avatar the recompute has never reached carries neither, and the guild's `Gildenspende`,
+`Handwerkssubventionen` and `Gildenlagerwert` are then **absent for the whole guild** rather than
+summed over the avatars that do carry them. That state is reachable and its window is named under
+the deploy in [build-run-deploy.md](build-run-deploy.md); the header says it cannot answer, and the
+table's total row says the same, so the two never disagree. Measured on the 03.09.2026 snapshot, 42 avatars: `119.334.247`, `20.231.794`, `104.597.124`,
+`39.441.922`, and a net of `74.410.839`.
+
+> **Why the split loses nothing:** `credited + donation - craftSubsidy` equals the deposit's goods
+> value bit-for-bit, over every catalog item at every quality and quantity, because the three credit
+> tiers all sit within a factor two of the `withdrawl` rate and the subtraction therefore cancels
+> exactly. Measured 2026-09-10: a tier of 0.25 breaks it in 1,494 cases, one of 0.2 in 4,305. A new
+> tier far from 0.6 would need that checked again.
+
+> **Where the 100 % credit can be gamed:** a `HANDWERKSMATERIAL` deposit credits 100 % while its
+> withdrawal costs 60 %, so cycling the same goods earns 40 % of their value out of nothing.
+> Detecting that is filed as its own item; the guild's rule is trust-based, and the software's job is
+> to make a breach visible rather than to prevent it. The unknown-item fallback `UNDEFINED` therefore
+> sits in `ROHSTOFFE`, the one tier that cannot over-credit: a name the catalog does not know must
+> never inherit the trader tier by default.
 
 ## How the metrics are computed: `EvergoreDataEvaluator`
 
@@ -105,8 +164,14 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   `itemValue × quantity × (quality / 100)` into `placement` / `withdrawl`, where `itemValue` is
   `getStorageValue()` for deposits and `getWithdrawlValue()` for withdrawals
   (`TransferTypeStorageEntryVisitor`). **Quality scales value linearly.**
+- **A deposit is valued twice**, and the gap is split into the two flows it is made of: into
+  `placement` with what it credits the member, and, against `getWithdrawlValue()` as the guild's own
+  price for the same goods, into **`donation`** where the credit falls short of that price (mined,
+  hunted and gem deposits, which credit nothing) and into **`craftSubsidy`** where it exceeds it
+  (trader goods, credited at 100 % of a price the guild values at 60 %). Exactly one of the two can
+  be non-zero per deposit. A withdrawal counts into `withdrawl` alone.
 - Results are keyed per avatar (`getBankPlacement(avatar)`, `getBankWithdrawl`,
-  `getStoragePlacement`, `getStorageWithdrawl`) and handed to `MetaInformationRepository.add` as
+  `getStoragePlacement`, `getStorageWithdrawl`, `getStorageDonation`, `getStorageCraftSubsidy`) and handed to `MetaInformationRepository.add` as
   **one batch for the whole run**, which the adapter writes in **one transaction**: a reader can
   see the state before the recompute or the state after it, never a mixture of both. The run
   computes first and writes last, so the transaction spans the write alone and no reader is blocked
@@ -119,7 +184,9 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   the whole run as one batch would otherwise have widened one bad ledger row from "one avatar goes
   stale" to "no avatar ever updates again", since a single unguarded `timeStamp` dereference in
   `getAllFor(avatar)` throws before the batch is written. Two consequences, both deliberate: the
-  guild-wide total then adds a stale contribution to current ones, and that avatar's row can show a
+  guild-wide total then adds a stale contribution to current ones, its two guild-share flows are
+  absent so the guild's three modelled figures answer nothing at all until it recomputes, and that
+  avatar's row can show a
   **last activity newer than its own sums**, because the activity columns are read live from the
   ledger while the sums come from the last recompute that reached him. Confining that to one row is
   the point: when the evaluator still wrote each avatar immediately, an unreadable row aborted the
@@ -181,8 +248,11 @@ independent readings by design, and no figure is derived from both.
   the net and the guild total from the **rounded** record, so every served row adds up and a total is
   the exact column sum of its rows (decision 2026-09-02). The unrounded record stays the domain's
   truth; only the read surface rounds. Rounding per avatar rather than once over the whole guild is
-  what makes a row addable, at the price of up to half a gold piece per avatar against the unrounded
-  total.
+  what makes a row addable, at the price of a small deviation from the unrounded truth: up to half a
+  gold piece per rounded sum, so up to about a gold on `Gildenlagerwert`, which adds three of them,
+  and up to one and a half on the figure before the deductions, which adds the rounded net as well.
+  Measured on the 03.09.2026 snapshot, the guild's `Gildenlagerwert` is exactly one gold above the
+  unrounded value.
 - `AvatarContribution` names the avatar behind one such record; `Contribution.sumOf` adds a
   collection of contributions into the guild's own, which is what the overview's total row shows.
 - `businessLogic/contribution/AvatarContributions` assembles one record per **known** avatar

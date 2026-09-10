@@ -14,6 +14,7 @@ import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
+import kong.unirest.json.JSONArray;
 import kong.unirest.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,6 +72,27 @@ class ProductionSnapshotRecomputeCheck {
 		assertThat(summaries.getJSONArray("items").length()).as("the artifact must carry every avatar, not a first page of them").isEqualTo(summaries.getInt("totalCount"));
 
 		write("overview-after-recompute.json", response.getBody());
+	}
+
+	@Test
+	void everyRowAndTheGuildTotalReconcileTheFourFiguresTheHeaderStates() {
+		JSONObject summaries = new JSONObject(Unirest.get("/api/v1/avatars?size=" + MAX_SIZE + "&token=test-token").asString().getBody());
+		JSONArray rows = summaries.getJSONArray("items");
+
+		assertThat(rows.length()).as("a snapshot with no avatar would make the reconciliation vacuous").isPositive();
+		for (int index = 0; index < rows.length(); index++) {
+			assertReconciles(rows.getJSONObject(index), rows.getJSONObject(index).getString("avatar"));
+		}
+		assertReconciles(summaries.getJSONObject("totals"), "the guild total");
+	}
+
+	private static void assertReconciles(JSONObject figures, String who) {
+		long bank = figures.getLong("bankDeposited") - figures.getLong("bankWithdrawn");
+		long donation = figures.getLong("donation");
+		long craftSubsidy = figures.getLong("craftSubsidy");
+		long storageValue = figures.getLong("storageDeposited") + donation - craftSubsidy - figures.getLong("storageWithdrawn");
+
+		assertThat(bank + storageValue - donation + craftSubsidy).as("the four figures must reconcile with the served net of %s", who).isEqualTo(figures.getLong("net"));
 	}
 
 	@Test

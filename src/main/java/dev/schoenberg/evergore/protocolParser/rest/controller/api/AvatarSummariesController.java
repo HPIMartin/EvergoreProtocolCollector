@@ -59,13 +59,21 @@ public class AvatarSummariesController {
 		Contribution total = Contribution.sumOf(recompute.avatars().stream().map(avatar -> avatar.contribution().inWholeGold()).toList());
 
 		return new GuildTotals(total.bankWithdrawn(), total.bankDeposited(), (long) total.storageWithdrawn(), (long) total.storageDeposited(), (long) total.net(),
-				recompute.containsStaleSums());
+				wholeDonationOf(total), wholeCraftSubsidyOf(total), recompute.containsStaleSums());
 	}
 
 	private static AvatarSummary summaryOf(AvatarContribution avatar) {
 		Contribution whole = avatar.contribution().inWholeGold();
 
 		return new AvatarSummary(avatar.avatar(), whole.bankWithdrawn(), whole.bankDeposited(), (long) whole.storageWithdrawn(), (long) whole.storageDeposited(),
-				(long) whole.net(), avatar.lastBankActivity(), avatar.lastStorageActivity(), avatar.staleSumsFrom());
+				(long) whole.net(), wholeDonationOf(whole), wholeCraftSubsidyOf(whole), avatar.lastBankActivity(), avatar.lastStorageActivity(), avatar.staleSumsFrom());
+	}
+
+	private static Long wholeDonationOf(Contribution contribution) {
+		return contribution.guildShare().map(share -> (long) share.donation()).orElse(null);
+	}
+
+	private static Long wholeCraftSubsidyOf(Contribution contribution) {
+		return contribution.guildShare().map(share -> (long) share.craftSubsidy()).orElse(null);
 	}
 }

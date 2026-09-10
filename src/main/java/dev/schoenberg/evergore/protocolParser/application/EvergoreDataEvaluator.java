@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
-import java.util.function.DoubleConsumer;
 import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.ToDoubleFunction;
@@ -29,6 +28,8 @@ import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageCraftSubsidy;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageDonation;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getSumsRecomputedAt;
@@ -108,50 +109,52 @@ public class EvergoreDataEvaluator {
 	private List<MetaInformation<Double>> storageInformationOf(String avatar, List<String> unknownItemNames) {
 		MetaInformationKey<Double> storagePlacementKey = getStoragePlacement(avatar);
 		MetaInformationKey<Double> storageWithdrawlKey = getStorageWithdrawl(avatar);
+		MetaInformationKey<Double> storageDonationKey = getStorageDonation(avatar);
+		MetaInformationKey<Double> storageCraftSubsidyKey = getStorageCraftSubsidy(avatar);
 
-		StorageStatus storage = new StorageStatus(0D, 0D);
+		StorageStatus storage = new StorageStatus();
 		storageRepo
 				.getAllFor(avatar)
 				.stream()
 				.map(e -> new StorageEntryItem(e, findItem(e, unknownItemNames)))
 				.forEach(e -> e.entry().type().accept(storageEntryVisitor).accept(storage, e));
 
-		return asList(new MetaInformation<>(storagePlacementKey, storage.placement), new MetaInformation<>(storageWithdrawlKey, storage.withdrawl));
+		return asList(new MetaInformation<>(storagePlacementKey, storage.placement), new MetaInformation<>(storageWithdrawlKey, storage.withdrawl),
+				new MetaInformation<>(storageDonationKey, storage.donation), new MetaInformation<>(storageCraftSubsidyKey, storage.craftSubsidy));
 	}
 
 	private static class StorageStatus {
 		private double placement;
 		private double withdrawl;
+		private double donation;
+		private double craftSubsidy;
 
-		public StorageStatus(double storagePlacement, double storageWithdrawl) {
-			placement = storagePlacement;
-			withdrawl = storageWithdrawl;
+		public void addPlacement(double credited, double goodsValueOfTheDeposit) {
+			placement += credited;
+			donation += Math.max(goodsValueOfTheDeposit - credited, 0);
+			craftSubsidy += Math.max(credited - goodsValueOfTheDeposit, 0);
 		}
 
-		public void addPlacement(double value) {
-			placement += value;
-		}
-
-		public void addWithdrawl(double value) {
-			withdrawl += value;
+		public void addWithdrawl(double cost) {
+			withdrawl += cost;
 		}
 	}
 
 	private final TransferTypeStorageEntryVisitor storageEntryVisitor = new TransferTypeStorageEntryVisitor();
 
-	private class TransferTypeStorageEntryVisitor implements TransferTypeVisitor<BiConsumer<StorageStatus, StorageEntryItem>> {
+	private static class TransferTypeStorageEntryVisitor implements TransferTypeVisitor<BiConsumer<StorageStatus, StorageEntryItem>> {
 		@Override
 		public BiConsumer<StorageStatus, StorageEntryItem> place() {
-			return operation(s -> s::addPlacement, EvergoreItem::getStorageValue);
+			return (status, entry) -> status.addPlacement(valueOf(entry, EvergoreItem::getStorageValue), valueOf(entry, EvergoreItem::getWithdrawlValue));
 		}
 
 		@Override
 		public BiConsumer<StorageStatus, StorageEntryItem> withdrawl() {
-			return operation(s -> s::addWithdrawl, EvergoreItem::getWithdrawlValue);
+			return (status, entry) -> status.addWithdrawl(valueOf(entry, EvergoreItem::getWithdrawlValue));
 		}
 
-		private BiConsumer<StorageStatus, StorageEntryItem> operation(Function<StorageStatus, DoubleConsumer> statusFunction, ToDoubleFunction<EvergoreItem> valueFunction) {
-			return (status, value) -> statusFunction.apply(status).accept(valueFunction.applyAsDouble(value.item()) * value.entry().quantity() * (value.entry().quality() / 100D));
+		private static double valueOf(StorageEntryItem entry, ToDoubleFunction<EvergoreItem> valueFunction) {
+			return valueFunction.applyAsDouble(entry.item()) * entry.entry().quantity() * (entry.entry().quality() / 100D);
 		}
 	}
 

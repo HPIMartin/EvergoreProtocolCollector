@@ -14,6 +14,8 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepos
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageCraftSubsidy;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageDonation;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getSumsRecomputedAt;
@@ -49,9 +51,15 @@ public class AvatarContributions {
 	private static AvatarContribution contributionOf(MetaInformationSnapshot recompute, String avatar, Instant lastBankActivity, Instant lastStorageActivity,
 			Optional<Instant> lastCollection) {
 		Contribution contribution = new Contribution(recompute.get(getBankPlacement(avatar)).orElse(0L), recompute.get(getBankWithdrawl(avatar)).orElse(0L),
-				recompute.get(getStoragePlacement(avatar)).orElse(0D), recompute.get(getStorageWithdrawl(avatar)).orElse(0D));
+				recompute.get(getStoragePlacement(avatar)).orElse(0D), recompute.get(getStorageWithdrawl(avatar)).orElse(0D), guildShareOf(recompute, avatar));
 
 		return new AvatarContribution(avatar, contribution, lastBankActivity, lastStorageActivity, staleSumsFrom(recompute, avatar, lastCollection));
+	}
+
+	private static Optional<GuildShare> guildShareOf(MetaInformationSnapshot recompute, String avatar) {
+		return recompute
+				.get(getStorageDonation(avatar))
+				.flatMap(donation -> recompute.get(getStorageCraftSubsidy(avatar)).map(craftSubsidy -> new GuildShare(donation, craftSubsidy)));
 	}
 
 	private static Instant staleSumsFrom(MetaInformationSnapshot recompute, String avatar, Optional<Instant> lastCollection) {

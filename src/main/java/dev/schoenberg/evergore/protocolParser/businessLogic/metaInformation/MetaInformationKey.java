@@ -44,6 +44,14 @@ public abstract class MetaInformationKey<T> {
 		return new DoubleKey("storage_withdrawl_" + avatar);
 	}
 
+	public static MetaInformationKey<Double> getStorageDonation(String avatar) {
+		return new DoubleKey("storage_donation_" + avatar);
+	}
+
+	public static MetaInformationKey<Double> getStorageCraftSubsidy(String avatar) {
+		return new DoubleKey("storage_craft_subsidy_" + avatar);
+	}
+
 	public static MetaInformationKey<Instant> getSumsRecomputedAt(String avatar) {
 		return new InstantKey("sums_recomputed_at_" + avatar);
 	}

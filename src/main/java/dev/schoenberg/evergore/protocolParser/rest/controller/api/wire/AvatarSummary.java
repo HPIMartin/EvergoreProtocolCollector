@@ -6,5 +6,5 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record AvatarSummary(@JsonProperty("avatar") String avatar, @JsonProperty("bankWithdrawn") long bankWithdrawn, @JsonProperty("bankDeposited") long bankDeposited,
 		@JsonProperty("storageWithdrawn") long storageWithdrawn, @JsonProperty("storageDeposited") long storageDeposited, @JsonProperty("net") long net,
-		@JsonProperty("lastBankActivity") Instant lastBankActivity, @JsonProperty("lastStorageActivity") Instant lastStorageActivity,
-		@JsonProperty("staleSumsFrom") Instant staleSumsFrom) {}
+		@JsonProperty("donation") Long donation, @JsonProperty("craftSubsidy") Long craftSubsidy, @JsonProperty("lastBankActivity") Instant lastBankActivity,
+		@JsonProperty("lastStorageActivity") Instant lastStorageActivity, @JsonProperty("staleSumsFrom") Instant staleSumsFrom) {}

@@ -46,7 +46,7 @@ class AvatarSummariesEmptyStateTest {
 
 		assertThat(body)
 				.isEqualTo("{\"page\":0,\"size\":100,\"totalCount\":0,"
-						+ "\"totals\":{\"bankWithdrawn\":0,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":0,\"containsStaleSums\":false},\"items\":[]}");
+						+ "\"totals\":{\"bankWithdrawn\":0,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":0,\"donation\":0,\"craftSubsidy\":0,\"containsStaleSums\":false},\"items\":[]}");
 	}
 
 	@MockBean(Configuration.class)

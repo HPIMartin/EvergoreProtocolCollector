@@ -73,14 +73,15 @@ class ProtocolEvaluationAcceptanceTest {
 		assertThat(body.getInt("size")).isEqualTo(100);
 		assertThat(body.getLong("totalCount")).isEqualTo(4);
 		assertThat(body.getJSONArray("items").toString())
-				.isEqualTo("[{\"avatar\":\"Aurora\",\"bankWithdrawn\":200,\"bankDeposited\":1500,\"storageWithdrawn\":300,\"storageDeposited\":185,\"net\":1185,"
-						+ "\"lastBankActivity\":\"2024-01-12T11:00:00Z\",\"lastStorageActivity\":\"2024-01-17T11:00:00Z\",\"staleSumsFrom\":null},"
-						+ "{\"avatar\":\"Boreas\",\"bankWithdrawn\":0,\"bankDeposited\":750,\"storageWithdrawn\":0,\"storageDeposited\":46,\"net\":796,"
-						+ "\"lastBankActivity\":\"2024-02-01T08:00:00Z\",\"lastStorageActivity\":\"2024-02-05T08:00:00Z\",\"staleSumsFrom\":null},"
-						+ "{\"avatar\":\"Brynja\",\"bankWithdrawn\":0,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":370,\"net\":370,"
-						+ "\"lastBankActivity\":null,\"lastStorageActivity\":\"2024-02-06T09:00:00Z\",\"staleSumsFrom\":null},"
-						+ "{\"avatar\":\"Calix\",\"bankWithdrawn\":300,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":-300,"
-						+ "\"lastBankActivity\":\"2024-03-01T07:00:00Z\",\"lastStorageActivity\":null,\"staleSumsFrom\":null}]");
+				.isEqualTo(
+						"[{\"avatar\":\"Aurora\",\"bankWithdrawn\":200,\"bankDeposited\":1500,\"storageWithdrawn\":300,\"storageDeposited\":308,\"net\":1308,\"donation\":120,\"craftSubsidy\":0,"
+								+ "\"lastBankActivity\":\"2024-01-12T11:00:00Z\",\"lastStorageActivity\":\"2024-01-17T11:00:00Z\",\"staleSumsFrom\":null},"
+								+ "{\"avatar\":\"Boreas\",\"bankWithdrawn\":0,\"bankDeposited\":750,\"storageWithdrawn\":0,\"storageDeposited\":77,\"net\":827,\"donation\":0,\"craftSubsidy\":0,"
+								+ "\"lastBankActivity\":\"2024-02-01T08:00:00Z\",\"lastStorageActivity\":\"2024-02-05T08:00:00Z\",\"staleSumsFrom\":null},"
+								+ "{\"avatar\":\"Brynja\",\"bankWithdrawn\":0,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":1217,\"net\":1217,\"donation\":0,\"craftSubsidy\":240,"
+								+ "\"lastBankActivity\":null,\"lastStorageActivity\":\"2024-02-06T09:00:00Z\",\"staleSumsFrom\":null},"
+								+ "{\"avatar\":\"Calix\",\"bankWithdrawn\":300,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":-300,\"donation\":0,\"craftSubsidy\":0,"
+								+ "\"lastBankActivity\":\"2024-03-01T07:00:00Z\",\"lastStorageActivity\":null,\"staleSumsFrom\":null}]");
 	}
 
 	@Test
@@ -144,16 +145,18 @@ class ProtocolEvaluationAcceptanceTest {
 
 		assertThat(totals.getLong("bankDeposited")).isEqualTo(2250);
 		assertThat(totals.getLong("bankWithdrawn")).isEqualTo(500);
-		assertThat(totals.getLong("storageDeposited")).isEqualTo(601);
+		assertThat(totals.getLong("storageDeposited")).isEqualTo(1602);
 		assertThat(totals.getLong("storageWithdrawn")).isEqualTo(300);
-		assertThat(totals.getLong("net")).isEqualTo(2051);
+		assertThat(totals.getLong("net")).isEqualTo(3052);
+		assertThat(totals.getLong("donation")).isEqualTo(120);
+		assertThat(totals.getLong("craftSubsidy")).isEqualTo(240);
 	}
 
 	@Test
 	void theGuildWideTotalsStayTheSameOnAPageThatShowsTwoAvatars() {
 		JSONObject totals = new JSONObject(get("/api/v1/avatars?page=1&size=2").getBody()).getJSONObject("totals");
 
-		assertThat(totals.getLong("net")).isEqualTo(2051);
+		assertThat(totals.getLong("net")).isEqualTo(3052);
 	}
 
 	@Test
@@ -208,13 +211,13 @@ class ProtocolEvaluationAcceptanceTest {
 	void storageValuationIsCorrectAtBeanLevel() {
 		MetaInformationRepository metaRepo = server.getApplicationContext().getBean(MetaInformationRepository.class);
 
-		assertThat(metaRepo.snapshot().get(getStoragePlacement("Aurora"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(185.04, within(1e-6)));
+		assertThat(metaRepo.snapshot().get(getStoragePlacement("Aurora"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(308.4, within(1e-6)));
 
 		assertThat(metaRepo.snapshot().get(getStorageWithdrawl("Aurora"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(300.0, within(1e-6)));
 
-		assertThat(metaRepo.snapshot().get(getStoragePlacement("Boreas"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(46.26, within(1e-6)));
+		assertThat(metaRepo.snapshot().get(getStoragePlacement("Boreas"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(77.1, within(1e-6)));
 
-		assertThat(metaRepo.snapshot().get(getStoragePlacement("Brynja"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(370.08, within(1e-6)));
+		assertThat(metaRepo.snapshot().get(getStoragePlacement("Brynja"))).isPresent().hasValueSatisfying(v -> assertThat(v).isCloseTo(1216.8, within(1e-6)));
 	}
 
 	@Test

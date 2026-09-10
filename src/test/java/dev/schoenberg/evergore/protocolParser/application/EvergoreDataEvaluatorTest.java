@@ -28,11 +28,15 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.base.Transfer
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageCraftSubsidy;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageDonation;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getSumsRecomputedAt;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.ERDE_EIBENLANZE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.LEINENTUCH;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MAGIESPLITTER;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STERNENSTAUB;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class EvergoreDataEvaluatorTest {
@@ -109,7 +113,9 @@ class EvergoreDataEvaluatorTest {
 						getSumsRecomputedAt(AVATAR).id, getBankPlacement(BANK_ONLY_AVATAR).id, getBankWithdrawl(BANK_ONLY_AVATAR).id, getStoragePlacement(BANK_ONLY_AVATAR).id,
 						getStorageWithdrawl(BANK_ONLY_AVATAR).id, getSumsRecomputedAt(BANK_ONLY_AVATAR).id, getBankPlacement(STORAGE_ONLY_AVATAR).id,
 						getBankWithdrawl(STORAGE_ONLY_AVATAR).id, getStoragePlacement(STORAGE_ONLY_AVATAR).id, getStorageWithdrawl(STORAGE_ONLY_AVATAR).id,
-						getSumsRecomputedAt(STORAGE_ONLY_AVATAR).id, getLastUpdatedKey().id);
+						getSumsRecomputedAt(STORAGE_ONLY_AVATAR).id, getStorageDonation(AVATAR).id, getStorageDonation(BANK_ONLY_AVATAR).id,
+						getStorageDonation(STORAGE_ONLY_AVATAR).id, getStorageCraftSubsidy(AVATAR).id, getStorageCraftSubsidy(BANK_ONLY_AVATAR).id,
+						getStorageCraftSubsidy(STORAGE_ONLY_AVATAR).id, getLastUpdatedKey().id);
 	}
 
 	@Test
@@ -245,6 +251,62 @@ class EvergoreDataEvaluatorTest {
 		double expectedWithdrawl = LEINENTUCH.getWithdrawlValue() * quantity * (quality / 100D);
 		assertThat(metaRepo.<Double>get(getStoragePlacement(AVATAR))).contains(expectedPlacement);
 		assertThat(metaRepo.<Double>get(getStorageWithdrawl(AVATAR))).contains(expectedWithdrawl);
+	}
+
+	@Test
+	void countsWhatTheGuildPaysAboveItsOwnGoodsValueAsACraftSubsidy() {
+		int quantity = 4;
+		int quality = 100;
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(MAGIESPLITTER.ingameName, quantity, quality)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Double>get(getStoragePlacement(AVATAR))).contains(240.0);
+		assertThat(metaRepo.<Double>get(getStorageCraftSubsidy(AVATAR))).contains(96.0);
+		assertThat(metaRepo.<Double>get(getStorageDonation(AVATAR))).contains(0.0);
+	}
+
+	@Test
+	void countsADepositThatCreditsNothingAsADonationAtTheGuildsGoodsValue() {
+		int quantity = 2;
+		int quality = 50;
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(STERNENSTAUB.ingameName, quantity, quality)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Double>get(getStoragePlacement(AVATAR))).contains(0.0);
+		assertThat(metaRepo.<Double>get(getStorageDonation(AVATAR))).contains(72.0);
+		assertThat(metaRepo.<Double>get(getStorageCraftSubsidy(AVATAR))).contains(0.0);
+	}
+
+	@Test
+	void keepsTheTwoFlowsApartOverALedgerThatCarriesBoth() {
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(STERNENSTAUB.ingameName, 1, 100), storagePlacement(MAGIESPLITTER.ingameName, 4, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Double>get(getStorageDonation(AVATAR))).contains(72.0);
+		assertThat(metaRepo.<Double>get(getStorageCraftSubsidy(AVATAR))).contains(96.0);
+		assertThat(metaRepo.<Double>get(getStoragePlacement(AVATAR))).contains(240.0);
+	}
+
+	@Test
+	void countsOnlyDepositsIntoTheTwoFlowsAndNotWithdrawals() {
+		storageRepo.seedEntries(AVATAR, List.of(storageWithdrawl(STERNENSTAUB.ingameName, 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Double>get(getStorageDonation(AVATAR))).contains(0.0);
+		assertThat(metaRepo.<Double>get(getStorageCraftSubsidy(AVATAR))).contains(0.0);
+		assertThat(metaRepo.<Double>get(getStorageWithdrawl(AVATAR))).contains(72.0);
 	}
 
 	@Test

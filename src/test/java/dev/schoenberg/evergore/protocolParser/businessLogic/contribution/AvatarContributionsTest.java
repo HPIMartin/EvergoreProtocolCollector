@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser.businessLogic.contribution;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -108,7 +109,7 @@ class AvatarContributionsTest {
 
 		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
-		assertThat(all).containsExactly(new AvatarContribution("Aurora", new Contribution(1500, 200, 185.04, 300.0), null, null, null));
+		assertThat(all).containsExactly(new AvatarContribution("Aurora", new Contribution(1500, 200, 185.04, 300.0, Optional.empty()), null, null, null));
 	}
 
 	@Test
@@ -117,7 +118,7 @@ class AvatarContributionsTest {
 
 		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
-		assertThat(all).containsExactly(new AvatarContribution("Brynja", Contribution.NOTHING, null, null, null));
+		assertThat(all).containsExactly(new AvatarContribution("Brynja", new Contribution(0, 0, 0, 0, Optional.empty()), null, null, null));
 	}
 
 	@Test
