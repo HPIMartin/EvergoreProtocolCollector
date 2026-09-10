@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { formatGold, formatTimestamp, instantOf } from './format.ts'
 import { Link } from './Link.tsx'
 import { StatusPanel } from './StatusPanel.tsx'
-
-export type ColumnTone = 'neutral' | 'credit' | 'debit'
+import type { Tone } from './tone.ts'
+import { toneOf } from './tone.ts'
 
 export type SortDirection = 'ascending' | 'descending'
 
@@ -25,8 +25,9 @@ export type Column<Row> =
     })
   | (ColumnHead & {
       readonly kind: 'number'
-      readonly tone: ColumnTone
+      readonly tone: Tone
       readonly value: (row: Row) => number | null
+      readonly missingNote?: string
     })
   | (ColumnHead & {
       readonly kind: 'timestamp'
@@ -58,6 +59,16 @@ export type SortableTableProps<Row> = {
 }
 
 const missingValue = '–'
+
+const shownMissingNote = <Row,>(
+  column: Column<Row>,
+  row: Row,
+): string | null => {
+  if (column.kind !== 'number' || column.missingNote === undefined) {
+    return null
+  }
+  return column.value(row) === null ? column.missingNote : null
+}
 
 const shownMark = (text: string | null | undefined): string | null =>
   text === null || text === undefined || text.trim() === '' ? null : text
@@ -112,15 +123,8 @@ const sortedBy = <Row,>(
 
 type Cell = {
   readonly text: string
-  readonly tone: ColumnTone
+  readonly tone: Tone
   readonly href: string | null
-}
-
-const toneOf = (value: number, columnTone: ColumnTone): ColumnTone => {
-  if (value === 0) {
-    return 'neutral'
-  }
-  return value < 0 ? 'debit' : columnTone
 }
 
 const cellOf = <Row,>(column: Column<Row>, row: Row): Cell => {
@@ -189,6 +193,30 @@ const indicatorOf = (sort: Sort | null, columnKey: string): string => {
     return ''
   }
   return sort.direction === 'ascending' ? '▲' : '▼'
+}
+
+function TotalCell<Row>({ column, total }: TotalCellProps<Row>) {
+  const cell = totalCellOf(column, total)
+  const missingNote = shownMissingNote(column, total.row)
+
+  return (
+    <td
+      className="data-table__cell"
+      data-kind={column.kind}
+      data-testid={`total-${column.key}`}
+      data-tone={cell.tone}
+    >
+      {missingNote === null ? null : (
+        <Mark text={missingNote} testId="total-cell-mark" />
+      )}
+      {cell.text}
+    </td>
+  )
+}
+
+type TotalCellProps<Row> = {
+  readonly column: Column<Row>
+  readonly total: Total<Row>
 }
 
 function Mark({ text, testId }: MarkProps) {
@@ -280,6 +308,7 @@ export function SortableTable<Row>({
               >
                 {columns.map((column, index) => {
                   const cell = cellOf(column, row)
+                  const missingNote = shownMissingNote(column, row)
                   return (
                     <td
                       key={column.key}
@@ -291,6 +320,9 @@ export function SortableTable<Row>({
                       {index === 0 && rowMark !== null ? (
                         <Mark text={rowMark} testId="row-mark" />
                       ) : null}
+                      {missingNote === null ? null : (
+                        <Mark text={missingNote} testId="cell-mark" />
+                      )}
                       {cell.href === null ? (
                         cell.text
                       ) : (
@@ -328,15 +360,7 @@ export function SortableTable<Row>({
                   {total.label}
                 </th>
               ) : (
-                <td
-                  key={column.key}
-                  className="data-table__cell"
-                  data-kind={column.kind}
-                  data-tone={totalCellOf(column, total).tone}
-                  data-testid={`total-${column.key}`}
-                >
-                  {totalCellOf(column, total).text}
-                </td>
+                <TotalCell column={column} key={column.key} total={total} />
               ),
             )}
           </tr>

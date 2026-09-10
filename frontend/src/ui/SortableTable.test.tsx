@@ -8,11 +8,8 @@ import {
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { SortableTable } from './SortableTable.tsx'
-import type {
-  Column,
-  ColumnTone,
-  SortableTableProps,
-} from './SortableTable.tsx'
+import type { Column, SortableTableProps } from './SortableTable.tsx'
+import type { Tone } from './tone.ts'
 
 type Member = {
   readonly name: string
@@ -70,7 +67,30 @@ const tonesOf = (columnKey: string): (string | undefined)[] =>
 const headerOf = (name: string): HTMLElement =>
   screen.getByRole('button', { name })
 
-const numberColumnToned = (tone: ColumnTone): readonly Column<Member>[] => [
+const notedColumns: readonly Column<Member>[] = [
+  {
+    key: 'name',
+    header: 'Avatar',
+    kind: 'text',
+    value: (member) => member.name,
+  },
+  {
+    key: 'deposited',
+    header: 'Eingezahlt',
+    kind: 'number',
+    tone: 'neutral',
+    value: (member) => member.deposited,
+    missingNote: 'Kein Wert: noch nicht berechnet.',
+  },
+]
+
+const memberWithoutAValue: Member = {
+  name: 'Nix',
+  deposited: null,
+  lastActivity: null,
+}
+
+const numberColumnToned = (tone: Tone): readonly Column<Member>[] => [
   {
     key: 'deposited',
     header: 'Eingezahlt',
@@ -81,6 +101,76 @@ const numberColumnToned = (tone: ColumnTone): readonly Column<Member>[] => [
 ]
 
 describe('SortableTable', () => {
+  it('explains a missing figure in a noted column instead of leaving a bare dash', () => {
+    renderTable({ columns: notedColumns, rows: [memberWithoutAValue] })
+
+    expect(screen.getByTestId('cell-mark').textContent).toContain(
+      'Kein Wert: noch nicht berechnet.',
+    )
+  })
+
+  it('carries no note on a figure of zero, which is a value it can answer', () => {
+    renderTable({
+      columns: notedColumns,
+      rows: [{ ...memberWithoutAValue, deposited: 0 }],
+    })
+
+    expect(screen.queryByTestId('cell-mark')).toBeNull()
+  })
+
+  it('carries no note on a column that declares none', () => {
+    renderTable({ rows: [memberWithoutAValue] })
+
+    expect(screen.queryByTestId('cell-mark')).toBeNull()
+  })
+
+  it('notes every row that cannot answer, not only the first', () => {
+    renderTable({
+      columns: notedColumns,
+      rows: [memberWithoutAValue, { ...memberWithoutAValue, name: 'Nix2' }],
+    })
+
+    expect(screen.getAllByTestId('cell-mark')).toHaveLength(2)
+  })
+
+  it('explains a total whose noted figure is missing, like the rows above it', () => {
+    renderTable({
+      columns: notedColumns,
+      rows: [memberWithoutAValue],
+      total: { label: 'Gilde', row: memberWithoutAValue },
+    })
+
+    expect(screen.getByTestId('total-cell-mark').textContent).toContain(
+      'Kein Wert: noch nicht berechnet.',
+    )
+  })
+
+  it('leaves a total that can answer its noted figure unmarked', () => {
+    renderTable({
+      columns: notedColumns,
+      rows: [memberWithoutAValue],
+      total: { label: 'Gilde', row: { ...memberWithoutAValue, deposited: 7 } },
+    })
+
+    expect(screen.queryByTestId('total-cell-mark')).toBeNull()
+  })
+
+  it('marks a stale row at its name and its missing figure in its own cell', () => {
+    renderTable({
+      columns: notedColumns,
+      rows: [memberWithoutAValue],
+      mark: () => 'Veraltete Zahlen.',
+    })
+
+    expect([
+      screen.getByTestId('row-mark').textContent,
+      screen.getByTestId('cell-mark').textContent,
+    ]).toStrictEqual([
+      '!Veraltete Zahlen.',
+      '!Kein Wert: noch nicht berechnet.',
+    ])
+  })
+
   afterEach(cleanup)
 
   it('names itself by its caption', () => {

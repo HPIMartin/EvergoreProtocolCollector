@@ -98,9 +98,17 @@ Four top-level folders under `frontend/src/`:
 - **The total row**: an optional `total` (`{label, row}`) renders one `tfoot` row, outside the sorted
   body, so a sum can never be mistaken for a member or reordered into the middle of the table. Its
   first column carries the label, number columns carry their total, and any other kind carries the
-  missing-value dash: a link or a timestamp has no total.
+  missing-value dash: a link or a timestamp has no total. A noted column's total carries the same
+  hint its rows do when it cannot answer either, because a total that sums rows which cannot answer
+  cannot answer itself.
 - An `initialSort` naming a column the table does not have **throws**, for the reason the API answers
   400 instead of clamping a bad page size: a client bug stays visible.
+- **A number column may carry a `missingNote`**, and then a `null` in it renders the same `!` mark
+  with a hover note that a stale row carries at its name, instead of the bare missing-value dash
+  (author rule 2026-09-10). The dash keeps its single meaning, "nothing happened here": a figure the
+  view cannot compute says so.
+- **`tone.ts` holds the one tone rule** both the table cells and the header figures read: zero is
+  neutral, a negative value is a debit, and a positive value takes the tone its caller declares.
 - **The gallery**: `gallery.html` plus `src/ui/gallery/` shows every primitive with fixture rows modeled
   on the guild sheet's columns ([google-sheet.md](google-sheet.md)). `npm run dev` serves it at
   `/gallery.html`; `vite build` ignores it, because `index.html` is the only build input, so it never
