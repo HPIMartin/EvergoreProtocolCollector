@@ -36,6 +36,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 class DashboardBrowserSmokeTest {
 	private static final Path WORKING_DB = Paths.get("build/tmp/dashboardBrowser/dashboardBrowser.sqlite");
 	private static final Duration RENDER_GUARD = Duration.ofSeconds(30);
+	private static final By ACTIVE_ROW = By.cssSelector("[data-testid='active-roster'] [data-testid='data-row']");
+	private static final By DORMANT_ROW = By.cssSelector("[data-testid='dormant-roster'] [data-testid='data-row']");
 	private static final By DATA_ROW = By.cssSelector("[data-testid='data-row']");
 	private static final By TOTAL_ROW = By.cssSelector("[data-testid='total-row']");
 	private static final By STAT_HEADER = By.cssSelector("[data-testid='stat-header']");
@@ -61,13 +63,19 @@ class DashboardBrowserSmokeTest {
 	}
 
 	@Test
-	void theOverviewShowsEveryAvatarWithItsRecomputedBankTotals() {
-		List<List<String>> rows = renderedRowsOf("/overview");
+	void theOverviewShowsEveryAvatarActiveInTheWindowWithItsRecomputedBankTotals() {
+		List<List<String>> rows = renderedRowsOf("/overview", ACTIVE_ROW);
 
 		assertThat(rows)
-				.containsExactly(List.of("Aurora", "1.500", "200", "308", "300", "1.308", "17.01.2024 12:00", "12.01.2024 12:00"),
-						List.of("Boreas", "750", "0", "77", "0", "827", "05.02.2024 09:00", "01.02.2024 09:00"),
+				.containsExactly(List.of("Boreas", "750", "0", "77", "0", "827", "05.02.2024 09:00", "01.02.2024 09:00"),
 						List.of("Brynja", "0", "0", "1.217", "0", "1.217", "06.02.2024 10:00", "–"), List.of("Calix", "0", "300", "0", "0", "-300", "–", "01.03.2024 08:00"));
+	}
+
+	@Test
+	void theOverviewShowsTheAvatarWhoseLastMoveTrailsTheNewestByMoreThanTheWindowAsDormant() {
+		List<List<String>> rows = renderedRowsOf("/overview", DORMANT_ROW);
+
+		assertThat(rows).containsExactly(List.of("Aurora", "1.500", "200", "308", "300", "1.308", "17.01.2024 12:00", "12.01.2024 12:00"));
 	}
 
 	@Test
@@ -92,10 +100,10 @@ class DashboardBrowserSmokeTest {
 	}
 
 	@Test
-	void theOverviewClosesWithTheGuildWideTotalRow() {
-		List<String> total = renderedTotalOf("/overview");
+	void theOverviewStatesTheGuildWideTotalRowOnceAcrossBothTables() {
+		List<List<String>> totals = renderedRowsOf("/overview", TOTAL_ROW);
 
-		assertThat(total).containsExactly("Gilde", "2.250", "500", "1.602", "300", "3.052", "–", "–");
+		assertThat(totals).containsExactly(List.of("Gilde", "2.250", "500", "1.602", "300", "3.052", "–", "–"));
 	}
 
 	@Test
@@ -105,10 +113,6 @@ class DashboardBrowserSmokeTest {
 		assertThat(rows)
 				.containsExactly(List.of("12.01.2024 12:00", "Aurora", "200", "Entnahme"), List.of("11.01.2024 11:00", "Aurora", "500", "Einlagerung"),
 						List.of("10.01.2024 10:00", "Aurora", "1.000", "Einlagerung"));
-	}
-
-	private List<String> renderedTotalOf(String clientRoute) {
-		return renderedRowsOf(clientRoute, TOTAL_ROW).getFirst();
 	}
 
 	private List<String> renderedPositionLabelsOf(String clientRoute) {
@@ -144,7 +148,7 @@ class DashboardBrowserSmokeTest {
 	}
 
 	private static List<String> renderedColumnLabels(WebDriver driver) {
-		return driver.findElements(By.cssSelector("[data-testid='column-label']")).stream().map(WebElement::getText).toList();
+		return driver.findElements(By.cssSelector("[data-testid='active-roster'] [data-testid='column-label']")).stream().map(WebElement::getText).toList();
 	}
 
 	private void openAndAwaitTheStatHeader(WebDriver driver, String clientRoute) {

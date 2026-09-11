@@ -225,7 +225,9 @@ Four top-level folders under `frontend/src/`:
 - **The one test that does run the real thing** is on the Java side: `DashboardBrowserSmokeTest`
   drives headless Firefox against the booted server and reads the painted rows back through the
   `data-testid` hooks, so "the bundle reaches the API and shows its data" is proven somewhere
-  (`testing.md`). It is the reason the hooks are a contract, not a convenience.
+  (`testing.md`). It is the reason the hooks are a contract, not a convenience. It reads the two
+  roster tables apart through `active-roster` / `dormant-roster`, and its fixture is from 2024, so a
+  cut against the reader's clock would empty its active table.
 
 ## The JSON API the SPA reads
 
