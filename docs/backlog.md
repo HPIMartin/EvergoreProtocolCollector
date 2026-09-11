@@ -37,9 +37,11 @@ opt-in check, the post-deploy snapshot (03.09.2026) reproduces all 42 avatars' s
 assumed. **The `0.2.0` cut (author decision 2026-09-07): the stale-row marker, the atomic run-status
 snapshot, the named guild share, E16, with F6 driving the deploy.** The two `S` correctness items and the
 named guild share have landed, so **E16** on the same view comes next. That landing carried the
-valuation rule with it (author decision 2026-09-10): the deposit credit follows the item's category
-as the guild announced it in 2020, which moves the guild's contribution on the 03.09.2026 snapshot
-from `-86.317.570` to `+74.410.839` and puts the trader role at break-even. The deploy script and its
+valuation rule with it (author decisions 2026-09-10): the deposit credit follows the item's category,
+on the guild's announced 60 % price and its zero for mined and hunted goods, plus two decided
+departures from that announcement for trader goods and for boards and bars, which
+[domain-model.md](knowledge-base/domain-model.md) names one by one. The guild's contribution on the
+03.09.2026 snapshot is `+74.410.839` and the trader role stands at break-even. The deploy script and its
 self-test have landed; **F6** is now only the run itself, which is what closes M7.
 **D23** follows *after* `0.2.0` (same decision): it changes what the numbers *are* while the header
 only changes what they *say*, and the header derives its figures from the data, so D23 landing later
