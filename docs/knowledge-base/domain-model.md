@@ -50,7 +50,10 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
 
 - **`ingameName`**: the exact German name as it appears in the scraped protocol (the parser
   matches on this).
-- **`marketValue`**: base gold value (Goldwert).
+- **`marketValue`**: base gold value (Goldwert). For the simple ammunition types it is the price the
+  **NPC trader charges**, confirmed by the author 2026-09-10 against the game: `PFEILE` 3, `BOLZEN` 12,
+  `MAGIEESSENZ` 4, exactly the catalog's numbers. So a member can buy those for `marketValue` rather
+  than craft them, which is what makes a 60 % credit a real loss of gold for whoever buys them.
 - **`category`**: one of the `Category` values (weapon/armor families, `ROHSTOFFE`,
   `JAGDBEUTEN` (hunt loot), `EDELSTEINE` (gems), `HANDWERKSMATERIAL`, …). Each category carries
   two multipliers, `placement` (what a deposit credits) and `withdrawl` (what a withdrawal costs),
@@ -92,6 +95,15 @@ getStorageValue() = marketValue × category.placement
 - `MAGISCHE_AETHERBINDE` (`BANDAGEN`, market value 257): 257 × 0.6 = **154.2** ✓
 - `MAGIESPLITTER` (`HANDWERKSMATERIAL`, market value 60): 60 × 1.0 = **60** ✓
 - `EISENBARREN` (`VERARBEITETE_ROHSTOFFE`, market value 120): 120 × 0.6 = **72** ✓
+
+**How the guild's rule 2 is implemented, without a rule of its own.** The announcement lets a member
+withdraw crafting material **free** as long as every product comes back. The software has no notion
+of a withdrawal belonging to a later deposit, and needs none: charging the withdrawal at 60 % and
+crediting the deposit of what it became cancels out, so a crafter who returns the products comes out
+at least whole, and better by the craft margin. The condition holds in the other direction too: a
+member who withdraws and never deposits keeps the charge, which is what "and only if" asks for. What
+the software genuinely cannot see is which of the two happened, so a withdrawal that was a **sale**
+rather than an input reads identically to one that will come back.
 
 **Why crafting pays.** A crafting gain is always `0.6 × (the product's market value less its
 ingredients')`, because `withdrawl` is 0.6 in every category: an ingredient's credit tier changes

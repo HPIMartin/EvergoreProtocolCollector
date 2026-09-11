@@ -157,11 +157,25 @@ second copy.
 - **D-2 (Other workbook tabs):** does the spreadsheet have tabs (raw protocol, item price list,
   per-month history) beyond `gid=937183112`? The CSV export only sees one. Scrape/import them?
 - **D-3 (Item value source of truth):** are `EvergoreItem.marketValue`s authoritative, or were the
-  sheet's values maintained separately (and possibly drifted)? How are new items / price changes maintained?
+  sheet's values maintained separately (and possibly drifted)? How are new items / price changes
+  maintained? Answered for the simple ammunition types, whose catalog value **is** the NPC trader's
+  price (confirmed 2026-09-10, see [domain-model.md](knowledge-base/domain-model.md)), so at least
+  those are not a guild convention. Whether that holds for the rest, and how a price change reaches
+  the catalog, is still open.
 - **D-4 (Hunt-loot estimate formula):** how is the sheet's estimated hunt-deposit value (col 6)
   computed? Only the display estimate is still open: crediting a hunt-loot deposit with **zero** is
   the guild's deliberate tax, decided 2026-09-10 from the guild's own announcements, so the
   valuation half of this question is answered (gates E3).
+- **D-12 (Should bought ammunition be credited in full?):** the 100 % tier exists because
+  `HANDWERKSMATERIAL` can only be bought, so a 60 % credit confiscates 40 % of the member's own gold.
+  The same is true of ammunition a member buys from the NPC at `marketValue` (D-3 above), and the
+  guild trader's `9.864.856` of ammunition deposits are credited `5.918.914`, a `3.945.942` loss on
+  purchases. But ammunition is also **craftable**, unlike every trader good, and the software cannot
+  tell a bought deposit from a crafted one: measured 2026-09-10, the guild's ammunition deposits are
+  `67.086.978` at market value, of which only 9,9 Mio are the trader's, so moving the three
+  `MUNITION_*` categories to 100 % would hand the crafters `26.834.791` for goods whose inputs they
+  already drew at 60 %. Any answer needs that double payment addressed, by a rule the ledger can
+  actually apply.
 - **D-9 (BDD tooling):** plain JUnit given/when/then, or a framework (Cucumber)? Assumed plain unless asked.
 - **D-11 (ToS / PII, enterprise-audit Pitfall #7):** the tool scrapes evergore.de and stores *other*
   guild members' bank/storage activity. No production pressure (Q2), but a deliberate stance is due:
