@@ -9,52 +9,41 @@
 > ([multi-agent-playbook.md](knowledge-base/multi-agent-playbook.md), handbook §7); landings stay
 > author-serialized.
 >
-> **Order re-cut 2026-09-04** (author decisions that day, see open-questions.md): correctness
-> before product, the two dependency bottlenecks before the product build-out, and a parked set
-> that is explicitly not in this stage.
+> **Order re-cut 2026-09-11** (author decision, see open-questions.md): settle what the numbers
+> *are*, then explain them, then the bottlenecks. The previous cut predates the valuation change and
+> knew none of the five items it produced. The explanation page must be revised in the same change
+> as any valuation rule it explains, so everything that changes what the numbers are lands before
+> it. A parked set stays explicitly out of this stage.
 
 ## Order
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M5 | Overview truth | author steps only | Closing out; the code landed, two author checks remain |
-| M6 | Numbers you can trust | landed | Every feature stands on these numbers, and on a status surface that reports one run |
-| M7 | The overview states the guild's actual position | E16, F6 | The most visible defect: the total row says the opposite of the truth. **M6 plus M7 is the `0.2.0` cut**, and F6 drives its deploy (decision 2026-09-07) |
-| M8 | Clear the last bottleneck | D12 | The `M` item that still gates the repeated read method; the migration framework landed |
-| M9 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
-| M10 | Product build-out | E12→E13, E9, E3, E6 | E12 inherits D18's query shape, so it follows it |
-| M11 | Ops, security & environment | F1, H11, C1, C8, C10, C11, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
+| M5 | Overview truth | author steps only | Closing out; the code landed, two restated author checks remain |
+| M7 | The overview states the guild's actual position | the active/dormant split, the stone aliases, the release run (E16, D23 in part, F6) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the aliases join because the release publishes `Gildenspende` for the first time |
+| M8 | The numbers hold up | the remaining unvalued names and the ammunition question, round-trip detection, opening balance, explanation page with the trader's figure (D23, D-12, F7, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
+| M9 | Clear the last bottleneck | D12, D24 | The item every later read method waits on; it also gates the transactional ingest |
+| M10 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
+| M11 | Product build-out | E12→E13, E9, E3, E6 | E12 inherits D18's query shape, so it follows it |
+| M12 | Ops, security & environment | F1, H11, C1, C8, C10, C11, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
 
 ## M5: Overview truth
 
 Slice: the overview answers "what did this member contribute" completely, instead of showing gold
 only. **Code complete; only author steps remain.**
 
-- [ ] The corrected storage sums are announced in the guild (author step, decision 2026-09-02).
-- [ ] Values match the sheet on a real sample (author check).
-
-## M6: Numbers you can trust
-
-Slice: every number the overview shows is verified, refreshes independently of the scrape, and says
-so when it did not.
-
-- [x] A production DB taken after the `0.1.0` deploy reproduces its own stored sums when recomputed
-      from its rows: the 03.09.2026 snapshot matches on all 42 avatars, measured with the committed
-      opt-in comparison rather than a one-off. **B19 is not part of this**: it is a separate item on
-      the test-suite hygiene list; see open-questions.md 2026-09-04 for why.
-- [x] The collection timestamp moved to the anonymous `/api/v1/admin/status` surface, so the
-      overview no longer carries a guild-wide number that reads like a per-row freshness claim.
-- [x] A row whose sums did not refresh is marked as such on the wire and in the table, and the
-      guild total states that it contains one.
-- [x] `/health` and `/api/v1/admin/status` answer from one atomic snapshot, so no reader mixes two
-      runs' fields.
-- [x] No read path dereferences a ledger `timeStamp` unguarded: the column is `NOT NULL` in the
-      database, so an entry without a timestamp cannot be stored in the first place.
+- [ ] The guild is told the valuation rule and what the four header figures mean (author step,
+      restated 2026-09-11: it supersedes the narrower announcement of the corrected storage sums
+      decided 2026-09-02, because the rule itself changed afterwards).
+- [ ] On a real sample, the columns that **must** match the sheet do (bank in and out, storage
+      withdrawal), and the two deliberate divergences on the deposit column do **not** (author
+      check, restated 2026-09-11: the software diverges from the sheet by decision, so the old
+      "values match the sheet" wording could never be ticked).
 
 ## M7: The overview states the guild's actual position
 
-Slice: the overview stops adding measured gold to modelled material, and the roster puts the
-members who matter above the fold.
+Slice: the overview stops adding measured gold to modelled material, the roster puts the members who
+matter above the fold, and the release goes out driven rather than typed. **This is `0.2.0`.**
 
 - [x] What the guild keeps of a member's deposits is named rather than hidden inside a number shaped
       like a balance: a stat header of four figures (`Gildenbank`, `Gildenlagerwert`,
@@ -64,23 +53,50 @@ members who matter above the fold.
       (decided 2026-09-10).
 - [ ] The roster splits into active and dormant, cut against the data's own timestamp and never
       against the viewer's clock (backlog E16, on the view the header just rebuilt).
+- [ ] `Marmor`, `Granit` and `Schiefer` carry the value of their catalogued `*stein` forms (backlog
+      D23, first step, decided 2026-09-11): the release publishes `Gildenspende` for the first time
+      and it is `2.478.114` (2,4 %) too low without them, with a further `371.016` missing from
+      storage withdrawal.
 - [ ] A committed deploy script drives a full deploy and rollback over ssh, carrying every check that
       caught the `0.1.0` defects, with a self-test that fails each of them against a faked bad state.
       The script and its self-test have landed; the box closes when it has driven this release and a
       rollback against the home server (backlog F6), so `0.2.0` is the first deploy nobody types by hand.
 
-## M8: Clear the last bottleneck
+## M8: The numbers hold up
+
+Slice: the figures the header named are complete, the rule behind them is decided where the ledger
+cannot decide it, and a member can follow how his own row comes about.
+
+- [ ] Each of the remaining unvalued storage names is classified as *must carry a value* or
+      *deliberately zero*, the deliberate ones stop counting as unknown in `/health`, and the
+      recompute is re-run so the corrected sums are measured rather than assumed (backlog D23).
+- [ ] Whether bought ammunition is credited in full is decided, with the double payment to crafters
+      addressed by a rule the ledger can actually apply (open question D-12). It belongs here
+      because it changes what a deposit credits.
+- [ ] A member cycling trader goods through the storage is named with the item and the overlapping
+      quantity, and a test proves the warning stays silent for a crafter who withdraws material and
+      deposits the product (backlog F7).
+- [ ] One opening entry per avatar books the counted stock at a chosen instant, marked as such on the
+      wire and in the view, and the recomputed sums equal that stock (backlog E18).
+- [ ] A page reachable from the overview explains every header figure and every credit tier with one
+      worked example each, in the style of the guild's own announcements, and a KB rule makes a
+      valuation change update it in the same commit (backlog E19). **Last in this milestone:** it
+      must follow every rule above it or be written twice.
+- [ ] The trader's figure is explained down to the transactions that make it, and each of the three
+      facts the ledger cannot see is either represented or recorded as out of the model's reach
+      (backlog E20), carried by the explanation page rather than standing alone.
+
+## M9: Clear the last bottleneck
 
 Slice: the item that every later read method waits on.
 
 - [ ] The duplicated bank/storage repositories are unified, one managed connection source, no
       cross-entity constant use (backlog D12). **Before** D18 and E12, or the same query lands
-      duplicated a fourth and fifth time. Also gates the bank+storage ingest transaction (D24).
-- [x] A schema-migration framework is wired and historical data provably survives it: Flyway owns
-      the schema, `V1` records the pre-Flyway tables and `V2` rebuilds all three with `NOT NULL` on
-      every column, proven row-for-row on an existing database.
+      duplicated a fourth and fifth time.
+- [ ] A scrape that aborts after the bank step leaves neither ledger table changed (backlog D24).
+      It needs a transaction spanning both repositories, which is why it follows the unification.
 
-## M9: What the bottlenecks release
+## M10: What the bottlenecks release
 
 Slice: the measured costs come down and the timezone hazard is fixed at its root.
 
@@ -93,7 +109,7 @@ Slice: the measured costs come down and the timezone hazard is fixed at its root
       retiring the interim startup guard (backlog D22).
 - [ ] The `withdrawl` → `withdrawal` rename runs as a migration, values preserved 1:1 (backlog D9).
 
-## M10: Product build-out
+## M11: Product build-out
 
 Slice: the dashboard answers windowed questions, and the work the value model rates at zero gets
 its due.
@@ -105,10 +121,11 @@ its due.
       standing (backlog E13).
 - [ ] Avatar name matching folds case in the ledger lookups and the meta keys, not only in the union
       (backlog E9).
-- [ ] Hunt-loot estimate (backlog E3) — gated on the D-4 valuation rule, still open.
+- [ ] Hunt-loot estimate (backlog E3). Its valuation half is decided; only the display estimate of
+      open question D-4 still gates it.
 - [ ] History / time-series per avatar (backlog E6).
 
-## M11: Ops, security & environment
+## M12: Ops, security & environment
 
 Slice: the stand deploys, scans and authenticates the way a showcase should, and the framework
 reaches its current major.
@@ -125,17 +142,19 @@ reaches its current major.
 
 ## Ongoing (no milestone; pull into any gap)
 
-- **Mechanical error prevention, the showcase's thesis:** enforcement hooks (G7), the git-hook
-  gate-bypass root cause (G13), the wildcard-import ban (G17, only in a gap with **no** open
-  strand), agent-environment polish including the shared probe result directory that makes
-  concurrent falsifier runs flaky (G11), the SessionStart hook that injects the lessons
-  deterministically (G10) — the learnings repeatedly show a session forgetting a written rule.
+- **Mechanical error prevention, the showcase's thesis:** the tool-level enforcement hooks, whose
+  working-directory-drift guard addresses a failure mode that has already cost work (G7); the one
+  remaining hole in the git gate, a prefix-squattable host-path scan (G13); the React hook rules,
+  which nothing enforces today (B24); the wildcard-import ban (G17, only in a gap with **no** open
+  strand); agent-environment polish, including the shared probe result directory that makes
+  concurrent falsifier runs flaky and the two worktree costs folded in from the dissolved
+  build-performance analysis (G11); and the SessionStart hook that injects the lessons
+  deterministically (G10). The learnings repeatedly show a session forgetting a written rule.
 - **Test-suite hygiene:** the scripted 1:1 value comparison (B19), repository tests (B4), style
   alignment (B8), the shared boot fixture (B18), the two parser residuals (B21, B22), deterministic
   fixture ids (B23), the unexplained load-sensitive failure (B20), AssertJ in `SmokeTest` (B7).
 - **Docs & code hygiene:** KB in lockstep with code (G3), KB accuracy sweep (G18), the parser
-  entrypoints made injectable (D15),
-  exception/logging hygiene and dead code (D11).
+  entrypoints made injectable (D15), exception/logging hygiene and dead code (D11).
 - **Craftsmanship, when a gap allows:** catalog refactor (D6), full repackaging (D3) last, on top
   of a tested core.
 - **Creative:** weekly guild report / delivery channel (F3).
