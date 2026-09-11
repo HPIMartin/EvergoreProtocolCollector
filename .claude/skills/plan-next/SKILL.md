@@ -53,12 +53,34 @@ checks, each of which has found something real in practice:
    documents, explains or publishes a number against anything that still changes that number. Name
    the dependency, not just the item.
 
-## 3. Deliver the analysis as a page
+## 3. Deliver it as a page, and make the page runnable
 
-Publish it with the `Artifact` tool (load the `artifact-design` skill first). A difference list
+Publish with the `Artifact` tool (load the `artifact-design` skill first). A difference list
 carrying measured figures is overview-able as a page and tiring as terminal scrollback, and the
-author has said which they prefer. Keep the terminal reply to the headline finding, the
-recommendation, and the decisions you need.
+author starts the work from that page on whatever machine is to hand. So the page carries **both**
+halves, and an analysis without the second half is not a finished result:
+
+**The plan.** The difference list with its measured figures, the proposed order, the decisions
+taken, and the questions still open.
+
+**The execution.** One block per acutely next step, each carrying:
+
+- A **prompt that stands on its own** in a fresh session on another machine: what to read first to
+  orient, the acceptance, the measured figures, and the trap that will otherwise be walked into.
+  Hand it the capability, never the backlog ID. Give it a copy button, which is what makes the page
+  a launcher rather than a report.
+- The **model** to start that session on, plus the gate's tier where the change escalates
+  (valuation math, time and timezones, concurrency, data migration, the auth and security surface).
+- The **reasoning effort** to set, and separately the size estimate, so the author can plan time
+  instead of inferring it.
+
+**The lanes.** Which steps run at the same time, grouped by the code they touch, and every
+constraint that survives the parallelism: one worktree per lane and never two Gradle runs in one
+tree; landings stay author-serialized however much runs in parallel; a step that changes a gate
+every other commit passes through lands before the other lanes start committing or after they
+land, never between; and the shared doc files the second lane to land has to rebase onto.
+
+Keep the terminal reply to the headline finding, the recommendation, and the decisions you need.
 
 ## 4. Recommend, do not survey
 
