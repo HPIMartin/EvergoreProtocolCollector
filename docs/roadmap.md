@@ -20,7 +20,7 @@
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
 | M5 | Overview truth | author steps only | Closing out; the code landed, two restated author checks remain |
-| M7 | The overview states the guild's actual position | the active/dormant split, the stone aliases, the release run (E16, D23 in part, F6) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the aliases join because the release publishes `Gildenspende` for the first time |
+| M7 | The overview states the guild's actual position | the stone aliases, the release run (D23 in part, F6) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the aliases join because the release publishes `Gildenspende` for the first time |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition question, round-trip detection, opening balance, explanation page with the trader's figure (D23, D-12, F7, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
 | M9 | Clear the last bottleneck | D12, D24 | The item every later read method waits on; it also gates the transactional ingest |
 | M10 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
@@ -51,8 +51,9 @@ matter above the fold, and the release goes out driven rather than typed. **This
       table's sixth column, leaving its column count and density untouched. It carried the valuation
       rule with it, from the recipe-based stand-in to the guild's announced category rule
       (decided 2026-09-10).
-- [ ] The roster splits into active and dormant, cut against the data's own timestamp and never
-      against the viewer's clock (backlog E16, on the view the header just rebuilt).
+- [x] The roster splits into an active and a dormant table over one column definition, cut against
+      the newest activity the loaded rows themselves carry and never against the reader's clock, so a
+      stalled collection cannot drop the whole guild into "dormant" (decided 2026-09-11).
 - [ ] `Marmor`, `Granit` and `Schiefer` carry the value of their catalogued `*stein` forms (backlog
       D23, first step, decided 2026-09-11): the release publishes `Gildenspende` for the first time
       and it is `2.478.114` (2,4 %) too low without them, with a further `371.016` missing from
