@@ -11,6 +11,8 @@ export {
 export type { Ledger, LedgerVisitor } from './ledger.ts'
 export { entriesOf, unknownAvatar } from './ledger.ts'
 export type { Page } from './page.ts'
+export type { RosterSplit } from './rosterSplit.ts'
+export { ACTIVITY_WINDOW_DAYS, rosterSplitOf } from './rosterSplit.ts'
 export { GUILD_STALE_SUMS_NOTE, staleSumsNoteOf } from './staleSums.ts'
 export type { StorageEntry } from './storageEntry.ts'
 export type { TransferType } from './transferType.ts'
