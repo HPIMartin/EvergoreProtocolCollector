@@ -166,3 +166,15 @@ command) inside guardrails. Two files:
 - Always multiple-choice; the author free-types only if none fit.
 - Recommended option first, and say so. Be picky: surface trade-offs the author may not have
   considered rather than quietly defaulting.
+
+## Handing the author a review
+
+- **Every request for the author to review carries a GitLens compare statement**, unasked. Without
+  it he has to reconstruct the range himself before he can look at anything.
+- **The format is exactly `<X>..<Y>`, newest first:** `X` is the strand's tip (the commit that
+  landed, or the branch head), `Y` is the base it is held against (the commit the strand started
+  from). Example: `5fd1d1c..bc36339`.
+- That order is what the author's GitLens compare field reads; the other way round it shows the
+  inverse change set, and `↔` or any other separator is not a form it accepts.
+- Nothing else belongs in the statement: no `git` prefix, no branch names, no arrows. The two SHAs
+  and the two dots.

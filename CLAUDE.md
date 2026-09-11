@@ -4,7 +4,7 @@
 > (the [single source of truth](docs/knowledge-base/README.md)); this file points to them and adds
 > Claude-Code mechanics. **Built from
 > [`agent-entry-template.md`](docs/knowledge-base/agent-entry-template.md) · based on template
-> version: 3.** At session start, quick-check the SHARED section against the template (re-sync on a
+> version: 4.** At session start, quick-check the SHARED section against the template (re-sync on a
 > version bump). **Conversation may be in German; code, comments, identifiers, and docs are always
 > English.**
 
@@ -43,6 +43,8 @@ manual Google Sheet; also a showcase of clean, test-driven, AI-assisted developm
   agent gates on it.
 - **Ask, don't guess:** author decisions get multiple-choice options (recommended first), recorded
   in [`open-questions.md`](docs/open-questions.md).
+- **Handing the author a review:** every review request carries a GitLens compare statement,
+  `<tip>..<base>` and nothing else → working-with-ai-agents.md.
 - **Context & token hygiene** (section-scoped reads, no re-reads, batched tool calls, short focused
   sessions) → working-with-ai-agents.md.
 

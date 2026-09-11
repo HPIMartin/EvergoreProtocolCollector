@@ -6,7 +6,7 @@ bootstraps from the **same** rules without duplicating the KB: a wrapper *points
 adds only that tool's mechanics. The KB (`docs/knowledge-base/` + `backlog.md` +
 `open-questions.md`) is the single source of truth.
 
-**Template version: 3.** Bump on any change to the SHARED section. Every wrapper records the
+**Template version: 4.** Bump on any change to the SHARED section. Every wrapper records the
 version it was built from and quick-checks at session start; re-sync on a bump. See the
 [KB README](README.md) "step 0".
 
@@ -58,6 +58,8 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
   agent gates on it.
 - **Ask, don't guess:** author decisions get multiple-choice options (recommended first), recorded
   in `open-questions.md`.
+- **Handing the author a review:** every review request carries a GitLens compare statement,
+  `<tip>..<base>` and nothing else → working-with-ai-agents.md.
 - **Context & token hygiene** (section-scoped reads, no re-reads, batched tool calls, short focused
   sessions) → working-with-ai-agents.md.
 

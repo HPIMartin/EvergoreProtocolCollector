@@ -249,6 +249,8 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   implementing what it claims; none may land. Red states are never committed (TDD red is transient;
   `@Ignore`-first Gherkin keeps the build green). A gateway defect is repaired by rebase into the
   commit it belongs to, before the merge: never left on `main`, never a follow-up "fix" commit.
+- **Asking the author to review** means handing him the GitLens compare statement for the range
+  (`<tip>..<base>`), never a description of where to look → working-with-ai-agents.md.
 - **Reword at the gateway** non-interactively via scripted `GIT_SEQUENCE_EDITOR` / `GIT_EDITOR`
   (no interactive TTY). `git push` stays the author's alone (deny in `.claude/settings.json`).
 - **Tool-neutral**: plain git (worktree · branch · rebase · `--ff-only`). Claude Code adds `Agent`
