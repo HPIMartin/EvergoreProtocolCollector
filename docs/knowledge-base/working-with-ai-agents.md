@@ -108,6 +108,11 @@ command) inside guardrails. Two files:
   commands; periodically prune the local file, but only when the session is idle (or by hand): a
   running session keeps its approval list in memory and rewrites the local file on every new
   approval, clobbering an in-session prune.
+- **The "always allow" flow can re-pollute the *committed* file**, writing path-bearing rules into
+  it and rewriting its indentation from tabs to spaces. Prefer bare commands that match the
+  portable `Bash(<cmd>:*)` rules, and diff against `HEAD` when unsure. The worktree
+  `git -C <absolute path>` re-prompt loop is already fixed by the committed portable wildcard
+  `Bash(git -C *.claude/worktrees/*)`; the indentation rewrite still needs watching.
 - **Token-efficient commands that still match.** Combined one-liners
   (`echo … && git status && grep …`) save round-trips and auto-allow when every segment matches an
   allow rule; prefer them over atomic calls. Inline `VAR=…` makes a chain un-matchable: use literal

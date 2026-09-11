@@ -121,6 +121,15 @@ Orchestrator = the main session (me), via the `Agent` tool: `subagent_type` = `i
   handbook §7): outside `check`/`build` and outside git, a leftover probe breaks nothing.
 - Focused tests during micro-steps (`./gradlew test --tests ClassName`); full `./gradlew build`
   before the gate.
+- **The shell's working directory drifts between worktrees.** With a strand worktree checked out
+  beside `main`, a Bash call can silently run in the wrong one, and a relative path then reads or
+  writes the wrong tree with no error at all (seen three times in one gate, once losing two
+  process-learnings rows into the main worktree while the branch stayed without them). Address the
+  target explicitly in every call: `git -C <absolute path>`, absolute paths for reads, writes and
+  Gradle, and `git status --short` in **both** worktrees before a gateway claim. A drifted Gradle
+  run is **green**, so an exit code proves nothing: count the test-result XMLs in the worktree's
+  own `build/` and check the strand's new test classes are among them, or the suite ran without
+  the change. Mechanical enforcement is backlog **G7**.
 
 ## Worked example (the storage-value evaluator feature)
 

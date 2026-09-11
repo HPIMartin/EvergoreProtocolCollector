@@ -16,3 +16,7 @@
   `binary`). Why: the repo originally had no `.gitattributes` and mixed CRLF/LF, making
   working-tree diffs look enormous (~95% line-ending churn). If a diff ever looks huge again,
   check line endings first (`git diff --ignore-all-space`).
+- The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes them to LF on commit,
+  so the warning is expected (`git diff --check` if unsure). A working tree holding CRLF templates
+  makes the running build **serve** CRLF; a clean LF checkout serves LF, and the 1:1 parity check
+  normalizes line endings before it compares.

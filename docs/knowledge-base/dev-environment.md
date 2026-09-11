@@ -117,6 +117,12 @@ Java version pinned in places that must stay in sync (**currently `25`**):
 - **To upgrade:** bump the toolchain in `build.gradle.kts` plus the devcontainer and Dockerfile
   bases together, rebuild the container, run `./gradlew build`; nothing lands on the host.
   (Standing goal: keep this bump a single, documented switch.)
+- **Java 25 made `java.sql.Timestamp.from` strict:** its `Math.multiplyExact` throws where JDK 17
+  silently wrapped, so converting an extreme instant (`LocalDateTime.MIN`, for one) to a
+  `java.sql.Timestamp` now fails. Keep extreme sentinel instants out of any code that converts,
+  or the conversion decides the behaviour instead of the domain.
+- **ArchUnit must stay at 1.4.1 or newer** to read Java 25 bytecode. An older version checks zero
+  classes without saying so, which passes as a false green.
 
 ## Production image (root `Dockerfile`)
 
@@ -130,7 +136,8 @@ Java version pinned in places that must stay in sync (**currently `25`**):
 - Buildable **from inside the devcontainer** since the `docker-outside-of-docker` feature returned:
   the `docker` CLI targets the host daemon, so `docker build` / `docker run` need no host shell.
   (The devcontainer image itself is still built by the host's Dev Containers extension, so changes
-  under `.devcontainer/` only take effect on the author's next rebuild.)
+  under `.devcontainer/` only take effect on the author's next rebuild.) An agent therefore
+  cannot validate a `.devcontainer/` change at all; only that rebuild proves it.
 
 ## Selenium in-container
 

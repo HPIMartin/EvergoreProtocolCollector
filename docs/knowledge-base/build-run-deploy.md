@@ -150,6 +150,10 @@ The devcontainer `postCreate` runs this automatically, but it only applies on th
 rebuild** (the devcontainer image is built outside the devcontainer; see
 [dev-environment.md](dev-environment.md)), so run it once by hand in an existing checkout.
 
+**Commit from inside the devcontainer.** A session on the Windows host fails the `pre-commit`
+gate: `checkstyleMain` pulls `:frontend:npmBuild`, which needs the Linux-installed
+`node_modules`, so the host has no `tsc` to run.
+
 - **`content-gate`**: not a hook, the shared content check. `--staged` reads the index, `--commit
   <sha>` reads one commit. Scans for: private-key blocks, AWS-style access keys, credential
   literals, real e-mail addresses, absolute user-home paths, and committed key/keystore files
