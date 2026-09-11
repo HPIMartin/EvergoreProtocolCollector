@@ -20,6 +20,16 @@ items mean, or a release approaches.
   finding turns on it, and only then.
 - **Name every item in words**; a shortcode may follow once, in parentheses. An analysis written in
   bare shortcodes is unreadable to the person who has to decide on it.
+- **Write the plan in the language this skill was invoked in.** A German request produces a German
+  page, prompts included, and an English one an English page. This is not cosmetic: a prompt on the
+  page is what starts the next session, so an English prompt silently switches that session's
+  language, whatever the author was working in. Two things stay unaffected either way. The
+  **repository's documentation remains English** under CLAUDE.md's language rule (conversation in
+  any language; code, comments, identifiers and docs always English), so the decision rows, backlog
+  rows and KB edits you write after the go are English even when the page is not; and **technical
+  material keeps its own spelling** inside the page, meaning file paths, identifiers, command names
+  and the German domain terms. The page is a deliverable to the author, not a repo doc, so nothing
+  should later "correct" it into English.
 
 ## 1. Orient
 
