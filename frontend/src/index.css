@@ -146,6 +146,10 @@ a:hover {
   margin-top: var(--space-3);
 }
 
+.roster + .roster {
+  margin-top: var(--space-6);
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;

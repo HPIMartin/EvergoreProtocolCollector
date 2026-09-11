@@ -153,7 +153,8 @@ Four top-level folders under `frontend/src/`:
   what the column kind reads, and `format.ts` is the one place that turns them into Berlin
   wall-clock. Transfer types are shown as `Einlagerung`/`Entnahme` from the domain, and the headers
   are German, like the sheet's.
-- **The overview's columns are the sheet's, in the sheet's order:** `Bank-Einzahlung`,
+- **The overview's columns are the sheet's, in the sheet's order, and both roster tables share the
+  one definition:** `Bank-Einzahlung`,
   `Bank-Auszahlung`, `Einlagerung`, `Entnahme`, the switched figure `Nach Abzügen`/`Vor Abzügen` and then the
   sheet's two right-hand columns `Letzte Lageraktivität` and `Letzte Bankaktivität`, so a member
   reconciles his own row against the sheet column by column. A ledger the avatar never used shows the
@@ -189,7 +190,29 @@ Four top-level folders under `frontend/src/`:
   `ui`'s `format.ts`. What the row cannot say, and why, is under the wire contract below.
 - **The guild-wide total row comes from the envelope, not from the loaded rows** (decision
   2026-09-02): the overview hands `totals` to the table's `total` prop and does no arithmetic, so the
-  row keeps meaning the guild once the overview pages or a time window narrows the body.
+  row keeps meaning the guild once the overview pages or a time window narrows the body. It is
+  rendered **once**, in the active table's `tfoot` (decision 2026-09-11): served across all avatars,
+  it is the sum of neither half, so it keeps its `Gilde` label under the table a reader actually
+  reads instead of stating the same guild-wide figure twice.
+- **The roster stands in two tables, active above and dormant below** (decision 2026-09-11):
+  `domain/rosterSplit.ts` divides the loaded rows, both tables render the **same** `Column` list, and
+  each keeps the German-collation order the API handed over, so the split reorders nothing. A row is
+  active when the later of its two activity timestamps is no older than `ACTIVITY_WINDOW_DAYS` before
+  the **newest activity in the loaded rows themselves**. The reference is the data's, never the
+  reader's clock: tied to the wall clock the whole roster falls into "dormant" as soon as the scraper
+  stalls, which is exactly when someone opens the page, whereas the row holding the maximum is active
+  by construction. With no activity anywhere there is no reference and every row stays active: the
+  dormant table is an exception list, and nothing moves into it without a measurable reason. The
+  window is 30 days rather than a calendar month because subtracting a month normalizes 31.07 to
+  01.07 and would change the window's length with the reference date. `lastUpdated` is deliberately
+  **not** read for this: it lives on `/api/v1/admin/status`, and the members' view does not reach
+  into an operator surface for a presentation question.
+- **The split is client-side and therefore covers only the loaded page.** Both captions state their
+  half against `totalCount` (`Aktiv (30 Tage vor dem letzten Vorgang): 24 von 42 Avataren`), so the
+  two never claim to have sorted the whole guild; today `size` 100 against 42 avatars means one page
+  holds all of them. The active caption names the window's **reference** rather than reading "letzte
+  30 Tage", which a member would take to mean 30 days from today and which is false on exactly the
+  stale data the cut exists for.
 - **Navigation lives in the frame and in the overview's own cells.** `PageFrame` carries
   "Übersicht" plus, on a ledger, that avatar's "Bank" and "Lager". In the overview the avatar cell
   links into the bank, and the two activity cells link into the ledger each of them reports on, so

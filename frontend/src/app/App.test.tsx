@@ -1,4 +1,11 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
@@ -213,6 +220,114 @@ const NO_TOTALS = {
   containsStaleSums: false,
 }
 
+interface RosterRow {
+  readonly avatar: string
+  readonly lastBankActivity: string | null
+  readonly lastStorageActivity: string | null
+}
+
+function rosterBodyOf(
+  rows: readonly RosterRow[],
+  totalCount: number = rows.length,
+): string {
+  return JSON.stringify({
+    page: 0,
+    size: 100,
+    totalCount,
+    totals: NO_TOTALS,
+    items: rows.map((row) => ({
+      ...row,
+      bankWithdrawn: 0,
+      bankDeposited: 0,
+      storageWithdrawn: 0,
+      storageDeposited: 0,
+      net: 0,
+      donation: 0,
+      craftSubsidy: 0,
+      staleSumsFrom: null,
+    })),
+  })
+}
+
+const NEWEST_ACTIVITY = '2026-08-05T10:15:00Z'
+const THIRTY_DAYS_EARLIER = '2026-07-06T10:15:00Z'
+
+const ROSTER_ON_THE_BOUNDARY = rosterBodyOf([
+  {
+    avatar: 'Aktiv',
+    lastBankActivity: null,
+    lastStorageActivity: NEWEST_ACTIVITY,
+  },
+  {
+    avatar: 'Grenzfall',
+    lastBankActivity: THIRTY_DAYS_EARLIER,
+    lastStorageActivity: null,
+  },
+  {
+    avatar: 'Knappdaneben',
+    lastBankActivity: null,
+    lastStorageActivity: '2026-07-06T10:14:59.999Z',
+  },
+  { avatar: 'Ruhend', lastBankActivity: null, lastStorageActivity: null },
+])
+
+const ROSTER_OF_A_STALLED_COLLECTION = rosterBodyOf([
+  {
+    avatar: 'Letzter',
+    lastBankActivity: null,
+    lastStorageActivity: '2021-03-01T10:00:00Z',
+  },
+  {
+    avatar: 'Vorletzter',
+    lastBankActivity: '2021-02-20T10:00:00Z',
+    lastStorageActivity: null,
+  },
+  {
+    avatar: 'Weit-Zurueck',
+    lastBankActivity: '2020-01-01T10:00:00Z',
+    lastStorageActivity: null,
+  },
+])
+
+const ROSTER_INTERLEAVED_BY_NAME = rosterBodyOf([
+  {
+    avatar: 'Anna',
+    lastBankActivity: null,
+    lastStorageActivity: NEWEST_ACTIVITY,
+  },
+  {
+    avatar: 'Bert',
+    lastBankActivity: '2026-01-01T10:00:00Z',
+    lastStorageActivity: null,
+  },
+  {
+    avatar: 'Cara',
+    lastBankActivity: THIRTY_DAYS_EARLIER,
+    lastStorageActivity: null,
+  },
+  {
+    avatar: 'Dora',
+    lastBankActivity: null,
+    lastStorageActivity: '2026-02-01T10:00:00Z',
+  },
+])
+
+const ROSTER_OF_ONE_LOADED_PAGE = rosterBodyOf(
+  [
+    {
+      avatar: 'Anna',
+      lastBankActivity: null,
+      lastStorageActivity: NEWEST_ACTIVITY,
+    },
+    {
+      avatar: 'Bert',
+      lastBankActivity: '2026-01-01T10:00:00Z',
+      lastStorageActivity: null,
+    },
+  ],
+  42,
+)
+
 const BANK_BODY = JSON.stringify({
   page: 0,
   size: 100,
@@ -338,6 +453,41 @@ function headerTexts(): string[] {
     .map((header) => header.textContent ?? '')
 }
 
+function headerTextsIn(roster: string): string[] {
+  return within(screen.getByTestId(roster))
+    .getAllByTestId('column-label')
+    .map((header) => header.textContent ?? '')
+}
+
+function rowNamesIn(roster: string): string[] {
+  return within(screen.getByTestId(roster))
+    .queryAllByTestId('cell-avatar')
+    .map((cell) => cell.textContent ?? '')
+}
+
+function sortButtonIn(roster: string, name: RegExp): HTMLElement {
+  return within(screen.getByTestId(roster)).getByRole('button', { name })
+}
+
+function statusIn(roster: string): string {
+  return (
+    within(screen.getByTestId(roster)).getByTestId('status-panel')
+      .textContent ?? ''
+  )
+}
+
+function totalRowsIn(roster: string): number {
+  return within(screen.getByTestId(roster)).queryAllByTestId('total-row').length
+}
+
+function captionOf(roster: string): string {
+  return (
+    within(screen.getByTestId(roster))
+      .getByRole('table')
+      .querySelector('caption')?.textContent ?? ''
+  )
+}
+
 function statTexts(): string[] {
   return Array.from(screen.getByTestId('stat-header').children).map(
     (stat) => stat.textContent ?? '',
@@ -443,10 +593,84 @@ describe('App', () => {
     )
   })
 
+  it('splits the roster into the members active in the window and the dormant rest', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, ROSTER_ON_THE_BOUNDARY),
+    )
+
+    expect([
+      rowNamesIn('active-roster'),
+      rowNamesIn('dormant-roster'),
+    ]).toStrictEqual([
+      ['Aktiv', 'Grenzfall'],
+      ['Knappdaneben', 'Ruhend'],
+    ])
+  })
+
+  it('measures the cut against the data, so a stalled collection empties no roster', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, ROSTER_OF_A_STALLED_COLLECTION),
+    )
+
+    expect([
+      rowNamesIn('active-roster'),
+      rowNamesIn('dormant-roster'),
+    ]).toStrictEqual([['Letzter', 'Vorletzter'], ['Weit-Zurueck']])
+  })
+
+  it('keeps the name order of the response inside each of the two tables', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, ROSTER_INTERLEAVED_BY_NAME),
+    )
+
+    expect([
+      rowNamesIn('active-roster'),
+      rowNamesIn('dormant-roster'),
+    ]).toStrictEqual([
+      ['Anna', 'Cara'],
+      ['Bert', 'Dora'],
+    ])
+  })
+
+  it('gives both tables the same columns', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, ROSTER_ON_THE_BOUNDARY),
+    )
+
+    expect(headerTextsIn('dormant-roster')).toStrictEqual(
+      headerTextsIn('active-roster'),
+    )
+  })
+
+  it('states the guild total under the active table and nowhere else', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, ROSTER_ON_THE_BOUNDARY),
+    )
+
+    expect([
+      totalRowsIn('active-roster'),
+      totalRowsIn('dormant-roster'),
+    ]).toStrictEqual([1, 0])
+  })
+
+  it('says so in the second table while no member is dormant', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    expect([
+      rowNamesIn('dormant-roster'),
+      statusIn('dormant-roster'),
+    ]).toStrictEqual([[], 'Kein Avatar ruht.'])
+  })
+
   it('names the overview columns in German', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(headerTexts()).toStrictEqual([
+    expect(headerTextsIn('active-roster')).toStrictEqual([
       'Avatar',
       'Bank-Einzahlung',
       'Bank-Auszahlung',
@@ -528,7 +752,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
-    expect(headerTexts()).toStrictEqual([
+    expect(headerTextsIn('active-roster')).toStrictEqual([
       'Avatar',
       'Bank-Einzahlung',
       'Bank-Auszahlung',
@@ -686,7 +910,7 @@ describe('App', () => {
   it('keeps the table usable when the reader sorts the sixth column and then switches it', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    fireEvent.click(screen.getByRole('button', { name: /Nach Abzügen/ }))
+    fireEvent.click(sortButtonIn('active-roster', /Nach Abzügen/))
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
     expect(rowTexts().join(' ')).toContain('2.800')
@@ -695,7 +919,7 @@ describe('App', () => {
   it('keeps a sort on the sixth column when the switch changes what it shows', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    fireEvent.click(screen.getByRole('button', { name: /Nach Abzügen/ }))
+    fireEvent.click(sortButtonIn('active-roster', /Nach Abzügen/))
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
     expect(rowTexts()[0]).toContain('Erde-Eibenlanze')
@@ -706,7 +930,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
-    expect(headerTexts()).toHaveLength(8)
+    expect(headerTextsIn('active-roster')).toHaveLength(8)
   })
 
   it('names the bank ledger columns in German', async () => {
@@ -800,15 +1024,25 @@ describe('App', () => {
 
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, body))
 
-    expect(shownStatus()).toBe('Noch kein Avatar erfasst.')
+    expect([
+      statusIn('active-roster'),
+      statusIn('dormant-roster'),
+    ]).toStrictEqual(['Noch kein Avatar erfasst.', 'Kein Avatar ruht.'])
   })
 
-  it('counts the avatars of the window against the whole guild', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+  it('counts each half against the whole guild, not against the loaded page', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, ROSTER_OF_ONE_LOADED_PAGE),
+    )
 
-    expect(
-      screen.queryByRole('table', { name: '2 von 2 Avataren' }),
-    ).not.toBeNull()
+    expect([
+      captionOf('active-roster'),
+      captionOf('dormant-roster'),
+    ]).toStrictEqual([
+      'Aktiv (30 Tage vor dem letzten Vorgang): 1 von 42 Avataren',
+      'Ruhend: 1 von 42 Avataren',
+    ])
   })
 
   it('shows the bank ledger the path names', async () => {
@@ -1066,7 +1300,7 @@ describe('App', () => {
     expect({
       rows: rowTexts().length,
       tables: screen.getAllByRole('table').length,
-    }).toStrictEqual({ rows: 2, tables: 1 })
+    }).toStrictEqual({ rows: 2, tables: 2 })
   })
 
   it('counts the entries of the window against the whole ledger', async () => {
