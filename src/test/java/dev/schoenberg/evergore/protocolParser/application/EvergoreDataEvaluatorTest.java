@@ -420,6 +420,58 @@ class EvergoreDataEvaluatorTest {
 		assertThat(result.unknownItemNames()).containsExactly("Unobtainium");
 	}
 
+	@ParameterizedTest(name = "{0}")
+	@ValueSource(strings = {"Kriegshammer", "Sense", "Speer", "Lanze"})
+	void reportsANameTheCatalogDoesNotKnowAsUnknownEvenWhenATwoHandedTwinExists(String bareName) {
+		storageRepo.seedEntries(AVATAR, List.of(storageWithdrawl(bareName, 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(result.unknownItemNames()).containsExactly(bareName);
+		assertThat(metaRepo.<Double>get(getStorageWithdrawl(AVATAR))).contains(0.0);
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@CsvSource({"Obsidian-Pike [2H], 82300", "Smaragd-Pike, 22300", "Rubin-Pike [2H], 42300", "Obsidian-Prunkschwert der Entschlossenheit [2H], 82300"})
+	void valuesTheSecondSpellingTheLedgerCarriesForOneItem(String itemName, int marketValue) {
+		storageRepo.seedEntries(AVATAR, List.of(storageWithdrawl(itemName, 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(metaRepo.<Double>get(getStorageWithdrawl(AVATAR))).contains(marketValue * 0.6);
+		assertThat(result.unknownItemNames()).isEmpty();
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@CsvSource({"Obsidian-Pike des Wegelagerers [2H], 82300", "Rubin-Pike [2H] des Wegelagerers, 42300"})
+	void stripsAMagicAffixBeforeTryingTheSecondSpelling(String ledgerName, int marketValue) {
+		storageRepo.seedEntries(AVATAR, List.of(storageWithdrawl(ledgerName, 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(metaRepo.<Double>get(getStorageWithdrawl(AVATAR))).contains(marketValue * 0.6);
+		assertThat(result.unknownItemNames()).isEmpty();
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@ValueSource(strings = {"Streitaxt des Dunklen Waldes", "Streitaxt der Wache des Nordens", "Streitaxt des wegelagerers"})
+	void reportsAnAffixShapeTheLookupDoesNotHandleAsUnknownRatherThanValuingItWrong(String ledgerName) {
+		storageRepo.seedEntries(AVATAR, List.of(storageWithdrawl(ledgerName, 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(result.unknownItemNames()).containsExactly(ledgerName);
+		assertThat(metaRepo.<Double>get(getStorageWithdrawl(AVATAR))).contains(0.0);
+	}
+
 	@Test
 	void reportsNoRawStoneNameAsUnknown() {
 		storageRepo.seedEntries(AVATAR, List.of(storagePlacement("Marmor", 1, 100), storagePlacement("Granit", 1, 100), storagePlacement("Schiefer", 1, 100)));

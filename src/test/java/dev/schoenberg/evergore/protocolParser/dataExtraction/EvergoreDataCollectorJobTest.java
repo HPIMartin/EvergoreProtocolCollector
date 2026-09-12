@@ -99,6 +99,17 @@ class EvergoreDataCollectorJobTest {
 	}
 
 	@Test
+	void handsBothNameListsOfTheRecomputeToTheLastRunStatusWithoutSwappingThem() {
+		evaluator.unknownItems = List.of("Unobtainium");
+		evaluator.zeroValuedItems = List.of("Übungsstück-Sorandilaxt");
+
+		tested.scheduleEvery24Hours();
+
+		assertThat(lastRunStatus.snapshot().unknownItemNames()).containsExactly("Unobtainium");
+		assertThat(lastRunStatus.snapshot().zeroValuedItemNames()).containsExactly("Übungsstück-Sorandilaxt");
+	}
+
+	@Test
 	void forwardsTheRunsUnknownItemsToLastRunStatus() {
 		evaluator.unknownItems = List.of("Unobtainium");
 
@@ -140,6 +151,7 @@ class EvergoreDataCollectorJobTest {
 		boolean failOnEvaluate;
 		boolean evaluateCalled;
 		List<String> unknownItems = List.of();
+		List<String> zeroValuedItems = List.of();
 
 		FailableEvaluator() {
 			super(new FakeMetaInformationRepository(), new StorageRepositoryStub(), new BankRepositoryStub(), null, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
@@ -151,7 +163,7 @@ class EvergoreDataCollectorJobTest {
 			if (failOnEvaluate) {
 				throw new RuntimeException("evaluateData failed");
 			}
-			return new EvaluationResult(unknownItems, List.of(), List.of());
+			return new EvaluationResult(unknownItems, zeroValuedItems, List.of());
 		}
 	}
 }

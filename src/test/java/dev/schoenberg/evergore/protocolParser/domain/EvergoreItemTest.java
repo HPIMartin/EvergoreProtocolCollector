@@ -3,6 +3,9 @@ package dev.schoenberg.evergore.protocolParser.domain;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 
@@ -11,16 +14,27 @@ import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.EDELSTEINE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.HANDWERKSMATERIAL;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.JAGDBEUTEN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.LEICHTE_RUESTUNG_LEDER;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.LEICHTE_RUESTUNG_STOFF;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.LEICHTE_SCHILDE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.ROHSTOFFE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.SCHWERER_SCHILDE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.SCHWERE_RUESTUNG_METALL;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.EISENBARREN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.GRANIT;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.JAGDPFEILE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KRISTALL;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KUPFERERZ;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MAGIESPLITTER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MAGISCHE_AETHERBINDE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MARMOR;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.OBSIDIAN_PIKE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.PANZERBRECHER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.PFEILE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.NOT_CRAFTABLE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.SCHIEFER;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.SMARAGD_PIKE_2H;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STEINBRECHER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STERNENSTAUB;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UNDEFINED;
 import static java.util.Arrays.stream;
@@ -32,6 +46,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 class EvergoreItemTest {
+	private static final Pattern GEM_PREFIX = Pattern.compile("^(Achat|Diamant|Jade|Jaspis|Kristall|Lapis|Obsidian|Onyx|Perlmutt|Pyrit|Quarz|Rubin|Saphir|Smaragd|Topas)-");
+	private static final Set<Category> ARMOUR = Set.of(LEICHTE_RUESTUNG_LEDER, LEICHTE_RUESTUNG_STOFF, SCHWERE_RUESTUNG_METALL, LEICHTE_SCHILDE, SCHWERER_SCHILDE);
 	private static final List<EvergoreItem> RAW_STONES = List.of(MARMOR, GRANIT, SCHIEFER);
 	private static final Set<Category> DONATED_CATEGORIES = Set.of(ROHSTOFFE, JAGDBEUTEN, EDELSTEINE);
 	private static final Set<String> TRADER_GOODS = Set
@@ -176,6 +192,70 @@ class EvergoreItemTest {
 		List<List<String>> entriesSharingAnIngameName = constantsByIngameName.values().stream().filter(constants -> constants.size() > 1).toList();
 
 		assertThat(entriesSharingAnIngameName).isEmpty();
+	}
+
+	@Test
+	void pricesEveryAmmunitionTypeAtTheGoldTheGuildStorageListsPerPiece() {
+		Map<String, Integer> pricePerAmmunition = new TreeMap<>();
+		for (EvergoreItem ammunition : List.of(STEINBRECHER, JAGDPFEILE, PANZERBRECHER)) {
+			pricePerAmmunition.put(ammunition.ingameName, ammunition.marketValue);
+		}
+
+		assertThat(pricePerAmmunition).containsExactlyInAnyOrderEntriesOf(Map.of("Steinbrecher", 44, "Jagdpfeile", 5, "Panzerbrecher", 11));
+	}
+
+	@Test
+	void onlyDeliberatelyWorthlessGearIsCataloguedAtZero() {
+		List<String> worthless = stream(EvergoreItem.values()).filter(item -> item.marketValue == 0).map(item -> item.ingameName).toList();
+
+		assertThat(worthless).hasSize(60);
+		assertThat(worthless).allMatch(name -> name.equals("undefined") || name.startsWith("Übungsstück-") || name.startsWith("Mystisch"));
+	}
+
+	@Test
+	void aCatalogEntryAnswersItsIngameNameAndEverySecondSpellingItCarries() {
+		assertThat(OBSIDIAN_PIKE.allNames()).containsExactly("Obsidian-Pike", "Obsidian-Pike [2H]");
+		assertThat(SMARAGD_PIKE_2H.allNames()).containsExactly("Smaragd-Pike [2H]", "Smaragd-Pike");
+		assertThat(PFEILE.allNames()).containsExactly("Pfeile");
+	}
+
+	@Test
+	void everyGemForgedWeaponOfOneGemAndOneCategoryCarriesOneAndTheSamePrice() {
+		Map<String, Set<Integer>> pricesPerGroup = new TreeMap<>();
+		for (EvergoreItem item : EvergoreItem.values()) {
+			if (GEM_PREFIX.matcher(item.ingameName).find() && !ARMOUR.contains(item.category)) {
+				pricesPerGroup
+						.computeIfAbsent(GEM_PREFIX.matcher(item.ingameName).results().findFirst().orElseThrow().group(1) + "/" + item.category, key -> new TreeSet<>())
+						.add(item.marketValue);
+			}
+		}
+
+		assertThat(pricesPerGroup).hasSize(58);
+		assertThat(pricesPerGroup).allSatisfy((group, prices) -> assertThat(prices).as(group).hasSize(1));
+	}
+
+	@Test
+	void noCraftableItemIsCataloguedAtZero() {
+		List<String> craftableAndFree = stream(EvergoreItem.values()).filter(item -> item.recipe != NOT_CRAFTABLE && item.marketValue == 0).map(item -> item.ingameName).toList();
+
+		assertThat(craftableAndFree).isEmpty();
+	}
+
+	@Test
+	void onlyGatheredGoodsSitInACategoryThatCreditsADepositNothing() {
+		List<String> craftedButUncredited = stream(EvergoreItem.values())
+				.filter(item -> item.category.placement == 0d && item.recipe != NOT_CRAFTABLE)
+				.map(item -> item.ingameName)
+				.toList();
+
+		assertThat(craftedButUncredited).isEmpty();
+	}
+
+	@Test
+	void noTwoCatalogEntriesClaimTheSameName() {
+		List<String> everyName = stream(EvergoreItem.values()).flatMap(item -> item.allNames().stream()).toList();
+
+		assertThat(everyName).doesNotHaveDuplicates();
 	}
 
 	@Test

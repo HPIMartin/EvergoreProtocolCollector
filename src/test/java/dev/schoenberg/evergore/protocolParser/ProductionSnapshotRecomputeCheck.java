@@ -114,11 +114,11 @@ class ProductionSnapshotRecomputeCheck {
 	void exportsTheValuationCatalogAndKeepsItemNamesUnique() {
 		StringBuilder catalog = new StringBuilder();
 		for (EvergoreItem item : EvergoreItem.values()) {
-			catalog.append(item.ingameName).append('\t').append(item.getStorageValue()).append('\t').append(item.getWithdrawlValue()).append('\n');
+			catalog.append(String.join(" | ", item.allNames())).append('\t').append(item.getStorageValue()).append('\t').append(item.getWithdrawlValue()).append('\n');
 		}
 		write("itemCatalog.tsv", catalog.toString());
 
-		List<String> ingameNames = stream(EvergoreItem.values()).map(item -> item.ingameName).toList();
+		List<String> ingameNames = stream(EvergoreItem.values()).flatMap(item -> item.allNames().stream()).toList();
 
 		assertThat(ingameNames).doesNotHaveDuplicates();
 	}

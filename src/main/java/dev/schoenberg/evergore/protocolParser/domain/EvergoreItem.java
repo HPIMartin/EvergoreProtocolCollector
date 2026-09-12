@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.domain;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.AEXTE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.AEXTE_2H;
@@ -279,14 +280,14 @@ public enum EvergoreItem {
 	KRISTALL_HAMMER("Kristall-Hammer", 2800, KEULEN, NOT_CRAFTABLE),
 	MORGENSTERN("Morgenstern", 4900, KEULEN, new Recipe(1, new Ingredient(9, SORANDILBARREN), new Ingredient(5, SCHMIEDEOEL), new Ingredient(6, SCHLEIFSTEIN))),
 	OBSIDIAN_HAMMER("Obsidian-Hammer", 44400, KEULEN, NOT_CRAFTABLE),
-	OBSIDIAN_KRIEGSHAMMER("Obsidian-Kriegshammer", 82300, KEULEN, NOT_CRAFTABLE),
+	OBSIDIAN_KRIEGSHAMMER("Obsidian-Kriegshammer", 82300, KEULEN_2H, NOT_CRAFTABLE),
 	OGERHERDE("Ogerherde", 9800, KEULEN, new Recipe(1, new Ingredient(12, ADAMANTBARREN), new Ingredient(5, SCHMIEDEOEL), new Ingredient(14, SCHLEIFSTEIN))),
 	QUARZ_HAMMER("Quarz-Hammer", 5700, KEULEN, NOT_CRAFTABLE),
-	QUARZ_KRIEGSHAMMER("Quarz-Kriegshammer", 12000, KEULEN, NOT_CRAFTABLE),
+	QUARZ_KRIEGSHAMMER("Quarz-Kriegshammer", 12000, KEULEN_2H, NOT_CRAFTABLE),
 	RUBIN_HAMMER("Rubin-Hammer", 21900, KEULEN, NOT_CRAFTABLE),
-	RUBIN_KRIEGSHAMMER("Rubin-Kriegshammer", 46000, KEULEN, NOT_CRAFTABLE),
+	RUBIN_KRIEGSHAMMER("Rubin-Kriegshammer", 46000, KEULEN_2H, NOT_CRAFTABLE),
 	SMARAGD_HAMMER("Smaragd-Hammer", 11400, KEULEN, NOT_CRAFTABLE),
-	SMARAGD_KRIEGSHAMMER("Smaragd-Kriegshammer", 24200, KEULEN, NOT_CRAFTABLE),
+	SMARAGD_KRIEGSHAMMER("Smaragd-Kriegshammer", 24200, KEULEN_2H, NOT_CRAFTABLE),
 	STREITKOLBEN("Streitkolben", 2400, KEULEN, new Recipe(1, new Ingredient(7, EISENBARREN), new Ingredient(10, SCHMIEDEOEL))),
 	ZACKENSTERN("Zackenstern", 34400, KEULEN,
 			new Recipe(1, new Ingredient(32, MITHRILBARREN), new Ingredient(6, SCHMIEDEOEL), new Ingredient(14, SCHLEIFSTEIN), new Ingredient(16, GRIFFBAND))),
@@ -516,10 +517,10 @@ public enum EvergoreItem {
 	JAGDBOLZEN("Jagdbolzen", 20, MUNITION_ARMBRUESTE, new Recipe(40, new Ingredient(6, BIRKENHOLZ), new Ingredient(10, FEDERN))),
 	KRIEGSBOLZEN("Kriegsbolzen", 28, MUNITION_ARMBRUESTE, new Recipe(57, new Ingredient(8, EICHENHOLZ), new Ingredient(7, FEDERN), new Ingredient(2, PFEILHARZ))),
 	MYSTISCHER_BOLZEN("Mystischer Bolzen", 0, MUNITION_ARMBRUESTE, NOT_CRAFTABLE),
-	STEINBRECHER("Steinbrecher", 0, MUNITION_ARMBRUESTE,
+	STEINBRECHER("Steinbrecher", 44, MUNITION_ARMBRUESTE,
 			new Recipe(152, new Ingredient(16, EIBENHOLZ), new Ingredient(9, FEDERN), new Ingredient(8, PFEILHARZ), new Ingredient(1, DRACHINSCHNEIDEN))),
 	GOETTERSTICH("Götterstich", 9, MUNITION_BOEGEN, new Recipe(360, new Ingredient(11, ESCHENHOLZ), new Ingredient(10, FEDERN), new Ingredient(5, PFEILHARZ))),
-	JAGDPFEILE("Jagdpfeile", 4, MUNITION_BOEGEN, new Recipe(163, new Ingredient(6, BIRKENHOLZ), new Ingredient(10, FEDERN))),
+	JAGDPFEILE("Jagdpfeile", 5, MUNITION_BOEGEN, new Recipe(163, new Ingredient(6, BIRKENHOLZ), new Ingredient(10, FEDERN))),
 	KRIEGSPFEILE("Kriegspfeile", 7, MUNITION_BOEGEN, new Recipe(228, new Ingredient(8, EICHENHOLZ), new Ingredient(7, FEDERN), new Ingredient(2, PFEILHARZ))),
 	MYSTISCHER_PFEIL("Mystischer Pfeil", 0, MUNITION_BOEGEN, NOT_CRAFTABLE),
 	PANZERBRECHER("Panzerbrecher", 11, MUNITION_BOEGEN,
@@ -659,14 +660,14 @@ public enum EvergoreItem {
 	LANGSCHWERT("Langschwert", 7400, SCHWERTER, new Recipe(1, new Ingredient(14, SORANDILBARREN), new Ingredient(3, SCHMIEDEOEL), new Ingredient(11, SCHLEIFSTEIN))),
 	LILIENKLINGE("Lilienklinge", 34400, SCHWERTER,
 			new Recipe(1, new Ingredient(32, MITHRILBARREN), new Ingredient(6, SCHMIEDEOEL), new Ingredient(14, SCHLEIFSTEIN), new Ingredient(16, GRIFFBAND))),
-	OBSIDIAN_PRUNKSCHWERT("Obsidian-Prunkschwert", 82300, SCHWERTER, NOT_CRAFTABLE),
+	OBSIDIAN_PRUNKSCHWERT("Obsidian-Prunkschwert", 82300, SCHWERTER_2H, NOT_CRAFTABLE, "Obsidian-Prunkschwert [2H]"),
 	OBSIDIAN_SCHWERT("Obsidian-Schwert", 44400, SCHWERTER, NOT_CRAFTABLE),
 	QUARZ_SCHWERT("Quarz-Schwert", 5700, SCHWERTER, NOT_CRAFTABLE),
 	RUBIN_SCHWERT("Rubin-Schwert", 21900, SCHWERTER, NOT_CRAFTABLE),
 	SCHIMMERKLINGE("Schimmerklinge", 22600, SCHWERTER,
 			new Recipe(1, new Ingredient(21, MITHRILBARREN), new Ingredient(5, SCHMIEDEOEL), new Ingredient(10, SCHLEIFSTEIN), new Ingredient(10, GRIFFBAND))),
 	SCHWERT("Schwert", 1800, SCHWERTER, new Recipe(1, new Ingredient(10, KUPFERBARREN), new Ingredient(7, SCHMIEDEOEL))),
-	SMARAGD_PRUNKSCHWERT("Smaragd-Prunkschwert", 24200, SCHWERTER, NOT_CRAFTABLE),
+	SMARAGD_PRUNKSCHWERT("Smaragd-Prunkschwert", 24200, SCHWERTER_2H, NOT_CRAFTABLE),
 	SMARAGD_SCHWERT("Smaragd-Schwert", 11400, SCHWERTER, NOT_CRAFTABLE),
 	SAEBEL("Säbel", 3700, SCHWERTER, new Recipe(1, new Ingredient(10, EISENBARREN), new Ingredient(15, SCHMIEDEOEL))),
 	UEBUNGSSTUECK_ADAMANTSCHWERT("Übungsstück-Adamantschwert", 0, SCHWERTER, NOT_CRAFTABLE),
@@ -695,13 +696,12 @@ public enum EvergoreItem {
 			new Recipe(1, new Ingredient(52, MITHRILBARREN), new Ingredient(6, SCHMIEDEOEL), new Ingredient(12, SCHLEIFSTEIN), new Ingredient(32, GRIFFBAND))),
 	KRISTALL_PIKE("Kristall-Pike", 5500, STANGENWAFFEN_2H, NOT_CRAFTABLE),
 	LANZE_2H("Lanze [2H]", 12300, STANGENWAFFEN_2H, new Recipe(1, new Ingredient(22, SORANDILBARREN), new Ingredient(10, SCHMIEDEOEL), new Ingredient(16, SCHLEIFSTEIN))),
-	OBSIDIAN_PIKE("Obsidian-Pike", 82300, STANGENWAFFEN_2H, NOT_CRAFTABLE),
+	OBSIDIAN_PIKE("Obsidian-Pike", 82300, STANGENWAFFEN_2H, NOT_CRAFTABLE, "Obsidian-Pike [2H]"),
 	PIKE_2H("Pike [2H]", 8100, STANGENWAFFEN_2H, new Recipe(1, new Ingredient(15, SORANDILBARREN), new Ingredient(8, SCHMIEDEOEL), new Ingredient(10, SCHLEIFSTEIN))),
 	QUARZ_PIKE("Quarz-Pike", 11100, STANGENWAFFEN_2H, NOT_CRAFTABLE),
-	RUBIN_PIKE("Rubin-Pike", 42300, STANGENWAFFEN_2H, NOT_CRAFTABLE),
-	RUBIN_PIKE_2H("Rubin-Pike [2H]", 42300, STANGENWAFFEN_2H, NOT_CRAFTABLE),
+	RUBIN_PIKE("Rubin-Pike", 42300, STANGENWAFFEN_2H, NOT_CRAFTABLE, "Rubin-Pike [2H]"),
 	SENSE_2H("Sense [2H]", 6100, STANGENWAFFEN_2H, new Recipe(1, new Ingredient(16, EISENBARREN), new Ingredient(25, SCHMIEDEOEL))),
-	SMARAGD_PIKE_2H("Smaragd-Pike [2H]", 22300, STANGENWAFFEN_2H, NOT_CRAFTABLE),
+	SMARAGD_PIKE_2H("Smaragd-Pike [2H]", 22300, STANGENWAFFEN_2H, NOT_CRAFTABLE, "Smaragd-Pike"),
 	SPEER_2H("Speer [2H]", 2000, STANGENWAFFEN_2H, new Recipe(1, new Ingredient(11, KUPFERBARREN), new Ingredient(8, SCHMIEDEOEL))),
 	UEBUNGSSTUECK_ADAMANTSTANGENWAFFE("Übungsstück-Adamantstangenwaffe", 0, STANGENWAFFEN_2H, NOT_CRAFTABLE),
 	UEBUNGSSTUECK_EISENSTANGENWAFFE("Übungsstück-Eisenstangenwaffe", 0, STANGENWAFFEN_2H, NOT_CRAFTABLE),
@@ -737,12 +737,12 @@ public enum EvergoreItem {
 	KRISTALL_AXT("Kristall-Axt", 2800, AEXTE, NOT_CRAFTABLE),
 	MILITAERPICKE("Militärpicke", 7400, AEXTE, new Recipe(1, new Ingredient(14, SORANDILBARREN), new Ingredient(3, SCHMIEDEOEL), new Ingredient(11, SCHLEIFSTEIN))),
 	OBSIDIAN_AXT("Obsidian-Axt", 44400, AEXTE, NOT_CRAFTABLE),
-	OBSIDIAN_PRUNKAXT("Obsidian-Prunkaxt", 82300, AEXTE, NOT_CRAFTABLE),
+	OBSIDIAN_PRUNKAXT("Obsidian-Prunkaxt", 82300, AEXTE_2H, NOT_CRAFTABLE),
 	QUARZ_AXT("Quarz-Axt", 5700, AEXTE, NOT_CRAFTABLE),
-	QUARZ_PRUNKAXT("Quarz-Prunkaxt", 12000, AEXTE, NOT_CRAFTABLE),
+	QUARZ_PRUNKAXT("Quarz-Prunkaxt", 12000, AEXTE_2H, NOT_CRAFTABLE),
 	RUBIN_AXT("Rubin-Axt", 21900, AEXTE, NOT_CRAFTABLE),
 	SMARAGD_AXT("Smaragd-Axt", 11400, AEXTE, NOT_CRAFTABLE),
-	SMARAGD_PRUNKAXT("Smaragd-Prunkaxt", 24200, AEXTE, NOT_CRAFTABLE),
+	SMARAGD_PRUNKAXT("Smaragd-Prunkaxt", 24200, AEXTE_2H, NOT_CRAFTABLE),
 	STREITAXT("Streitaxt", 1800, AEXTE, new Recipe(1, new Ingredient(10, KUPFERBARREN), new Ingredient(7, SCHMIEDEOEL))),
 	TOMAHAWK("Tomahawk", 22600, AEXTE,
 			new Recipe(1, new Ingredient(21, MITHRILBARREN), new Ingredient(5, SCHMIEDEOEL), new Ingredient(10, SCHLEIFSTEIN), new Ingredient(10, GRIFFBAND))),
@@ -767,12 +767,22 @@ public enum EvergoreItem {
 	public final int marketValue;
 	public final Category category;
 	public final Recipe recipe;
+	private final List<String> alternativeNames;
 
-	EvergoreItem(String ingameName, int marketValue, Category category, Recipe recipe) {
+	EvergoreItem(String ingameName, int marketValue, Category category, Recipe recipe, String... alternativeNames) {
 		this.ingameName = ingameName;
 		this.marketValue = marketValue;
 		this.category = category;
 		this.recipe = recipe;
+		this.alternativeNames = List.of(alternativeNames);
+	}
+
+	public boolean isNamed(String candidate) {
+		return ingameName.equals(candidate) || alternativeNames.contains(candidate);
+	}
+
+	public List<String> allNames() {
+		return Stream.concat(Stream.of(ingameName), alternativeNames.stream()).toList();
 	}
 
 	public double getStorageValue() {

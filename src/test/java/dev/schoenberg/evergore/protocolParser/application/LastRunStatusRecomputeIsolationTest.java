@@ -89,7 +89,7 @@ class LastRunStatusRecomputeIsolationTest {
 		silentThrow(() -> start.await());
 		Instant runInstant = tag.equals("A") ? RUN_ONE_INSTANT : RUN_TWO_INSTANT;
 		for (int i = 0; i < WRITES_PER_WRITER_THREAD; i++) {
-			tested.recordSuccessfulRecompute(runInstant, List.of(tag + "-item"), List.of(), List.of(tag + "-avatar"));
+			tested.recordSuccessfulRecompute(runInstant, List.of(tag + "-item"), List.of(tag + "-zero"), List.of(tag + "-avatar"));
 		}
 	}
 
@@ -98,15 +98,18 @@ class LastRunStatusRecomputeIsolationTest {
 			return;
 		}
 		List<String> unknown = snapshot.unknownItemNames();
+		List<String> zeroValued = snapshot.zeroValuedItemNames();
 		List<String> failed = snapshot.failedAvatarNames();
-		if (unknown.isEmpty() && failed.isEmpty()) {
+		if (unknown.isEmpty() && zeroValued.isEmpty() && failed.isEmpty()) {
 			return;
 		}
 		taggedSnapshotsObserved.incrementAndGet();
 		String unknownTag = unknown.isEmpty() ? null : unknown.get(0).substring(0, 1);
+		String zeroValuedTag = zeroValued.isEmpty() ? null : zeroValued.get(0).substring(0, 1);
 		String failedTag = failed.isEmpty() ? null : failed.get(0).substring(0, 1);
 		try {
 			assertThat(unknownTag).as("unknownItemNames tag must match failedAvatarNames tag within one snapshot").isEqualTo(failedTag);
+			assertThat(zeroValuedTag).as("zeroValuedItemNames tag must match the other tags within one snapshot").isEqualTo(failedTag);
 			String instantTag = snapshot.lastSuccessfulRecompute().map(instant -> instant.equals(RUN_ONE_INSTANT) ? "A" : "B").orElse(null);
 			assertThat(instantTag).as("instant tag must match the field tags within one snapshot").isEqualTo(unknownTag != null ? unknownTag : failedTag);
 		} catch (AssertionError e) {

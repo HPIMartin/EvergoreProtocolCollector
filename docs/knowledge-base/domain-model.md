@@ -54,25 +54,30 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   **NPC trader charges**, confirmed by the author 2026-09-10 against the game: `PFEILE` 3, `BOLZEN` 12,
   `MAGIEESSENZ` 4, exactly the catalog's numbers. So a member can buy those for `marketValue` rather
   than craft them, which is what makes a 60 % credit a real loss of gold for whoever buys them.
-- **The wiki's `Waren` table is where the market values come from.** Matched on the exact
-  `ingameName` against its 746 priced rows, it lists 404 of the catalog's 446 entries and prices
-  400 of them at the catalog's own value. It differs on four, the catalog's value first:
-  `Steinbrecher` `0` against `44`, `Luft-Spiralstab` `16300` against `6300`, `Einfacher
-  Wollverband` `32` against `16` and `Jagdpfeile` `4` against `5`. The 42 it does not list are 34
-  `[2H]` names, six it spells its own way, `Improvisierte Leinenbinde` and the `undefined`
-  sentinel (measured 2026-09-11).
+- **The game prices the catalog, and the wiki is only a convenience.** The guild storage lists what
+  it holds per piece at that piece's quality, so a value is read from a holding at quality 100, and a
+  stored blueprint carries the gold value of the item it
+  makes, which together priced 244 of the catalog's 601 entries when it was last read. All 244 agree
+  with the catalog. The wiki's `Waren` table is where the numbers originally came from and still fills
+  gaps the storage cannot reach, but it is not authoritative: it disagrees with the game on 4 of the
+  99 checkable gem-forged values, pricing `Quarz-Prunkaxt` at `1000` against the game's `12000`, and it
+  carries none of the `Mystisch*` quest consumables the ledger holds. Two catalog values are still only
+  contested by the wiki and unread from the game, `Luft-Spiralstab` and `Einfacher Wollverband`
+  (measured 2026-09-11).
 - **It is no authority for spelling, so the name is the game's.** Those six are the raw stones,
   which it writes `Marmorstein`, `Granitstein` and `Schieferstein`, and the three essences, which
   it writes in the plural; all six carry the value it gives them, so only the name differs. The
   game's blueprints, its `Steine` page and the ledger itself say `Marmor`, `Granit` and
   `Schiefer`. A name only the wiki uses matches no ledger row, so it values every movement of a
   real item at zero and says nothing.
-- **One item, several spellings.** A name is resolved against the catalog exactly first, then with a
-  trailing magic affix (`des`/`der <X>`) stripped, then with the ` [2H]` suffix toggled, then with both.
-  The ledger carries `Obsidian-Pike` beside `Obsidian-Pike [2H]` for one item and the game prices
-  `Holzfälleraxt des Wegelagerers` exactly as its plain form, so neither variant is a ware of its own.
-  The exact match comes first, so a family with a real one-handed and two-handed member,
-  `Kriegshammer`, is never confused.
+- **One item, several spellings.** A name is resolved against the catalog exactly first, then with
+  a trailing magic affix (`des`/`der <X>`) stripped. The affix is normalised away because its space is
+  open, every base item times every affix, and because the game prices `Streitaxt des Wegelagerers`
+  at exactly `Streitaxt`s `1800`. A second **fixed** spelling, such as the ` [2H]` the ledger adds to
+  `Obsidian-Pike` but not to `Obsidian-Kriegshammer`, is recorded as an alternative name on the entry
+  itself. Deriving it by toggling the suffix instead would price 35 names the catalog has never
+  seen, `Kriegshammer` and `Sense` among them, off their two-handed twin and drop them out of the
+  unknown-name report (34 against the catalog as it now stands), which is the signal the rest of the catalog work depends on.
 - **Two families are catalogued at zero on purpose.** `Übungsstück-*` trains a craft without
   spending materials and sells only to the trader for almost nothing; `Mystisch*` items are quest
   rewards. They are entries rather than gaps so a catalog hole stays distinguishable from a
@@ -168,7 +173,7 @@ avatar the recompute has never reached carries neither, and the guild's `Gildens
 summed over the avatars that do carry them. That state is reachable and its window is named under
 the deploy in [build-run-deploy.md](build-run-deploy.md); the header says it cannot answer, and the
 table's total row says the same, so the two never disagree. Measured on the 03.09.2026 snapshot,
-42 avatars: `119.334.247`, `24.973.432`, `107.075.238`, `39.441.922`, and a net of `76.674.363`.
+42 avatars: `119.334.247`, `25.145.111`, `107.075.238`, `39.441.922`, and a net of `76.846.042`.
 
 > **Why the split loses nothing:** `credited + donation - craftSubsidy` equals the deposit's goods
 > value bit-for-bit, over every catalog item at every quality and quantity, because the three credit
@@ -193,8 +198,9 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
 
 - **Bank:** sum entry `amount` into `placement` (EINLAGERUNG) or `withdrawl` (ENTNAHME), via
   `TransferTypeBankEntryVisitor`.
-- **Storage:** for each entry, look up its `EvergoreItem` by `ingameName` (the match is exact and
-  takes an arbitrary one of the entries carrying that name, so two may never share one; unknown name
+- **Storage:** for each entry, look up its `EvergoreItem` by name (tried as written against every name
+  an entry answers to, then with a magic affix stripped, taking an arbitrary one of the entries that
+  carry it, so two may never share a name; unknown name
   → `UNDEFINED`, valued 0, **logged at WARN**; every miss is collected into the `EvaluationResult`
   returned by `evaluateData()` and surfaced via `/health`'s `lastRun` detail as `unknownItemCount` +
   distinct `unknownItemNames`, so a catalog gap is loud, not silent; since evaluation is a full

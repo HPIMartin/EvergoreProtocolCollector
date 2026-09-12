@@ -146,6 +146,31 @@ class LastRunStatusTest {
 	}
 
 	@Test
+	void recordsTheZeroValuedItemNamesOfTheLastRun() {
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of("Übungsstück-Sorandilaxt"), List.of());
+
+		assertThat(tested.snapshot().zeroValuedItemNames()).containsExactly("Übungsstück-Sorandilaxt");
+	}
+
+	@Test
+	void clearsThePreviousRunsZeroValuedItemNamesOnACleanRecompute() {
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of("Übungsstück-Sorandilaxt"), List.of());
+
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T09:00:00Z"), List.of(), List.of(), List.of());
+
+		assertThat(tested.snapshot().zeroValuedItemNames()).isEmpty();
+	}
+
+	@Test
+	void keepsTheLastSuccessfulRunsZeroValuedItemNamesWhenTheNextRecomputeFails() {
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of("Übungsstück-Sorandilaxt"), List.of());
+
+		tested.recordRecomputeFailure(Instant.parse("2026-06-21T09:00:00Z"));
+
+		assertThat(tested.snapshot().zeroValuedItemNames()).containsExactly("Übungsstück-Sorandilaxt");
+	}
+
+	@Test
 	void keepsTheLastSuccessfulRunsInstantAndNamesWhenTheNextRecomputeFails() {
 		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of("Unobtainium"), List.of(), List.of("Zwerg"));
 

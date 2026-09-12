@@ -49,7 +49,8 @@ class LastRunHealthIndicatorTest {
 	@Test
 	void reportsItemsKnownToBeWorthNothingApartFromUnknownOnes() {
 		lastRunStatus
-				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of("Unobtainium"), List.of("Übungsstück-Sorandilaxt", "Übungsstück-Sorandilaxt"), List.of());
+				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of("Unobtainium"),
+						List.of("Übungsstück-Sorandilaxt", "Mystischer Pfeil", "Übungsstück-Sorandilaxt"), List.of());
 
 		HealthResult result = singleResult();
 
@@ -57,8 +58,8 @@ class LastRunHealthIndicatorTest {
 		Map<String, Object> details = (Map<String, Object>) result.getDetails();
 		assertThat(details.get("unknownItemCount")).isEqualTo(1);
 		assertThat(details.get("unknownItemNames")).isEqualTo(List.of("Unobtainium"));
-		assertThat(details.get("zeroValuedItemCount")).isEqualTo(2);
-		assertThat(details.get("zeroValuedItemNames")).isEqualTo(List.of("Übungsstück-Sorandilaxt"));
+		assertThat(details.get("zeroValuedItemCount")).isEqualTo(3);
+		assertThat(details.get("zeroValuedItemNames")).isEqualTo(List.of("Mystischer Pfeil", "Übungsstück-Sorandilaxt"));
 	}
 
 	@Test

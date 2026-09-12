@@ -39,6 +39,7 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UNDEFIN
 import static java.util.Arrays.asList;
 
 public class EvergoreDataEvaluator {
+	private static final Pattern MAGIC_AFFIX = Pattern.compile(" (?:des|der) \\p{Lu}\\p{L}+( \\[2H\\])?$");
 	private final MetaInformationRepository metaRepo;
 	private final BankRepository bankRepo;
 	private final StorageRepository storageRepo;
@@ -162,9 +163,6 @@ public class EvergoreDataEvaluator {
 		}
 	}
 
-	private static final String TWO_HANDED_SUFFIX = " [2H]";
-	private static final Pattern MAGIC_AFFIX = Pattern.compile(" (?:des|der) \\p{Lu}\\p{L}+( \\[2H\\])?$");
-
 	private EvergoreItem findItem(StorageEntry entry, List<String> unknownItemNames, List<String> zeroValuedItemNames) {
 		Optional<EvergoreItem> found = spellingsOf(entry.name()).map(EvergoreDataEvaluator::itemNamed).flatMap(Optional::stream).findFirst();
 		if (found.isEmpty()) {
@@ -179,20 +177,15 @@ public class EvergoreDataEvaluator {
 	}
 
 	private static Stream<String> spellingsOf(String ingameName) {
-		String plain = withoutMagicAffix(ingameName);
-		return Stream.of(ingameName, plain, withTwoHandedSuffixToggled(ingameName), withTwoHandedSuffixToggled(plain)).distinct();
+		return Stream.of(ingameName, withoutMagicAffix(ingameName)).distinct();
 	}
 
 	private static Optional<EvergoreItem> itemNamed(String ingameName) {
-		return Arrays.stream(EvergoreItem.values()).filter(item -> item.ingameName.equals(ingameName)).findAny();
+		return Arrays.stream(EvergoreItem.values()).filter(item -> item.isNamed(ingameName)).findAny();
 	}
 
 	private static String withoutMagicAffix(String ingameName) {
 		return MAGIC_AFFIX.matcher(ingameName).replaceFirst("$1");
-	}
-
-	private static String withTwoHandedSuffixToggled(String ingameName) {
-		return ingameName.endsWith(TWO_HANDED_SUFFIX) ? ingameName.substring(0, ingameName.length() - TWO_HANDED_SUFFIX.length()) : ingameName + TWO_HANDED_SUFFIX;
 	}
 
 	private record StorageEntryItem(StorageEntry entry, EvergoreItem item) {}
