@@ -38,7 +38,7 @@
 | `ApplicationExceptionHandlerHttpTest` | Boots the server against its own fixture DB copy and drives the not-found path through the **real Netty write**, which the pure unit test cannot reach: an unknown avatar answers 404 with the default `Not Found` reason phrase (no echo of the requested name), and an unknown avatar whose percent-encoded name carries `CRLF` still answers 404 instead of the 500 that a control character in the reason phrase used to cause. | `@MicronautTest` integration |
 | `ProductionSnapshotRecomputeCheck` | **Opt-in, on-demand** (`-DprodSnapshot.check=true`): boots the real context against a *copy* of a local production snapshot (`temp.sqlite`, gitignored) with the scraper stubbed, so the real `EvergoreDataEvaluator` recomputes the meta sums on real data and the delta can be inspected before a deploy. Writes the summaries response verbatim to `build/tmp/prodSnapshot/overview-after-recompute.json` (decision 2026-08-08) and asserts the artifact carries every avatar rather than a first page of them, which holds up to the API's `MAX_SIZE` of 1000 avatars and fails rather than truncates beyond it; also exports the valuation catalog and asserts item names are unique (the lookup takes an arbitrary entry carrying the name, see [domain-model.md](domain-model.md)). Holds every meta sum the snapshot stored against the one recomputed from the same rows and writes the pair to `metaSums-stored-vs-recomputed.tsv`; it asserts that every stored key was compared and that none was dropped, so a failed read cannot pass as an empty diff. It does **not** assert equality: the diff is the measurement, not a gate. Details: [1:1 against the production instance](#11-against-the-production-instance). | `@MicronautTest` on-demand check |
 | `ProductionSnapshotMigrationCheck` | **Opt-in, on-demand** (`-DprodSnapshot.check=true`, same flag as the recompute check): runs the real `DatabaseMigration` over a *copy* of the local production snapshot and holds every row of all three tables against a SHA-256 taken before it, so a migration that drops, reorders or rewrites a row fails instead of being noticed after the deploy. Also pins that every column comes out `NOT NULL`, that no `*_strict` table is left behind, and that a second run is a no-op. Run it before every deploy that carries a new migration. Measured 2026-09-07: 237,538 rows, digests identical, ~4 min on a slow bind mount. | on-demand check |
-| `GameCatalogScrapeCheck` | **Opt-in, on-demand** (`-DgameCatalog.scrape=true`, driven by `./run-game-scrape.sh`): signs in to the live game and dumps each page named in `gameCatalog.pages` into `build/tmp/gameCatalog/` as rendered text, HTML and a link table, so a catalogued price or recipe can be settled against the game instead of against memory. It reads and navigates only, submitting no form beyond the login the production scraper already performs. The one instrument behind every catalog value; how to drive it and where the prices and recipes sit is below | on-demand check |
+| `GameCatalogScrapeCheck` | **Opt-in, on-demand** (`-DgameCatalog.scrape=true`, driven by `./run-game-scrape.sh`): signs in to the live game and dumps each page named in `gameCatalog.pages` into `build/tmp/gameCatalog/` as rendered text, HTML and a link table, so a catalogued price or recipe can be settled against the game instead of against memory. A named `stock_out` selection with no `pos=` is fetched in full, page by page. It reads and navigates only, submitting no form beyond the login the production scraper already performs. The one instrument behind every catalog value; how to drive it and where the prices and recipes sit is below | on-demand check |
 | `MetaSumComparisonTest` | Pure unit tests over the snapshot comparison tool: `StoredMetaSums` reads every `metaInformation` key of a database **read-only** and leaves out a key stored as `NULL`; `MetaSumComparison` calls a key unchanged when its *number* is unchanged even if its text differs, carries both sides plus their ratio for a changed one, reports no ratio where the stored value was `0`, and counts only the keys both sides hold. Hand-built maps plus one throwaway SQLite file under `build/tmp/test/` | pure unit |
 | `OnDemandCheckOptInTest` | Pins every on-demand check's switch in one place: the build really forwards each opt-in property into the test JVM (an absent property would leave that check unrunnable with nothing to distinguish that from a passing run), each check is switched on by its own property being true, and an ordinary run leaves every one of them off. It discovers the checks by their `@EnabledIfSystemProperty` annotation and pins how many it finds, so a check the discovery misses fails the suite instead of going unpinned. A hand-kept map keyed by property could not hold `ProductionSnapshotMigrationCheck` at all, which shares `prodSnapshot.check` with the recompute check | pure unit |
 | `RateLimitCounterTest` | Pure unit tests for `RateLimitCounter`: the block lifts deterministically after `block-duration` (injected `Clock`, no `sleep`), stays active before expiry, and `isIdle()` answers the eviction question — true once the interval elapsed, false while it runs, false while a block is still active, true again once the block expired. The concurrency case is a **lost-update** test: 20 threads × 50 `increment()` calls must hand out 1000 distinct counts, and it fails without the `synchronized` counter. Concurrent `block()` calls on a frozen clock would prove nothing, since every thread writes the same instant. | pure unit |
@@ -370,7 +370,7 @@ already performs. Opt-in on the same pattern as the snapshot harness, and pinned
 - **To run it:**
 
   ```bash
-  ./run-game-scrape.sh '-DgameCatalog.pages=stock_out&selection=7&pos=1,academy_craft&selection=52'
+  ./run-game-scrape.sh '-DgameCatalog.pages=stock_out&selection=7,academy_craft&selection=52'
   ```
 
   Quote the argument: real page parameters carry `&`, and unquoted the shell backgrounds the run.
@@ -393,11 +393,31 @@ already performs. Opt-in on the same pattern as the snapshot harness, and pinned
   `selection` numbers are the links on the first such page, and its `(Gesamt: N)` gives how many
   rows that selection holds, twenty to a page. Stock held at quality 100 and stored blueprints both
   carry the item's own gold value, so either serves as the price.
-- **The check does not page: it fetches exactly the pages named, and nothing else.** Omitting `pos`
-  reads page one and silently stops there. That is how 15 of the storage's 43 pages went unread
-  until 2026-09-12, hiding 76 gem-forged prices behind six selections, one of them 97 rows deep.
-  Read `(Gesamt: N)` off each selection's first page and name every `pos` up to `ceil(N / 20)`;
-  making the check follow the pagination itself is backlog **B27**.
+- **A `stock_out&selection=<n>` named with no `pos=` is read in full.** The fetch loop reads the
+  `(Gesamt: N)` that sits in parentheses on the selection's first page and fetches every `pos` up
+  to `ceil(N / 20)` itself, twenty rows to a page, capped at 100 pages (a row count beyond that is
+  rejected before it is divided, so it fails loudly rather than risking an overflowed page count);
+  a first page that carries no such total fails loudly too, rather than being read as one page and
+  passing green. Naming `pos=` explicitly still fetches exactly that one page (a leading space
+  before it, `&selection=7& pos=2`, still counts as explicit); the bare `stock_out` overview page
+  (no `&selection=`) is always fetched once, unpaged, since it is the index the `selection` numbers
+  are read from, not a selection itself. `academy_craft` and every other page outside `stock_out` is
+  fetched exactly as named, unpaged. This does **not** cover `guild_protocol`/`town_protocol`, the
+  two pages `SeleniumPageSource` itself pages through in production: those paginate by whether a
+  page still carries a recognizable entry line, not by a `(Gesamt: N)` total, so this check's
+  total-based paging does not apply to them; naming either here still reads page one only. Every
+  dump name is checked against every other one actually written **within the same run**, so an
+  auto-paged and an explicitly named `pos=` can never silently overwrite each other in one
+  invocation; a stale dump from an earlier, larger run can still linger in `build/tmp/gameCatalog/`
+  since nothing clears that directory between runs. **Known limitation, unverified against a real
+  page:** the total is read from the first `(Gesamt: N)` found anywhere in the page's text; no page
+  dump is committed (the dumps carry host/guild data, see below and **B28**), so whether a real
+  `stock_out` page ever carries a second parenthesized total ahead of the selection's own is not
+  established either way. The loop's stopping point is the pure function pair
+  `pagePositions(String)`/`pageRequestsFor(String, String)`, the auto-page/single-fetch decision is
+  `isAPagedStorageSelection(String)`, and the collision guard is `recordDumpName(String)`; all are
+  unit-tested directly (`GameCatalogScrapePagePositionsTest`, `GameCatalogScrapePageRequestsTest`,
+  `GameCatalogScrapePagedSelectionTest`, `GameCatalogScrapeDumpNameGuardTest`) without a browser.
 - **Where the recipes are.** `page=academy_craft&selection=51..67`, seventeen crafts holding 424
   blueprints between them (read 2026-09-12). It lists **every** blueprint with its ingredients
   regardless of the account's own skill level, which is why it is used instead of `page=craft`: that

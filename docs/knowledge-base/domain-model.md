@@ -57,11 +57,12 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
 - **The game prices the catalog, and the wiki is only a convenience.** The guild storage lists what
   it holds per piece at that piece's quality, so a value is read from a holding at quality 100, and a
   stored blueprint carries the gold value of the item it
-  makes, which together priced 244 of the catalog's 601 entries when it was last read. All 244 agree
-  with the catalog. **That read covered only the first page of each storage selection** and so rests
+  makes, which together priced 244 of the catalog's 601 entries when it was last read (backlog
+  **B27**: that headline count is still a first-page-only measurement). All 244 agree with the
+  catalog. **That read covered only the first page of each storage selection** and so rests
   on 28 of the storage's 43 pages; a paged re-read on 2026-09-12 found **no deviation anywhere** and
-  raised the gem-forged names the storage prices from 20 to **99** of the 102 the catalog holds
-  (backlog **B27**). The wiki's `Waren` table is where the numbers originally came from and still fills
+  raised the gem-forged names the storage prices from 20 to **99** of the 102 the catalog holds. The
+  wiki's `Waren` table is where the numbers originally came from and still fills
   gaps the storage cannot reach, but it is not authoritative: it disagrees with the game on 4 of the
   99 gem-forged values that were checkable against the game when it was read, out of the 102 such
   names the catalog holds (98 entries plus four second spellings), pricing `Quarz-Prunkaxt` at

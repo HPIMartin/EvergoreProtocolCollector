@@ -4,7 +4,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -32,6 +37,12 @@ class GameCatalogScrapeCheck {
 	private static final Path OUTPUT = Path.of("build/tmp/gameCatalog");
 	private static final Duration WAIT_TIMEOUT = ofMinutes(1);
 	private static final Duration WAIT_POLL_INTERVAL = ofMillis(500);
+	private static final int ROWS_PER_PAGE = 20;
+	private static final int MAX_PLAUSIBLE_PAGES = 100;
+	private static final Pattern TOTAL_ROW_COUNT = Pattern.compile("\\(Gesamt:\\s*(\\d[\\d.]{0,9})\\)");
+	private static final String PAGED_SELECTION_PREFIX = "stock_out";
+
+	private final Set<String> dumpedNames = new HashSet<>();
 
 	@Test
 	void dumpsTheGamePagesTheItemCatalogIsReadFrom() throws Exception {
@@ -49,14 +60,61 @@ class GameCatalogScrapeCheck {
 			signIn(driver, config);
 			dumpPage(driver, "01-portal");
 			for (String page : pages) {
-				String url = SERVER + "/" + config.server + "?page=" + page;
-				driver.navigate().to(url);
-				waitForUrl(driver, url);
-				dumpPage(driver, dumpNameOf(page));
+				fetchAllPagesOf(driver, config, page);
 			}
 		} finally {
 			quitWithoutMaskingTheScrapeFailure(driver);
 		}
+	}
+
+	private void fetchAllPagesOf(WebDriver driver, Configuration config, String page) throws Exception {
+		if (!isAPagedStorageSelection(page)) {
+			fetchAndDumpPage(driver, config, page);
+			return;
+		}
+		String firstPageText = fetchAndDumpPage(driver, config, page + "&pos=1");
+		List<String> pageRequests = pageRequestsFor(page, firstPageText);
+		for (String pageRequest : pageRequests.subList(1, pageRequests.size())) {
+			fetchAndDumpPage(driver, config, pageRequest);
+		}
+	}
+
+	static boolean isAPagedStorageSelection(String page) {
+		return page.startsWith(PAGED_SELECTION_PREFIX + "&") && !namesAnExplicitPosition(page);
+	}
+
+	private static boolean namesAnExplicitPosition(String page) {
+		return stream(page.split("&")).map(String::trim).anyMatch(parameter -> parameter.startsWith("pos="));
+	}
+
+	static List<String> pageRequestsFor(String page, String firstPageBodyText) {
+		return pagePositions(firstPageBodyText).stream().map(pos -> page + "&pos=" + pos).toList();
+	}
+
+	static List<Integer> pagePositions(String firstPageBodyText) {
+		Matcher totalRowCount = TOTAL_ROW_COUNT.matcher(firstPageBodyText);
+		assertThat(totalRowCount.find()).as("a paged storage selection carries no (Gesamt: N), so its first page did not render as expected").isTrue();
+		long total = parseTotalRowCount(totalRowCount.group(1));
+		assertThat(total)
+				.as("a row count of %s would turn into an implausible number of live page requests", total)
+				.isLessThanOrEqualTo((long) MAX_PLAUSIBLE_PAGES * ROWS_PER_PAGE);
+		long pageCount = ceilDiv(total, ROWS_PER_PAGE);
+		return IntStream.rangeClosed(1, (int) Math.max(1, pageCount)).boxed().toList();
+	}
+
+	private static long parseTotalRowCount(String digitsWithGermanThousandsSeparators) {
+		return Long.parseLong(digitsWithGermanThousandsSeparators.replace(".", ""));
+	}
+
+	private static long ceilDiv(long total, int perPage) {
+		return (total + perPage - 1) / perPage;
+	}
+
+	private String fetchAndDumpPage(WebDriver driver, Configuration config, String page) throws Exception {
+		String url = SERVER + "/" + config.server + "?page=" + page;
+		driver.navigate().to(url);
+		waitForUrl(driver, url);
+		return dumpPage(driver, dumpNameOf(page));
 	}
 
 	private static List<String> requestedPages() {
@@ -104,11 +162,18 @@ class GameCatalogScrapeCheck {
 		} catch (RuntimeException thrownWhileTheRealFailureIsStillInFlight) {}
 	}
 
-	private void dumpPage(WebDriver driver, String name) throws Exception {
-		Files.writeString(OUTPUT.resolve(name + ".txt"), driver.getCurrentUrl() + "\n\n" + driver.findElement(By.tagName("body")).getText(), UTF_8);
+	void recordDumpName(String name) {
+		assertThat(dumpedNames.add(name)).as("%s was already dumped once; two page requests collided on the same evidence file", name).isTrue();
+	}
+
+	private String dumpPage(WebDriver driver, String name) throws Exception {
+		recordDumpName(name);
+		String bodyText = driver.findElement(By.tagName("body")).getText();
+		Files.writeString(OUTPUT.resolve(name + ".txt"), driver.getCurrentUrl() + "\n\n" + bodyText, UTF_8);
 		Files.writeString(OUTPUT.resolve(name + ".html"), driver.getPageSource(), UTF_8);
 		Files.writeString(OUTPUT.resolve(name + ".tsv"), linkTable(driver), UTF_8);
 		assertThat(OUTPUT.resolve(name + ".txt")).as("the dump of %s is empty, so the session carried no page", name).isNotEmptyFile();
+		return bodyText;
 	}
 
 	private String linkTable(WebDriver driver) {
