@@ -20,7 +20,7 @@
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
 | M5 | Overview truth | author steps only | Closing out; the code landed, two restated author checks remain |
-| M7 | The overview states the guild's actual position | the stone aliases, the release run (D23 in part, F6) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the aliases join because the release publishes `Gildenspende` for the first time |
+| M7 | The overview states the guild's actual position | the catalog closed against the game, the release run (D23 in part, F6) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the catalog work joins because the release publishes `Gildenspende` for the first time |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition question, round-trip detection, opening balance, explanation page with the trader's figure (D23, D-12, F7, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
 | M9 | Clear the last bottleneck | D12, D24 | The item every later read method waits on; it also gates the transactional ingest |
 | M10 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
@@ -68,9 +68,10 @@ matter above the fold, and the release goes out driven rather than typed. **This
 Slice: the figures the header named are complete, the rule behind them is decided where the ledger
 cannot decide it, and a member can follow how his own row comes about.
 
-- [ ] Each of the remaining unvalued storage names is classified as *must carry a value* or
-      *deliberately zero*, the deliberate ones stop counting as unknown in `/health`, and the
-      recompute is re-run so the corrected sums are measured rather than assumed (backlog D23).
+- [ ] Every storage name carries the value the game gives it or is recorded as a parser miss, and
+      the recompute is re-run so the corrected sums are measured rather than assumed (backlog
+      D23). The catalog is closed against the game bar 15 names over 31 rows; the deliberate
+      zeros already count apart from unknown ones in `/health`.
 - [ ] Whether bought ammunition is credited in full is decided, with the double payment to crafters
       addressed by a rule the ledger can actually apply (open question D-12). It belongs here
       because it changes what a deposit credits.

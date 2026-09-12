@@ -168,7 +168,7 @@ avatar the recompute has never reached carries neither, and the guild's `Gildens
 summed over the avatars that do carry them. That state is reachable and its window is named under
 the deploy in [build-run-deploy.md](build-run-deploy.md); the header says it cannot answer, and the
 table's total row says the same, so the two never disagree. Measured on the 03.09.2026 snapshot,
-42 avatars: `119.334.247`, `22.338.892`, `107.075.238`, `39.441.922`, and a net of `74.039.823`.
+42 avatars: `119.334.247`, `24.973.432`, `107.075.238`, `39.441.922`, and a net of `76.674.363`.
 
 > **Why the split loses nothing:** `credited + donation - craftSubsidy` equals the deposit's goods
 > value bit-for-bit, over every catalog item at every quality and quantity, because the three credit

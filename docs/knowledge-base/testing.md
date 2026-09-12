@@ -235,9 +235,16 @@ production snapshot via the gitignored harness described below:
   new ones for none. The delta is the fix landing, not a regression.
 - **Catalog gap, pre-existing:** the snapshot holds storage rows whose item name is not in
   `EvergoreItem`; they value at zero and are reported through `/health`'s `unknownItemNames`.
-  Measured on the 03.09.2026 snapshot: **121 of its 513 distinct storage item names**, covering
-  **1 093 of 243 443 rows** (0.45 %) and 88 528 units moved. Backlog **D23** holds the question of
-  which of them should carry a value at all.
+  Measured on the 03.09.2026 snapshot: **15 of its 513 distinct storage item names**, covering
+  **31 of 243 443 rows** (0.013 %) and 1 263 units moved. Thirteen are gem-forged gear the game
+  prices nowhere the scrape can reach, and two are parser misses rather than items.
+- **Closing the catalog against the game moves a third of the guild.** Measured on the 03.09.2026
+  snapshot by running the recompute check on each side of the change: `Gildenspende` rises by
+  `2 478 114`, storage deposits by `5 250 988` and storage withdrawals by `2 987 464`, so the net
+  after deductions rises `2 263 524` to `76 674 363` and **33 of 42** avatars change. One member
+  crosses from a negative contribution to a positive one. Distinct unknown item names fall from
+  **124 to 15** and the rows they cover from **1 684 to 31**; a further 18 names over 786 rows are
+  known and deliberately worth nothing, which `/health` now counts apart from the unknown ones.
 - **The three raw stones' correction is measured, not asserted.** Two independent methods agree to the
   gold on the 03.09.2026 snapshot: a catalog-driven SQL sum over the `Marmor`, `Granit` and
   `Schiefer` rows, and the recompute check run once on each side of the correction. The guild
@@ -300,10 +307,10 @@ Measured with the same opt-in check after the valuation moved to the announced r
 | figure | value |
 | --- | --- |
 | Gildenbank (bank in less bank out, measured gold) | `119.334.247` |
-| Gildenlagerwert (what the storage holds at the guild's own price) | `22.338.892` |
+| Gildenlagerwert (what the storage holds at the guild's own price) | `24.973.432` |
 | Gildenspende (deposits the guild credits nothing for) | `107.075.238` |
 | Handwerkssubventionen (what the guild credits above its own price) | `39.441.922` |
-| Nach Abzügen, the table's total row | `74.039.823` |
+| Nach Abzügen, the table's total row | `76.674.363` |
 
 - The identity `net = Gildenbank + Gildenlagerwert - Gildenspende + Handwerkssubventionen` holds
   **exactly** in whole gold, per avatar and in the total, which is what makes the header checkable

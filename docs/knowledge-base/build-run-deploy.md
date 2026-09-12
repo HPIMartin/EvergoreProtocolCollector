@@ -513,10 +513,10 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      `unknownItemCount` and `unknownItemNames`. Neither is an error: they are the catalog gap
      (testing.md). **`unknownItemCount` counts occurrences, `unknownItemNames` distinct names**, so
      the two differ by an order of magnitude. Measured on the production snapshot 2026-09-03:
-     **1093 occurrences over 121 names**, and the 1093 matches the snapshot's own row count for
-     those names exactly. A four-digit count is normal at this volume. `zeroValuedItemCount` and
-     `zeroValuedItemNames` sit beside them and carry what the catalog knows and deliberately values
-     at nothing, so a catalog gap stays distinguishable from a deliberate zero.
+     **31 occurrences over 15 names**, and the 31 matches the snapshot's own row count for those
+     names exactly. `zeroValuedItemCount` and `zeroValuedItemNames` sit beside them and carry what the
+     catalog knows and deliberately values at nothing, 786 occurrences over 18 names, so a catalog
+     gap stays distinguishable from a deliberate zero.
    - `/` serves the SPA shell without a token (~480 bytes, `text/html`, carrying `<div id="root">`
      and the bundle `<script>`); the SPA then fetches the API with the token from its URL.
    - `/api/v1/avatars?token=…` answers `{page, size, totalCount, items[]}` with
