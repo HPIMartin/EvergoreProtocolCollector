@@ -61,6 +61,11 @@ public class LastRunHealthIndicator implements HealthIndicator {
 			details.put("unknownItemCount", unknownItemNames.size());
 			details.put("unknownItemNames", unknownItemNames.stream().distinct().sorted().toList());
 		}
+		List<String> zeroValuedItemNames = snapshot.zeroValuedItemNames();
+		if (!zeroValuedItemNames.isEmpty()) {
+			details.put("zeroValuedItemCount", zeroValuedItemNames.size());
+			details.put("zeroValuedItemNames", zeroValuedItemNames.stream().distinct().sorted().toList());
+		}
 
 		List<String> failedAvatarNames = snapshot.failedAvatarNames();
 		if (!failedAvatarNames.isEmpty()) {

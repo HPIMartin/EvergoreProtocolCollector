@@ -30,10 +30,10 @@ class LastRunStatusRecomputeIsolationTest {
 	@Test
 	void answersTheSnapshotOfTheRunBeforeARecomputeWhileThatRecomputeIsStillCopyingItsLastListBeforePublishing() throws InterruptedException {
 		LastRunStatus tested = new LastRunStatus();
-		tested.recordSuccessfulRecompute(RUN_ONE_INSTANT, List.of("old-item"), List.of("old-avatar"));
+		tested.recordSuccessfulRecompute(RUN_ONE_INSTANT, List.of("old-item"), List.of(), List.of("old-avatar"));
 		List<String> blockingFailedAvatarNames = new BlockingOnFirstIteration(List.of("new-avatar"));
 
-		Thread writer = new Thread(() -> tested.recordSuccessfulRecompute(RUN_TWO_INSTANT, List.of("new-item"), blockingFailedAvatarNames));
+		Thread writer = new Thread(() -> tested.recordSuccessfulRecompute(RUN_TWO_INSTANT, List.of("new-item"), List.of(), blockingFailedAvatarNames));
 		writer.start();
 		boolean writerReachedTheBlockingCopy = writerIsBuildingItsNewSnapshot.await(HANG_GUARD_SECONDS, TimeUnit.SECONDS);
 
@@ -89,7 +89,7 @@ class LastRunStatusRecomputeIsolationTest {
 		silentThrow(() -> start.await());
 		Instant runInstant = tag.equals("A") ? RUN_ONE_INSTANT : RUN_TWO_INSTANT;
 		for (int i = 0; i < WRITES_PER_WRITER_THREAD; i++) {
-			tested.recordSuccessfulRecompute(runInstant, List.of(tag + "-item"), List.of(tag + "-avatar"));
+			tested.recordSuccessfulRecompute(runInstant, List.of(tag + "-item"), List.of(), List.of(tag + "-avatar"));
 		}
 	}
 

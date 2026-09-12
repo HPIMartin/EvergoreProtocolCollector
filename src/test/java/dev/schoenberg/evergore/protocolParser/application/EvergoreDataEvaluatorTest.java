@@ -409,6 +409,18 @@ class EvergoreDataEvaluatorTest {
 	}
 
 	@Test
+	void countsAKnownItemWorthNothingApartFromAnUnknownName() {
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement("Übungsstück-Sorandilaxt", 1, 100), storagePlacement("Unobtainium", 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(result.zeroValuedItemNames()).containsExactly("Übungsstück-Sorandilaxt");
+		assertThat(result.unknownItemNames()).containsExactly("Unobtainium");
+	}
+
+	@Test
 	void reportsNoRawStoneNameAsUnknown() {
 		storageRepo.seedEntries(AVATAR, List.of(storagePlacement("Marmor", 1, 100), storagePlacement("Granit", 1, 100), storagePlacement("Schiefer", 1, 100)));
 		storageRepo.seedAvatars(List.of(AVATAR));

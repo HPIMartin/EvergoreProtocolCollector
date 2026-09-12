@@ -34,7 +34,7 @@ class LastRunHealthIndicatorTest {
 	@Test
 	void reportsUpWithTimestampDetailAfterSuccessfulRecompute() {
 		Instant recorded = Instant.parse("2026-06-21T12:00:00Z");
-		lastRunStatus.recordSuccessfulRecompute(recorded, List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(recorded, List.of(), List.of(), List.of());
 
 		HealthResult result = singleResult();
 
@@ -47,8 +47,34 @@ class LastRunHealthIndicatorTest {
 	}
 
 	@Test
+	void reportsItemsKnownToBeWorthNothingApartFromUnknownOnes() {
+		lastRunStatus
+				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of("Unobtainium"), List.of("Übungsstück-Sorandilaxt", "Übungsstück-Sorandilaxt"), List.of());
+
+		HealthResult result = singleResult();
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> details = (Map<String, Object>) result.getDetails();
+		assertThat(details.get("unknownItemCount")).isEqualTo(1);
+		assertThat(details.get("unknownItemNames")).isEqualTo(List.of("Unobtainium"));
+		assertThat(details.get("zeroValuedItemCount")).isEqualTo(2);
+		assertThat(details.get("zeroValuedItemNames")).isEqualTo(List.of("Übungsstück-Sorandilaxt"));
+	}
+
+	@Test
+	void omitsTheZeroValuedItemDetailWhenNoneOccurredInLastRun() {
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of());
+
+		HealthResult result = singleResult();
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> details = (Map<String, Object>) result.getDetails();
+		assertThat(details).doesNotContainKey("zeroValuedItemCount");
+	}
+
+	@Test
 	void omitsUnknownItemDetailWhenNoneOccurredInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of());
 
 		HealthResult result = singleResult();
 
@@ -59,7 +85,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsUnknownItemCountAndNamesWhenPresentInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of("Unobtainium", "Unobtainium"), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of("Unobtainium", "Unobtainium"), List.of(), List.of());
 
 		HealthResult result = singleResult();
 
@@ -71,7 +97,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsScrapeFailureButNotRecomputeFailureAfterASuccessfulRecomputeFollowedByAFailedScrape() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of());
 		lastRunStatus.recordScrapeFailure(Instant.parse("2026-06-22T12:00:00Z"));
 
 		HealthResult result = singleResult();
@@ -85,7 +111,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsDownWithRecomputeFailureAfterASuccessfulRecomputeFollowedByAFailedRecompute() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of());
 		lastRunStatus.recordRecomputeFailure(Instant.parse("2026-06-22T12:00:00Z"));
 
 		HealthResult result = singleResult();

@@ -76,7 +76,7 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
 - **Two families are catalogued at zero on purpose.** `Übungsstück-*` trains a craft without
   spending materials and sells only to the trader for almost nothing; `Mystisch*` items are quest
   rewards. They are entries rather than gaps so a catalog hole stays distinguishable from a
-  deliberate zero.
+  deliberate zero, and `/health` counts them apart as `zeroValuedItemCount`/`zeroValuedItemNames`.
 - **Gem-forged gear follows a price ladder, which is a finding and not a rule the code applies.**
   Within one gem every one-handed weapon shares a price, as does every staff and every ranged
   weapon, and the armour values repeat across gem families (`Rubin-Plattenhandschuhe` and
