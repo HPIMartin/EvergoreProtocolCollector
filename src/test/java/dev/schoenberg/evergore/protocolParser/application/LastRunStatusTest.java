@@ -149,7 +149,7 @@ class LastRunStatusTest {
 	void recordsTheZeroValuedItemNamesOfTheLastRun() {
 		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of("Übungsstück-Sorandilaxt"), List.of());
 
-		assertThat(tested.snapshot().zeroValuedItemNames()).containsExactly("Übungsstück-Sorandilaxt");
+		assertThat(snapshot().zeroValuedItemNames()).containsExactly("Übungsstück-Sorandilaxt");
 	}
 
 	@Test
@@ -158,7 +158,7 @@ class LastRunStatusTest {
 
 		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T09:00:00Z"), List.of(), List.of(), List.of());
 
-		assertThat(tested.snapshot().zeroValuedItemNames()).isEmpty();
+		assertThat(snapshot().zeroValuedItemNames()).isEmpty();
 	}
 
 	@Test
@@ -167,7 +167,7 @@ class LastRunStatusTest {
 
 		tested.recordRecomputeFailure(Instant.parse("2026-06-21T09:00:00Z"));
 
-		assertThat(tested.snapshot().zeroValuedItemNames()).containsExactly("Übungsstück-Sorandilaxt");
+		assertThat(snapshot().zeroValuedItemNames()).containsExactly("Übungsstück-Sorandilaxt");
 	}
 
 	@Test

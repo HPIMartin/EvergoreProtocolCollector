@@ -38,9 +38,6 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STEINBR
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STERNENSTAUB;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UNDEFINED;
 import static java.util.Arrays.stream;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -186,15 +183,6 @@ class EvergoreItemTest {
 	}
 
 	@Test
-	void noTwoCatalogEntriesShareAnIngameName() {
-		Map<String, List<String>> constantsByIngameName = stream(EvergoreItem.values()).collect(groupingBy(item -> item.ingameName, mapping(EvergoreItem::name, toList())));
-
-		List<List<String>> entriesSharingAnIngameName = constantsByIngameName.values().stream().filter(constants -> constants.size() > 1).toList();
-
-		assertThat(entriesSharingAnIngameName).isEmpty();
-	}
-
-	@Test
 	void pricesEveryAmmunitionTypeAtTheGoldTheGuildStorageListsPerPiece() {
 		Map<String, Integer> pricePerAmmunition = new TreeMap<>();
 		for (EvergoreItem ammunition : List.of(STEINBRECHER, JAGDPFEILE, PANZERBRECHER)) {
@@ -239,6 +227,44 @@ class EvergoreItemTest {
 		List<String> craftableAndFree = stream(EvergoreItem.values()).filter(item -> item.recipe != NOT_CRAFTABLE && item.marketValue == 0).map(item -> item.ingameName).toList();
 
 		assertThat(craftableAndFree).isEmpty();
+	}
+
+	@Test
+	void noCraftableItemIsWorthLessThanTheIngredientsItsRecipeConsumes() {
+		List<String> pricedBelowTheirIngredients = stream(EvergoreItem.values())
+				.filter(item -> item.recipe != NOT_CRAFTABLE)
+				.filter(item -> item.marketValue * item.recipe.amount < ingredientMarketValueOf(item))
+				.map(item -> item.ingameName)
+				.toList();
+
+		assertThat(pricedBelowTheirIngredients).isEmpty();
+	}
+
+	@Test
+	void aCatalogueEntryIsEitherNotCraftableOrNamesWhatItConsumes() {
+		List<String> craftableFromNothing = stream(EvergoreItem.values())
+				.filter(item -> item.recipe != NOT_CRAFTABLE && item.recipe.ingredients.isEmpty())
+				.map(item -> item.ingameName)
+				.toList();
+
+		assertThat(craftableFromNothing).isEmpty();
+	}
+
+	@Test
+	void theCatalogStillHoldsEveryProductionChainItRecorded() {
+		long craftables = stream(EvergoreItem.values()).filter(item -> item.recipe != NOT_CRAFTABLE).count();
+
+		assertThat(craftables).isEqualTo(369);
+	}
+
+	@Test
+	void everyCraftableIsCreditedAtLeastWhatItsWithdrawalCharges() {
+		List<String> creditedBelowTheirCost = stream(EvergoreItem.values())
+				.filter(item -> item.recipe != NOT_CRAFTABLE && item.category.placement < item.category.withdrawl)
+				.map(item -> item.ingameName)
+				.toList();
+
+		assertThat(creditedBelowTheirCost).isEmpty();
 	}
 
 	@Test

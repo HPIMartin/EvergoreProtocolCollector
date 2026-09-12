@@ -60,7 +60,9 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   makes, which together priced 244 of the catalog's 601 entries when it was last read. All 244 agree
   with the catalog. The wiki's `Waren` table is where the numbers originally came from and still fills
   gaps the storage cannot reach, but it is not authoritative: it disagrees with the game on 4 of the
-  99 checkable gem-forged values, pricing `Quarz-Prunkaxt` at `1000` against the game's `12000`, and it
+  99 gem-forged values that were checkable against the game when it was read, out of the 102 such
+  names the catalog holds (98 entries plus four second spellings), pricing `Quarz-Prunkaxt` at
+  `1000` against the game's `12000`, and it
   carries none of the `Mystisch*` quest consumables the ledger holds. Two catalog values are still only
   contested by the wiki and unread from the game, `Luft-Spiralstab` and `Einfacher Wollverband`
   (measured 2026-09-11).
@@ -97,6 +99,24 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   how many units the recipe yields. **The recipes are the game's production chains, not an input to
   the valuation** (author decision 2026-09-10): no production code reads them, and the tests that
   pin the guild's announced worked examples are their only reader.
+- **Gem-forged gear is crafted from a learned blueprint, not from an academy recipe, so the catalog
+  holds no ingredients for it.** The academy's craft chambers list **424 blueprints across all 17
+  crafts** (`academy_craft&selection=51..67`, read 2026-09-12) and **not one is gem-forged**; the
+  blueprints themselves exist as items instead, `Erlernbar ab Stufe 3` or `4`, and reach the guild
+  storage, where 20 of the catalog's gem-forged names are priced through one. So the academy, which
+  is the one surface that shows a blueprint's ingredients whatever the account's own skill, can
+  never show a gem one, and the ingredient list of a gem blueprint is reachable nowhere yet read.
+  The catalog nevertheless held recipes for `Achat-Lederbeinlinge` and `Achat-Lederstulpen`, the
+  only two of its 98 gem-prefixed entries that did, and both are now `NOT_CRAFTABLE` like the other
+  96 (author decision 2026-09-12): an ingredient list no source attests is not kept. No served
+  figure moves, because no production code reads a recipe.
+- **No catalogued craftable is worth less than the ingredients its recipe consumes**
+  (`EvergoreItemTest`): a product priced under its own inputs means one of the two numbers is wrong.
+  The two Achat entries were the only pair breaking it, and their ingredient lists were the
+  unattested half. The rule reaches the catalog's own production chains and claims nothing about
+  gem gear, which now carries none: nine tier-1 gem armour pieces are priced below the `2500` five
+  tier-1 gems cost, four of those prices read straight from the game, and whether the game really
+  prices them under their inputs cannot be settled until a gem blueprint's ingredients are read.
 
 ### The value math (verified against `EvergoreItemTest`)
 
