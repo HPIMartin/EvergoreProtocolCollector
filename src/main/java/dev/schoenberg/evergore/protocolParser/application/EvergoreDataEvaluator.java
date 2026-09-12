@@ -12,6 +12,7 @@ import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.ToDoubleFunction;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
@@ -159,14 +160,20 @@ public class EvergoreDataEvaluator {
 		}
 	}
 
+	private static final String TWO_HANDED_SUFFIX = " [2H]";
 	private static final Pattern MAGIC_AFFIX = Pattern.compile(" (?:des|der) \\p{Lu}\\p{L}+( \\[2H\\])?$");
 
 	private EvergoreItem findItem(StorageEntry entry, List<String> unknownItemNames) {
-		return itemNamed(entry.name()).or(() -> itemNamed(withoutMagicAffix(entry.name()))).orElseGet(() -> {
+		return spellingsOf(entry.name()).map(EvergoreDataEvaluator::itemNamed).flatMap(Optional::stream).findFirst().orElseGet(() -> {
 			logger.warn("Unable to find item: " + entry.name());
 			unknownItemNames.add(entry.name());
 			return UNDEFINED;
 		});
+	}
+
+	private static Stream<String> spellingsOf(String ingameName) {
+		String plain = withoutMagicAffix(ingameName);
+		return Stream.of(ingameName, plain, withTwoHandedSuffixToggled(ingameName), withTwoHandedSuffixToggled(plain)).distinct();
 	}
 
 	private static Optional<EvergoreItem> itemNamed(String ingameName) {
@@ -175,6 +182,10 @@ public class EvergoreDataEvaluator {
 
 	private static String withoutMagicAffix(String ingameName) {
 		return MAGIC_AFFIX.matcher(ingameName).replaceFirst("$1");
+	}
+
+	private static String withTwoHandedSuffixToggled(String ingameName) {
+		return ingameName.endsWith(TWO_HANDED_SUFFIX) ? ingameName.substring(0, ingameName.length() - TWO_HANDED_SUFFIX.length()) : ingameName + TWO_HANDED_SUFFIX;
 	}
 
 	private record StorageEntryItem(StorageEntry entry, EvergoreItem item) {}

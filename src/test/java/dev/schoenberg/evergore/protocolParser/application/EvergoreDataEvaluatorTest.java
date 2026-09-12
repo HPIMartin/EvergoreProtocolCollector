@@ -382,6 +382,32 @@ class EvergoreDataEvaluatorTest {
 		return stream(EvergoreItem.values()).filter(item -> item.ingameName.equals(plain)).findAny().orElseThrow();
 	}
 
+	@ParameterizedTest(name = "{0}")
+	@CsvSource({"Obsidian-Kriegshammer, 82300", "Obsidian-Pike, 82300", "Obsidian-Pike [2H], 82300", "Rubin-Plattenhelm, 15900", "Achat-Armbrust, 5500", "Jade-Feuerstab, 42300"})
+	void valuesGemForgedGearAtThePriceTheGameGivesIt(String itemName, int marketValue) {
+		storageRepo.seedEntries(AVATAR, List.of(storageWithdrawl(itemName, 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Double>get(getStorageWithdrawl(AVATAR))).contains(marketValue * 0.6);
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@ValueSource(strings = {"Übungsstück-Sorandilaxt", "Übungsstück-Eibenstab", "Mystischer Pfeil", "Mystische Essenz"})
+	void knowsPracticeGearAndQuestConsumablesAndValuesThemAtZero(String itemName) {
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(itemName, 7, 100), storageWithdrawl(itemName, 7, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(result.unknownItemNames()).isEmpty();
+		assertThat(metaRepo.<Double>get(getStorageWithdrawl(AVATAR))).contains(0.0);
+		assertThat(metaRepo.<Double>get(getStorageDonation(AVATAR))).contains(0.0);
+	}
+
 	@Test
 	void reportsNoRawStoneNameAsUnknown() {
 		storageRepo.seedEntries(AVATAR, List.of(storagePlacement("Marmor", 1, 100), storagePlacement("Granit", 1, 100), storagePlacement("Schiefer", 1, 100)));

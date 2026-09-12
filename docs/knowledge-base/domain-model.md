@@ -73,6 +73,16 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   `Holzfälleraxt des Wegelagerers` exactly as its plain form, so neither variant is a ware of its own.
   The exact match comes first, so a family with a real one-handed and two-handed member,
   `Kriegshammer`, is never confused.
+- **Two families are catalogued at zero on purpose.** `Übungsstück-*` trains a craft without
+  spending materials and sells only to the trader for almost nothing; `Mystisch*` items are quest
+  rewards. They are entries rather than gaps so a catalog hole stays distinguishable from a
+  deliberate zero.
+- **Gem-forged gear follows a price ladder, which is a finding and not a rule the code applies.**
+  Within one gem every one-handed weapon shares a price, as does every staff and every ranged
+  weapon, and the armour values repeat across gem families (`Rubin-Plattenhandschuhe` and
+  `Jade-Handschuhe` both `14 200`). The ratios between slots are close but not exact, so the
+  ladder is never used to invent a value: an item carries the price the game gave it or none
+  (measured 2026-09-11).
 - **`category`**: one of the `Category` values (weapon/armor families, `ROHSTOFFE`,
   `JAGDBEUTEN` (hunt loot), `EDELSTEINE` (gems), `HANDWERKSMATERIAL`, …). Each category carries
   two multipliers, `placement` (what a deposit credits) and `withdrawl` (what a withdrawal costs),
