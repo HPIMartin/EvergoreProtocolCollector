@@ -10,6 +10,9 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.schoenberg.evergore.protocolParser.ApplicationFactory;
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
@@ -318,6 +321,56 @@ class EvergoreDataEvaluatorTest {
 		tested.evaluateData();
 
 		assertThat(metaRepo.<Double>get(getStoragePlacement(AVATAR))).contains(ERDE_EIBENLANZE.getStorageValue());
+	}
+
+	@ParameterizedTest(name = "{0} deposited")
+	@CsvSource({"Marmor, 72.0", "Granit, 54.0", "Schiefer, 36.0"})
+	void creditsADepositOfARawStoneNothingAndBooksItAsADonation(String itemName, double expectedDonation) {
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(itemName, 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Double>get(getStoragePlacement(AVATAR))).contains(0.0);
+		assertThat(metaRepo.<Double>get(getStorageDonation(AVATAR))).contains(expectedDonation);
+		assertThat(metaRepo.<Double>get(getStorageCraftSubsidy(AVATAR))).contains(0.0);
+	}
+
+	@ParameterizedTest(name = "[{0}]")
+	@ValueSource(strings = {"marmor", "MARMOR", " Marmor", "Marmor "})
+	void reportsASpellingThatIsNotTheOneTheGameUsesAsUnknown(String nearMiss) {
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(nearMiss, 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(result.unknownItemNames()).containsExactly(nearMiss);
+		assertThat(metaRepo.<Double>get(getStorageDonation(AVATAR))).contains(0.0);
+	}
+
+	@ParameterizedTest(name = "{0} withdrawn")
+	@CsvSource({"Marmor, 72.0", "Granit, 54.0", "Schiefer, 36.0"})
+	void valuesAWithdrawalOfARawStoneUnderTheNameTheGameUses(String itemName, double expectedCost) {
+		storageRepo.seedEntries(AVATAR, List.of(storageWithdrawl(itemName, 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Double>get(getStorageWithdrawl(AVATAR))).contains(expectedCost);
+	}
+
+	@Test
+	void reportsNoRawStoneNameAsUnknown() {
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement("Marmor", 1, 100), storagePlacement("Granit", 1, 100), storagePlacement("Schiefer", 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(result.unknownItemNames()).isEmpty();
 	}
 
 	@Test

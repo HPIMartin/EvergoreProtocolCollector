@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.domain;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -11,19 +13,26 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Categor
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.JAGDBEUTEN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.ROHSTOFFE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.EISENBARREN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.GRANIT;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KRISTALL;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KUPFERERZ;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MAGIESPLITTER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MAGISCHE_AETHERBINDE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MARMOR;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.PFEILE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.SCHIEFER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STERNENSTAUB;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UNDEFINED;
 import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 class EvergoreItemTest {
+	private static final List<EvergoreItem> RAW_STONES = List.of(MARMOR, GRANIT, SCHIEFER);
 	private static final Set<Category> DONATED_CATEGORIES = Set.of(ROHSTOFFE, JAGDBEUTEN, EDELSTEINE);
 	private static final Set<String> TRADER_GOODS = Set
 			.of("Schmiedeöl", "Bogensalbe", "Harz", "Zwirn", "Steinkohle", "Nähgarn", "Lederfett", "Magiesplitter", "Federn", "Salz", "Mörtel", "Schleifstein", "Elbenhaar",
@@ -158,6 +167,29 @@ class EvergoreItemTest {
 		double roundTrip = MAGIESPLITTER.getStorageValue() - MAGIESPLITTER.getWithdrawlValue();
 
 		assertThat(roundTrip).isCloseTo(24d, within(0.0001d));
+	}
+
+	@Test
+	void noTwoCatalogEntriesShareAnIngameName() {
+		Map<String, List<String>> constantsByIngameName = stream(EvergoreItem.values()).collect(groupingBy(item -> item.ingameName, mapping(EvergoreItem::name, toList())));
+
+		List<List<String>> entriesSharingAnIngameName = constantsByIngameName.values().stream().filter(constants -> constants.size() > 1).toList();
+
+		assertThat(entriesSharingAnIngameName).isEmpty();
+	}
+
+	@Test
+	void theRawStonesCarryTheNameTheGameUses() {
+		List<String> names = RAW_STONES.stream().map(item -> item.ingameName).toList();
+
+		assertThat(names).containsExactly("Marmor", "Granit", "Schiefer");
+	}
+
+	@Test
+	void theRawStonesKeepThePriceTheWikiTableRecords() {
+		List<Integer> marketValues = RAW_STONES.stream().map(item -> item.marketValue).toList();
+
+		assertThat(marketValues).containsExactly(120, 90, 60);
 	}
 
 	private static double valueGainOfCrafting(EvergoreItem product) {

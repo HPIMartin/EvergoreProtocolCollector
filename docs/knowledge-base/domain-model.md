@@ -54,6 +54,19 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   **NPC trader charges**, confirmed by the author 2026-09-10 against the game: `PFEILE` 3, `BOLZEN` 12,
   `MAGIEESSENZ` 4, exactly the catalog's numbers. So a member can buy those for `marketValue` rather
   than craft them, which is what makes a 60 % credit a real loss of gold for whoever buys them.
+- **The wiki's `Waren` table is where the market values come from.** Matched on the exact
+  `ingameName` against its 746 priced rows, it lists 404 of the catalog's 446 entries and prices
+  400 of them at the catalog's own value. It differs on four, the catalog's value first:
+  `Steinbrecher` `0` against `44`, `Luft-Spiralstab` `16300` against `6300`, `Einfacher
+  Wollverband` `32` against `16` and `Jagdpfeile` `4` against `5`. The 42 it does not list are 34
+  `[2H]` names, six it spells its own way, `Improvisierte Leinenbinde` and the `undefined`
+  sentinel (measured 2026-09-11).
+- **It is no authority for spelling, so the name is the game's.** Those six are the raw stones,
+  which it writes `Marmorstein`, `Granitstein` and `Schieferstein`, and the three essences, which
+  it writes in the plural; all six carry the value it gives them, so only the name differs. The
+  game's blueprints, its `Steine` page and the ledger itself say `Marmor`, `Granit` and
+  `Schiefer`. A name only the wiki uses matches no ledger row, so it values every movement of a
+  real item at zero and says nothing.
 - **`category`**: one of the `Category` values (weapon/armor families, `ROHSTOFFE`,
   `JAGDBEUTEN` (hunt loot), `EDELSTEINE` (gems), `HANDWERKSMATERIAL`, …). Each category carries
   two multipliers, `placement` (what a deposit credits) and `withdrawl` (what a withdrawal costs),
@@ -138,8 +151,8 @@ avatar the recompute has never reached carries neither, and the guild's `Gildens
 `Handwerkssubventionen` and `Gildenlagerwert` are then **absent for the whole guild** rather than
 summed over the avatars that do carry them. That state is reachable and its window is named under
 the deploy in [build-run-deploy.md](build-run-deploy.md); the header says it cannot answer, and the
-table's total row says the same, so the two never disagree. Measured on the 03.09.2026 snapshot, 42 avatars: `119.334.247`, `20.231.794`, `104.597.124`,
-`39.441.922`, and a net of `74.410.839`.
+table's total row says the same, so the two never disagree. Measured on the 03.09.2026 snapshot,
+42 avatars: `119.334.247`, `22.338.892`, `107.075.238`, `39.441.922`, and a net of `74.039.823`.
 
 > **Why the split loses nothing:** `credited + donation - craftSubsidy` equals the deposit's goods
 > value bit-for-bit, over every catalog item at every quality and quantity, because the three credit
@@ -164,17 +177,17 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
 
 - **Bank:** sum entry `amount` into `placement` (EINLAGERUNG) or `withdrawl` (ENTNAHME), via
   `TransferTypeBankEntryVisitor`.
-- **Storage:** for each entry, look up its `EvergoreItem` by `ingameName`
-  (unknown name → `UNDEFINED`, valued 0, **logged at WARN**; every miss is collected into the
-  `EvaluationResult` returned by `evaluateData()` and surfaced via `/health`'s `lastRun` detail as
-  `unknownItemCount` + distinct `unknownItemNames`, so a catalog gap is loud, not silent; since
-  evaluation is a full recompute, this count is unknown-item rows across **the entire stored
-  history of every avatar the run could read**, recomputed each run, not just those new since the
-  previous run; an avatar whose ledger read throws reports none, because both ledger
-  adapters materialise their result before returning it, so the throw precedes every item lookup;
-  the repository interface does not require that), then add
-  `itemValue × quantity × (quality / 100)` into `placement` / `withdrawl`, where `itemValue` is
-  `getStorageValue()` for deposits and `getWithdrawlValue()` for withdrawals
+- **Storage:** for each entry, look up its `EvergoreItem` by `ingameName` (the match is exact and
+  takes an arbitrary one of the entries carrying that name, so two may never share one; unknown name
+  → `UNDEFINED`, valued 0, **logged at WARN**; every miss is collected into the `EvaluationResult`
+  returned by `evaluateData()` and surfaced via `/health`'s `lastRun` detail as `unknownItemCount` +
+  distinct `unknownItemNames`, so a catalog gap is loud, not silent; since evaluation is a full
+  recompute, this count is unknown-item rows across **the entire stored history of every avatar the
+  run could read**, recomputed each run, not just those new since the previous run; an avatar whose
+  ledger read throws reports none, because both ledger adapters materialise their result before
+  returning it, so the throw precedes every item lookup; the repository interface does not require
+  that), then add `itemValue × quantity × (quality / 100)` into `placement` / `withdrawl`, where
+  `itemValue` is `getStorageValue()` for deposits and `getWithdrawlValue()` for withdrawals
   (`TransferTypeStorageEntryVisitor`). **Quality scales value linearly.**
 - **A deposit is valued twice**, and the gap is split into the two flows it is made of: into
   `placement` with what it credits the member, and, against `getWithdrawlValue()` as the guild's own

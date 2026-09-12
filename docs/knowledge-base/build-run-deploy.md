@@ -513,7 +513,7 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      `unknownItemCount` and `unknownItemNames`. Neither is an error: they are the catalog gap
      (testing.md). **`unknownItemCount` counts occurrences, `unknownItemNames` distinct names**, so
      the two differ by an order of magnitude. Measured on the production snapshot 2026-09-03:
-     **1684 occurrences over 124 names**, and the 1684 matches the snapshot's own row count for
+     **1093 occurrences over 121 names**, and the 1093 matches the snapshot's own row count for
      those names exactly. A four-digit count is normal at this volume.
    - `/` serves the SPA shell without a token (~480 bytes, `text/html`, carrying `<div id="root">`
      and the bundle `<script>`); the SPA then fetches the API with the token from its URL.

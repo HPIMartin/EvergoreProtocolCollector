@@ -54,10 +54,10 @@ matter above the fold, and the release goes out driven rather than typed. **This
 - [x] The roster splits into an active and a dormant table over one column definition, cut against
       the newest activity the loaded rows themselves carry and never against the reader's clock, so a
       stalled collection cannot drop the whole guild into "dormant" (decided 2026-09-11).
-- [ ] `Marmor`, `Granit` and `Schiefer` carry the value of their catalogued `*stein` forms (backlog
-      D23, first step, decided 2026-09-11): the release publishes `Gildenspende` for the first time
-      and it is `2.478.114` (2,4 %) too low without them, with a further `371.016` missing from
-      storage withdrawal.
+- [x] `Marmor`, `Granit` and `Schiefer` carry a value under the names the game uses, three catalog
+      entries renamed (backlog D23, first step, decided 2026-09-11): the release publishes
+      `Gildenspende` for the first time and it is measurably too low without them
+      ([testing.md](knowledge-base/testing.md)).
 - [ ] A committed deploy script drives a full deploy and rollback over ssh, carrying every check that
       caught the `0.1.0` defects, with a self-test that fails each of them against a faked bad state.
       The script and its self-test have landed; the box closes when it has driven this release and a
