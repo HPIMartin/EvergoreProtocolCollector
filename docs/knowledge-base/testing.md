@@ -38,8 +38,9 @@
 | `ApplicationExceptionHandlerHttpTest` | Boots the server against its own fixture DB copy and drives the not-found path through the **real Netty write**, which the pure unit test cannot reach: an unknown avatar answers 404 with the default `Not Found` reason phrase (no echo of the requested name), and an unknown avatar whose percent-encoded name carries `CRLF` still answers 404 instead of the 500 that a control character in the reason phrase used to cause. | `@MicronautTest` integration |
 | `ProductionSnapshotRecomputeCheck` | **Opt-in, on-demand** (`-DprodSnapshot.check=true`): boots the real context against a *copy* of a local production snapshot (`temp.sqlite`, gitignored) with the scraper stubbed, so the real `EvergoreDataEvaluator` recomputes the meta sums on real data and the delta can be inspected before a deploy. Writes the summaries response verbatim to `build/tmp/prodSnapshot/overview-after-recompute.json` (decision 2026-08-08) and asserts the artifact carries every avatar rather than a first page of them, which holds up to the API's `MAX_SIZE` of 1000 avatars and fails rather than truncates beyond it; also exports the valuation catalog and asserts item names are unique (the lookup takes an arbitrary entry carrying the name, see [domain-model.md](domain-model.md)). Holds every meta sum the snapshot stored against the one recomputed from the same rows and writes the pair to `metaSums-stored-vs-recomputed.tsv`; it asserts that every stored key was compared and that none was dropped, so a failed read cannot pass as an empty diff. It does **not** assert equality: the diff is the measurement, not a gate. Details: [1:1 against the production instance](#11-against-the-production-instance). | `@MicronautTest` on-demand check |
 | `ProductionSnapshotMigrationCheck` | **Opt-in, on-demand** (`-DprodSnapshot.check=true`, same flag as the recompute check): runs the real `DatabaseMigration` over a *copy* of the local production snapshot and holds every row of all three tables against a SHA-256 taken before it, so a migration that drops, reorders or rewrites a row fails instead of being noticed after the deploy. Also pins that every column comes out `NOT NULL`, that no `*_strict` table is left behind, and that a second run is a no-op. Run it before every deploy that carries a new migration. Measured 2026-09-07: 237,538 rows, digests identical, ~4 min on a slow bind mount. | on-demand check |
+| `GameCatalogScrapeCheck` | **Opt-in, on-demand** (`-DgameCatalog.scrape=true`, driven by `./run-game-scrape.sh`): signs in to the live game and dumps each page named in `gameCatalog.pages` into `build/tmp/gameCatalog/` as rendered text, HTML and a link table, so a catalogued price or recipe can be settled against the game instead of against memory. It reads and navigates only, submitting no form beyond the login the production scraper already performs. The one instrument behind every catalog value; how to drive it and where the prices and recipes sit is below | on-demand check |
 | `MetaSumComparisonTest` | Pure unit tests over the snapshot comparison tool: `StoredMetaSums` reads every `metaInformation` key of a database **read-only** and leaves out a key stored as `NULL`; `MetaSumComparison` calls a key unchanged when its *number* is unchanged even if its text differs, carries both sides plus their ratio for a changed one, reports no ratio where the stored value was `0`, and counts only the keys both sides hold. Hand-built maps plus one throwaway SQLite file under `build/tmp/test/` | pure unit |
-| `ProductionSnapshotCheckOptInTest` | Pins the on-demand check's switch in one place: the build really forwards `prodSnapshot.check` into the test JVM (an absent property would leave the check unrunnable with nothing to distinguish that from a passing run), the check carries that same property as its `@EnabledIfSystemProperty` condition, and an ordinary run leaves it off | pure unit |
+| `OnDemandCheckOptInTest` | Pins every on-demand check's switch in one place: the build really forwards each opt-in property into the test JVM (an absent property would leave that check unrunnable with nothing to distinguish that from a passing run), each check is switched on by its own property being true, and an ordinary run leaves every one of them off. It discovers the checks by their `@EnabledIfSystemProperty` annotation and pins how many it finds, so a check the discovery misses fails the suite instead of going unpinned. A hand-kept map keyed by property could not hold `ProductionSnapshotMigrationCheck` at all, which shares `prodSnapshot.check` with the recompute check | pure unit |
 | `RateLimitCounterTest` | Pure unit tests for `RateLimitCounter`: the block lifts deterministically after `block-duration` (injected `Clock`, no `sleep`), stays active before expiry, and `isIdle()` answers the eviction question — true once the interval elapsed, false while it runs, false while a block is still active, true again once the block expired. The concurrency case is a **lost-update** test: 20 threads × 50 `increment()` calls must hand out 1000 distinct counts, and it fails without the `synchronized` counter. Concurrent `block()` calls on a frozen clock would prove nothing, since every thread writes the same instant. | pure unit |
 | `RateLimitCountersTest` | Pure unit tests for the bounded per-IP map, which owns every `RateLimitCounter` and answers the whole throttle question in one call: with a budget of one request, the first is admitted and the second blocked, another client still starts fresh, an expired block lets the client back in, and the blocked client is logged once. The bound: an idle client is forgotten when a new one appears, a **blocked** client is not, the least recently used client goes once `max-tracked-clients` is reached (and counting a known client again makes another the oldest), and 100 distinct clients leave the map at its bound. Deterministic throughout: a frozen clock isolates the LRU rule, an advanced one the idle and block rules. | pure unit |
 | `RateLimitFilterTest` | Boots the server in the `ratelimit` environment (`rebuildContext = true`) against its own fixture DB copy: `/favicon.ico` is blocked with 429 once the configured limit is exceeded, and so are `/`, `/index.html` and a **bundled** asset (resolved from the packaged `assets/` dir, not hard-coded) — token-free does not mean uncounted. A `//probe` is counted like any other path instead of being skipped as the SPA root, so its third request hits 429 rather than a third 401. A burst of malformed targets (`/overview%zz`, sent over `RawHttpClient`) is answered 400, 400, 429: the filters do not read the path, so an invalid escape is counted like anything else. The counterpart pins what the filters cannot see: an **oversized** target (5000 characters) answers 413 three times without ever earning a 429, the measured remainder of **C10**. | `@MicronautTest` integration |
@@ -336,8 +337,10 @@ possible.
   only must not become a build gate; with it, nothing has to be edited to take a measurement.
   `tasks.withType<Test>` forwards `prodSnapshot.check` **always** (defaulting to `false`) and
   `prodSnapshot.file` only when given, so a missing forward cannot masquerade as a passing run.
-  `ProductionSnapshotCheckOptInTest` pins that. It still compiles under `-Werror`, so a refactor
-  cannot rot it unnoticed.
+  `OnDemandCheckOptInTest` pins that for every on-demand check at once, finding them by their
+  `@EnabledIfSystemProperty` annotation on the classpath rather than from a hand-kept list, and
+  pinning how many it finds so a check cannot slip past the discovery. It still compiles under
+  `-Werror`, so a refactor cannot rot it unnoticed.
 - **To run it:**
 
   ```bash
@@ -354,6 +357,63 @@ possible.
   without a snapshot at that path fails on the missing file instead of passing empty.
 - It writes only under `build/`, never to the snapshot. Always copy the snapshot; never open the
   original read-write.
+
+### The game-catalog scrape
+
+`GameCatalogScrapeCheck` signs in to the live game and dumps the pages the item catalog is read
+from, so a catalogued price can be checked against the game rather than against memory. It is the
+only instrument that can settle what an item is worth; without it every later catalog entry is an
+assertion. It reads and navigates, and submits no form beyond the login the production scraper
+already performs. Opt-in on the same pattern as the snapshot harness, and pinned by the same
+`OnDemandCheckOptInTest`.
+
+- **To run it:**
+
+  ```bash
+  ./run-game-scrape.sh '-DgameCatalog.pages=stock_out&selection=7&pos=1,academy_craft&selection=52'
+  ```
+
+  Quote the argument: real page parameters carry `&`, and unquoted the shell backgrounds the run.
+  The script reads the credentials file (`zugang.txt` beside the main checkout, line 1 the user,
+  line 2 the password; `EVERGORE_CREDENTIALS_FILE` overrides the location), exports them as
+  `EVERGORE_CREDENTIALS_USERNAME`/`_PASSWORD`, and opts the check in. It resolves the file from
+  `git rev-parse --git-common-dir`, so it works the same from a worktree as from the main checkout.
+  Each page named in the comma-separated `gameCatalog.pages` is dumped three ways into
+  `build/tmp/gameCatalog/`: `.txt` (the rendered text, which is what the values are read from),
+  `.html` and `.tsv` (every link with its target, which is how the `selection` numbers are found).
+- **The credentials file is CRLF on the author's machine, and the script strips the `\r`.** Without
+  that, `sed -n 1p` leaves a carriage return on the username, WebDriver normalises it to the Enter
+  key, the login form submits before the password field is filled, and the run then sits silently in
+  `waitForUrl` for the full minute before failing.
+- **A repeat of the same scrape would otherwise not scrape.** Gradle finds `:test` up to date for an
+  unchanged task input and reports `BUILD SUCCESSFUL` without opening a browser, while the previous
+  run's dumps sit in `build/tmp/gameCatalog/` looking current (the directory is no declared output).
+  The script passes `--rerun` for exactly that reason; changing `gameCatalog.pages` re-runs anyway.
+- **Where the prices are.** The guild storage, `page=stock_out&selection=<n>&pos=<n>`: the
+  `selection` numbers are the links on the first such page, and its `(Gesamt: N)` gives how many
+  rows that selection holds, twenty to a page. Stock held at quality 100 and stored blueprints both
+  carry the item's own gold value, so either serves as the price.
+- **The check does not page: it fetches exactly the pages named, and nothing else.** Omitting `pos`
+  reads page one and silently stops there. That is how 15 of the storage's 43 pages went unread
+  until 2026-09-12, hiding 76 gem-forged prices behind six selections, one of them 97 rows deep.
+  Read `(Gesamt: N)` off each selection's first page and name every `pos` up to `ceil(N / 20)`;
+  making the check follow the pagination itself is backlog **B27**.
+- **Where the recipes are.** `page=academy_craft&selection=51..67`, seventeen crafts holding 424
+  blueprints between them (read 2026-09-12). It lists **every** blueprint with its ingredients
+  regardless of the account's own skill level, which is why it is used instead of `page=craft`: that
+  one is locked, the scraping account standing at level 0 in every craft. Take the `selection`
+  numbers from any craft page's own `.tsv` rather than counting: the range starts at **51**, and a
+  craft page omits its own link, so no single page lists all seventeen. **Gem-forged gear appears in
+  none of them**: those are crafted from a blueprint learned as an item, not from an academy recipe,
+  so the academy can never show their ingredients and this route cannot attest a gem recipe. That is
+  what settled the two `Achat-` recipes the catalog used to hold. A gem blueprint *is* visible in
+  the guild storage, priced like the item it makes, but listed without its ingredients.
+- **Two line formats carry a value, and both have to be read**:
+  `<kg>, <category>, Stufe <n> <gold> Gold` and `<kg> <gold> Gold / Stk.`. Ammunition uses the
+  second, without a category, which is how `Steinbrecher` and `Jagdpfeile` were first missed and
+  left catalogued at zero.
+- **The dump does not survive a clean build**: `build/tmp/gameCatalog/` goes with `build/`. Copy it
+  aside before running one, or the evidence a catalog change rests on is gone.
 
 ## Test execution model (one JVM)
 

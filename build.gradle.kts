@@ -107,6 +107,8 @@ tasks.withType<Test> {
 	// check's own default when given. See the production-snapshot harness in testing.md.
 	systemProperty("prodSnapshot.check", providers.systemProperty("prodSnapshot.check").getOrElse("false"))
 	providers.systemProperty("prodSnapshot.file").orNull?.let { systemProperty("prodSnapshot.file", it) }
+	systemProperty("gameCatalog.scrape", providers.systemProperty("gameCatalog.scrape").getOrElse("false"))
+	providers.systemProperty("gameCatalog.pages").orNull?.let { systemProperty("gameCatalog.pages", it) }
 }
 
 // The active rules are not type-aware, so Checkstyle needs no compiled classpath. Emptying it drops
