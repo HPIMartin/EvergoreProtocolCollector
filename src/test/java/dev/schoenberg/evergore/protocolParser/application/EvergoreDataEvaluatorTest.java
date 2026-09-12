@@ -24,6 +24,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarC
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.FakeMetaInformationRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
+import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.EINLAGERUNG;
@@ -40,6 +41,7 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.ERDE_EI
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.LEINENTUCH;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MAGIESPLITTER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STERNENSTAUB;
+import static java.util.Arrays.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class EvergoreDataEvaluatorTest {
@@ -360,6 +362,24 @@ class EvergoreDataEvaluatorTest {
 		tested.evaluateData();
 
 		assertThat(metaRepo.<Double>get(getStorageWithdrawl(AVATAR))).contains(expectedCost);
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@ValueSource(strings = {"Streitaxt des Wegelagerers", "Barbarenaxt der Wache", "Bidenaxt des Wegelagerers [2H]"})
+	void valuesAMagicallyNamedItemLikeThePlainItemItIsMadeFrom(String affixedName) {
+		storageRepo.seedEntries(AVATAR, List.of(storageWithdrawl(affixedName, 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(metaRepo.<Double>get(getStorageWithdrawl(AVATAR))).contains(plainItemNamed(affixedName).getWithdrawlValue());
+		assertThat(result.unknownItemNames()).isEmpty();
+	}
+
+	private static EvergoreItem plainItemNamed(String affixedName) {
+		String plain = affixedName.replaceFirst(" (?:des|der) [A-ZÄÖÜ]\\p{L}+", "");
+		return stream(EvergoreItem.values()).filter(item -> item.ingameName.equals(plain)).findAny().orElseThrow();
 	}
 
 	@Test

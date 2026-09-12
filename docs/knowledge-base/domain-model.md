@@ -67,6 +67,12 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   game's blueprints, its `Steine` page and the ledger itself say `Marmor`, `Granit` and
   `Schiefer`. A name only the wiki uses matches no ledger row, so it values every movement of a
   real item at zero and says nothing.
+- **One item, several spellings.** A name is resolved against the catalog exactly first, then with a
+  trailing magic affix (`des`/`der <X>`) stripped, then with the ` [2H]` suffix toggled, then with both.
+  The ledger carries `Obsidian-Pike` beside `Obsidian-Pike [2H]` for one item and the game prices
+  `Holzfälleraxt des Wegelagerers` exactly as its plain form, so neither variant is a ware of its own.
+  The exact match comes first, so a family with a real one-handed and two-handed member,
+  `Kriegshammer`, is never confused.
 - **`category`**: one of the `Category` values (weapon/armor families, `ROHSTOFFE`,
   `JAGDBEUTEN` (hunt loot), `EDELSTEINE` (gems), `HANDWERKSMATERIAL`, …). Each category carries
   two multipliers, `placement` (what a deposit credits) and `withdrawl` (what a withdrawal costs),

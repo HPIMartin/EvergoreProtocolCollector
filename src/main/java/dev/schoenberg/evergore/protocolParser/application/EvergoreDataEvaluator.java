@@ -11,6 +11,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.ToDoubleFunction;
+import java.util.regex.Pattern;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
@@ -158,12 +159,22 @@ public class EvergoreDataEvaluator {
 		}
 	}
 
+	private static final Pattern MAGIC_AFFIX = Pattern.compile(" (?:des|der) \\p{Lu}\\p{L}+( \\[2H\\])?$");
+
 	private EvergoreItem findItem(StorageEntry entry, List<String> unknownItemNames) {
-		return Arrays.stream(EvergoreItem.values()).filter(e -> e.ingameName.equals(entry.name())).findAny().orElseGet(() -> {
+		return itemNamed(entry.name()).or(() -> itemNamed(withoutMagicAffix(entry.name()))).orElseGet(() -> {
 			logger.warn("Unable to find item: " + entry.name());
 			unknownItemNames.add(entry.name());
 			return UNDEFINED;
 		});
+	}
+
+	private static Optional<EvergoreItem> itemNamed(String ingameName) {
+		return Arrays.stream(EvergoreItem.values()).filter(item -> item.ingameName.equals(ingameName)).findAny();
+	}
+
+	private static String withoutMagicAffix(String ingameName) {
+		return MAGIC_AFFIX.matcher(ingameName).replaceFirst("$1");
 	}
 
 	private record StorageEntryItem(StorageEntry entry, EvergoreItem item) {}
