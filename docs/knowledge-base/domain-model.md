@@ -126,6 +126,14 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   material on something with no value: `Übungsstück-Kupferschwert` consumes material worth `200` and
   returns nothing, so withdrawing that material charges its apprentice `120` and the craft gives
   none of it back.
+- **Two independent sources agree on the whole production graph** (measured 2026-09-13): the
+  academy's 424 blueprints and the catalog's 424 recipes are the **same** 424, name for name, yield
+  for yield and quantity for quantity. The 369 that predate the practice pieces were transcribed
+  from the wiki on 2026-09-10, before the academy was ever scraped, and match it exactly, so the
+  agreement is corroboration rather than circularity. The list reaches well past what the scraping
+  character could make: its blueprints require craft `Stufe` up to `24` while that character stands
+  at `Level 3`. **Nothing in the suite pins this**, which only counts a cardinality; holding the
+  catalog against the dumped pages is backlog **B28**.
 - **No item whose value is meant to reflect its inputs is worth less than the ingredients its
   recipe consumes** (`EvergoreItemTest`): a product priced under its own inputs means one of the
   two numbers is wrong. The rule names the deliberate-zero families it excludes, `Übungsstück-*`
