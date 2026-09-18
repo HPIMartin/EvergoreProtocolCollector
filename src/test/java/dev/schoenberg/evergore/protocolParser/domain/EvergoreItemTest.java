@@ -34,6 +34,7 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.OBSIDIA
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.PANZERBRECHER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.PFEILE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.NOT_CRAFTABLE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.UNKNOWN_RECIPE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.SCHIEFER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.SMARAGD_PIKE_2H;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STEINBRECHER;
@@ -277,13 +278,49 @@ class EvergoreItemTest {
 	}
 
 	@Test
-	void aCatalogueEntryIsEitherNotCraftableOrNamesWhatItConsumes() {
+	void aCatalogueEntryEitherNamesWhatItConsumesOrSaysWhyItCannot() {
 		List<String> craftableFromNothing = stream(EvergoreItem.values())
-				.filter(item -> item.recipe != NOT_CRAFTABLE && item.recipe.ingredients.isEmpty())
+				.filter(item -> item.recipe != NOT_CRAFTABLE && item.recipe != UNKNOWN_RECIPE && item.recipe.ingredients.isEmpty())
 				.map(item -> item.ingameName)
 				.toList();
 
 		assertThat(craftableFromNothing).isEmpty();
+	}
+
+	@Test
+	void everyGemForgedEntrySaysItsRecipeIsUnreadRatherThanAbsent() {
+		List<String> claimingTheGameCraftsThemNowhere = stream(EvergoreItem.values())
+				.filter(item -> GEM_PREFIX.matcher(item.ingameName).find())
+				.filter(item -> item.recipe != UNKNOWN_RECIPE)
+				.map(item -> item.ingameName)
+				.toList();
+
+		assertThat(claimingTheGameCraftsThemNowhere).isEmpty();
+	}
+
+	@Test
+	void aRecipeCannotBeRewrittenByWhoeverReadsIt() {
+		List<Ingredient> published = PFEILE.recipe.ingredients;
+
+		assertThatThrownBy(() -> published.set(0, new Ingredient(9999, MARMOR))).isInstanceOf(UnsupportedOperationException.class);
+	}
+
+	@Test
+	void noEntryOutsideTheGemFamiliesClaimsItsRecipeIsMerelyUnread() {
+		List<String> unreadButNotGemForged = stream(EvergoreItem.values())
+				.filter(item -> item.recipe == UNKNOWN_RECIPE)
+				.filter(item -> !GEM_PREFIX.matcher(item.ingameName).find())
+				.map(item -> item.ingameName)
+				.toList();
+
+		assertThat(unreadButNotGemForged).isEmpty();
+	}
+
+	@Test
+	void theCatalogLeavesExactlyTheGemForgedRecipesUnread() {
+		long unread = stream(EvergoreItem.values()).filter(item -> item.recipe == UNKNOWN_RECIPE).count();
+
+		assertThat(unread).isEqualTo(98);
 	}
 
 	@Test
@@ -295,13 +332,6 @@ class EvergoreItemTest {
 				.toList();
 
 		assertThat(excludedButPriced).isEmpty();
-	}
-
-	@Test
-	void aRecipeCannotBeRewrittenByWhoeverReadsIt() {
-		List<Ingredient> published = PFEILE.recipe.ingredients;
-
-		assertThatThrownBy(() -> published.set(0, new Ingredient(9999, MARMOR))).isInstanceOf(UnsupportedOperationException.class);
 	}
 
 	@Test

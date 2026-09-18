@@ -98,22 +98,27 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   `JAGDBEUTEN` (hunt loot), `EDELSTEINE` (gems), `HANDWERKSMATERIAL`, …). Each category carries
   two multipliers, `placement` (what a deposit credits) and `withdrawl` (what a withdrawal costs),
   and the category alone decides both.
-- **`recipe`**: either `Recipe.NOT_CRAFTABLE` (gathered raw item) or a `Recipe(amount, Ingredient…)`
-  where each `Ingredient(amount, EvergoreItem)` references other catalog items, and `amount` is
-  how many units the recipe yields. **The recipes are the game's production chains, not an input to
-  the valuation** (author decision 2026-09-10): no production code reads them, and the tests that
-  pin the guild's announced worked examples are their only reader.
-- **Gem-forged gear is crafted from a learned blueprint, not from an academy recipe, so the catalog
-  holds no ingredients for it.** The academy's craft chambers list **424 blueprints across all 17
-  crafts** (`academy_craft&selection=51..67`, read 2026-09-12) and **not one is gem-forged**; the
-  blueprints themselves exist as items instead, `Erlernbar ab Stufe 3` or `4`, and reach the guild
-  storage, where 20 of the catalog's gem-forged names are priced through one. So the academy, which
-  is the one surface that shows a blueprint's ingredients whatever the account's own skill, can
-  never show a gem one, and the ingredient list of a gem blueprint is reachable nowhere yet read.
-  The catalog nevertheless held recipes for `Achat-Lederbeinlinge` and `Achat-Lederstulpen`, the
-  only two of its 98 gem-prefixed entries that did, and both are now `NOT_CRAFTABLE` like the other
-  96 (author decision 2026-09-12): an ingredient list no source attests is not kept. No served
-  figure moves, because no production code reads a recipe.
+- **`recipe`**: a `Recipe(amount, Ingredient…)` where each `Ingredient(amount, EvergoreItem)`
+  references other catalog items and `amount` is how many units the recipe yields, or one of two
+  sentinels that mean different things and must not be confused. **`NOT_CRAFTABLE`** is a claim
+  about the game: it does not craft this at all (ores, gems, hunt loot). **`UNKNOWN_RECIPE`** is a
+  claim about us: it is craftable and we have not read what it consumes. One sentinel for both
+  would report 55 recorded recipes as absent and make the round-trip detection's answers unsafe, so
+  the catalog says which of the two it means (author decision 2026-09-12). **The recipes are the
+  game's production chains, not an input to the valuation** (author decision 2026-09-10): no
+  production code reads them, and the tests are their only reader.
+- **Gem-forged gear is crafted from a blueprint learned as an item, which the academy never lists,
+  so its ingredients are `UNKNOWN_RECIPE` rather than absent.** The academy's craft chambers list
+  **424 blueprints across all 17 crafts** (`academy_craft&selection=51..67`, read 2026-09-12) and
+  **not one is gem-forged**; the blueprints exist as items instead, learnable at nine levels between `Stufe 3` and `Stufe 24`,
+  and reach the guild storage, where 98 of the catalog's 102 gem-forged names are priced through
+  one (counted 2026-09-12 over the complete storage dump, all 43 pages of its 28 selections). The
+  four it does not price are three second spellings whose primary name it does price, and
+  `Achat-Lederbeinlinge`, which appears nowhere in the dump at all. The
+  academy is the one surface that shows a blueprint's ingredients, and it shows no gem one, so no
+  reachable surface attests a gem recipe. All 98 gem-prefixed entries therefore
+  carry `UNKNOWN_RECIPE`, including `Achat-Lederbeinlinge` and `Achat-Lederstulpen`, whose
+  ingredient lists the catalog once asserted and no source supports.
 - **Practice pieces carry the recipes the academy states, and are meant to come out worthless.**
   All 55 `Übungsstück-*` entries name what they consume, read from the academy's own
   `Lehrlingsbausatz` blueprints; `Übungsstück-Adamantaxt` is 2 `ADAMANTBARREN` + 1 `SCHMIEDEOEL` +
