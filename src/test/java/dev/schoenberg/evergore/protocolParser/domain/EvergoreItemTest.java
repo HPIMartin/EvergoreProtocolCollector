@@ -200,10 +200,10 @@ class EvergoreItemTest {
 
 	@Test
 	void onlyDeliberatelyWorthlessGearIsCataloguedAtZero() {
-		List<String> worthless = stream(EvergoreItem.values()).filter(item -> item.marketValue == 0).map(item -> item.ingameName).toList();
+		List<EvergoreItem> worthless = stream(EvergoreItem.values()).filter(item -> item.marketValue == 0).toList();
 
 		assertThat(worthless).hasSize(60);
-		assertThat(worthless).allMatch(name -> name.equals("undefined") || name.startsWith(PRACTICE_PIECE) || name.startsWith("Mystisch"));
+		assertThat(worthless).allMatch(item -> item.ingameName.equals("undefined") || isDeliberatelyWorthless(item));
 	}
 
 	@Test
@@ -317,7 +317,7 @@ class EvergoreItemTest {
 	}
 
 	@Test
-	void theCatalogLeavesExactlyTheGemForgedRecipesUnread() {
+	void theCatalogLeavesNinetyEightRecipesUnread() {
 		long unread = stream(EvergoreItem.values()).filter(item -> item.recipe == UNKNOWN_RECIPE).count();
 
 		assertThat(unread).isEqualTo(98);
