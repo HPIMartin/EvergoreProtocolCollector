@@ -61,13 +61,14 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   **B27**: that headline count is still a first-page-only measurement). All 244 agree with the
   catalog. **That read covered only the first page of each storage selection** and so rests
   on 28 of the storage's 43 pages; a paged re-read on 2026-09-12 found **no deviation anywhere** and
-  raised the gem-forged names the storage prices from 20 to **99** of the 102 the catalog holds. The
-  wiki's `Waren` table is where the numbers originally came from and still fills
-  gaps the storage cannot reach, but it is not authoritative: it disagrees with the game on 4 of the
-  99 gem-forged values that were checkable against the game when it was read, out of the 102 such
-  names the catalog holds (98 entries plus four second spellings), pricing `Quarz-Prunkaxt` at
-  `1000` against the game's `12000`, and it
-  carries none of the `Mystisch*` quest consumables the ledger holds. Two catalog values are still only
+  raised the gem-forged names the storage prices from 20 to **98** of the 102 gem-forged names the
+  catalog holds across 98 entries and four second spellings. The four it never prices are three
+  second spellings whose primary name it does price, and `Achat-Lederbeinlinge`, which appears
+  nowhere in it. The wiki's `Waren` table is where the numbers originally came from and still fills
+  gaps the storage cannot reach, but it is not authoritative: it is wrong on 4 of the 99 gem-gear
+  values that were checkable against the game when both were read on 2026-09-11, pricing
+  `Quarz-Prunkaxt` at `1000` against the game's `12000`, and it carries
+  none of the `Mystisch*` quest consumables the ledger holds. Two catalog values are still only
   contested by the wiki and unread from the game, `Luft-Spiralstab` and `Einfacher Wollverband`
   (measured 2026-09-11).
 - **It is no authority for spelling, so the name is the game's.** Those six are the raw stones,
@@ -110,8 +111,9 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
 - **Gem-forged gear is crafted from a blueprint learned as an item, which the academy never lists,
   so its ingredients are `UNKNOWN_RECIPE` rather than absent.** The academy's craft chambers list
   **424 blueprints across all 17 crafts** (`academy_craft&selection=51..67`, read 2026-09-12) and
-  **not one is gem-forged**; the blueprints exist as items instead, learnable at nine levels between `Stufe 3` and `Stufe 24`,
-  and reach the guild storage, where 98 of the catalog's 102 gem-forged names are priced through
+  **not one is gem-forged**; the blueprints exist as items instead, learnable at nine levels between
+  `Stufe 3` and `Stufe 24`, and reach the guild storage, where 98 of the catalog's 102 gem-forged
+  names are priced through
   one (counted 2026-09-12 over the complete storage dump, all 43 pages of its 28 selections). The
   four it does not price are three second spellings whose primary name it does price, and
   `Achat-Lederbeinlinge`, which appears nowhere in the dump at all. The
