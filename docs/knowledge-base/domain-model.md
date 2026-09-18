@@ -114,13 +114,21 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   only two of its 98 gem-prefixed entries that did, and both are now `NOT_CRAFTABLE` like the other
   96 (author decision 2026-09-12): an ingredient list no source attests is not kept. No served
   figure moves, because no production code reads a recipe.
-- **No catalogued craftable is worth less than the ingredients its recipe consumes**
-  (`EvergoreItemTest`): a product priced under its own inputs means one of the two numbers is wrong.
-  The two Achat entries were the only pair breaking it, and their ingredient lists were the
-  unattested half. The rule reaches the catalog's own production chains and claims nothing about
-  gem gear, which now carries none: nine tier-1 gem armour pieces are priced below the `2500` five
-  tier-1 gems cost, four of those prices read straight from the game, and whether the game really
-  prices them under their inputs cannot be settled until a gem blueprint's ingredients are read.
+- **Practice pieces carry the recipes the academy states, and are meant to come out worthless.**
+  All 55 `Übungsstück-*` entries name what they consume, read from the academy's own
+  `Lehrlingsbausatz` blueprints; `Übungsstück-Adamantaxt` is 2 `ADAMANTBARREN` + 1 `SCHMIEDEOEL` +
+  2 `SCHLEIFSTEIN` and is worth `0`. That is the point of the family: it trains a craft by spending
+  material on something with no value: `Übungsstück-Kupferschwert` consumes material worth `200` and
+  returns nothing, so withdrawing that material charges its apprentice `120` and the craft gives
+  none of it back.
+- **No item whose value is meant to reflect its inputs is worth less than the ingredients its
+  recipe consumes** (`EvergoreItemTest`): a product priced under its own inputs means one of the
+  two numbers is wrong. The rule names the deliberate-zero families it excludes, `Übungsstück-*`
+  and `Mystisch*`, rather than passing by accident because a recipe was withheld. It reaches the
+  catalog's own production chains and claims nothing about gem gear, which carries none: nine
+  tier-1 gem armour pieces are priced below the `2500` five tier-1 gems cost, four of those prices
+  read straight from the game, and whether the game really prices them under their inputs cannot be
+  settled until a gem blueprint's ingredients are read.
 
 ### The value math (verified against `EvergoreItemTest`)
 

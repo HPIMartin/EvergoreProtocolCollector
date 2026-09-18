@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -36,6 +37,7 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.SCHIEFE
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.SMARAGD_PIKE_2H;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STEINBRECHER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STERNENSTAUB;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UEBUNGSSTUECK_KUPFERSCHWERT;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UNDEFINED;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toSet;
@@ -43,6 +45,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 class EvergoreItemTest {
+	private static final String PRACTICE_PIECE = "Übungsstück-";
 	private static final Pattern GEM_PREFIX = Pattern.compile("^(Achat|Diamant|Jade|Jaspis|Kristall|Lapis|Obsidian|Onyx|Perlmutt|Pyrit|Quarz|Rubin|Saphir|Smaragd|Topas)-");
 	private static final Set<Category> ARMOUR = Set.of(LEICHTE_RUESTUNG_LEDER, LEICHTE_RUESTUNG_STOFF, SCHWERE_RUESTUNG_METALL, LEICHTE_SCHILDE, SCHWERER_SCHILDE);
 	private static final List<EvergoreItem> RAW_STONES = List.of(MARMOR, GRANIT, SCHIEFER);
@@ -197,7 +200,33 @@ class EvergoreItemTest {
 		List<String> worthless = stream(EvergoreItem.values()).filter(item -> item.marketValue == 0).map(item -> item.ingameName).toList();
 
 		assertThat(worthless).hasSize(60);
-		assertThat(worthless).allMatch(name -> name.equals("undefined") || name.startsWith("Übungsstück-") || name.startsWith("Mystisch"));
+		assertThat(worthless).allMatch(name -> name.equals("undefined") || name.startsWith(PRACTICE_PIECE) || name.startsWith("Mystisch"));
+	}
+
+	@Test
+	void aPracticePieceCostsTheApprenticeExactlyWhatWithdrawingItsMaterialCharges() {
+		double valueGain = valueGainOfCrafting(UEBUNGSSTUECK_KUPFERSCHWERT);
+
+		assertThat(valueGain).isCloseTo(-120d, within(0.0001d));
+	}
+
+	@Test
+	void everyPracticePieceYieldsASinglePiece() {
+		List<String> yieldingMoreThanOne = practicePieces().filter(item -> item.recipe.amount != 1).map(item -> item.ingameName).toList();
+
+		assertThat(yieldingMoreThanOne).isEmpty();
+	}
+
+	@Test
+	void everyPracticePieceIsTrainedOnMaterialItsOwnCraftAlsoUses() {
+		List<String> trainedOnForeignMaterial = practicePieces()
+				.flatMap(piece -> piece.recipe.ingredients
+						.stream()
+						.filter(ingredient -> !materialUsedBy(piece.category).contains(ingredient.item))
+						.map(ingredient -> piece.ingameName + " consumes " + ingredient.item.ingameName))
+				.toList();
+
+		assertThat(trainedOnForeignMaterial).isEmpty();
 	}
 
 	@Test
@@ -223,16 +252,21 @@ class EvergoreItemTest {
 	}
 
 	@Test
-	void noCraftableItemIsCataloguedAtZero() {
-		List<String> craftableAndFree = stream(EvergoreItem.values()).filter(item -> item.recipe != NOT_CRAFTABLE && item.marketValue == 0).map(item -> item.ingameName).toList();
+	void onlyTheDeliberatelyWorthlessAreCraftableForNothing() {
+		List<String> craftableAndFree = stream(EvergoreItem.values())
+				.filter(item -> !item.recipe.ingredients.isEmpty() && item.marketValue == 0)
+				.filter(item -> !isDeliberatelyWorthless(item))
+				.map(item -> item.ingameName)
+				.toList();
 
 		assertThat(craftableAndFree).isEmpty();
 	}
 
 	@Test
-	void noCraftableItemIsWorthLessThanTheIngredientsItsRecipeConsumes() {
+	void noItemWhoseValueReflectsItsInputsIsWorthLessThanTheIngredientsItsRecipeConsumes() {
 		List<String> pricedBelowTheirIngredients = stream(EvergoreItem.values())
-				.filter(item -> item.recipe != NOT_CRAFTABLE)
+				.filter(item -> !item.recipe.ingredients.isEmpty())
+				.filter(item -> !isDeliberatelyWorthless(item))
 				.filter(item -> item.marketValue * item.recipe.amount < ingredientMarketValueOf(item))
 				.map(item -> item.ingameName)
 				.toList();
@@ -251,16 +285,34 @@ class EvergoreItemTest {
 	}
 
 	@Test
-	void theCatalogStillHoldsEveryProductionChainItRecorded() {
-		long craftables = stream(EvergoreItem.values()).filter(item -> item.recipe != NOT_CRAFTABLE).count();
+	void nothingTheValueGuardsExcludeCarriesAPriceOfItsOwn() {
+		List<String> excludedButPriced = stream(EvergoreItem.values())
+				.filter(EvergoreItemTest::isDeliberatelyWorthless)
+				.filter(item -> item.marketValue != 0)
+				.map(item -> item.ingameName)
+				.toList();
 
-		assertThat(craftables).isEqualTo(369);
+		assertThat(excludedButPriced).isEmpty();
+	}
+
+	@Test
+	void everyPracticePieceNamesTheMaterialItIsTrainedOn() {
+		List<String> withoutIngredients = practicePieces().filter(item -> item.recipe.ingredients.isEmpty()).map(item -> item.ingameName).toList();
+
+		assertThat(withoutIngredients).isEmpty();
+	}
+
+	@Test
+	void theCatalogStillHoldsEveryProductionChainItRecorded() {
+		long craftables = stream(EvergoreItem.values()).filter(item -> !item.recipe.ingredients.isEmpty()).count();
+
+		assertThat(craftables).isEqualTo(424);
 	}
 
 	@Test
 	void everyCraftableIsCreditedAtLeastWhatItsWithdrawalCharges() {
 		List<String> creditedBelowTheirCost = stream(EvergoreItem.values())
-				.filter(item -> item.recipe != NOT_CRAFTABLE && item.category.placement < item.category.withdrawl)
+				.filter(item -> !item.recipe.ingredients.isEmpty() && item.category.placement < item.category.withdrawl)
 				.map(item -> item.ingameName)
 				.toList();
 
@@ -270,7 +322,7 @@ class EvergoreItemTest {
 	@Test
 	void onlyGatheredGoodsSitInACategoryThatCreditsADepositNothing() {
 		List<String> craftedButUncredited = stream(EvergoreItem.values())
-				.filter(item -> item.category.placement == 0d && item.recipe != NOT_CRAFTABLE)
+				.filter(item -> item.category.placement == 0d && !item.recipe.ingredients.isEmpty())
 				.map(item -> item.ingameName)
 				.toList();
 
@@ -296,6 +348,22 @@ class EvergoreItemTest {
 		List<Integer> marketValues = RAW_STONES.stream().map(item -> item.marketValue).toList();
 
 		assertThat(marketValues).containsExactly(120, 90, 60);
+	}
+
+	private static Stream<EvergoreItem> practicePieces() {
+		return stream(EvergoreItem.values()).filter(item -> item.ingameName.startsWith(PRACTICE_PIECE));
+	}
+
+	private static Set<EvergoreItem> materialUsedBy(Category craft) {
+		return stream(EvergoreItem.values())
+				.filter(item -> item.category == craft && !item.ingameName.startsWith(PRACTICE_PIECE))
+				.flatMap(item -> item.recipe.ingredients.stream())
+				.map(ingredient -> ingredient.item)
+				.collect(toSet());
+	}
+
+	private static boolean isDeliberatelyWorthless(EvergoreItem item) {
+		return item.ingameName.startsWith(PRACTICE_PIECE) || item.ingameName.startsWith("Mystisch");
 	}
 
 	private static double valueGainOfCrafting(EvergoreItem product) {
