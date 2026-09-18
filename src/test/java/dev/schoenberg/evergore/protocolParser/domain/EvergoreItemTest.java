@@ -11,6 +11,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category;
+import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Ingredient;
 
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.EDELSTEINE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.HANDWERKSMATERIAL;
@@ -42,6 +43,7 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UNDEFIN
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toSet;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
 class EvergoreItemTest {
@@ -293,6 +295,13 @@ class EvergoreItemTest {
 				.toList();
 
 		assertThat(excludedButPriced).isEmpty();
+	}
+
+	@Test
+	void aRecipeCannotBeRewrittenByWhoeverReadsIt() {
+		List<Ingredient> published = PFEILE.recipe.ingredients;
+
+		assertThatThrownBy(() -> published.set(0, new Ingredient(9999, MARMOR))).isInstanceOf(UnsupportedOperationException.class);
 	}
 
 	@Test

@@ -33,7 +33,6 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Categor
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.VERARBEITETE_ROHSTOFFE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.WASSERSTAEBE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.NOT_CRAFTABLE;
-import static java.util.Arrays.asList;
 
 public enum EvergoreItem {
 	UNDEFINED("undefined", 0, ROHSTOFFE, NOT_CRAFTABLE),
@@ -871,7 +870,7 @@ public enum EvergoreItem {
 
 		public Recipe(int amount, Ingredient... ingredients) {
 			this.amount = amount;
-			this.ingredients = asList(ingredients);
+			this.ingredients = List.of(ingredients);
 		}
 	}
 
