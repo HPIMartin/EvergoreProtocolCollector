@@ -42,6 +42,10 @@ dependencies {
 	testImplementation("com.konghq:unirest-java:3.11.11")
 	testImplementation("org.assertj:assertj-core:3.27.7")
 	testImplementation("com.tngtech.archunit:archunit-junit5:1.4.1")
+	testImplementation(platform("io.cucumber:cucumber-bom:7.22.1"))
+	testImplementation("io.cucumber:cucumber-java")
+	testImplementation("io.cucumber:cucumber-junit-platform-engine")
+	testImplementation("org.junit.platform:junit-platform-suite")
 }
 
 val frontendDistUsage: Attribute<String> = Attribute.of("dev.schoenberg.evergore.frontend-dist", String::class.java)
@@ -139,6 +143,12 @@ spotless {
 
 tasks.test {
 	finalizedBy(tasks.jacocoTestReport)
+
+	providers.systemProperty("cucumber.filter.tags").orNull?.let {
+		systemProperty("cucumber.filter.tags", it)
+		failOnNoDiscoveredTests = false
+	}
+	providers.systemProperty("cucumber.features").orNull?.let { systemProperty("cucumber.features", it) }
 
 	// Guard against re-adding `forkEvery`. Gradle restarts the test JVM per compiled *class file* of
 	// the test source set (198 here, only 28 of which hold tests), and `--tests` does not reduce that
