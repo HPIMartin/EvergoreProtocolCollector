@@ -1,7 +1,7 @@
 #!/bin/sh
-# git creates the commits of a rebase, cherry-pick or revert itself and asks no pre-commit hook,
-# so the gate cannot refuse them. It runs here instead, after the refs have already moved, and
-# records what it finds; pre-commit then refuses to grow history on top of a recorded commit.
+# git creates the commits of a rebase or an amend itself and asks no pre-commit hook for the ones it
+# replays, so the gate cannot refuse them. It runs here instead, after the refs have already moved,
+# and records what it finds; pre-commit then refuses to grow history on top of a recorded commit.
 # git ignores this hook's exit status: the record, not the status, is what blocks.
 set -eu
 
@@ -47,10 +47,10 @@ while read -r old new _rest; do
 "
 done
 
-if [ -x ./gradlew ] && ! gated HEAD && ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then
+if ! gated HEAD && ! "$hooks_dir/format-gate" >/dev/null 2>&1; then
 	git rev-parse HEAD >> "$found"
 	report="$report
-[gate] the rewritten tree fails spotlessCheck/checkstyle. Run './gradlew spotlessApply' and amend.
+[gate] the rewritten tree fails the format/style check (hooks/format-gate). Format it and amend.
 "
 fi
 

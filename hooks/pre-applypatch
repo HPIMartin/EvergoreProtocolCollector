@@ -10,10 +10,7 @@ hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 "$hooks_dir/breach-guard"
 "$hooks_dir/content-gate" --staged
 
-if [ -x ./gradlew ]; then
-	printf '[pre-applypatch] spotlessCheck + checkstyle...\n'
-	if ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then
-		printf '\n[pre-applypatch] formatting/brace gate failed. Fix the patch and apply it again.\n' >&2
-		exit 1
-	fi
+if ! "$hooks_dir/format-gate"; then
+	printf '\n[pre-applypatch] format/style gate failed. Fix the patch and apply it again.\n' >&2
+	exit 1
 fi

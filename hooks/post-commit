@@ -27,10 +27,10 @@ else
 	report="$finding"
 fi
 
-if [ -x ./gradlew ] && ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then
+if ! "$hooks_dir/format-gate" >/dev/null 2>&1; then
 	failed=1
 	report="$report
-[gate] the resulting tree fails spotlessCheck/checkstyle. Run './gradlew spotlessApply' and amend."
+[gate] the resulting tree fails the format/style check (hooks/format-gate). Format it and amend."
 fi
 
 if [ "$failed" -eq 1 ]; then

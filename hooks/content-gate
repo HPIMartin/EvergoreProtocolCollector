@@ -1,7 +1,9 @@
 #!/bin/sh
 # Content checks over one revision of the tree, shared by pre-commit (the staged content) and
-# post-rewrite (a commit the sequencer created without asking a hook).
-set -eu
+# post-rewrite / post-commit (a commit the sequencer created without asking a hook).
+# -f keeps the extension lists below from being expanded against the working tree: they are patterns
+# for git and for `case`, never filenames.
+set -euf
 
 usage() {
 	printf 'usage: content-gate --staged | content-gate --commit <sha>\n' >&2
@@ -18,6 +20,96 @@ esac
 
 cd "$(git rev-parse --show-toplevel)"
 
+# > **ADAPT:** the extension families every check below keys off, one per comment syntax:
+# > `comment_slash_ext` for `//` and `/* */`, `comment_hash_ext` for `#`, `comment_xml_ext` for
+# > `<!-- -->`. `docstring_ext` adds the triple-quoted-string rules and the `directive_allow_re`
+# > exemption for tool directives. The self-test's fixtures must use the same extensions.
+comment_slash_ext='*.java *.kt *.kts *.ts *.tsx *.js *.jsx *.mjs *.cjs *.cs *.cpp *.cc *.cxx *.hpp *.hh *.h *.c'
+comment_hash_ext='*.py *.cmake CMakeLists.txt *.toml'
+comment_xml_ext='*.csproj *.props *.targets'
+docstring_ext='*.py'
+directive_allow_re='^#[[:space:]]*(noqa|type|pragma|fmt|ruff|pyright|mypy|pylint|isort|nosec)(:[[:space:]]*[^[:space:]]*)?[[:space:]]*$'
+
+# > **ADAPT:** where production source lives and what marks a test. A file is production source when
+# > it starts with one of `production_trees`, starts with none of `test_trees` and matches none of
+# > `test_name_re`; the rules that only bind production code key off exactly that.
+production_trees='src/main/ frontend/src/'
+test_trees='src/test/ tests/ test/'
+test_name_re='(^|/)[^/]*Tests?/|\.test\.|_test\.|(^|/)test_[^/]*\.py$|Tests?\.(java|kt|cs|cpp|cc|ts|tsx)$'
+
+# > **ADAPT:** path prefixes whose stdout *is* the interface (a CLI adapter, a code generator) and
+# > which therefore keep their debug-print exemption. Empty means: nowhere.
+print_allow_paths=''
+
+# The self-test drives the allowlist through the environment so its cases need no edit of this file.
+print_allow_paths=${CONTENT_GATE_PRINT_ALLOW-$print_allow_paths}
+
+# > **ADAPT:** the debug-output constructs of each family. Whatever a stack writes to the console
+# > instead of to the project logger belongs here.
+debug_print_re() {
+	case "$1" in
+		*.java|*.kt|*.kts) printf '%s' 'System\.(out|err)\.|printStackTrace' ;;
+		*.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs) printf '%s' 'console\.(log|debug)' ;;
+		*.cs) printf '%s' 'Console\.(Write|Error)' ;;
+		*.c|*.cc|*.cpp|*.cxx|*.h|*.hh|*.hpp) printf '%s' 'printf\(|puts\(|std::(cout|cerr)' ;;
+		*.py) printf '%s' 'print\(|breakpoint\(\)|import pdb' ;;
+	esac
+}
+
+# > **ADAPT:** the constructs refused in production source only. C# shown: the null-forgiving
+# > operator overrides the compiler's nullability answer, which a test may do and production may not.
+production_smell_re() {
+	case "$1" in
+		*.cs) printf '%s' '[]A-Za-z0-9_)]![^=]' ;;
+	esac
+}
+
+source_ext="$comment_slash_ext $comment_hash_ext $comment_xml_ext"
+
+# hooks/ holds the detection patterns themselves and .template/ holds the adopted template's
+# baseline; neither is the project's own source, so every scan skips both.
+scan_exclude=':(exclude)hooks/* :(exclude).template/*'
+
+matches_any() {
+	candidate=$1
+	shift
+	for glob in "$@"; do
+		case "$candidate" in $glob) return 0 ;; esac
+	done
+	return 1
+}
+
+starts_with_any() {
+	candidate=$1
+	shift
+	for prefix in "$@"; do
+		case "$candidate" in "$prefix"*) return 0 ;; esac
+	done
+	return 1
+}
+
+is_production_source() {
+	if ! starts_with_any "$1" $production_trees; then return 1; fi
+	if starts_with_any "$1" $test_trees; then return 1; fi
+	if printf '%s' "$1" | grep -qE "$test_name_re"; then return 1; fi
+	return 0
+}
+
+smell_re() {
+	smell_pattern='(TODO|FIXME)'
+	print_pattern=$(debug_print_re "$1")
+	if [ -n "$print_pattern" ] && ! starts_with_any "$1" $print_allow_paths; then
+		smell_pattern="$smell_pattern|$print_pattern"
+	fi
+	if is_production_source "$1"; then
+		production_pattern=$(production_smell_re "$1")
+		if [ -n "$production_pattern" ]; then
+			smell_pattern="$smell_pattern|$production_pattern"
+		fi
+	fi
+	printf '%s' "$smell_pattern"
+}
+
 # Every category is collected and reported together. Stopping at the first one would let a commit
 # hide a new violation behind an older one of a category that is checked earlier.
 problems=""
@@ -31,17 +123,21 @@ verdict() {
 	exit 1
 }
 
+# The prefixes are forced rather than inherited: a repository with diff.noprefix set would otherwise
+# emit '+++ <path>', and the header parser below reads the path at a fixed offset. R joins the filter
+# because a renamed file reports as R and would otherwise leave every scan; detection stays on, so a
+# rename that edits nothing adds no lines and the file's existing stock is not read as new.
 added_lines() {
 	case "$mode" in
-		--staged) git diff --cached -U0 --diff-filter=ACM -- '*.java' '*.ts' '*.tsx' ;;
-		--commit) git show -U0 --format= --diff-merges=first-parent --diff-filter=ACM "$sha" -- '*.java' '*.ts' '*.tsx' ;;
+		--staged) git diff --cached -U0 --diff-filter=ACMR --src-prefix=a/ --dst-prefix=b/ -- $source_ext $scan_exclude ;;
+		--commit) git show -U0 --format= --diff-merges=first-parent --diff-filter=ACMR --src-prefix=a/ --dst-prefix=b/ "$sha" -- $source_ext $scan_exclude ;;
 	esac
 }
 
 changed_files() {
 	case "$mode" in
-		--staged) git diff --cached --name-only --diff-filter=ACM -- . ':(exclude)hooks/*' ;;
-		--commit) git diff-tree -r --root --no-commit-id --name-only --diff-merges=first-parent --diff-filter=ACM "$sha" -- . ':(exclude)hooks/*' ;;
+		--staged) git diff --cached --name-only --diff-filter=ACMR -- . $scan_exclude ;;
+		--commit) git diff-tree -r --root --no-commit-id --name-only --diff-merges=first-parent --diff-filter=ACMR "$sha" -- . $scan_exclude ;;
 	esac
 }
 
@@ -65,8 +161,10 @@ cred_re="(password|passwd|secret|api[_-]?key)[[:space:]]*[:=][[:space:]]*[\"'][^
 email_re='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
 email_allow='@(example|test|invalid|localhost)\.[A-Za-z]+$|@localhost$'
 host_re="(/home/|/Users/)[A-Za-z0-9._-]+/|[Cc]:\\\\+Users"
+# > **ADAPT:** allowlist for host-path false positives, e.g. your devcontainer user's home.
 host_allow='/home/vscode/|/home/app/'
-# Hard-coded auth tokens are scanned only under src/main below (tests legitimately use a non-secret test token).
+# Hard-coded auth tokens, scanned in production source only (a test legitimately carries a
+# non-secret test token).
 token_url='\?token=[A-Za-z0-9._-]+'
 token_assign="(valid[_-]?token|api[_-]?token|auth[_-]?token|access[_-]?token|secret[_-]?token|bearer[_-]?token)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{3,}"
 
@@ -87,16 +185,16 @@ for f in $staged; do
 	hosts=$(printf '%s\n' "$blob" | grep -nIoE "$host_re" | grep -viE "$host_allow" || true)
 	emails=$(printf '%s\n' "$blob" | grep -nIoE "$email_re" | grep -viE "$email_allow" || true)
 	tokens=""
-	case "$f" in
-		src/main/*) tokens=$(printf '%s\n' "$blob" | grep -niIE -e "$token_url" -e "$token_assign" || true) ;;
-	esac
+	if is_production_source "$f"; then
+		tokens=$(printf '%s\n' "$blob" | grep -niIE -e "$token_url" -e "$token_assign" || true)
+	fi
 	if [ -n "$hits$hosts$emails$tokens" ]; then
 		findings=$(printf '%s\n--- %s ---\n%s\n%s\n%s\n%s\n' "$findings" "$f" "$hits" "$hosts" "$emails" "$tokens")
 	fi
 	code=""
-	case "$f" in
-		*.java) code=$(printf '%s\n' "$blob" | grep -nIE -e 'System\.(out|err)\.' -e 'printStackTrace' -e '(TODO|FIXME)' || true) ;;
-	esac
+	if matches_any "$f" $source_ext; then
+		code=$(printf '%s\n' "$blob" | grep -nIE "$(smell_re "$f")" || true)
+	fi
 	if [ -n "$code" ]; then
 		smells=$(printf '%s\n--- %s ---\n%s\n' "$smells" "$f" "$code")
 	fi
@@ -108,14 +206,14 @@ IFS=$oldifs
 $findings
 If this is real, remove it (use a gitignored *.local.* file or a secret store, injected at runtime)."
 
-[ -z "$(printf '%s' "$smells" | tr -d '[:space:]')" ] || note "forbidden in committed Java - use the project Logger, and track TODO/FIXME in the backlog, not code:
+[ -z "$(printf '%s' "$smells" | tr -d '[:space:]')" ] || note "forbidden in committed source - use the project logger, and track TODO/FIXME in the backlog, not code:
 $smells"
 
 # Added lines are intersected with the comment lines a scanner finds in the post-image of the file,
-# so a // inside a string, a template literal or a Java text block is never read as a comment; a
-# check with false positives gets switched off. Known residue: a TypeScript regular-expression
-# literal containing // is read as a comment.
-scan_comments='
+# so a // inside a string, a template literal or a text block is never read as a comment; a check
+# with false positives gets switched off. Known residue: a TypeScript regular-expression literal
+# containing //.
+scan_slash='
 	BEGIN { state = 0 }
 	{
 		if (state == 5) { print path "\t" NR }
@@ -155,8 +253,68 @@ scan_comments='
 	}
 '
 
+# The hash family: # opens a comment outside a quoted literal. A line-1 shebang is the interpreter,
+# not prose, so it is exempt. With docstring=1 the scanner also tracks triple-quoted strings and
+# reports the ones opened at statement position: a string standing where a statement belongs is a
+# docstring or a no-op, never a value.
+scan_hash='
+	BEGIN { state = 0; tq = ""; dq3 = "\"\"\""; sq3 = "\047\047\047" }
+	{
+		if (NR == 1 && substr($0, 1, 2) == "#!") next
+		if (docstring && tq == "") {
+			head = $0
+			sub(/^[[:space:]]*/, "", head)
+			sub(/^[rbufRBUF]+/, "", head)
+			if (substr(head, 1, 3) == dq3 || substr(head, 1, 3) == sq3) { print path "\t" NR }
+		}
+		i = 1
+		n = length($0)
+		while (i <= n) {
+			c = substr($0, i, 1)
+			if (tq != "") {
+				if (substr($0, i, 3) == tq) { tq = ""; i += 3; continue }
+				i++
+				continue
+			}
+			if (state == 0) {
+				if (docstring && (substr($0, i, 3) == dq3 || substr($0, i, 3) == sq3)) { tq = substr($0, i, 3); i += 3; continue }
+				if (c == "#") { comment_text = substr($0, i); if (allow_re == "" || comment_text !~ allow_re) { print path "\t" NR } break }
+				if (c == "\"") { state = 1; i++; continue }
+				if (c == "\047") { state = 2; i++; continue }
+				i++
+			} else if (state == 1) {
+				if (c == "\\") { i += 2; continue }
+				if (c == "\"") { state = 0 }
+				i++
+			} else {
+				if (c == "\\") { i += 2; continue }
+				if (c == "\047") { state = 0 }
+				i++
+			}
+		}
+		if (state == 1 || state == 2) { state = 0 }
+	}
+'
+
+# The XML family: every line a <!-- ... --> block covers, however many it spans.
+scan_xml='
+	BEGIN { inside = 0 }
+	{
+		if (inside) {
+			print path "\t" NR
+			if (index($0, "-->")) { inside = 0 }
+			next
+		}
+		start = index($0, "<!--")
+		if (start) {
+			print path "\t" NR
+			if (index(substr($0, start + 4), "-->") == 0) { inside = 1 }
+		}
+	}
+'
+
 scan_added='
-	/^\+\+\+ / { path = substr($0, 7); next }
+	/^\+\+\+ / { path = substr($0, 7); sub(/\t$/, "", path); next }
 	/^--- / { next }
 	/^@@/ {
 		match($0, /\+[0-9]+/)
@@ -173,7 +331,22 @@ cut -f1 "$scratch/added" | sort -u > "$scratch/paths"
 : > "$scratch/comments"
 while IFS= read -r path; do
 	[ -n "$path" ] || continue
-	file_content "$path" 2>/dev/null | awk -v path="$path" "$scan_comments" >> "$scratch/comments"
+	if matches_any "$path" $comment_slash_ext; then
+		file_content "$path" 2>/dev/null | awk -v path="$path" "$scan_slash" >> "$scratch/comments"
+	fi
+	if matches_any "$path" $comment_hash_ext; then
+		# The docstring extensions are the family whose tool directives are configuration, not prose.
+		docstring=0
+		allow_re=''
+		if matches_any "$path" $docstring_ext; then
+			docstring=1
+			allow_re=$directive_allow_re
+		fi
+		file_content "$path" 2>/dev/null | awk -v path="$path" -v docstring="$docstring" -v allow_re="$allow_re" "$scan_hash" >> "$scratch/comments"
+	fi
+	if matches_any "$path" $comment_xml_ext; then
+		file_content "$path" 2>/dev/null | awk -v path="$path" "$scan_xml" >> "$scratch/comments"
+	fi
 done < "$scratch/paths"
 sort -u "$scratch/comments" > "$scratch/comments.sorted"
 
@@ -190,7 +363,7 @@ done < "$scratch/hits"
 
 [ -z "$(printf '%s' "$comments" | tr -d '[:space:]')" ] || note "explanatory comment(s) added:
 $comments
-Javadoc and // are an absolute no-go: put the knowledge in a name, a test name or the knowledge
+Doc comments and // are an absolute no-go: put the knowledge in a name, a test name or the knowledge
 base. There is no opt-out for this check."
 
 verdict

@@ -1,7 +1,12 @@
 #!/bin/sh
 # Proves the hooks block. Every case asserts the resulting history - a commit count, a sha, a
 # recorded breach - and never the text the hooks printed, because a printed rejection is what the
-# gate-bypass finding was made of. Runs without Gradle, so it works in a host session too.
+# gate-bypass finding was made of. Runs without the project's build tool, so it works in a host
+# session too.
+#
+# > **ADAPT:** the fixtures below use the extensions, smells, production and test trees and the
+# > `./verify` wrapper stub that hooks/content-gate and hooks/format-gate ship with. When you adapt
+# > those two, adapt the fixtures with them, or the self-test asserts a gate you no longer have.
 set -eu
 
 hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -34,6 +39,7 @@ new_repo() {
 	git init -q .
 	git config user.email gate@example.com
 	git config user.name Gate
+	git config core.autocrlf false
 	git config core.hooksPath "$hooks_dir"
 	n=1
 	while [ "$n" -le 3 ]; do
@@ -46,6 +52,28 @@ new_repo() {
 
 commits() { git rev-list --count HEAD; }
 
+# One line per argument, so a fixture of any language stays a single readable call.
+write_file() {
+	target=$1
+	shift
+	case "$target" in */*) mkdir -p "${target%/*}" ;; esac
+	printf '%s\n' "$@" > "$target"
+}
+
+refuses() {
+	git add -A
+	before=$(commits)
+	git commit -q -m "$1" >/dev/null 2>&1 || true
+	[ "$(commits)" -eq "$before" ]
+}
+
+accepts() {
+	git add -A
+	before=$(commits)
+	git commit -q -m "$1" >/dev/null 2>&1 || true
+	[ "$(commits)" -eq $((before + 1)) ]
+}
+
 clean_file() { printf 'class %s {\n}\n' "$1" > "$1.java"; }
 secret_file() { printf 'api_key = "not-a-real-value"\n' > "$1"; }
 smelly_file() { printf 'class %s {\n\tvoid run() {\n\t\tSystem.out.println("x");\n\t}\n}\n' "$1" > "$1.java"; }
@@ -54,31 +82,131 @@ printf 'hook self-test\n'
 
 new_repo control
 clean_file Clean
-git add -A
-before=$(commits)
-git commit -q -m "Add clean class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+if accepts "Add clean class"; then r=0; else r=1; fi
 check "a clean change commits" "$r"
 
 new_repo secret
 secret_file config.txt
-git add -A
-before=$(commits)
-git commit -q -m "Add config" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+if refuses "Add config"; then r=0; else r=1; fi
 check "a staged credential literal leaves no commit behind" "$r"
 if "$hooks_dir/content-gate" --staged >/dev/null 2>&1; then r=1; else r=0; fi
 check "the content gate itself is what refused the credential literal" "$r"
 
 new_repo smell
 smelly_file Loud
+if refuses "Add loud class"; then r=0; else r=1; fi
+check "staged debug output leaves no commit behind" "$r"
+if "$hooks_dir/content-gate" --staged >/dev/null 2>&1; then r=1; else r=0; fi
+check "the content gate itself is what refused the debug output" "$r"
+
+new_repo csprint
+write_file Api.cs 'class Api {' '	void Run() {' '		Console.WriteLine("x");' '	}' '}'
+if refuses "Add the api class"; then r=0; else r=1; fi
+check "a C# console write leaves no commit behind" "$r"
+
+new_repo pyprint
+write_file runner.py 'def run():' '	print("x")'
+if refuses "Add the runner module"; then r=0; else r=1; fi
+check "a Python debug print leaves no commit behind" "$r"
+
+new_repo cppprint
+write_file main.cpp '#include <iostream>' 'int main() {' '	std::cout << "x";' '	return 0;' '}'
+if refuses "Add the entry point"; then r=0; else r=1; fi
+check "a C++ stream write leaves no commit behind" "$r"
+
+new_repo tsprint
+write_file client.ts 'export function run() {' '	console.log("x");' '}'
+if refuses "Add the run function"; then r=0; else r=1; fi
+check "a TypeScript console log leaves no commit behind" "$r"
+
+new_repo todo
+write_file client.ts 'export const label = "TODO: rename";'
+if refuses "Add the label constant"; then r=0; else r=1; fi
+check "an added TODO marker leaves no commit behind" "$r"
+
+new_repo nullforgiving
+write_file src/main/Api.cs 'class Api {' '	void Run(Node node) {' '		node!.Accept();' '	}' '}'
+if refuses "Add the api class"; then r=0; else r=1; fi
+check "a null-forgiving operator in production C# leaves no commit behind" "$r"
+
+new_repo nullforgivingtest
+write_file tests/ApiTests.cs 'class ApiTests {' '	void Run(Node node) {' '		node!.Accept();' '	}' '}'
+if accepts "Add the api tests"; then r=0; else r=1; fi
+check "a test may use the null-forgiving operator" "$r"
+
+new_repo prodtoken
+write_file src/main/client.py 'URL = "https://example.com/api?token=abcdef"'
+if refuses "Add the client module"; then r=0; else r=1; fi
+check "a hard-coded token in production source leaves no commit behind" "$r"
+
+new_repo testtoken
+write_file tests/test_client.py 'URL = "https://example.com/api?token=abcdef"'
+if accepts "Add the client test"; then r=0; else r=1; fi
+check "a test may hard-code a token" "$r"
+
+new_repo secretpem
+write_file deploy.conf '-----BEGIN RSA PRIVATE KEY-----' 'not-a-real-key-body' '-----END RSA PRIVATE KEY-----'
+if refuses "Add the deploy config"; then r=0; else r=1; fi
+check "a staged private-key block leaves no commit behind" "$r"
+
+new_repo secretaws
+write_file deploy.conf 'access_key = AKIAZZZZZZZZZZZZZZZZ'
+if refuses "Add the deploy config"; then r=0; else r=1; fi
+check "a staged AWS-style access key leaves no commit behind" "$r"
+
+new_repo secretemail
+write_file team.txt 'owner = gatekeeper@corp.internal'
+if refuses "Add the team note"; then r=0; else r=1; fi
+check "a routable e-mail address leaves no commit behind" "$r"
+
+# This case pins the allowlist, not the address scan: it is the one that flips when email_allow
+# stops matching, while the refusal case above flips when the scan itself does.
+new_repo secretemailallowed
+write_file team.txt 'owner = gatekeeper@example.com'
+if accepts "Add the team note"; then r=0; else r=1; fi
+check "an allowlisted example address commits" "$r"
+
+new_repo hostpath
+write_file notes.txt 'workspace = /home/someone/projects/demo'
+if refuses "Add the notes"; then r=0; else r=1; fi
+check "an absolute host path leaves no commit behind" "$r"
+
+# This case pins the host-path allowlist: the production image's application home is a fixed path
+# the Dockerfile and the deploy script name on purpose.
+new_repo hostpathallowed
+write_file notes.txt 'workspace = /home/app/protocolParser'
+if accepts "Add the notes"; then r=0; else r=1; fi
+check "an allowlisted container path commits" "$r"
+
+new_repo keyfile
+write_file server.pem 'not-a-real-key-body'
+if refuses "Add the server key"; then r=0; else r=1; fi
+check "a staged key file leaves no commit behind" "$r"
+
+new_repo prodtokenassign
+write_file src/main/client.py 'auth_token = "not-a-real-value"'
+if refuses "Add the client module"; then r=0; else r=1; fi
+check "a hard-coded auth token assignment in production source leaves no commit behind" "$r"
+
+# This case pins the production-only scope of the token scan: it is the one that flips when
+# is_production_source stops telling a test tree from a production one.
+new_repo testtokenassign
+write_file tests/test_client.py 'auth_token = "not-a-real-value"'
+if accepts "Add the client test"; then r=0; else r=1; fi
+check "a test may hard-code an auth token assignment" "$r"
+
+new_repo printallow_default
+write_file cli/main.py 'def run():' '	print("x")'
+if refuses "Add the cli entry point"; then r=0; else r=1; fi
+check "a debug print is refused wherever it sits until a path opts in" "$r"
+
+new_repo printallow_optin
+write_file cli/main.py 'def run():' '	print("x")'
 git add -A
 before=$(commits)
-git commit -q -m "Add loud class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
-check "staged System.out leaves no commit behind" "$r"
-if "$hooks_dir/content-gate" --staged >/dev/null 2>&1; then r=1; else r=0; fi
-check "the content gate itself is what refused System.out" "$r"
+CONTENT_GATE_PRINT_ALLOW=cli/ git commit -q -m "Add the cli entry point" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+check "a path listed in print_allow_paths commits its stdout" "$r"
 
 new_repo amend
 smelly_file Loud
@@ -98,18 +226,12 @@ check "rebase --continue commits without asking a hook (the bypass itself)" "$r"
 if [ -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=0; else r=1; fi
 check "post-rewrite records the ungated commit" "$r"
 clean_file Next
-git add Next.java
-before=$(commits)
-git commit -q -m "Add next class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+if refuses "Add next class"; then r=0; else r=1; fi
 check "the next commit is refused while the ungated commit is reachable" "$r"
 recorded=$(head -n 1 "$(git rev-parse --git-dir)/gate-breach")
 git checkout -q -b clean-line "$(git rev-list --max-parents=0 HEAD)"
 clean_file Fresh
-git add Fresh.java
-before=$(commits)
-git commit -q -m "Add fresh class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq $((before + 1)) ] && ! git merge-base --is-ancestor "$recorded" HEAD 2>/dev/null; then r=0; else r=1; fi
+if accepts "Add fresh class" && ! git merge-base --is-ancestor "$recorded" HEAD 2>/dev/null; then r=0; else r=1; fi
 check "the record clears itself once the ungated commit is unreachable" "$r"
 
 new_repo replay
@@ -124,27 +246,92 @@ if [ -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=1; else r=0; fi
 check "replaying a pre-existing violation raises no breach" "$r"
 
 new_repo comment
-printf 'class Noted {\n\t// why this exists\n}\n' > Noted.java
-git add -A
-before=$(commits)
-git commit -q -m "Add noted class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+write_file Noted.java 'class Noted {' '	// why this exists' '}'
+if refuses "Add noted class"; then r=0; else r=1; fi
 check "an added // comment leaves no commit behind" "$r"
 
-new_repo javadoc
-printf 'class Documented {\n\t/** what it does */\n\tvoid run() {\n\t}\n}\n' > Documented.java
+# git reports a file renamed and edited in one commit as R, which the scans' ACM filter drops. The
+# bodies below are long enough for rename detection to fire, which is what makes the case a rename
+# rather than a delete plus an add.
+renamed_body() {
+	write_file "$1" 'class Old {' '	void run() {' '		int a = 1;' '		int b = 2;' '		int c = 3;' '		int d = 4;' '		int e = 5;' '	}' "$2" '}'
+}
+
+new_repo renamecomment
+renamed_body Old.java ''
 git add -A
-before=$(commits)
-git commit -q -m "Add documented class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
-check "an added Javadoc block leaves no commit behind" "$r"
+git commit -q --no-verify -m "Add old class"
+git mv Old.java New.java
+renamed_body New.java '	// snuck in on the rename'
+if refuses "Rename the old class"; then r=0; else r=1; fi
+check "an added comment riding in on a rename leaves no commit behind" "$r"
+
+new_repo renamesecret
+renamed_body Old.java ''
+git add -A
+git commit -q --no-verify -m "Add old class"
+git mv Old.java New.java
+renamed_body New.java '	String home = "/home/someone/projects/demo";'
+if refuses "Rename the old class"; then r=0; else r=1; fi
+check "a host path riding in on a rename leaves no commit behind" "$r"
+
+new_repo renamecherry
+renamed_body Old.java ''
+git add -A
+git commit -q --no-verify -m "Add old class"
+git checkout -q -b donor
+git mv Old.java New.java
+renamed_body New.java '	// snuck in on the rename'
+git add -A
+git commit -q --no-verify -m "Rename the old class"
+git checkout -q -
+git cherry-pick donor >/dev/null 2>&1 || true
+if [ -f "$(git rev-parse --git-common-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a cherry-picked rename carrying a comment is recorded" "$r"
+
+new_repo renamecherrysecret
+renamed_body Old.java ''
+git add -A
+git commit -q --no-verify -m "Add old class"
+git checkout -q -b donor
+git mv Old.java New.java
+renamed_body New.java '	String home = "/home/someone/projects/demo";'
+git add -A
+git commit -q --no-verify -m "Rename the old class"
+git checkout -q -
+git cherry-pick donor >/dev/null 2>&1 || true
+if [ -f "$(git rev-parse --git-common-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a cherry-picked rename carrying a host path is recorded" "$r"
+
+# Clean content either way, so this one pins only that a zero-diff rename survives the pipeline; the
+# case below is the one that pins how such a rename is read.
+new_repo renameclean
+renamed_body Old.java ''
+git add -A
+git commit -q --no-verify -m "Add old class"
+git mv Old.java New.java
+if accepts "Rename the old class"; then r=0; else r=1; fi
+check "a rename that edits nothing commits" "$r"
+
+# The counterpart of the `stock` case for the rename path: moving a file is not editing it, so the
+# scan that intersects with added lines stays silent about what the file already carried. This is the
+# case that goes red when rename detection is switched off instead of `R` joining the filter.
+new_repo renamestale
+write_file Old.java 'class Old {' '	// an older comment nobody touched' '}'
+git add -A
+git commit -q --no-verify -m "Add old class"
+git mv Old.java New.java
+if accepts "Rename the old class"; then r=0; else r=1; fi
+check "a rename alone does not re-flag a comment the file already carried" "$r"
+
+new_repo doccomment
+write_file Documented.java 'class Documented {' '	/** what it does */' '	void run() {' '	}' '}'
+if refuses "Add documented class"; then r=0; else r=1; fi
+check "an added doc-comment block leaves no commit behind" "$r"
 
 new_repo literal
-printf 'class Addresses {\n\tString home = "https://evergore.de";\n\tString node = "//input[@type=1]";\n}\n' > Addresses.java
-git add -A
-before=$(commits)
-git commit -q -m "Add addresses class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+write_file Addresses.java 'class Addresses {' '	String home = "https://example.com";' '	String node = "//input[@type=1]";' '}'
+if accepts "Add addresses class"; then r=0; else r=1; fi
 check "a // inside a string literal is not read as a comment" "$r"
 
 new_repo stock
@@ -152,35 +339,140 @@ printf 'class Legacy {\n\t// an older comment nobody touched\n}\n' > Legacy.java
 git add -A
 git commit -q --no-verify -m "Add legacy class"
 printf 'class Legacy {\n\t// an older comment nobody touched\n\tint added = 1;\n}\n' > Legacy.java
-git add -A
-before=$(commits)
-git commit -q -m "Add a field to the legacy class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+if accepts "Add a field to the legacy class"; then r=0; else r=1; fi
 check "an untouched existing comment does not block the file's next commit" "$r"
 
+new_repo noprefix
+git config diff.noprefix true
+write_file Noted.java 'class Noted {' '	// why this exists' '}'
+if refuses "Add noted class"; then r=0; else r=1; fi
+check "a repository configured with diff.noprefix still has its added comments read" "$r"
+
+new_repo spacedpath
+write_file 'Noted Class.java' 'class NotedClass {' '	// why this exists' '}'
+if refuses "Add the noted class"; then r=0; else r=1; fi
+check "an added comment in a path containing a space leaves no commit behind" "$r"
+
 new_repo scope
-printf '// a build script comment\nplugins {\n}\n' > build.gradle.kts
-git add -A
-before=$(commits)
-git commit -q -m "Add build script" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
-check "the check stays out of files that are not java, ts or tsx" "$r"
+write_file build.gradle '// a build script comment' 'plugins {' '}'
+if accepts "Add build script"; then r=0; else r=1; fi
+check "the check stays out of files the comment scan does not list" "$r"
 
 new_repo template
-printf 'export const endpoint = `https://example.com/api`;\n' > client.ts
-git add -A
-before=$(commits)
-git commit -q -m "Add the endpoint constant" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+write_file client.ts 'export const endpoint = `https://example.com/api`;'
+if accepts "Add the endpoint constant"; then r=0; else r=1; fi
 check "a TypeScript template literal is not read as a comment" "$r"
 
 new_repo textblock
-printf 'class Selector {\n\tString path = """\n\t\t//div[@id=1]\n\t\t""";\n}\n' > Selector.java
-git add -A
-before=$(commits)
-git commit -q -m "Add the selector class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
-check "a Java text block holding an XPath is not read as a comment" "$r"
+write_file Selector.java 'class Selector {' '	String path = """' '		//div[@id=1]' '		""";' '}'
+if accepts "Add the selector class"; then r=0; else r=1; fi
+check "a text block holding an XPath is not read as a comment" "$r"
+
+new_repo cppcomment
+write_file main.cpp 'int main() {' '	// note' '	return 0;' '}'
+if refuses "Add the entry point"; then r=0; else r=1; fi
+check "an added // comment in a C++ file leaves no commit behind" "$r"
+
+new_repo cppinclude
+write_file main.cpp '#include <vector>' 'int main() {' '	return 0;' '}'
+if accepts "Add the entry point"; then r=0; else r=1; fi
+check "an added #include is code, not a comment" "$r"
+
+new_repo cscomment
+write_file Api.cs 'class Api {' '	// note' '}'
+if refuses "Add the api class"; then r=0; else r=1; fi
+check "an added // comment in a C# file leaves no commit behind" "$r"
+
+new_repo csregion
+write_file Api.cs '#region Api' 'class Api {' '}' '#endregion'
+if accepts "Add the api class"; then r=0; else r=1; fi
+check "an added #region is code, not a comment" "$r"
+
+new_repo hashcomment
+write_file counter.py 'def run():' '	# why this exists' '	return 1'
+if refuses "Add the counter module"; then r=0; else r=1; fi
+check "an added # comment in a Python file leaves no commit behind" "$r"
+
+new_repo hashliteral
+write_file counter.py 'MARKER = "#not a comment"'
+if accepts "Add the marker constant"; then r=0; else r=1; fi
+check "a # inside a string literal is not read as a comment" "$r"
+
+new_repo shebang
+write_file tool.py '#!/usr/bin/env python3' 'def run():' '	return 1'
+if accepts "Add the tool module"; then r=0; else r=1; fi
+check "a shebang on line 1 is not read as a comment" "$r"
+
+new_repo cmakecomment
+write_file CMakeLists.txt '# the build' 'project(demo)'
+if refuses "Add the cmake build"; then r=0; else r=1; fi
+check "an added # comment in CMakeLists.txt leaves no commit behind" "$r"
+
+new_repo tomlcomment
+write_file pyproject.toml '[project]' '# the project name' 'name = "demo"'
+if refuses "Add the project manifest"; then r=0; else r=1; fi
+check "an added # comment in a TOML file leaves no commit behind" "$r"
+
+new_repo templatebaseline
+write_file .template/baseline/hooks/Seeded.java 'class Seeded {' '	// a comment the template shipped' '}'
+write_file .template/baseline/config.txt 'api_key = "not-a-real-value"' 'home = /home/someone/work'
+if accepts "Add the template baseline"; then r=0; else r=1; fi
+check "the scans stay out of the adopted template baseline" "$r"
+
+new_repo xmlcomment
+write_file App.csproj '<Project>' '	<!-- keep -->' '</Project>'
+if refuses "Add the project file"; then r=0; else r=1; fi
+check "an added XML comment leaves no commit behind" "$r"
+
+new_repo xmlblock
+write_file App.csproj '<Project>' '	<!-- keep' '	     this -->' '</Project>'
+if refuses "Add the project file"; then r=0; else r=1; fi
+check "an added multi-line XML comment leaves no commit behind" "$r"
+
+new_repo xmlelement
+write_file App.csproj '<Project>' '	<TargetFramework>net8.0</TargetFramework>' '</Project>'
+if accepts "Add the project file"; then r=0; else r=1; fi
+check "a plain XML element is not read as a comment" "$r"
+
+new_repo directive
+write_file wide.py '# noqa: E501' 'VALUE = 1'
+if accepts "Add the value constant"; then r=0; else r=1; fi
+check "a tool directive is configuration, not an explanatory comment" "$r"
+
+new_repo directivetrailingnoqa
+write_file trailing_noqa.py 'VALUE = 1  # noqa: E501'
+if accepts "Add the value constant"; then r=0; else r=1; fi
+check "a trailing noqa directive is configuration, not an explanatory comment" "$r"
+
+new_repo directivetrailingtype
+write_file trailing_type.py 'value = maybe_none()  # type: ignore[attr-defined]'
+if accepts "Add the value assignment"; then r=0; else r=1; fi
+check "a trailing type-ignore directive is configuration, not an explanatory comment" "$r"
+
+new_repo directivetrailingprose
+write_file trailing_prose.py 'VALUE = 1  # explains why'
+if refuses "Add the value constant"; then r=0; else r=1; fi
+check "a trailing explanatory comment beside code is still refused" "$r"
+
+new_repo directiveprosestart
+write_file prose_start.py '# noqa because reasons' 'VALUE = 1'
+if refuses "Add the value constant"; then r=0; else r=1; fi
+check "a directive keyword followed by prose is still refused" "$r"
+
+new_repo docstring
+write_file greeter.py '"""Greeting helpers."""' 'def greet():' '	"""Say hello."""' '	return "hi"'
+if refuses "Add the greeter module"; then r=0; else r=1; fi
+check "an added docstring leaves no commit behind" "$r"
+
+new_repo tripleassign
+write_file banner.py 'BANNER = """welcome"""'
+if accepts "Add the banner constant"; then r=0; else r=1; fi
+check "a triple-quoted assignment is not read as a doc comment" "$r"
+
+new_repo triplehash
+write_file banner.py 'BANNER = """' '# not a comment' '"""'
+if accepts "Add the banner constant"; then r=0; else r=1; fi
+check "a # inside a triple-quoted string is not read as a comment" "$r"
 
 new_repo merge
 git checkout -q -b topic
@@ -231,10 +523,7 @@ git worktree add -q -b sibling-line "$work/sibling-line" >/dev/null 2>&1
 cd "$work/sibling-line"
 git merge -q --ff-only "$poisoned" >/dev/null 2>&1 || true
 clean_file Fresh
-git add Fresh.java
-before=$(commits)
-git commit -q -m "Add fresh class" >/dev/null 2>&1 || true
-if git merge-base --is-ancestor "$poisoned" HEAD 2>/dev/null && [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+if git merge-base --is-ancestor "$poisoned" HEAD 2>/dev/null && refuses "Add fresh class"; then r=0; else r=1; fi
 check "a sibling worktree carrying the same recorded commit is refused too" "$r"
 
 new_repo newontop
@@ -282,10 +571,7 @@ GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
 if git merge-base --is-ancestor "$violator" HEAD 2>/dev/null && [ -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=0; else r=1; fi
 check "a later clean rewrite does not clear a still-reachable record" "$r"
 clean_file Beyond
-git add Beyond.java
-before=$(commits)
-git commit -q -m "Add beyond class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+if refuses "Add beyond class"; then r=0; else r=1; fi
 check "the next commit is still refused after that later rewrite" "$r"
 
 new_repo cherry
@@ -298,10 +584,7 @@ git cherry-pick donor >/dev/null 2>&1 || true
 if [ -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=0; else r=1; fi
 check "a cherry-picked violation is recorded" "$r"
 clean_file After
-git add After.java
-before=$(commits)
-git commit -q -m "Add after class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+if refuses "Add after class"; then r=0; else r=1; fi
 check "the next commit is refused after a cherry-picked violation" "$r"
 
 new_repo revert
@@ -322,73 +605,293 @@ git commit -q --no-verify -m "Add loud class" >/dev/null 2>&1 || true
 if [ "$(commits)" -eq $((before + 1)) ] && [ ! -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=0; else r=1; fi
 check "--no-verify stays the deliberate valve and is not recorded" "$r"
 
-new_repo deployleg_red
-mkdir -p deploy
-printf '#!/bin/sh\nexit 1\n' > deploy/self-test
-git add -A
-git commit -q --no-verify -m "Add the deploy self-test"
-printf '#!/bin/sh\nexit 1\n' > deploy/epc-deploy
-git add deploy/epc-deploy
-before=$(commits)
-git commit -q -m "Add the deploy script" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
-check "a failing deploy self-test leaves no commit behind" "$r"
-
-new_repo deployleg_deleted
-mkdir -p deploy
-printf '#!/bin/sh\nexit 0\n' > deploy/self-test
-git add -A
-git commit -q --no-verify -m "Add the deploy self-test"
-git rm -q deploy/self-test
-before=$(commits)
-git commit -q -m "Remove the deploy self-test" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
-check "deleting the deploy self-test cannot disable its own gate" "$r"
-
-new_repo deployleg_green
-mkdir -p deploy
-printf '#!/bin/sh\nexit 0\n' > deploy/self-test
-git add -A
-git commit -q --no-verify -m "Add the deploy self-test"
-printf '#!/bin/sh\nexit 0\n' > deploy/epc-deploy
-git add deploy/epc-deploy
-before=$(commits)
-git commit -q -m "Add the deploy script" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
-check "a passing deploy self-test lets the commit through" "$r"
-
-new_repo deployleg_untouched
-clean_file Elsewhere
-git add -A
-before=$(commits)
-git commit -q -m "Add elsewhere class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
-check "a commit that does not touch deploy runs no deploy self-test" "$r"
-
+# The stubs answer on the argument, not on being called at all: a wrapper run with the wrong
+# subcommand (or with none) would otherwise satisfy both cases vacuously.
 new_repo formatleg_red
-printf '#!/bin/sh\nexit 1\n' > gradlew
-chmod +x gradlew
+write_file verify '#!/bin/sh' '[ "$1" = format ] && exit 1' 'exit 0'
+chmod +x verify
 git add -A
-git commit -q --no-verify -m "Add the build wrapper"
+git commit -q --no-verify -m "Add the verify wrapper"
 clean_file Formatted
-git add Formatted.java
-before=$(commits)
-git commit -q -m "Add formatted class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+if refuses "Add formatted class"; then r=0; else r=1; fi
 check "a failing format leg leaves no commit behind" "$r"
 
 new_repo formatleg_green
-printf '#!/bin/sh\nexit 0\n' > gradlew
-chmod +x gradlew
+write_file verify '#!/bin/sh' '[ "$1" = format ] && exit 0' 'exit 1'
+chmod +x verify
 git add -A
-git commit -q --no-verify -m "Add the build wrapper"
+git commit -q --no-verify -m "Add the verify wrapper"
 clean_file Formatted
-git add Formatted.java
-before=$(commits)
-git commit -q -m "Add formatted class" >/dev/null 2>&1 || true
-if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+if accepts "Add formatted class"; then r=0; else r=1; fi
 check "a passing format leg lets the commit through" "$r"
 
+# The content of both patches below is clean, so the format leg is the only thing that can refuse:
+# these two cases pin the exit status of the hooks that run before their commit exists.
+new_repo formatleg_applypatch
+write_file verify '#!/bin/sh' '[ "$1" = format ] && exit 1' 'exit 0'
+chmod +x verify
+git add -A
+git commit -q --no-verify -m "Add the verify wrapper"
+donor="$work/formatleg-donor"
+mkdir -p "$donor"
+cd "$donor"
+git init -q .
+git config user.email gate@example.com
+git config user.name Gate
+git config core.autocrlf false
+printf 'class Seed1 {\n}\n' > Seed1.java
+git add -A
+git commit -q --no-verify -m "Add seed 1"
+clean_file Patched
+git add -A
+git commit -q --no-verify -m "Add patched class"
+git format-patch -1 -o "$donor/patches" >/dev/null 2>&1
+cd "$repo"
+before=$(commits)
+git am "$donor/patches/"*.patch >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "git am whose format leg fails leaves no commit behind" "$r"
+git am --abort >/dev/null 2>&1 || true
+
+new_repo formatleg_merge
+write_file verify '#!/bin/sh' '[ "$1" = format ] && exit 1' 'exit 0'
+chmod +x verify
+git add -A
+git commit -q --no-verify -m "Add the verify wrapper"
+git checkout -q -b topic
+clean_file Topic
+git add -A
+git commit -q --no-verify -m "Add topic class"
+git checkout -q -
+clean_file Other
+git add -A
+git commit -q --no-verify -m "Add other class"
+before=$(commits)
+git merge --no-ff --no-edit topic >/dev/null 2>&1 || true
+if [ "$(commits)" -eq "$before" ]; then r=0; else r=1; fi
+check "a --no-ff merge whose format leg fails leaves no commit behind" "$r"
+
+wrapper_file() {
+	write_file CLAUDE.md '# Wrapper' '' "Based on agent-entry-template version: $2." '' \
+		'## SHARED section (keep textually identical)' '' "$1" '' '## Tool mechanics' '' 'tool notes'
+}
+
+template_file() {
+	write_file docs/knowledge-base/agent-entry-template.md '# Template' '' "**Template version: $2.**" '' \
+		'## SHARED section (keep textually identical)' '' "$1" '' '## Adoption' '' 'adoption notes'
+}
+
+new_repo sharedmatch
+wrapper_file 'the shared rule' 4
+template_file 'the shared rule' 4
+if accepts "Add the entry files"; then r=0; else r=1; fi
+check "entry files carrying the same SHARED section commit" "$r"
+
+new_repo shareddrift
+wrapper_file 'the shared rules' 4
+template_file 'the shared rule' 4
+if refuses "Add the entry files"; then r=0; else r=1; fi
+check "a SHARED section that drifted from the template leaves no commit behind" "$r"
+
+new_repo sharedalone
+wrapper_file 'the shared rule' 4
+template_file 'the shared rule' 4
+git add -A
+git commit -q --no-verify -m "Add the entry files"
+wrapper_file 'the shared rule, reworded' 4
+if refuses "Refine the wrapper"; then r=0; else r=1; fi
+check "a wrapper edited alone is compared against the template in the tree" "$r"
+
+new_repo sharedversion
+wrapper_file 'the shared rule' 4
+template_file 'the shared rule' 4
+git add -A
+git commit -q --no-verify -m "Add the entry files"
+template_file 'the shared rule' 5
+if refuses "Bump the template version"; then r=0; else r=1; fi
+check "a template version bump the wrapper does not record leaves no commit behind" "$r"
+wrapper_file 'the shared rule' 5
+if accepts "Bump the template version"; then r=0; else r=1; fi
+check "a template version bump the wrapper records commits" "$r"
+
+new_repo sharedscope
+wrapper_file 'the shared rules' 4
+template_file 'the shared rule' 4
+git add -A
+git commit -q --no-verify -m "Add the entry files"
+clean_file Elsewhere
+if accepts "Add elsewhere class"; then r=0; else r=1; fi
+check "a commit touching neither entry file runs no SHARED check" "$r"
+
+# The verb rule refuses an empty subject as well, so this case pins the behaviour rather than the
+# one line that names it: the suite asserts history, and no history-asserting case can tell the two
+# refusals apart.
+new_repo messageempty
+clean_file Parser
+if refuses ""; then r=0; else r=1; fi
+check "an empty commit message leaves no commit behind" "$r"
+
+new_repo messagebody
+clean_file Parser
+if refuses "$(printf 'Add the parser\n\nThe reason it exists.')"; then r=0; else r=1; fi
+check "a message carrying a body leaves no commit behind" "$r"
+
+# A single-line subject, so the footer rule is what refuses it rather than the body rule.
+new_repo messagefooter
+clean_file Parser
+if refuses "Add the Co-Authored-By scrubber"; then r=0; else r=1; fi
+check "a subject naming a tool footer leaves no commit behind" "$r"
+
+new_repo messagepasttense
+clean_file Parser
+if refuses "Added the parser"; then r=0; else r=1; fi
+check "a past-tense subject leaves no commit behind" "$r"
+
+new_repo messagegerund
+clean_file Parser
+if refuses "Adding the parser"; then r=0; else r=1; fi
+check "a gerund subject leaves no commit behind" "$r"
+
+ticket_key='[A-Z][A-Z0-9]+-[0-9]+'
+
+commits_with_ticket() {
+	required=no
+	if [ "$3" = required ]; then required=yes; fi
+	git add -A
+	before=$(commits)
+	COMMIT_MSG_TICKET_KEY_RE=$1 COMMIT_MSG_TICKET_POSITION=$2 COMMIT_MSG_TICKET_REQUIRED=$required \
+		git commit -q -m "$4" >/dev/null 2>&1 || true
+	[ "$(commits)" -eq $((before + 1)) ]
+}
+
+new_repo ticketoff
+clean_file Plain
+if accepts "Add the plain class (PROJ-12)"; then r=0; else r=1; fi
+check "no ticket pattern configured leaves a parenthesised subject alone" "$r"
+
+new_repo ticketsuffix
+clean_file Parser
+if commits_with_ticket "$ticket_key" suffix optional "Add the parser (PROJ-12)"; then r=0; else r=1; fi
+check "a suffix ticket key is accepted where suffix is configured" "$r"
+clean_file Lexer
+if ! commits_with_ticket "$ticket_key" suffix optional "[PROJ-12] Add the lexer"; then r=0; else r=1; fi
+check "a prefix ticket key is refused where suffix is configured" "$r"
+clean_file Reader
+if ! commits_with_ticket "$ticket_key" suffix optional "Add the reader (proj12)"; then r=0; else r=1; fi
+check "a malformed ticket key is refused" "$r"
+clean_file Writer
+if commits_with_ticket "$ticket_key" suffix optional "Add the writer"; then r=0; else r=1; fi
+check "an optional ticket key may be left out" "$r"
+
+new_repo ticketprefix
+clean_file Parser
+if commits_with_ticket "$ticket_key" prefix optional "[PROJ-12] Add the parser"; then r=0; else r=1; fi
+check "a prefix ticket key is accepted where prefix is configured" "$r"
+clean_file Backlog
+if commits_with_ticket "$ticket_key" prefix optional "[PROJ-12] [doc] Groom the backlog"; then r=0; else r=1; fi
+check "a doc tag sits behind the ticket prefix" "$r"
+clean_file Lexer
+if ! commits_with_ticket "$ticket_key" prefix optional "Add the lexer (PROJ-12)"; then r=0; else r=1; fi
+check "a suffix ticket key is refused where prefix is configured" "$r"
+
+new_repo ticketrequired
+clean_file Parser
+if ! commits_with_ticket "$ticket_key" suffix required "Add the parser"; then r=0; else r=1; fi
+check "a required ticket key that is missing is refused" "$r"
+clean_file Lexer
+if commits_with_ticket "$ticket_key" suffix required "Add the lexer (PROJ-12)"; then r=0; else r=1; fi
+check "a required ticket key that is there is accepted" "$r"
+
+new_repo ticketdefaults
+clean_file Parser
+git add -A
+before=$(commits)
+COMMIT_MSG_TICKET_KEY_RE=$ticket_key git commit -q -m "Add the parser (PROJ-12)" >/dev/null 2>&1 || true
+if [ "$(commits)" -eq $((before + 1)) ]; then r=0; else r=1; fi
+check "the shipped ticket defaults are the suffix position and no requirement" "$r"
+
+new_repo stacksleg_red
+write_file stacks/self-test '#!/bin/sh' 'exit 1'
+chmod +x stacks/self-test
+git add -A
+git commit -q --no-verify -m "Add the stacks self-test"
+write_file stacks/jvm/verify '#!/bin/sh' 'exit 0'
+if refuses "Add the jvm preset"; then r=0; else r=1; fi
+check "a failing stacks self-test leaves no commit behind" "$r"
+
+new_repo stacksleg_green
+write_file stacks/self-test '#!/bin/sh' 'exit 0'
+chmod +x stacks/self-test
+git add -A
+git commit -q --no-verify -m "Add the stacks self-test"
+write_file stacks/jvm/verify '#!/bin/sh' 'exit 0'
+if accepts "Add the jvm preset"; then r=0; else r=1; fi
+check "a passing stacks self-test lets the commit through" "$r"
+
+new_repo stacksleg_gone
+write_file stacks/self-test '#!/bin/sh' 'exit 0'
+chmod +x stacks/self-test
+write_file stacks/jvm/verify '#!/bin/sh' 'exit 0'
+git add -A
+git commit -q --no-verify -m "Add the stacks preset"
+git rm -q stacks/self-test
+if refuses "Remove the stacks self-test"; then r=0; else r=1; fi
+check "removing the stacks self-test leaves no commit behind" "$r"
+
+new_repo stacksleg_scope
+write_file stacks/self-test '#!/bin/sh' 'exit 1'
+chmod +x stacks/self-test
+git add -A
+git commit -q --no-verify -m "Add the stacks self-test"
+clean_file Elsewhere
+if accepts "Add elsewhere class"; then r=0; else r=1; fi
+check "a commit touching nothing under stacks/ runs no stacks self-test" "$r"
+
+# The deploy leg mirrors the stacks leg: the deploy script ships its own self-test under deploy/.
+new_repo deployleg_red
+write_file deploy/self-test '#!/bin/sh' 'exit 1'
+git add -A
+git commit -q --no-verify -m "Add the deploy self-test"
+write_file deploy/epc-deploy '#!/bin/sh' 'exit 1'
+if refuses "Add the deploy script"; then r=0; else r=1; fi
+check "a failing deploy self-test leaves no commit behind" "$r"
+
+new_repo deployleg_green
+write_file deploy/self-test '#!/bin/sh' 'exit 0'
+git add -A
+git commit -q --no-verify -m "Add the deploy self-test"
+write_file deploy/epc-deploy '#!/bin/sh' 'exit 0'
+if accepts "Add the deploy script"; then r=0; else r=1; fi
+check "a passing deploy self-test lets the commit through" "$r"
+
+new_repo deployleg_gone
+write_file deploy/self-test '#!/bin/sh' 'exit 0'
+write_file deploy/epc-deploy '#!/bin/sh' 'exit 0'
+git add -A
+git commit -q --no-verify -m "Add the deploy script"
+git rm -q deploy/self-test
+if refuses "Remove the deploy self-test"; then r=0; else r=1; fi
+check "removing the deploy self-test leaves no commit behind" "$r"
+
+new_repo deployleg_scope
+write_file deploy/self-test '#!/bin/sh' 'exit 1'
+git add -A
+git commit -q --no-verify -m "Add the deploy self-test"
+clean_file Elsewhere
+if accepts "Add elsewhere class"; then r=0; else r=1; fi
+check "a commit touching nothing under deploy/ runs no deploy self-test" "$r"
+
+# A hook staged non-executable is skipped outright by git on POSIX, so the gate would not narrate,
+# it would not run at all; core.fileMode=false on a Windows host hides that from every local check.
+# Fix a finding here with: git update-index --chmod=+x hooks/<name>
+tracked=$(git -C "$hooks_dir" ls-files -s -- "$hooks_dir" 2>/dev/null | grep -v '\.md$' || true)
+if [ -z "$tracked" ]; then
+	printf '  skip every tracked hook is staged executable: none tracked yet, so this proves nothing.\n'
+	printf '       Stage them (git add hooks/) and re-run, or the first commit may record them 100644.\n'
+else
+	if printf '%s\n' "$tracked" | grep -qv '^100755 '; then r=1; else r=0; fi
+	check "every tracked hook is staged executable (100755)" "$r"
+fi
 
 if [ "$outer_head" = "$(git -C "$hooks_dir" rev-parse HEAD 2>/dev/null || echo none)" ] \
 	&& [ "$outer_branch" = "$(git -C "$hooks_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo none)" ]; then r=0; else r=1; fi

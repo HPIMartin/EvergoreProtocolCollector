@@ -1,7 +1,7 @@
 #!/bin/sh
 # Fast pre-commit quality gate. Deliberately excludes the test run and the full build to keep the
 # TDD micro-commit loop fast; every commit is already green by the time it is made.
-# Active via: git config core.hooksPath hooks (set automatically by the devcontainer postCreate).
+# Active via: git config core.hooksPath hooks (wire that into the devcontainer postCreate).
 set -eu
 
 cd "$(git rev-parse --show-toplevel)"
@@ -21,16 +21,55 @@ if git diff --cached --name-only --diff-filter=ACMD -- 'hooks/*' | grep -q .; th
 	"$hooks_dir/self-test" >/dev/null 2>&1 || reject "hooks/self-test fails, so the gate no longer blocks what it claims to block. Run 'hooks/self-test' and read its output."
 fi
 
-if git diff --cached --name-only --diff-filter=ACMD -- 'deploy/*' | grep -q .; then
-	printf '[pre-commit] deploy self-test...\n'
-	sh ./deploy/self-test >/dev/null 2>&1 || reject "deploy/self-test fails or is gone, so the deploy no longer refuses what it claims to refuse. Run 'sh deploy/self-test' and read its output."
+# Guarded on the staged paths, not on the script: a commit that removes stacks/self-test must run
+# into the leg rather than switch it off.
+if git diff --cached --name-only --diff-filter=ACMD -- 'stacks/*' | grep -q .; then
+	printf '[pre-commit] stacks self-test...\n'
+	[ -f stacks/self-test ] || reject "stacks/self-test is missing, so nothing proves the stack presets' contract. Restore it."
+	sh stacks/self-test >/dev/null 2>&1 || reject "stacks/self-test fails, so a stack preset no longer honours the contract the hooks rely on. Run 'sh stacks/self-test' and read its output."
 fi
 
-if [ -x ./gradlew ]; then
-	printf '[pre-commit] spotlessCheck + checkstyle...\n'
-	if ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then
-		reject "formatting/brace gate failed. Run './gradlew spotlessApply', add any missing braces, then restage."
+# The deploy script ships its own self-test (deploy/self-test); the same guard shape keeps a
+# weakened deploy check, or its deletion, from landing.
+if git diff --cached --name-only --diff-filter=ACMD -- 'deploy/*' | grep -q .; then
+	printf '[pre-commit] deploy self-test...\n'
+	[ -f deploy/self-test ] || reject "deploy/self-test is missing, so nothing proves the deploy script refuses what it claims to refuse. Restore it."
+	sh deploy/self-test >/dev/null 2>&1 || reject "deploy/self-test fails, so the deploy no longer refuses what it claims to refuse. Run 'sh deploy/self-test' and read its output."
+fi
+
+# The agent entry files carry one section verbatim. It is compared from the staged blobs, falling
+# back to HEAD for the file the commit does not touch, so editing one of the two alone is caught.
+entry_wrapper=CLAUDE.md
+entry_template=docs/knowledge-base/agent-entry-template.md
+
+entry_blob() {
+	git show ":$1" 2>/dev/null || git show "HEAD:$1" 2>/dev/null || true
+}
+
+shared_section() {
+	entry_blob "$1" | awk '
+		/^## SHARED section/ { inside = 1; print; next }
+		inside && (/^## / || $0 == "---") { exit }
+		inside { print }
+	'
+}
+
+if git diff --cached --name-only --diff-filter=ACM -- "$entry_wrapper" "$entry_template" | grep -q .; then
+	printf '[pre-commit] entry-file SHARED section...\n'
+	scratch=$(mktemp -d)
+	trap 'rm -rf "$scratch"' EXIT
+	shared_section "$entry_template" > "$scratch/${entry_template##*/}"
+	shared_section "$entry_wrapper" > "$scratch/${entry_wrapper##*/}"
+	diff -u "$scratch/${entry_template##*/}" "$scratch/${entry_wrapper##*/}" >&2 \
+		|| reject "the SHARED section of $entry_wrapper no longer matches $entry_template (diff above). Re-sync the wrapper; the template is the source."
+	template_version=$(entry_blob "$entry_template" | sed -n 's/.*\*\*Template version: \([0-9][0-9]*\)\.\*\*.*/\1/p' | head -n 1)
+	if [ -n "$template_version" ]; then
+		entry_blob "$entry_wrapper" | sed -n '1,/^## SHARED section/p' | grep -qE "version: $template_version([^0-9]|$)" \
+			|| reject "$entry_wrapper does not record template version $template_version. A version bump lands in the template and in every wrapper together."
 	fi
 fi
 
+"$hooks_dir/format-gate" || reject "formatting/style gate failed. Run your stack's format command (hooks/format-gate names it), fix what it cannot, then restage."
+
+# The tree this hook approved, so post-rewrite can tell an amend of it from an ungated commit.
 git write-tree > "$(git rev-parse --git-dir)/gate-stamp"

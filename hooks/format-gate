@@ -1,0 +1,24 @@
+#!/bin/sh
+# The stack's fast format/style check, in one place. Called by pre-commit, pre-applypatch,
+# pre-merge-commit, post-commit and post-rewrite, so the gate has a single adaptation spot instead
+# of five. Must run in seconds: the test run and the full build stay out of it deliberately, so the
+# TDD micro-commit loop stays fast (every commit is already green by the time it is made).
+#
+# The check is guarded on a repo-local build wrapper rather than on a command in PATH. That is what
+# lets hooks/self-test stub the wrapper in a throwaway repository and assert the leg's behaviour
+# instead of assuming it, and it keeps the hooks usable in a checkout that has no toolchain yet.
+set -eu
+
+# The callers have already changed to the repository root; this only covers a standalone run from a
+# subdirectory, and stays silent where git cannot answer (a rebase's hook environment).
+top=$(git rev-parse --show-toplevel 2>/dev/null || true)
+[ -z "$top" ] || cd "$top"
+
+# > **ADAPT:** the repo's `./verify format` is the stack's fast check; the stack presets supply the
+# > script. Keep the wrapper guard: hooks/self-test relies on it, and the name must match the one the
+# > self-test stubs.
+wrapper=./verify
+[ -x "$wrapper" ] || exit 0
+
+printf '[gate] format/style check...\n'
+"$wrapper" format

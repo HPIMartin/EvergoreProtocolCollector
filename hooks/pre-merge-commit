@@ -12,10 +12,7 @@ hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 "$hooks_dir/breach-guard"
 "$hooks_dir/content-gate" --staged
 
-if [ -x ./gradlew ]; then
-	printf '[pre-merge-commit] spotlessCheck + checkstyle...\n'
-	if ! ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest; then
-		printf '\n[pre-merge-commit] formatting/brace gate failed on the merge result.\n' >&2
-		exit 1
-	fi
+if ! "$hooks_dir/format-gate"; then
+	printf '\n[pre-merge-commit] format/style gate failed on the merge result.\n' >&2
+	exit 1
 fi
