@@ -1,0 +1,27 @@
+#!/bin/sh
+# Refuses while a commit recorded by post-rewrite or post-commit is still reachable from HEAD. This
+# is the only place the record is pruned, and only by reachability, so a rewrite that removes the
+# offending commit ends the block with no manual step.
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+breach="$(git rev-parse --git-common-dir)/gate-breach"
+[ -f "$breach" ] || exit 0
+
+reachable=""
+while read -r recorded; do
+	[ -n "$recorded" ] || continue
+	if git merge-base --is-ancestor "$recorded" HEAD 2>/dev/null; then
+		reachable="$reachable $recorded"
+	fi
+done < "$breach"
+
+if [ -n "$reachable" ]; then
+	printf '\n[gate] history carries ungated commit(s):%s\n' "$reachable" >&2
+	printf 'git runs no pre-commit hook for the commits rebase, cherry-pick and revert create, so they
+were recorded after the fact. Amend or rebase them until the gate passes; the record clears itself
+once they are no longer reachable from HEAD.\n' >&2
+	exit 1
+fi
+
+rm -f "$breach"

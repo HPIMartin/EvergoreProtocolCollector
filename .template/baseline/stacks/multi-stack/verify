@@ -1,0 +1,145 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln\n' >&2
+	exit 2
+}
+
+[ $# -ge 1 ] || usage
+cmd=$1
+shift
+
+target=""
+if [ "$cmd" = focus ]; then
+	[ $# -eq 1 ] || usage
+	case "$1" in
+		/*) target=$1 ;;
+		*) target=$PWD/$1 ;;
+	esac
+fi
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$root"
+target=${target#"$root"/}
+
+run_in() {
+	dir=$1
+	shift
+	( cd "$dir" && "$@" ) || exit 1
+}
+
+run() {
+	run_in "$root" "$@"
+}
+
+require() {
+	case "$1" in
+		*/*) if [ -f "$1" ] && [ -x "$1" ]; then return 0; fi ;;
+		*) if command -v "$1" >/dev/null 2>&1; then return 0; fi ;;
+	esac
+	printf '[verify] required tool not available: %s\n' "$1" >&2
+	exit 1
+}
+
+report_in() {
+	dir=$1
+	shift
+	status=0
+	( cd "$dir" && "$@" ) || status=$?
+	if [ "$status" -eq 0 ]; then
+		return 0
+	fi
+	if [ "$status" -ge 126 ]; then
+		printf '[verify] %s could not be executed (exit %s)\n' "$1" "$status" >&2
+		exit 1
+	fi
+	printf '[verify] %s reported findings (exit %s)\n' "$1" "$status"
+}
+
+report() {
+	report_in "$root" "$@"
+}
+
+every_tag='@wip or not @wip'
+# ADAPT: one entry per stack; the prefix decides which stack owns a focused path.
+frontend=frontend
+
+case "$cmd" in
+	format|focus|bdd|all|outdated|vuln) ;;
+	*) usage ;;
+esac
+
+case "$cmd" in
+	format)
+		require ./gradlew
+		run ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest
+		require npm
+		run_in "$frontend" npm run --silent format:check
+		;;
+	focus)
+		# ADAPT: one pattern per stack root. A path that matches none of them is a usage error, so
+		# a typo or a file outside every stack can never be answered by the wrong runner.
+		case "$target" in
+			"$frontend"/*)
+				require npm
+				run_in "$frontend" npm test -- "${target#"$frontend"/}"
+				;;
+			src/test/resources/features/*.feature)
+				require ./gradlew
+				run ./gradlew test --no-build-cache --console=plain \
+					-Dcucumber.features="$target" -Dcucumber.filter.tags="$every_tag"
+				;;
+			src/main/*|src/test/*)
+				require ./gradlew
+				run ./gradlew test --no-build-cache --console=plain \
+					--tests "$(basename "$target" .java)"
+				;;
+			*)
+				printf '[verify] %s belongs to no stack; known roots: %s, src/main, src/test\n' \
+					"$target" "$frontend" >&2
+				exit 2
+				;;
+		esac
+		;;
+	bdd)
+		require ./gradlew
+		run ./gradlew test --no-build-cache --console=plain -Dcucumber.filter.tags='@wip'
+		;;
+	all)
+		require ./gradlew
+		run ./gradlew clean build --no-build-cache --console=plain
+		results=$(mktemp)
+		trap 'rm -f "$results"' EXIT
+		# ADAPT: a deny-list, like the java preset's. Extend it to every directory no stack writes
+		# results into, or the count reports someone else's run.
+		if ! find . -type d \
+				\( -name .git -o -name .claude -o -name .template -o -name node_modules \) -prune \
+				-o -path '*/build/test-results/*' -name 'TEST-*.xml' -print > "$results"; then
+			printf '[verify] the test results could not be collected\n' >&2
+			exit 1
+		fi
+		printf '[verify] executed test classes: %s\n' "$(wc -l < "$results" | tr -d ' ')"
+		require npm
+		mkdir -p "$frontend/artifacts/test-results"
+		run_in "$frontend" npm run --silent format:check
+		run_in "$frontend" npm run --silent lint
+		run_in "$frontend" npm run --silent typecheck
+		run_in "$frontend" npm test -- --reporter=verbose --reporter=junit \
+			--outputFile.junit=artifacts/test-results/vitest.xml
+		;;
+	outdated)
+		require ./gradlew
+		report ./gradlew --quiet --console=plain dependencyUpdates
+		require npm
+		report_in "$frontend" npm outdated
+		;;
+	vuln)
+		require ./gradlew
+		report ./gradlew --console=plain dependencyCheckAnalyze
+		require npm
+		report_in "$frontend" npm audit
+		;;
+esac
+
+exit 0

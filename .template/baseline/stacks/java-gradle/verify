@@ -1,0 +1,108 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln\n' >&2
+	exit 2
+}
+
+[ $# -ge 1 ] || usage
+cmd=$1
+shift
+
+target=""
+if [ "$cmd" = focus ]; then
+	[ $# -eq 1 ] || usage
+	case "$1" in
+		/*) target=$1 ;;
+		*) target=$PWD/$1 ;;
+	esac
+fi
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$root"
+target=${target#"$root"/}
+
+run() {
+	"$@" || exit 1
+}
+
+require() {
+	case "$1" in
+		*/*) if [ -f "$1" ] && [ -x "$1" ]; then return 0; fi ;;
+		*) if command -v "$1" >/dev/null 2>&1; then return 0; fi ;;
+	esac
+	printf '[verify] required tool not available: %s\n' "$1" >&2
+	exit 1
+}
+
+report() {
+	status=0
+	"$@" || status=$?
+	if [ "$status" -eq 0 ]; then
+		return 0
+	fi
+	if [ "$status" -ge 126 ]; then
+		printf '[verify] %s could not be executed (exit %s)\n' "$1" "$status" >&2
+		exit 1
+	fi
+	printf '[verify] %s reported findings (exit %s)\n' "$1" "$status"
+}
+
+every_tag='@wip or not @wip'
+
+case "$cmd" in
+	format|focus|bdd|all|outdated|vuln) ;;
+	*) usage ;;
+esac
+
+require ./gradlew
+
+case "$cmd" in
+	format)
+		run ./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest
+		;;
+	focus)
+		case "$target" in
+			*.feature)
+				run ./gradlew test --no-build-cache --console=plain \
+					-Dcucumber.features="$target" -Dcucumber.filter.tags="$every_tag"
+				;;
+			*)
+				run ./gradlew test --no-build-cache --console=plain \
+					--tests "$(basename "$target" .java)"
+				;;
+		esac
+		;;
+	bdd)
+		run ./gradlew test --no-build-cache --console=plain -Dcucumber.filter.tags='@wip'
+		;;
+	all)
+		run ./gradlew clean build --no-build-cache --console=plain
+		results=$(mktemp)
+		trap 'rm -f "$results"' EXIT
+		# ADAPT: this prune list is a deny-list. Extend it to every directory your build never
+		# writes into (worktrees, vendored trees, a nested tool build such as tools/codegen/build),
+		# or the count reports someone else's run, and prefer your build tool's own test summary
+		# wherever it prints one.
+		if ! find . -type d \
+				\( -name .git -o -name .claude -o -name .template -o -name node_modules \) -prune \
+				-o -path '*/build/test-results/*' -name 'TEST-*.xml' -print > "$results"; then
+			printf '[verify] the test results could not be collected\n' >&2
+			exit 1
+		fi
+		printf '[verify] executed test classes: %s\n' "$(wc -l < "$results" | tr -d ' ')"
+		;;
+	outdated)
+		# ADAPT: needs the com.github.ben-manes.versions plugin. Without it, use
+		# ./gradlew --refresh-dependencies dependencies and read the resolved versions.
+		report ./gradlew --quiet --console=plain dependencyUpdates
+		;;
+	vuln)
+		# ADAPT: OWASP dependency-check plugin; trivy fs --scanners vuln . is the plugin-free
+		# alternative.
+		report ./gradlew --console=plain dependencyCheckAnalyze
+		;;
+esac
+
+exit 0

@@ -1,0 +1,148 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln\n' >&2
+	exit 2
+}
+
+[ $# -ge 1 ] || usage
+cmd=$1
+shift
+
+target=""
+if [ "$cmd" = focus ]; then
+	[ $# -eq 1 ] || usage
+	case "$1" in
+		/*) target=$1 ;;
+		*) target=$PWD/$1 ;;
+	esac
+fi
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$root"
+target=${target#"$root"/}
+
+run() {
+	"$@" || exit 1
+}
+
+require() {
+	case "$1" in
+		*/*) if [ -f "$1" ] && [ -x "$1" ]; then return 0; fi ;;
+		*) if command -v "$1" >/dev/null 2>&1; then return 0; fi ;;
+	esac
+	printf '[verify] required tool not available: %s\n' "$1" >&2
+	exit 1
+}
+
+pass_when_no_scenario_is_tagged() {
+	status=0
+	"$@" || status=$?
+	if [ "$status" -eq 5 ]; then
+		printf '[verify] no @wip scenarios\n'
+		status=0
+	fi
+	[ "$status" -eq 0 ] || exit 1
+}
+
+report() {
+	status=0
+	"$@" || status=$?
+	if [ "$status" -eq 0 ]; then
+		return 0
+	fi
+	if [ "$status" -ge 126 ]; then
+		printf '[verify] %s could not be executed (exit %s)\n' "$1" "$status" >&2
+		exit 1
+	fi
+	printf '[verify] %s reported findings (exit %s)\n' "$1" "$status"
+}
+
+build_dir=build
+acceptance=tests/acceptance
+# ADAPT: the artifact the acceptance scenarios drive. The steps know this path and nothing else
+# about the build.
+APP_BINARY=${APP_BINARY:-$root/$build_dir/app}
+export APP_BINARY
+
+format_sources() {
+	require git
+	require clang-format
+	files=$(git ls-files '*.cpp' '*.cc' '*.hpp' '*.h') || {
+		printf '[verify] not a git repository, so the sources cannot be listed\n' >&2
+		exit 1
+	}
+	if [ -n "$files" ]; then
+		printf '%s\n' "$files" | xargs clang-format --dry-run --Werror || exit 1
+	fi
+}
+
+configure() {
+	require cmake
+	run cmake -S . -B "$build_dir" -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+}
+
+case "$cmd" in
+	format|focus|bdd|all|outdated|vuln) ;;
+	*) usage ;;
+esac
+
+case "$cmd" in
+	format)
+		format_sources
+		;;
+	focus)
+		configure
+		run cmake --build "$build_dir"
+		case "$target" in
+			*.feature)
+				require uv
+				run uv run --project "$acceptance" pytest -p no:cacheprovider -v \
+					"$acceptance/steps/test_$(basename "$target" .feature).py"
+				;;
+			*)
+				require ctest
+				run ctest --test-dir "$build_dir" --output-on-failure --no-tests=error \
+					-R "^$(basename "$target" | sed 's/\.[^.]*$//')\."
+				;;
+		esac
+		;;
+	bdd)
+		configure
+		run cmake --build "$build_dir"
+		require uv
+		pass_when_no_scenario_is_tagged \
+			uv run --project "$acceptance" pytest -p no:cacheprovider -v -m wip
+		;;
+	all)
+		format_sources
+		configure
+		run cmake --build "$build_dir" --clean-first
+		# ADAPT: drop this line where clang-tidy runs during the build via CMAKE_CXX_CLANG_TIDY.
+		require run-clang-tidy
+		run run-clang-tidy -p "$build_dir" -quiet
+		mkdir -p artifacts/test-results
+		require ctest
+		run ctest --test-dir "$build_dir" --output-on-failure --no-tests=error \
+			--output-junit "$root/artifacts/test-results/ctest.xml"
+		require uv
+		run uv run --project "$acceptance" pytest -p no:cacheprovider -v \
+			-m "not wip and not characterization" \
+			--junitxml=artifacts/test-results/acceptance.xml
+		;;
+	outdated)
+		# ADAPT: vcpkg manifest mode shown. Conan: compare the conanfile requirements against
+		# conan list "<name>/*" -r=conancenter.
+		require vcpkg
+		report vcpkg x-update-baseline --dry-run
+		;;
+	vuln)
+		# ADAPT: osv-scanner v2 spells this "osv-scanner scan source -r ."; a Conan project scans
+		# osv-scanner --lockfile conan.lock.
+		require osv-scanner
+		report osv-scanner -r .
+		;;
+esac
+
+exit 0

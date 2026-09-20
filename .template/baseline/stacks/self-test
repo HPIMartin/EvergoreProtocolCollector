@@ -1,0 +1,338 @@
+#!/bin/sh
+# > **ADAPT:** after changing a preset's verify script, change the case that pins the behaviour with
+# > it. A preset whose verify script this suite does not cover is a preset nobody proved.
+set -eu
+
+stacks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+for leaked in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do
+	unset "$leaked"
+done
+
+path_base="/usr/bin:/bin"
+git_bin=$(command -v git || true)
+[ -z "$git_bin" ] || path_base="$path_base:$(dirname "$git_bin")"
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+failures=0
+proj=""
+bin=""
+out_file=""
+status=0
+
+check() {
+	if [ "$2" -eq 0 ]; then
+		printf '  ok   %s\n' "$1"
+	else
+		printf '  FAIL %s\n' "$1"
+		failures=$((failures + 1))
+	fi
+}
+
+stub_at() {
+	cat > "$1" <<'STUB'
+#!/bin/sh
+name=$(basename "$0")
+printf '%s %s\n' "$name" "$*" >> "$STUB_LOG"
+if [ -n "${STUB_FAIL_MATCH:-}" ]; then
+	if printf '%s %s' "$name" "$*" | grep -qE "$STUB_FAIL_MATCH"; then
+		exit "${STUB_FAIL_CODE:-1}"
+	fi
+fi
+exit 0
+STUB
+	chmod +x "$1"
+}
+
+stub() { stub_at "$bin/$1"; }
+
+project() {
+	name=$1
+	script=$2
+	shift 2
+	proj="$work/$name"
+	bin="$proj/stub-bin"
+	out_file="$proj/out.txt"
+	mkdir -p "$proj" "$bin"
+	cd "$proj"
+	if [ -z "${no_git:-}" ]; then
+		git init -q .
+		git config user.email stack@example.com
+		git config user.name Stack
+	fi
+	cp "$stacks_dir/$script" verify
+	chmod +x verify
+	STUB_LOG="$proj/stub.log"
+	: > "$STUB_LOG"
+	export STUB_LOG
+	unset STUB_FAIL_MATCH STUB_FAIL_CODE
+	PATH="$bin:$path_base"
+	export PATH
+	for tool in "$@"; do
+		stub "$tool"
+	done
+}
+
+project_without_git() {
+	no_git=1
+	project "$@"
+	no_git=""
+}
+
+fails_with() {
+	STUB_FAIL_MATCH=$1
+	STUB_FAIL_CODE=$2
+	export STUB_FAIL_MATCH STUB_FAIL_CODE
+}
+
+attempt() {
+	set +e
+	"$@" > "$out_file" 2>&1
+	status=$?
+	set -e
+}
+
+logged() { grep -qF "$1" "$STUB_LOG"; }
+
+printf 'stack preset self-test\n'
+
+project multi-all multi-stack/verify npm npx uv
+stub_at "$proj/gradlew"
+mkdir -p frontend
+r=0
+for sub in format all outdated vuln; do
+	: > "$STUB_LOG"
+	attempt ./verify "$sub"
+	if [ "$status" -ne 0 ]; then r=1; fi
+	grep -q '^gradlew ' "$STUB_LOG" || r=1
+	grep -q '^npm ' "$STUB_LOG" || r=1
+done
+check "the composed script runs both stacks for format, all, outdated and vuln" "$r"
+: > "$STUB_LOG"
+attempt ./verify bdd
+if [ "$status" -eq 0 ] && grep -q '^gradlew ' "$STUB_LOG"; then r=0; else r=1; fi
+check "the composed script runs the one acceptance runner for bdd" "$r"
+
+project multi-focus multi-stack/verify npm npx
+stub_at "$proj/gradlew"
+mkdir -p frontend/src src/test/resources/features docs
+: > frontend/src/a.test.ts
+: > src/test/resources/features/x.feature
+: > docs/readme.md
+attempt ./verify focus frontend/src/a.test.ts
+if [ "$status" -eq 0 ] && logged 'a.test.ts'; then r=0; else r=1; fi
+check "the composed script dispatches a frontend path to the frontend stack" "$r"
+: > "$STUB_LOG"
+attempt ./verify focus src/test/resources/features/x.feature
+if [ "$status" -eq 0 ] && logged 'cucumber.features=src/test/resources/features/x.feature'; then r=0; else r=1; fi
+check "the composed script dispatches a feature path to the acceptance runner" "$r"
+: > "$STUB_LOG"
+attempt ./verify focus docs/readme.md
+if [ "$status" -eq 2 ] && [ ! -s "$STUB_LOG" ]; then r=0; else r=1; fi
+check "the composed script refuses a path that belongs to no stack" "$r"
+
+project java-count java-gradle/verify
+stub_at "$proj/gradlew"
+mkdir -p build/test-results/test \
+	.claude/worktrees/other/build/test-results/test \
+	.template/build/test-results/test \
+	node_modules/pkg/build/test-results/test
+: > build/test-results/test/TEST-Real.xml
+: > .claude/worktrees/other/build/test-results/test/TEST-Decoy.xml
+: > .template/build/test-results/test/TEST-Decoy.xml
+: > node_modules/pkg/build/test-results/test/TEST-Decoy.xml
+attempt ./verify all
+if [ "$status" -eq 0 ] && grep -q 'executed test classes: 1' "$out_file"; then r=0; else r=1; fi
+check "java all counts only the project's own test results" "$r"
+
+project java-find java-gradle/verify find
+stub_at "$proj/gradlew"
+fails_with '^find ' 1
+attempt ./verify all
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "java all fails when the result collection itself fails" "$r"
+
+project java-exit java-gradle/verify
+stub_at "$proj/gradlew"
+fails_with '^gradlew' 3
+attempt ./verify all
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "java all clamps a build tool exit code to 1" "$r"
+
+project java-path java-gradle/verify
+stub_at "$proj/gradlew"
+mkdir -p sub/features features
+: > sub/features/x.feature
+: > features/x.feature
+attempt sh -c 'cd sub && ../verify focus features/x.feature'
+if [ "$status" -eq 0 ] && logged 'cucumber.features=sub/features/x.feature'; then r=0; else r=1; fi
+check "java focus resolves a relative path against the caller's directory" "$r"
+
+project java-vuln-missing java-gradle/verify
+attempt ./verify vuln
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "java vuln fails when the build wrapper is missing" "$r"
+
+project java-outdated-missing java-gradle/verify
+attempt ./verify outdated
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "java outdated fails when the build wrapper is missing" "$r"
+
+project java-vuln-findings java-gradle/verify
+stub_at "$proj/gradlew"
+fails_with 'dependencyCheckAnalyze' 1
+attempt ./verify vuln
+if [ "$status" -eq 0 ]; then r=0; else r=1; fi
+check "java vuln stays green when the scanner reports findings" "$r"
+
+project java-vuln-crash java-gradle/verify
+stub_at "$proj/gradlew"
+fails_with 'dependencyCheckAnalyze' 139
+attempt ./verify vuln
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "java vuln fails when the scanner dies by signal" "$r"
+
+project js-vuln-broken js-ts-npm/verify npm
+fails_with 'npm audit' 127
+attempt ./verify vuln
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "js vuln fails when the audit command cannot be executed" "$r"
+
+project js-path js-ts-npm/verify npm npx
+mkdir -p sub/features features
+: > sub/features/x.feature
+: > features/x.feature
+attempt sh -c 'cd sub && ../verify focus features/x.feature'
+if [ "$status" -eq 0 ] && logged 'sub/features/x.feature'; then r=0; else r=1; fi
+check "js focus resolves a relative path against the caller's directory" "$r"
+
+project js-vuln-missing js-ts-npm/verify
+attempt ./verify vuln
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "js vuln fails when npm is not installed" "$r"
+
+project js-vuln-findings js-ts-npm/verify npm
+fails_with 'npm audit' 1
+attempt ./verify vuln
+if [ "$status" -eq 0 ]; then r=0; else r=1; fi
+check "js vuln stays green when the audit reports findings" "$r"
+
+project js-outdated-missing js-ts-npm/verify
+attempt ./verify outdated
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "js outdated fails when npm is not installed" "$r"
+
+project js-all js-ts-npm/verify npm
+attempt ./verify all
+if [ "$status" -eq 0 ] && logged 'artifacts/test-results'; then r=0; else r=1; fi
+check "js all writes its test report to the documented path" "$r"
+
+project python-bdd python/verify uv
+fails_with 'pytest.*-m wip' 5
+attempt ./verify bdd
+if [ "$status" -eq 0 ] && grep -q 'no @wip scenarios' "$out_file"; then r=0; else r=1; fi
+check "python bdd is green with a printed note when no scenario is tagged" "$r"
+
+project python-focus python/verify uv
+fails_with 'pytest' 4
+attempt ./verify focus tests/steps/test_thing.py
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "python focus clamps a runner error to 1" "$r"
+
+project python-path python/verify uv
+mkdir -p sub tests
+: > sub/test_thing.py
+: > test_thing.py
+attempt sh -c 'cd sub && ../verify focus test_thing.py'
+if [ "$status" -eq 0 ] && logged 'sub/test_thing.py'; then r=0; else r=1; fi
+check "python focus resolves a relative path against the caller's directory" "$r"
+
+project python-all python/verify uv
+attempt ./verify all
+if [ "$status" -eq 0 ] && logged 'not wip and not characterization'; then r=0; else r=1; fi
+check "python all excludes wip and characterization scenarios" "$r"
+
+project python-junit python/verify uv
+attempt ./verify all
+if [ "$status" -eq 0 ] && logged 'artifacts/test-results'; then r=0; else r=1; fi
+check "python all writes its test report to the documented path" "$r"
+
+project python-vuln-missing python/verify
+attempt ./verify vuln
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "python vuln fails when uv is not installed" "$r"
+
+project python-vuln-findings python/verify uv
+fails_with 'pip-audit' 1
+attempt ./verify vuln
+if [ "$status" -eq 0 ]; then r=0; else r=1; fi
+check "python vuln stays green when the scanner reports findings" "$r"
+
+project cpp-bdd cpp/verify cmake ctest uv
+fails_with 'pytest.*-m wip' 5
+attempt ./verify bdd
+if [ "$status" -eq 0 ] && grep -q 'no @wip scenarios' "$out_file"; then r=0; else r=1; fi
+check "cpp bdd is green with a printed note when no scenario is tagged" "$r"
+
+project cpp-all cpp/verify cmake ctest clang-format run-clang-tidy uv
+attempt ./verify all
+if [ "$status" -eq 0 ] && logged 'not wip and not characterization'; then r=0; else r=1; fi
+check "cpp all excludes wip and characterization scenarios" "$r"
+
+project cpp-junit cpp/verify cmake ctest clang-format run-clang-tidy uv
+attempt ./verify all
+if [ "$status" -eq 0 ] && logged 'output-junit'; then r=0; else r=1; fi
+check "cpp all writes a junit report for the unit tests" "$r"
+
+project_without_git cpp-format-nogit cpp/verify clang-format
+attempt ./verify format
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "cpp format fails when the working tree is not a repository" "$r"
+
+project cpp-vuln-missing cpp/verify cmake ctest uv
+attempt ./verify vuln
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "cpp vuln fails when the scanner is not installed" "$r"
+
+project cpp-vuln-findings cpp/verify osv-scanner
+fails_with 'osv-scanner' 1
+attempt ./verify vuln
+if [ "$status" -eq 0 ]; then r=0; else r=1; fi
+check "cpp vuln stays green when the scanner reports findings" "$r"
+
+project csharp-all csharp-dotnet/verify dotnet
+attempt ./verify all
+if [ "$status" -eq 0 ] && logged 'TestCategory!=wip&TestCategory!=characterization'; then r=0; else r=1; fi
+check "csharp all excludes wip and characterization scenarios" "$r"
+
+project csharp-vuln-missing csharp-dotnet/verify
+attempt ./verify vuln
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "csharp vuln fails when the dotnet sdk is not installed" "$r"
+
+project csharp-vuln-findings csharp-dotnet/verify dotnet
+fails_with 'list package --vulnerable' 1
+attempt ./verify vuln
+if [ "$status" -eq 0 ]; then r=0; else r=1; fi
+check "csharp vuln stays green when the scan reports findings" "$r"
+
+r=0
+for preset in java-gradle js-ts-npm python cpp csharp-dotnet multi-stack; do
+	project "usage-$preset" "$preset/verify"
+	attempt ./verify nonsense
+	[ "$status" -eq 2 ] || r=1
+	attempt ./verify focus
+	[ "$status" -eq 2 ] || r=1
+	attempt ./verify
+	[ "$status" -eq 2 ] || r=1
+done
+check "every script answers a misuse with the usage exit code" "$r"
+
+printf 'stack preset self-test: '
+if [ "$failures" -eq 0 ]; then
+	printf 'all cases pass\n'
+else
+	printf '%s case(s) FAILED\n' "$failures"
+	exit 1
+fi

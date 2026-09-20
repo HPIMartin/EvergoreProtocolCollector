@@ -1,0 +1,94 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln\n' >&2
+	exit 2
+}
+
+[ $# -ge 1 ] || usage
+cmd=$1
+shift
+
+target=""
+if [ "$cmd" = focus ]; then
+	[ $# -eq 1 ] || usage
+	case "$1" in
+		/*) target=$1 ;;
+		*) target=$PWD/$1 ;;
+	esac
+fi
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$root"
+target=${target#"$root"/}
+
+run() {
+	"$@" || exit 1
+}
+
+require() {
+	case "$1" in
+		*/*) if [ -f "$1" ] && [ -x "$1" ]; then return 0; fi ;;
+		*) if command -v "$1" >/dev/null 2>&1; then return 0; fi ;;
+	esac
+	printf '[verify] required tool not available: %s\n' "$1" >&2
+	exit 1
+}
+
+report() {
+	status=0
+	"$@" || status=$?
+	if [ "$status" -eq 0 ]; then
+		return 0
+	fi
+	if [ "$status" -ge 126 ]; then
+		printf '[verify] %s could not be executed (exit %s)\n' "$1" "$status" >&2
+		exit 1
+	fi
+	printf '[verify] %s reported findings (exit %s)\n' "$1" "$status"
+}
+
+case "$cmd" in
+	format|focus|bdd|all|outdated|vuln) ;;
+	*) usage ;;
+esac
+
+require dotnet
+
+case "$cmd" in
+	format)
+		run dotnet format --verify-no-changes
+		;;
+	focus)
+		case "$target" in
+			*.feature)
+				run dotnet test --filter "FullyQualifiedName~$(basename "$target" .feature)Feature"
+				;;
+			*)
+				run dotnet test --filter "FullyQualifiedName~$(basename "$target" .cs)"
+				;;
+		esac
+		;;
+	bdd)
+		run dotnet test --filter "TestCategory=wip"
+		;;
+	all)
+		run dotnet format --verify-no-changes
+		run dotnet build --no-incremental
+		# ADAPT: the junit logger comes from the JunitXml.TestLogger package; drop it where the
+		# pipeline reads trx instead.
+		run dotnet test --no-build \
+			--filter "TestCategory!=wip&TestCategory!=characterization" \
+			--logger "console;verbosity=normal" \
+			--logger "junit;LogFilePath=artifacts/test-results/{assembly}.xml"
+		;;
+	outdated)
+		report dotnet list package --outdated
+		;;
+	vuln)
+		report dotnet list package --vulnerable --include-transitive
+		;;
+esac
+
+exit 0

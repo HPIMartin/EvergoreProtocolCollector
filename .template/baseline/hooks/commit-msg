@@ -1,0 +1,90 @@
+#!/bin/sh
+# Enforce the project's strict commit-message rules (see engineering-handbook.md section 7):
+# one single line, a present-tense verb first (optional leading "[doc] " tag), no body,
+# no Co-Authored-By line, no tool footer.
+set -eu
+
+msg_file=$1
+source=${2:-}
+
+# > **ADAPT:** ticket keys in the subject. An empty `ticket_key_re` leaves the rules below untouched;
+# > a pattern ('[A-Z][A-Z0-9]+-[0-9]+' for Jira, '#[0-9]+' for GitLab issues) makes
+# > '<verb ...> (KEY)' the sanctioned shape, `ticket_position=prefix` makes it '[KEY] <verb ...>',
+# > and `ticket_required=yes` refuses a subject that carries no key.
+ticket_key_re=''
+ticket_position='suffix'
+ticket_required='no'
+
+# The self-test drives every mode through the environment so its cases need no edit of this file.
+ticket_key_re=${COMMIT_MSG_TICKET_KEY_RE-$ticket_key_re}
+ticket_position=${COMMIT_MSG_TICKET_POSITION-$ticket_position}
+ticket_required=${COMMIT_MSG_TICKET_REQUIRED-$ticket_required}
+
+case "$source" in
+	merge|squash) exit 0 ;;
+esac
+
+reject() {
+	printf '\n[commit-msg] %s\n' "$1" >&2
+	exit 1
+}
+
+clean=$(sed '/^#.*>8/,$d' "$msg_file" | git stripspace --strip-comments)
+subject=$(printf '%s\n' "$clean" | grep -vE '^[[:space:]]*$' | head -n1)
+
+[ -n "$subject" ] || reject "empty commit message."
+
+body_lines=$(printf '%s\n' "$clean" | grep -cE '[^[:space:]]' || true)
+[ "$body_lines" -le 1 ] || reject "the message must be a single line, no body. The git log is the record; details belong in the diff/KB, not a commit body."
+
+if printf '%s\n' "$clean" | grep -qiE 'co-authored-by|generated with|claude code|noreply@anthropic\.com'; then
+	reject "remove the Co-Authored-By line / tool footer: commits carry no attribution footer."
+fi
+
+without_ticket=$subject
+if [ -n "$ticket_key_re" ]; then
+	suffix_re="[^[:space:]] \(($ticket_key_re)\)$"
+	prefix_re="^\[($ticket_key_re)\] "
+	carries_key=no
+	if [ "$ticket_position" = prefix ]; then
+		if printf '%s' "$subject" | grep -qE "$prefix_re"; then
+			without_ticket=${subject#*\] }
+			carries_key=yes
+		elif printf '%s' "$subject" | grep -qE "$suffix_re"; then
+			reject "the ticket key belongs in front, as '[KEY] <verb ...>'. Got: '$subject'"
+		else
+			case "$subject" in
+				"[doc] "*) : ;;
+				"["*"] "*) reject "the leading tag is no ticket key matching $ticket_key_re. Got: '$subject'" ;;
+			esac
+		fi
+	else
+		if printf '%s' "$subject" | grep -qE "$suffix_re"; then
+			without_ticket=${subject% (*)}
+			carries_key=yes
+		elif printf '%s' "$subject" | grep -qE "$prefix_re"; then
+			reject "the ticket key belongs at the end, as '<verb ...> (KEY)'. Got: '$subject'"
+		else
+			case "$subject" in
+				*" ("*")") reject "the trailing group is no ticket key matching $ticket_key_re. Got: '$subject'" ;;
+			esac
+		fi
+	fi
+	if [ "$carries_key" = no ] && [ "$ticket_required" = yes ]; then
+		reject "this project requires a ticket key matching $ticket_key_re. Got: '$subject'"
+	fi
+fi
+
+stripped=$(printf '%s' "$without_ticket" | sed -E 's/^\[doc\] //')
+first=$(printf '%s' "$stripped" | sed -E 's/[[:space:]].*$//')
+
+printf '%s' "$first" | grep -qE '^[A-Z][a-zA-Z0-9]+$' \
+	|| reject "start with a capitalized present-tense verb (optionally prefixed with '[doc] '), e.g. 'Add ...', 'Remove ...', '[doc] Refine ...'. Got: '$subject'"
+
+if printf '%s' "$first" | grep -qE '^(Added|Removed|Fixed|Updated|Created|Changed|Refactored|Implemented|Renamed|Moved|Deleted|Wired|Documented|Adjusted|Improved|Introduced|Replaced|Returned|Handled|Ignored|Aligned|Exposed|Recorded|Served|Bumped|Merged|Reverted|Enabled|Disabled|Wrote|Built|Tested|Deployed|Cleaned|Optimized|Patched|Migrated|Dropped|Pinned|Refined|Groomed|Adding|Removing|Fixing|Updating|Creating|Changing|Refactoring|Implementing|Renaming|Moving|Deleting|Wiring|Documenting|Building|Testing|Deploying|Cleaning|Optimizing|Patching|Migrating|Dropping|Pinning|Refining)$'; then
+	reject "use the present tense: '$first' is past tense or a gerund. Write the verb as a command, e.g. 'Add'/'Fix'/'Refine'."
+fi
+
+if printf '%s' "$stripped" | grep -qE '^(feat|fix|chore|docs|refactor|test|build|ci|style|perf)(\(.*\))?:'; then
+	reject "no conventional-commit prefixes (feat:/fix:/...). Start with a plain present-tense verb."
+fi

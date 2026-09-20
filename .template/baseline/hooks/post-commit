@@ -1,0 +1,41 @@
+#!/bin/sh
+# git asks pre-commit only for `git commit`. A cherry-pick and a revert build their commit
+# themselves, so no hook can refuse it; this runs afterwards, with the refs already moved, records
+# what it finds and lets pre-commit refuse to grow history on top of it. A rebase is left to
+# post-rewrite, which sees the pre-images and can tell a new violation from replayed history, and a
+# plain or amended `git commit` is left alone: pre-commit either ran or was deliberately bypassed
+# with --no-verify, which stays the documented emergency valve.
+# The reflog is what tells those paths apart; git ignores this hook's exit status, so the record,
+# not the status, is what blocks.
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+common_dir=$(git rev-parse --git-common-dir)
+
+case "$(git reflog -1 --format=%gs 2>/dev/null || true)" in
+	cherry-pick:*|revert:*) ;;
+	*) exit 0 ;;
+esac
+
+failed=0
+report=""
+if finding=$("$hooks_dir/content-gate" --commit HEAD 2>&1); then
+	:
+else
+	failed=1
+	report="$finding"
+fi
+
+if ! "$hooks_dir/format-gate" >/dev/null 2>&1; then
+	failed=1
+	report="$report
+[gate] the resulting tree fails the format/style check (hooks/format-gate). Format it and amend."
+fi
+
+if [ "$failed" -eq 1 ]; then
+	git rev-parse HEAD >> "$common_dir/gate-breach"
+	printf '\n[post-commit] this %s built its commit without asking a hook, and it fails the gate:\n%s\n' "$(git reflog -1 --format=%gs | cut -d: -f1)" "$report" >&2
+	printf '[post-commit] every further commit is refused until it is gone.\n' >&2
+	exit 1
+fi

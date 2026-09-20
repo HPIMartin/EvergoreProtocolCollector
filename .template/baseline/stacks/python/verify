@@ -1,0 +1,107 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln\n' >&2
+	exit 2
+}
+
+[ $# -ge 1 ] || usage
+cmd=$1
+shift
+
+target=""
+if [ "$cmd" = focus ]; then
+	[ $# -eq 1 ] || usage
+	case "$1" in
+		/*) target=$1 ;;
+		*) target=$PWD/$1 ;;
+	esac
+fi
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$root"
+target=${target#"$root"/}
+
+run() {
+	"$@" || exit 1
+}
+
+require() {
+	case "$1" in
+		*/*) if [ -f "$1" ] && [ -x "$1" ]; then return 0; fi ;;
+		*) if command -v "$1" >/dev/null 2>&1; then return 0; fi ;;
+	esac
+	printf '[verify] required tool not available: %s\n' "$1" >&2
+	exit 1
+}
+
+pass_when_no_scenario_is_tagged() {
+	status=0
+	"$@" || status=$?
+	if [ "$status" -eq 5 ]; then
+		printf '[verify] no @wip scenarios\n'
+		status=0
+	fi
+	[ "$status" -eq 0 ] || exit 1
+}
+
+report() {
+	status=0
+	"$@" || status=$?
+	if [ "$status" -eq 0 ]; then
+		return 0
+	fi
+	if [ "$status" -ge 126 ]; then
+		printf '[verify] %s could not be executed (exit %s)\n' "$1" "$status" >&2
+		exit 1
+	fi
+	printf '[verify] %s reported findings (exit %s)\n' "$1" "$status"
+}
+
+case "$cmd" in
+	format|focus|bdd|all|outdated|vuln) ;;
+	*) usage ;;
+esac
+
+require uv
+
+case "$cmd" in
+	format)
+		run uv run ruff format --check .
+		run uv run ruff check .
+		;;
+	focus)
+		case "$target" in
+			*.feature)
+				run uv run pytest -p no:cacheprovider -v \
+					"tests/steps/test_$(basename "$target" .feature).py"
+				;;
+			*)
+				run uv run pytest -p no:cacheprovider -v "$target"
+				;;
+		esac
+		;;
+	bdd)
+		pass_when_no_scenario_is_tagged uv run pytest -p no:cacheprovider -v -m wip
+		;;
+	all)
+		mkdir -p artifacts/test-results
+		run uv run ruff format --check .
+		run uv run ruff check .
+		# ADAPT: mypy --strict . where mypy is the chosen type checker.
+		run uv run pyright
+		run uv run pytest -p no:cacheprovider -v -m "not wip and not characterization" \
+			--junitxml=artifacts/test-results/pytest.xml
+		;;
+	outdated)
+		report uv pip list --outdated
+		report uv lock --upgrade --dry-run
+		;;
+	vuln)
+		# ADAPT: osv-scanner --lockfile uv.lock is the scanner-agnostic alternative.
+		report uv run pip-audit
+		;;
+esac
+
+exit 0

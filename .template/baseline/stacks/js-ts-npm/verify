@@ -1,0 +1,91 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln\n' >&2
+	exit 2
+}
+
+[ $# -ge 1 ] || usage
+cmd=$1
+shift
+
+target=""
+if [ "$cmd" = focus ]; then
+	[ $# -eq 1 ] || usage
+	case "$1" in
+		/*) target=$1 ;;
+		*) target=$PWD/$1 ;;
+	esac
+fi
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$root"
+target=${target#"$root"/}
+
+run() {
+	"$@" || exit 1
+}
+
+require() {
+	case "$1" in
+		*/*) if [ -f "$1" ] && [ -x "$1" ]; then return 0; fi ;;
+		*) if command -v "$1" >/dev/null 2>&1; then return 0; fi ;;
+	esac
+	printf '[verify] required tool not available: %s\n' "$1" >&2
+	exit 1
+}
+
+report() {
+	status=0
+	"$@" || status=$?
+	if [ "$status" -eq 0 ]; then
+		return 0
+	fi
+	if [ "$status" -ge 126 ]; then
+		printf '[verify] %s could not be executed (exit %s)\n' "$1" "$status" >&2
+		exit 1
+	fi
+	printf '[verify] %s reported findings (exit %s)\n' "$1" "$status"
+}
+
+case "$cmd" in
+	format|focus|bdd|all|outdated|vuln) ;;
+	*) usage ;;
+esac
+
+require npm
+
+case "$cmd" in
+	format)
+		run npm run --silent format:check
+		;;
+	focus)
+		case "$target" in
+			*.feature) run npm run --silent bdd -- --profile focus "$target" ;;
+			*) run npm test -- "$target" ;;
+		esac
+		;;
+	bdd)
+		run npm run --silent bdd -- --profile wip
+		;;
+	all)
+		mkdir -p artifacts/test-results
+		run npm run --silent format:check
+		run npm run --silent lint
+		run npm run --silent typecheck
+		run npm test -- --reporter=verbose --reporter=junit \
+			--outputFile.junit=artifacts/test-results/vitest.xml
+		run npm run --silent bdd -- --profile default \
+			--format junit:artifacts/test-results/cucumber.xml
+		;;
+	outdated)
+		report npm outdated
+		;;
+	vuln)
+		# ADAPT: --audit-level tunes what is printed, never whether this fails.
+		report npm audit
+		;;
+esac
+
+exit 0

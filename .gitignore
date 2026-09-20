@@ -20,6 +20,8 @@ CLAUDE.local.md
 /.claude/worktrees/
 /.claude/cache/
 /.claude/.tmp/
+# A newer template payload staged for /template-upgrade; the adopted baseline beside it is committed.
+/.template/incoming/
 # Persisted Claude login + history (devcontainer bind mount) — folder is committed empty; its contents (live tokens) never are
 /.devcontainer/.claude-home/*
 /logs.txt

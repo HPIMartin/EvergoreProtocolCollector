@@ -1,0 +1,25 @@
+.claude/settings.local.json
+.claude/worktrees/
+# A newer template payload staged for /template-upgrade; the adopted baseline beside it is committed.
+.template/incoming/
+# The archive assemble.sh writes into the checkout by default.
+ai-dev-process-template-*.zip
+ai-dev-process-template-*.tar.gz
+# Devcontainer variant only (env/devcontainer/): the per-project Claude home stays local.
+.devcontainer/.claude-home/*
+!.devcontainer/.claude-home/.gitignore
+# Throwaway agent probes (build-run-deploy.md) and build output, per stack preset; /adopt keeps the
+# lines of the chosen stacks (C#: keep probe/Probe.csproj tracked with !/probe/Probe.csproj).
+/src/probe/
+/probe/
+/artifacts/
+/build/
+.venv/
+# Secrets and keystores never reach the repo (engineering-handbook §7). A committed placeholder
+# template needs a negation, e.g. !secrets.local.properties.template
+*.local.*
+*.pfx
+*.p12
+*.jks
+*.pem
+*.key
