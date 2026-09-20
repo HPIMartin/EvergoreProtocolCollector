@@ -4,7 +4,8 @@
 
 - **Tool:** Gradle (Kotlin DSL, `build.gradle.kts`), `io.micronaut.application` plugin, Micronaut
   platform `4.10.3`, **Java 25** (Gradle toolchain, auto-provisioned via the foojay resolver),
-  runtime Netty. Main class `…​.Application`. Build and test: `./gradlew build`.
+  runtime Netty. Main class `…​.Application`. Build and test: `./verify all` (the one entry point,
+  below), which wraps `./gradlew clean build --no-build-cache`.
 - **Key deps:** Selenium 4.7.2, ORMLite-JDBC 6.1, sqlite-jdbc 3.41.2.2, flyway-core 11.20.3 (schema
   migrations), micronaut-openapi (Swagger/RapiDoc/ReDoc), `micronaut-management` (health endpoint +
   indicators), snakeyaml (Micronaut 4 no longer bundles it). Test only: micronaut-test-junit5, JUnit
@@ -136,6 +137,28 @@
   - **Toolchain:** the `trivy` binary comes from the devcontainer feature
     `ghcr.io/dhoeric/features/trivy` (present after a container rebuild; any `trivy` on the `PATH`
     works, e.g. from the [official install script](https://trivy.dev/latest/getting-started/installation/)).
+
+## The verify script (the one entry point)
+
+`./verify`, a committed POSIX-sh script at the repo root, is what developers, agents and the git
+hooks call; Gradle is the roof underneath it and drives the frontend's npm tasks (`:frontend:npm*`),
+so the script needs no second stack of its own.
+
+| Subcommand | Runs | Who calls it |
+|---|---|---|
+| `./verify format` | `./gradlew --quiet --console=plain spotlessCheck checkstyleMain checkstyleTest` | `hooks/format-gate`, on every commit-path hook |
+| `./verify focus <path>` | a `frontend/` path → `npm test -- <path>` (Vitest) in `frontend/`; a `src/test/resources/features/*.feature` path → the acceptance suite with `-Dcucumber.features=<path>` and every tag; a `src/main/` or `src/test/` path → `./gradlew test --no-build-cache --tests <class>`; any other path is a usage error (exit 2) | the TDD inner loop; the falsifiers' counter-tests |
+| `./verify bdd` | the acceptance suite (`--tests '*RunAcceptanceScenariosTest'`) with `-Dcucumber.filter.tags='@wip'`; no `@wip` scenario is a clean pass | the TDD loop while the scenarios are still tagged |
+| `./verify all` | `./gradlew clean build --no-build-cache --console=plain` (Java and frontend tests, lint, format, the armed scenarios), then the count of `TEST-*.xml` under `build/test-results/` | before every gate, after every rebase |
+| `./verify outdated` | refuses with the reason: no Gradle freshness task is installed, Dependabot reports freshness for every ecosystem of this project | the modernisation track, on demand |
+| `./verify vuln` | `./gradlew vulnScan` (Trivy over both dependency graphs, below), report-only | on demand; gating is a delivery decision |
+
+- Exit code 0 or 1; a usage error exits 2. A relative `focus` path resolves against the caller's
+  directory. `all` prints the executed test-class count, so a cached or skipped run cannot pass as a
+  green one ([testing.md](testing.md), "Proving a run really executed").
+- The `test` task forwards `cucumber.filter.tags` and `cucumber.features` into the test JVM and
+  relaxes `failOnNoDiscoveredTests` for exactly those runs; `junit-platform.properties` holds the
+  default filter `not @wip and not @characterization`.
 
 ## Git hooks (local enforcement)
 

@@ -458,7 +458,9 @@ configuration-time `check` fails the build if it is ever set again.
 
 ## Proving a run really executed
 
-The gateway build is **`./gradlew clean build --no-build-cache`**. All three parts are load-bearing:
+The gateway build is **`./verify all`**, which runs `./gradlew clean build --no-build-cache` and
+prints the executed test-class count ([build-run-deploy.md](build-run-deploy.md)). All three parts
+of the Gradle command are load-bearing:
 
 - **`clean` alone does not force execution.** It deletes the outputs, but `org.gradle.caching` is on
   and the local build cache is shared by every worktree (build-run-deploy.md), so Gradle restores
