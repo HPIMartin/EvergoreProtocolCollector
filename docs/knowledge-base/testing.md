@@ -497,7 +497,20 @@ of the Gradle command are load-bearing:
   failure output would leave the reader guessing which of several inputs failed, or one that proves
   something by absence. Everywhere else the name states the behaviour and the message is redundant
   narration. A message that says something the name does not is a name that needs rewriting.
-- **BDD (PO perspective):** capture the use cases as scenarios, e.g. *"Given a member deposited
-  N gold and crafted items worth M, when I view the overview, then their guild value is N+M."*
-  The whole collect→evaluate→overview flow is now covered by `ProtocolEvaluationAcceptanceTest`
-  (scraper stubbed, real evaluation, asserted via HTTP + the meta repo).
+- **A test for an injected seam asserts that the seam was driven**, not only the outcome it enables:
+  count the fake's calls, read the fake clock. If the assertion would still pass with the production
+  collaborator wired in, the test is fake-green.
+- **BDD comes first and is mandatory** (handbook §5, author decision 2026-09-20): a feature with
+  observable behavior begins with Gherkin scenarios in `src/test/resources/features/`, gated by the
+  scenario falsifier, **confirmed by the author as the complete acceptance**, and committed `@wip`
+  before any production code; TDD cycles drive them green, step definitions in
+  `dev.schoenberg.evergore.protocolParser.acceptance` included, and the feature is armed (`@wip`
+  removed) when they pass. `RunAcceptanceScenariosTest` is the one acceptance runner for the whole
+  system, backend and SPA; the frontend keeps its Vitest unit tests only. `./verify bdd` runs the
+  `@wip` scenarios, `./verify all` the armed ones; a `@characterization` scenario awaiting the
+  author's confirmation (`/bdd-catch-up`) is excluded from `all` like `@wip`. Scenario language:
+  English, with the game's German names quoted as the game spells them. **Suspended for now**
+  (author decision 2026-09-20): the runner carries no scenario, the catch-up is a low-priority
+  backlog item, and strands claim the §5 exemption explicitly until the author picks it. The
+  collect→evaluate→overview flow is covered today by `ProtocolEvaluationAcceptanceTest` (scraper
+  stubbed, real evaluation, asserted via HTTP + the meta repo).

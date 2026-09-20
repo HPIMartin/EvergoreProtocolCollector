@@ -115,7 +115,7 @@ Java version pinned in places that must stay in sync (**currently `25`**):
 - The build toolchain JDK is auto-provisioned by the foojay resolver, so a host/devcontainer JDK
   mismatch self-heals.
 - **To upgrade:** bump the toolchain in `build.gradle.kts` plus the devcontainer and Dockerfile
-  bases together, rebuild the container, run `./gradlew build`; nothing lands on the host.
+  bases together, rebuild the container, run `./verify all`; nothing lands on the host.
   (Standing goal: keep this bump a single, documented switch.)
 - **Java 25 made `java.sql.Timestamp.from` strict:** its `Math.multiplyExact` throws where JDK 17
   silently wrapped, so converting an extreme instant (`LocalDateTime.MIN`, for one) to a

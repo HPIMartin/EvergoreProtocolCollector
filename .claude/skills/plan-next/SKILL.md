@@ -37,10 +37,12 @@ items mean, or a release approaches.
 - `docs/backlog.md`, the "▶ Current status / next action" section
 - `docs/open-questions.md`, newest decisions first, plus the newest rows of `docs/process-learnings.md`
 - `docs/roadmap.md` and `docs/risks.md`
+- the `.feature` files under `src/test/resources/features/`: they are the executable specification
+  (handbook §5)
 
 ## 2. Build the difference list
 
-This is the deliverable. It is **not** a summary of the backlog, which the author can read. Seven
+This is the deliverable. It is **not** a summary of the backlog, which the author can read. Eight
 checks, each of which has found something real in practice:
 
 1. **Items younger than the plan.** Take the date of the last ordering decision in
@@ -62,6 +64,9 @@ checks, each of which has found something real in practice:
 7. **Ordering traps.** Find items whose cost is paid twice in the wrong order: anything that
    documents, explains or publishes a number against anything that still changes that number. Name
    the dependency, not just the item.
+8. **Specification drift.** A `.feature` that promises behavior no item owns, and an item that
+   promises behavior no `.feature` covers; with executable scenarios the specification and the plan
+   can drift apart in both directions.
 
 ## 3. Deliver it as a page, and make the page runnable
 
@@ -76,7 +81,8 @@ taken, and the questions still open.
 **The execution.** One block per acutely next step, each carrying:
 
 - A **prompt that stands on its own** in a fresh session on another machine: what to read first to
-  orient, the acceptance, the measured figures, and the trap that will otherwise be walked into.
+  orient, the acceptance (the `.feature` where one exists), the measured figures, and the trap that
+  will otherwise be walked into.
   Hand it the capability, never the backlog ID. Give it a copy button, which is what makes the page
   a launcher rather than a report.
 - The **model** to start that session on, plus the gate's tier where the change escalates
@@ -103,7 +109,7 @@ way, with figures where you measured them.
 
 - Record each decision in `docs/open-questions.md` as its own dated row (decision, why, alternatives
   offered). **One row per line**; never append onto the previous row's line, which has silently
-  swallowed five decisions before.
+  swallowed five decisions before (DOC-11).
 - Apply the consequences: the backlog's rows and status, the roadmap's milestones, and every inbound
   pointer to a heading you renumber (DOC-10). Completed work leaves the docs; git is the history.
 - Commit per handbook §7: one confirmed single-line message per cohesive change, no body, no footer,
@@ -112,4 +118,4 @@ way, with figures where you measured them.
 Optional scope from the author: $ARGUMENTS
 
 Start by orienting, then report the difference list. Do not propose an order before you have run all
-seven checks: the finding that changes the plan is usually the one nobody was looking for.
+eight checks: the finding that changes the plan is usually the one nobody was looking for.
