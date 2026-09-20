@@ -1,5 +1,0 @@
-.claude/settings.local.json
-.claude/worktrees/
-# Devcontainer variant only (env/devcontainer/): the per-project Claude home stays local.
-.devcontainer/.claude-home/*
-!.devcontainer/.claude-home/.gitignore

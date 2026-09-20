@@ -171,6 +171,5 @@ Kept in the backlog with their rationale, not deleted; revisit only on a new rea
 - **F4** multi-guild / multi-world and **F5** public read-only API — speculative: there is one
   guild and no second consumer.
 - **G5** case study — worth writing once there is something finished to tell.
-- **G4** BDD tooling — "plain JUnit unless asked" has held since June and blocks nothing.
 - **G8** `/commit` slash command and **G9** the WebFetch doc convention — neither prevents an error
   mechanically, which is the bar this stage applies to the G epic.
