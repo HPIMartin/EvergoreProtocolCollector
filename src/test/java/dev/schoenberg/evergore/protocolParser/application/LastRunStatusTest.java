@@ -1,11 +1,12 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
-import java.time.*;
-import java.util.*;
+import java.time.Instant;
+import java.util.List;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class LastRunStatusTest {
 

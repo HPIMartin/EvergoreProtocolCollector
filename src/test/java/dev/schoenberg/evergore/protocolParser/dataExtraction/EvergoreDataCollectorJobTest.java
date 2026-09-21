@@ -1,19 +1,26 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction;
 
-import java.time.*;
-import java.util.*;
-import java.util.concurrent.atomic.*;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import dev.schoenberg.evergore.protocolParser.*;
-import dev.schoenberg.evergore.protocolParser.application.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
-import dev.schoenberg.evergore.protocolParser.helper.config.*;
+import dev.schoenberg.evergore.protocolParser.LoggerSpy;
+import dev.schoenberg.evergore.protocolParser.application.EvaluationResult;
+import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
+import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
+import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.FakeMetaInformationRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class EvergoreDataCollectorJobTest {
 

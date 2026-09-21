@@ -1,16 +1,20 @@
 package dev.schoenberg.evergore.protocolParser.monitoring;
 
-import java.time.*;
-import java.util.*;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 
-import io.micronaut.health.*;
-import io.micronaut.management.health.indicator.*;
-import org.junit.jupiter.api.*;
-import org.reactivestreams.*;
+import io.micronaut.health.HealthStatus;
+import io.micronaut.management.health.indicator.HealthResult;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
-import dev.schoenberg.evergore.protocolParser.application.*;
+import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class LastRunHealthIndicatorTest {
 

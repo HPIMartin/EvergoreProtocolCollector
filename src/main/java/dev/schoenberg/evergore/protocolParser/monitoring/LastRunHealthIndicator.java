@@ -1,14 +1,18 @@
 package dev.schoenberg.evergore.protocolParser.monitoring;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import jakarta.inject.*;
+import jakarta.inject.Singleton;
 
-import io.micronaut.health.*;
-import io.micronaut.management.health.indicator.*;
-import org.reactivestreams.*;
+import io.micronaut.health.HealthStatus;
+import io.micronaut.management.health.indicator.HealthIndicator;
+import io.micronaut.management.health.indicator.HealthResult;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
 
-import dev.schoenberg.evergore.protocolParser.application.*;
+import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 
 @Singleton
 public class LastRunHealthIndicator implements HealthIndicator {

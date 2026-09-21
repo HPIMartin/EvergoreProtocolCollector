@@ -1,27 +1,33 @@
 package dev.schoenberg.evergore.protocolParser;
 
-import java.time.*;
+import java.time.Clock;
+import java.time.ZoneId;
 
-import jakarta.inject.*;
+import jakarta.inject.Singleton;
 
 import io.micronaut.context.annotation.Factory;
 import org.openqa.selenium.support.ui.Sleeper;
 
-import dev.schoenberg.evergore.protocolParser.application.*;
+import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
+import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
+import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
-import dev.schoenberg.evergore.protocolParser.businessLogic.banking.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.*;
-import dev.schoenberg.evergore.protocolParser.businessLogic.storage.*;
-import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
-import dev.schoenberg.evergore.protocolParser.database.*;
-import dev.schoenberg.evergore.protocolParser.database.bank.*;
-import dev.schoenberg.evergore.protocolParser.database.metaInformation.*;
-import dev.schoenberg.evergore.protocolParser.database.storage.*;
-import dev.schoenberg.evergore.protocolParser.helper.config.*;
-import dev.schoenberg.evergore.protocolParser.helper.fileLoader.*;
-import dev.schoenberg.evergore.protocolParser.helper.selenium.*;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContributions;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
+import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
+import dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
+import dev.schoenberg.evergore.protocolParser.helper.fileLoader.AlternativeFileLoaderWrapper;
+import dev.schoenberg.evergore.protocolParser.helper.fileLoader.DiscFileLoader;
+import dev.schoenberg.evergore.protocolParser.helper.fileLoader.ResourceFileLoader;
+import dev.schoenberg.evergore.protocolParser.helper.selenium.FileLoader;
 
 @Factory
 public class ApplicationFactory {

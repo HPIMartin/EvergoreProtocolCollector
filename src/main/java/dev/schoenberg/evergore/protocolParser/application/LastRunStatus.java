@@ -1,8 +1,9 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
-import java.time.*;
-import java.util.*;
-import java.util.concurrent.atomic.*;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class LastRunStatus {
 

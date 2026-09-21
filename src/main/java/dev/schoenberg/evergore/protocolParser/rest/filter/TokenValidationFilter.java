@@ -1,16 +1,18 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
-import java.security.*;
+import java.security.MessageDigest;
 
-import jakarta.inject.*;
+import jakarta.inject.Singleton;
 
-import io.micronaut.http.*;
-import io.micronaut.http.annotation.*;
-import io.micronaut.http.filter.*;
-import org.reactivestreams.*;
+import io.micronaut.http.HttpRequest;
+import io.micronaut.http.MutableHttpResponse;
+import io.micronaut.http.annotation.Filter;
+import io.micronaut.http.filter.HttpServerFilter;
+import io.micronaut.http.filter.ServerFilterChain;
+import org.reactivestreams.Publisher;
 
-import dev.schoenberg.evergore.protocolParser.*;
-import dev.schoenberg.evergore.protocolParser.exceptions.*;
+import dev.schoenberg.evergore.protocolParser.Logger;
+import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
 import dev.schoenberg.evergore.protocolParser.helper.config.SecurityConfiguration;
 
 import static java.nio.charset.StandardCharsets.UTF_8;

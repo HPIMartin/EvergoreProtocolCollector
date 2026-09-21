@@ -1,24 +1,28 @@
 package dev.schoenberg.evergore.protocolParser;
 
-import java.io.*;
-import java.nio.file.*;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
-import jakarta.inject.*;
+import jakarta.inject.Inject;
 
-import io.micronaut.runtime.server.*;
-import io.micronaut.scheduling.*;
-import io.micronaut.test.annotation.*;
-import io.micronaut.test.extensions.junit5.annotation.*;
-import kong.unirest.*;
-import org.junit.jupiter.api.*;
+import io.micronaut.runtime.server.EmbeddedServer;
+import io.micronaut.scheduling.DefaultTaskExceptionHandler;
+import io.micronaut.test.annotation.MockBean;
+import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import kong.unirest.HttpResponse;
+import kong.unirest.Unirest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import dev.schoenberg.evergore.protocolParser.application.*;
-import dev.schoenberg.evergore.protocolParser.dataExtraction.*;
-import dev.schoenberg.evergore.protocolParser.database.*;
-import dev.schoenberg.evergore.protocolParser.helper.config.*;
+import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
+import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
+import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.*;
-import static org.assertj.core.api.Assertions.*;
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @MicronautTest
 class HealthEndpointTest {
