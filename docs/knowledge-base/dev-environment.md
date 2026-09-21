@@ -71,6 +71,17 @@ now fails visibly instead of silently.
 Claude Code, Java pack (the *editor* language server, distinct from the JDK), Checkstyle, SonarLint,
 GitLens.
 
+### The IDE's Java null analysis is off (`.vscode/settings.json`)
+
+`java.compile.nullAnalysis.mode` is **`disabled`**, not `automatic` (backlog **G20**, decided
+2026-09-21, open-questions.md). `automatic` turns itself on because jspecify 1.0.0 sits transitively
+on the compile classpath, then the language server's JDT compiler runs annotation-based null *type*
+analysis over a codebase that carries no null annotation at all: 136 of 152 findings were `@NonNull`
+type arguments JDT infers itself and immediately reports as unchecked conversions, not defects. A
+panel that size trains the reader to ignore it, hiding the handful of findings `javac` genuinely
+cannot see. Adopting jspecify project-wide (`@NullMarked` + annotations) was the alternative; nothing
+enforces it today since `javac` reads none of it (that would be backlog **G6**).
+
 ## How to work in it (recommended)
 
 1. Open the repo in **VS Code** with the **Dev Containers** extension.

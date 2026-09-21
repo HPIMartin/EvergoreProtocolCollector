@@ -70,7 +70,7 @@ class LastRunStatusRecomputeIsolationTest {
 			}
 			assertRunTaggedFieldsBelongToTheSameRun(tested.snapshot(), readerFailure, taggedSnapshotsObserved);
 		});
-		reader.setUncaughtExceptionHandler((thread, error) -> readerFailure.compareAndSet(null, error));
+		reader.setUncaughtExceptionHandler((_, error) -> readerFailure.compareAndSet(null, error));
 
 		writerA.start();
 		writerB.start();

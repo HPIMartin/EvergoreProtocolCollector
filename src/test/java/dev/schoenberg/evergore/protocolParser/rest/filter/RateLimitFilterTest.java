@@ -98,7 +98,7 @@ class RateLimitFilterTest {
 	void countsAMalformedRequestTargetLikeAnyOther() {
 		RawHttpClient rawClient = new RawHttpClient(server.getPort());
 
-		List<Integer> statuses = IntStream.range(0, REQUESTS_PER_BURST).mapToObj(request -> rawClient.statusOf("/overview%zz")).toList();
+		List<Integer> statuses = IntStream.range(0, REQUESTS_PER_BURST).mapToObj(_ -> rawClient.statusOf("/overview%zz")).toList();
 
 		assertThat(statuses).containsExactly(BAD_REQUEST.getCode(), BAD_REQUEST.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
@@ -108,13 +108,13 @@ class RateLimitFilterTest {
 		RawHttpClient rawClient = new RawHttpClient(server.getPort());
 		String oversizedTarget = "/" + "a".repeat(TARGET_LONGER_THAN_THE_SERVER_ACCEPTS);
 
-		List<Integer> statuses = IntStream.range(0, REQUESTS_PER_BURST).mapToObj(request -> rawClient.statusOf(oversizedTarget)).toList();
+		List<Integer> statuses = IntStream.range(0, REQUESTS_PER_BURST).mapToObj(_ -> rawClient.statusOf(oversizedTarget)).toList();
 
 		assertThat(statuses).as("a 429 on the third request would mean the counter saw them; 413 throughout means it did not").containsOnly(REQUEST_ENTITY_TOO_LARGE.getCode());
 	}
 
 	private List<Integer> statusesOfThreeRequestsTo(String path) {
-		return IntStream.range(0, REQUESTS_PER_BURST).mapToObj(request -> statusOf(path)).toList();
+		return IntStream.range(0, REQUESTS_PER_BURST).mapToObj(_ -> statusOf(path)).toList();
 	}
 
 	private int statusOf(String path) {

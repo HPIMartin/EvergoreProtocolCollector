@@ -245,7 +245,7 @@ class EvergoreItemTest {
 		for (EvergoreItem item : EvergoreItem.values()) {
 			if (GEM_PREFIX.matcher(item.ingameName).find() && !ARMOUR.contains(item.category)) {
 				pricesPerGroup
-						.computeIfAbsent(GEM_PREFIX.matcher(item.ingameName).results().findFirst().orElseThrow().group(1) + "/" + item.category, key -> new TreeSet<>())
+						.computeIfAbsent(GEM_PREFIX.matcher(item.ingameName).results().findFirst().orElseThrow().group(1) + "/" + item.category, _ -> new TreeSet<>())
 						.add(item.marketValue);
 			}
 		}

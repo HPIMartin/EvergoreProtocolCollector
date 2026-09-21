@@ -21,7 +21,7 @@ class TokenValidationFilterTest {
 	private static final String API_TOKEN = "correct-horse-battery-staple";
 	private static final String PROTECTED_PATH = "/api/v1/avatars";
 
-	private final Publisher<MutableHttpResponse<?>> passedThrough = subscriber -> {};
+	private final Publisher<MutableHttpResponse<?>> passedThrough = _ -> {};
 	private final List<HttpRequest<?>> reachedTheChain = new ArrayList<>();
 	private final ServerFilterChain chain = request -> {
 		reachedTheChain.add(request);

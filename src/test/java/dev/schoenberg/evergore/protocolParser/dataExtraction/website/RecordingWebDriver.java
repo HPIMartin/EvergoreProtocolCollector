@@ -73,7 +73,7 @@ final class RecordingWebDriver implements WebDriver {
 	}
 
 	private void keysSent(By locator, CharSequence... keys) {
-		sentKeys.computeIfAbsent(locator, ignored -> new ArrayList<>()).add(String.join("", keys));
+		sentKeys.computeIfAbsent(locator, _ -> new ArrayList<>()).add(String.join("", keys));
 	}
 
 	@Override

@@ -34,7 +34,9 @@ public class RawHttpClient {
 	}
 
 	private String readStatusLine(Socket socket) throws Exception {
-		return new BufferedReader(new InputStreamReader(socket.getInputStream(), US_ASCII)).readLine();
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), US_ASCII))) {
+			return reader.readLine();
+		}
 	}
 
 	private int statusCodeOf(String statusLine) {

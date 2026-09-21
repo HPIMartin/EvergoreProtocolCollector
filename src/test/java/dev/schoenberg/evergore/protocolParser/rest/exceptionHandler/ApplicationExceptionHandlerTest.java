@@ -9,7 +9,6 @@ import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
 import dev.schoenberg.evergore.protocolParser.exceptions.NoElementFound;
 import dev.schoenberg.evergore.protocolParser.exceptions.ProtocolParserException;
-import dev.schoenberg.evergore.protocolParser.exceptions.ProtocolParserException.ExceptionResponseVisitor;
 import dev.schoenberg.evergore.protocolParser.exceptions.TooManyRequests;
 
 import static org.assertj.core.api.Assertions.assertThat;
