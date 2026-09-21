@@ -85,6 +85,13 @@ class KbClassReferenceExtractorTest {
 	}
 
 	@Test
+	void excludesStrictHostKeyCheckingAsAnOpenSshClientOptionNotAClass() {
+		List<String> extracted = KbClassReferenceExtractor.extractCandidates("The deploy runs with `StrictHostKeyChecking=yes`.");
+
+		assertThat(extracted).isEmpty();
+	}
+
+	@Test
 	void extractsAMultiHumpTokenThatIsNotStoplisted() {
 		List<String> extracted = KbClassReferenceExtractor.extractCandidates("`TokenScopeTest` proves the default-deny scope.");
 

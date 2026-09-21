@@ -21,6 +21,7 @@ class KbClassReferenceExtractor {
 		reasons.put("EnterWorktree", "a Claude Code tool name, not a project class");
 		reasons.put("D2AcceptanceTest", "the engineering handbook's own deliberate counter-example of a bad class name, not a claim it exists");
 		reasons.put("SonarSource", "VS Code extension publisher id, not a class");
+		reasons.put("StrictHostKeyChecking", "OpenSSH client option name, not a class");
 		return Collections.unmodifiableMap(reasons);
 	}
 
