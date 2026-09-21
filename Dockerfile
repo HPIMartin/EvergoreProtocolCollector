@@ -11,6 +11,9 @@ COPY gradle ./gradle
 COPY config ./config
 COPY src ./src
 COPY frontend ./frontend
+# `check` runs KbCitationGuardTest, which reads the knowledge base's Markdown; without it the image
+# build fails on a NoSuchFileException rather than on the code.
+COPY docs/knowledge-base ./docs/knowledge-base
 
 RUN ./gradlew --no-daemon clean check installDist
 
