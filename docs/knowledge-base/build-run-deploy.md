@@ -269,12 +269,14 @@ tests) remains the gate for landing on `main`.
 - **SemVer, no `-SNAPSHOT`:** nothing is published to an artifact repository, so a snapshot suffix
   would gate nothing. `version` holds the number of the **next** release, and the commit that sets
   that number only *declares* it. One version commit per release.
-- **The tagged commit is the released state, not the version commit:** the tag goes on the **tip of
-  `main` at release time** — the stand that passed the release gate (green
-  `clean build --no-build-cache`, buildable image, 1:1 check) and whose image is deployed. The
-  version commit may sit far behind that tip and carry none of it. Tagging it instead would name a
-  stand nobody built or ran (the `0.1.0` case: the version commit's image build was broken and its
-  credential handling superseded).
+- **The tagged commit is the released state, not the version commit:** the tag goes on the commit
+  the deployed image's `revision` label names (read it off the container, "Which stand is
+  running?"). That is the tip of `main` at release time — the stand that passed the release gate
+  (green `clean build --no-build-cache`, buildable image, 1:1 check) — unless the release's own
+  documentation landed after it, as at `0.2.0`, where the deployed revision sits a few `[doc]`
+  commits behind the tip. The version commit may sit far behind and carry none of it. Tagging it
+  instead would name a stand nobody built or ran (the `0.1.0` case: the version commit's image
+  build was broken and its credential handling superseded).
 - **Consequence — a build off an untagged `main` commit is not identified by its version alone**
   (between releases `version` still names the release being prepared). Such a build is tagged
   `evergore-protocol-collector:<version>-<short sha>`; a **bare**
@@ -367,12 +369,23 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
 - **What the self-test does not prove:** the transport, the real filesystem permissions and real
   Docker semantics are stubbed, because the home server is not reachable from the work machine's
   agent session.
-- **The script has not yet run against the home server** (author decision 2026-09-09, in
-  open-questions.md): the `0.2.0` deploy is its first real run there. It has driven a full deploy, a
-  rollback and a refused same-day re-run against the work machine's Docker daemon on a copy of the
-  production snapshot (2026-09-21, recipe below), which is what proved the checks against real
-  Docker, real permissions and the real `V2` rebuild. Start the home-server deploy with `--dry-run`
-  as its own step, and schedule it with time to read a log.
+- **The script drove the `0.2.0` release on the home server** (2026-09-21): dry run, deploy,
+  rollback onto `pre-0.2.0` and the same-day re-deploy, each through it and each green at the first
+  attempt, after a rehearsal against the work machine's Docker daemon on a copy of the production
+  snapshot had found and fixed three defects the same morning (recipe below). Start every release
+  with `--dry-run` as its own step, and schedule it with time to read a log.
+- **Password-based hosts:** the home server is reached by password on its own port, and its user is
+  not in the `docker` group. `EPC_DEPLOY_SSH=deploy/ssh-with-password` with `EPC_DEPLOY_SSH_PORT`,
+  `EPC_DEPLOY_SSH_PASSWORD` and `EPC_DEPLOY_SUDO=1` covers that: ssh asks the script itself for the
+  password (`SSH_ASKPASS`), and every remote command starts with `sudo -k -S -v`, which consumes
+  the password from the first stdin line before the command sees the rest. The password reaches
+  no command line; `deploy/self-test` asserts that. Pin the host key first, because the transport
+  runs with `StrictHostKeyChecking=yes`: `ssh-keyscan -p <port> <host> >> ~/.ssh/known_hosts`, then
+  compare the fingerprint with `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server.
+- **The parameters live in `deploy.local.env`** (gitignored by `*.local.*`, mode 600 because it
+  holds the password): every `EPC_DEPLOY_*` variable from the usage text plus the API token; the
+  game login stays in `credentials.local.env`. Export both into the environment and the script
+  needs no option but `--image`.
 - **The image build runs the whole `check`, so any test that reads repository files outside `src/`
   needs them in the build context.** `KbCitationGuardTest` reads `docs/knowledge-base`; the
   Dockerfile copies it and `.dockerignore` lets exactly that directory through. Without it the image
@@ -506,8 +519,9 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      it — `docker inspect --type container -f '{{json .HostConfig.PortBindings}}' epc` — because a
      wrong host port yields a healthy container that every existing URL misses. The same inspection
      answers the **restart policy** (`{{.HostConfig.RestartPolicy.Name}}`), which this command does
-     not set: the home server runs with `no`, so the service does not come back by itself after a
-     host reboot.
+     not set: the home server runs with **`unless-stopped`** (read off the container 2026-09-21),
+     so the service comes back after a host reboot and stays down only after an explicit stop. The
+     script copies whatever policy it reads.
    - **Timeline** (measured 2026-08-16 on both machines): the server answers after ~1 s, the first
      collection starts 30 s after startup (`getCollectorInitialDelaySeconds`), and extraction plus
      evaluation together took **16 s** on the work machine and **42 s** on the home server. So
@@ -521,6 +535,12 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      same file ran 5 min 15 s and `UP` came after **500 s**. The script's default
      `EPC_DEPLOY_HEALTH_TIMEOUT` of 900 s leaves headroom; the home server's slower CPU (42 s
      against 16 s for one collection) argues for raising it rather than trusting the margin.
+   - **Timeline on the home server** (measured 2026-09-21, the `0.2.0` release over the real
+     database, 39.8 MB): the 1.5 GB image transferred in **32 s**; startup 1.2 s; the `V2` rebuild
+     ran at once and took **2.2 s**; extraction 14 s, recompute 3 s; `/health` turned `UP` **50 s**
+     after start, on the deploy, the rollback and the re-deploy alike. The whole deploy, local build
+     included, took 3 min 19 s. The minutes measured on the work machine are the bind mount's, not
+     the migration's.
    - **`/health` is a composite.** Micronaut nests every indicator under `details`, each with a
      `status` of its own, and several read `UP` while the service itself is still `UNKNOWN`. The
      script reads the **first**, top-level status only; a check that greps the whole body passes on
@@ -588,6 +608,11 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    - The restored state is only observable in the **first 30 seconds**: the collection then runs
      again and writes the restored database forward. Verify `/api/v1/admin/status`'s `lastUpdated`
      right after startup.
+   - **Rolled back on the home server 2026-09-21**: the superseded copy (78.5 MB) kept, the backup
+     (39.8 MB) restored, `pre-0.2.0` up and `UP` after 50 s with a live scrape. A re-deploy the same
+     day meets the backup guard; the author's call was to move the backup aside as
+     `temp.sqlite.bak-<yyyymmdd>-vor-rollback` and run again, which took a fresh backup of the
+     restored file and ran `V2` over it once more.
    - **A rollback onto `0.1.0` reports `UP` only after a successful scrape**: that code does not
      recompute after a failed one. If the game is unreachable on rollback day the health poll runs
      to its timeout and the script declares the rollback failed while the old container serves; the
@@ -617,8 +642,9 @@ column, copying every row into the new table. What this means for a deploy:
   rows: counts unchanged, the SHA-256 over every row of every table identical before and after,
   `V1`/`V2` both recorded successful, a second run a no-op.
 - **Budget minutes, not seconds, on a slow mount.** The copy is fsync-heavy: the same rebuild took
-  ~1 s on a local disk and **~4 min** on this devcontainer's `/workspaces` bind mount, and 4 min 7 s
-  inside the container on the same drive (2026-09-21, Flyway `execution_time` 241,432 ms). The first
+  ~1 s on a local disk and **~4 min** on this devcontainer's `/workspaces` bind mount, 4 min 7 s
+  inside the container on the same drive, and **2.2 s** on the home server's disk over the live
+  database (all 2026-09-21). The first
   boot blocks until it finishes, so do not kill the container because it looks hung; killing it is
   safe (the transaction rolls back) but buys nothing.
 - **The file roughly doubles.** The rebuild leaves the old tables' pages as free pages and nothing

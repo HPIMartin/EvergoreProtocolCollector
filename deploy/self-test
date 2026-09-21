@@ -553,6 +553,40 @@ run_epc deploy --host "$host_name" --ssh-user "$ssh_account" --container
 if [ "$status" -ne 0 ] && [ ! -s "$journal" ] && printf '%s' "$output" | grep -qF 'epc-deploy: --container needs a value'; then r=0; else r=1; fi
 check "a flag given without its value fails with the script's own message" "$r"
 
+new_case
+ssh_bin="$case_dir/sshbin"
+mkdir -p "$ssh_bin"
+cat > "$ssh_bin/ssh" <<'SSH_STUB'
+#!/bin/sh
+line="ssh"
+for argument in "$@"; do line="$line $argument"; done
+printf '%s\n' "$line" > "$EPC_STUB_STATE/ssh-arguments"
+cat > "$EPC_STUB_STATE/ssh-stdin"
+SSH_STUB
+chmod +x "$ssh_bin/ssh"
+set +e
+printf 'the image stream\n' | PATH="$ssh_bin:$PATH" EPC_DEPLOY_SSH_PORT=2222 EPC_DEPLOY_SSH_PASSWORD=self-test-only-passphrase \
+	"$deploy_dir/ssh-with-password" "$ssh_account@$host_name" "docker load"
+status=$?
+set -e
+if [ "$status" -eq 0 ] && grep -qF -- " -p 2222 " "$state_dir/ssh-arguments" && grep -qF -- " $ssh_account@$host_name " "$state_dir/ssh-arguments"; then r=0; else r=1; fi
+check "the password transport signs in on the configured port as the passed user" "$r"
+if grep -qF 'sudo -k -S -v' "$state_dir/ssh-arguments" && grep -qF 'docker load' "$state_dir/ssh-arguments"; then r=0; else r=1; fi
+check "it takes a sudo ticket first and then runs the command it was given" "$r"
+if [ "$(head -n 1 "$state_dir/ssh-stdin")" = self-test-only-passphrase ] && [ "$(tail -n +2 "$state_dir/ssh-stdin")" = 'the image stream' ]; then r=0; else r=1; fi
+check "the password is the first stdin line and the command's own stdin follows it intact" "$r"
+if grep -qF self-test-only-passphrase "$state_dir/ssh-arguments"; then r=1; else r=0; fi
+check "the password reaches no command line" "$r"
+asked=$(SSH_WITH_PASSWORD_ASKPASS=1 EPC_DEPLOY_SSH_PASSWORD=self-test-only-passphrase "$deploy_dir/ssh-with-password" 'Password:')
+if [ "$asked" = self-test-only-passphrase ]; then r=0; else r=1; fi
+check "asked by ssh, the same script answers with the password" "$r"
+set +e
+PATH="$ssh_bin:$PATH" EPC_DEPLOY_SSH_PASSWORD= "$deploy_dir/ssh-with-password" "$ssh_account@$host_name" "docker ps" </dev/null >/dev/null 2>&1
+status=$?
+set -e
+if [ "$status" -ne 0 ]; then r=0; else r=1; fi
+check "an unset password stops the transport instead of signing in with nothing" "$r"
+
 if [ "$failures" -eq 0 ]; then
 	printf 'deploy self-test: all cases pass\n'
 else

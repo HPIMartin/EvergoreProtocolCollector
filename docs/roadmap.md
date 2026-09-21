@@ -20,7 +20,7 @@
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
 | M5 | Overview truth | author steps only | Closing out; the code landed, two restated author checks remain |
-| M7 | The overview states the guild's actual position | the catalog closed against the game, the release run (D23 in part, F6) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the catalog work joins because the release publishes `Gildenspende` for the first time |
+| M7 | The overview states the guild's actual position | the catalog closed against the game, the release run (D23 in part, the deploy script) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the catalog work joins because the release publishes `Gildenspende` for the first time |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition question, round-trip detection, opening balance, explanation page with the trader's figure (D23, D-12, F7, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
 | M9 | Clear the last bottleneck | D12, D24 | The item every later read method waits on; it also gates the transactional ingest |
 | M10 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
@@ -58,10 +58,11 @@ matter above the fold, and the release goes out driven rather than typed. **This
       entries renamed (backlog D23, first step, decided 2026-09-11): the release publishes
       `Gildenspende` for the first time and it is measurably too low without them
       ([testing.md](knowledge-base/testing.md)).
-- [ ] A committed deploy script drives a full deploy and rollback over ssh, carrying every check that
+- [x] A committed deploy script drives a full deploy and rollback over ssh, carrying every check that
       caught the `0.1.0` defects, with a self-test that fails each of them against a faked bad state.
-      The script and its self-test have landed; the box closes when it has driven this release and a
-      rollback against the home server (backlog F6), so `0.2.0` is the first deploy nobody types by hand.
+      It drove the `0.2.0` release, its rollback and the re-deploy on the home server (2026-09-21),
+      so `0.2.0` is the first deploy nobody typed by hand
+      ([build-run-deploy.md](knowledge-base/build-run-deploy.md)).
 
 ## M8: The numbers hold up
 
