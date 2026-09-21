@@ -284,8 +284,8 @@ tests) remains the gate for landing on `main`.
   run it):
 
   ```sh
-  git tag -a v0.1.0 -m "Release 0.1.0"
-  git push origin v0.1.0      # a push is the author's decision alone, tags included
+  git tag -a v0.2.0 -m "Release 0.2.0"
+  git push origin v0.2.0      # a push is the author's decision alone, tags included
   ```
 
   Annotated, not lightweight, so the tag carries its own author and date.
@@ -367,10 +367,42 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
 - **What the self-test does not prove:** the transport, the real filesystem permissions and real
   Docker semantics are stubbed, because the home server is not reachable from the work machine's
   agent session.
-- **The script has never run against the home server** (author decision 2026-09-09, in
-  open-questions.md): the `0.2.0` deploy is its first real run there, and the rollback path will not
-  have run before it. Start that deploy with `--dry-run` as its own step, and schedule it with time
-  to read a log.
+- **The script has not yet run against the home server** (author decision 2026-09-09, in
+  open-questions.md): the `0.2.0` deploy is its first real run there. It has driven a full deploy, a
+  rollback and a refused same-day re-run against the work machine's Docker daemon on a copy of the
+  production snapshot (2026-09-21, recipe below), which is what proved the checks against real
+  Docker, real permissions and the real `V2` rebuild. Start the home-server deploy with `--dry-run`
+  as its own step, and schedule it with time to read a log.
+- **The image build runs the whole `check`, so any test that reads repository files outside `src/`
+  needs them in the build context.** `KbCitationGuardTest` reads `docs/knowledge-base`; the
+  Dockerfile copies it and `.dockerignore` lets exactly that directory through. Without it the image
+  build fails on a `NoSuchFileException` before the container is touched.
+- **The build's progress is on stderr**, so the deploy log carries the whole BuildKit stream even
+  though the script silences the build's stdout. A warm build takes ~2 min on the work machine.
+- **A re-run of the same tag over a stand already running it stops at the rollback tag**: the
+  `pre-<version>` tag names the previous image, not the running one. That is the intended refusal,
+  not a defect.
+
+**Rehearsing on the work machine** (repeat before every release; nothing on the home server is
+touched):
+
+- The work machine's daemon stands in for the host. Start the previous release's image as the
+  predecessor (`docker run -d --name epc-rehearsal -p 18080:8080 --restart no --env-file <throwaway
+  secrets> -v <shared dir>:/database evergore-protocol-collector:<previous>`), on a **copy** of a
+  pre-migration snapshot in a directory both the daemon and the shell resolve under **one** path.
+  From the devcontainer that is `/run/desktop/mnt/host/<drive>/<path>` (Docker Desktop's view of the
+  Windows drive; symlink the same path inside the devcontainer onto `/workspaces/...`), `chmod 777`
+  on the directory and `666` on the copy, and the modes stick.
+- `EPC_DEPLOY_SSH` points at a shim that drops the target and runs the command locally with `sh -c`,
+  rewriting `http://localhost:` to `http://host.docker.internal:` in the command **and** in the text
+  a `mktemp` placement receives on stdin (the curl config carries the URL), never in the image
+  stream. A published port is not `localhost` inside the devcontainer.
+- Throwaway credentials are enough for the `0.2.0` line: a failed scrape still runs the recompute,
+  so `/health` turns `UP`. The `0.1.0` image does **not** recompute after a failed scrape and stays
+  `UNKNOWN`, so a rollback rehearsal onto it times out at the health poll with a serving container;
+  judge that stand by its API answers instead.
+- Image tag `evergore-protocol-collector:<version>-<short sha>`; the bare release tag stays reserved
+  for the tagged commit.
 
 Runs against the Docker host daemon — from a host shell or from the devcontainer, whose `docker`
 CLI targets that same daemon. Steps 1–3 must be done **before** the running container is replaced.
@@ -387,7 +419,12 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    - The script names the copy `<database>.bak-<yyyymmdd>`, verifies its size against the source,
      and **refuses an existing file of that name** instead of overwriting it: a second run on the
      same day would otherwise replace the only pre-migration copy with an already migrated one.
-     There is no option that skips the backup.
+     The refusal comes right after the running container is read, **before** the transfer and the
+     stop, so a run that cannot proceed leaves the service up and moves no image (three reads
+     reach the host, nothing else). There is no option that skips the backup.
+   - The backup is created by the ssh user's `cp`, so it carries that user's umask (`644`), not the
+     database's `666`; the restore copies onto the existing file and keeps `666`, so this only
+     matters for a restore that has to create the file.
 2. **Secure the rollback target:** confirm the currently running image carries a tag you can start
    again (`docker inspect --type container -f '{{.Config.Image}}' epc`). If it is untagged,
    `<none>`, or a tag the next build overwrites, tag it now — the tag goes into the **repository the
@@ -477,6 +514,17 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      `/health` turned `UP` **46 s** and **71 s** after container start — the older "~2.5 minutes"
      is a conservative upper bound, not the expected value. `UNKNOWN` before that is the documented
      state, not a failure; past ~3 minutes, read the log instead of waiting.
+   - **Timeline with the `V2` rebuild** (measured 2026-09-21 on the work machine, Docker Desktop,
+     Windows-drive bind mount, 251,300 rows): startup 0.6 s; the rebuild starts at the collector's
+     first database access, **30 s** after start, and ran **4 min 7 s**; a failing scrape then took
+     2 min and the recompute 25 s, so `/health` turned `UP` after **430 s**; a second rebuild of the
+     same file ran 5 min 15 s and `UP` came after **500 s**. The script's default
+     `EPC_DEPLOY_HEALTH_TIMEOUT` of 900 s leaves headroom; the home server's slower CPU (42 s
+     against 16 s for one collection) argues for raising it rather than trusting the margin.
+   - **`/health` is a composite.** Micronaut nests every indicator under `details`, each with a
+     `status` of its own, and several read `UP` while the service itself is still `UNKNOWN`. The
+     script reads the **first**, top-level status only; a check that greps the whole body passes on
+     a service that has not run once.
 6. **Verify**, in order — `<token>` is the same value passed in step 5:
 
    ```sh
@@ -540,6 +588,11 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    - The restored state is only observable in the **first 30 seconds**: the collection then runs
      again and writes the restored database forward. Verify `/api/v1/admin/status`'s `lastUpdated`
      right after startup.
+   - **A rollback onto `0.1.0` reports `UP` only after a successful scrape**: that code does not
+     recompute after a failed one. If the game is unreachable on rollback day the health poll runs
+     to its timeout and the script declares the rollback failed while the old container serves; the
+     four requests of step 6, run by hand against `localhost:<port>` on the host, are the judgement
+     then. The `0.2.0` line recomputes on the stored rows and turns `UP` regardless.
 
 A scrape failure is contained: Micronaut's task exception handler logs it, the app keeps serving,
 and the database is left untouched, so a broken scrape degrades to stale data rather than downtime.
@@ -564,9 +617,14 @@ column, copying every row into the new table. What this means for a deploy:
   rows: counts unchanged, the SHA-256 over every row of every table identical before and after,
   `V1`/`V2` both recorded successful, a second run a no-op.
 - **Budget minutes, not seconds, on a slow mount.** The copy is fsync-heavy: the same rebuild took
-  ~1 s on a local disk and **~4 min** on this devcontainer's `/workspaces` bind mount. The first
+  ~1 s on a local disk and **~4 min** on this devcontainer's `/workspaces` bind mount, and 4 min 7 s
+  inside the container on the same drive (2026-09-21, Flyway `execution_time` 241,432 ms). The first
   boot blocks until it finishes, so do not kill the container because it looks hung; killing it is
   safe (the transaction rolls back) but buys nothing.
+- **The file roughly doubles.** The rebuild leaves the old tables' pages as free pages and nothing
+  vacuums: 39.4 MB became 77.8 MB on the 03.09.2026 snapshot (row counts unchanged, meta rows grew
+  from 169 to 295 through the recompute's new keys). With the backup and a rollback's superseded
+  copy beside it, the mount briefly holds about four times the pre-migration size.
 - A row that carries a `NULL` in any column **aborts the boot** instead of being dropped. That is
   the intended strict behaviour (engineering-handbook §3), and the production snapshot holds no such
   row in any of the three tables (ledgers measured 2026-09-06, `metaInformation` 2026-09-07). The

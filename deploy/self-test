@@ -197,6 +197,11 @@ export EPC_DEPLOY_SSH EPC_DEPLOY_HEALTH_INTERVAL EPC_DEPLOY_HEALTH_TIMEOUT
 
 case_number=0
 
+# Micronaut's answer is a composite: the service's own status first, then every indicator under
+# "details", each carrying a status of its own. Only the first one says whether the service is up.
+healthy_answer='{"name":"evergore-protocol-parser","status":"UP","details":{"lastRun":{"name":"evergore-protocol-parser","status":"UP","details":{}},"diskSpace":{"name":"evergore-protocol-parser","status":"UP","details":{}}}}'
+not_yet_answer='{"name":"evergore-protocol-parser","status":"UNKNOWN","details":{"lastRun":{"name":"evergore-protocol-parser","status":"UNKNOWN","details":null},"diskSpace":{"name":"evergore-protocol-parser","status":"UP","details":{}}}}'
+
 new_case() {
 	case_number=$((case_number + 1))
 	case_dir="$work/case$case_number"
@@ -215,7 +220,7 @@ new_case() {
 	EPC_STUB_LOCAL_IMAGE_ID=sha256:new
 	EPC_STUB_REMOTE_IMAGE_ID=sha256:new
 	EPC_STUB_STARTED_IMAGE=
-	EPC_STUB_HEALTH='{"status":"UP"}'
+	EPC_STUB_HEALTH=$healthy_answer
 	EPC_STUB_CONTAINER_MISSING=
 	EPC_STUB_LOCAL_IMAGE_MISSING=
 	EPC_STUB_REMOTE_IMAGE_MISSING=
@@ -391,6 +396,8 @@ printf 'an earlier backup from today\n' > "$backup_path"
 run_deploy
 if [ "$status" -ne 0 ] && [ "$(cat "$backup_path")" = 'an earlier backup from today' ]; then r=0; else r=1; fi
 check "today's existing backup is not replaced by an already migrated database" "$r"
+if nothing_destructive && ! journal_has 'docker load'; then r=0; else r=1; fi
+check "and the refusal comes before the stop and the transfer, so the service is not taken down for a run that cannot proceed" "$r"
 
 new_case
 run_deploy --skip-backup
@@ -402,6 +409,12 @@ EPC_STUB_HEALTH='{"status":"UNKNOWN"}'
 run_deploy
 if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; fi
 check "a service that never reports UP fails the deploy and prints the way back" "$r"
+
+new_case
+EPC_STUB_HEALTH=$not_yet_answer
+run_deploy
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; fi
+check "a service still UNKNOWN is not read as UP because an indicator inside it is UP" "$r"
 
 new_case
 EPC_STUB_UNAUTH_CODE=200

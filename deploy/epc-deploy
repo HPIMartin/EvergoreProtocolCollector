@@ -311,6 +311,12 @@ copy_or_print() {
 	copy_database "$1" "$2" "$3"
 }
 
+refuse_existing_backup() {
+	if remote "test -e '$backup_path'"; then
+		fail "$backup_path already exists. Overwriting it would replace the only pre-migration copy with an already migrated database, so move it aside and run again. Nothing was transferred and the container is still running"
+	fi
+}
+
 stop_and_backup() {
 	step "Stop the container, prove it stopped, and only then copy the database"
 	stop_proven
@@ -361,7 +367,8 @@ verify_service() {
 	waited=0
 	while :; do
 		health=$(remote "curl -s http://localhost:$host_port/health" 2>/dev/null) || health=
-		case $health in
+		top_level_health=${health%%\"details\"*}
+		case $top_level_health in
 			*'"status":"UP"'*) break ;;
 		esac
 		if [ "$waited" -ge "$health_timeout" ]; then
@@ -420,6 +427,7 @@ cmd_deploy() {
 	require_remote_tools
 	build_image
 	read_running_container
+	refuse_existing_backup
 	transfer_image
 	secure_rollback_tag
 	if [ "$dry_run" -eq 1 ]; then
@@ -432,7 +440,11 @@ cmd_deploy() {
 	replace_container
 	verify_service
 	print_rollback_hint
-	printf '\ndeploy: %s runs %s on %s\n' "$container" "$image" "$host"
+	if [ "$dry_run" -eq 1 ]; then
+		printf '\ndeploy rehearsal: nothing on %s was changed; the run above is what deploying %s would do\n' "$host" "$image"
+	else
+		printf '\ndeploy: %s runs %s on %s\n' "$container" "$image" "$host"
+	fi
 }
 
 cmd_rollback() {
@@ -471,7 +483,11 @@ STATEMENT
 	step "Start $image with the port and policy read off the replaced container"
 	start_container "$image" "$rolled_back_id"
 	verify_service
-	printf '\nrollback: %s runs %s on %s\n' "$container" "$image" "$host"
+	if [ "$dry_run" -eq 1 ]; then
+		printf '\nrollback rehearsal: nothing on %s was changed; the run above is what rolling back to %s would do\n' "$host" "$image"
+	else
+		printf '\nrollback: %s runs %s on %s\n' "$container" "$image" "$host"
+	fi
 }
 
 case $command_name in
