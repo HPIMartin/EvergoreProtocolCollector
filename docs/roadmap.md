@@ -148,8 +148,7 @@ reaches its current major.
 - **Mechanical error prevention, the showcase's thesis:** the tool-level enforcement hooks, whose
   working-directory-drift guard addresses a failure mode that has already cost work (G7); the one
   remaining hole in the git gate, a prefix-squattable host-path scan (G13); the React hook rules,
-  which nothing enforces today (B24); the wildcard-import ban (G17, only in a gap with **no** open
-  strand); agent-environment polish, including the shared probe result directory that makes
+  which nothing enforces today (B24); agent-environment polish, including the shared probe result directory that makes
   concurrent falsifier runs flaky and the two worktree costs folded in from the dissolved
   build-performance analysis (G11); and the SessionStart hook that injects the lessons
   deterministically (G10). The learnings repeatedly show a session forgetting a written rule.

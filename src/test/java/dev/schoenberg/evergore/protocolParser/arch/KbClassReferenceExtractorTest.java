@@ -57,6 +57,13 @@ class KbClassReferenceExtractorTest {
 	}
 
 	@Test
+	void excludesAvoidStarImportAsACheckstyleRuleShortNameNotOnTheApplicationClasspath() {
+		List<String> extracted = KbClassReferenceExtractor.extractCandidates("The `AvoidStarImport` rule is active.");
+
+		assertThat(extracted).isEmpty();
+	}
+
+	@Test
 	void excludesJavaCompileAsAGradleApiClassOnlyOnTheBuildScriptClasspath() {
 		List<String> extracted = KbClassReferenceExtractor.extractCandidates("Configured via `JavaCompile`.");
 

@@ -51,33 +51,37 @@
     Kotlin formatter (ktlint/ktfmt): each of them indents with spaces while this codebase is
     tab-indented, and reconciling that needs an `.editorconfig`, which is declined (below).
   - VS Code does format + organize-imports on save (`.vscode/settings.json`); star imports are
-    forbidden (`java.sources.organizeImports.starThreshold: 999999` → always explicit; the
-    codebase is now wildcard-free).
-  - The formatter wraps `if`-bodies but cannot *insert* `{ }`; always-braces is enforced separately
-    by the Checkstyle `NeedBraces` gate (next bullet).
+    forbidden (`java.sources.organizeImports.starThreshold: 999999` → always explicit), which is
+    how a new file stays wildcard-free while editing it.
+  - The formatter wraps `if`-bodies but cannot *insert* `{ }`, and `removeUnusedImports` deletes
+    imports but cannot *expand* `…*` (that needs type information, which Spotless has none of);
+    always-braces and explicit imports are enforced separately by the Checkstyle gate
+    (next bullet).
   - Universal whitespace basics (trim, final newline) are native VS Code `files.*` settings (no
     `.editorconfig`).
   - Formatter-engine decision (Eclipse JDT, single shared profile) recorded in
     [open-questions.md](../open-questions.md).
 - **Linting, Checkstyle (single-purpose):** `config/checkstyle/checkstyle.xml` (the deliberately
-  minimal Gradle/Checkstyle default path) holds exactly one rule, `NeedBraces`; it enforces only
-  what the formatter cannot express (formatter wraps `if`/`for`/`while` bodies but cannot *insert*
-  `{ }`). Layout stays solely with the formatter; the two tools are disjoint (no rule lives in
-  both, avoiding parallel upkeep).
+  minimal Gradle/Checkstyle default path) holds two rules, `NeedBraces` and `AvoidStarImport`, each
+  one enforcing something the formatter cannot express (it wraps `if`/`for`/`while` bodies but
+  cannot *insert* `{ }`; it drops unused imports but cannot expand `…*`). Layout stays solely with
+  the formatter; the two tools are disjoint (no rule lives in both, avoiding parallel upkeep).
   - Wired via the Gradle `checkstyle` plugin (toolVersion `10.21.0`, `severity=error`) into
-    `check`, so `./gradlew build` fails on any braceless control statement (gate proven by a
-    deliberate braceless `if`).
+    `check`, so `./gradlew build` fails on any braceless control statement and on any
+    `import …*;` (both gates proven red before they landed: a deliberate braceless `if`, and the
+    wildcard imports the tree carried until the commit before this one expanded them).
   - Same config drives the IDE: the **vscode-checkstyle** extension (`shengchen.vscode-checkstyle`,
     recommended via `.vscode/extensions.json`, auto-installed in the devcontainer) points at it
     (`java.checkstyle.configuration`) for live inline squiggles; the engine version there is the
-    extension's own bundle (the single rule is version-stable, so build and IDE need not pin the
+    extension's own bundle (both rules are version-stable, so build and IDE need not pin the
     same engine).
   - The Checkstyle tasks run with an **empty classpath** (`classpath = files()`): the active rules are
     not type-aware, and the default classpath would drag `classes → processResources →
     :frontend:npmBuild` into every `pre-commit` run. The gate itself is unaffected, it still fails on a
-    braceless `if`.
-  - Checkstyle only *reports*, no auto-fix; add braces via the redhat.java "Add braces" quick-fix.
-  - Stays scoped to this one gap, not a general linter (that overlap with the reviewer agent / a
+    braceless `if` and on a star import, neither of which needs the classpath to spot.
+  - Checkstyle only *reports*, no auto-fix; add braces via the redhat.java "Add braces" quick-fix
+    and expand a star import with organize-imports on save (the IDE has the type information).
+  - Stays scoped to these two gaps, not a general linter (that overlap with the reviewer agent / a
     future Sonar-style static-analysis gate, backlog G6, was why it was earlier declined).
 - **Frontend build (`:frontend` Gradle subproject):** a React/TypeScript SPA built with Vite, wired
   into the root build via a `frontendDist` Gradle configuration (`:frontend`'s `build/dist`

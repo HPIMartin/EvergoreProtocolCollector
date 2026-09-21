@@ -17,6 +17,7 @@ class KbClassReferenceExtractor {
 		Map<String, String> reasons = new HashMap<>();
 		reasons.put("ArchUnit", "product/brand name, no literal class of that name");
 		reasons.put("NeedBraces", "Checkstyle rule short-name (the real class is NeedBracesCheck); Checkstyle is a Gradle plugin, not on the application's compile/test classpath");
+		reasons.put("AvoidStarImport", "Checkstyle rule short-name (the real class is AvoidStarImportCheck); Checkstyle is a Gradle plugin, not on the classpath");
 		reasons.put("JavaCompile", "Gradle API class, only on the build script's classpath, not the application's");
 		reasons.put("EnterWorktree", "a Claude Code tool name, not a project class");
 		reasons.put("D2AcceptanceTest", "the engineering handbook's own deliberate counter-example of a bad class name, not a claim it exists");
