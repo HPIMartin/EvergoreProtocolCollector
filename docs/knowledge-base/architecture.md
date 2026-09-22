@@ -80,7 +80,14 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   transaction keeps its own connection until it ends, so a read on another thread cannot land inside
   it. The exception is a commit SQLite refuses, because an outside process holds a read transaction
   longer than the connection waits: that connection goes back to the pool with its transaction still
-  open. The context closes the database when it stops ·
+  open. The context closes the database when it stops. Reads and write-first statements wait up to
+  **10 s** on another connection's lock before they fail with `SQLITE_BUSY` (sqlite-jdbc's implicit
+  bound is 3 s), so a read outlasts an unusually long write instead of answering 500. A commit also
+  waits up to 10 s for an outside reader to finish, and the meta `add` through `inTransaction`
+  commits twice, so it can wait about 20 s (measured 20.5 s). A transaction that reads before it
+  writes, the recompute's batch, fails at once under another writer's lock: SQLite answers
+  `SQLITE_BUSY` there without waiting. In-process that is unreachable, because the scheduled job is
+  the only writer ·
   `database/{bank,storage,metaInformation}/*` (adapters implementing the businessLogic ports, all
   three built on that one database; a ledger `add` converts its whole list first, so an entry that
   cannot be converted stores nothing, then writes it as one batch on the batch's own connection, one

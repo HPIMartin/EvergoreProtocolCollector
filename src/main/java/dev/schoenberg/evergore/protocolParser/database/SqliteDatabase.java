@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.database;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.concurrent.Callable;
 
 import com.j256.ormlite.dao.Dao;
@@ -16,6 +17,8 @@ import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.Exc
 import static java.nio.file.Files.createDirectories;
 
 public class SqliteDatabase implements AutoCloseable {
+	private static final Duration BUSY_TIMEOUT = Duration.ofSeconds(10);
+
 	private final ConnectionSource connections;
 
 	private SqliteDatabase(ConnectionSource connections) {
@@ -33,7 +36,7 @@ public class SqliteDatabase implements AutoCloseable {
 			new DatabaseMigration(config, logger).migrate();
 			String url = "jdbc:sqlite:" + dbPath;
 			logger.info("Connecting to: " + url);
-			return new SqliteDatabase(new JdbcPooledConnectionSource(url));
+			return new SqliteDatabase(new JdbcPooledConnectionSource(url + "?busy_timeout=" + BUSY_TIMEOUT.toMillis()));
 		});
 	}
 
