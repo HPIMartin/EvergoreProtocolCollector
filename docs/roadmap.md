@@ -20,8 +20,8 @@
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
 | M5 | Overview truth | author steps only | Closing out; the code landed, two restated author checks remain |
-| M7 | The overview states the guild's actual position | the catalog closed against the game, the release run (D23 in part, the deploy script) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the catalog work joins because the release publishes `Gildenspende` for the first time |
-| M8 | The numbers hold up | the remaining unvalued names and the ammunition question, round-trip detection, opening balance, explanation page with the trader's figure (D23, D-12, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
+| M7 | The overview states the guild's actual position | the catalog closed against the game, the release run (the stone renames, the deploy script) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the catalog work joins because the release publishes `Gildenspende` for the first time |
+| M8 | The numbers hold up | the remaining unvalued names and the ammunition question, round-trip detection, opening balance, explanation page with the trader's figure (D-12, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
 | M9 | Clear the last bottleneck | D12, D24 | The item every later read method waits on; it also gates the transactional ingest |
 | M10 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
 | M11 | Product build-out | E12→E13, E9, E3, E6 | E12 inherits D18's query shape, so it follows it |
@@ -55,7 +55,7 @@ matter above the fold, and the release goes out driven rather than typed. **This
       the newest activity the loaded rows themselves carry and never against the reader's clock, so a
       stalled collection cannot drop the whole guild into "dormant" (decided 2026-09-11).
 - [x] `Marmor`, `Granit` and `Schiefer` carry a value under the names the game uses, three catalog
-      entries renamed (backlog D23, first step, decided 2026-09-11): the release publishes
+      entries renamed (decided 2026-09-11): the release publishes
       `Gildenspende` for the first time and it is measurably too low without them
       ([testing.md](knowledge-base/testing.md)).
 - [x] A committed deploy script drives a full deploy and rollback over ssh, carrying every check that
@@ -69,10 +69,11 @@ matter above the fold, and the release goes out driven rather than typed. **This
 Slice: the figures the header named are complete, the rule behind them is decided where the ledger
 cannot decide it, and a member can follow how his own row comes about.
 
-- [ ] Every storage name carries the value the game gives it or is recorded as a parser miss, and
-      the recompute is re-run so the corrected sums are measured rather than assumed (backlog
-      D23). The catalog is closed against the game bar 15 names over 31 rows; the deliberate
-      zeros already count apart from unknown ones in `/health`.
+- [x] Every storage name carries the value the game gives it, is recorded as a parser miss, or is
+      recorded as unpriced by the game with the date of the read that found no price (2026-09-22):
+      of the 15 names over 31 rows, 13 are gem pieces no complete read priced and 2 are parser
+      misses. The recompute was re-run on the 03.09.2026 snapshot and the guild position did not
+      move ([testing.md](knowledge-base/testing.md)).
 - [ ] Whether bought ammunition is credited in full is decided, with the double payment to crafters
       addressed by a rule the ledger can actually apply (open question D-12). It belongs here
       because it changes what a deposit credits.

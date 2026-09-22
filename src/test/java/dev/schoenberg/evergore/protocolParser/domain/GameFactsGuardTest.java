@@ -51,6 +51,16 @@ class GameFactsGuardTest {
 	}
 
 	@Test
+	void recordsExactlyTheThirteenGemPiecesNoCompleteReadPricedAsUnpriced() {
+		List<String> unpriced = factsOfKind("unpriced").stream().map(Fact::item).toList();
+
+		assertThat(unpriced)
+				.containsExactlyInAnyOrder("Diamant-Lederbeinlinge", "Diamant-Lederharnisch", "Diamant-Lederhelm", "Diamant-Lederstiefel", "Diamant-Lederstulpen",
+						"Diamant-Rundschild", "Obsidian-Plattenbeinlinge", "Obsidian-Plattenhelm", "Obsidian-Plattenpanzer", "Obsidian-Prunkschild", "Onyx-Hose",
+						"Quarz-Prunkschwert", "Topas-Bogen");
+	}
+
+	@Test
 	void everyRecipeTheGameShowsIsTheRecipeTheCatalogHolds() {
 		List<String> divergences = new ArrayList<>();
 		for (Fact fact : factsOfKind("recipe")) {

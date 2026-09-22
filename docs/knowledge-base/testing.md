@@ -243,8 +243,11 @@ production snapshot via the gitignored harness described below:
 - **Catalog gap, pre-existing:** the snapshot holds storage rows whose item name is not in
   `EvergoreItem`; they value at zero and are reported through `/health`'s `unknownItemNames`.
   Measured on the 03.09.2026 snapshot: **15 of its 513 distinct storage item names**, covering
-  **31 of 243 443 rows** (0.013 %) and 1 263 units moved. Thirteen are gem-forged gear the game
-  prices nowhere the scrape can reach, and two are parser misses rather than items.
+  **31 of 243 443 rows** (0.013 %) and 1 263 units moved. Thirteen are gem-forged gear no complete
+  read of the game priced, recorded as `unpriced` with that read's date in the game facts below;
+  two are parser misses rather than items, a `Gold` row and a consent-banner sentence, both read
+  into one 2024-05-29 entry. Re-measured 2026-09-22: the same 15 names over the same 31 rows, and
+  the guild position below reproduces to the gold, so recording them moves no sum.
 - **Closing the catalog against the game moves a third of the guild.** Measured on the 03.09.2026
   snapshot by running the recompute check on each side of the change: `Gildenspende` rises by
   `2 478 114`, storage deposits by `6 318 321` and storage withdrawals by `3 883 118`, so the net
@@ -310,7 +313,8 @@ recomputed value per key.
 
 Measured with the same opt-in check after the valuation moved to the announced rule, against the
 03.09.2026 snapshot, 42 avatars, read out of the check's own
-`overview-after-recompute.json` rather than computed beside it:
+`overview-after-recompute.json` rather than computed beside it. The table stands for the catalog as
+closed against the game on 2026-09-11 and was re-measured unchanged on 2026-09-22:
 
 | figure | value |
 | --- | --- |
@@ -463,6 +467,11 @@ date, **per line**, so a later partial re-scrape re-dates only the rows it touch
 - **Only derived facts, never the dumps.** The raw pages carry guild member names, `Lagerzugriff`
   lines and `Hergestellt von <member> für <member>` clauses, which is host data (handbook §1–§3) and
   is never committed. `GameFactsGuardTest` guards the file itself against those markers.
+- **An `unpriced` row records an absence**: a name the ledger holds that neither complete paged
+  read priced, with `stock_out+market_all_articles` as its source and that read's date, so "the
+  game has not priced it" is a dated claim rather than a gap. `GameFactsGuardTest` names the 13
+  such rows and fails once a price row or a catalog entry for one of them appears, which is when
+  the row has to go. A price is never filled in from the wiki or the gem price ladder.
 - **An item priced by two pages keeps both rows**, so the storage and the market corroborate each
   other instead of one silently replacing the other; 178 names are priced by both and none disagree.
 - **A price is read from a holding at quality 100 only**, because the storage scales a holding's

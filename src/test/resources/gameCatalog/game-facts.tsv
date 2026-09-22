@@ -1094,3 +1094,16 @@ recipe	Übungsstück-Sorandilstangenwaffe	1	2 Sorandilbarren + 1 Schmiedeöl + 1
 recipe	Übungsstück-Weichlederrüstung	1	2 Weichleder + 1 Lederfett	academy_craft&selection=61	2026-09-22
 recipe	Übungsstück-Wollrüstung	1	2 Wolltuch + 2 Nähgarn	academy_craft&selection=66	2026-09-22
 recipe	Übungsstück-Ätherrüstung	1	2 Äthertuch + 1 Nähgarn + 1 Schutzpolster + 1 Vulkandraht	academy_craft&selection=66	2026-09-22
+unpriced	Diamant-Lederbeinlinge			stock_out+market_all_articles	2026-09-22
+unpriced	Diamant-Lederharnisch			stock_out+market_all_articles	2026-09-22
+unpriced	Diamant-Lederhelm			stock_out+market_all_articles	2026-09-22
+unpriced	Diamant-Lederstiefel			stock_out+market_all_articles	2026-09-22
+unpriced	Diamant-Lederstulpen			stock_out+market_all_articles	2026-09-22
+unpriced	Diamant-Rundschild			stock_out+market_all_articles	2026-09-22
+unpriced	Obsidian-Plattenbeinlinge			stock_out+market_all_articles	2026-09-22
+unpriced	Obsidian-Plattenhelm			stock_out+market_all_articles	2026-09-22
+unpriced	Obsidian-Plattenpanzer			stock_out+market_all_articles	2026-09-22
+unpriced	Obsidian-Prunkschild			stock_out+market_all_articles	2026-09-22
+unpriced	Onyx-Hose			stock_out+market_all_articles	2026-09-22
+unpriced	Quarz-Prunkschwert			stock_out+market_all_articles	2026-09-22
+unpriced	Topas-Bogen			stock_out+market_all_articles	2026-09-22

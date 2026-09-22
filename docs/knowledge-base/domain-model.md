@@ -96,7 +96,9 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   weapon, and the armour values repeat across gem families (`Rubin-Plattenhandschuhe` and
   `Jade-Handschuhe` both `14 200`). The ratios between slots are close but not exact, so the
   ladder is never used to invent a value: an item carries the price the game gave it or none
-  (measured 2026-09-11).
+  (measured 2026-09-11). The 13 gem pieces the ledger holds and no complete read priced therefore
+  have no catalog entry; they are recorded as unpriced by the game as of 2026-09-22 in the game
+  facts ([testing.md](testing.md)) and stay in `/health`'s unknown names until the game prices them.
 - **`category`**: one of the `Category` values (weapon/armor families, `ROHSTOFFE`,
   `JAGDBEUTEN` (hunt loot), `EDELSTEINE` (gems), `HANDWERKSMATERIAL`, …). Each category carries
   two multipliers, `placement` (what a deposit credits) and `withdrawl` (what a withdrawal costs),
