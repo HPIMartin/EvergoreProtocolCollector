@@ -13,8 +13,8 @@ import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 import dev.schoenberg.evergore.protocolParser.database.TransferTypeDatabaseVisitor;
 import dev.schoenberg.evergore.protocolParser.exceptions.NoElementFound;
 
-import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.AVATAR_COLUMN;
-import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.AVATAR_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.TIMESTAMP_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static java.sql.Timestamp.from;
 import static java.util.stream.Collectors.toMap;
@@ -53,7 +53,7 @@ public class StorageDatabaseRepository implements StorageRepository {
 
 	@Override
 	public List<StorageEntry> getAllSince(Instant timestampInclusive) {
-		List<StorageDatabaseEntry> result = silentThrow(() -> storage().queryBuilder().where().ge(StorageDatabaseEntry.TIMESTAMP_COLUMN, from(timestampInclusive)).query());
+		List<StorageDatabaseEntry> result = silentThrow(() -> storage().queryBuilder().where().ge(TIMESTAMP_COLUMN, from(timestampInclusive)).query());
 
 		return convert(result);
 	}

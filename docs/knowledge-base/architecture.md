@@ -95,7 +95,7 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   against 210 ms. A row a constraint refuses keeps at most the rows before it and fails every run
   until it leaves the game's 30-day window; an error on which SQLite rolls the transaction back
   itself loses the whole batch; the extractor writes oldest first, so any stored part is the oldest
-  rows) ·
+  rows) · `database/LedgerDatabaseEntry` (the columns both ledger rows share) ·
   `database/TransferTypeDatabaseVisitor` (enum ⇄ German DB strings "Einlagerung"/"Entnahme").
 - **Business logic (framework-free):** ports `BankRepository`, `StorageRepository`,
   `MetaInformationRepository` · records `BankEntry`, `StorageEntry`, `MetaInformation` ·
