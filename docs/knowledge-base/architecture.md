@@ -75,28 +75,33 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   implements `PageSource`) · `PageContents` (DTO) · `parser/{EntityParser,EntryFactory}` (text ▶
   `Entry`, regex from `Constants`). Coordinator `EvergoreDataExtractor` (delta filter) lives in
   `application`.
-- **Persistence:** `database/SqliteDatabase`, one per context: it opens the file once, runs the
-  migrations and hands out pooled connections, none to a second thread while one holds it, and a
-  transaction keeps its own connection until it ends, so a read on another thread cannot land inside
-  it. The exception is a commit SQLite refuses, because an outside process holds a read transaction
-  longer than the connection waits: that connection goes back to the pool with its transaction still
-  open. The context closes the database when it stops. Reads and write-first statements wait up to
-  **10 s** on another connection's lock before they fail with `SQLITE_BUSY` (sqlite-jdbc's implicit
-  bound is 3 s), so a read outlasts an unusually long write instead of answering 500. A commit also
-  waits up to 10 s for an outside reader to finish, and the meta `add` through `inTransaction`
-  commits twice, so it can wait about 20 s (measured 20.5 s). A transaction that reads before it
-  writes, the recompute's batch, fails at once under another writer's lock: SQLite answers
-  `SQLITE_BUSY` there without waiting. In-process that is unreachable, because the scheduled job is
-  the only writer ·
-  `database/{bank,storage,metaInformation}/*` (adapters implementing the businessLogic ports, all
-  three built on that one database; a ledger `add` converts its whole list first, so an entry that
-  cannot be converted stores nothing, then writes it as one batch on the batch's own connection, one
-  commit, because on the pool ORMLite's `create(Collection)` commits every row: 300 rows took 43 s
-  against 210 ms. A row a constraint refuses keeps at most the rows before it and fails every run
-  until it leaves the game's 30-day window; an error on which SQLite rolls the transaction back
-  itself loses the whole batch; the extractor writes oldest first, so any stored part is the oldest
-  rows) · `database/LedgerDatabaseEntry` (the columns both ledger rows share) ·
-  `database/TransferTypeDatabaseVisitor` (enum ⇄ German DB strings "Einlagerung"/"Entnahme").
+- **Persistence:** three adapters implementing the businessLogic ports, all built on one database:
+  - `database/SqliteDatabase`, one per context: it opens the file once, runs the migrations and
+    hands out pooled connections, none to a second thread while one holds it, and a transaction
+    keeps its own connection until it ends, so a read on another thread cannot land inside it. The
+    exception is a commit SQLite refuses, because an outside process holds a read transaction longer
+    than the connection waits: that connection goes back to the pool with its transaction still open.
+    The context closes the database when it stops. Reads and write-first statements wait up to
+    **10 s** on another connection's lock before they fail with `SQLITE_BUSY` (sqlite-jdbc's implicit
+    bound is 3 s), so a read outlasts an unusually long write instead of answering 500. A commit also
+    waits up to 10 s for an outside reader to finish, and the meta `add` through `inTransaction`
+    commits twice, so it can wait about 20 s (measured 20.5 s). A transaction that reads before it
+    writes, the recompute's batch, fails at once under another writer's lock: SQLite answers
+    `SQLITE_BUSY` there without waiting. In-process that is unreachable, because the scheduled job is
+    the only writer.
+  - `database/LedgerDatabaseRepository`, the one ledger base: the seven ledger operations live here
+    once, over the `LedgerDatabaseEntry` row (the columns both ledger rows share), and so does the
+    transfer-type conversion through `TransferTypeDatabaseVisitor` (enum ⇄ German DB strings
+    "Einlagerung"/"Entnahme"). Its `add` converts the whole list first, so an entry that cannot be
+    converted stores nothing, then writes it as one batch on the batch's own connection, one commit,
+    because on the pool ORMLite's `create(Collection)` commits every row: 300 rows took 43 s against
+    210 ms. A row a constraint refuses keeps at most the rows before it and fails every run until it
+    leaves the game's 30-day window; an error on which SQLite rolls the transaction back itself
+    loses the whole batch; the extractor writes oldest first, so any stored part is the oldest rows.
+    `database/{bank,storage}/*` add only their row and the mapping between that row and its entry
+    record.
+  - `database/metaInformation/*`, the meta store: a recompute's batch is written in one
+    `SqliteDatabase` transaction.
 - **Business logic (framework-free):** ports `BankRepository` and `StorageRepository` (each the
   generic `base/LedgerRepository` over its entry record, declaring nothing of its own),
   `MetaInformationRepository` · records `BankEntry`, `StorageEntry`, `MetaInformation` ·
