@@ -22,7 +22,7 @@
 | M5 | Overview truth | author steps only | Closing out; the code landed, two restated author checks remain |
 | M7 | The overview states the guild's actual position | the catalog closed against the game, the release run (the stone renames, the deploy script) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the catalog work joins because the release publishes `Gildenspende` for the first time |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition question, round-trip detection, opening balance, explanation page with the trader's figure (D-12, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
-| M9 | Clear the last bottleneck | D12, D24 | The item every later read method waits on; it also gates the transactional ingest |
+| M9 | Clear the last bottleneck | D24 | The transactional ingest rests on the unified repositories, which every later read method needed first |
 | M10 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
 | M11 | Product build-out | E12→E13, E9, E3, E6 | E12 inherits D18's query shape, so it follows it |
 | M12 | Ops, security & environment | F1, H11, C1, C8, C10, C11, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
@@ -92,11 +92,10 @@ cannot decide it, and a member can follow how his own row comes about.
 
 ## M9: Clear the last bottleneck
 
-Slice: the item that every later read method waits on.
+Slice: a scrape that aborts midway leaves both ledgers where they were.
 
-- [ ] The duplicated bank/storage repositories are unified, one managed connection source, no
-      cross-entity constant use (backlog D12). **Before** D18 and E12, or the same query lands
-      duplicated a fourth and fifth time.
+- [x] The duplicated bank/storage repositories are unified, one managed connection source, no
+      cross-entity constant use.
 - [ ] A scrape that aborts after the bank step leaves neither ledger table changed (backlog D24).
       It needs a transaction spanning both repositories, which is why it follows the unification.
 
