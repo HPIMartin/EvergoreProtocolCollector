@@ -4,15 +4,12 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.ToDoubleFunction;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
@@ -25,6 +22,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.Meta
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationSnapshot;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
+import dev.schoenberg.evergore.protocolParser.domain.CatalogLookup;
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
@@ -39,7 +37,6 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UNDEFIN
 import static java.util.Arrays.asList;
 
 public class EvergoreDataEvaluator {
-	private static final Pattern MAGIC_AFFIX = Pattern.compile(" (?:des|der) \\p{Lu}\\p{L}+( \\[2H\\])?$");
 	private final MetaInformationRepository metaRepo;
 	private final BankRepository bankRepo;
 	private final StorageRepository storageRepo;
@@ -164,7 +161,7 @@ public class EvergoreDataEvaluator {
 	}
 
 	private EvergoreItem findItem(StorageEntry entry, List<String> unknownItemNames, List<String> zeroValuedItemNames) {
-		Optional<EvergoreItem> found = spellingsOf(entry.name()).map(EvergoreDataEvaluator::itemNamed).flatMap(Optional::stream).findFirst();
+		Optional<EvergoreItem> found = CatalogLookup.itemFor(entry.name());
 		if (found.isEmpty()) {
 			logger.warn("Unable to find item: " + entry.name());
 			unknownItemNames.add(entry.name());
@@ -174,18 +171,6 @@ public class EvergoreDataEvaluator {
 			zeroValuedItemNames.add(entry.name());
 		}
 		return found.get();
-	}
-
-	private static Stream<String> spellingsOf(String ingameName) {
-		return Stream.of(ingameName, withoutMagicAffix(ingameName)).distinct();
-	}
-
-	private static Optional<EvergoreItem> itemNamed(String ingameName) {
-		return Arrays.stream(EvergoreItem.values()).filter(item -> item.isNamed(ingameName)).findAny();
-	}
-
-	private static String withoutMagicAffix(String ingameName) {
-		return MAGIC_AFFIX.matcher(ingameName).replaceFirst("$1");
 	}
 
 	private record StorageEntryItem(StorageEntry entry, EvergoreItem item) {}
