@@ -7,7 +7,9 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
@@ -24,7 +26,7 @@ public final class RoundTripDetector {
 
 	private RoundTripDetector() {}
 
-	public static List<RoundTrip> detect(String avatar, List<ResolvedStorageEntry> entries) {
+	public static RoundTripReport detect(String avatar, List<ResolvedStorageEntry> entries) {
 		List<ResolvedStorageEntry> sorted = entries
 				.stream()
 				.filter(resolved -> resolved.entry().avatar().equals(avatar))
@@ -35,6 +37,7 @@ public final class RoundTripDetector {
 
 		Map<EvergoreItem, Deque<Lot>> openLots = new TreeMap<>();
 		Map<EvergoreItem, Integer> roundTripQuantities = new TreeMap<>();
+		Set<EvergoreItem> abstainedItems = new TreeSet<>();
 		RecipeConsumption consumption = new RecipeConsumption();
 
 		for (ResolvedStorageEntry resolved : sorted) {
@@ -43,7 +46,7 @@ public final class RoundTripDetector {
 
 			if (item.category != HANDWERKSMATERIAL) {
 				if (entry.type() == TransferType.EINLAGERUNG) {
-					consumeIngredientLots(item, entry.quantity(), entry.timeStamp(), openLots, consumption);
+					handleProductDeposit(item, entry.quantity(), entry.timeStamp(), openLots, abstainedItems, consumption);
 				}
 				continue;
 			}
@@ -60,10 +63,18 @@ public final class RoundTripDetector {
 			}
 		}
 
-		return roundTripQuantities.entrySet().stream().map(entry -> new RoundTrip(avatar, entry.getKey(), entry.getValue())).toList();
+		List<RoundTrip> roundTrips = roundTripQuantities
+				.entrySet()
+				.stream()
+				.filter(entry -> !abstainedItems.contains(entry.getKey()))
+				.map(entry -> new RoundTrip(avatar, entry.getKey(), entry.getValue()))
+				.toList();
+		List<RoundTripAbstention> abstentions = abstainedItems.stream().map(item -> new RoundTripAbstention(avatar, item)).toList();
+		return new RoundTripReport(roundTrips, abstentions);
 	}
 
-	private static void consumeIngredientLots(EvergoreItem product, int depositedQuantity, Instant at, Map<EvergoreItem, Deque<Lot>> openLots, RecipeConsumption consumption) {
+	private static void handleProductDeposit(EvergoreItem product, int depositedQuantity, Instant at, Map<EvergoreItem, Deque<Lot>> openLots, Set<EvergoreItem> abstainedItems,
+			RecipeConsumption consumption) {
 		switch (product.recipe) {
 			case Published published -> {
 				int depositedSoFar = consumption.deposited(product, depositedQuantity);
@@ -79,7 +90,15 @@ public final class RoundTripDetector {
 			}
 			case NotCraftable _ -> {
 			}
-			case Unread _ -> {
+			case Unread _ -> abstainOpenLots(at, openLots, abstainedItems);
+		}
+	}
+
+	private static void abstainOpenLots(Instant at, Map<EvergoreItem, Deque<Lot>> openLots, Set<EvergoreItem> abstainedItems) {
+		for (Map.Entry<EvergoreItem, Deque<Lot>> entry : openLots.entrySet()) {
+			dropExpiredLots(entry.getValue(), at);
+			if (!entry.getValue().isEmpty()) {
+				abstainedItems.add(entry.getKey());
 			}
 		}
 	}

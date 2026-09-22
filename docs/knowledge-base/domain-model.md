@@ -389,6 +389,17 @@ consumes nothing, so a withdrawal followed by an unrelated deposit and then the 
 amount coming back is still reported in full. The detector reads all three `Recipe` cases through an
 exhaustive `switch`, so a fourth case the compiler adds later cannot fall through silently.
 
+**A deposited product whose recipe is `UNKNOWN_RECIPE` (`Recipe.Unread`) makes the detector abstain
+rather than accuse.** 98 gem-forged entries have no readable recipe ("Gem-forged gear is crafted
+from a blueprint learned as an item" above), so the detector cannot tell whether such a deposit
+consumes a currently open withdrawal or not. Rather than guess either way, it checks every item that
+has an open lot at that moment (after dropping the ones the window has already passed): each one it
+finds becomes an abstained avatar/item pair, reported as a `RoundTripAbstention(avatar, item)`
+instead of a `RoundTrip`, however the rest of the walk goes for that pair; an item with no open lot
+at that moment is untouched. `RoundTripDetector.detect` therefore answers a
+`RoundTripReport(roundTrips, abstentions)`. Silence would read as innocence, so the abstention is
+listed rather than dropped: it is the measure of what a read gem recipe would buy.
+
 ## Identity / equality quirks
 
 - `BankEntry` and `StorageEntry` are records, so equality is value-based (all fields); this is

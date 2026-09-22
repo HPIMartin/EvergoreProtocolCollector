@@ -9,10 +9,12 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem;
 
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.ACHAT_ARMBRUST;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.BUCHENHOLZ;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.EISENBARREN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.FEDERN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.HARZ;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KRISTALLAT;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KUPFERERZ;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.PFEILE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STEINKOHLE;
@@ -25,45 +27,45 @@ class RoundTripDetectorTest {
 	void reportsATraderGoodWithdrawnAndDepositedAgainWithinTheWindow() {
 		List<ResolvedStorageEntry> entries = List.of(withdrawal("Alrik", FEDERN, 100, T), deposit("Alrik", FEDERN, 100, T.plusSeconds(3600)));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).containsExactly(new RoundTrip("Alrik", FEDERN, 100));
+		assertThat(report.roundTrips()).containsExactly(new RoundTrip("Alrik", FEDERN, 100));
 	}
 
 	@Test
 	void reportsOnlyTheOverlappingQuantityWhenTheDepositIsSmaller() {
 		List<ResolvedStorageEntry> entries = List.of(withdrawal("Alrik", FEDERN, 100, T), deposit("Alrik", FEDERN, 60, T.plusSeconds(3600)));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).containsExactly(new RoundTrip("Alrik", FEDERN, 60));
+		assertThat(report.roundTrips()).containsExactly(new RoundTrip("Alrik", FEDERN, 60));
 	}
 
 	@Test
 	void reportsOnlyTheOverlappingQuantityWhenTheWithdrawalIsSmaller() {
 		List<ResolvedStorageEntry> entries = List.of(withdrawal("Alrik", FEDERN, 50, T), deposit("Alrik", FEDERN, 80, T.plusSeconds(3600)));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).containsExactly(new RoundTrip("Alrik", FEDERN, 50));
+		assertThat(report.roundTrips()).containsExactly(new RoundTrip("Alrik", FEDERN, 50));
 	}
 
 	@Test
 	void reportsADepositExactlyFortyEightHoursAfterTheWithdrawal() {
 		List<ResolvedStorageEntry> entries = List.of(withdrawal("Alrik", FEDERN, 100, T), deposit("Alrik", FEDERN, 100, T.plus(RoundTripDetector.WINDOW)));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).containsExactly(new RoundTrip("Alrik", FEDERN, 100));
+		assertThat(report.roundTrips()).containsExactly(new RoundTrip("Alrik", FEDERN, 100));
 	}
 
 	@Test
 	void leavesADepositAloneOnceTheWindowHasPassed() {
 		List<ResolvedStorageEntry> entries = List.of(withdrawal("Alrik", FEDERN, 100, T), deposit("Alrik", FEDERN, 100, T.plus(RoundTripDetector.WINDOW).plusSeconds(60)));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).isEmpty();
+		assertThat(report.roundTrips()).isEmpty();
 	}
 
 	@Test
@@ -71,47 +73,47 @@ class RoundTripDetectorTest {
 		List<ResolvedStorageEntry> entries = List
 				.of(withdrawal("Alrik", FEDERN, 100, T), withdrawal("Alrik", FEDERN, 100, T.plusSeconds(47 * 3600)), deposit("Alrik", FEDERN, 100, T.plusSeconds(49 * 3600)));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).containsExactly(new RoundTrip("Alrik", FEDERN, 100));
+		assertThat(report.roundTrips()).containsExactly(new RoundTrip("Alrik", FEDERN, 100));
 	}
 
 	@Test
 	void keepsItemsApart() {
 		List<ResolvedStorageEntry> entries = List.of(withdrawal("Alrik", FEDERN, 100, T), deposit("Alrik", HARZ, 100, T.plusSeconds(3600)));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).isEmpty();
+		assertThat(report.roundTrips()).isEmpty();
 	}
 
 	@Test
 	void keepsAvatarsApart() {
 		List<ResolvedStorageEntry> entries = List.of(withdrawal("Alrik", FEDERN, 100, T), deposit("Brynn", FEDERN, 100, T.plusSeconds(3600)));
 
-		List<RoundTrip> alriksRoundTrips = RoundTripDetector.detect("Alrik", entries);
-		List<RoundTrip> brynnsRoundTrips = RoundTripDetector.detect("Brynn", entries);
+		RoundTripReport alriksReport = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport brynnsReport = RoundTripDetector.detect("Brynn", entries);
 
-		assertThat(alriksRoundTrips).isEmpty();
-		assertThat(brynnsRoundTrips).isEmpty();
+		assertThat(alriksReport.roundTrips()).isEmpty();
+		assertThat(brynnsReport.roundTrips()).isEmpty();
 	}
 
 	@Test
 	void countsASameMinuteWithdrawalAndDepositAsARoundTripWhateverTheirOrderInTheList() {
 		List<ResolvedStorageEntry> entries = List.of(deposit("Alrik", FEDERN, 100, T), withdrawal("Alrik", FEDERN, 100, T));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).containsExactly(new RoundTrip("Alrik", FEDERN, 100));
+		assertThat(report.roundTrips()).containsExactly(new RoundTrip("Alrik", FEDERN, 100));
 	}
 
 	@Test
 	void ignoresAGoodOutsideTheTraderTier() {
 		List<ResolvedStorageEntry> entries = List.of(withdrawal("Alrik", KUPFERERZ, 100, T), deposit("Alrik", KUPFERERZ, 100, T.plusSeconds(3600)));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).isEmpty();
+		assertThat(report.roundTrips()).isEmpty();
 	}
 
 	@Test
@@ -119,9 +121,9 @@ class RoundTripDetectorTest {
 		List<ResolvedStorageEntry> entries = List
 				.of(withdrawal("Alrik", FEDERN, 10, T), deposit("Alrik", PFEILE, 135, T.plusSeconds(3600)), deposit("Alrik", FEDERN, 10, T.plusSeconds(7200)));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).containsExactly(new RoundTrip("Alrik", FEDERN, 5));
+		assertThat(report.roundTrips()).containsExactly(new RoundTrip("Alrik", FEDERN, 5));
 	}
 
 	@Test
@@ -130,9 +132,9 @@ class RoundTripDetectorTest {
 				.of(withdrawal("Alrik", STEINKOHLE, 2, T), deposit("Alrik", EISENBARREN, 1, T.plusSeconds(1800)), deposit("Alrik", EISENBARREN, 1, T.plusSeconds(3600)),
 						deposit("Alrik", STEINKOHLE, 2, T.plusSeconds(7200)));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).containsExactly(new RoundTrip("Alrik", STEINKOHLE, 1));
+		assertThat(report.roundTrips()).containsExactly(new RoundTrip("Alrik", STEINKOHLE, 1));
 	}
 
 	@Test
@@ -140,9 +142,9 @@ class RoundTripDetectorTest {
 		List<ResolvedStorageEntry> entries = List
 				.of(withdrawal("Alrik", FEDERN, 100, T), deposit("Alrik", KUPFERERZ, 10, T.plusSeconds(3600)), deposit("Alrik", FEDERN, 100, T.plusSeconds(7200)));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).containsExactly(new RoundTrip("Alrik", FEDERN, 100));
+		assertThat(report.roundTrips()).containsExactly(new RoundTrip("Alrik", FEDERN, 100));
 	}
 
 	@Test
@@ -151,9 +153,43 @@ class RoundTripDetectorTest {
 				.of(withdrawal("Alrik", BUCHENHOLZ, 6, T), withdrawal("Alrik", FEDERN, 5, T), deposit("Alrik", PFEILE, 135, T.plusSeconds(3600)),
 						deposit("Alrik", BUCHENHOLZ, 6, T.plusSeconds(7200)), deposit("Alrik", FEDERN, 5, T.plusSeconds(7200)));
 
-		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
-		assertThat(roundTrips).isEmpty();
+		assertThat(report.roundTrips()).isEmpty();
+	}
+
+	@Test
+	void abstainsFromAPairWhoseOpenWithdrawalMeetsAnUnreadRecipeDeposit() {
+		List<ResolvedStorageEntry> entries = List
+				.of(withdrawal("Alrik", KRISTALLAT, 100, T), deposit("Alrik", ACHAT_ARMBRUST, 1, T.plusSeconds(3600)), deposit("Alrik", KRISTALLAT, 100, T.plusSeconds(7200)));
+
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(report.roundTrips()).isEmpty();
+		assertThat(report.abstentions()).containsExactly(new RoundTripAbstention("Alrik", KRISTALLAT));
+	}
+
+	@Test
+	void reportsTheRoundTripWhenAnUnreadRecipeDepositMeetsNoOpenWithdrawal() {
+		List<ResolvedStorageEntry> entries = List
+				.of(deposit("Alrik", ACHAT_ARMBRUST, 1, T), withdrawal("Alrik", KRISTALLAT, 100, T.plusSeconds(3600)), deposit("Alrik", KRISTALLAT, 100, T.plusSeconds(7200)));
+
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(report.roundTrips()).containsExactly(new RoundTrip("Alrik", KRISTALLAT, 100));
+		assertThat(report.abstentions()).isEmpty();
+	}
+
+	@Test
+	void abstainsOnlyThePairTheUnreadDepositTouches() {
+		List<ResolvedStorageEntry> entries = List
+				.of(withdrawal("Alrik", KRISTALLAT, 100, T), deposit("Alrik", ACHAT_ARMBRUST, 1, T.plusSeconds(3600)), deposit("Alrik", KRISTALLAT, 100, T.plusSeconds(7200)),
+						withdrawal("Alrik", FEDERN, 50, T.plusSeconds(10800)), deposit("Alrik", FEDERN, 50, T.plusSeconds(14400)));
+
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(report.roundTrips()).containsExactly(new RoundTrip("Alrik", FEDERN, 50));
+		assertThat(report.abstentions()).containsExactly(new RoundTripAbstention("Alrik", KRISTALLAT));
 	}
 
 	private static ResolvedStorageEntry withdrawal(String avatar, EvergoreItem item, int quantity, Instant at) {
