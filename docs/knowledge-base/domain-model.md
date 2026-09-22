@@ -236,7 +236,8 @@ table's total row says the same, so the two never disagree. Measured on the 03.0
 
 > **Where the 100 % credit can be gamed:** a `HANDWERKSMATERIAL` deposit credits 100 % while its
 > withdrawal costs 60 %, so cycling the same goods earns 40 % of their value out of nothing.
-> Detecting that is filed as its own item; the guild's rule is trust-based, and the software's job is
+> Detecting that is the round-trip detection below ("The round-trip detection: `RoundTripDetector`");
+> the guild's rule is trust-based, and the software's job is
 > to make a breach visible rather than to prevent it. The unknown-item fallback `UNDEFINED` therefore
 > sits in `ROHSTOFFE`, the one tier that cannot over-credit: a name the catalog does not know must
 > never inherit the trader tier by default.
@@ -358,6 +359,21 @@ independent readings by design, and no figure is derived from both.
 - `businessLogic/contribution/AvatarContributions` assembles one record per **known** avatar
   (`KnownAvatars`, German collation) out of the stored keys, a missing key counting as zero, so an
   avatar who only ever moved items keeps his row.
+
+### The round-trip detection: `RoundTripDetector`
+
+`businessLogic/roundTrip/RoundTripDetector` answers the "Where the 100 % credit can be gamed" note
+above: it reports, per avatar and per `HANDWERKSMATERIAL` item, the quantity withdrawn and deposited
+again within **48 hours** (`RoundTripDetector.WINDOW = Duration.ofHours(48)`, author decision
+2026-09-22). It walks one avatar's `ResolvedStorageEntry` list sorted by timestamp, withdrawals
+before deposits at an equal timestamp (the game stamps to the minute, so a same-minute out-and-in
+is exactly the cycle the rule is about): a withdrawal of a trader-tier item opens a lot of that
+quantity; a deposit of the same item consumes the avatar's open lots for that item **oldest first**,
+after dropping lots the window has already passed (a deposit exactly 48 h after the withdrawal still
+matches, one minute later does not), and the consumed quantity is reported as one `RoundTrip` per
+avatar/item pair, summed over the walk, only when positive. Quality is ignored; only quantities
+move. An item outside `HANDWERKSMATERIAL` opens no lot and closes none: a raw-material round trip
+costs the member rather than minting, so it is never reported.
 
 ## Identity / equality quirks
 
