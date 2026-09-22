@@ -97,7 +97,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   itself loses the whole batch; the extractor writes oldest first, so any stored part is the oldest
   rows) · `database/LedgerDatabaseEntry` (the columns both ledger rows share) ·
   `database/TransferTypeDatabaseVisitor` (enum ⇄ German DB strings "Einlagerung"/"Entnahme").
-- **Business logic (framework-free):** ports `BankRepository`, `StorageRepository`,
+- **Business logic (framework-free):** ports `BankRepository` and `StorageRepository` (each the
+  generic `base/LedgerRepository` over its entry record, declaring nothing of its own),
   `MetaInformationRepository` · records `BankEntry`, `StorageEntry`, `MetaInformation` ·
   `TransferType` + visitor · `MetaInformationKey` (typed: `DateTimeKey`/`LongKey`/`DoubleKey`) ·
   `contribution/{Contribution,AvatarContribution,AvatarContributions}` (the four ledger sums, their
