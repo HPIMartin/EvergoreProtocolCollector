@@ -28,8 +28,7 @@
         │  (TransferType visitor + EvergoreItem); overwrites MetaInformationRepository
         │  a failing avatar is caught, named and skipped; last_updated stamped on every completed run
         ▼
-   LastRunStatus.recordSuccessfulRecompute(when, unknownItemNames, zeroValuedItemNames, roundTrips,
-   roundTripAbstentions, failedAvatarNames)  (one atomic snapshot)
+   LastRunStatus.recordSuccessfulRecompute(when, EvaluationResult)  (one atomic snapshot)
    (recompute failure ▶ recordRecomputeFailure(...), rethrown)   (monitoring seam)
         ▼
    PostCollectionHook   (no-op in prod; test seam, runs only after a successful recompute)

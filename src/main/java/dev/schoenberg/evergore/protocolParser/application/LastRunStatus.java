@@ -20,13 +20,12 @@ public class LastRunStatus {
 		current.updateAndGet(snapshot -> snapshot.withLastScrapeFailure(when));
 	}
 
-	public void recordSuccessfulRecompute(Instant when, List<String> unknownItemNames, List<String> zeroValuedItemNames, List<RoundTrip> roundTrips,
-			List<RoundTripAbstention> roundTripAbstentions, List<String> failedAvatarNames) {
-		List<String> unknown = List.copyOf(unknownItemNames);
-		List<String> zeroValued = List.copyOf(zeroValuedItemNames);
-		List<RoundTrip> roundTripsCopy = List.copyOf(roundTrips);
-		List<RoundTripAbstention> roundTripAbstentionsCopy = List.copyOf(roundTripAbstentions);
-		List<String> failed = List.copyOf(failedAvatarNames);
+	public void recordSuccessfulRecompute(Instant when, EvaluationResult result) {
+		List<String> unknown = List.copyOf(result.unknownItemNames());
+		List<String> zeroValued = List.copyOf(result.zeroValuedItemNames());
+		List<RoundTrip> roundTripsCopy = List.copyOf(result.roundTrips());
+		List<RoundTripAbstention> roundTripAbstentionsCopy = List.copyOf(result.roundTripAbstentions());
+		List<String> failed = List.copyOf(result.failedAvatarNames());
 		current.updateAndGet(snapshot -> snapshot.withSuccessfulRecompute(when, unknown, zeroValued, roundTripsCopy, roundTripAbstentionsCopy, failed));
 	}
 

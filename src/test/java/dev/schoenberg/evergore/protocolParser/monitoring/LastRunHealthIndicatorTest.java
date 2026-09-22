@@ -12,6 +12,7 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import dev.schoenberg.evergore.protocolParser.application.EvaluationResult;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTrip;
 import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTripAbstention;
@@ -43,7 +44,7 @@ class LastRunHealthIndicatorTest {
 	@Test
 	void reportsUpWithTimestampDetailAfterSuccessfulRecompute() {
 		Instant recorded = Instant.parse("2026-06-21T12:00:00Z");
-		lastRunStatus.recordSuccessfulRecompute(recorded, List.of(), List.of(), List.of(), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(recorded, new EvaluationResult(List.of(), List.of(), List.of(), List.of(), List.of()));
 
 		HealthResult result = singleResult();
 
@@ -58,8 +59,8 @@ class LastRunHealthIndicatorTest {
 	@Test
 	void reportsItemsKnownToBeWorthNothingApartFromUnknownOnes() {
 		lastRunStatus
-				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of("Unobtainium"),
-						List.of("Übungsstück-Sorandilaxt", "Mystischer Pfeil", "Übungsstück-Sorandilaxt"), List.of(), List.of(), List.of());
+				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), new EvaluationResult(List.of("Unobtainium"),
+						List.of("Übungsstück-Sorandilaxt", "Mystischer Pfeil", "Übungsstück-Sorandilaxt"), List.of(), List.of(), List.of()));
 
 		HealthResult result = singleResult();
 
@@ -73,7 +74,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void omitsTheZeroValuedItemDetailWhenNoneOccurredInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), new EvaluationResult(List.of(), List.of(), List.of(), List.of(), List.of()));
 
 		HealthResult result = singleResult();
 
@@ -84,7 +85,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void omitsUnknownItemDetailWhenNoneOccurredInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), new EvaluationResult(List.of(), List.of(), List.of(), List.of(), List.of()));
 
 		HealthResult result = singleResult();
 
@@ -95,7 +96,9 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsUnknownItemCountAndNamesWhenPresentInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of("Unobtainium", "Unobtainium"), List.of(), List.of(), List.of(), List.of());
+		lastRunStatus
+				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"),
+						new EvaluationResult(List.of("Unobtainium", "Unobtainium"), List.of(), List.of(), List.of(), List.of()));
 
 		HealthResult result = singleResult();
 
@@ -107,7 +110,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsScrapeFailureButNotRecomputeFailureAfterASuccessfulRecomputeFollowedByAFailedScrape() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), new EvaluationResult(List.of(), List.of(), List.of(), List.of(), List.of()));
 		lastRunStatus.recordScrapeFailure(Instant.parse("2026-06-22T12:00:00Z"));
 
 		HealthResult result = singleResult();
@@ -121,7 +124,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsDownWithRecomputeFailureAfterASuccessfulRecomputeFollowedByAFailedRecompute() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), new EvaluationResult(List.of(), List.of(), List.of(), List.of(), List.of()));
 		lastRunStatus.recordRecomputeFailure(Instant.parse("2026-06-22T12:00:00Z"));
 
 		HealthResult result = singleResult();
@@ -148,7 +151,9 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsRoundTripCountAndDescriptionsWhenPresentInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(new RoundTrip("Alrik", FEDERN, 100)), List.of(), List.of());
+		lastRunStatus
+				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"),
+						new EvaluationResult(List.of(), List.of(), List.of(), List.of(new RoundTrip("Alrik", FEDERN, 100)), List.of()));
 
 		HealthResult result = singleResult();
 
@@ -161,8 +166,8 @@ class LastRunHealthIndicatorTest {
 	@Test
 	void listsTheRoundTripsOfOneAvatarByItemRatherThanByQuantityText() {
 		lastRunStatus
-				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(),
-						List.of(new RoundTrip("Alrik", HARZ, 10), new RoundTrip("Alrik", FEDERN, 2)), List.of(), List.of());
+				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"),
+						new EvaluationResult(List.of(), List.of(), List.of(), List.of(new RoundTrip("Alrik", HARZ, 10), new RoundTrip("Alrik", FEDERN, 2)), List.of()));
 
 		HealthResult result = singleResult();
 
@@ -173,7 +178,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void omitsTheRoundTripDetailWhenNoneOccurredInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), new EvaluationResult(List.of(), List.of(), List.of(), List.of(), List.of()));
 
 		HealthResult result = singleResult();
 
@@ -186,8 +191,8 @@ class LastRunHealthIndicatorTest {
 	@Test
 	void reportsRoundTripAbstentionCountAndDescriptionsWhenPresentInLastRun() {
 		lastRunStatus
-				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(new RoundTripAbstention("Alrik", KRISTALLAT)),
-						List.of());
+				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"),
+						new EvaluationResult(List.of(), List.of(), List.of(), List.of(), List.of(new RoundTripAbstention("Alrik", KRISTALLAT))));
 
 		HealthResult result = singleResult();
 
@@ -199,7 +204,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void omitsTheRoundTripAbstentionDetailWhenNoneOccurredInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), new EvaluationResult(List.of(), List.of(), List.of(), List.of(), List.of()));
 
 		HealthResult result = singleResult();
 
