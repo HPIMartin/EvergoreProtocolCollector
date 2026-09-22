@@ -62,10 +62,11 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 ## Layers & responsibilities (condensed)
 
 - **Entry/lifecycle:** `Application` (boots Micronaut) · `ApplicationFactory` (`@Factory` composition
-  root: builds the un-annotated repositories, the framework-free `application` use-cases,
-  `FileLoader`, no-op hooks) · `EvergoreDataCollectorJob` (`@Scheduled`). The schema belongs to
-  Flyway: `Repository.getCon` runs the versioned migrations in `src/main/resources/db/migration`
-  before it opens the connection, so no caller can reach an unmigrated database.
+  root: builds the one `SqliteDatabase` and the un-annotated repositories on it, the framework-free
+  `application` use-cases, `FileLoader`, no-op hooks) · `EvergoreDataCollectorJob` (`@Scheduled`).
+  The schema belongs to Flyway: `SqliteDatabase.open` runs the versioned migrations in
+  `src/main/resources/db/migration` before it opens the connection source, so no caller can reach
+  an unmigrated database.
 - **Application use-cases (framework-free):** `application/{EvergoreDataExtractor,EvergoreDataEvaluator}`
   (collect + evaluate coordinators) · `application/LastRunStatus` (monitoring seam: what the
   last run reached, see the pipeline above). Plain objects, wired in `ApplicationFactory`.
@@ -74,9 +75,21 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   implements `PageSource`) · `PageContents` (DTO) · `parser/{EntityParser,EntryFactory}` (text ▶
   `Entry`, regex from `Constants`). Coordinator `EvergoreDataExtractor` (delta filter) lives in
   `application`.
-- **Persistence:** `database/Repository` (ORMLite base) · `database/{bank,storage,metaInformation}/*`
-  (adapters implementing the businessLogic ports) · `database/TransferTypeDatabaseVisitor`
-  (enum ⇄ German DB strings "Einlagerung"/"Entnahme").
+- **Persistence:** `database/SqliteDatabase`, one per context: it opens the file once, runs the
+  migrations and hands out pooled connections, none to a second thread while one holds it, and a
+  transaction keeps its own connection until it ends, so a read on another thread cannot land inside
+  it. The exception is a commit SQLite refuses, because an outside process holds a read transaction
+  longer than the connection waits: that connection goes back to the pool with its transaction still
+  open. The context closes the database when it stops ·
+  `database/{bank,storage,metaInformation}/*` (adapters implementing the businessLogic ports, all
+  three built on that one database; a ledger `add` converts its whole list first, so an entry that
+  cannot be converted stores nothing, then writes it as one batch on the batch's own connection, one
+  commit, because on the pool ORMLite's `create(Collection)` commits every row: 300 rows took 43 s
+  against 210 ms. A row a constraint refuses keeps at most the rows before it and fails every run
+  until it leaves the game's 30-day window; an error on which SQLite rolls the transaction back
+  itself loses the whole batch; the extractor writes oldest first, so any stored part is the oldest
+  rows) ·
+  `database/TransferTypeDatabaseVisitor` (enum ⇄ German DB strings "Einlagerung"/"Entnahme").
 - **Business logic (framework-free):** ports `BankRepository`, `StorageRepository`,
   `MetaInformationRepository` · records `BankEntry`, `StorageEntry`, `MetaInformation` ·
   `TransferType` + visitor · `MetaInformationKey` (typed: `DateTimeKey`/`LongKey`/`DoubleKey`) ·

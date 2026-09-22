@@ -8,6 +8,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,6 +16,7 @@ import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationSnapshot;
+import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
@@ -29,27 +31,35 @@ class MetaInformationSnapshotIsolationTest {
 	private final CountDownLatch recomputeIsInsideItsTransaction = new CountDownLatch(1);
 	private final CountDownLatch readerHasTakenItsSnapshot = new CountDownLatch(1);
 
+	private SqliteDatabase database;
+
 	@BeforeEach
-	void deleteStaleDatabase() {
+	void openAFreshDatabase() {
 		silentThrow(() -> Files.deleteIfExists(Paths.get(FRESH_DB_PATH)));
+		database = SqliteDatabase.open(configurationFor(FRESH_DB_PATH), () -> {}, new LoggerSpy());
+	}
+
+	@AfterEach
+	void closeTheDatabase() {
+		database.close();
 	}
 
 	@Test
 	void answersTheStateBeforeARecomputeWhileThatRecomputeIsStillOpen() throws Exception {
-		MetaInformationDatabaseRepository writer = repositoryOnTheFreshFile();
-		writer.add(generation(1));
-		MetaInformationDatabaseRepository reader = repositoryOnTheFreshFile();
+		MetaInformationDatabaseRepository tested = repositoryOnTheFreshFile();
+		tested.add(generation(1));
 
-		Thread recompute = new Thread(() -> writer.add(generationBlockingOnTheReader(2)));
+		Thread recompute = new Thread(() -> tested.add(generationBlockingOnTheReader(2)));
 		recompute.start();
 		assertThat(recomputeIsInsideItsTransaction.await(HANG_GUARD_SECONDS, TimeUnit.SECONDS)).as("the recompute never entered its transaction").isTrue();
 
-		Set<Long> readDuringTheRecompute = generationsIn(reader.snapshot());
+		Set<Long> readDuringTheRecompute = generationsIn(tested.snapshot());
 		readerHasTakenItsSnapshot.countDown();
 		recompute.join();
+		Set<Long> readAfterTheRecompute = generationsIn(tested.snapshot());
 
 		assertThat(readDuringTheRecompute).as("a read landing inside an open recompute must see the state before it, whole").containsExactly(1L);
-		assertThat(generationsIn(reader.snapshot())).as("once the recompute committed, the next read sees it whole").containsExactly(2L);
+		assertThat(readAfterTheRecompute).as("once the recompute committed, the next read sees it whole").containsExactly(2L);
 	}
 
 	private List<MetaInformation<Long>> generation(long value) {
@@ -68,8 +78,8 @@ class MetaInformationSnapshotIsolationTest {
 		return KEYS.stream().map(id -> snapshot.get(new LongKey(id)).orElseThrow()).collect(toSet());
 	}
 
-	private static MetaInformationDatabaseRepository repositoryOnTheFreshFile() {
-		return MetaInformationDatabaseRepository.get(configurationFor(FRESH_DB_PATH), new LoggerSpy(), () -> {});
+	private MetaInformationDatabaseRepository repositoryOnTheFreshFile() {
+		return new MetaInformationDatabaseRepository(database);
 	}
 
 	private static Configuration configurationFor(String databasePath) {

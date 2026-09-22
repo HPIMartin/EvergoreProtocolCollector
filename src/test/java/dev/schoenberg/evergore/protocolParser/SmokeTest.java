@@ -25,6 +25,7 @@ import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.website.SeleniumPageSource;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
+import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 import dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseRepository;
@@ -70,7 +71,9 @@ class SmokeTest {
 
 	@Test
 	void retrieveDataViaBankEndpoint() {
-		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(SEEDED_TIME, "BankTestAvatar", 42, EINLAGERUNG)));
+		try (SqliteDatabase database = SqliteDatabase.open(config, () -> {}, logger)) {
+			new BankDatabaseRepository(database).add(asList(new BankEntry(SEEDED_TIME, "BankTestAvatar", 42, EINLAGERUNG)));
+		}
 
 		HttpResponse<String> response = get("/api/v1/avatars/BankTestAvatar/bank");
 
@@ -81,7 +84,9 @@ class SmokeTest {
 
 	@Test
 	void retrieveDataViaStorageEndpoint() {
-		StorageDatabaseRepository.get(config, logger, () -> {}).add(asList(new StorageEntry(SEEDED_TIME, "StorageTestAvatar", 1, "TestItem", 42, EINLAGERUNG)));
+		try (SqliteDatabase database = SqliteDatabase.open(config, () -> {}, logger)) {
+			new StorageDatabaseRepository(database).add(asList(new StorageEntry(SEEDED_TIME, "StorageTestAvatar", 1, "TestItem", 42, EINLAGERUNG)));
+		}
 
 		HttpResponse<String> response = get("/api/v1/avatars/StorageTestAvatar/storage");
 
@@ -94,10 +99,12 @@ class SmokeTest {
 	@Test
 	void retrieveDataViaOverviewEndpoint() {
 		String avatar = "OverviewTestAvatar";
-		BankDatabaseRepository.get(config, logger, () -> {}).add(asList(new BankEntry(EPOCH, avatar, 0, EINLAGERUNG)));
 		MetaInformation<Long> placement = new MetaInformation<>(getBankPlacement(avatar), 1337L);
 		MetaInformation<Long> withdrawl = new MetaInformation<>(getBankWithdrawl(avatar), 42L);
-		MetaInformationDatabaseRepository.get(config, logger, () -> {}).add(asList(placement, withdrawl));
+		try (SqliteDatabase database = SqliteDatabase.open(config, () -> {}, logger)) {
+			new BankDatabaseRepository(database).add(asList(new BankEntry(EPOCH, avatar, 0, EINLAGERUNG)));
+			new MetaInformationDatabaseRepository(database).add(asList(placement, withdrawl));
+		}
 
 		HttpResponse<String> response = get("/api/v1/avatars");
 

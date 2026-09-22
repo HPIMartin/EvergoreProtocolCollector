@@ -6,12 +6,14 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
+import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 import dev.schoenberg.evergore.protocolParser.database.SqliteFile;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
@@ -26,10 +28,17 @@ class StorageDatabaseRepositoryTest {
 	private static final String FRESH_DB_PATH = "build/tmp/test/storageRepositoryTest.sqlite";
 
 	private final SqliteFile databaseFile = new SqliteFile(FRESH_DB_PATH);
+	private SqliteDatabase database;
 
 	@BeforeEach
-	void deleteStaleDatabase() {
+	void openAFreshDatabase() {
 		silentThrow(() -> Files.deleteIfExists(Paths.get(FRESH_DB_PATH)));
+		database = SqliteDatabase.open(configurationFor(FRESH_DB_PATH), () -> {}, new LoggerSpy());
+	}
+
+	@AfterEach
+	void closeTheDatabase() {
+		database.close();
 	}
 
 	@Test
@@ -111,6 +120,44 @@ class StorageDatabaseRepositoryTest {
 	}
 
 	@Test
+	void addStoresSeveralRowsInOneCommit() {
+		StorageDatabaseRepository tested = repository();
+		List<StorageEntry> severalRows = List.of(storageEntry("Aurora", BOUNDARY, 1), storageEntry("Aurora", BOUNDARY, 2), storageEntry("Boreas", BOUNDARY, 3));
+
+		int commits = databaseFile.commitsDuring(() -> tested.add(severalRows));
+
+		assertThat(commits).isEqualTo(1);
+	}
+
+	@Test
+	void addStoresNothingWhenAnEntryCannotBeMapped() {
+		StorageDatabaseRepository tested = repository();
+		List<StorageEntry> batch = List.of(storageEntry("Aurora", BOUNDARY, 1), entryWithoutTimestamp(2));
+
+		Throwable failure = catchThrowable(() -> tested.add(batch));
+		long stored = tested.countFor("Aurora");
+
+		assertThat(failure).isNotNull();
+		assertThat(stored).isZero();
+	}
+
+	@Test
+	void aRefusedRowStoresAtMostTheRowsBeforeIt() {
+		StorageDatabaseRepository tested = repository();
+		List<StorageEntry> batch = List
+				.of(storageEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1), storageEntry("Aurora", BOUNDARY, 2), entryWithoutAvatar(3),
+						storageEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 4));
+
+		Throwable failure = catchThrowable(() -> tested.add(batch));
+		Throwable lockRefusal = catchThrowable(databaseFile::takeAndReleaseTheExclusiveLockWithoutWaiting);
+		List<Integer> committed = databaseFile.committedValues(StorageDatabaseEntry.TABLE, "quantity");
+
+		assertThat(failure).hasStackTraceContaining("NOT NULL constraint failed");
+		assertThat(lockRefusal).isNull();
+		assertThat(List.of(List.of(), List.of(1), List.of(1, 2))).contains(committed);
+	}
+
+	@Test
 	void countForCountsOnlyTheRowsOfTheGivenAvatar() {
 		StorageDatabaseRepository repo = repository();
 		repo.add(List.of(storageEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1), storageEntry("Aurora", BOUNDARY, 2), storageEntry("Boreas", ONE_MINUTE_AFTER_BOUNDARY, 3)));
@@ -150,6 +197,14 @@ class StorageDatabaseRepositoryTest {
 		return new StorageEntry(timeStamp, avatar, quantity, "Drachenhaut", 80, TransferType.EINLAGERUNG);
 	}
 
+	private static StorageEntry entryWithoutTimestamp(int quantity) {
+		return new StorageEntry(null, "Aurora", quantity, "Drachenhaut", 80, TransferType.EINLAGERUNG);
+	}
+
+	private static StorageEntry entryWithoutAvatar(int quantity) {
+		return new StorageEntry(BOUNDARY, null, quantity, "Drachenhaut", 80, TransferType.EINLAGERUNG);
+	}
+
 	private static Configuration configurationFor(String databasePath) {
 		return new Configuration() {
 			@Override
@@ -159,7 +214,7 @@ class StorageDatabaseRepositoryTest {
 		};
 	}
 
-	private static StorageDatabaseRepository repository() {
-		return StorageDatabaseRepository.get(configurationFor(FRESH_DB_PATH), new LoggerSpy(), () -> {});
+	private StorageDatabaseRepository repository() {
+		return new StorageDatabaseRepository(database);
 	}
 }

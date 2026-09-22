@@ -6,12 +6,14 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
+import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 import dev.schoenberg.evergore.protocolParser.database.SqliteFile;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
@@ -26,10 +28,17 @@ class BankDatabaseRepositoryTest {
 	private static final Instant ONE_MINUTE_AFTER_BOUNDARY = BOUNDARY.plusSeconds(60);
 
 	private final SqliteFile databaseFile = new SqliteFile(FRESH_DB_PATH);
+	private SqliteDatabase database;
 
 	@BeforeEach
-	void deleteStaleDatabase() {
+	void openAFreshDatabase() {
 		silentThrow(() -> Files.deleteIfExists(Paths.get(FRESH_DB_PATH)));
+		database = SqliteDatabase.open(configurationFor(FRESH_DB_PATH), () -> {}, new LoggerSpy());
+	}
+
+	@AfterEach
+	void closeTheDatabase() {
+		database.close();
 	}
 
 	@Test
@@ -122,6 +131,43 @@ class BankDatabaseRepositoryTest {
 	}
 
 	@Test
+	void addStoresSeveralRowsInOneCommit() {
+		BankDatabaseRepository tested = repository();
+		List<BankEntry> severalRows = List.of(bankEntry("Aurora", BOUNDARY, 1), bankEntry("Aurora", BOUNDARY, 2), bankEntry("Boreas", BOUNDARY, 3));
+
+		int commits = databaseFile.commitsDuring(() -> tested.add(severalRows));
+
+		assertThat(commits).isEqualTo(1);
+	}
+
+	@Test
+	void addStoresNothingWhenAnEntryCannotBeMapped() {
+		BankDatabaseRepository tested = repository();
+		List<BankEntry> batch = List.of(bankEntry("Aurora", BOUNDARY, 1), entryWithoutTimestamp(2));
+
+		Throwable failure = catchThrowable(() -> tested.add(batch));
+		long stored = tested.countFor("Aurora");
+
+		assertThat(failure).isNotNull();
+		assertThat(stored).isZero();
+	}
+
+	@Test
+	void aRefusedRowStoresAtMostTheRowsBeforeIt() {
+		BankDatabaseRepository tested = repository();
+		List<BankEntry> batch = List
+				.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1), bankEntry("Aurora", BOUNDARY, 2), entryWithoutAvatar(3), bankEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 4));
+
+		Throwable failure = catchThrowable(() -> tested.add(batch));
+		Throwable lockRefusal = catchThrowable(databaseFile::takeAndReleaseTheExclusiveLockWithoutWaiting);
+		List<Integer> committed = databaseFile.committedValues(BankDatabaseEntry.TABLE, "amount");
+
+		assertThat(failure).hasStackTraceContaining("NOT NULL constraint failed");
+		assertThat(lockRefusal).isNull();
+		assertThat(List.of(List.of(), List.of(1), List.of(1, 2))).contains(committed);
+	}
+
+	@Test
 	void countForCountsOnlyTheRowsOfTheGivenAvatar() {
 		BankDatabaseRepository repo = repository();
 		repo.add(List.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 100), bankEntry("Aurora", BOUNDARY, 200), bankEntry("Boreas", ONE_MINUTE_AFTER_BOUNDARY, 300)));
@@ -161,6 +207,14 @@ class BankDatabaseRepositoryTest {
 		return new BankEntry(timeStamp, avatar, amount, TransferType.EINLAGERUNG);
 	}
 
+	private static BankEntry entryWithoutTimestamp(int amount) {
+		return new BankEntry(null, "Aurora", amount, TransferType.EINLAGERUNG);
+	}
+
+	private static BankEntry entryWithoutAvatar(int amount) {
+		return new BankEntry(BOUNDARY, null, amount, TransferType.EINLAGERUNG);
+	}
+
 	private static Configuration configurationFor(String databasePath) {
 		return new Configuration() {
 			@Override
@@ -170,7 +224,7 @@ class BankDatabaseRepositoryTest {
 		};
 	}
 
-	private static BankDatabaseRepository repository() {
-		return BankDatabaseRepository.get(configurationFor(FRESH_DB_PATH), new LoggerSpy(), () -> {});
+	private BankDatabaseRepository repository() {
+		return new BankDatabaseRepository(database);
 	}
 }

@@ -59,9 +59,6 @@ public class EvergoreDataExtractor {
 		return sortedByTimestamp(surplusOverStored(parsed, stored), timestampOf);
 	}
 
-	// Pages are scraped newest-first; ORMLite's create(Collection) on SQLite has no transaction, so a mid-batch
-	// failure commits a partial batch. Ascending order keeps a partial commit a prefix of the oldest rows, so the
-	// next run re-ingests the rest instead of permanently stranding everything below the new stored max.
 	private <T> List<T> sortedByTimestamp(List<T> entries, Function<T, Instant> timestampOf) {
 		return entries.stream().sorted(Comparator.comparing(timestampOf)).toList();
 	}

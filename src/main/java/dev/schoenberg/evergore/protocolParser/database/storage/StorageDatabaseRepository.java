@@ -6,16 +6,12 @@ import java.util.Map;
 
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.dao.GenericRawResults;
-import com.j256.ormlite.support.ConnectionSource;
 
-import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
-import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
-import dev.schoenberg.evergore.protocolParser.database.Repository;
+import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 import dev.schoenberg.evergore.protocolParser.database.TransferTypeDatabaseVisitor;
 import dev.schoenberg.evergore.protocolParser.exceptions.NoElementFound;
-import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.AVATAR_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.TIMESTAMP_COLUMN;
@@ -23,25 +19,18 @@ import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.Exc
 import static java.sql.Timestamp.from;
 import static java.util.stream.Collectors.toMap;
 
-public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> implements StorageRepository {
-	private final Dao<StorageDatabaseEntry, String> storage;
+public class StorageDatabaseRepository implements StorageRepository {
+	private final SqliteDatabase database;
 	private final TransferTypeDatabaseVisitor transferTypeVisitor = new TransferTypeDatabaseVisitor();
 
-	public static StorageDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
-		ConnectionSource con = getCon(config, logger, hook);
-		StorageDatabaseRepository repository = new StorageDatabaseRepository(con, logger, getDao(con, StorageDatabaseEntry.class));
-		return repository;
-	}
-
-	private StorageDatabaseRepository(ConnectionSource con, Logger logger, Dao<StorageDatabaseEntry, String> bank) {
-		super(con, logger);
-		storage = bank;
+	public StorageDatabaseRepository(SqliteDatabase database) {
+		this.database = database;
 	}
 
 	@Override
 	public List<StorageEntry> getAllFor(String avatar, long page, long size) {
 		List<StorageDatabaseEntry> result = silentThrow(
-				() -> storage.queryBuilder().limit(size).offset(page * size).orderBy(TIMESTAMP_COLUMN, false).where().eq(AVATAR_COLUMN, avatar).query());
+				() -> storage().queryBuilder().limit(size).offset(page * size).orderBy(TIMESTAMP_COLUMN, false).where().eq(AVATAR_COLUMN, avatar).query());
 
 		if (result.isEmpty()) {
 			throw new NoElementFound(avatar);
@@ -52,31 +41,38 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 
 	@Override
 	public List<StorageEntry> getAllFor(String avatar) {
-		List<StorageDatabaseEntry> result = silentThrow(() -> storage.queryBuilder().where().eq(AVATAR_COLUMN, avatar).query());
+		List<StorageDatabaseEntry> result = silentThrow(() -> storage().queryBuilder().where().eq(AVATAR_COLUMN, avatar).query());
 
 		return convert(result);
 	}
 
 	@Override
 	public long countFor(String avatar) {
-		return silentThrow(() -> storage.queryBuilder().where().eq(AVATAR_COLUMN, avatar).countOf());
+		return silentThrow(() -> storage().queryBuilder().where().eq(AVATAR_COLUMN, avatar).countOf());
 	}
 
 	@Override
 	public List<StorageEntry> getAllSince(Instant timestampInclusive) {
-		List<StorageDatabaseEntry> result = silentThrow(() -> storage.queryBuilder().where().ge(StorageDatabaseEntry.TIMESTAMP_COLUMN, from(timestampInclusive)).query());
+		List<StorageDatabaseEntry> result = silentThrow(() -> storage().queryBuilder().where().ge(StorageDatabaseEntry.TIMESTAMP_COLUMN, from(timestampInclusive)).query());
 
 		return convert(result);
 	}
 
 	@Override
 	public void add(List<StorageEntry> newEntries) {
-		silentThrow(() -> storage.create(newEntries.stream().map(this::convert).toList()));
+		Dao<StorageDatabaseEntry, String> storage = storage();
+		List<StorageDatabaseEntry> rows = newEntries.stream().map(this::convert).toList();
+		silentThrow(() -> storage.callBatchTasks(() -> {
+			for (StorageDatabaseEntry row : rows) {
+				storage.create(row);
+			}
+			return null;
+		}));
 	}
 
 	@Override
 	public List<String> getAllDifferentAvatars() {
-		List<StorageDatabaseEntry> avatars = silentThrow(() -> storage.queryBuilder().distinct().selectColumns(AVATAR_COLUMN).query());
+		List<StorageDatabaseEntry> avatars = silentThrow(() -> storage().queryBuilder().distinct().selectColumns(AVATAR_COLUMN).query());
 		return avatars.stream().map(bde -> bde.avatar).toList();
 	}
 
@@ -86,6 +82,7 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 				+ AVATAR_COLUMN;
 
 		return silentThrow(() -> {
+			Dao<StorageDatabaseEntry, String> storage = storage();
 			GenericRawResults<StorageDatabaseEntry> rows = storage.queryRaw(newestPerAvatar, storage.getRawRowMapper());
 			try {
 				return rows.getResults().stream().collect(toMap(row -> row.avatar, row -> row.timeStamp.toInstant()));
@@ -93,6 +90,10 @@ public class StorageDatabaseRepository extends Repository<StorageDatabaseEntry> 
 				rows.close();
 			}
 		});
+	}
+
+	private Dao<StorageDatabaseEntry, String> storage() {
+		return database.dao(StorageDatabaseEntry.class);
 	}
 
 	private List<StorageEntry> convert(List<StorageDatabaseEntry> dbEntries) {

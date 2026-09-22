@@ -4,7 +4,7 @@ import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
 import com.j256.ormlite.dao.Dao;
-import com.j256.ormlite.jdbc.JdbcConnectionSource;
+import com.j256.ormlite.jdbc.JdbcPooledConnectionSource;
 import com.j256.ormlite.misc.TransactionManager;
 import com.j256.ormlite.support.ConnectionSource;
 
@@ -15,16 +15,14 @@ import static com.j256.ormlite.dao.DaoManager.createDao;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static java.nio.file.Files.createDirectories;
 
-public abstract class Repository<T> {
-	private final ConnectionSource con;
-	protected final Logger logger;
+public class SqliteDatabase implements AutoCloseable {
+	private final ConnectionSource connections;
 
-	public Repository(ConnectionSource con, Logger logger) {
-		this.con = con;
-		this.logger = logger;
+	private SqliteDatabase(ConnectionSource connections) {
+		this.connections = connections;
 	}
 
-	protected static ConnectionSource getCon(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
+	public static SqliteDatabase open(Configuration config, PreDatabaseConnectionHook hook, Logger logger) {
 		return silentThrow(() -> {
 			String dbPath = config.getDatabasePath();
 			Path parent = Path.of(dbPath).getParent();
@@ -35,16 +33,20 @@ public abstract class Repository<T> {
 			new DatabaseMigration(config, logger).migrate();
 			String url = "jdbc:sqlite:" + dbPath;
 			logger.info("Connecting to: " + url);
-			return new JdbcConnectionSource(url);
+			return new SqliteDatabase(new JdbcPooledConnectionSource(url));
 		});
 	}
 
-	protected static <T> Dao<T, String> getDao(ConnectionSource con, Class<T> type) {
-		return silentThrow(() -> createDao(con, type));
+	public <T> Dao<T, String> dao(Class<T> type) {
+		return silentThrow(() -> createDao(connections, type));
 	}
 
-	protected <R> R inTransaction(Callable<R> work) {
-		return silentThrow(() -> TransactionManager.callInTransaction(con, work));
+	public <R> R inTransaction(Callable<R> work) {
+		return silentThrow(() -> TransactionManager.callInTransaction(connections, work));
 	}
 
+	@Override
+	public void close() {
+		silentThrow(() -> connections.close());
+	}
 }

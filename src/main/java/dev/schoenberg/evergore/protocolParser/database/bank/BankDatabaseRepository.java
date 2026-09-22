@@ -6,16 +6,12 @@ import java.util.Map;
 
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.dao.GenericRawResults;
-import com.j256.ormlite.support.ConnectionSource;
 
-import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
-import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
-import dev.schoenberg.evergore.protocolParser.database.Repository;
+import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 import dev.schoenberg.evergore.protocolParser.database.TransferTypeDatabaseVisitor;
 import dev.schoenberg.evergore.protocolParser.exceptions.NoElementFound;
-import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.AVATAR_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.TIMESTAMP_COLUMN;
@@ -23,26 +19,19 @@ import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.Exc
 import static java.sql.Timestamp.from;
 import static java.util.stream.Collectors.toMap;
 
-public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implements BankRepository {
-	private final Dao<BankDatabaseEntry, String> bank;
+public class BankDatabaseRepository implements BankRepository {
+	private final SqliteDatabase database;
 
 	private final TransferTypeDatabaseVisitor transferTypeVisitor = new TransferTypeDatabaseVisitor();
 
-	public static BankDatabaseRepository get(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
-		ConnectionSource con = getCon(config, logger, hook);
-		BankDatabaseRepository repository = new BankDatabaseRepository(con, logger, getDao(con, BankDatabaseEntry.class));
-		return repository;
-	}
-
-	private BankDatabaseRepository(ConnectionSource con, Logger logger, Dao<BankDatabaseEntry, String> bank) {
-		super(con, logger);
-		this.bank = bank;
+	public BankDatabaseRepository(SqliteDatabase database) {
+		this.database = database;
 	}
 
 	@Override
 	public List<BankEntry> getAllFor(String avatar, long page, long size) {
 		List<BankDatabaseEntry> result = silentThrow(
-				() -> bank.queryBuilder().orderBy(TIMESTAMP_COLUMN, false).limit(size).offset(page * size).where().eq(AVATAR_COLUMN, avatar).query());
+				() -> bank().queryBuilder().orderBy(TIMESTAMP_COLUMN, false).limit(size).offset(page * size).where().eq(AVATAR_COLUMN, avatar).query());
 
 		if (result.isEmpty()) {
 			throw new NoElementFound(avatar);
@@ -53,31 +42,38 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 
 	@Override
 	public List<BankEntry> getAllFor(String avatar) {
-		List<BankDatabaseEntry> result = silentThrow(() -> bank.queryBuilder().where().eq(AVATAR_COLUMN, avatar).query());
+		List<BankDatabaseEntry> result = silentThrow(() -> bank().queryBuilder().where().eq(AVATAR_COLUMN, avatar).query());
 
 		return convert(result);
 	}
 
 	@Override
 	public long countFor(String avatar) {
-		return silentThrow(() -> bank.queryBuilder().where().eq(AVATAR_COLUMN, avatar).countOf());
+		return silentThrow(() -> bank().queryBuilder().where().eq(AVATAR_COLUMN, avatar).countOf());
 	}
 
 	@Override
 	public List<BankEntry> getAllSince(Instant timestampInclusive) {
-		List<BankDatabaseEntry> result = silentThrow(() -> bank.queryBuilder().where().ge(TIMESTAMP_COLUMN, from(timestampInclusive)).query());
+		List<BankDatabaseEntry> result = silentThrow(() -> bank().queryBuilder().where().ge(TIMESTAMP_COLUMN, from(timestampInclusive)).query());
 
 		return convert(result);
 	}
 
 	@Override
 	public void add(List<BankEntry> newEntries) {
-		silentThrow(() -> bank.create(newEntries.stream().map(this::convert).toList()));
+		Dao<BankDatabaseEntry, String> bank = bank();
+		List<BankDatabaseEntry> rows = newEntries.stream().map(this::convert).toList();
+		silentThrow(() -> bank.callBatchTasks(() -> {
+			for (BankDatabaseEntry row : rows) {
+				bank.create(row);
+			}
+			return null;
+		}));
 	}
 
 	@Override
 	public List<String> getAllDifferentAvatars() {
-		List<BankDatabaseEntry> avatars = silentThrow(() -> bank.queryBuilder().distinct().selectColumns(AVATAR_COLUMN).query());
+		List<BankDatabaseEntry> avatars = silentThrow(() -> bank().queryBuilder().distinct().selectColumns(AVATAR_COLUMN).query());
 		return avatars.stream().map(bde -> bde.avatar).toList();
 	}
 
@@ -87,6 +83,7 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 				+ AVATAR_COLUMN;
 
 		return silentThrow(() -> {
+			Dao<BankDatabaseEntry, String> bank = bank();
 			GenericRawResults<BankDatabaseEntry> rows = bank.queryRaw(newestPerAvatar, bank.getRawRowMapper());
 			try {
 				return rows.getResults().stream().collect(toMap(row -> row.avatar, row -> row.timeStamp.toInstant()));
@@ -94,6 +91,10 @@ public class BankDatabaseRepository extends Repository<BankDatabaseEntry> implem
 				rows.close();
 			}
 		});
+	}
+
+	private Dao<BankDatabaseEntry, String> bank() {
+		return database.dao(BankDatabaseEntry.class);
 	}
 
 	private List<BankEntry> convert(List<BankDatabaseEntry> dbEntries) {

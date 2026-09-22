@@ -8,6 +8,7 @@ import java.util.List;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
+import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 import dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
@@ -29,15 +30,17 @@ public class TestDataGenerator {
 		LoggerSpy logger = new LoggerSpy();
 		Configuration config = new FixtureConfiguration();
 
-		BankDatabaseRepository bank = BankDatabaseRepository.get(config, logger, () -> {});
-		bank.add(auroraBankEntries());
-		bank.add(boreasBankEntries());
-		bank.add(calixBankEntries());
+		try (SqliteDatabase database = SqliteDatabase.open(config, () -> {}, logger)) {
+			BankDatabaseRepository bank = new BankDatabaseRepository(database);
+			bank.add(auroraBankEntries());
+			bank.add(boreasBankEntries());
+			bank.add(calixBankEntries());
 
-		StorageDatabaseRepository storage = StorageDatabaseRepository.get(config, logger, () -> {});
-		storage.add(auroraStorageEntries());
-		storage.add(boreasStorageEntries());
-		storage.add(brynjaStorageEntries());
+			StorageDatabaseRepository storage = new StorageDatabaseRepository(database);
+			storage.add(auroraStorageEntries());
+			storage.add(boreasStorageEntries());
+			storage.add(brynjaStorageEntries());
+		}
 	}
 
 	private static List<BankEntry> auroraBankEntries() {

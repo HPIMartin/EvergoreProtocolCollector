@@ -8,12 +8,14 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey;
+import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
@@ -23,9 +25,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class MetaInformationDatabaseRepositoryTest {
 	private static final String FRESH_DB_PATH = "build/tmp/test/metaInformationRepositoryTest.sqlite";
 
+	private SqliteDatabase database;
+
 	@BeforeEach
-	void deleteStaleDatabase() {
+	void openAFreshDatabase() {
 		silentThrow(() -> Files.deleteIfExists(Paths.get(FRESH_DB_PATH)));
+		database = SqliteDatabase.open(configurationFor(FRESH_DB_PATH), () -> {}, new LoggerSpy());
+	}
+
+	@AfterEach
+	void closeTheDatabase() {
+		database.close();
 	}
 
 	@Test
@@ -77,8 +87,8 @@ class MetaInformationDatabaseRepositoryTest {
 		});
 	}
 
-	private static MetaInformationDatabaseRepository repositoryOnAFreshFile() {
-		return MetaInformationDatabaseRepository.get(configurationFor(FRESH_DB_PATH), new LoggerSpy(), () -> {});
+	private MetaInformationDatabaseRepository repositoryOnAFreshFile() {
+		return new MetaInformationDatabaseRepository(database);
 	}
 
 	private static Configuration configurationFor(String databasePath) {

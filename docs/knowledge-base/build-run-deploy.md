@@ -634,8 +634,8 @@ and the database is left untouched, so a broken scrape degrades to stale data ra
 `bank_placement_<avatar>` and `bank_withdrawl_<avatar>` meta keys are stable, and the
 `storage_placement_<avatar>` / `storage_withdrawl_<avatar>` keys are additive.
 
-**Schema migrations (Flyway):** `Repository.getCon` runs `src/main/resources/db/migration` before it
-opens the connection, so the first start of a new version migrates the live database. `V1` creates
+**Schema migrations (Flyway):** `SqliteDatabase.open` runs `src/main/resources/db/migration` before
+it opens the connection source, so the first start of a new version migrates the live database. `V1` creates
 the pre-Flyway tables `IF NOT EXISTS`, so it is a no-op on a database that already has them and
 still repairs one that is missing a table; `V2` rebuilds all three tables with `NOT NULL` on every
 column, copying every row into the new table. What this means for a deploy:

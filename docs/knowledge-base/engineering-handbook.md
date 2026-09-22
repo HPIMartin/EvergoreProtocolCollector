@@ -51,9 +51,8 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
   primitive `int` as **0** without an exception, so a nullable `amount` would not crash, it would
   silently change a member's sums.
 - **No logic in constructors; field assignment only** (no IO, no `init()`-style calls);
-  construct + initialize via static **factory method** (the `Repository` subclass
-  `get(...)` methods, Effective Java Item 1) or a lifecycle hook. Constructor logic breaks
-  testability and SRP.
+  construct + initialize via static **factory method** (`SqliteDatabase.open(...)`, Effective
+  Java Item 1) or a lifecycle hook. Constructor logic breaks testability and SRP.
 - **`static` is a smell, mutable static state above all**: hidden cross-instance/cross-test
   coupling (a `public static int DELAY_IN_SEC` once stomped between two boot-test contexts).
   Prefer DI, instance state, a proper seam. Boot tests sharing bean-written state use an injected

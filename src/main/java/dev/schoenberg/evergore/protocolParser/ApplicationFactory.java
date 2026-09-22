@@ -5,6 +5,7 @@ import java.time.ZoneId;
 
 import jakarta.inject.Singleton;
 
+import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import org.openqa.selenium.support.ui.Sleeper;
 
@@ -20,6 +21,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepos
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
+import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 import dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseRepository;
@@ -63,18 +65,24 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public BankDatabaseRepository bankDatabaseRepository(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
-		return BankDatabaseRepository.get(config, logger, hook);
+	@Bean(preDestroy = "close")
+	public SqliteDatabase sqliteDatabase(Configuration config, PreDatabaseConnectionHook hook, Logger logger) {
+		return SqliteDatabase.open(config, hook, logger);
 	}
 
 	@Singleton
-	public StorageDatabaseRepository storageDatabaseRepository(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
-		return StorageDatabaseRepository.get(config, logger, hook);
+	public BankDatabaseRepository bankDatabaseRepository(SqliteDatabase database) {
+		return new BankDatabaseRepository(database);
 	}
 
 	@Singleton
-	public MetaInformationDatabaseRepository metaInformationDatabaseRepository(Configuration config, Logger logger, PreDatabaseConnectionHook hook) {
-		return MetaInformationDatabaseRepository.get(config, logger, hook);
+	public StorageDatabaseRepository storageDatabaseRepository(SqliteDatabase database) {
+		return new StorageDatabaseRepository(database);
+	}
+
+	@Singleton
+	public MetaInformationDatabaseRepository metaInformationDatabaseRepository(SqliteDatabase database) {
+		return new MetaInformationDatabaseRepository(database);
 	}
 
 	@Singleton
