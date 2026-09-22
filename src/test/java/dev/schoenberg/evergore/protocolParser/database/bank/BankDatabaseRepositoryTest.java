@@ -12,16 +12,20 @@ import org.junit.jupiter.api.Test;
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
+import dev.schoenberg.evergore.protocolParser.database.SqliteFile;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 class BankDatabaseRepositoryTest {
 	private static final String FRESH_DB_PATH = "build/tmp/test/bankRepositoryTest.sqlite";
 	private static final Instant BOUNDARY = Instant.parse("2024-06-01T13:37:00Z");
 	private static final Instant ONE_MINUTE_BEFORE_BOUNDARY = BOUNDARY.minusSeconds(60);
 	private static final Instant ONE_MINUTE_AFTER_BOUNDARY = BOUNDARY.plusSeconds(60);
+
+	private final SqliteFile databaseFile = new SqliteFile(FRESH_DB_PATH);
 
 	@BeforeEach
 	void deleteStaleDatabase() {
@@ -69,6 +73,52 @@ class BankDatabaseRepositoryTest {
 		List<BankEntry> result = repo.getAllSince(BOUNDARY);
 
 		assertThat(result).containsExactly(newer);
+	}
+
+	@Test
+	void aStoredWithdrawalReadsBackAsAWithdrawal() {
+		BankDatabaseRepository tested = repository();
+		BankEntry withdrawal = new BankEntry(BOUNDARY, "Aurora", 100, TransferType.ENTNAHME);
+		tested.add(List.of(withdrawal));
+
+		List<BankEntry> result = tested.getAllFor("Aurora");
+
+		assertThat(result).containsExactly(withdrawal);
+	}
+
+	@Test
+	void getAllForAnAvatarHoldsOnlyTheRowsStoredBeforeItReturned() {
+		BankDatabaseRepository tested = repository();
+		BankEntry older = bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 100);
+		BankEntry newer = bankEntry("Aurora", BOUNDARY, 200);
+		tested.add(List.of(older, newer));
+
+		List<BankEntry> result = tested.getAllFor("Aurora");
+		tested.add(List.of(bankEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 300)));
+
+		assertThat(result).containsExactlyInAnyOrder(older, newer);
+	}
+
+	@Test
+	void getAllForAnAvatarFailsAtTheCallOnAStoredRowOfAnUnknownTransferType() {
+		BankDatabaseRepository tested = repository();
+		tested.add(List.of(bankEntry("Aurora", BOUNDARY, 100)));
+		databaseFile.execute("UPDATE " + BankDatabaseEntry.TABLE + " SET type = 'Unbekannt'");
+
+		Throwable failure = catchThrowable(() -> tested.getAllFor("Aurora"));
+
+		assertThat(failure).hasMessageContaining("Unbekannt");
+	}
+
+	@Test
+	void getAllForAnAvatarLeavesNothingOpenOnceItReturns() {
+		BankDatabaseRepository tested = repository();
+		tested.add(List.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 100), bankEntry("Aurora", BOUNDARY, 200)));
+
+		tested.getAllFor("Aurora");
+		Throwable lockRefusal = catchThrowable(databaseFile::takeAndReleaseTheExclusiveLockWithoutWaiting);
+
+		assertThat(lockRefusal).isNull();
 	}
 
 	@Test
