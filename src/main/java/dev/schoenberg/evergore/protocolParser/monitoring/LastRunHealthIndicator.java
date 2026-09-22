@@ -1,5 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.monitoring;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,11 +14,17 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTrip;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTripAbstention;
 
 @Singleton
 public class LastRunHealthIndicator implements HealthIndicator {
 
 	private static final String NAME = "lastRun";
+	private static final Comparator<RoundTrip> BY_AVATAR_THEN_ITEM = Comparator.comparing(RoundTrip::avatar).thenComparing(roundTrip -> roundTrip.item().ingameName);
+	private static final Comparator<RoundTripAbstention> ABSTENTIONS_BY_AVATAR_THEN_ITEM = Comparator
+			.comparing(RoundTripAbstention::avatar)
+			.thenComparing(abstention -> abstention.item().ingameName);
 
 	private final LastRunStatus lastRunStatus;
 
@@ -76,6 +83,25 @@ public class LastRunHealthIndicator implements HealthIndicator {
 			details.put("failedAvatarNames", failedAvatarNames.stream().distinct().sorted().toList());
 		}
 
+		List<RoundTrip> roundTrips = snapshot.roundTrips();
+		if (!roundTrips.isEmpty()) {
+			details.put("roundTripCount", roundTrips.size());
+			details.put("roundTrips", roundTrips.stream().sorted(BY_AVATAR_THEN_ITEM).map(LastRunHealthIndicator::describe).toList());
+		}
+		List<RoundTripAbstention> roundTripAbstentions = snapshot.roundTripAbstentions();
+		if (!roundTripAbstentions.isEmpty()) {
+			details.put("roundTripAbstentionCount", roundTripAbstentions.size());
+			details.put("roundTripAbstentions", roundTripAbstentions.stream().sorted(ABSTENTIONS_BY_AVATAR_THEN_ITEM).map(LastRunHealthIndicator::describe).toList());
+		}
+
 		return details;
+	}
+
+	private static String describe(RoundTrip roundTrip) {
+		return roundTrip.avatar() + ": " + roundTrip.quantity() + " × " + roundTrip.item().ingameName;
+	}
+
+	private static String describe(RoundTripAbstention abstention) {
+		return abstention.avatar() + ": " + abstention.item().ingameName;
 	}
 }

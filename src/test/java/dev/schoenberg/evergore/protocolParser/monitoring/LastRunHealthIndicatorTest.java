@@ -13,7 +13,12 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTrip;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTripAbstention;
 
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.FEDERN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.HARZ;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KRISTALLAT;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class LastRunHealthIndicatorTest {
@@ -38,7 +43,7 @@ class LastRunHealthIndicatorTest {
 	@Test
 	void reportsUpWithTimestampDetailAfterSuccessfulRecompute() {
 		Instant recorded = Instant.parse("2026-06-21T12:00:00Z");
-		lastRunStatus.recordSuccessfulRecompute(recorded, List.of(), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(recorded, List.of(), List.of(), List.of(), List.of(), List.of());
 
 		HealthResult result = singleResult();
 
@@ -54,7 +59,7 @@ class LastRunHealthIndicatorTest {
 	void reportsItemsKnownToBeWorthNothingApartFromUnknownOnes() {
 		lastRunStatus
 				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of("Unobtainium"),
-						List.of("Übungsstück-Sorandilaxt", "Mystischer Pfeil", "Übungsstück-Sorandilaxt"), List.of());
+						List.of("Übungsstück-Sorandilaxt", "Mystischer Pfeil", "Übungsstück-Sorandilaxt"), List.of(), List.of(), List.of());
 
 		HealthResult result = singleResult();
 
@@ -68,7 +73,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void omitsTheZeroValuedItemDetailWhenNoneOccurredInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
 
 		HealthResult result = singleResult();
 
@@ -79,7 +84,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void omitsUnknownItemDetailWhenNoneOccurredInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
 
 		HealthResult result = singleResult();
 
@@ -90,7 +95,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsUnknownItemCountAndNamesWhenPresentInLastRun() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of("Unobtainium", "Unobtainium"), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of("Unobtainium", "Unobtainium"), List.of(), List.of(), List.of(), List.of());
 
 		HealthResult result = singleResult();
 
@@ -102,7 +107,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsScrapeFailureButNotRecomputeFailureAfterASuccessfulRecomputeFollowedByAFailedScrape() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
 		lastRunStatus.recordScrapeFailure(Instant.parse("2026-06-22T12:00:00Z"));
 
 		HealthResult result = singleResult();
@@ -116,7 +121,7 @@ class LastRunHealthIndicatorTest {
 
 	@Test
 	void reportsDownWithRecomputeFailureAfterASuccessfulRecomputeFollowedByAFailedRecompute() {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of());
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
 		lastRunStatus.recordRecomputeFailure(Instant.parse("2026-06-22T12:00:00Z"));
 
 		HealthResult result = singleResult();
@@ -139,6 +144,69 @@ class LastRunHealthIndicatorTest {
 		Map<String, Object> details = (Map<String, Object>) result.getDetails();
 		assertThat(details).containsKey("lastRecomputeFailure");
 		assertThat(details).doesNotContainKey("lastSuccessfulRecompute");
+	}
+
+	@Test
+	void reportsRoundTripCountAndDescriptionsWhenPresentInLastRun() {
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(new RoundTrip("Alrik", FEDERN, 100)), List.of(), List.of());
+
+		HealthResult result = singleResult();
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> details = (Map<String, Object>) result.getDetails();
+		assertThat(details).containsEntry("roundTripCount", 1);
+		assertThat(details).containsEntry("roundTrips", List.of("Alrik: 100 × Federn"));
+	}
+
+	@Test
+	void listsTheRoundTripsOfOneAvatarByItemRatherThanByQuantityText() {
+		lastRunStatus
+				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(),
+						List.of(new RoundTrip("Alrik", HARZ, 10), new RoundTrip("Alrik", FEDERN, 2)), List.of(), List.of());
+
+		HealthResult result = singleResult();
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> details = (Map<String, Object>) result.getDetails();
+		assertThat(details).containsEntry("roundTrips", List.of("Alrik: 2 × Federn", "Alrik: 10 × Harz"));
+	}
+
+	@Test
+	void omitsTheRoundTripDetailWhenNoneOccurredInLastRun() {
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
+
+		HealthResult result = singleResult();
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> details = (Map<String, Object>) result.getDetails();
+		assertThat(details).doesNotContainKey("roundTripCount");
+		assertThat(details).doesNotContainKey("roundTrips");
+	}
+
+	@Test
+	void reportsRoundTripAbstentionCountAndDescriptionsWhenPresentInLastRun() {
+		lastRunStatus
+				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(new RoundTripAbstention("Alrik", KRISTALLAT)),
+						List.of());
+
+		HealthResult result = singleResult();
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> details = (Map<String, Object>) result.getDetails();
+		assertThat(details).containsEntry("roundTripAbstentionCount", 1);
+		assertThat(details).containsEntry("roundTripAbstentions", List.of("Alrik: Kristallat"));
+	}
+
+	@Test
+	void omitsTheRoundTripAbstentionDetailWhenNoneOccurredInLastRun() {
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
+
+		HealthResult result = singleResult();
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> details = (Map<String, Object>) result.getDetails();
+		assertThat(details).doesNotContainKey("roundTripAbstentionCount");
+		assertThat(details).doesNotContainKey("roundTripAbstentions");
 	}
 
 	private HealthResult singleResult() {

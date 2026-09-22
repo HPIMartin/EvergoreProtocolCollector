@@ -28,7 +28,8 @@
         │  (TransferType visitor + EvergoreItem); overwrites MetaInformationRepository
         │  a failing avatar is caught, named and skipped; last_updated stamped on every completed run
         ▼
-   LastRunStatus.recordSuccessfulRecompute(when, unknownItemNames, failedAvatarNames)  (one atomic snapshot)
+   LastRunStatus.recordSuccessfulRecompute(when, unknownItemNames, zeroValuedItemNames, roundTrips,
+   roundTripAbstentions, failedAvatarNames)  (one atomic snapshot)
    (recompute failure ▶ recordRecomputeFailure(...), rethrown)   (monitoring seam)
         ▼
    PostCollectionHook   (no-op in prod; test seam, runs only after a successful recompute)
@@ -46,7 +47,9 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
                         telling "could not scrape" apart from
                         "could not recompute", + unknownItemCount/unknownItemNames when the last run hit
                         unknown items, + failedAvatarCount/failedAvatarNames when an avatar could not be
-                        recomputed
+                        recomputed, + roundTripCount/roundTrips when the last run's RoundTripDetector
+                        reported one, + roundTripAbstentionCount/roundTripAbstentions when it abstained
+                        from judging a pair
 
 Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ AdminStatusController
                         ▶ lastUpdated read from AvatarContributions/MetaInformationRepository (persisted,

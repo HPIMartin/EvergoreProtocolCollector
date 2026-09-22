@@ -58,8 +58,8 @@ class LastRunStatusTest {
 		Instant first = Instant.parse("2026-06-21T08:00:00Z");
 		Instant second = Instant.parse("2026-06-21T10:00:00Z");
 
-		tested.recordSuccessfulRecompute(first, List.of(), List.of(), List.of());
-		tested.recordSuccessfulRecompute(second, List.of(), List.of(), List.of());
+		tested.recordSuccessfulRecompute(first, List.of(), List.of(), List.of(), List.of(), List.of());
+		tested.recordSuccessfulRecompute(second, List.of(), List.of(), List.of(), List.of(), List.of());
 
 		assertThat(snapshot().lastSuccessfulRecompute()).contains(second);
 	}
@@ -84,7 +84,7 @@ class LastRunStatusTest {
 
 		tested.recordSuccessfulScrape(scrapeSuccess);
 		tested.recordScrapeFailure(scrapeFailure);
-		tested.recordSuccessfulRecompute(recomputeSuccess, List.of(), List.of(), List.of());
+		tested.recordSuccessfulRecompute(recomputeSuccess, List.of(), List.of(), List.of(), List.of(), List.of());
 		tested.recordRecomputeFailure(recomputeFailure);
 
 		LastRunStatus.Snapshot snapshot = snapshot();
@@ -101,14 +101,14 @@ class LastRunStatusTest {
 
 	@Test
 	void becomesRecomputeHealthyAfterASuccessfulRecompute() {
-		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of(), List.of());
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
 
 		assertThat(snapshot().recomputeHealthy()).isTrue();
 	}
 
 	@Test
 	void becomesRecomputeUnhealthyAfterARecomputeFailureFollowingASuccess() {
-		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of(), List.of());
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
 		tested.recordRecomputeFailure(Instant.parse("2026-06-21T09:00:00Z"));
 
 		assertThat(snapshot().recomputeHealthy()).isFalse();
@@ -116,9 +116,9 @@ class LastRunStatusTest {
 
 	@Test
 	void becomesRecomputeHealthyAgainAfterASubsequentSuccessFollowingAFailure() {
-		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of(), List.of());
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
 		tested.recordRecomputeFailure(Instant.parse("2026-06-21T09:00:00Z"));
-		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T10:00:00Z"), List.of(), List.of(), List.of());
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T10:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
 
 		assertThat(snapshot().recomputeHealthy()).isTrue();
 	}
@@ -130,16 +130,16 @@ class LastRunStatusTest {
 
 	@Test
 	void recordsTheUnknownItemNamesOfTheLastRun() {
-		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of("Unobtainium", "Unobtainium"), List.of(), List.of());
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of("Unobtainium", "Unobtainium"), List.of(), List.of(), List.of(), List.of());
 
 		assertThat(snapshot().unknownItemNames()).containsExactly("Unobtainium", "Unobtainium");
 	}
 
 	@Test
 	void clearsThePreviousRunsUnknownItemAndFailedAvatarNamesOnACleanRecompute() {
-		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of("Unobtainium"), List.of(), List.of("Zwerg"));
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of("Unobtainium"), List.of(), List.of(), List.of(), List.of("Zwerg"));
 
-		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T09:00:00Z"), List.of(), List.of(), List.of());
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T09:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
 
 		LastRunStatus.Snapshot snapshot = snapshot();
 		assertThat(snapshot.unknownItemNames()).isEmpty();
@@ -148,23 +148,23 @@ class LastRunStatusTest {
 
 	@Test
 	void recordsTheZeroValuedItemNamesOfTheLastRun() {
-		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of("Übungsstück-Sorandilaxt"), List.of());
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of("Übungsstück-Sorandilaxt"), List.of(), List.of(), List.of());
 
 		assertThat(snapshot().zeroValuedItemNames()).containsExactly("Übungsstück-Sorandilaxt");
 	}
 
 	@Test
 	void clearsThePreviousRunsZeroValuedItemNamesOnACleanRecompute() {
-		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of("Übungsstück-Sorandilaxt"), List.of());
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of("Übungsstück-Sorandilaxt"), List.of(), List.of(), List.of());
 
-		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T09:00:00Z"), List.of(), List.of(), List.of());
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T09:00:00Z"), List.of(), List.of(), List.of(), List.of(), List.of());
 
 		assertThat(snapshot().zeroValuedItemNames()).isEmpty();
 	}
 
 	@Test
 	void keepsTheLastSuccessfulRunsZeroValuedItemNamesWhenTheNextRecomputeFails() {
-		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of("Übungsstück-Sorandilaxt"), List.of());
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of(), List.of("Übungsstück-Sorandilaxt"), List.of(), List.of(), List.of());
 
 		tested.recordRecomputeFailure(Instant.parse("2026-06-21T09:00:00Z"));
 
@@ -173,7 +173,7 @@ class LastRunStatusTest {
 
 	@Test
 	void keepsTheLastSuccessfulRunsInstantAndNamesWhenTheNextRecomputeFails() {
-		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of("Unobtainium"), List.of(), List.of("Zwerg"));
+		tested.recordSuccessfulRecompute(Instant.parse("2026-06-21T08:00:00Z"), List.of("Unobtainium"), List.of(), List.of(), List.of(), List.of("Zwerg"));
 
 		tested.recordRecomputeFailure(Instant.parse("2026-06-21T09:00:00Z"));
 
