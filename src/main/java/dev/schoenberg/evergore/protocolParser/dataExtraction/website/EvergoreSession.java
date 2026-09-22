@@ -16,6 +16,7 @@ import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofMinutes;
 import static org.openqa.selenium.By.id;
 import static org.openqa.selenium.By.xpath;
+import static org.openqa.selenium.support.ui.ExpectedConditions.or;
 import static org.openqa.selenium.support.ui.ExpectedConditions.urlToBe;
 
 @Singleton
@@ -37,14 +38,18 @@ public class EvergoreSession {
 	}
 
 	public void signIn(WebDriver driver, String username, String password, String server) {
+		String worldPortal = SERVER + "/portal";
+		String game = SERVER + "/" + server;
 		driver.navigate().to(SERVER + "/login");
 		dismissConsentBannerIfShown(driver);
 		driver.findElement(NAME_INPUT).sendKeys(username);
 		driver.findElement(PASSWORD_INPUT).sendKeys(password);
 		driver.findElement(LOGIN_SUBMIT).click();
-		awaitUrl(driver, SERVER + "/portal");
-		driver.findElement(PORTAL_SUBMIT).click();
-		awaitUrl(driver, SERVER + "/" + server);
+		awaitEitherUrl(driver, worldPortal, game);
+		if (worldPortal.equals(driver.getCurrentUrl())) {
+			driver.findElement(PORTAL_SUBMIT).click();
+			awaitUrl(driver, game);
+		}
 	}
 
 	public void openPage(WebDriver driver, String url) {
@@ -56,7 +61,15 @@ public class EvergoreSession {
 		driver.findElements(CONSENT_BANNER).stream().findFirst().ifPresent(WebElement::click);
 	}
 
+	private void awaitEitherUrl(WebDriver driver, String oneUrl, String orTheOther) {
+		waitFor(driver).until(or(urlToBe(oneUrl), urlToBe(orTheOther)));
+	}
+
 	private void awaitUrl(WebDriver driver, String url) {
-		new WebDriverWait(driver, WAIT_TIMEOUT, WAIT_POLL_INTERVAL, clock, sleeper).until(urlToBe(url));
+		waitFor(driver).until(urlToBe(url));
+	}
+
+	private WebDriverWait waitFor(WebDriver driver) {
+		return new WebDriverWait(driver, WAIT_TIMEOUT, WAIT_POLL_INTERVAL, clock, sleeper);
 	}
 }

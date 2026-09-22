@@ -144,12 +144,13 @@ class GameFactsGuardTest {
 
 	private static List<Fact> recordedFacts() {
 		try (Stream<String> lines = rawFacts().lines()) {
-			return lines.skip(1).filter(line -> !line.isBlank()).map(GameFactsGuardTest::parse).toList();
+			return lines.skip(1).map(GameFactsGuardTest::parse).toList();
 		}
 	}
 
 	private static Fact parse(String line) {
 		String[] columns = line.split("\t", -1);
+		assertThat(columns).as("a recorded fact carries the guard's six columns, this row carries %s: %s", columns.length, line).hasSize(6);
 		return new Fact(columns[0], columns[1], columns[2], columns[3], columns[4], columns[5]);
 	}
 

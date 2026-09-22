@@ -60,8 +60,9 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   makes; the market's offer overview (`market_all_articles`) states each offer's base value beside
   the stand's asking price. Over a **complete paged read** of both on 2026-09-22 (the storage's 560
   rows across all 43 pages of its 28 selections, and all 232 offers across 12 pages) the two price
-  **483 of the catalog's 601 entries**, the storage reaching 433 of them and the market 229. That
-  replaces the first-page-only headline of 244 the storage alone once gave. **Not one of the 671
+  **483 of the catalog's 601 entries**, the storage reaching 433 of them and the market 229. Only a
+  complete read carries that figure: the first page of each storage selection names 251 of the 437
+  item names the storage prices in full. **Not one of the 671
   recorded prices deviates from the catalog**, and the 178 names both pages price carry the same
   value on each, so the two sources corroborate rather than merely repeat. Every one of those prices
   is recorded in `src/test/resources/gameCatalog/game-facts.tsv` and held against the catalog by
@@ -69,10 +70,9 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   originally came from and still fills gaps the game's pages cannot reach, but it is not
   authoritative: it is wrong on 4 of the 99 gem-gear values that were checkable against the game
   when both were read on 2026-09-11, pricing `Quarz-Prunkaxt` at `1000` against the game's `12000`,
-  and it carries none of the `Mystisch*` quest consumables the ledger holds. The two values that
-  were once contested by the wiki alone are no longer: the 2026-09-22 read prices
-  `Einfacher Wollverband` at `32` from both the market and the storage and `Luft-Spiralstab` at
-  `16300` from the market, and the catalog already held both.
+  and it carries none of the `Mystisch*` quest consumables the ledger holds. `Einfacher Wollverband`
+  (`32`, on both the market and in the storage) and `Luft-Spiralstab` (`16300`, on the market) are
+  read from the game and agree with the catalog, so neither rests on the wiki.
 - **It is no authority for spelling, so the name is the game's.** Those six are the raw stones,
   which it writes `Marmorstein`, `Granitstein` and `Schieferstein`, and the three essences, which
   it writes in the plural; all six carry the value it gives them, so only the name differs. The
@@ -136,9 +136,9 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   from the wiki on 2026-09-10, before the academy was ever scraped, and match it exactly, so the
   agreement is corroboration rather than circularity. The list reaches well past what the scraping
   character could make: its blueprints require craft `Stufe` up to `24` while that character stands
-  at `Level 3`. The 2026-09-22 read finds the same 424 blueprints, and `GameFactsGuardTest` now
-  holds every one of them against the catalog's recipe for that item, yield and quantities included,
-  rather than counting a cardinality.
+  at `Level 3`. The 2026-09-22 read finds the same 424 blueprints, and `GameFactsGuardTest` holds
+  every one of them against the catalog's recipe for that item, yield and quantities included,
+  rather than against a cardinality.
 - **No item whose value is meant to reflect its inputs is worth less than the ingredients its
   recipe consumes** (`EvergoreItemTest`): a product priced under its own inputs means one of the
   two numbers is wrong. The rule names the deliberate-zero families it excludes, `Übungsstück-*`

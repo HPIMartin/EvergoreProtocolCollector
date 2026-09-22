@@ -66,6 +66,24 @@ class EvergoreSessionTest {
 	}
 
 	@Test
+	void reachesTheGameWhenTheLoginNeverShowsTheWorldPortal() {
+		webDriver.navigateOnClick(xpath("//input[@type=\"submit\"]"), SERVER + "/" + SERVER_NAME);
+
+		tested.signIn(webDriver, USERNAME, PASSWORD, SERVER_NAME);
+
+		assertThat(webDriver.getCurrentUrl()).isEqualTo(SERVER + "/" + SERVER_NAME);
+	}
+
+	@Test
+	void leavesThePortalConfirmationAloneWhenNoPortalWasShown() {
+		webDriver.navigateOnClick(xpath("//input[@type=\"submit\"]"), SERVER + "/" + SERVER_NAME);
+
+		tested.signIn(webDriver, USERNAME, PASSWORD, SERVER_NAME);
+
+		assertThat(webDriver.clickOrder()).doesNotContain(xpath("//button[@type=\"submit\"]"));
+	}
+
+	@Test
 	void waitsForTheRequestedPageRatherThanReadingWhateverTheBrowserStillShows() {
 		webDriver.stopNavigating();
 
