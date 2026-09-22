@@ -3,7 +3,6 @@ package dev.schoenberg.evergore.protocolParser;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
-import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -18,33 +17,28 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Sleeper;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
+import dev.schoenberg.evergore.protocolParser.dataExtraction.website.EvergoreSession;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
-import dev.schoenberg.evergore.protocolParser.helper.selenium.Browser;
+import dev.schoenberg.evergore.protocolParser.helper.logger.Slf4jLogger;
+import dev.schoenberg.evergore.protocolParser.helper.selenium.Driver;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.SERVER;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.time.Duration.ofMillis;
-import static java.time.Duration.ofMinutes;
 import static java.util.Arrays.stream;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.openqa.selenium.By.id;
-import static org.openqa.selenium.By.xpath;
-import static org.openqa.selenium.support.ui.ExpectedConditions.urlToBe;
 
 @EnabledIfSystemProperty(named = "gameCatalog.scrape", matches = "true", disabledReason = "on-demand: ./run-game-scrape.sh '-DgameCatalog.pages=<comma-separated page parameters>', see testing.md")
 @ExtendWith(OrphanedBrowserSweep.class)
 class GameCatalogScrapeCheck {
 	private static final Path OUTPUT = Path.of("build/tmp/gameCatalog");
-	private static final Duration WAIT_TIMEOUT = ofMinutes(1);
-	private static final Duration WAIT_POLL_INTERVAL = ofMillis(500);
 	private static final int ROWS_PER_PAGE = 20;
 	private static final int MAX_PLAUSIBLE_PAGES = 100;
 	private static final Pattern TOTAL_ROW_COUNT = Pattern.compile("\\(Gesamt:\\s*(\\d[\\d.]{0,9})\\)");
 	private static final String PAGED_SELECTION_PREFIX = "stock_out";
 
 	private final Set<String> dumpedNames = new HashSet<>();
+	private final EvergoreSession session = new EvergoreSession(Clock.systemDefaultZone(), Sleeper.SYSTEM_SLEEPER);
 
 	@Test
 	void dumpsTheGamePagesTheItemCatalogIsReadFrom() throws Exception {
@@ -57,9 +51,9 @@ class GameCatalogScrapeCheck {
 
 		Files.createDirectories(OUTPUT);
 		Configuration config = new Configuration();
-		WebDriver driver = Browser.fromString(config.browser).getDriver(config);
+		WebDriver driver = new Driver(new ApplicationFactory().fileLoader(config, new Slf4jLogger()), config).createWebDriver();
 		try {
-			signIn(driver, config);
+			session.signIn(driver, requiredEnvironmentValue("EVERGORE_CREDENTIALS_USERNAME"), requiredEnvironmentValue("EVERGORE_CREDENTIALS_PASSWORD"), config.server);
 			dumpPage(driver, "01-portal");
 			for (String page : pages) {
 				fetchAllPagesOf(driver, config, page);
@@ -113,9 +107,7 @@ class GameCatalogScrapeCheck {
 	}
 
 	private String fetchAndDumpPage(WebDriver driver, Configuration config, String page) throws Exception {
-		String url = SERVER + "/" + config.server + "?page=" + page;
-		driver.navigate().to(url);
-		waitForUrl(driver, url);
+		session.openPage(driver, SERVER + "/" + config.server + "?page=" + page);
 		return dumpPage(driver, dumpNameOf(page));
 	}
 
@@ -127,35 +119,12 @@ class GameCatalogScrapeCheck {
 		return "page-" + page.replaceAll("[^A-Za-z0-9]+", "-");
 	}
 
-	private void signIn(WebDriver driver, Configuration config) {
-		driver.navigate().to(SERVER + "/login");
-		dismissCookieBannerIfPresent(driver);
-		driver.findElement(id("nameInput")).sendKeys(requiredEnvironmentValue("EVERGORE_CREDENTIALS_USERNAME"));
-		driver.findElement(id("pwInput")).sendKeys(requiredEnvironmentValue("EVERGORE_CREDENTIALS_PASSWORD"));
-		driver.findElement(xpath("//input[@type=\"submit\"]")).click();
-		waitForUrl(driver, SERVER + "/portal");
-		driver.findElement(xpath("//button[@type=\"submit\"]")).click();
-		waitForUrl(driver, SERVER + "/" + config.server);
-	}
-
 	private static String requiredEnvironmentValue(String name) {
 		String value = System.getenv(name);
 		if (value == null || value.isBlank()) {
 			throw new IllegalStateException(name + " is not set; ./run-game-scrape.sh exports it from the credentials file");
 		}
 		return value;
-	}
-
-	private void dismissCookieBannerIfPresent(WebDriver driver) {
-		driver
-				.findElements(xpath("//button[@class=\"fc-button fc-cta-consent fc-primary-button\" and p[@class=\"fc-button-label\" and text()=\"Einwilligen\"]]"))
-				.stream()
-				.findFirst()
-				.ifPresent(WebElement::click);
-	}
-
-	private void waitForUrl(WebDriver driver, String url) {
-		new WebDriverWait(driver, WAIT_TIMEOUT, WAIT_POLL_INTERVAL, Clock.systemDefaultZone(), Sleeper.SYSTEM_SLEEPER).until(urlToBe(url));
 	}
 
 	private void quitWithoutMaskingTheScrapeFailure(WebDriver driver) {

@@ -3,12 +3,14 @@ package dev.schoenberg.evergore.protocolParser.dataExtraction.website;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Dimension;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.Point;
 import org.openqa.selenium.Rectangle;
@@ -18,10 +20,13 @@ import org.openqa.selenium.WebElement;
 final class RecordingWebDriver implements WebDriver {
 	private final Map<By, String> clickTargets = new HashMap<>();
 	private final Map<By, List<String>> sentKeys = new HashMap<>();
+	private final List<By> clickOrder = new ArrayList<>();
+	private final Set<By> absentLocators = new HashSet<>();
 	private RuntimeException navigateFailure;
 	private RuntimeException quitFailure;
 	private String currentUrl = "";
 	private boolean quitCalled;
+	private boolean navigating = true;
 
 	void navigateOnClick(By locator, String target) {
 		clickTargets.put(locator, target);
@@ -29,10 +34,19 @@ final class RecordingWebDriver implements WebDriver {
 
 	void stopNavigating() {
 		clickTargets.clear();
+		navigating = false;
 	}
 
 	List<String> keysSentTo(By locator) {
 		return sentKeys.getOrDefault(locator, List.of());
+	}
+
+	List<By> clickOrder() {
+		return List.copyOf(clickOrder);
+	}
+
+	void withoutElementsMatching(By locator) {
+		absentLocators.add(locator);
 	}
 
 	void failOnNavigate(RuntimeException failure) {
@@ -62,10 +76,14 @@ final class RecordingWebDriver implements WebDriver {
 
 	@Override
 	public WebElement findElement(By by) {
+		if (absentLocators.contains(by)) {
+			throw new NoSuchElementException("no element for " + by);
+		}
 		return new StubWebElement(by, this);
 	}
 
 	private void clicked(By locator) {
+		clickOrder.add(locator);
 		String target = clickTargets.get(locator);
 		if (target != null) {
 			currentUrl = target;
@@ -84,7 +102,9 @@ final class RecordingWebDriver implements WebDriver {
 				if (navigateFailure != null) {
 					throw navigateFailure;
 				}
-				currentUrl = url;
+				if (navigating) {
+					currentUrl = url;
+				}
 			}
 
 			@Override
@@ -126,7 +146,7 @@ final class RecordingWebDriver implements WebDriver {
 
 	@Override
 	public List<WebElement> findElements(By by) {
-		throw new UnsupportedOperationException();
+		return absentLocators.contains(by) ? List.of() : List.of(new StubWebElement(by, this));
 	}
 
 	@Override
