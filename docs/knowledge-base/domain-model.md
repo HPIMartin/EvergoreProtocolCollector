@@ -111,8 +111,10 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   would report 55 recorded recipes as absent and make the round-trip detection's answers unsafe, so
   the catalog says which of the two it means (author decision 2026-09-12). A reader switches over
   the three cases exhaustively and never compares a `Recipe` by `==` or by value. **The recipes are
-  the game's production chains, not an input to the valuation** (author decision 2026-09-10): no
-  production code reads them, and the tests are their only reader.
+  the game's production chains, not an input to the valuation** (author decision 2026-09-10): the
+  round-trip detection is their one production reader ("The round-trip detection:
+  `RoundTripDetector`" below), which uses them to tell a crafter's legitimate restock from a member
+  cycling the same goods.
 - **Gem-forged gear is crafted from a blueprint learned as an item, which the academy never lists,
   so its ingredients are `UNKNOWN_RECIPE` rather than absent.** The academy's craft chambers list
   **424 blueprints across all 17 crafts** (`academy_craft&selection=51..67`, read 2026-09-12 and again 2026-09-22) and
@@ -374,6 +376,18 @@ matches, one minute later does not), and the consumed quantity is reported as on
 avatar/item pair, summed over the walk, only when positive. Quality is ignored; only quantities
 move. An item outside `HANDWERKSMATERIAL` opens no lot and closes none: a raw-material round trip
 costs the member rather than minting, so it is never reported.
+
+**A crafter who withdraws material and deposits the product it becomes is not a round trip.** A
+deposit of a *different* item whose `recipe` is `Recipe.Published` and names the watched item as an
+ingredient consumes what the recipe has used for **all** of that product the avatar has deposited so
+far, `ceil(depositedSoFar × ingredient.amount / recipe.amount)`, less what earlier deposits of it
+already used up, from that item's open lots, oldest first, same window rule, before any later
+same-item deposit can match them; nothing is reported for that consumption. Counting cumulatively is
+what makes a craft logged as two deposit lines consume exactly what one line for the same quantity
+would, so splitting a deposit can neither hide nor invent a round trip. A product the game does not craft (`NOT_CRAFTABLE`)
+consumes nothing, so a withdrawal followed by an unrelated deposit and then the same withdrawal
+amount coming back is still reported in full. The detector reads all three `Recipe` cases through an
+exhaustive `switch`, so a fourth case the compiler adds later cannot fall through silently.
 
 ## Identity / equality quirks
 

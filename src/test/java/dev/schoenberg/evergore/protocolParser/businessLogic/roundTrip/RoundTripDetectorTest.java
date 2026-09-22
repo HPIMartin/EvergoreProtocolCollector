@@ -9,9 +9,13 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem;
 
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.BUCHENHOLZ;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.EISENBARREN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.FEDERN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.HARZ;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KUPFERERZ;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.PFEILE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STEINKOHLE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class RoundTripDetectorTest {
@@ -104,6 +108,48 @@ class RoundTripDetectorTest {
 	@Test
 	void ignoresAGoodOutsideTheTraderTier() {
 		List<ResolvedStorageEntry> entries = List.of(withdrawal("Alrik", KUPFERERZ, 100, T), deposit("Alrik", KUPFERERZ, 100, T.plusSeconds(3600)));
+
+		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(roundTrips).isEmpty();
+	}
+
+	@Test
+	void chargesOnlyTheRestockedShareAfterACrafterBuysBackWhatTheRecipeAlreadyConsumed() {
+		List<ResolvedStorageEntry> entries = List
+				.of(withdrawal("Alrik", FEDERN, 10, T), deposit("Alrik", PFEILE, 135, T.plusSeconds(3600)), deposit("Alrik", FEDERN, 10, T.plusSeconds(7200)));
+
+		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(roundTrips).containsExactly(new RoundTrip("Alrik", FEDERN, 5));
+	}
+
+	@Test
+	void consumesNoMoreForAProductDepositedInTwoLinesThanForTheSameQuantityDepositedAtOnce() {
+		List<ResolvedStorageEntry> entries = List
+				.of(withdrawal("Alrik", STEINKOHLE, 2, T), deposit("Alrik", EISENBARREN, 1, T.plusSeconds(1800)), deposit("Alrik", EISENBARREN, 1, T.plusSeconds(3600)),
+						deposit("Alrik", STEINKOHLE, 2, T.plusSeconds(7200)));
+
+		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(roundTrips).containsExactly(new RoundTrip("Alrik", STEINKOHLE, 1));
+	}
+
+	@Test
+	void aProductTheGameDoesNotCraftBetweenTheTwoMovesConsumesNothing() {
+		List<ResolvedStorageEntry> entries = List
+				.of(withdrawal("Alrik", FEDERN, 100, T), deposit("Alrik", KUPFERERZ, 10, T.plusSeconds(3600)), deposit("Alrik", FEDERN, 100, T.plusSeconds(7200)));
+
+		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(roundTrips).containsExactly(new RoundTrip("Alrik", FEDERN, 100));
+	}
+
+	@Test
+	void staysSilentForACrafterWhoWithdrawsMaterialDepositsTheProductAndRestocksTheMaterial() {
+		List<ResolvedStorageEntry> entries = List
+				.of(withdrawal("Alrik", BUCHENHOLZ, 6, T), withdrawal("Alrik", FEDERN, 5, T), deposit("Alrik", PFEILE, 135, T.plusSeconds(3600)),
+						deposit("Alrik", BUCHENHOLZ, 6, T.plusSeconds(7200)), deposit("Alrik", FEDERN, 5, T.plusSeconds(7200)));
 
 		List<RoundTrip> roundTrips = RoundTripDetector.detect("Alrik", entries);
 
