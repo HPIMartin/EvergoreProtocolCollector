@@ -54,23 +54,25 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   **NPC trader charges**, confirmed by the author 2026-09-10 against the game: `PFEILE` 3, `BOLZEN` 12,
   `MAGIEESSENZ` 4, exactly the catalog's numbers. So a member can buy those for `marketValue` rather
   than craft them, which is what makes a 60 % credit a real loss of gold for whoever buys them.
-- **The game prices the catalog, and the wiki is only a convenience.** The guild storage lists what
-  it holds per piece at that piece's quality, so a value is read from a holding at quality 100, and a
-  stored blueprint carries the gold value of the item it
-  makes, which together priced 244 of the catalog's 601 entries when it was last read (backlog
-  **B27**: that headline count is still a first-page-only measurement). All 244 agree with the
-  catalog. **That read covered only the first page of each storage selection** and so rests
-  on 28 of the storage's 43 pages; a paged re-read on 2026-09-12 found **no deviation anywhere** and
-  raised the gem-forged names the storage prices from 20 to **98** of the 102 gem-forged names the
-  catalog holds across 98 entries and four second spellings. The four it never prices are three
-  second spellings whose primary name it does price, and `Achat-Lederbeinlinge`, which appears
-  nowhere in it. The wiki's `Waren` table is where the numbers originally came from and still fills
-  gaps the storage cannot reach, but it is not authoritative: it is wrong on 4 of the 99 gem-gear
-  values that were checkable against the game when both were read on 2026-09-11, pricing
-  `Quarz-Prunkaxt` at `1000` against the game's `12000`, and it carries
-  none of the `Mystisch*` quest consumables the ledger holds. Two catalog values are still only
-  contested by the wiki and unread from the game, `Luft-Spiralstab` and `Einfacher Wollverband`
-  (measured 2026-09-11).
+- **The game prices the catalog, and the wiki is only a convenience.** Two of the game's own pages
+  carry a price: the guild storage lists what it holds per piece at that piece's quality, so a value
+  is read from a holding at quality 100 and a stored blueprint carries the gold value of the item it
+  makes; the market's offer overview (`market_all_articles`) states each offer's base value beside
+  the stand's asking price. Over a **complete paged read** of both on 2026-09-22 (the storage's 560
+  rows across all 43 pages of its 28 selections, and all 232 offers across 12 pages) the two price
+  **483 of the catalog's 601 entries**, the storage reaching 433 of them and the market 229. That
+  replaces the first-page-only headline of 244 the storage alone once gave. **Not one of the 671
+  recorded prices deviates from the catalog**, and the 178 names both pages price carry the same
+  value on each, so the two sources corroborate rather than merely repeat. Every one of those prices
+  is recorded in `src/test/resources/gameCatalog/game-facts.tsv` and held against the catalog by
+  `GameFactsGuardTest` ([testing.md](testing.md)). The wiki's `Waren` table is where the numbers
+  originally came from and still fills gaps the game's pages cannot reach, but it is not
+  authoritative: it is wrong on 4 of the 99 gem-gear values that were checkable against the game
+  when both were read on 2026-09-11, pricing `Quarz-Prunkaxt` at `1000` against the game's `12000`,
+  and it carries none of the `Mystisch*` quest consumables the ledger holds. The two values that
+  were once contested by the wiki alone are no longer: the 2026-09-22 read prices
+  `Einfacher Wollverband` at `32` from both the market and the storage and `Luft-Spiralstab` at
+  `16300` from the market, and the catalog already held both.
 - **It is no authority for spelling, so the name is the game's.** Those six are the raw stones,
   which it writes `Marmorstein`, `Granitstein` and `Schieferstein`, and the three essences, which
   it writes in the plural; all six carry the value it gives them, so only the name differs. The
@@ -110,13 +112,13 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   production code reads them, and the tests are their only reader.
 - **Gem-forged gear is crafted from a blueprint learned as an item, which the academy never lists,
   so its ingredients are `UNKNOWN_RECIPE` rather than absent.** The academy's craft chambers list
-  **424 blueprints across all 17 crafts** (`academy_craft&selection=51..67`, read 2026-09-12) and
+  **424 blueprints across all 17 crafts** (`academy_craft&selection=51..67`, read 2026-09-12 and again 2026-09-22) and
   **not one is gem-forged**; the blueprints exist as items instead, learnable at nine levels between
-  `Stufe 3` and `Stufe 24`, and reach the guild storage, where 98 of the catalog's 102 gem-forged
-  names are priced through
-  one (counted 2026-09-12 over the complete storage dump, all 43 pages of its 28 selections). The
-  four it does not price are three second spellings whose primary name it does price, and
-  `Achat-Lederbeinlinge`, which appears nowhere in the dump at all. The
+  `Stufe 3` and `Stufe 24`, and reach the guild storage, which prices them through one. The
+  complete 2026-09-22 read prices **96 of the catalog's 98 gem-forged entries**; the two it does not
+  reach are `Achat-Lederbeinlinge`, which has never appeared in any read, and `Lapis-Bogen`, which
+  the guild simply did not hold or offer that day. Which gem names are priced therefore moves with
+  the guild's stock and is no statement about the catalog. The
   academy is the one surface that shows a blueprint's ingredients, and it shows no gem one, so no
   reachable surface attests a gem recipe. All 98 gem-prefixed entries therefore
   carry `UNKNOWN_RECIPE`, including `Achat-Lederbeinlinge` and `Achat-Lederstulpen`, whose
@@ -134,8 +136,9 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   from the wiki on 2026-09-10, before the academy was ever scraped, and match it exactly, so the
   agreement is corroboration rather than circularity. The list reaches well past what the scraping
   character could make: its blueprints require craft `Stufe` up to `24` while that character stands
-  at `Level 3`. **Nothing in the suite pins this**, which only counts a cardinality; holding the
-  catalog against the dumped pages is backlog **B28**.
+  at `Level 3`. The 2026-09-22 read finds the same 424 blueprints, and `GameFactsGuardTest` now
+  holds every one of them against the catalog's recipe for that item, yield and quantities included,
+  rather than counting a cardinality.
 - **No item whose value is meant to reflect its inputs is worth less than the ingredients its
   recipe consumes** (`EvergoreItemTest`): a product priced under its own inputs means one of the
   two numbers is wrong. The rule names the deliberate-zero families it excludes, `Übungsstück-*`

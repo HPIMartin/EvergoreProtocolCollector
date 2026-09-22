@@ -1,0 +1,1096 @@
+kind	item	value	ingredients	source	read
+price	Achat	500		stock_out&selection=34&pos=1	2026-09-22
+price	Achat-Armbrust	5500		stock_out&selection=12&pos=1	2026-09-22
+price	Achat-Armbrust	5500		stock_out&selection=35&pos=1	2026-09-22
+price	Achat-Bogen	5500		stock_out&selection=35&pos=1	2026-09-22
+price	Achat-Lederharnisch	2800		stock_out&selection=35&pos=1	2026-09-22
+price	Achat-Lederhelm	2000		stock_out&selection=35&pos=1	2026-09-22
+price	Achat-Lederstiefel	1800		stock_out&selection=35&pos=1	2026-09-22
+price	Achat-Lederstulpen	1800		stock_out&selection=35&pos=1	2026-09-22
+price	Achat-Rundschild	2500		stock_out&selection=35&pos=1	2026-09-22
+price	Adamant-Kettenbeinlinge	9400		market_all_articles	2026-09-22
+price	Adamant-Kettenbeinlinge	9400		stock_out&selection=23&pos=2	2026-09-22
+price	Adamant-Kettenhandschuhe	7000		market_all_articles	2026-09-22
+price	Adamant-Kettenhandschuhe	7000		stock_out&selection=23&pos=2	2026-09-22
+price	Adamant-Kettenhaube	8100		market_all_articles	2026-09-22
+price	Adamant-Kettenhaube	8100		stock_out&selection=23&pos=2	2026-09-22
+price	Adamant-Kettenhemd	12200		market_all_articles	2026-09-22
+price	Adamant-Kettenhemd	12200		stock_out&selection=23&pos=2	2026-09-22
+price	Adamant-Kettenstiefel	7000		market_all_articles	2026-09-22
+price	Adamant-Kettenstiefel	7000		stock_out&selection=23&pos=2	2026-09-22
+price	Adamant-Plattenbeinlinge	14200		market_all_articles	2026-09-22
+price	Adamant-Plattenbeinlinge	14200		stock_out&selection=23&pos=2	2026-09-22
+price	Adamant-Plattenhandschuhe	10700		market_all_articles	2026-09-22
+price	Adamant-Plattenhandschuhe	10700		stock_out&selection=23&pos=2	2026-09-22
+price	Adamant-Plattenhelm	12400		market_all_articles	2026-09-22
+price	Adamant-Plattenhelm	12400		stock_out&selection=23&pos=2	2026-09-22
+price	Adamant-Plattenpanzer	18600		market_all_articles	2026-09-22
+price	Adamant-Plattenpanzer	18600		stock_out&selection=23&pos=2	2026-09-22
+price	Adamant-Plattenstiefel	10700		stock_out&selection=23&pos=2	2026-09-22
+price	Adamantbarren	270		stock_out&selection=31&pos=2	2026-09-22
+price	Adamanterz	90		stock_out&selection=31&pos=2	2026-09-22
+price	Arbaleste	4000		market_all_articles	2026-09-22
+price	Armbrust	3000		market_all_articles	2026-09-22
+price	Assassinenklinge	14900		market_all_articles	2026-09-22
+price	Assassinenklinge	14900		stock_out&selection=3&pos=1	2026-09-22
+price	Axt	1200		market_all_articles	2026-09-22
+price	Axt	1200		stock_out&selection=4&pos=1	2026-09-22
+price	Ballista	6100		market_all_articles	2026-09-22
+price	Barbarenaxt	4900		market_all_articles	2026-09-22
+price	Barbarenaxt	4900		stock_out&selection=4&pos=1	2026-09-22
+price	Bastardschwert [2H]	4600		market_all_articles	2026-09-22
+price	Bastardschwert [2H]	4600		stock_out&selection=2&pos=1	2026-09-22
+price	Bauernsense [2H]	3000		market_all_articles	2026-09-22
+price	Bauernsense [2H]	3000		stock_out&selection=8&pos=1	2026-09-22
+price	Baumwoll-Beinlinge	7100		market_all_articles	2026-09-22
+price	Baumwoll-Handschuhe	3500		market_all_articles	2026-09-22
+price	Baumwoll-Haube	4000		market_all_articles	2026-09-22
+price	Baumwoll-Hose	4700		market_all_articles	2026-09-22
+price	Baumwoll-Robe	6100		market_all_articles	2026-09-22
+price	Baumwoll-Robe	6100		stock_out&selection=21&pos=1	2026-09-22
+price	Baumwoll-Schuhe	3500		market_all_articles	2026-09-22
+price	Baumwoll-Spitzhut	6200		market_all_articles	2026-09-22
+price	Baumwoll-Stiefel	5300		market_all_articles	2026-09-22
+price	Baumwoll-Stulpen	5300		market_all_articles	2026-09-22
+price	Baumwoll-Tunika	9200		market_all_articles	2026-09-22
+price	Baumwolle	60		stock_out&selection=31&pos=2	2026-09-22
+price	Baumwolltuch	180		market_all_articles	2026-09-22
+price	Baumwolltuch	180		stock_out&selection=31&pos=2	2026-09-22
+price	Berserkeraxt [2H]	37600		market_all_articles	2026-09-22
+price	Berserkeraxt [2H]	37600		stock_out&selection=5&pos=1	2026-09-22
+price	Beschläge	500		stock_out&selection=32&pos=2	2026-09-22
+price	Beschützer	6200		market_all_articles	2026-09-22
+price	Beschützer	6200		stock_out&selection=24&pos=1	2026-09-22
+price	Bidenaxt [2H]	4600		market_all_articles	2026-09-22
+price	Bidenaxt [2H]	4600		stock_out&selection=5&pos=1	2026-09-22
+price	Bidenaxt des Wegelagerers [2H]	4600		stock_out&selection=5&pos=1	2026-09-22
+price	Bidenhänder [2H]	7000		market_all_articles	2026-09-22
+price	Bidenhänder [2H]	7000		stock_out&selection=2&pos=1	2026-09-22
+price	Birkenbretter	120		stock_out&selection=31&pos=1	2026-09-22
+price	Birkenholz	40		stock_out&selection=31&pos=1	2026-09-22
+price	Bogensalbe	80		stock_out&selection=32&pos=1	2026-09-22
+price	Bolzen	12		stock_out&selection=42&pos=1	2026-09-22
+price	Breitaxt	3700		market_all_articles	2026-09-22
+price	Breitaxt	3700		stock_out&selection=4&pos=1	2026-09-22
+price	Breitschwert	2400		market_all_articles	2026-09-22
+price	Breitschwert	2400		stock_out&selection=1&pos=1	2026-09-22
+price	Buchenbretter	60		stock_out&selection=31&pos=1	2026-09-22
+price	Buchenholz	20		stock_out&selection=31&pos=1	2026-09-22
+price	Diamant	5000		stock_out&selection=34&pos=1	2026-09-22
+price	Diamant-Armbrust	82300		stock_out&selection=35&pos=5	2026-09-22
+price	Diamant-Bogen	82300		stock_out&selection=35&pos=5	2026-09-22
+price	Donnerhammer [2H]	57300		market_all_articles	2026-09-22
+price	Donnerhammer [2H]	57300		stock_out&selection=7&pos=1	2026-09-22
+price	Dornenschild	8100		market_all_articles	2026-09-22
+price	Dornenschild	8100		stock_out&selection=24&pos=1	2026-09-22
+price	Drachenhaut	120		stock_out&selection=31&pos=3	2026-09-22
+price	Drachenleder	360		stock_out&selection=31&pos=3	2026-09-22
+price	Drachenleder-Beinlinge	28600		market_all_articles	2026-09-22
+price	Drachenleder-Beinlinge	28600		stock_out&selection=22&pos=4	2026-09-22
+price	Drachenleder-Handschuhe	14100		stock_out&selection=22&pos=3	2026-09-22
+price	Drachenleder-Harnisch	37300		market_all_articles	2026-09-22
+price	Drachenleder-Harnisch	37300		stock_out&selection=22&pos=3	2026-09-22
+price	Drachenleder-Haube	16400		market_all_articles	2026-09-22
+price	Drachenleder-Haube	16400		stock_out&selection=22&pos=3	2026-09-22
+price	Drachenleder-Helm	24900		stock_out&selection=22&pos=3	2026-09-22
+price	Drachenleder-Hose	18800		market_all_articles	2026-09-22
+price	Drachenleder-Hose	18800		stock_out&selection=22&pos=3	2026-09-22
+price	Drachenleder-Schuhe	14100		stock_out&selection=22&pos=3	2026-09-22
+price	Drachenleder-Stiefel	21500		stock_out&selection=22&pos=4	2026-09-22
+price	Drachenleder-Stulpen	21500		market_all_articles	2026-09-22
+price	Drachenleder-Stulpen	21500		stock_out&selection=22&pos=3	2026-09-22
+price	Drachenleder-Stulpen	21500		stock_out&selection=22&pos=4	2026-09-22
+price	Drachenleder-Wappenrock	24500		market_all_articles	2026-09-22
+price	Drachenleder-Wappenrock	24500		stock_out&selection=22&pos=3	2026-09-22
+price	Drachenschild	2800		market_all_articles	2026-09-22
+price	Drachenschild	2800		stock_out&selection=25&pos=1	2026-09-22
+price	Drachenzunder	150		stock_out&selection=32&pos=1	2026-09-22
+price	Drachinschneiden	500		stock_out&selection=32&pos=2	2026-09-22
+price	Dreizack [2H]	16300		market_all_articles	2026-09-22
+price	Dreizack [2H]	16300		stock_out&selection=8&pos=1	2026-09-22
+price	Drescher [2H]	37600		market_all_articles	2026-09-22
+price	Drescher [2H]	37600		stock_out&selection=8&pos=1	2026-09-22
+price	Dämonendorn	36		stock_out&selection=42&pos=1	2026-09-22
+price	Eckschild	1400		market_all_articles	2026-09-22
+price	Eckschild	1400		stock_out&selection=25&pos=1	2026-09-22
+price	Edelmörtel	180		stock_out&selection=32&pos=2	2026-09-22
+price	Eiben-Dachkonstrukt	51200		stock_out&selection=33&pos=1	2026-09-22
+price	Eibenbretter	360		stock_out&selection=31&pos=3	2026-09-22
+price	Eibenholz	120		stock_out&selection=31&pos=3	2026-09-22
+price	Eichenbretter	180		stock_out&selection=31&pos=2	2026-09-22
+price	Eichenholz	60		stock_out&selection=31&pos=2	2026-09-22
+price	Einfacher Wollverband	32		market_all_articles	2026-09-22
+price	Einfacher Wollverband	32		stock_out&selection=39&pos=1	2026-09-22
+price	Eisen-Kettenbeinlinge	2300		market_all_articles	2026-09-22
+price	Eisen-Kettenbeinlinge	2300		stock_out&selection=23&pos=1	2026-09-22
+price	Eisen-Kettenhandschuhe	1700		market_all_articles	2026-09-22
+price	Eisen-Kettenhandschuhe	1700		stock_out&selection=23&pos=1	2026-09-22
+price	Eisen-Kettenhaube	2000		market_all_articles	2026-09-22
+price	Eisen-Kettenhaube	2000		stock_out&selection=23&pos=1	2026-09-22
+price	Eisen-Kettenhemd	3000		market_all_articles	2026-09-22
+price	Eisen-Kettenhemd	3000		stock_out&selection=23&pos=1	2026-09-22
+price	Eisen-Kettenstiefel	1700		market_all_articles	2026-09-22
+price	Eisen-Kettenstiefel	1700		stock_out&selection=23&pos=1	2026-09-22
+price	Eisen-Plattenbeinlinge	3500		market_all_articles	2026-09-22
+price	Eisen-Plattenbeinlinge	3500		stock_out&selection=23&pos=1	2026-09-22
+price	Eisen-Plattenhandschuhe	2600		market_all_articles	2026-09-22
+price	Eisen-Plattenhandschuhe	2600		stock_out&selection=23&pos=1	2026-09-22
+price	Eisen-Plattenhelm	3100		market_all_articles	2026-09-22
+price	Eisen-Plattenhelm	3100		stock_out&selection=23&pos=1	2026-09-22
+price	Eisen-Plattenpanzer	4600		market_all_articles	2026-09-22
+price	Eisen-Plattenpanzer	4600		stock_out&selection=23&pos=1	2026-09-22
+price	Eisen-Plattenstiefel	2600		market_all_articles	2026-09-22
+price	Eisen-Plattenstiefel	2600		stock_out&selection=23&pos=1	2026-09-22
+price	Eisenbarren	120		stock_out&selection=31&pos=1	2026-09-22
+price	Eisenerz	40		stock_out&selection=31&pos=1	2026-09-22
+price	Eisenkeule [2H]	7000		market_all_articles	2026-09-22
+price	Eisenkeule [2H]	7000		stock_out&selection=7&pos=1	2026-09-22
+price	Elbenbann [2H]	28500		market_all_articles	2026-09-22
+price	Elbenbann [2H]	28500		stock_out&selection=2&pos=1	2026-09-22
+price	Elbenhaar	200		stock_out&selection=32&pos=1	2026-09-22
+price	Engelsklinge [2H]	57300		market_all_articles	2026-09-22
+price	Engelsklinge [2H]	57300		stock_out&selection=2&pos=1	2026-09-22
+price	Entermesser	4900		market_all_articles	2026-09-22
+price	Erde-Krummstab	3000		stock_out&selection=15&pos=1	2026-09-22
+price	Erde-Langholz	4000		stock_out&selection=15&pos=1	2026-09-22
+price	Erde-Runenstab	6100		stock_out&selection=15&pos=1	2026-09-22
+price	Erde-Stecken	2000		market_all_articles	2026-09-22
+price	Erde-Stecken	2000		stock_out&selection=15&pos=1	2026-09-22
+price	Erde-Wächterstab	57300		stock_out&selection=15&pos=1	2026-09-22
+price	Erdenblut	500		stock_out&selection=32&pos=2	2026-09-22
+price	Eschenbretter	270		stock_out&selection=31&pos=2	2026-09-22
+price	Eschenholz	90		stock_out&selection=31&pos=2	2026-09-22
+price	Federn	25		stock_out&selection=32&pos=1	2026-09-22
+price	Felsenspalter [2H]	7000		market_all_articles	2026-09-22
+price	Felsenspalter [2H]	7000		stock_out&selection=5&pos=1	2026-09-22
+price	Feuer-Langholz	4000		market_all_articles	2026-09-22
+price	Feuer-Stecken	2000		market_all_articles	2026-09-22
+price	Feuer-Stecken	2000		stock_out&selection=13&pos=1	2026-09-22
+price	Feuer-Wächterstab	57300		stock_out&selection=13&pos=1	2026-09-22
+price	Flamberge [2H]	14200		market_all_articles	2026-09-22
+price	Flamberge [2H]	14200		stock_out&selection=2&pos=1	2026-09-22
+price	Flegel	3700		market_all_articles	2026-09-22
+price	Flegel	3700		stock_out&selection=6&pos=1	2026-09-22
+price	Franziska	34400		stock_out&selection=4&pos=1	2026-09-22
+price	Gladius	14900		market_all_articles	2026-09-22
+price	Gladius	14900		stock_out&selection=1&pos=1	2026-09-22
+price	Glaszwirn	150		stock_out&selection=32&pos=1	2026-09-22
+price	Gothika	4200		market_all_articles	2026-09-22
+price	Granit	90		stock_out&selection=31&pos=2	2026-09-22
+price	Granitharz	150		stock_out&selection=32&pos=1	2026-09-22
+price	Granitziegel	270		stock_out&selection=31&pos=2	2026-09-22
+price	Griffband	500		stock_out&selection=32&pos=2	2026-09-22
+price	Gute Baumwollbinde	65		market_all_articles	2026-09-22
+price	Gute Baumwollbinde	65		stock_out&selection=39&pos=1	2026-09-22
+price	Götterstich	9		stock_out&selection=41&pos=1	2026-09-22
+price	Hammer	1800		market_all_articles	2026-09-22
+price	Hammer	1800		stock_out&selection=6&pos=1	2026-09-22
+price	Hartleder	180		stock_out&selection=31&pos=2	2026-09-22
+price	Hartleder-Beinlinge	7100		market_all_articles	2026-09-22
+price	Hartleder-Beinlinge	7100		stock_out&selection=22&pos=2	2026-09-22
+price	Hartleder-Handschuhe	3500		market_all_articles	2026-09-22
+price	Hartleder-Handschuhe	3500		stock_out&selection=22&pos=2	2026-09-22
+price	Hartleder-Harnisch	9200		market_all_articles	2026-09-22
+price	Hartleder-Harnisch	9200		stock_out&selection=22&pos=2	2026-09-22
+price	Hartleder-Haube	4000		market_all_articles	2026-09-22
+price	Hartleder-Haube	4000		stock_out&selection=22&pos=2	2026-09-22
+price	Hartleder-Helm	6200		market_all_articles	2026-09-22
+price	Hartleder-Helm	6200		stock_out&selection=22&pos=2	2026-09-22
+price	Hartleder-Hose	4700		market_all_articles	2026-09-22
+price	Hartleder-Hose	4700		stock_out&selection=22&pos=2	2026-09-22
+price	Hartleder-Schuhe	3500		market_all_articles	2026-09-22
+price	Hartleder-Schuhe	3500		stock_out&selection=22&pos=2	2026-09-22
+price	Hartleder-Stiefel	5300		market_all_articles	2026-09-22
+price	Hartleder-Stiefel	5300		stock_out&selection=22&pos=2	2026-09-22
+price	Hartleder-Stulpen	5300		market_all_articles	2026-09-22
+price	Hartleder-Stulpen	5300		stock_out&selection=22&pos=2	2026-09-22
+price	Hartleder-Wappenrock	6100		market_all_articles	2026-09-22
+price	Hartleder-Wappenrock	6100		stock_out&selection=22&pos=2	2026-09-22
+price	Hartpelz	60		stock_out&selection=31&pos=2	2026-09-22
+price	Harz	100		stock_out&selection=32&pos=1	2026-09-22
+price	Heilsamer Seidenverband	127		market_all_articles	2026-09-22
+price	Heilsamer Seidenverband	127		stock_out&selection=39&pos=1	2026-09-22
+price	Heldenaxt [2H]	14200		market_all_articles	2026-09-22
+price	Heldenaxt [2H]	14200		stock_out&selection=5&pos=1	2026-09-22
+price	Hellebarde [2H]	24800		market_all_articles	2026-09-22
+price	Hellebarde [2H]	24800		stock_out&selection=8&pos=1	2026-09-22
+price	Holzfälleraxt	2400		stock_out&selection=4&pos=1	2026-09-22
+price	Holzfälleraxt des Wegelagerers	2400		market_all_articles	2026-09-22
+price	Hornarmbrust	12300		market_all_articles	2026-09-22
+price	Improvisierte Leinenbinde	16		stock_out&selection=39&pos=1	2026-09-22
+price	Jade	3500		stock_out&selection=34&pos=1	2026-09-22
+price	Jade-Feuerstab	42300		stock_out&selection=35&pos=4	2026-09-22
+price	Jade-Handschuhe	14200		stock_out&selection=35&pos=4	2026-09-22
+price	Jade-Haube	15900		stock_out&selection=35&pos=4	2026-09-22
+price	Jade-Hose	17700		stock_out&selection=35&pos=4	2026-09-22
+price	Jade-Luftstab	42300		stock_out&selection=35&pos=4	2026-09-22
+price	Jade-Wasserstab	42300		stock_out&selection=35&pos=4	2026-09-22
+price	Jagdbogen	3000		market_all_articles	2026-09-22
+price	Jagdpfeile	5		stock_out&selection=41&pos=1	2026-09-22
+price	Jagdspeer [2H]	4000		market_all_articles	2026-09-22
+price	Jagdspeer [2H]	4000		stock_out&selection=8&pos=1	2026-09-22
+price	Jaspis	1000		stock_out&selection=34&pos=1	2026-09-22
+price	Jaspis-Feuerstab	11100		stock_out&selection=35&pos=2	2026-09-22
+price	Jaspis-Luftstab	11100		stock_out&selection=35&pos=2	2026-09-22
+price	Jaspis-Wasserstab	11100		stock_out&selection=35&pos=2	2026-09-22
+price	Kalkstein	20		stock_out&selection=31&pos=1	2026-09-22
+price	Kalkziegel	60		stock_out&selection=31&pos=1	2026-09-22
+price	Kampfschild	2100		market_all_articles	2026-09-22
+price	Kampfschild	2100		stock_out&selection=25&pos=1	2026-09-22
+price	Kampfschnitter [2H]	28500		market_all_articles	2026-09-22
+price	Kampfschnitter [2H]	28500		stock_out&selection=5&pos=1	2026-09-22
+price	Knochenbrecher [2H]	18700		market_all_articles	2026-09-22
+price	Knochenbrecher [2H]	18700		stock_out&selection=7&pos=1	2026-09-22
+price	Knüppel	1200		market_all_articles	2026-09-22
+price	Knüppel	1200		stock_out&selection=6&pos=1	2026-09-22
+price	Kriegsbeil	14900		market_all_articles	2026-09-22
+price	Kriegsbeil	14900		stock_out&selection=4&pos=1	2026-09-22
+price	Kriegsbogen	12300		market_all_articles	2026-09-22
+price	Kriegsbogen	12300		stock_out&selection=11&pos=1	2026-09-22
+price	Kriegshammer [2H]	14200		market_all_articles	2026-09-22
+price	Kriegshammer [2H]	14200		stock_out&selection=7&pos=1	2026-09-22
+price	Kriegskeule [2H]	28500		market_all_articles	2026-09-22
+price	Kriegskeule [2H]	28500		stock_out&selection=7&pos=1	2026-09-22
+price	Kriegsknüppel	14900		market_all_articles	2026-09-22
+price	Kriegsknüppel	14900		stock_out&selection=6&pos=1	2026-09-22
+price	Kriegskolben	7400		market_all_articles	2026-09-22
+price	Kriegskolben	7400		stock_out&selection=6&pos=1	2026-09-22
+price	Kriegspfeile	7		stock_out&selection=41&pos=1	2026-09-22
+price	Kriegspike [2H]	57300		market_all_articles	2026-09-22
+price	Kriegspike [2H]	57300		stock_out&selection=8&pos=1	2026-09-22
+price	Kristall	500		stock_out&selection=34&pos=1	2026-09-22
+price	Kristall-Axt	2800		stock_out&selection=35&pos=1	2026-09-22
+price	Kristall-Dolch	2800		stock_out&selection=35&pos=1	2026-09-22
+price	Kristall-Hammer	2800		stock_out&selection=35&pos=1	2026-09-22
+price	Kristall-Pike	5500		stock_out&selection=35&pos=1	2026-09-22
+price	Kristall-Plattenbeinlinge	2200		stock_out&selection=35&pos=2	2026-09-22
+price	Kristall-Plattenhandschuhe	1800		stock_out&selection=35&pos=1	2026-09-22
+price	Kristall-Plattenhelm	2000		stock_out&selection=35&pos=1	2026-09-22
+price	Kristall-Plattenpanzer	2800		stock_out&selection=35&pos=1	2026-09-22
+price	Kristall-Plattenstiefel	1800		stock_out&selection=35&pos=2	2026-09-22
+price	Kristall-Schwert	2800		stock_out&selection=35&pos=1	2026-09-22
+price	Kristallat	150		stock_out&selection=32&pos=2	2026-09-22
+price	Krummschwert	9800		market_all_articles	2026-09-22
+price	Krummschwert	9800		stock_out&selection=1&pos=1	2026-09-22
+price	Krummsäbel	4900		market_all_articles	2026-09-22
+price	Krummsäbel	4900		stock_out&selection=1&pos=1	2026-09-22
+price	Kupfer-Kettenbeinlinge	1200		market_all_articles	2026-09-22
+price	Kupfer-Kettenbeinlinge	1200		stock_out&selection=23&pos=1	2026-09-22
+price	Kupfer-Kettenhandschuhe	900		market_all_articles	2026-09-22
+price	Kupfer-Kettenhandschuhe	900		stock_out&selection=23&pos=1	2026-09-22
+price	Kupfer-Kettenhaube	1000		market_all_articles	2026-09-22
+price	Kupfer-Kettenhaube	1000		stock_out&selection=23&pos=1	2026-09-22
+price	Kupfer-Kettenhemd	1500		market_all_articles	2026-09-22
+price	Kupfer-Kettenhemd	1500		stock_out&selection=23&pos=1	2026-09-22
+price	Kupfer-Kettenstiefel	900		market_all_articles	2026-09-22
+price	Kupfer-Kettenstiefel	900		stock_out&selection=23&pos=1	2026-09-22
+price	Kupfer-Plattenbeinlinge	1700		market_all_articles	2026-09-22
+price	Kupfer-Plattenbeinlinge	1700		stock_out&selection=23&pos=1	2026-09-22
+price	Kupfer-Plattenhandschuhe	1300		market_all_articles	2026-09-22
+price	Kupfer-Plattenhandschuhe	1300		stock_out&selection=23&pos=1	2026-09-22
+price	Kupfer-Plattenhelm	1500		market_all_articles	2026-09-22
+price	Kupfer-Plattenhelm	1500		stock_out&selection=23&pos=1	2026-09-22
+price	Kupfer-Plattenpanzer	2300		market_all_articles	2026-09-22
+price	Kupfer-Plattenpanzer	2300		stock_out&selection=23&pos=1	2026-09-22
+price	Kupfer-Plattenstiefel	1300		market_all_articles	2026-09-22
+price	Kupfer-Plattenstiefel	1300		stock_out&selection=23&pos=1	2026-09-22
+price	Kupferbarren	60		market_all_articles	2026-09-22
+price	Kupferbarren	60		stock_out&selection=31&pos=1	2026-09-22
+price	Kupfererz	20		stock_out&selection=31&pos=1	2026-09-22
+price	Kurzbogen	2000		market_all_articles	2026-09-22
+price	Kurzbogen	2000		stock_out&selection=11&pos=1	2026-09-22
+price	Kurzschwert	1200		market_all_articles	2026-09-22
+price	Kurzschwert	1200		stock_out&selection=1&pos=1	2026-09-22
+price	Langbogen	6100		market_all_articles	2026-09-22
+price	Langschwert	7400		market_all_articles	2026-09-22
+price	Langschwert	7400		stock_out&selection=1&pos=1	2026-09-22
+price	Lanze [2H]	12300		market_all_articles	2026-09-22
+price	Lanze [2H]	12300		stock_out&selection=8&pos=1	2026-09-22
+price	Lapis	3500		stock_out&selection=34&pos=1	2026-09-22
+price	Lapis-Armbrust	42300		stock_out&selection=35&pos=4	2026-09-22
+price	Lapis-Lederhelm	15900		stock_out&selection=35&pos=4	2026-09-22
+price	Lapis-Lederstiefel	14200		stock_out&selection=35&pos=4	2026-09-22
+price	Lapis-Rundschild	19400		stock_out&selection=35&pos=4	2026-09-22
+price	Leder	120		stock_out&selection=31&pos=2	2026-09-22
+price	Leder-Beinlinge	3500		market_all_articles	2026-09-22
+price	Leder-Beinlinge	3500		stock_out&selection=22&pos=2	2026-09-22
+price	Leder-Handschuhe	1700		market_all_articles	2026-09-22
+price	Leder-Handschuhe	1700		stock_out&selection=22&pos=1	2026-09-22
+price	Leder-Harnisch	4600		market_all_articles	2026-09-22
+price	Leder-Harnisch	4600		stock_out&selection=22&pos=1	2026-09-22
+price	Leder-Haube	2000		market_all_articles	2026-09-22
+price	Leder-Haube	2000		stock_out&selection=22&pos=1	2026-09-22
+price	Leder-Helm	3100		market_all_articles	2026-09-22
+price	Leder-Helm	3100		stock_out&selection=22&pos=1	2026-09-22
+price	Leder-Hose	2300		market_all_articles	2026-09-22
+price	Leder-Hose	2300		stock_out&selection=22&pos=1	2026-09-22
+price	Leder-Schuhe	1700		market_all_articles	2026-09-22
+price	Leder-Schuhe	1700		stock_out&selection=22&pos=1	2026-09-22
+price	Leder-Stiefel	2600		market_all_articles	2026-09-22
+price	Leder-Stiefel	2600		stock_out&selection=22&pos=2	2026-09-22
+price	Leder-Stulpen	2600		market_all_articles	2026-09-22
+price	Leder-Stulpen	2600		stock_out&selection=22&pos=2	2026-09-22
+price	Leder-Wappenrock	3000		market_all_articles	2026-09-22
+price	Leder-Wappenrock	3000		stock_out&selection=22&pos=1	2026-09-22
+price	Lederfett	80		stock_out&selection=32&pos=1	2026-09-22
+price	Ledernieten	200		stock_out&selection=32&pos=1	2026-09-22
+price	Lederschild	1000		market_all_articles	2026-09-22
+price	Lederschild	1000		stock_out&selection=24&pos=1	2026-09-22
+price	Leinen	20		stock_out&selection=31&pos=1	2026-09-22
+price	Leinen-Beinlinge	1700		market_all_articles	2026-09-22
+price	Leinen-Handschuhe	900		stock_out&selection=21&pos=1	2026-09-22
+price	Leinen-Haube	1000		stock_out&selection=21&pos=1	2026-09-22
+price	Leinen-Hose	1200		stock_out&selection=21&pos=1	2026-09-22
+price	Leinen-Robe	1500		stock_out&selection=21&pos=1	2026-09-22
+price	Leinen-Schuhe	900		stock_out&selection=21&pos=1	2026-09-22
+price	Leinen-Stiefel	1300		market_all_articles	2026-09-22
+price	Leinen-Stiefel	1300		stock_out&selection=21&pos=1	2026-09-22
+price	Leinen-Stulpen	1300		market_all_articles	2026-09-22
+price	Leinen-Stulpen	1300		stock_out&selection=21&pos=1	2026-09-22
+price	Leinentuch	60		stock_out&selection=31&pos=1	2026-09-22
+price	Lilienklinge	34400		stock_out&selection=1&pos=1	2026-09-22
+price	Luft-Rute	12300		market_all_articles	2026-09-22
+price	Luft-Spiralstab	16300		market_all_articles	2026-09-22
+price	Luft-Stecken	2000		market_all_articles	2026-09-22
+price	Luft-Wächterstab	57300		stock_out&selection=16&pos=1	2026-09-22
+price	Magieessenz	4		stock_out&selection=43&pos=1	2026-09-22
+price	Magiesplitter	60		stock_out&selection=32&pos=1	2026-09-22
+price	Magiestaub	20		stock_out&selection=31&pos=1	2026-09-22
+price	Magische Ätherbinde	257		market_all_articles	2026-09-22
+price	Magische Ätherbinde	257		stock_out&selection=39&pos=1	2026-09-22
+price	Marmor	120		stock_out&selection=31&pos=3	2026-09-22
+price	Marmorziegel	360		stock_out&selection=31&pos=3	2026-09-22
+price	Militärpicke	7400		market_all_articles	2026-09-22
+price	Militärpicke	7400		stock_out&selection=4&pos=1	2026-09-22
+price	Mithril-Kettenbeinlinge	18800		market_all_articles	2026-09-22
+price	Mithril-Kettenbeinlinge	18800		stock_out&selection=23&pos=3	2026-09-22
+price	Mithril-Kettenhandschuhe	14100		market_all_articles	2026-09-22
+price	Mithril-Kettenhandschuhe	14100		stock_out&selection=23&pos=3	2026-09-22
+price	Mithril-Kettenhaube	16400		market_all_articles	2026-09-22
+price	Mithril-Kettenhaube	16400		stock_out&selection=23&pos=3	2026-09-22
+price	Mithril-Kettenhemd	24500		market_all_articles	2026-09-22
+price	Mithril-Kettenhemd	24500		stock_out&selection=23&pos=3	2026-09-22
+price	Mithril-Kettenstiefel	14100		stock_out&selection=23&pos=3	2026-09-22
+price	Mithril-Plattenbeinlinge	28600		stock_out&selection=23&pos=4	2026-09-22
+price	Mithril-Plattenhandschuhe	21500		stock_out&selection=23&pos=3	2026-09-22
+price	Mithril-Plattenhandschuhe	21500		stock_out&selection=23&pos=4	2026-09-22
+price	Mithril-Plattenhelm	24900		stock_out&selection=23&pos=3	2026-09-22
+price	Mithril-Plattenpanzer	37300		stock_out&selection=23&pos=3	2026-09-22
+price	Mithril-Plattenstiefel	21500		stock_out&selection=23&pos=4	2026-09-22
+price	Mithrilbarren	360		stock_out&selection=31&pos=3	2026-09-22
+price	Mithrilerz	120		stock_out&selection=31&pos=3	2026-09-22
+price	Monarchenschild	34400		market_all_articles	2026-09-22
+price	Monarchenschild	34400		stock_out&selection=25&pos=1	2026-09-22
+price	Mondessenz	12		stock_out&selection=43&pos=1	2026-09-22
+price	Mondklinge [2H]	37600		market_all_articles	2026-09-22
+price	Mondklinge [2H]	37600		stock_out&selection=2&pos=1	2026-09-22
+price	Mondstaub	90		stock_out&selection=31&pos=3	2026-09-22
+price	Morgenstern	4900		market_all_articles	2026-09-22
+price	Mystische Bandagen	0		stock_out&selection=39&pos=1	2026-09-22
+price	Mystische Essenz	0		stock_out&selection=43&pos=1	2026-09-22
+price	Mystischer Bolzen	0		stock_out&selection=42&pos=1	2026-09-22
+price	Mystischer Pfeil	0		stock_out&selection=41&pos=1	2026-09-22
+price	Mörtel	80		stock_out&selection=32&pos=1	2026-09-22
+price	Nebeldolch	34400		stock_out&selection=3&pos=1	2026-09-22
+price	Nebelschild	24900		market_all_articles	2026-09-22
+price	Nebelschild	24900		stock_out&selection=24&pos=1	2026-09-22
+price	Nieten	500		stock_out&selection=32&pos=2	2026-09-22
+price	Nietenschild	12400		market_all_articles	2026-09-22
+price	Nietenschild	12400		stock_out&selection=24&pos=1	2026-09-22
+price	Nähgarn	80		stock_out&selection=32&pos=1	2026-09-22
+price	Obsidian	5000		stock_out&selection=34&pos=1	2026-09-22
+price	Obsidian-Axt	44400		stock_out&selection=35&pos=5	2026-09-22
+price	Obsidian-Dolch	44400		stock_out&selection=35&pos=4	2026-09-22
+price	Obsidian-Hammer	44400		stock_out&selection=35&pos=5	2026-09-22
+price	Obsidian-Kriegshammer	82300		stock_out&selection=35&pos=5	2026-09-22
+price	Obsidian-Pike	82300		stock_out&selection=35&pos=5	2026-09-22
+price	Obsidian-Plattenhandschuhe	26500		stock_out&selection=35&pos=5	2026-09-22
+price	Obsidian-Plattenstiefel	26500		stock_out&selection=35&pos=5	2026-09-22
+price	Obsidian-Prunkaxt	82300		stock_out&selection=35&pos=5	2026-09-22
+price	Obsidian-Prunkschwert	82300		stock_out&selection=35&pos=4	2026-09-22
+price	Obsidian-Schwert	44400		stock_out&selection=35&pos=4	2026-09-22
+price	Ochsenzunge	3700		market_all_articles	2026-09-22
+price	Ogerherde	9800		stock_out&selection=6&pos=1	2026-09-22
+price	Onyx	5000		stock_out&selection=34&pos=1	2026-09-22
+price	Onyx-Erdenstab	82300		stock_out&selection=35&pos=5	2026-09-22
+price	Onyx-Feuerstab	82300		stock_out&selection=35&pos=5	2026-09-22
+price	Onyx-Handschuhe	26500		stock_out&selection=35&pos=5	2026-09-22
+price	Onyx-Luftstab	82300		stock_out&selection=35&pos=5	2026-09-22
+price	Onyx-Schuhe	26500		stock_out&selection=35&pos=5	2026-09-22
+price	Onyx-Wasserstab	82300		stock_out&selection=35&pos=5	2026-09-22
+price	Panzerbrecher	11		stock_out&selection=41&pos=1	2026-09-22
+price	Pavese	5600		market_all_articles	2026-09-22
+price	Pavese	5600		stock_out&selection=25&pos=1	2026-09-22
+price	Pelze	40		stock_out&selection=31&pos=1	2026-09-22
+price	Perlmutt	2000		stock_out&selection=34&pos=1	2026-09-22
+price	Perlmutt-Erdenstab	22300		stock_out&selection=35&pos=3	2026-09-22
+price	Perlmutt-Hose	9100		stock_out&selection=35&pos=3	2026-09-22
+price	Perlmutt-Robe	11200		stock_out&selection=35&pos=3	2026-09-22
+price	Perlmutt-Schuhe	7300		stock_out&selection=35&pos=3	2026-09-22
+price	Perlmutt-Wasserstab	22300		stock_out&selection=35&pos=3	2026-09-22
+price	Pfeile	3		stock_out&selection=41&pos=1	2026-09-22
+price	Pfeilharz	150		stock_out&selection=32&pos=2	2026-09-22
+price	Phasenkraut	200		stock_out&selection=32&pos=1	2026-09-22
+price	Pike [2H]	8100		market_all_articles	2026-09-22
+price	Pike [2H]	8100		stock_out&selection=8&pos=1	2026-09-22
+price	Prunkaxt [2H]	9300		market_all_articles	2026-09-22
+price	Prunkaxt [2H]	9300		stock_out&selection=5&pos=1	2026-09-22
+price	Prunkaxt der Entschlossenheit [2H]	9300		stock_out&selection=5&pos=1	2026-09-22
+price	Prunkbogen	57300		stock_out&selection=11&pos=1	2026-09-22
+price	Prunkschild	8500		market_all_articles	2026-09-22
+price	Prunkschild	8500		stock_out&selection=25&pos=1	2026-09-22
+price	Prunkschwert [2H]	18700		market_all_articles	2026-09-22
+price	Prunkschwert [2H]	18700		stock_out&selection=2&pos=1	2026-09-22
+price	Pyrit	500		stock_out&selection=34&pos=1	2026-09-22
+price	Pyrit-Erdenstab	5500		stock_out&selection=35&pos=1	2026-09-22
+price	Pyrit-Feuerstab	5500		stock_out&selection=35&pos=1	2026-09-22
+price	Pyrit-Hose	2200		stock_out&selection=35&pos=1	2026-09-22
+price	Pyrit-Luftstab	5500		stock_out&selection=35&pos=1	2026-09-22
+price	Pyrit-Wasserstab	5500		stock_out&selection=35&pos=1	2026-09-22
+price	Quarz	1000		stock_out&selection=34&pos=1	2026-09-22
+price	Quarz-Axt	5700		stock_out&selection=35&pos=2	2026-09-22
+price	Quarz-Dolch	5700		stock_out&selection=35&pos=2	2026-09-22
+price	Quarz-Hammer	5700		stock_out&selection=35&pos=2	2026-09-22
+price	Quarz-Kriegshammer	12000		stock_out&selection=35&pos=2	2026-09-22
+price	Quarz-Pike	11100		stock_out&selection=35&pos=2	2026-09-22
+price	Quarz-Plattenbeinlinge	4500		stock_out&selection=35&pos=2	2026-09-22
+price	Quarz-Plattenhandschuhe	3600		stock_out&selection=35&pos=2	2026-09-22
+price	Quarz-Plattenpanzer	5600		stock_out&selection=35&pos=2	2026-09-22
+price	Quarz-Prunkaxt	12000		stock_out&selection=35&pos=2	2026-09-22
+price	Quarz-Prunkschild	6200		stock_out&selection=35&pos=2	2026-09-22
+price	Quarz-Schwert	5700		stock_out&selection=35&pos=2	2026-09-22
+price	Repetierarmbrust	8100		market_all_articles	2026-09-22
+price	Riesenhaut	90		stock_out&selection=31&pos=3	2026-09-22
+price	Riesenleder	270		stock_out&selection=31&pos=3	2026-09-22
+price	Riesenleder-Beinlinge	14200		market_all_articles	2026-09-22
+price	Riesenleder-Beinlinge	14200		stock_out&selection=22&pos=3	2026-09-22
+price	Riesenleder-Handschuhe	7000		market_all_articles	2026-09-22
+price	Riesenleder-Handschuhe	7000		stock_out&selection=22&pos=2	2026-09-22
+price	Riesenleder-Harnisch	18600		market_all_articles	2026-09-22
+price	Riesenleder-Harnisch	18600		stock_out&selection=22&pos=2	2026-09-22
+price	Riesenleder-Haube	8100		market_all_articles	2026-09-22
+price	Riesenleder-Haube	8100		stock_out&selection=22&pos=2	2026-09-22
+price	Riesenleder-Helm	12400		market_all_articles	2026-09-22
+price	Riesenleder-Helm	12400		stock_out&selection=22&pos=2	2026-09-22
+price	Riesenleder-Hose	9400		market_all_articles	2026-09-22
+price	Riesenleder-Hose	9400		stock_out&selection=22&pos=2	2026-09-22
+price	Riesenleder-Schuhe	7000		market_all_articles	2026-09-22
+price	Riesenleder-Schuhe	7000		stock_out&selection=22&pos=2	2026-09-22
+price	Riesenleder-Stiefel	10700		market_all_articles	2026-09-22
+price	Riesenleder-Stiefel	10700		stock_out&selection=22&pos=3	2026-09-22
+price	Riesenleder-Stulpen	10700		market_all_articles	2026-09-22
+price	Riesenleder-Stulpen	10700		stock_out&selection=22&pos=3	2026-09-22
+price	Riesenleder-Wappenrock	12200		market_all_articles	2026-09-22
+price	Riesenleder-Wappenrock	12200		stock_out&selection=22&pos=2	2026-09-22
+price	Rubin	3500		stock_out&selection=34&pos=1	2026-09-22
+price	Rubin-Axt	21900		stock_out&selection=35&pos=3	2026-09-22
+price	Rubin-Dolch	21900		stock_out&selection=35&pos=3	2026-09-22
+price	Rubin-Hammer	21900		stock_out&selection=35&pos=3	2026-09-22
+price	Rubin-Kriegshammer	46000		stock_out&selection=35&pos=4	2026-09-22
+price	Rubin-Pike	42300		stock_out&selection=35&pos=4	2026-09-22
+price	Rubin-Pike [2H]	42300		stock_out&selection=8&pos=1	2026-09-22
+price	Rubin-Plattenbeinlinge	17700		stock_out&selection=35&pos=4	2026-09-22
+price	Rubin-Plattenhandschuhe	14200		stock_out&selection=35&pos=4	2026-09-22
+price	Rubin-Plattenhelm	15900		stock_out&selection=35&pos=4	2026-09-22
+price	Rubin-Plattenpanzer	22100		stock_out&selection=35&pos=4	2026-09-22
+price	Rubin-Plattenstiefel	14200		stock_out&selection=35&pos=4	2026-09-22
+price	Rubin-Schwert	21900		stock_out&selection=35&pos=3	2026-09-22
+price	Rundschild	1500		market_all_articles	2026-09-22
+price	Rundschild	1500		stock_out&selection=24&pos=1	2026-09-22
+price	Runenbogen	24800		market_all_articles	2026-09-22
+price	Salz	100		stock_out&selection=32&pos=1	2026-09-22
+price	Sandstein	40		stock_out&selection=31&pos=1	2026-09-22
+price	Sandziegel	120		stock_out&selection=31&pos=1	2026-09-22
+price	Saphir	2000		stock_out&selection=34&pos=1	2026-09-22
+price	Saphir-Armbrust	22300		stock_out&selection=35&pos=3	2026-09-22
+price	Saphir-Bogen	22300		stock_out&selection=35&pos=3	2026-09-22
+price	Saphir-Lederbeinlinge	9100		stock_out&selection=35&pos=3	2026-09-22
+price	Saphir-Rundschild	10200		stock_out&selection=35&pos=3	2026-09-22
+price	Schattenessenz	9		stock_out&selection=43&pos=1	2026-09-22
+price	Schattenstaub	60		stock_out&selection=31&pos=2	2026-09-22
+price	Schiefer	60		stock_out&selection=31&pos=2	2026-09-22
+price	Schieferziegel	180		stock_out&selection=31&pos=2	2026-09-22
+price	Schimmerklinge	22600		market_all_articles	2026-09-22
+price	Schimmerklinge	22600		stock_out&selection=1&pos=1	2026-09-22
+price	Schlangendolch	9800		stock_out&selection=3&pos=1	2026-09-22
+price	Schleifstein	200		stock_out&selection=32&pos=1	2026-09-22
+price	Schmiedeöl	80		stock_out&selection=32&pos=1	2026-09-22
+price	Schottenschwert [2H]	9300		market_all_articles	2026-09-22
+price	Schottenschwert [2H]	9300		stock_out&selection=2&pos=1	2026-09-22
+price	Schutzpolster	200		stock_out&selection=32&pos=1	2026-09-22
+price	Schwert	1800		market_all_articles	2026-09-22
+price	Schwert	1800		stock_out&selection=1&pos=1	2026-09-22
+price	Seide	90		stock_out&selection=31&pos=2	2026-09-22
+price	Seiden-Beinlinge	14200		market_all_articles	2026-09-22
+price	Seiden-Handschuhe	7000		market_all_articles	2026-09-22
+price	Seiden-Haube	8100		market_all_articles	2026-09-22
+price	Seiden-Hose	9400		market_all_articles	2026-09-22
+price	Seiden-Robe	12200		market_all_articles	2026-09-22
+price	Seiden-Schuhe	7000		market_all_articles	2026-09-22
+price	Seiden-Spitzhut	12400		market_all_articles	2026-09-22
+price	Seiden-Stiefel	10700		market_all_articles	2026-09-22
+price	Seiden-Stulpen	10700		market_all_articles	2026-09-22
+price	Seiden-Tunika	18600		market_all_articles	2026-09-22
+price	Seidentuch	270		stock_out&selection=31&pos=3	2026-09-22
+price	Sense [2H]	6100		market_all_articles	2026-09-22
+price	Sense [2H]	6100		stock_out&selection=8&pos=1	2026-09-22
+price	Smaragd	2000		stock_out&selection=34&pos=1	2026-09-22
+price	Smaragd-Axt	11400		stock_out&selection=35&pos=2	2026-09-22
+price	Smaragd-Dolch	11400		stock_out&selection=35&pos=2	2026-09-22
+price	Smaragd-Hammer	11400		stock_out&selection=35&pos=3	2026-09-22
+price	Smaragd-Kriegshammer	24200		stock_out&selection=35&pos=3	2026-09-22
+price	Smaragd-Pike [2H]	22300		stock_out&selection=8&pos=1	2026-09-22
+price	Smaragd-Plattenbeinlinge	9100		stock_out&selection=35&pos=3	2026-09-22
+price	Smaragd-Plattenhelm	8200		stock_out&selection=35&pos=3	2026-09-22
+price	Smaragd-Plattenstiefel	7300		stock_out&selection=35&pos=3	2026-09-22
+price	Smaragd-Prunkaxt	24200		stock_out&selection=35&pos=3	2026-09-22
+price	Smaragd-Prunkschwert	24200		stock_out&selection=35&pos=3	2026-09-22
+price	Smaragd-Schwert	11400		stock_out&selection=35&pos=2	2026-09-22
+price	Sonnensichel [2H]	18700		market_all_articles	2026-09-22
+price	Sonnensichel [2H]	18700		stock_out&selection=5&pos=1	2026-09-22
+price	Sorandil-Kettenbeinlinge	4700		market_all_articles	2026-09-22
+price	Sorandil-Kettenbeinlinge	4700		stock_out&selection=23&pos=2	2026-09-22
+price	Sorandil-Kettenhandschuhe	3500		market_all_articles	2026-09-22
+price	Sorandil-Kettenhandschuhe	3500		stock_out&selection=23&pos=2	2026-09-22
+price	Sorandil-Kettenhaube	4000		market_all_articles	2026-09-22
+price	Sorandil-Kettenhaube	4000		stock_out&selection=23&pos=2	2026-09-22
+price	Sorandil-Kettenhemd	6100		market_all_articles	2026-09-22
+price	Sorandil-Kettenhemd	6100		stock_out&selection=23&pos=2	2026-09-22
+price	Sorandil-Kettenstiefel	3500		stock_out&selection=23&pos=2	2026-09-22
+price	Sorandil-Plattenbeinlinge	7100		market_all_articles	2026-09-22
+price	Sorandil-Plattenbeinlinge	7100		stock_out&selection=23&pos=2	2026-09-22
+price	Sorandil-Plattenhandschuhe	5300		market_all_articles	2026-09-22
+price	Sorandil-Plattenhandschuhe	5300		stock_out&selection=23&pos=2	2026-09-22
+price	Sorandil-Plattenhelm	6200		market_all_articles	2026-09-22
+price	Sorandil-Plattenhelm	6200		stock_out&selection=23&pos=2	2026-09-22
+price	Sorandil-Plattenpanzer	9200		market_all_articles	2026-09-22
+price	Sorandil-Plattenpanzer	9200		stock_out&selection=23&pos=2	2026-09-22
+price	Sorandil-Plattenstiefel	5300		market_all_articles	2026-09-22
+price	Sorandil-Plattenstiefel	5300		stock_out&selection=23&pos=2	2026-09-22
+price	Sorandilbarren	180		stock_out&selection=31&pos=2	2026-09-22
+price	Sorandilerz	60		stock_out&selection=31&pos=2	2026-09-22
+price	Speer [2H]	2000		market_all_articles	2026-09-22
+price	Speer [2H]	2000		stock_out&selection=8&pos=1	2026-09-22
+price	Spinnenbogen	8100		market_all_articles	2026-09-22
+price	Spitzdolch	22600		market_all_articles	2026-09-22
+price	Spitzdolch	22600		stock_out&selection=3&pos=1	2026-09-22
+price	Stabzepter [2H]	37600		market_all_articles	2026-09-22
+price	Stabzepter [2H]	37600		stock_out&selection=7&pos=1	2026-09-22
+price	Stachelkeule [2H]	9300		market_all_articles	2026-09-22
+price	Stachelkeule [2H]	9300		stock_out&selection=7&pos=1	2026-09-22
+price	Stachelschild	4000		market_all_articles	2026-09-22
+price	Stachelschild	4000		stock_out&selection=24&pos=1	2026-09-22
+price	Steinbrecher	44		stock_out&selection=42&pos=1	2026-09-22
+price	Steinkohle	100		stock_out&selection=32&pos=1	2026-09-22
+price	Sternenessenz	15		market_all_articles	2026-09-22
+price	Sternenessenz	15		stock_out&selection=43&pos=1	2026-09-22
+price	Sternenstaub	120		stock_out&selection=31&pos=3	2026-09-22
+price	Stoßdolch	7400		market_all_articles	2026-09-22
+price	Stoßdolch	7400		stock_out&selection=3&pos=1	2026-09-22
+price	Streitaxt	1800		market_all_articles	2026-09-22
+price	Streitaxt	1800		stock_out&selection=4&pos=1	2026-09-22
+price	Streitaxt des Wegelagerers	1800		stock_out&selection=4&pos=1	2026-09-22
+price	Streitkolben	2400		market_all_articles	2026-09-22
+price	Streitkolben	2400		stock_out&selection=6&pos=1	2026-09-22
+price	Säbel	3700		market_all_articles	2026-09-22
+price	Säbel	3700		stock_out&selection=1&pos=1	2026-09-22
+price	Tartsche	2000		market_all_articles	2026-09-22
+price	Todesstaub	40		stock_out&selection=31&pos=2	2026-09-22
+price	Tomahawk	22600		market_all_articles	2026-09-22
+price	Tomahawk	22600		stock_out&selection=4&pos=1	2026-09-22
+price	Topas	1000		stock_out&selection=34&pos=1	2026-09-22
+price	Topas-Lederharnisch	5600		stock_out&selection=35&pos=2	2026-09-22
+price	Turmschild	17100		market_all_articles	2026-09-22
+price	Turmschild	17100		stock_out&selection=25&pos=1	2026-09-22
+price	Tyrannenaxt [2H]	57300		stock_out&selection=5&pos=1	2026-09-22
+price	Verteidiger	16400		market_all_articles	2026-09-22
+price	Verteidiger	16400		stock_out&selection=24&pos=1	2026-09-22
+price	Vorschlaghammer [2H]	4600		market_all_articles	2026-09-22
+price	Vorschlaghammer [2H]	4600		stock_out&selection=7&pos=1	2026-09-22
+price	Vulkandraht	500		stock_out&selection=32&pos=2	2026-09-22
+price	Wall	22600		market_all_articles	2026-09-22
+price	Wall	22600		stock_out&selection=25&pos=1	2026-09-22
+price	Wappenschild	11200		market_all_articles	2026-09-22
+price	Wappenschild	11200		stock_out&selection=25&pos=1	2026-09-22
+price	Wasser-Lichtstab	8100		market_all_articles	2026-09-22
+price	Wasser-Rute	12300		market_all_articles	2026-09-22
+price	Wasser-Spiralstab	16300		market_all_articles	2026-09-22
+price	Wasser-Stecken	2000		stock_out&selection=14&pos=1	2026-09-22
+price	Wasser-Wächterstab	57300		stock_out&selection=14&pos=1	2026-09-22
+price	Wattierung	200		stock_out&selection=32&pos=1	2026-09-22
+price	Weichleder	60		stock_out&selection=31&pos=1	2026-09-22
+price	Weichleder-Beinlinge	1700		stock_out&selection=22&pos=1	2026-09-22
+price	Weichleder-Handschuhe	900		market_all_articles	2026-09-22
+price	Weichleder-Handschuhe	900		stock_out&selection=22&pos=1	2026-09-22
+price	Weichleder-Harnisch	2300		stock_out&selection=22&pos=1	2026-09-22
+price	Weichleder-Haube	1000		stock_out&selection=22&pos=1	2026-09-22
+price	Weichleder-Helm	1500		stock_out&selection=22&pos=1	2026-09-22
+price	Weichleder-Hose	1200		stock_out&selection=22&pos=1	2026-09-22
+price	Weichleder-Schuhe	900		market_all_articles	2026-09-22
+price	Weichleder-Schuhe	900		stock_out&selection=22&pos=1	2026-09-22
+price	Weichleder-Stiefel	1300		stock_out&selection=22&pos=1	2026-09-22
+price	Weichleder-Stulpen	1300		stock_out&selection=22&pos=1	2026-09-22
+price	Weichleder-Wappenrock	1500		stock_out&selection=22&pos=1	2026-09-22
+price	Weichpelze	20		stock_out&selection=31&pos=1	2026-09-22
+price	Woll-Beinlinge	3500		market_all_articles	2026-09-22
+price	Woll-Handschuhe	1700		market_all_articles	2026-09-22
+price	Woll-Handschuhe	1700		stock_out&selection=21&pos=1	2026-09-22
+price	Woll-Haube	2000		market_all_articles	2026-09-22
+price	Woll-Hose	2300		market_all_articles	2026-09-22
+price	Woll-Hose	2300		stock_out&selection=21&pos=1	2026-09-22
+price	Woll-Robe	3000		market_all_articles	2026-09-22
+price	Woll-Robe	3000		stock_out&selection=21&pos=1	2026-09-22
+price	Woll-Schuhe	1700		market_all_articles	2026-09-22
+price	Woll-Schuhe	1700		stock_out&selection=21&pos=1	2026-09-22
+price	Woll-Spitzhut	3100		market_all_articles	2026-09-22
+price	Woll-Stiefel	2600		market_all_articles	2026-09-22
+price	Woll-Stiefel	2600		stock_out&selection=21&pos=1	2026-09-22
+price	Woll-Stulpen	2600		market_all_articles	2026-09-22
+price	Woll-Tunika	4600		market_all_articles	2026-09-22
+price	Woll-Tunika	4600		stock_out&selection=21&pos=1	2026-09-22
+price	Wolle	40		stock_out&selection=31&pos=1	2026-09-22
+price	Wolltuch	120		market_all_articles	2026-09-22
+price	Wolltuch	120		stock_out&selection=31&pos=1	2026-09-22
+price	Zedernbogen	16300		market_all_articles	2026-09-22
+price	Zirkelschild	3100		market_all_articles	2026-09-22
+price	Zirkelschild	3100		stock_out&selection=24&pos=1	2026-09-22
+price	Zwillingsaxt	9800		market_all_articles	2026-09-22
+price	Zwillingsaxt	9800		stock_out&selection=4&pos=1	2026-09-22
+price	Zwirn	100		stock_out&selection=32&pos=1	2026-09-22
+price	Äther-Beinlinge	28600		stock_out&selection=21&pos=2	2026-09-22
+price	Äther-Beinlinge	28600		stock_out&selection=21&pos=3	2026-09-22
+price	Äther-Handschuhe	14100		market_all_articles	2026-09-22
+price	Äther-Haube	16400		market_all_articles	2026-09-22
+price	Äther-Hose	18800		market_all_articles	2026-09-22
+price	Äther-Schuhe	14100		market_all_articles	2026-09-22
+price	Äther-Spitzhut	24900		stock_out&selection=21&pos=1	2026-09-22
+price	Äther-Spitzhut	24900		stock_out&selection=21&pos=2	2026-09-22
+price	Äther-Stiefel	21500		stock_out&selection=21&pos=3	2026-09-22
+price	Äther-Stulpen	21500		stock_out&selection=21&pos=2	2026-09-22
+price	Äther-Tunika	37300		stock_out&selection=21&pos=2	2026-09-22
+price	Ätherfäden	120		stock_out&selection=31&pos=3	2026-09-22
+price	Äthertuch	360		stock_out&selection=31&pos=3	2026-09-22
+recipe	Adamant-Kettenbeinlinge	1	11 Adamantbarren + 9 Schmiedeöl + 12 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Adamant-Kettenhandschuhe	1	8 Adamantbarren + 9 Schmiedeöl + 8 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Adamant-Kettenhaube	1	10 Adamantbarren + 8 Schmiedeöl + 10 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Adamant-Kettenhemd	1	15 Adamantbarren + 10 Schmiedeöl + 16 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Adamant-Kettenstiefel	1	8 Adamantbarren + 9 Schmiedeöl + 8 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Adamant-Plattenbeinlinge	1	17 Adamantbarren + 14 Schmiedeöl + 18 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Adamant-Plattenhandschuhe	1	13 Adamantbarren + 14 Schmiedeöl + 12 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Adamant-Plattenhelm	1	15 Adamantbarren + 14 Schmiedeöl + 15 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Adamant-Plattenpanzer	1	23 Adamantbarren + 14 Schmiedeöl + 25 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Adamant-Plattenstiefel	1	13 Adamantbarren + 14 Schmiedeöl + 12 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Adamantbarren	5	5 Adamanterz + 3 Drachenzunder	academy_craft&selection=53	2026-09-22
+recipe	Arbaleste	1	11 Birkenbretter + 16 Bogensalbe	academy_craft&selection=65	2026-09-22
+recipe	Armbrust	1	16 Buchenbretter + 12 Bogensalbe	academy_craft&selection=65	2026-09-22
+recipe	Assassinenklinge	1	18 Adamantbarren + 6 Schmiedeöl + 22 Schleifstein	academy_craft&selection=57	2026-09-22
+recipe	Axt	1	7 Kupferbarren + 5 Schmiedeöl	academy_craft&selection=58	2026-09-22
+recipe	Ballista	1	16 Birkenbretter + 25 Bogensalbe	academy_craft&selection=65	2026-09-22
+recipe	Barbarenaxt	1	9 Sorandilbarren + 5 Schmiedeöl + 6 Schleifstein	academy_craft&selection=58	2026-09-22
+recipe	Bastardschwert [2H]	1	13 Eisenbarren + 19 Schmiedeöl	academy_craft&selection=56	2026-09-22
+recipe	Bauernsense [2H]	1	16 Kupferbarren + 12 Schmiedeöl	academy_craft&selection=60	2026-09-22
+recipe	Baumwoll-Beinlinge	1	13 Baumwolltuch + 12 Nähgarn + 7 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Baumwoll-Handschuhe	1	6 Baumwolltuch + 7 Nähgarn + 3 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Baumwoll-Haube	1	7 Baumwolltuch + 9 Nähgarn + 3 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Baumwoll-Hose	1	8 Baumwolltuch + 12 Nähgarn + 3 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Baumwoll-Robe	1	11 Baumwolltuch + 10 Nähgarn + 6 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Baumwoll-Schuhe	1	6 Baumwolltuch + 7 Nähgarn + 3 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Baumwoll-Spitzhut	1	11 Baumwolltuch + 8 Nähgarn + 7 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Baumwoll-Stiefel	1	10 Baumwolltuch + 12 Nähgarn + 4 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Baumwoll-Stulpen	1	10 Baumwolltuch + 12 Nähgarn + 4 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Baumwoll-Tunika	1	17 Baumwolltuch + 13 Nähgarn + 10 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Baumwolltuch	5	5 Baumwolle + 2 Glaszwirn	academy_craft&selection=54	2026-09-22
+recipe	Belagerungsarmbrust	1	20 Eschenbretter + 12 Bogensalbe + 22 Elbenhaar	academy_craft&selection=65	2026-09-22
+recipe	Berserkeraxt [2H]	1	34 Mithrilbarren + 5 Schmiedeöl + 10 Schleifstein + 20 Griffband	academy_craft&selection=58	2026-09-22
+recipe	Beschützer	1	11 Hartleder + 8 Lederfett + 7 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Bidenaxt [2H]	1	13 Eisenbarren + 19 Schmiedeöl	academy_craft&selection=58	2026-09-22
+recipe	Bidenhänder [2H]	1	19 Eisenbarren + 29 Schmiedeöl	academy_craft&selection=56	2026-09-22
+recipe	Birken-Dachkonstrukt	1	4 Sandziegel + 14 Birkenbretter + 22 Harz	academy_craft&selection=55	2026-09-22
+recipe	Birken-Stützbalken	1	10 Birkenbretter + 12 Harz	academy_craft&selection=55	2026-09-22
+recipe	Birkenbretter	5	5 Birkenholz + 2 Harz	academy_craft&selection=51	2026-09-22
+recipe	Bolzen	33	6 Buchenholz + 5 Federn	academy_craft&selection=65	2026-09-22
+recipe	Breitaxt	1	10 Eisenbarren + 15 Schmiedeöl	academy_craft&selection=58	2026-09-22
+recipe	Breitschwert	1	7 Eisenbarren + 10 Schmiedeöl	academy_craft&selection=56	2026-09-22
+recipe	Buchen-Dachkonstrukt	1	4 Kalkziegel + 14 Buchenbretter + 11 Harz	academy_craft&selection=55	2026-09-22
+recipe	Buchen-Stützbalken	1	10 Buchenbretter + 6 Harz	academy_craft&selection=55	2026-09-22
+recipe	Buchenbretter	5	5 Buchenholz + 1 Harz	academy_craft&selection=51	2026-09-22
+recipe	Dolch	1	10 Kupferbarren + 7 Schmiedeöl	academy_craft&selection=57	2026-09-22
+recipe	Donnerhammer [2H]	1	52 Mithrilbarren + 6 Schmiedeöl + 8 Schleifstein + 34 Griffband	academy_craft&selection=59	2026-09-22
+recipe	Dornenschild	1	10 Riesenleder + 8 Lederfett + 5 Ledernieten + 2 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Drachenleder	5	5 Drachenhaut + 4 Kristallat	academy_craft&selection=54	2026-09-22
+recipe	Drachenleder-Beinlinge	1	26 Drachenleder + 8 Lederfett + 6 Ledernieten + 15 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Drachenleder-Handschuhe	1	13 Drachenleder + 6 Lederfett + 6 Ledernieten + 6 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Drachenleder-Harnisch	1	34 Drachenleder + 15 Lederfett + 10 Ledernieten + 18 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Drachenleder-Haube	1	15 Drachenleder + 8 Lederfett + 9 Ledernieten + 6 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Drachenleder-Helm	1	22 Drachenleder + 8 Lederfett + 8 Ledernieten + 12 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Drachenleder-Hose	1	17 Drachenleder + 6 Lederfett + 6 Ledernieten + 9 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Drachenleder-Schuhe	1	13 Drachenleder + 6 Lederfett + 6 Ledernieten + 6 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Drachenleder-Stiefel	1	20 Drachenleder + 6 Lederfett + 8 Ledernieten + 10 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Drachenleder-Stulpen	1	20 Drachenleder + 6 Lederfett + 8 Ledernieten + 10 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Drachenleder-Wappenrock	1	22 Drachenleder + 14 Lederfett + 12 Ledernieten + 9 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Drachenschild	1	8 Eisenbarren + 12 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Dreizack [2H]	1	20 Adamantbarren + 12 Schmiedeöl + 22 Schleifstein	academy_craft&selection=60	2026-09-22
+recipe	Drescher [2H]	1	34 Mithrilbarren + 4 Schmiedeöl + 8 Schleifstein + 21 Griffband	academy_craft&selection=60	2026-09-22
+recipe	Dämonenarmbrust	1	52 Eibenbretter + 6 Bogensalbe + 12 Elbenhaar + 32 Griffband	academy_craft&selection=65	2026-09-22
+recipe	Dämonendorn	90	11 Eschenholz + 10 Federn + 5 Pfeilharz	academy_craft&selection=65	2026-09-22
+recipe	Eckschild	1	8 Kupferbarren + 6 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Eiben-Dachkonstrukt	1	12 Marmorziegel + 34 Eibenbretter + 110 Granitharz	academy_craft&selection=55	2026-09-22
+recipe	Eiben-Stützbalken	1	26 Eibenbretter + 62 Granitharz	academy_craft&selection=55	2026-09-22
+recipe	Eibenbretter	5	5 Eibenholz + 4 Granitharz	academy_craft&selection=51	2026-09-22
+recipe	Eichen-Dachkonstrukt	1	6 Schieferziegel + 17 Eichenbretter + 28 Granitharz	academy_craft&selection=55	2026-09-22
+recipe	Eichen-Stützbalken	1	13 Eichenbretter + 16 Granitharz	academy_craft&selection=55	2026-09-22
+recipe	Eichenbretter	5	5 Eichenholz + 2 Granitharz	academy_craft&selection=51	2026-09-22
+recipe	Einfacher Wollverband	100	5 Wolltuch + 3 Leder + 12 Nähgarn	academy_craft&selection=67	2026-09-22
+recipe	Eisen-Kettenbeinlinge	1	6 Eisenbarren + 9 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Eisen-Kettenhandschuhe	1	5 Eisenbarren + 7 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Eisen-Kettenhaube	1	6 Eisenbarren + 8 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Eisen-Kettenhemd	1	8 Eisenbarren + 12 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Eisen-Kettenstiefel	1	5 Eisenbarren + 7 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Eisen-Plattenbeinlinge	1	10 Eisenbarren + 14 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Eisen-Plattenhandschuhe	1	7 Eisenbarren + 10 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Eisen-Plattenhelm	1	8 Eisenbarren + 12 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Eisen-Plattenpanzer	1	12 Eisenbarren + 18 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Eisen-Plattenstiefel	1	7 Eisenbarren + 10 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Eisenbarren	5	5 Eisenerz + 2 Steinkohle	academy_craft&selection=53	2026-09-22
+recipe	Eisenkeule [2H]	1	19 Eisenbarren + 29 Schmiedeöl	academy_craft&selection=59	2026-09-22
+recipe	Elbenbann [2H]	1	35 Adamantbarren + 16 Schmiedeöl + 40 Schleifstein	academy_craft&selection=56	2026-09-22
+recipe	Engelsklinge [2H]	1	52 Mithrilbarren + 6 Schmiedeöl + 8 Schleifstein + 34 Griffband	academy_craft&selection=56	2026-09-22
+recipe	Entermesser	1	9 Sorandilbarren + 5 Schmiedeöl + 6 Schleifstein	academy_craft&selection=57	2026-09-22
+recipe	Erde-Eibenlanze	1	34 Eibenbretter + 6 Magiesplitter + 10 Phasenkraut + 20 Erdenblut	academy_craft&selection=63	2026-09-22
+recipe	Erde-Eschenstab	1	30 Eschenbretter + 8 Magiesplitter + 38 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Erde-Krummstab	1	16 Buchenbretter + 16 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Erde-Langholz	1	11 Birkenbretter + 22 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Erde-Lichtstab	1	15 Eichenbretter + 5 Magiesplitter + 12 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Erde-Runenstab	1	17 Birkenbretter + 34 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Erde-Rute	1	22 Eichenbretter + 5 Magiesplitter + 19 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Erde-Spiralstab	1	20 Eschenbretter + 6 Magiesplitter + 25 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Erde-Stecken	1	11 Buchenbretter + 11 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Erde-Wächterstab	1	52 Eibenbretter + 6 Magiesplitter + 12 Phasenkraut + 32 Erdenblut	academy_craft&selection=63	2026-09-22
+recipe	Eschen-Dachkonstrukt	1	8 Granitziegel + 22 Eschenbretter + 56 Granitharz	academy_craft&selection=55	2026-09-22
+recipe	Eschen-Stützbalken	1	17 Eschenbretter + 32 Granitharz	academy_craft&selection=55	2026-09-22
+recipe	Eschenbretter	5	5 Eschenholz + 3 Granitharz	academy_craft&selection=51	2026-09-22
+recipe	Felsenspalter [2H]	1	19 Eisenbarren + 29 Schmiedeöl	academy_craft&selection=58	2026-09-22
+recipe	Feuer-Eibenlanze	1	34 Eibenbretter + 6 Magiesplitter + 10 Phasenkraut + 20 Erdenblut	academy_craft&selection=63	2026-09-22
+recipe	Feuer-Eschenstab	1	30 Eschenbretter + 8 Magiesplitter + 38 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Feuer-Krummstab	1	16 Buchenbretter + 16 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Feuer-Langholz	1	11 Birkenbretter + 22 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Feuer-Lichtstab	1	15 Eichenbretter + 5 Magiesplitter + 12 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Feuer-Runenstab	1	17 Birkenbretter + 34 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Feuer-Rute	1	22 Eichenbretter + 5 Magiesplitter + 19 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Feuer-Spiralstab	1	20 Eschenbretter + 6 Magiesplitter + 25 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Feuer-Stecken	1	11 Buchenbretter + 11 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Feuer-Wächterstab	1	52 Eibenbretter + 6 Magiesplitter + 12 Phasenkraut + 32 Erdenblut	academy_craft&selection=63	2026-09-22
+recipe	Flamberge [2H]	1	26 Sorandilbarren + 6 Schmiedeöl + 21 Schleifstein	academy_craft&selection=56	2026-09-22
+recipe	Flegel	1	10 Eisenbarren + 15 Schmiedeöl	academy_craft&selection=59	2026-09-22
+recipe	Franziska	1	32 Mithrilbarren + 6 Schmiedeöl + 14 Schleifstein + 16 Griffband	academy_craft&selection=58	2026-09-22
+recipe	Gladius	1	18 Adamantbarren + 6 Schmiedeöl + 22 Schleifstein	academy_craft&selection=56	2026-09-22
+recipe	Gothika	1	12 Eisenbarren + 18 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Granit-Bodenplatte	1	21 Granitziegel + 32 Edelmörtel	academy_craft&selection=55	2026-09-22
+recipe	Granit-Mauerstück	1	15 Granitziegel + 10 Eschenbretter + 38 Edelmörtel	academy_craft&selection=55	2026-09-22
+recipe	Granitziegel	5	5 Granit + 3 Drachenzunder	academy_craft&selection=52	2026-09-22
+recipe	Gute Baumwollbinde	100	7 Baumwolltuch + 4 Hartleder + 19 Nähgarn + 2 Phasenkraut	academy_craft&selection=67	2026-09-22
+recipe	Götterstich	360	11 Eschenholz + 10 Federn + 5 Pfeilharz	academy_craft&selection=64	2026-09-22
+recipe	Hammer	1	10 Kupferbarren + 7 Schmiedeöl	academy_craft&selection=59	2026-09-22
+recipe	Handarmbrust	1	11 Buchenbretter + 8 Bogensalbe	academy_craft&selection=65	2026-09-22
+recipe	Hartleder	5	5 Hartpelz + 2 Kristallat	academy_craft&selection=54	2026-09-22
+recipe	Hartleder-Beinlinge	1	13 Hartleder + 12 Lederfett + 7 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Hartleder-Handschuhe	1	6 Hartleder + 7 Lederfett + 3 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Hartleder-Harnisch	1	17 Hartleder + 13 Lederfett + 10 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Hartleder-Haube	1	7 Hartleder + 9 Lederfett + 3 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Hartleder-Helm	1	11 Hartleder + 8 Lederfett + 7 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Hartleder-Hose	1	8 Hartleder + 12 Lederfett + 3 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Hartleder-Schuhe	1	6 Hartleder + 7 Lederfett + 3 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Hartleder-Stiefel	1	10 Hartleder + 12 Lederfett + 4 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Hartleder-Stulpen	1	10 Hartleder + 12 Lederfett + 4 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Hartleder-Wappenrock	1	11 Hartleder + 10 Lederfett + 6 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Heilsamer Seidenverband	100	9 Seidentuch + 5 Riesenleder + 28 Nähgarn + 8 Phasenkraut	academy_craft&selection=67	2026-09-22
+recipe	Heldenaxt [2H]	1	26 Sorandilbarren + 6 Schmiedeöl + 21 Schleifstein	academy_craft&selection=58	2026-09-22
+recipe	Hellebarde [2H]	1	30 Adamantbarren + 14 Schmiedeöl + 35 Schleifstein	academy_craft&selection=60	2026-09-22
+recipe	Holzfälleraxt	1	7 Eisenbarren + 10 Schmiedeöl	academy_craft&selection=58	2026-09-22
+recipe	Hornarmbrust	1	22 Eichenbretter + 10 Bogensalbe + 16 Elbenhaar	academy_craft&selection=65	2026-09-22
+recipe	Improvisierte Leinenbinde	100	5 Leinentuch + 3 Weichleder + 6 Nähgarn	academy_craft&selection=67	2026-09-22
+recipe	Jagdbogen	1	16 Buchenbretter + 12 Bogensalbe	academy_craft&selection=64	2026-09-22
+recipe	Jagdbolzen	40	6 Birkenholz + 10 Federn	academy_craft&selection=65	2026-09-22
+recipe	Jagdpfeile	163	6 Birkenholz + 10 Federn	academy_craft&selection=64	2026-09-22
+recipe	Jagdspeer [2H]	1	11 Eisenbarren + 16 Schmiedeöl	academy_craft&selection=60	2026-09-22
+recipe	Kalk-Bodenplatte	1	12 Kalkziegel + 9 Mörtel	academy_craft&selection=55	2026-09-22
+recipe	Kalk-Mauerstück	1	8 Kalkziegel + 6 Buchenbretter + 11 Mörtel	academy_craft&selection=55	2026-09-22
+recipe	Kalkziegel	5	5 Kalkstein + 1 Steinkohle	academy_craft&selection=52	2026-09-22
+recipe	Kampfschild	1	12 Kupferbarren + 9 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Kampfschnitter [2H]	1	35 Adamantbarren + 16 Schmiedeöl + 40 Schleifstein	academy_craft&selection=58	2026-09-22
+recipe	Klingenbogen	1	34 Eibenbretter + 4 Bogensalbe + 8 Elbenhaar + 21 Griffband	academy_craft&selection=64	2026-09-22
+recipe	Knochenbrecher [2H]	1	23 Adamantbarren + 8 Schmiedeöl + 28 Schleifstein	academy_craft&selection=59	2026-09-22
+recipe	Knüppel	1	7 Kupferbarren + 5 Schmiedeöl	academy_craft&selection=59	2026-09-22
+recipe	Kolossusarmbrust	1	30 Eschenbretter + 14 Bogensalbe + 35 Elbenhaar	academy_craft&selection=65	2026-09-22
+recipe	Kompositbogen	1	11 Birkenbretter + 16 Bogensalbe	academy_craft&selection=64	2026-09-22
+recipe	Kriegsarmbrust	1	34 Eibenbretter + 4 Bogensalbe + 8 Elbenhaar + 21 Griffband	academy_craft&selection=65	2026-09-22
+recipe	Kriegsbeil	1	18 Adamantbarren + 6 Schmiedeöl + 22 Schleifstein	academy_craft&selection=58	2026-09-22
+recipe	Kriegsbogen	1	22 Eichenbretter + 10 Bogensalbe + 16 Elbenhaar	academy_craft&selection=64	2026-09-22
+recipe	Kriegsbolzen	57	8 Eichenholz + 7 Federn + 2 Pfeilharz	academy_craft&selection=65	2026-09-22
+recipe	Kriegshammer [2H]	1	26 Sorandilbarren + 6 Schmiedeöl + 21 Schleifstein	academy_craft&selection=59	2026-09-22
+recipe	Kriegskeule [2H]	1	35 Adamantbarren + 16 Schmiedeöl + 40 Schleifstein	academy_craft&selection=59	2026-09-22
+recipe	Kriegsknüppel	1	18 Adamantbarren + 6 Schmiedeöl + 22 Schleifstein	academy_craft&selection=59	2026-09-22
+recipe	Kriegskolben	1	14 Sorandilbarren + 3 Schmiedeöl + 11 Schleifstein	academy_craft&selection=59	2026-09-22
+recipe	Kriegspfeile	228	8 Eichenholz + 7 Federn + 2 Pfeilharz	academy_craft&selection=64	2026-09-22
+recipe	Kriegspike [2H]	1	52 Mithrilbarren + 6 Schmiedeöl + 12 Schleifstein + 32 Griffband	academy_craft&selection=60	2026-09-22
+recipe	Kriegszepter	1	21 Mithrilbarren + 5 Schmiedeöl + 10 Schleifstein + 10 Griffband	academy_craft&selection=59	2026-09-22
+recipe	Krummschwert	1	12 Adamantbarren + 5 Schmiedeöl + 14 Schleifstein	academy_craft&selection=56	2026-09-22
+recipe	Krummsäbel	1	9 Sorandilbarren + 5 Schmiedeöl + 6 Schleifstein	academy_craft&selection=56	2026-09-22
+recipe	Kupfer-Kettenbeinlinge	1	7 Kupferbarren + 5 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Kupfer-Kettenhandschuhe	1	5 Kupferbarren + 4 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Kupfer-Kettenhaube	1	6 Kupferbarren + 4 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Kupfer-Kettenhemd	1	8 Kupferbarren + 6 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Kupfer-Kettenstiefel	1	5 Kupferbarren + 4 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Kupfer-Plattenbeinlinge	1	10 Kupferbarren + 7 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Kupfer-Plattenhandschuhe	1	7 Kupferbarren + 5 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Kupfer-Plattenhelm	1	8 Kupferbarren + 6 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Kupfer-Plattenpanzer	1	12 Kupferbarren + 9 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Kupfer-Plattenstiefel	1	7 Kupferbarren + 5 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Kupferbarren	5	5 Kupfererz + 1 Steinkohle	academy_craft&selection=53	2026-09-22
+recipe	Kurzbogen	1	11 Buchenbretter + 8 Bogensalbe	academy_craft&selection=64	2026-09-22
+recipe	Kurzschwert	1	7 Kupferbarren + 5 Schmiedeöl	academy_craft&selection=56	2026-09-22
+recipe	Langbogen	1	16 Birkenbretter + 25 Bogensalbe	academy_craft&selection=64	2026-09-22
+recipe	Langschwert	1	14 Sorandilbarren + 3 Schmiedeöl + 11 Schleifstein	academy_craft&selection=56	2026-09-22
+recipe	Lanze [2H]	1	22 Sorandilbarren + 10 Schmiedeöl + 16 Schleifstein	academy_craft&selection=60	2026-09-22
+recipe	Leder	5	5 Pelze + 2 Salz	academy_craft&selection=54	2026-09-22
+recipe	Leder-Beinlinge	1	10 Leder + 14 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Leder-Handschuhe	1	5 Leder + 7 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Leder-Harnisch	1	12 Leder + 18 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Leder-Haube	1	6 Leder + 8 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Leder-Helm	1	8 Leder + 12 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Leder-Hose	1	6 Leder + 9 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Leder-Schuhe	1	5 Leder + 7 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Leder-Stiefel	1	7 Leder + 10 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Leder-Stulpen	1	7 Leder + 10 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Leder-Wappenrock	1	8 Leder + 12 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Lederschild	1	5 Weichleder + 4 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Leinen-Beinlinge	1	10 Leinentuch + 7 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Leinen-Handschuhe	1	5 Leinentuch + 4 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Leinen-Haube	1	6 Leinentuch + 4 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Leinen-Hose	1	7 Leinentuch + 5 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Leinen-Robe	1	8 Leinentuch + 6 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Leinen-Schuhe	1	5 Leinentuch + 4 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Leinen-Spitzhut	1	8 Leinentuch + 6 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Leinen-Stiefel	1	7 Leinentuch + 5 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Leinen-Stulpen	1	7 Leinentuch + 5 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Leinen-Tunika	1	12 Leinentuch + 9 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Leinentuch	5	5 Leinen + 1 Zwirn	academy_craft&selection=54	2026-09-22
+recipe	Lilienklinge	1	32 Mithrilbarren + 6 Schmiedeöl + 14 Schleifstein + 16 Griffband	academy_craft&selection=56	2026-09-22
+recipe	Luft-Eibenlanze	1	34 Eibenbretter + 6 Magiesplitter + 10 Phasenkraut + 20 Erdenblut	academy_craft&selection=63	2026-09-22
+recipe	Luft-Eschenstab	1	30 Eschenbretter + 8 Magiesplitter + 38 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Luft-Krummstab	1	16 Buchenbretter + 16 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Luft-Langholz	1	11 Birkenbretter + 22 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Luft-Lichtstab	1	15 Eichenbretter + 5 Magiesplitter + 12 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Luft-Runenstab	1	17 Birkenbretter + 34 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Luft-Rute	1	22 Eichenbretter + 5 Magiesplitter + 19 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Luft-Spiralstab	1	20 Eschenbretter + 6 Magiesplitter + 25 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Luft-Stecken	1	11 Buchenbretter + 11 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Luft-Wächterstab	1	52 Eibenbretter + 6 Magiesplitter + 12 Phasenkraut + 32 Erdenblut	academy_craft&selection=63	2026-09-22
+recipe	Magieessenz	100	6 Magiestaub + 2 Magiesplitter	academy_craft&selection=67	2026-09-22
+recipe	Magische Ätherbinde	100	14 Äthertuch + 7 Drachenleder + 37 Nähgarn + 17 Phasenkraut + 3 Erdenblut	academy_craft&selection=67	2026-09-22
+recipe	Marmor-Bodenplatte	1	32 Marmorziegel + 65 Edelmörtel	academy_craft&selection=55	2026-09-22
+recipe	Marmor-Mauerstück	1	25 Marmorziegel + 12 Eibenbretter + 75 Edelmörtel	academy_craft&selection=55	2026-09-22
+recipe	Marmorziegel	5	5 Marmor + 4 Drachenzunder	academy_craft&selection=52	2026-09-22
+recipe	Messer	1	7 Kupferbarren + 5 Schmiedeöl	academy_craft&selection=57	2026-09-22
+recipe	Militärpicke	1	14 Sorandilbarren + 3 Schmiedeöl + 11 Schleifstein	academy_craft&selection=58	2026-09-22
+recipe	Mithril-Kettenbeinlinge	1	17 Mithrilbarren + 6 Schmiedeöl + 6 Wattierung + 9 Nieten	academy_craft&selection=62	2026-09-22
+recipe	Mithril-Kettenhandschuhe	1	13 Mithrilbarren + 6 Schmiedeöl + 6 Wattierung + 6 Nieten	academy_craft&selection=62	2026-09-22
+recipe	Mithril-Kettenhaube	1	15 Mithrilbarren + 8 Schmiedeöl + 9 Wattierung + 6 Nieten	academy_craft&selection=62	2026-09-22
+recipe	Mithril-Kettenhemd	1	22 Mithrilbarren + 14 Schmiedeöl + 12 Wattierung + 9 Nieten	academy_craft&selection=62	2026-09-22
+recipe	Mithril-Kettenstiefel	1	13 Mithrilbarren + 6 Schmiedeöl + 6 Wattierung + 6 Nieten	academy_craft&selection=62	2026-09-22
+recipe	Mithril-Plattenbeinlinge	1	26 Mithrilbarren + 8 Schmiedeöl + 6 Wattierung + 15 Nieten	academy_craft&selection=62	2026-09-22
+recipe	Mithril-Plattenhandschuhe	1	20 Mithrilbarren + 6 Schmiedeöl + 8 Wattierung + 10 Nieten	academy_craft&selection=62	2026-09-22
+recipe	Mithril-Plattenhelm	1	22 Mithrilbarren + 8 Schmiedeöl + 8 Wattierung + 12 Nieten	academy_craft&selection=62	2026-09-22
+recipe	Mithril-Plattenpanzer	1	34 Mithrilbarren + 15 Schmiedeöl + 10 Wattierung + 18 Nieten	academy_craft&selection=62	2026-09-22
+recipe	Mithril-Plattenstiefel	1	20 Mithrilbarren + 6 Schmiedeöl + 8 Wattierung + 10 Nieten	academy_craft&selection=62	2026-09-22
+recipe	Mithrilbarren	5	5 Mithrilerz + 4 Drachenzunder	academy_craft&selection=53	2026-09-22
+recipe	Monarchenschild	1	32 Mithrilbarren + 15 Schmiedeöl + 10 Ledernieten + 16 Beschläge	academy_craft&selection=62	2026-09-22
+recipe	Mondessenz	270	11 Mondstaub + 7 Magiesplitter + 3 Phasenkraut	academy_craft&selection=67	2026-09-22
+recipe	Mondklinge [2H]	1	34 Mithrilbarren + 5 Schmiedeöl + 10 Schleifstein + 20 Griffband	academy_craft&selection=56	2026-09-22
+recipe	Morgenstern	1	9 Sorandilbarren + 5 Schmiedeöl + 6 Schleifstein	academy_craft&selection=59	2026-09-22
+recipe	Nebeldolch	1	32 Mithrilbarren + 6 Schmiedeöl + 14 Schleifstein + 16 Griffband	academy_craft&selection=57	2026-09-22
+recipe	Nebelschild	1	23 Drachenleder + 8 Lederfett + 8 Ledernieten + 12 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Nietenschild	1	15 Riesenleder + 9 Lederfett + 7 Ledernieten + 4 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Ochsenzunge	1	10 Eisenbarren + 15 Schmiedeöl	academy_craft&selection=57	2026-09-22
+recipe	Ogerherde	1	12 Adamantbarren + 5 Schmiedeöl + 14 Schleifstein	academy_craft&selection=59	2026-09-22
+recipe	Panzerbrecher	610	16 Eibenholz + 9 Federn + 8 Pfeilharz + 1 Drachinschneiden	academy_craft&selection=64	2026-09-22
+recipe	Pavese	1	10 Sorandilbarren + 8 Schmiedeöl + 6 Ledernieten	academy_craft&selection=62	2026-09-22
+recipe	Pfeile	135	6 Buchenholz + 5 Federn	academy_craft&selection=64	2026-09-22
+recipe	Pike [2H]	1	15 Sorandilbarren + 8 Schmiedeöl + 10 Schleifstein	academy_craft&selection=60	2026-09-22
+recipe	Prunkaxt [2H]	1	17 Sorandilbarren + 3 Schmiedeöl + 14 Schleifstein	academy_craft&selection=58	2026-09-22
+recipe	Prunkbogen	1	52 Eibenbretter + 6 Bogensalbe + 12 Elbenhaar + 32 Griffband	academy_craft&selection=64	2026-09-22
+recipe	Prunkschild	1	15 Sorandilbarren + 10 Schmiedeöl + 10 Ledernieten	academy_craft&selection=62	2026-09-22
+recipe	Prunkschwert [2H]	1	23 Adamantbarren + 8 Schmiedeöl + 28 Schleifstein	academy_craft&selection=56	2026-09-22
+recipe	Repetierarmbrust	1	15 Eichenbretter + 8 Bogensalbe + 10 Elbenhaar	academy_craft&selection=65	2026-09-22
+recipe	Riesenleder	5	5 Riesenhaut + 3 Kristallat	academy_craft&selection=54	2026-09-22
+recipe	Riesenleder-Beinlinge	1	17 Riesenleder + 14 Lederfett + 18 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Riesenleder-Handschuhe	1	8 Riesenleder + 9 Lederfett + 8 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Riesenleder-Harnisch	1	23 Riesenleder + 14 Lederfett + 25 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Riesenleder-Haube	1	10 Riesenleder + 8 Lederfett + 10 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Riesenleder-Helm	1	15 Riesenleder + 14 Lederfett + 15 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Riesenleder-Hose	1	11 Riesenleder + 9 Lederfett + 12 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Riesenleder-Schuhe	1	8 Riesenleder + 9 Lederfett + 8 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Riesenleder-Stiefel	1	13 Riesenleder + 14 Lederfett + 12 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Riesenleder-Stulpen	1	13 Riesenleder + 14 Lederfett + 12 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Riesenleder-Wappenrock	1	15 Riesenleder + 10 Lederfett + 16 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Rundschild	1	8 Weichleder + 6 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Runenbogen	1	30 Eschenbretter + 14 Bogensalbe + 35 Elbenhaar	academy_craft&selection=64	2026-09-22
+recipe	Sand-Bodenplatte	1	12 Sandziegel + 18 Mörtel	academy_craft&selection=55	2026-09-22
+recipe	Sand-Mauerstück	1	8 Sandziegel + 6 Birkenbretter + 22 Mörtel	academy_craft&selection=55	2026-09-22
+recipe	Sandziegel	5	5 Sandstein + 2 Steinkohle	academy_craft&selection=52	2026-09-22
+recipe	Schattenessenz	180	8 Schattenstaub + 5 Magiesplitter + 1 Phasenkraut	academy_craft&selection=67	2026-09-22
+recipe	Schiefer-Bodenplatte	1	16 Schieferziegel + 16 Edelmörtel	academy_craft&selection=55	2026-09-22
+recipe	Schiefer-Mauerstück	1	12 Schieferziegel + 7 Eichenbretter + 19 Edelmörtel	academy_craft&selection=55	2026-09-22
+recipe	Schieferziegel	5	5 Schiefer + 2 Drachenzunder	academy_craft&selection=52	2026-09-22
+recipe	Schimmerklinge	1	21 Mithrilbarren + 5 Schmiedeöl + 10 Schleifstein + 10 Griffband	academy_craft&selection=56	2026-09-22
+recipe	Schlangendolch	1	12 Adamantbarren + 5 Schmiedeöl + 14 Schleifstein	academy_craft&selection=57	2026-09-22
+recipe	Schottenschwert [2H]	1	17 Sorandilbarren + 3 Schmiedeöl + 14 Schleifstein	academy_craft&selection=56	2026-09-22
+recipe	Schwert	1	10 Kupferbarren + 7 Schmiedeöl	academy_craft&selection=56	2026-09-22
+recipe	Seiden-Beinlinge	1	17 Seidentuch + 14 Nähgarn + 18 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Seiden-Handschuhe	1	8 Seidentuch + 9 Nähgarn + 8 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Seiden-Haube	1	10 Seidentuch + 8 Nähgarn + 10 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Seiden-Hose	1	11 Seidentuch + 9 Nähgarn + 12 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Seiden-Robe	1	15 Seidentuch + 10 Nähgarn + 16 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Seiden-Schuhe	1	8 Seidentuch + 9 Nähgarn + 8 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Seiden-Spitzhut	1	15 Seidentuch + 14 Nähgarn + 15 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Seiden-Stiefel	1	13 Seidentuch + 14 Nähgarn + 12 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Seiden-Stulpen	1	13 Seidentuch + 14 Nähgarn + 12 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Seiden-Tunika	1	23 Seidentuch + 14 Nähgarn + 25 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Seidentuch	5	5 Seide + 3 Glaszwirn	academy_craft&selection=54	2026-09-22
+recipe	Sense [2H]	1	16 Eisenbarren + 25 Schmiedeöl	academy_craft&selection=60	2026-09-22
+recipe	Sonnensichel [2H]	1	23 Adamantbarren + 8 Schmiedeöl + 28 Schleifstein	academy_craft&selection=58	2026-09-22
+recipe	Sorandil-Kettenbeinlinge	1	8 Sorandilbarren + 12 Schmiedeöl + 3 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Sorandil-Kettenhandschuhe	1	6 Sorandilbarren + 7 Schmiedeöl + 3 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Sorandil-Kettenhaube	1	7 Sorandilbarren + 9 Schmiedeöl + 3 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Sorandil-Kettenhemd	1	11 Sorandilbarren + 10 Schmiedeöl + 6 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Sorandil-Kettenstiefel	1	6 Sorandilbarren + 7 Schmiedeöl + 3 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Sorandil-Plattenbeinlinge	1	13 Sorandilbarren + 12 Schmiedeöl + 7 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Sorandil-Plattenhandschuhe	1	10 Sorandilbarren + 12 Schmiedeöl + 4 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Sorandil-Plattenhelm	1	11 Sorandilbarren + 8 Schmiedeöl + 7 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Sorandil-Plattenpanzer	1	17 Sorandilbarren + 13 Schmiedeöl + 10 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Sorandil-Plattenstiefel	1	10 Sorandilbarren + 12 Schmiedeöl + 4 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Sorandilbarren	5	5 Sorandilerz + 2 Drachenzunder	academy_craft&selection=53	2026-09-22
+recipe	Speer [2H]	1	11 Kupferbarren + 8 Schmiedeöl	academy_craft&selection=60	2026-09-22
+recipe	Spinnenbogen	1	15 Eichenbretter + 8 Bogensalbe + 10 Elbenhaar	academy_craft&selection=64	2026-09-22
+recipe	Spitzdolch	1	21 Mithrilbarren + 5 Schmiedeöl + 10 Schleifstein + 10 Griffband	academy_craft&selection=57	2026-09-22
+recipe	Stabzepter [2H]	1	34 Mithrilbarren + 5 Schmiedeöl + 10 Schleifstein + 20 Griffband	academy_craft&selection=59	2026-09-22
+recipe	Stachelkeule [2H]	1	17 Sorandilbarren + 3 Schmiedeöl + 14 Schleifstein	academy_craft&selection=59	2026-09-22
+recipe	Stachelschild	1	7 Hartleder + 9 Lederfett + 3 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Steinbrecher	152	16 Eibenholz + 9 Federn + 8 Pfeilharz + 1 Drachinschneiden	academy_craft&selection=65	2026-09-22
+recipe	Sternenessenz	450	16 Sternenstaub + 8 Magiesplitter + 5 Phasenkraut + 1 Erdenblut	academy_craft&selection=67	2026-09-22
+recipe	Stilett	1	7 Eisenbarren + 10 Schmiedeöl	academy_craft&selection=57	2026-09-22
+recipe	Stoßdolch	1	14 Sorandilbarren + 3 Schmiedeöl + 11 Schleifstein	academy_craft&selection=57	2026-09-22
+recipe	Streitaxt	1	10 Kupferbarren + 7 Schmiedeöl	academy_craft&selection=58	2026-09-22
+recipe	Streitkolben	1	7 Eisenbarren + 10 Schmiedeöl	academy_craft&selection=59	2026-09-22
+recipe	Säbel	1	10 Eisenbarren + 15 Schmiedeöl	academy_craft&selection=56	2026-09-22
+recipe	Tartsche	1	5 Leder + 8 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Todesessenz	115	6 Todesstaub + 4 Magiesplitter	academy_craft&selection=67	2026-09-22
+recipe	Tomahawk	1	21 Mithrilbarren + 5 Schmiedeöl + 10 Schleifstein + 10 Griffband	academy_craft&selection=58	2026-09-22
+recipe	Turmschild	1	21 Adamantbarren + 6 Schmiedeöl + 6 Ledernieten + 8 Beschläge	academy_craft&selection=62	2026-09-22
+recipe	Tyrannenaxt [2H]	1	52 Mithrilbarren + 6 Schmiedeöl + 8 Schleifstein + 34 Griffband	academy_craft&selection=58	2026-09-22
+recipe	Verteidiger	1	15 Drachenleder + 6 Lederfett + 5 Ledernieten + 8 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Vorschlaghammer [2H]	1	13 Eisenbarren + 19 Schmiedeöl	academy_craft&selection=59	2026-09-22
+recipe	Wall	1	21 Mithrilbarren + 10 Schmiedeöl + 8 Ledernieten + 10 Beschläge	academy_craft&selection=62	2026-09-22
+recipe	Wappenschild	1	14 Adamantbarren + 5 Schmiedeöl + 4 Ledernieten + 5 Beschläge	academy_craft&selection=62	2026-09-22
+recipe	Wasser-Eibenlanze	1	34 Eibenbretter + 6 Magiesplitter + 10 Phasenkraut + 20 Erdenblut	academy_craft&selection=63	2026-09-22
+recipe	Wasser-Eschenstab	1	30 Eschenbretter + 8 Magiesplitter + 38 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Wasser-Krummstab	1	16 Buchenbretter + 16 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Wasser-Langholz	1	11 Birkenbretter + 22 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Wasser-Lichtstab	1	15 Eichenbretter + 5 Magiesplitter + 12 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Wasser-Runenstab	1	17 Birkenbretter + 34 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Wasser-Rute	1	22 Eichenbretter + 5 Magiesplitter + 19 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Wasser-Spiralstab	1	20 Eschenbretter + 6 Magiesplitter + 25 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Wasser-Stecken	1	11 Buchenbretter + 11 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Wasser-Wächterstab	1	52 Eibenbretter + 6 Magiesplitter + 12 Phasenkraut + 32 Erdenblut	academy_craft&selection=63	2026-09-22
+recipe	Weichleder	5	5 Weichpelze + 1 Salz	academy_craft&selection=54	2026-09-22
+recipe	Weichleder-Beinlinge	1	10 Weichleder + 7 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Weichleder-Handschuhe	1	5 Weichleder + 4 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Weichleder-Harnisch	1	12 Weichleder + 9 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Weichleder-Haube	1	6 Weichleder + 4 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Weichleder-Helm	1	8 Weichleder + 6 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Weichleder-Hose	1	7 Weichleder + 5 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Weichleder-Schuhe	1	5 Weichleder + 4 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Weichleder-Stiefel	1	7 Weichleder + 5 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Weichleder-Stulpen	1	7 Weichleder + 5 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Weichleder-Wappenrock	1	8 Weichleder + 6 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Woll-Beinlinge	1	10 Wolltuch + 14 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Woll-Handschuhe	1	5 Wolltuch + 7 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Woll-Haube	1	6 Wolltuch + 8 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Woll-Hose	1	6 Wolltuch + 9 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Woll-Robe	1	8 Wolltuch + 12 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Woll-Schuhe	1	5 Wolltuch + 7 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Woll-Spitzhut	1	8 Wolltuch + 12 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Woll-Stiefel	1	7 Wolltuch + 10 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Woll-Stulpen	1	7 Wolltuch + 10 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Woll-Tunika	1	12 Wolltuch + 18 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Wolltuch	5	5 Wolle + 2 Zwirn	academy_craft&selection=54	2026-09-22
+recipe	Zackenstern	1	32 Mithrilbarren + 6 Schmiedeöl + 14 Schleifstein + 16 Griffband	academy_craft&selection=59	2026-09-22
+recipe	Zedernbogen	1	20 Eschenbretter + 12 Bogensalbe + 22 Elbenhaar	academy_craft&selection=64	2026-09-22
+recipe	Zirkelschild	1	8 Leder + 12 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Zwillingsaxt	1	12 Adamantbarren + 5 Schmiedeöl + 14 Schleifstein	academy_craft&selection=58	2026-09-22
+recipe	Äther-Beinlinge	1	26 Äthertuch + 8 Nähgarn + 6 Schutzpolster + 15 Vulkandraht	academy_craft&selection=66	2026-09-22
+recipe	Äther-Handschuhe	1	13 Äthertuch + 6 Nähgarn + 6 Schutzpolster + 6 Vulkandraht	academy_craft&selection=66	2026-09-22
+recipe	Äther-Haube	1	15 Äthertuch + 8 Nähgarn + 9 Schutzpolster + 6 Vulkandraht	academy_craft&selection=66	2026-09-22
+recipe	Äther-Hose	1	17 Äthertuch + 6 Nähgarn + 6 Schutzpolster + 9 Vulkandraht	academy_craft&selection=66	2026-09-22
+recipe	Äther-Robe	1	22 Äthertuch + 14 Nähgarn + 12 Schutzpolster + 9 Vulkandraht	academy_craft&selection=66	2026-09-22
+recipe	Äther-Schuhe	1	13 Äthertuch + 6 Nähgarn + 6 Schutzpolster + 6 Vulkandraht	academy_craft&selection=66	2026-09-22
+recipe	Äther-Spitzhut	1	22 Äthertuch + 8 Nähgarn + 8 Schutzpolster + 12 Vulkandraht	academy_craft&selection=66	2026-09-22
+recipe	Äther-Stiefel	1	20 Äthertuch + 6 Nähgarn + 8 Schutzpolster + 10 Vulkandraht	academy_craft&selection=66	2026-09-22
+recipe	Äther-Stulpen	1	20 Äthertuch + 6 Nähgarn + 8 Schutzpolster + 10 Vulkandraht	academy_craft&selection=66	2026-09-22
+recipe	Äther-Tunika	1	34 Äthertuch + 15 Nähgarn + 10 Schutzpolster + 18 Vulkandraht	academy_craft&selection=66	2026-09-22
+recipe	Äthertuch	5	5 Ätherfäden + 4 Glaszwirn	academy_craft&selection=54	2026-09-22
+recipe	Übungsstück-Adamantaxt	1	2 Adamantbarren + 1 Schmiedeöl + 2 Schleifstein	academy_craft&selection=58	2026-09-22
+recipe	Übungsstück-Adamantdolch	1	2 Adamantbarren + 1 Schmiedeöl + 2 Schleifstein	academy_craft&selection=57	2026-09-22
+recipe	Übungsstück-Adamantkeule	1	2 Adamantbarren + 1 Schmiedeöl + 2 Schleifstein	academy_craft&selection=59	2026-09-22
+recipe	Übungsstück-Adamantrüstung	1	2 Adamantbarren + 1 Schmiedeöl + 2 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Übungsstück-Adamantschwert	1	2 Adamantbarren + 1 Schmiedeöl + 2 Schleifstein	academy_craft&selection=56	2026-09-22
+recipe	Übungsstück-Adamantstangenwaffe	1	2 Adamantbarren + 1 Schmiedeöl + 2 Schleifstein	academy_craft&selection=60	2026-09-22
+recipe	Übungsstück-Baumwollrüstung	1	2 Baumwolltuch + 1 Nähgarn + 1 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Übungsstück-Birkenarmbrust	1	2 Birkenbretter + 2 Bogensalbe	academy_craft&selection=65	2026-09-22
+recipe	Übungsstück-Birkenbogen	1	2 Birkenbretter + 2 Bogensalbe	academy_craft&selection=64	2026-09-22
+recipe	Übungsstück-Birkenstab	1	2 Birkenbretter + 2 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Übungsstück-Buchenarmbrust	1	2 Buchenbretter + 1 Bogensalbe	academy_craft&selection=65	2026-09-22
+recipe	Übungsstück-Buchenbogen	1	2 Buchenbretter + 1 Bogensalbe	academy_craft&selection=64	2026-09-22
+recipe	Übungsstück-Buchenstab	1	2 Buchenbretter + 1 Magiesplitter	academy_craft&selection=63	2026-09-22
+recipe	Übungsstück-Drachenlederrüstung	1	2 Drachenleder + 1 Lederfett + 1 Ledernieten + 1 Beschläge	academy_craft&selection=61	2026-09-22
+recipe	Übungsstück-Eibenarmbrust	1	2 Eibenbretter + 1 Bogensalbe + 1 Elbenhaar + 1 Griffband	academy_craft&selection=65	2026-09-22
+recipe	Übungsstück-Eibenbogen	1	2 Eibenbretter + 1 Bogensalbe + 1 Elbenhaar + 1 Griffband	academy_craft&selection=64	2026-09-22
+recipe	Übungsstück-Eibenstab	1	2 Eibenbretter + 1 Magiesplitter + 1 Phasenkraut + 1 Erdenblut	academy_craft&selection=63	2026-09-22
+recipe	Übungsstück-Eichenarmbrust	1	2 Eichenbretter + 1 Bogensalbe + 1 Elbenhaar	academy_craft&selection=65	2026-09-22
+recipe	Übungsstück-Eichenbogen	1	2 Eichenbretter + 1 Bogensalbe + 1 Elbenhaar	academy_craft&selection=64	2026-09-22
+recipe	Übungsstück-Eichenstab	1	2 Eichenbretter + 1 Magiesplitter + 1 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Übungsstück-Eisenaxt	1	2 Eisenbarren + 2 Schmiedeöl	academy_craft&selection=58	2026-09-22
+recipe	Übungsstück-Eisendolch	1	2 Eisenbarren + 2 Schmiedeöl	academy_craft&selection=57	2026-09-22
+recipe	Übungsstück-Eisenkeule	1	2 Eisenbarren + 2 Schmiedeöl	academy_craft&selection=59	2026-09-22
+recipe	Übungsstück-Eisenrüstung	1	2 Eisenbarren + 2 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Übungsstück-Eisenschwert	1	2 Eisenbarren + 2 Schmiedeöl	academy_craft&selection=56	2026-09-22
+recipe	Übungsstück-Eisenstangenwaffe	1	2 Eisenbarren + 2 Schmiedeöl	academy_craft&selection=60	2026-09-22
+recipe	Übungsstück-Eschenarmbrust	1	2 Eschenbretter + 1 Bogensalbe + 2 Elbenhaar	academy_craft&selection=65	2026-09-22
+recipe	Übungsstück-Eschenbogen	1	2 Eschenbretter + 1 Bogensalbe + 2 Elbenhaar	academy_craft&selection=64	2026-09-22
+recipe	Übungsstück-Eschenstab	1	2 Eschenbretter + 1 Magiesplitter + 2 Phasenkraut	academy_craft&selection=63	2026-09-22
+recipe	Übungsstück-Hartlederrüstung	1	2 Hartleder + 1 Lederfett + 1 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Übungsstück-Kupferaxt	1	2 Kupferbarren + 1 Schmiedeöl	academy_craft&selection=58	2026-09-22
+recipe	Übungsstück-Kupferdolch	1	2 Kupferbarren + 1 Schmiedeöl	academy_craft&selection=57	2026-09-22
+recipe	Übungsstück-Kupferkeule	1	2 Kupferbarren + 1 Schmiedeöl	academy_craft&selection=59	2026-09-22
+recipe	Übungsstück-Kupferrüstung	1	2 Kupferbarren + 1 Schmiedeöl	academy_craft&selection=62	2026-09-22
+recipe	Übungsstück-Kupferschwert	1	2 Kupferbarren + 1 Schmiedeöl	academy_craft&selection=56	2026-09-22
+recipe	Übungsstück-Kupferstangenwaffe	1	2 Kupferbarren + 1 Schmiedeöl	academy_craft&selection=60	2026-09-22
+recipe	Übungsstück-Lederrüstung	1	2 Leder + 2 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Übungsstück-Leinenrüstung	1	2 Leinentuch + 1 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Übungsstück-Mithrilaxt	1	2 Mithrilbarren + 1 Schmiedeöl + 1 Schleifstein + 1 Griffband	academy_craft&selection=58	2026-09-22
+recipe	Übungsstück-Mithrildolch	1	2 Mithrilbarren + 1 Schmiedeöl + 1 Schleifstein + 1 Griffband	academy_craft&selection=57	2026-09-22
+recipe	Übungsstück-Mithrilkeule	1	2 Mithrilbarren + 1 Schmiedeöl + 1 Schleifstein + 1 Griffband	academy_craft&selection=59	2026-09-22
+recipe	Übungsstück-Mithrilrüstung	1	2 Mithrilbarren + 1 Schmiedeöl + 1 Wattierung + 1 Nieten	academy_craft&selection=62	2026-09-22
+recipe	Übungsstück-Mithrilschwert	1	2 Mithrilbarren + 1 Schmiedeöl + 1 Schleifstein + 1 Griffband	academy_craft&selection=56	2026-09-22
+recipe	Übungsstück-Mithrilstangenwaffe	1	2 Mithrilbarren + 1 Schmiedeöl + 1 Schleifstein + 1 Griffband	academy_craft&selection=60	2026-09-22
+recipe	Übungsstück-Riesenlederrüstung	1	2 Riesenleder + 1 Lederfett + 2 Ledernieten	academy_craft&selection=61	2026-09-22
+recipe	Übungsstück-Seidenrüstung	1	2 Seidentuch + 1 Nähgarn + 2 Schutzpolster	academy_craft&selection=66	2026-09-22
+recipe	Übungsstück-Sorandilaxt	1	2 Sorandilbarren + 1 Schmiedeöl + 1 Schleifstein	academy_craft&selection=58	2026-09-22
+recipe	Übungsstück-Sorandildolch	1	2 Sorandilbarren + 1 Schmiedeöl + 1 Schleifstein	academy_craft&selection=57	2026-09-22
+recipe	Übungsstück-Sorandilkeule	1	2 Sorandilbarren + 1 Schmiedeöl + 1 Schleifstein	academy_craft&selection=59	2026-09-22
+recipe	Übungsstück-Sorandilrüstung	1	2 Sorandilbarren + 1 Schmiedeöl + 1 Wattierung	academy_craft&selection=62	2026-09-22
+recipe	Übungsstück-Sorandilschwert	1	2 Sorandilbarren + 1 Schmiedeöl + 1 Schleifstein	academy_craft&selection=56	2026-09-22
+recipe	Übungsstück-Sorandilstangenwaffe	1	2 Sorandilbarren + 1 Schmiedeöl + 1 Schleifstein	academy_craft&selection=60	2026-09-22
+recipe	Übungsstück-Weichlederrüstung	1	2 Weichleder + 1 Lederfett	academy_craft&selection=61	2026-09-22
+recipe	Übungsstück-Wollrüstung	1	2 Wolltuch + 2 Nähgarn	academy_craft&selection=66	2026-09-22
+recipe	Übungsstück-Ätherrüstung	1	2 Äthertuch + 1 Nähgarn + 1 Schutzpolster + 1 Vulkandraht	academy_craft&selection=66	2026-09-22

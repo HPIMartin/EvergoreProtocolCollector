@@ -65,7 +65,8 @@
 | `BankEntryEqualityTest` / `StorageEntryEqualityTest` | Value equality of the two entry records: equal when all fields match, different for each single field in turn (timestamp, avatar, amount/quantity, name, quality, transfer type). The window-dedup in `EvergoreDataExtractor` compares entries by value, so this is load-bearing, not record boilerplate. | pure unit |
 | `KbCitationGuardTest` | Guards every `docs/knowledge-base/*.md` file for a phantom backtick class reference: extracts candidate class names per `KbClassReferenceExtractor`'s inclusion rules (a compound-PascalCase, ≥2-hump token; a bare single-word class citation like `Configuration` is a disclosed blind spot the rule does not cover), resolves each against `KnownJavaSymbols`' classpath-backed lookup (the project's own compiled classes, every dependency jar, and the JDK, read from the test runtime classpath by listing class-file/module entry names, no bytecode parsing), and fails naming every unresolved `file:line: token`. Verified non-vacuous by injecting a temporary phantom reference into a `@TempDir` fixture. Scoped to Java `src/` references only: the documented React/TypeScript frontend symbols the extractor's rules still pick up in `frontend.md` never resolve against that scan, so they are named in an explicit disclosed-gap set (itself pinned to only ever accept `frontend.md`-rooted entries) rather than silently swallowed by skipping the file. | architecture guard (ArchUnit + JUnit 5) |
 | `SeleniumPageSourceTest` | Drives `SeleniumPageSource` against a `RecordingWebDriver` fake, using **injected `Clock` and `Sleeper`** so wait timeouts never touch real time: the driver is quit after a successful scrape **and** after a failing one (try/finally), the scrape failure propagates and is logged, both-fail contract is pinned (scrape failure propagates; both failures logged), and a timeout waits deterministically without real-time dependency. The login it delegates is covered here only at its seam: a failing sign-in logs exactly one `warn` that names the login and carries neither credential. | pure unit (fake driver, injected clock/sleeper) |
-| `CatalogLookupTest` | Pins `CatalogLookup`, the one description of how a scraped name resolves to a catalog entry: the catalog's own name, a recorded second spelling, a trailing magic affix stripped, an affix sitting before a ` [2H]` suffix, and nothing at all for a name the catalog has never seen. `EvergoreDataEvaluator` resolves every scraped item name through it, so the rule has one home rather than sitting private inside the evaluator. | pure unit |
+| `GameFactsGuardTest` | Holds the catalog against `src/test/resources/gameCatalog/game-facts.tsv`, the committed record of what the game itself said (see "The recorded game facts" below). Every recorded price must be the catalog's price and every recorded recipe the catalog's recipe, and the failure names each divergence with the page it was read from and the date. It also pins that the guard really reaches every fact (671 price rows, 424 recipe rows, none skipped for want of a catalog entry), the headline counts the catalog rests on (the storage prices 433 entries, the market 229, together 483 of 601), that every row says where and when it was read, and that no guild member or storage-access line survived into the file. | pure unit (committed data file) |
+| `CatalogLookupTest` | Pins `CatalogLookup`, the one description of how a scraped name resolves to a catalog entry: the catalog's own name, a recorded second spelling, a trailing magic affix stripped, an affix sitting before a ` [2H]` suffix, and nothing at all for a name the catalog has never seen. `EvergoreDataEvaluator` and `GameFactsGuardTest` both resolve through it, so neither can drift from the other. | pure unit |
 | `EvergoreSessionTest` | Drives `EvergoreSession`, the one description of how the game is signed in, against the same fake: the configured username and password reach the fields the login form names for them, the browser is left on the game rather than on the world portal it passes through, the consent banner is clicked before the form is touched and its absence changes nothing, and `openPage` waits for the page it asked for instead of reading whatever the browser still shows. Both the production scraper and `GameCatalogScrapeCheck` go through this class, so these cases cover the check's login too. | pure unit (fake driver, injected clock/sleeper) |
 | `RunAcceptanceScenariosTest` | The cucumber-jvm suite: `@Suite` + `@IncludeEngines("cucumber")` over the classpath resource `features` (`src/test/resources/features/`, one `.feature` per capability, product language, handbook §5); glue package `dev.schoenberg.evergore.protocolParser.acceptance`; the default tag filter in `junit-platform.properties` excludes `@wip` and `@characterization`, and `./verify bdd` / `./verify focus <feature>` override it through the `test` task's forwarded system properties. Carries no scenario yet: `/bdd-catch-up` derives them, one capability per run. | acceptance (cucumber-jvm on the JUnit platform) |
 | Fakes & stubs | `LoggerSpy` (records info/warn/error messages), `FakeMetaInformationRepository` (in-memory map), `BankRepositoryStub` / `StorageRepositoryStub`, `RecordingWebDriver` (scriptable Selenium `WebDriver`: click targets, elements a page does not carry, and a `stopNavigating` that freezes the browser where it is), `MutableClock`/`CountingSleeper` (wait timeouts without real time). Hand-written, no mocking framework. | helpers (no `@Test`) |
@@ -446,6 +447,34 @@ already performs. Opt-in on the same pattern as the snapshot harness, and pinned
   left catalogued at zero.
 - **The dump does not survive a clean build**: `build/tmp/gameCatalog/` goes with `build/`. Copy it
   aside before running one, or the evidence a catalog change rests on is gone.
+
+### The recorded game facts
+
+`src/test/resources/gameCatalog/game-facts.tsv` is the committed, diffable record of what the scrape
+established, so a catalog value can be re-checked without signing into the game again. One fact per
+line, tab separated, `kind item value ingredients source read`: a `price` row carries the gold value
+and an empty ingredients column, a `recipe` row carries the yield in `value` and `5 Buchenholz + 1
+Harz` in `ingredients`. `source` is the page parameter the fact was read from
+(`stock_out&selection=4&pos=1`, `market_all_articles`, `academy_craft&selection=58`) and `read` the
+date, **per line**, so a later partial re-scrape re-dates only the rows it touched.
+
+- **Only derived facts, never the dumps.** The raw pages carry guild member names, `Lagerzugriff`
+  lines and `Hergestellt von <member> für <member>` clauses, which is host data (handbook §1–§3) and
+  is never committed. `GameFactsGuardTest` guards the file itself against those markers.
+- **An item priced by two pages keeps both rows**, so the storage and the market corroborate each
+  other instead of one silently replacing the other; 178 names are priced by both and none disagree.
+- **A price is read from a holding at quality 100 only**, because the storage scales a holding's
+  gold with its quality (an `Äther-Spitzhut` at quality 20 lists a fifth of its value).
+- **Both value line shapes have to be read.** `<kg>, <category>, Stufe <n> <gold> Gold` is the
+  common one, but raw materials, gems, crafting material and **ammunition** use
+  `<kg> <gold> Gold / Stk.` with no category, and crafted gear inserts a third clause,
+  `, Hergestellt von … für …`, before the gold. Missing the second shape is what once left
+  `Steinbrecher` and `Jagdpfeile` catalogued below the game; missing the third hides 109 of the
+  storage's 560 rows. The extraction is checked against the game's own `(Gesamt: N)` totals for
+  exactly that reason: 560 of 560 storage rows and 232 of 232 market offers were read.
+- **Re-deriving it means one complete paged run, not a question per value**: the storage's 28
+  selections auto-paged, `market_all_articles&selection=0&pos=1..N` named explicitly (the check only
+  auto-pages `stock_out`), and `academy_craft&selection=51..67`.
 
 ## Test execution model (one JVM)
 
