@@ -248,10 +248,11 @@ production snapshot via the gitignored harness described below:
 - **Closing the catalog against the game moves a third of the guild.** Measured on the 03.09.2026
   snapshot by running the recompute check on each side of the change: `Gildenspende` rises by
   `2 478 114`, storage deposits by `6 318 321` and storage withdrawals by `3 883 118`, so the net
-  after deductions rises `2 435 203` to `76 846 042` and **35 of 42** avatars change. One member
-  crosses from a negative contribution to a positive one. Distinct unknown item names fall from
-  **124 to 15** and the rows they cover from **1 684 to 31**; a further 17 names over 690 rows are
-  known and deliberately worth nothing, which `/health` counts apart from the unknown ones.
+  after deductions rises by `2 435 203` to the guild position below and **35 of 42** avatars
+  change. One member crosses from a negative contribution to a positive one. Distinct unknown item
+  names fall from **124 to 15** and the rows they cover from **1 684 to 31**; a further 17 names
+  over 690 rows are known and deliberately worth nothing, which `/health` counts apart from the
+  unknown ones.
 - **The three raw stones' correction is measured, not asserted.** Two independent methods agree to the
   gold on the 03.09.2026 snapshot: a catalog-driven SQL sum over the `Marmor`, `Granit` and
   `Schiefer` rows, and the recompute check run once on each side of the correction. The guild

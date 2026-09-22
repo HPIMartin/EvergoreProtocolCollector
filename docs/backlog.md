@@ -30,7 +30,7 @@ blank line between two rows splits the table mid-body (DOC-11).
 - The catalog is closed against the game: the three raw stones renamed, magic affixes normalised,
   156 entries priced as the game prices them, `Steinbrecher` and `Jagdpfeile` corrected, and
   `/health` counting deliberate zeros apart from unknown names, which fall from 124 to 15. The
-  guild net reads `76 846 042` ([testing.md](knowledge-base/testing.md)).
+  guild position is measured in [testing.md](knowledge-base/testing.md).
 - The game itself is reachable as evidence: `GameCatalogScrapeCheck` is opt-in and its operation is
   written down, and what it established is committed as a dated data file the suite holds the
   catalog against ([testing.md](knowledge-base/testing.md)).

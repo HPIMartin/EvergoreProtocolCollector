@@ -227,8 +227,8 @@ avatar the recompute has never reached carries neither, and the guild's `Gildens
 `Handwerkssubventionen` and `Gildenlagerwert` are then **absent for the whole guild** rather than
 summed over the avatars that do carry them. That state is reachable and its window is named under
 the deploy in [build-run-deploy.md](build-run-deploy.md); the header says it cannot answer, and the
-table's total row says the same, so the two never disagree. Measured on the 03.09.2026 snapshot,
-42 avatars: `119.334.247`, `25.145.111`, `107.075.238`, `39.441.922`, and a net of `76.846.042`.
+table's total row says the same, so the two never disagree. The measured figures have one home,
+the guild position in [testing.md](testing.md).
 
 > **Why the split loses nothing:** `credited + donation - craftSubsidy` equals the deposit's goods
 > value bit-for-bit, over every catalog item at every quality and quantity, because the three credit
