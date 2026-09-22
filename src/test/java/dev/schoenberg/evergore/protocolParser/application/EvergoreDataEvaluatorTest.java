@@ -22,6 +22,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankReposito
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContribution;
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContributions;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.FakeMetaInformationRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTrip;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem;
@@ -38,6 +39,7 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformati
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getSumsRecomputedAt;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.ERDE_EIBENLANZE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.FEDERN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.LEINENTUCH;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MAGIESPLITTER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STERNENSTAUB;
@@ -605,6 +607,40 @@ class EvergoreDataEvaluatorTest {
 	@Test
 	void applicationClockUsesTheBerlinZone() {
 		assertThat(new ApplicationFactory().clock().getZone()).isEqualTo(APP_ZONE);
+	}
+
+	@Test
+	void carriesARoundTripDetectedOverTheLedgerInTheResult() {
+		storageRepo.seedEntries(AVATAR, List.of(storageWithdrawl(FEDERN.ingameName, 100, 100), storagePlacement(FEDERN.ingameName, 100, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(result.roundTrips()).containsExactly(new RoundTrip(AVATAR, FEDERN, 100));
+	}
+
+	@Test
+	void carriesNoRoundTripOverACleanLedger() {
+		storageRepo.seedEntries(AVATAR, List.of(storagePlacement(LEINENTUCH.ingameName, 1, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR));
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(result.roundTrips()).isEmpty();
+	}
+
+	@Test
+	void omitsRoundTripsOfAnAvatarWhoseLedgerCannotBeReadWhileCarryingAHealthyAvatarsOwn() {
+		storageRepo.seedEntries(AVATAR, List.of(storageWithdrawl(FEDERN.ingameName, 100, 100), storagePlacement(FEDERN.ingameName, 100, 100)));
+		storageRepo.seedAvatars(List.of(AVATAR, UNREADABLE_AVATAR));
+		storageRepo.failOn(UNREADABLE_AVATAR);
+		bankRepo.seedAvatars(List.of());
+
+		EvaluationResult result = tested.evaluateData();
+
+		assertThat(result.roundTrips()).containsExactly(new RoundTrip(AVATAR, FEDERN, 100));
 	}
 
 	private static BankEntry bankPlacement(int amount) {

@@ -267,6 +267,12 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   that), then add `itemValue × quantity × (quality / 100)` into `placement` / `withdrawl`, where
   `itemValue` is `getStorageValue()` for deposits and `getWithdrawlValue()` for withdrawals
   (`TransferTypeStorageEntryVisitor`). **Quality scales value linearly.**
+- **The same resolved storage entries feed the round-trip detection.** Each avatar's ledger is
+  resolved into `ResolvedStorageEntry`s once, valued as above and handed to
+  `RoundTripDetector.detect(avatar, entries)`; its `RoundTripReport` is collected into the run's
+  `EvaluationResult` as `roundTrips` and `roundTripAbstentions`, per run, over the full recompute,
+  the same way an unknown item or a failed avatar is. An avatar whose ledger read throws contributes
+  neither, because the throw precedes both the valuation and the detection.
 - **A deposit is valued twice**, and the gap is split into the two flows it is made of: into
   `placement` with what it credits the member, and, against `getWithdrawlValue()` as the guild's own
   price for the same goods, into **`donation`** where the credit falls short of that price (mined,

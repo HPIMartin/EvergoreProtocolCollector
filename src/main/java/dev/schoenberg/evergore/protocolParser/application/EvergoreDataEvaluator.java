@@ -20,6 +20,11 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.Meta
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationSnapshot;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.ResolvedStorageEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTrip;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTripAbstention;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTripDetector;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTripReport;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
 import dev.schoenberg.evergore.protocolParser.domain.CatalogLookup;
@@ -58,18 +63,21 @@ public class EvergoreDataEvaluator {
 		List<String> unknownItemNames = new ArrayList<>();
 		List<String> zeroValuedItemNames = new ArrayList<>();
 		List<String> failedAvatarNames = new ArrayList<>();
+		List<RoundTrip> roundTrips = new ArrayList<>();
+		List<RoundTripAbstention> roundTripAbstentions = new ArrayList<>();
 		List<MetaInformation<?>> recomputed = new ArrayList<>();
 		MetaInformationSnapshot beforeThisRun = metaRepo.snapshot();
 		Instant runInstant = clock.instant();
 		List<String> guild = knownAvatars.sortedByName();
 		Optional<Instant> runBeforeThisOne = beforeThisRun.lastRecomputeOf(guild);
 
-		guild.forEach(avatar -> collectInformationOf(avatar, runInstant, recomputed, unknownItemNames, zeroValuedItemNames, failedAvatarNames));
+		guild.forEach(avatar -> collectInformationOf(avatar, runInstant, recomputed, unknownItemNames, zeroValuedItemNames, failedAvatarNames, roundTrips, roundTripAbstentions));
 		failedAvatarNames.forEach(avatar -> seedRecomputeInstantOf(avatar, beforeThisRun, runBeforeThisOne, recomputed));
 		recomputed.add(new MetaInformation<>(getLastUpdatedKey(), LocalDateTime.ofInstant(runInstant, clock.getZone())));
 		metaRepo.add(recomputed);
 
-		return new EvaluationResult(List.copyOf(unknownItemNames), List.copyOf(zeroValuedItemNames), List.copyOf(failedAvatarNames));
+		return new EvaluationResult(List.copyOf(unknownItemNames), List.copyOf(zeroValuedItemNames), List.copyOf(failedAvatarNames), List.copyOf(roundTrips),
+				List.copyOf(roundTripAbstentions));
 	}
 
 	private static void seedRecomputeInstantOf(String avatar, MetaInformationSnapshot beforeThisRun, Optional<Instant> runBeforeThisOne, List<MetaInformation<?>> recomputed) {
@@ -82,18 +90,27 @@ public class EvergoreDataEvaluator {
 	}
 
 	private void collectInformationOf(String avatar, Instant runInstant, List<MetaInformation<?>> recomputed, List<String> unknownItemNames, List<String> zeroValuedItemNames,
-			List<String> failedAvatarNames) {
+			List<String> failedAvatarNames, List<RoundTrip> roundTrips, List<RoundTripAbstention> roundTripAbstentions) {
 		try {
-			recomputed.addAll(informationOf(avatar, runInstant, unknownItemNames, zeroValuedItemNames));
+			recomputed.addAll(informationOf(avatar, runInstant, unknownItemNames, zeroValuedItemNames, roundTrips, roundTripAbstentions));
 		} catch (RuntimeException failure) {
 			logger.error("Unable to recompute the sums of " + avatar + "; keeping the stored ones.", failure);
 			failedAvatarNames.add(avatar);
 		}
 	}
 
-	private List<MetaInformation<?>> informationOf(String avatar, Instant runInstant, List<String> unknownItemNames, List<String> zeroValuedItemNames) {
+	private List<MetaInformation<?>> informationOf(String avatar, Instant runInstant, List<String> unknownItemNames, List<String> zeroValuedItemNames, List<RoundTrip> roundTrips,
+			List<RoundTripAbstention> roundTripAbstentions) {
 		List<MetaInformation<?>> information = new ArrayList<>(bankInformationOf(avatar));
-		information.addAll(storageInformationOf(avatar, unknownItemNames, zeroValuedItemNames));
+		List<ResolvedStorageEntry> resolvedEntries = storageRepo
+				.getAllFor(avatar)
+				.stream()
+				.map(entry -> new ResolvedStorageEntry(entry, findItem(entry, unknownItemNames, zeroValuedItemNames)))
+				.toList();
+		information.addAll(storageInformationOf(avatar, resolvedEntries));
+		RoundTripReport report = RoundTripDetector.detect(avatar, resolvedEntries);
+		roundTrips.addAll(report.roundTrips());
+		roundTripAbstentions.addAll(report.abstentions());
 		information.add(new MetaInformation<>(getSumsRecomputedAt(avatar), runInstant));
 		return information;
 	}
@@ -108,18 +125,14 @@ public class EvergoreDataEvaluator {
 		return asList(new MetaInformation<>(bankPlacementKey, bank.placement), new MetaInformation<>(bankWithdrawlKey, bank.withdrawl));
 	}
 
-	private List<MetaInformation<Double>> storageInformationOf(String avatar, List<String> unknownItemNames, List<String> zeroValuedItemNames) {
+	private List<MetaInformation<Double>> storageInformationOf(String avatar, List<ResolvedStorageEntry> resolvedEntries) {
 		MetaInformationKey<Double> storagePlacementKey = getStoragePlacement(avatar);
 		MetaInformationKey<Double> storageWithdrawlKey = getStorageWithdrawl(avatar);
 		MetaInformationKey<Double> storageDonationKey = getStorageDonation(avatar);
 		MetaInformationKey<Double> storageCraftSubsidyKey = getStorageCraftSubsidy(avatar);
 
 		StorageStatus storage = new StorageStatus();
-		storageRepo
-				.getAllFor(avatar)
-				.stream()
-				.map(e -> new StorageEntryItem(e, findItem(e, unknownItemNames, zeroValuedItemNames)))
-				.forEach(e -> e.entry().type().accept(storageEntryVisitor).accept(storage, e));
+		resolvedEntries.forEach(entry -> entry.entry().type().accept(storageEntryVisitor).accept(storage, entry));
 
 		return asList(new MetaInformation<>(storagePlacementKey, storage.placement), new MetaInformation<>(storageWithdrawlKey, storage.withdrawl),
 				new MetaInformation<>(storageDonationKey, storage.donation), new MetaInformation<>(storageCraftSubsidyKey, storage.craftSubsidy));
@@ -144,18 +157,18 @@ public class EvergoreDataEvaluator {
 
 	private final TransferTypeStorageEntryVisitor storageEntryVisitor = new TransferTypeStorageEntryVisitor();
 
-	private static class TransferTypeStorageEntryVisitor implements TransferTypeVisitor<BiConsumer<StorageStatus, StorageEntryItem>> {
+	private static class TransferTypeStorageEntryVisitor implements TransferTypeVisitor<BiConsumer<StorageStatus, ResolvedStorageEntry>> {
 		@Override
-		public BiConsumer<StorageStatus, StorageEntryItem> place() {
+		public BiConsumer<StorageStatus, ResolvedStorageEntry> place() {
 			return (status, entry) -> status.addPlacement(valueOf(entry, EvergoreItem::getStorageValue), valueOf(entry, EvergoreItem::getWithdrawlValue));
 		}
 
 		@Override
-		public BiConsumer<StorageStatus, StorageEntryItem> withdrawl() {
+		public BiConsumer<StorageStatus, ResolvedStorageEntry> withdrawl() {
 			return (status, entry) -> status.addWithdrawl(valueOf(entry, EvergoreItem::getWithdrawlValue));
 		}
 
-		private static double valueOf(StorageEntryItem entry, ToDoubleFunction<EvergoreItem> valueFunction) {
+		private static double valueOf(ResolvedStorageEntry entry, ToDoubleFunction<EvergoreItem> valueFunction) {
 			return valueFunction.applyAsDouble(entry.item()) * entry.entry().quantity() * (entry.entry().quality() / 100D);
 		}
 	}
@@ -172,8 +185,6 @@ public class EvergoreDataEvaluator {
 		}
 		return found.get();
 	}
-
-	private record StorageEntryItem(StorageEntry entry, EvergoreItem item) {}
 
 	private static class BankStatus {
 		private long placement;

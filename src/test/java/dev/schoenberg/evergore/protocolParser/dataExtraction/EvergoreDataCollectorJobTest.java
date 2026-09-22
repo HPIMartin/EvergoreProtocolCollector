@@ -170,7 +170,7 @@ class EvergoreDataCollectorJobTest {
 			if (failOnEvaluate) {
 				throw new RuntimeException("evaluateData failed");
 			}
-			return new EvaluationResult(unknownItems, zeroValuedItems, List.of());
+			return new EvaluationResult(unknownItems, zeroValuedItems, List.of(), List.of(), List.of());
 		}
 	}
 }
