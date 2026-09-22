@@ -3,6 +3,7 @@ package dev.schoenberg.evergore.protocolParser;
 import java.io.File;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Skipped where no browser exists, which is deliberate rather than lenient: the production image's build stage runs {@code check} on {@code eclipse-temurin:25-jdk}, and that stage
  * must not grow a browser dependency. A skip is visible in the report; a missing browser never reads as a pass.
  */
+@ExtendWith(OrphanedBrowserSweep.class)
 class DockerBrowserSmokeTest {
 	private static final String MARKER = "evergore";
 

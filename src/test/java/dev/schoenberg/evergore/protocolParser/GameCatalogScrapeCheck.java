@@ -13,6 +13,7 @@ import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -33,6 +34,7 @@ import static org.openqa.selenium.By.xpath;
 import static org.openqa.selenium.support.ui.ExpectedConditions.urlToBe;
 
 @EnabledIfSystemProperty(named = "gameCatalog.scrape", matches = "true", disabledReason = "on-demand: ./run-game-scrape.sh '-DgameCatalog.pages=<comma-separated page parameters>', see testing.md")
+@ExtendWith(OrphanedBrowserSweep.class)
 class GameCatalogScrapeCheck {
 	private static final Path OUTPUT = Path.of("build/tmp/gameCatalog");
 	private static final Duration WAIT_TIMEOUT = ofMinutes(1);

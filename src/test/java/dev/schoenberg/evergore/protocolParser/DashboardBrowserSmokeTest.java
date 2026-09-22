@@ -16,6 +16,7 @@ import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -33,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @MicronautTest
+@ExtendWith(OrphanedBrowserSweep.class)
 class DashboardBrowserSmokeTest {
 	private static final Path WORKING_DB = Paths.get("build/tmp/dashboardBrowser/dashboardBrowser.sqlite");
 	private static final Duration RENDER_GUARD = Duration.ofSeconds(30);
