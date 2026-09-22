@@ -16,9 +16,10 @@ import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Ingredient;
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe;
+import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.NotCraftable;
+import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.Published;
+import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.Unread;
 
-import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.NOT_CRAFTABLE;
-import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.UNKNOWN_RECIPE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toCollection;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -116,13 +117,11 @@ class GameFactsGuardTest {
 	}
 
 	private static String describe(Recipe recipe) {
-		if (recipe == NOT_CRAFTABLE) {
-			return "NOT_CRAFTABLE";
-		}
-		if (recipe == UNKNOWN_RECIPE) {
-			return "UNKNOWN_RECIPE";
-		}
-		return recipe.amount + " <- " + recipe.ingredients.stream().map(GameFactsGuardTest::describe).reduce((a, b) -> a + " + " + b).orElse("");
+		return switch (recipe) {
+			case NotCraftable _ -> "NOT_CRAFTABLE";
+			case Unread _ -> "UNKNOWN_RECIPE";
+			case Published published -> published.amount + " <- " + published.ingredients.stream().map(GameFactsGuardTest::describe).reduce((a, b) -> a + " + " + b).orElse("");
+		};
 	}
 
 	private static String describe(Ingredient ingredient) {

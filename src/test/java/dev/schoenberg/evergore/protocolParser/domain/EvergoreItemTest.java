@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category;
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Ingredient;
+import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.Published;
+import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.Unread;
 
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.EDELSTEINE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.HANDWERKSMATERIAL;
@@ -164,7 +166,7 @@ class EvergoreItemTest {
 	void aCraftingGainIsSixtyPercentOfTheMarginBetweenProductAndIngredients() {
 		double gain = valueGainOfCrafting(EISENBARREN);
 
-		assertThat(gain).isCloseTo(0.6d * (EISENBARREN.marketValue * EISENBARREN.recipe.amount - ingredientMarketValueOf(EISENBARREN)), within(0.0001d));
+		assertThat(gain).isCloseTo(0.6d * (EISENBARREN.marketValue * amountOf(EISENBARREN) - ingredientMarketValueOf(EISENBARREN)), within(0.0001d));
 	}
 
 	@Test
@@ -215,7 +217,7 @@ class EvergoreItemTest {
 
 	@Test
 	void everyPracticePieceYieldsASinglePiece() {
-		List<String> yieldingMoreThanOne = practicePieces().filter(item -> item.recipe.amount != 1).map(item -> item.ingameName).toList();
+		List<String> yieldingMoreThanOne = practicePieces().filter(item -> amountOf(item) != 1).map(item -> item.ingameName).toList();
 
 		assertThat(yieldingMoreThanOne).isEmpty();
 	}
@@ -223,7 +225,7 @@ class EvergoreItemTest {
 	@Test
 	void everyPracticePieceIsTrainedOnMaterialItsOwnCraftAlsoUses() {
 		List<String> trainedOnForeignMaterial = practicePieces()
-				.flatMap(piece -> piece.recipe.ingredients
+				.flatMap(piece -> ingredientsOf(piece)
 						.stream()
 						.filter(ingredient -> !materialUsedBy(piece.category).contains(ingredient.item))
 						.map(ingredient -> piece.ingameName + " consumes " + ingredient.item.ingameName))
@@ -257,7 +259,7 @@ class EvergoreItemTest {
 	@Test
 	void onlyTheDeliberatelyWorthlessAreCraftableForNothing() {
 		List<String> craftableAndFree = stream(EvergoreItem.values())
-				.filter(item -> !item.recipe.ingredients.isEmpty() && item.marketValue == 0)
+				.filter(item -> !ingredientsOf(item).isEmpty() && item.marketValue == 0)
 				.filter(item -> !isDeliberatelyWorthless(item))
 				.map(item -> item.ingameName)
 				.toList();
@@ -268,9 +270,9 @@ class EvergoreItemTest {
 	@Test
 	void noItemWhoseValueReflectsItsInputsIsWorthLessThanTheIngredientsItsRecipeConsumes() {
 		List<String> pricedBelowTheirIngredients = stream(EvergoreItem.values())
-				.filter(item -> !item.recipe.ingredients.isEmpty())
+				.filter(item -> !ingredientsOf(item).isEmpty())
 				.filter(item -> !isDeliberatelyWorthless(item))
-				.filter(item -> item.marketValue * item.recipe.amount < ingredientMarketValueOf(item))
+				.filter(item -> item.marketValue * amountOf(item) < ingredientMarketValueOf(item))
 				.map(item -> item.ingameName)
 				.toList();
 
@@ -280,7 +282,7 @@ class EvergoreItemTest {
 	@Test
 	void aCatalogueEntryEitherNamesWhatItConsumesOrSaysWhyItCannot() {
 		List<String> craftableFromNothing = stream(EvergoreItem.values())
-				.filter(item -> item.recipe != NOT_CRAFTABLE && item.recipe != UNKNOWN_RECIPE && item.recipe.ingredients.isEmpty())
+				.filter(item -> item.recipe instanceof Published published && published.ingredients.isEmpty())
 				.map(item -> item.ingameName)
 				.toList();
 
@@ -291,7 +293,7 @@ class EvergoreItemTest {
 	void everyGemForgedEntrySaysItsRecipeIsUnreadRatherThanAbsent() {
 		List<String> claimingTheGameCraftsThemNowhere = stream(EvergoreItem.values())
 				.filter(item -> GEM_PREFIX.matcher(item.ingameName).find())
-				.filter(item -> item.recipe != UNKNOWN_RECIPE)
+				.filter(item -> !(item.recipe instanceof Unread))
 				.map(item -> item.ingameName)
 				.toList();
 
@@ -300,15 +302,15 @@ class EvergoreItemTest {
 
 	@Test
 	void aRecipeCannotBeRewrittenByWhoeverReadsIt() {
-		List<Ingredient> published = PFEILE.recipe.ingredients;
+		List<Ingredient> ingredients = ingredientsOf(PFEILE);
 
-		assertThatThrownBy(() -> published.set(0, new Ingredient(9999, MARMOR))).isInstanceOf(UnsupportedOperationException.class);
+		assertThatThrownBy(() -> ingredients.set(0, new Ingredient(9999, MARMOR))).isInstanceOf(UnsupportedOperationException.class);
 	}
 
 	@Test
 	void noEntryOutsideTheGemFamiliesClaimsItsRecipeIsMerelyUnread() {
 		List<String> unreadButNotGemForged = stream(EvergoreItem.values())
-				.filter(item -> item.recipe == UNKNOWN_RECIPE)
+				.filter(item -> item.recipe instanceof Unread)
 				.filter(item -> !GEM_PREFIX.matcher(item.ingameName).find())
 				.map(item -> item.ingameName)
 				.toList();
@@ -317,8 +319,18 @@ class EvergoreItemTest {
 	}
 
 	@Test
+	void theTwoRecipeSentinelsAreTypesOfTheirOwn() {
+		assertThat(NOT_CRAFTABLE.getClass()).isNotEqualTo(UNKNOWN_RECIPE.getClass());
+	}
+
+	@Test
+	void aRecipeSentinelIsNotEqualToTheOther() {
+		assertThat(NOT_CRAFTABLE).isNotEqualTo(UNKNOWN_RECIPE);
+	}
+
+	@Test
 	void theCatalogLeavesNinetyEightRecipesUnread() {
-		long unread = stream(EvergoreItem.values()).filter(item -> item.recipe == UNKNOWN_RECIPE).count();
+		long unread = stream(EvergoreItem.values()).filter(item -> item.recipe instanceof Unread).count();
 
 		assertThat(unread).isEqualTo(98);
 	}
@@ -336,14 +348,14 @@ class EvergoreItemTest {
 
 	@Test
 	void everyPracticePieceNamesTheMaterialItIsTrainedOn() {
-		List<String> withoutIngredients = practicePieces().filter(item -> item.recipe.ingredients.isEmpty()).map(item -> item.ingameName).toList();
+		List<String> withoutIngredients = practicePieces().filter(item -> ingredientsOf(item).isEmpty()).map(item -> item.ingameName).toList();
 
 		assertThat(withoutIngredients).isEmpty();
 	}
 
 	@Test
 	void theCatalogStillHoldsEveryProductionChainItRecorded() {
-		long craftables = stream(EvergoreItem.values()).filter(item -> !item.recipe.ingredients.isEmpty()).count();
+		long craftables = stream(EvergoreItem.values()).filter(item -> !ingredientsOf(item).isEmpty()).count();
 
 		assertThat(craftables).isEqualTo(424);
 	}
@@ -351,7 +363,7 @@ class EvergoreItemTest {
 	@Test
 	void everyCraftableIsCreditedAtLeastWhatItsWithdrawalCharges() {
 		List<String> creditedBelowTheirCost = stream(EvergoreItem.values())
-				.filter(item -> !item.recipe.ingredients.isEmpty() && item.category.placement < item.category.withdrawl)
+				.filter(item -> !ingredientsOf(item).isEmpty() && item.category.placement < item.category.withdrawl)
 				.map(item -> item.ingameName)
 				.toList();
 
@@ -361,7 +373,7 @@ class EvergoreItemTest {
 	@Test
 	void onlyGatheredGoodsSitInACategoryThatCreditsADepositNothing() {
 		List<String> craftedButUncredited = stream(EvergoreItem.values())
-				.filter(item -> item.category.placement == 0d && !item.recipe.ingredients.isEmpty())
+				.filter(item -> item.category.placement == 0d && !ingredientsOf(item).isEmpty())
 				.map(item -> item.ingameName)
 				.toList();
 
@@ -396,7 +408,7 @@ class EvergoreItemTest {
 	private static Set<EvergoreItem> materialUsedBy(Category craft) {
 		return stream(EvergoreItem.values())
 				.filter(item -> item.category == craft && !item.ingameName.startsWith(PRACTICE_PIECE))
-				.flatMap(item -> item.recipe.ingredients.stream())
+				.flatMap(item -> ingredientsOf(item).stream())
 				.map(ingredient -> ingredient.item)
 				.collect(toSet());
 	}
@@ -406,15 +418,23 @@ class EvergoreItemTest {
 	}
 
 	private static double valueGainOfCrafting(EvergoreItem product) {
-		return product.getStorageValue() * product.recipe.amount - withdrawlCostOfIngredientsOf(product);
+		return product.getStorageValue() * amountOf(product) - withdrawlCostOfIngredientsOf(product);
 	}
 
 	private static double withdrawlCostOfIngredientsOf(EvergoreItem product) {
-		return product.recipe.ingredients.stream().mapToDouble(ingredient -> ingredient.amount * ingredient.item.getWithdrawlValue()).sum();
+		return ingredientsOf(product).stream().mapToDouble(ingredient -> ingredient.amount * ingredient.item.getWithdrawlValue()).sum();
 	}
 
 	private static double ingredientMarketValueOf(EvergoreItem product) {
-		return product.recipe.ingredients.stream().mapToDouble(ingredient -> ingredient.amount * ingredient.item.marketValue).sum();
+		return ingredientsOf(product).stream().mapToDouble(ingredient -> ingredient.amount * ingredient.item.marketValue).sum();
+	}
+
+	private static int amountOf(EvergoreItem item) {
+		return item.recipe instanceof Published published ? published.amount : 1;
+	}
+
+	private static List<Ingredient> ingredientsOf(EvergoreItem item) {
+		return item.recipe instanceof Published published ? published.ingredients : List.of();
 	}
 
 	private static double expectedPlacementOf(Category category) {

@@ -101,14 +101,17 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   `JAGDBEUTEN` (hunt loot), `EDELSTEINE` (gems), `HANDWERKSMATERIAL`, …). Each category carries
   two multipliers, `placement` (what a deposit credits) and `withdrawl` (what a withdrawal costs),
   and the category alone decides both.
-- **`recipe`**: a `Recipe(amount, Ingredient…)` where each `Ingredient(amount, EvergoreItem)`
-  references other catalog items and `amount` is how many units the recipe yields, or one of two
-  sentinels that mean different things and must not be confused. **`NOT_CRAFTABLE`** is a claim
-  about the game: it does not craft this at all (ores, gems, hunt loot). **`UNKNOWN_RECIPE`** is a
-  claim about us: it is craftable and we have not read what it consumes. One sentinel for both
+- **`recipe`**: a `Recipe`, one of three types the compiler tells apart rather than two equal
+  instances of one class (`sealed interface Recipe permits Recipe.Published, Recipe.NotCraftable,
+  Recipe.Unread`). `Recipe.Published(amount, Ingredient…)` names what the recipe consumes, where
+  each `Ingredient(amount, EvergoreItem)` references other catalog items and `amount` is how many
+  units the recipe yields. `NOT_CRAFTABLE` (`Recipe.NotCraftable`) is a claim about the game: it
+  does not craft this at all (ores, gems, hunt loot). `UNKNOWN_RECIPE` (`Recipe.Unread`) is a claim
+  about us: it is craftable and we have not read what it consumes. One sentinel type for both
   would report 55 recorded recipes as absent and make the round-trip detection's answers unsafe, so
-  the catalog says which of the two it means (author decision 2026-09-12). **The recipes are the
-  game's production chains, not an input to the valuation** (author decision 2026-09-10): no
+  the catalog says which of the two it means (author decision 2026-09-12). A reader switches over
+  the three cases exhaustively and never compares a `Recipe` by `==` or by value. **The recipes are
+  the game's production chains, not an input to the valuation** (author decision 2026-09-10): no
   production code reads them, and the tests are their only reader.
 - **Gem-forged gear is crafted from a blueprint learned as an item, which the academy never lists,
   so its ingredients are `UNKNOWN_RECIPE` rather than absent.** The academy's craft chambers list
