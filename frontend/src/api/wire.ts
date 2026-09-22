@@ -5,6 +5,8 @@ import type {
   GuildTotals,
   Overview,
   Page,
+  RoundTrip,
+  RoundTripAbstention,
   StorageEntry,
   TransferType,
 } from '../domain'
@@ -58,7 +60,47 @@ export function adminStatusFrom(body: unknown): AdminStatus {
     lastRecomputeFailure: optionalInstantFrom(envelope, 'lastRecomputeFailure'),
     unknownItemNames: stringArrayFrom(envelope, 'unknownItemNames'),
     failedAvatarNames: stringArrayFrom(envelope, 'failedAvatarNames'),
+    roundTrips: arrayFrom(envelope, 'roundTrips', roundTripFrom),
+    roundTripAbstentions: arrayFrom(
+      envelope,
+      'roundTripAbstentions',
+      roundTripAbstentionFrom,
+    ),
   }
+}
+
+function roundTripFrom(item: unknown): RoundTrip {
+  const roundTrip = objectFrom(item)
+
+  return {
+    avatar: stringFrom(roundTrip, 'avatar'),
+    item: stringFrom(roundTrip, 'item'),
+    quantity: numberFrom(roundTrip, 'quantity'),
+  }
+}
+
+function roundTripAbstentionFrom(item: unknown): RoundTripAbstention {
+  const abstention = objectFrom(item)
+
+  return {
+    avatar: stringFrom(abstention, 'avatar'),
+    item: stringFrom(abstention, 'item'),
+  }
+}
+
+function arrayFrom<E>(
+  source: WireObject,
+  field: string,
+  itemFrom: (item: unknown) => E,
+): E[] {
+  const value = source[field]
+  if (!Array.isArray(value)) {
+    throw new MalformedResponse(
+      `The API answered a ${field} that is not an array`,
+    )
+  }
+
+  return value.map(itemFrom)
 }
 
 function stringArrayFrom(source: WireObject, field: string): string[] {

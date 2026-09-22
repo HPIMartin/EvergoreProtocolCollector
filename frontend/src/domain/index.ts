@@ -1,4 +1,8 @@
-export type { AdminStatus } from './adminStatus.ts'
+export type {
+  AdminStatus,
+  RoundTrip,
+  RoundTripAbstention,
+} from './adminStatus.ts'
 export type { AvatarSummary, GuildTotals, Overview } from './avatarSummary.ts'
 export type { BankEntry } from './bankEntry.ts'
 export type { GuildPosition } from './guildPosition.ts'

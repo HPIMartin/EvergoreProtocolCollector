@@ -373,6 +373,8 @@ const ADMIN_STATUS_BODY = JSON.stringify({
   lastRecomputeFailure: null,
   unknownItemNames: ['Unobtainium'],
   failedAvatarNames: ['Zwerg'],
+  roundTrips: [{ avatar: 'Alrik', item: 'Federn', quantity: 100 }],
+  roundTripAbstentions: [{ avatar: 'Zwerg', item: 'Erz' }],
 })
 
 const FAILED_RUN_ADMIN_STATUS_BODY = JSON.stringify({
@@ -383,6 +385,8 @@ const FAILED_RUN_ADMIN_STATUS_BODY = JSON.stringify({
   lastRecomputeFailure: null,
   unknownItemNames: [],
   failedAvatarNames: [],
+  roundTrips: [],
+  roundTripAbstentions: [],
 })
 
 const NEVER_COLLECTED_ADMIN_STATUS_BODY = JSON.stringify({
@@ -393,6 +397,8 @@ const NEVER_COLLECTED_ADMIN_STATUS_BODY = JSON.stringify({
   lastRecomputeFailure: null,
   unknownItemNames: [],
   failedAvatarNames: [],
+  roundTrips: [],
+  roundTripAbstentions: [],
 })
 
 interface Answer {
@@ -1151,10 +1157,15 @@ describe('App', () => {
       askedFor: server.askedFor,
       unknownItemNames: screen.getByTestId('unknown-item-names').textContent,
       failedAvatarNames: screen.getByTestId('failed-avatar-names').textContent,
+      roundTrips: screen.getByTestId('round-trips').textContent,
+      roundTripAbstentions: screen.getByTestId('round-trip-abstentions')
+        .textContent,
     }).toStrictEqual({
       askedFor: ['/api/v1/admin/status'],
       unknownItemNames: 'Unbekannte Items: Unobtainium',
       failedAvatarNames: 'Nicht aktualisierte Avatare: Zwerg',
+      roundTrips: 'Verdacht auf Warenkreislauf: Alrik: 100 × Federn',
+      roundTripAbstentions: 'Nicht beurteilbar (Rezept ungelesen): Zwerg: Erz',
     })
   })
 
@@ -1180,6 +1191,8 @@ describe('App', () => {
       lastRecomputeFailure: screen.queryByTestId('last-recompute-failure'),
       unknownItemNames: screen.queryByTestId('unknown-item-names'),
       failedAvatarNames: screen.queryByTestId('failed-avatar-names'),
+      roundTrips: screen.queryByTestId('round-trips'),
+      roundTripAbstentions: screen.queryByTestId('round-trip-abstentions'),
     }).toStrictEqual({
       lastUpdated: 'Stand: noch kein Abgleich gelaufen',
       lastSuccessfulScrape: 'Letzter Scrape: noch kein Scrape gelaufen',
@@ -1189,6 +1202,8 @@ describe('App', () => {
       lastRecomputeFailure: null,
       unknownItemNames: null,
       failedAvatarNames: null,
+      roundTrips: null,
+      roundTripAbstentions: null,
     })
   })
 

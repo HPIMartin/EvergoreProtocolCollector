@@ -1,5 +1,5 @@
 import type { ProtocolApi } from '../api'
-import { formatTimestamp } from '../ui'
+import { describeAbstention, describeRoundTrip, formatTimestamp } from '../ui'
 
 import { LoadedView } from './LoadedView.tsx'
 import { requestKeyOf } from './requestKey.ts'
@@ -43,6 +43,16 @@ export function AdminView({ api }: AdminViewProps) {
               testId="failed-avatar-names"
               heading="Nicht aktualisierte Avatare"
               names={status.failedAvatarNames}
+            />
+            <NameList
+              testId="round-trips"
+              heading="Verdacht auf Warenkreislauf"
+              names={status.roundTrips.map(describeRoundTrip)}
+            />
+            <NameList
+              testId="round-trip-abstentions"
+              heading="Nicht beurteilbar (Rezept ungelesen)"
+              names={status.roundTripAbstentions.map(describeAbstention)}
             />
           </>
         )}

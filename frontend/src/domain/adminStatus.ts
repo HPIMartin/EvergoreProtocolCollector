@@ -6,4 +6,17 @@ export interface AdminStatus {
   readonly lastRecomputeFailure: Date | null
   readonly unknownItemNames: readonly string[]
   readonly failedAvatarNames: readonly string[]
+  readonly roundTrips: readonly RoundTrip[]
+  readonly roundTripAbstentions: readonly RoundTripAbstention[]
+}
+
+export interface RoundTrip {
+  readonly avatar: string
+  readonly item: string
+  readonly quantity: number
+}
+
+export interface RoundTripAbstention {
+  readonly avatar: string
+  readonly item: string
 }

@@ -1,4 +1,5 @@
-export { formatGold, formatTimestamp } from './format.ts'
+export { formatCount, formatGold, formatTimestamp } from './format.ts'
+export { describeAbstention, describeRoundTrip } from './roundTripText.ts'
 export { Link } from './Link.tsx'
 export { Pagination } from './Pagination.tsx'
 export type { PaginationProps } from './Pagination.tsx'

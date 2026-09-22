@@ -85,6 +85,8 @@ const ADMIN_STATUS_BODY = JSON.stringify({
   lastRecomputeFailure: null,
   unknownItemNames: ['Unobtainium'],
   failedAvatarNames: [],
+  roundTrips: [],
+  roundTripAbstentions: [],
 })
 
 interface RecordingFetch {

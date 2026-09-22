@@ -372,6 +372,8 @@ const adminStatusBody = {
   lastRecomputeFailure: '2026-08-04T10:15:30Z',
   unknownItemNames: ['Unobtainium'],
   failedAvatarNames: ['Alrik', 'Zwerg'],
+  roundTrips: [{ avatar: 'Alrik', item: 'Federn', quantity: 100 }],
+  roundTripAbstentions: [{ avatar: 'Zwerg', item: 'Erz' }],
 }
 
 describe('the admin status wire shape', () => {
@@ -386,6 +388,8 @@ describe('the admin status wire shape', () => {
       lastRecomputeFailure: new Date('2026-08-04T10:15:30Z'),
       unknownItemNames: ['Unobtainium'],
       failedAvatarNames: ['Alrik', 'Zwerg'],
+      roundTrips: [{ avatar: 'Alrik', item: 'Federn', quantity: 100 }],
+      roundTripAbstentions: [{ avatar: 'Zwerg', item: 'Erz' }],
     })
   })
 
@@ -398,6 +402,8 @@ describe('the admin status wire shape', () => {
       lastRecomputeFailure: null,
       unknownItemNames: [],
       failedAvatarNames: [],
+      roundTrips: [],
+      roundTripAbstentions: [],
     })
 
     expect(status).toStrictEqual({
@@ -408,6 +414,8 @@ describe('the admin status wire shape', () => {
       lastRecomputeFailure: null,
       unknownItemNames: [],
       failedAvatarNames: [],
+      roundTrips: [],
+      roundTripAbstentions: [],
     })
   })
 
@@ -421,6 +429,40 @@ describe('the admin status wire shape', () => {
   it('refuses a body whose failed avatar names are not strings', () => {
     const reading = () =>
       adminStatusFrom({ ...adminStatusBody, failedAvatarNames: [null] })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it('refuses a body without the round trips', () => {
+    const reading = () =>
+      adminStatusFrom({ ...adminStatusBody, roundTrips: undefined })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it('refuses a round trip whose quantity is not a number', () => {
+    const reading = () =>
+      adminStatusFrom({
+        ...adminStatusBody,
+        roundTrips: [{ avatar: 'Alrik', item: 'Federn', quantity: '100' }],
+      })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it('refuses a body without the round-trip abstentions', () => {
+    const reading = () =>
+      adminStatusFrom({ ...adminStatusBody, roundTripAbstentions: undefined })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it('refuses a round-trip abstention without an item', () => {
+    const reading = () =>
+      adminStatusFrom({
+        ...adminStatusBody,
+        roundTripAbstentions: [{ avatar: 'Zwerg', item: null }],
+      })
 
     expect(reading).toThrow(MalformedResponse)
   })

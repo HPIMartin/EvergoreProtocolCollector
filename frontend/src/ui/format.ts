@@ -1,4 +1,6 @@
-const goldFormat = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 })
+const wholeNumberFormat = new Intl.NumberFormat('de-DE', {
+  maximumFractionDigits: 0,
+})
 
 const berlinDateFormat = new Intl.DateTimeFormat('de-DE', {
   timeZone: 'Europe/Berlin',
@@ -14,7 +16,11 @@ const berlinTimeFormat = new Intl.DateTimeFormat('de-DE', {
   hourCycle: 'h23',
 })
 
-export const formatGold = (value: number): string => goldFormat.format(value)
+export const formatGold = (value: number): string =>
+  wholeNumberFormat.format(value)
+
+export const formatCount = (value: number): string =>
+  wholeNumberFormat.format(value)
 
 export const instantOf = (isoInstant: string): number => {
   const epochMilliseconds = Date.parse(isoInstant)
