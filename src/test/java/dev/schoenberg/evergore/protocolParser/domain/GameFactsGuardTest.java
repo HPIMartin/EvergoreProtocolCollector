@@ -61,6 +61,20 @@ class GameFactsGuardTest {
 	}
 
 	@Test
+	void aNameRecordedAsUnpricedIsNeitherPricedByTheGameNorCatalogued() {
+		Set<String> priced = factsOfKind("price").stream().map(Fact::item).collect(toCollection(TreeSet::new));
+
+		List<String> contradicted = factsOfKind("unpriced")
+				.stream()
+				.map(Fact::item)
+				.filter(item -> priced.contains(item) || CatalogLookup.itemFor(item).isPresent())
+				.sorted()
+				.toList();
+
+		assertThat(contradicted).isEmpty();
+	}
+
+	@Test
 	void everyRecipeTheGameShowsIsTheRecipeTheCatalogHolds() {
 		List<String> divergences = new ArrayList<>();
 		for (Fact fact : factsOfKind("recipe")) {
