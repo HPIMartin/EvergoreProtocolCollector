@@ -8,4 +8,5 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public record AdminStatus(@JsonProperty("lastUpdated") Instant lastUpdated, @JsonProperty("lastSuccessfulScrape") Instant lastSuccessfulScrape,
 		@JsonProperty("lastScrapeFailure") Instant lastScrapeFailure, @JsonProperty("lastSuccessfulRecompute") Instant lastSuccessfulRecompute,
 		@JsonProperty("lastRecomputeFailure") Instant lastRecomputeFailure, @JsonProperty("unknownItemNames") List<String> unknownItemNames,
-		@JsonProperty("failedAvatarNames") List<String> failedAvatarNames) {}
+		@JsonProperty("failedAvatarNames") List<String> failedAvatarNames, @JsonProperty("roundTrips") List<RoundTripWire> roundTrips,
+		@JsonProperty("roundTripAbstentions") List<RoundTripAbstentionWire> roundTripAbstentions) {}

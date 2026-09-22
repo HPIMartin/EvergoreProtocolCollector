@@ -25,10 +25,14 @@ import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTrip;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTripAbstention;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.FEDERN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KRISTALLAT;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
@@ -95,6 +99,26 @@ class AdminStatusEndpointTest {
 
 		assertThat(Map.of("unknownItemNames", toList(body.getJSONArray("unknownItemNames")), "failedAvatarNames", toList(body.getJSONArray("failedAvatarNames"))))
 				.containsOnly(entry("unknownItemNames", List.of("Unobtainium")), entry("failedAvatarNames", List.of("Alrik", "Zwerg")));
+	}
+
+	@Test
+	void namesEveryRoundTripAndAbstentionOfTheLastRun() {
+		lastRunStatus
+				.recordSuccessfulRecompute(Instant.parse("2026-09-06T03:00:10Z"), List.of(), List.of(), List.of(new RoundTrip("Alrik", FEDERN, 100)),
+						List.of(new RoundTripAbstention("Zwerg", KRISTALLAT)), List.of());
+
+		JSONObject body = adminStatus();
+
+		JSONArray roundTrips = body.getJSONArray("roundTrips");
+		JSONArray abstentions = body.getJSONArray("roundTripAbstentions");
+		assertThat(roundTrips.length()).isEqualTo(1);
+		assertThat(Map
+				.of("avatar", roundTrips.getJSONObject(0).getString("avatar"), "item", roundTrips.getJSONObject(0).getString("item"), "quantity",
+						roundTrips.getJSONObject(0).getInt("quantity")))
+				.containsOnly(entry("avatar", "Alrik"), entry("item", "Federn"), entry("quantity", 100));
+		assertThat(abstentions.length()).isEqualTo(1);
+		assertThat(Map.of("avatar", abstentions.getJSONObject(0).getString("avatar"), "item", abstentions.getJSONObject(0).getString("item")))
+				.containsOnly(entry("avatar", "Zwerg"), entry("item", "Kristallat"));
 	}
 
 	private static JSONObject adminStatus() {

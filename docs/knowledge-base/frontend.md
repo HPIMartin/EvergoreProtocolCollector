@@ -240,7 +240,7 @@ service's only read surface.
 | `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, the two flows `donation` and `craftSubsidy`, plus `lastBankActivity`, `lastStorageActivity` and `staleSumsFrom`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
 | `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first. |
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first. |
-| `GET /api/v1/admin/status` | Anonymous, `token`-exempt (same trust level as `/health`): `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, every key always rendered. The operator-facing facts that used to sit on the overview; see below. |
+| `GET /api/v1/admin/status` | Anonymous, `token`-exempt (same trust level as `/health`): `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, `roundTrips`, `roundTripAbstentions`, every key always rendered (the two round-trip arrays as `[]` rather than `null` when empty). The operator-facing facts that used to sit on the overview; see below. |
 
 - **One envelope for every collection**: `page`, `size`, `totalCount`, `items`. `/api/v1/avatars`
   adds `totals`.

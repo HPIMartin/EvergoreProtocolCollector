@@ -54,7 +54,8 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
 Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ AdminStatusController
                         ▶ lastUpdated read from AvatarContributions/MetaInformationRepository (persisted,
                         stamped on the last completed evaluation) + the four scrape/recompute outcome
-                        instants and unknownItemNames/failedAvatarNames read from LastRunStatus
+                        instants, unknownItemNames/failedAvatarNames and roundTrips/roundTripAbstentions
+                        (sorted by avatar then item, item = ingameName) read from LastRunStatus
                         (in-memory, the same source /health uses). It serves the facts; /health keeps the
                         UP/DOWN verdict derived from them
 ```
