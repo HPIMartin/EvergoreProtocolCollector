@@ -8,12 +8,15 @@ import org.junit.jupiter.api.Test;
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.helper.config.CredentialsConfiguration;
 
+import static dev.schoenberg.evergore.protocolParser.ThrowawayDatabaseFactory.THROWAWAY_DATABASE_PATH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 class CredentialsStartupValidatorTest {
+	private static final String THROWAWAY_DB_PATH = "build/tmp/test/credentialsStartupValidatorTest.sqlite";
+
 	private final LoggerSpy logger = new LoggerSpy();
 
 	@Test
@@ -78,7 +81,8 @@ class CredentialsStartupValidatorTest {
 
 	@Test
 	void aBlankLoginStopsTheApplicationContextFromStarting() {
-		Map<String, Object> blankLogin = Map.of("evergore.credentials.username", "", "evergore.credentials.password", "", "micronaut.server.port", "-1");
+		Map<String, Object> blankLogin = Map
+				.of("evergore.credentials.username", "", "evergore.credentials.password", "", "micronaut.server.port", "-1", THROWAWAY_DATABASE_PATH, THROWAWAY_DB_PATH);
 
 		Throwable thrown = catchThrowable(() -> ApplicationContext.run(blankLogin, "test").close());
 

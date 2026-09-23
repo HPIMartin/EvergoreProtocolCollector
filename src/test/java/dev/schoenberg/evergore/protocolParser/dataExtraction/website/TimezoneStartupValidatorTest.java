@@ -13,12 +13,15 @@ import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 
+import static dev.schoenberg.evergore.protocolParser.ThrowawayDatabaseFactory.THROWAWAY_DATABASE_PATH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 class TimezoneStartupValidatorTest {
+	private static final String THROWAWAY_DB_PATH = "build/tmp/test/timezoneStartupValidatorTest.sqlite";
+
 	private final LoggerSpy logger = new LoggerSpy();
 
 	@Test
@@ -62,7 +65,9 @@ class TimezoneStartupValidatorTest {
 
 	@Test
 	void theRealSystemDefaultZoneAllowsTheApplicationContextToStart() {
-		Map<String, Object> validLogin = Map.of("evergore.credentials.username", "username", "evergore.credentials.password", "password", "micronaut.server.port", "-1");
+		Map<String, Object> validLogin = Map
+				.of("evergore.credentials.username", "username", "evergore.credentials.password", "password", "micronaut.server.port", "-1", THROWAWAY_DATABASE_PATH,
+						THROWAWAY_DB_PATH);
 
 		Throwable thrown = catchThrowable(() -> ApplicationContext.run(validLogin, "test").close());
 
@@ -73,7 +78,7 @@ class TimezoneStartupValidatorTest {
 	void aDstObservingZoneBeanStopsTheApplicationContextFromStarting() {
 		Map<String, Object> validLoginWithDstZoneSpec = Map
 				.of("spec.name", "TimezoneStartupValidatorTest.dstZone", "evergore.credentials.username", "username", "evergore.credentials.password", "password",
-						"micronaut.server.port", "-1");
+						"micronaut.server.port", "-1", THROWAWAY_DATABASE_PATH, THROWAWAY_DB_PATH);
 
 		Throwable thrown = catchThrowable(() -> ApplicationContext.run(validLoginWithDstZoneSpec, "test").close());
 
