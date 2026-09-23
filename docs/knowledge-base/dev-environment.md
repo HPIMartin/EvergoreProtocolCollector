@@ -73,7 +73,7 @@ GitLens.
 
 ### The IDE's Java null analysis is off (`.vscode/settings.json`)
 
-`java.compile.nullAnalysis.mode` is **`disabled`**, not `automatic` (backlog **G20**, decided
+`java.compile.nullAnalysis.mode` is **`disabled`**, not `automatic` (the IDE null-analysis item, decided
 2026-09-21, open-questions.md). `automatic` turns itself on because jspecify 1.0.0 sits transitively
 on the compile classpath, then the language server's JDT compiler runs annotation-based null *type*
 analysis over a codebase that carries no null annotation at all: 136 of 152 findings were `@NonNull`
