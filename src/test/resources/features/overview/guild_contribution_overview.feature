@@ -8,38 +8,38 @@ Feature: Guild contribution overview
   Scenario: A member's row adds the sheet's four columns up to the guild value they generated
     Given the guild bank ledger holds:
       | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-      | 10.01.2024 10:00 | Aurora | 1500   | Einzahlung |
-      | 12.01.2024 12:00 | Aurora | 200    | Entnahme   |
+      | 01.01.2026 12:00 | Aurora | 1500   | Einzahlung |
+      | 02.01.2026 12:00 | Aurora | 200    | Entnahme   |
     And the guild storage ledger holds:
       | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-      | 15.01.2024 10:00 | Aurora | 10    | Eisenbarren | 100      | Einlagerung |
-      | 17.01.2024 12:00 | Aurora | 5     | Kupfererz   | 100      | Entnahme    |
+      | 03.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
+      | 04.01.2026 12:00 | Aurora | 1     | Kupfererz   | 100      | Entnahme    |
     And the daily collection has run
     When a member opens the overview
     Then the overview shows:
       | Avatar | Bank-Einzahlung | Bank-Auszahlung | Einlagerung | Entnahme | Nach Abzügen | Letzte Lageraktivität | Letzte Bankaktivität |
-      | Aurora | 1.500           | 200             | 720         | 60       | 1.960        | 17.01.2024 12:00      | 12.01.2024 12:00     |
+      | Aurora | 1.500           | 200             | 72          | 12       | 1.360        | 04.01.2026 12:00      | 02.01.2026 12:00     |
 
   Scenario: A member who used only one of the two ledgers is listed with nothing in the other
     Given the guild bank ledger holds:
       | Zeitpunkt        | Avatar | Betrag | Vorgang  |
-      | 01.03.2024 08:00 | Calix  | 300    | Entnahme |
+      | 01.01.2026 12:00 | Calix  | 300    | Entnahme |
     And the guild storage ledger holds:
       | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-      | 06.02.2024 10:00 | Brynja | 10    | Eisenbarren | 100      | Einlagerung |
+      | 02.01.2026 12:00 | Brynja | 1     | Eisenbarren | 100      | Einlagerung |
     And the daily collection has run
     When a member opens the overview
     Then the overview shows:
       | Avatar | Bank-Einzahlung | Bank-Auszahlung | Einlagerung | Entnahme | Nach Abzügen | Letzte Lageraktivität | Letzte Bankaktivität |
-      | Brynja | 0               | 0               | 720         | 0        | 720          | 06.02.2024 10:00      | –                    |
-      | Calix  | 0               | 300             | 0           | 0        | -300         | –                     | 01.03.2024 08:00     |
+      | Brynja | 0               | 0               | 72          | 0        | 72           | 02.01.2026 12:00      | –                    |
+      | Calix  | 0               | 300             | 0           | 0        | -300         | –                     | 01.01.2026 12:00     |
 
   Scenario: Members are listed in German alphabetical order
     Given the guild bank ledger holds:
       | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-      | 10.01.2024 10:00 | Zorn   | 100    | Einzahlung |
-      | 10.01.2024 11:00 | Ärger  | 100    | Einzahlung |
-      | 10.01.2024 12:00 | Bambor | 100    | Einzahlung |
+      | 01.01.2026 12:00 | Zorn   | 100    | Einzahlung |
+      | 02.01.2026 12:00 | Ärger  | 100    | Einzahlung |
+      | 03.01.2026 12:00 | Bambor | 100    | Einzahlung |
     And the daily collection has run
     When a member opens the overview
     Then the overview lists "Ärger, Bambor, Zorn"
@@ -56,11 +56,14 @@ Feature: Guild contribution overview
       | 0          | 0               | 0            | 0                     |
 
   Scenario: The overview shows the first hundred members and says how many there are
-    Given 101 members named "Mitglied 001" to "Mitglied 101" each paid 1 gold into the guild bank on 10.01.2024 at 10:00
+    All 101 moved gold at the same time, so every member is active; the caption counts the 100
+    members shown against the 101 of the guild.
+
+    Given 101 members have each paid 1 gold into the guild bank
     And the daily collection has run
     When a member opens the overview
-    Then the overview lists "Mitglied 001" to "Mitglied 100"
-    And "Mitglied 101" is not listed
+    Then the overview lists 100 members
+    And the member last in German alphabetical order is not listed
     And the active table's caption reads "Aktiv (30 Tage vor dem letzten Vorgang): 100 von 101 Avataren"
     And the guild row shows:
       | Avatar | Bank-Einzahlung |
@@ -71,7 +74,7 @@ Feature: Guild contribution overview
     Today the page says "Fehler: The API answered 500". This states the corrected behavior; the
     overview stands for every page of the dashboard, which all show a failure the same way.
 
-    Given the dashboard cannot load its figures from the service
+    Given the figures cannot be loaded
     When a member opens the overview
     Then the page says "Die Daten konnten nicht geladen werden. Bitte später erneut versuchen."
 

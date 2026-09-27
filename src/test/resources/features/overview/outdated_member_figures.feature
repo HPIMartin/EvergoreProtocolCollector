@@ -11,30 +11,30 @@ Feature: A member whose figures could not be refreshed
     Background:
       Given the guild bank ledger holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 31.08.2026 18:00 | Boreas | 750    | Einzahlung |
+        | 01.01.2026 12:00 | Boreas | 750    | Einzahlung |
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 31.08.2026 19:00 | Aurora | 10    | Eisenbarren | 100      | Einlagerung |
-      And the daily collection ran at 01.09.2026 05:00
+        | 02.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
+      And the daily collection ran at 03.01.2026 05:00
       And the guild bank ledger also holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 01.09.2026 21:00 | Boreas | 250    | Einzahlung |
+        | 03.01.2026 12:00 | Boreas | 250    | Einzahlung |
       And the guild storage ledger also holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 01.09.2026 20:00 | Aurora | 10    | Eisenbarren | 100      | Einlagerung |
+        | 04.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
       And Aurora's stored movements cannot be read
-      And the daily collection ran at 02.09.2026 05:00
+      And the daily collection ran at 05.01.2026 05:00
 
     Scenario: Everyone else is refreshed while the unreadable member keeps their figures
       When a member opens the overview
       Then the overview shows:
         | Avatar | Bank-Einzahlung | Einlagerung | Letzte Lageraktivität |
-        | Aurora | 0               | 720         | 01.09.2026 20:00      |
+        | Aurora | 0               | 72          | 04.01.2026 12:00      |
         | Boreas | 1.000           | 0           | –                     |
 
     Scenario: The outdated row says since when its figures are unchanged
       When a member opens the overview
-      Then Aurora's row is marked "Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom 01.09.2026 05:00."
+      Then Aurora's row is marked "Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom 03.01.2026 05:00."
       And Boreas's row carries no mark
 
     Scenario: The guild row says that it adds up an outdated row
@@ -43,55 +43,42 @@ Feature: A member whose figures could not be refreshed
 
     Scenario: The next run that can read the movements brings the member up to date
       Given Aurora's stored movements can be read again
-      And the daily collection ran at 03.09.2026 05:00
+      And the daily collection ran at 06.01.2026 05:00
       When a member opens the overview
       Then the overview shows:
         | Avatar | Einlagerung |
-        | Aurora | 1.440       |
+        | Aurora | 144         |
       And Aurora's row carries no mark
       And the guild row carries no mark
 
   Rule: A member no run has computed yet is shown as not yet computed
-    Today such a member's row shows zeros, marked as outdated since the run before when there was
-    one and not marked at all on the guild's very first run. The two scenarios below state the
-    corrected behavior.
+    Dorn deposited on 01.01., Calix on 02.01., and Calix's first recompute, in the run of
+    03.01.2026 05:00, fails. Whether an earlier run had computed Dorn before makes no difference.
 
     @wip
-    Scenario: A new member whose first recompute fails is shown as not yet computed, even after an earlier run
-      Today his row shows zeros, marked "Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom
-      01.09.2026 05:00.", the date of the run before.
+    Scenario Outline: A member whose first recompute fails <when> is shown as not yet computed
+      Today Calix's row shows zeros: after an earlier run it is marked "Veraltete Zahlen. Letzte
+      erfolgreiche Aktualisierung vom 02.01.2026 05:00.", the date of that run, and on the guild's
+      very first run it carries no mark. This states the corrected behavior for both histories.
 
-      Given the guild bank ledger holds:
-        | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 31.08.2026 18:00 | Boreas | 750    | Einzahlung |
-      And the daily collection ran at 01.09.2026 05:00
+      Given the guild storage ledger holds:
+        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
+        | 01.01.2026 12:00 | Dorn   | 1     | Eisenbarren | 100      | Einlagerung |
+      And <history>
       And the guild storage ledger also holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 01.09.2026 22:00 | Calix  | 10    | Eisenbarren | 100      | Einlagerung |
+        | 02.01.2026 12:00 | Calix  | 1     | Eisenbarren | 100      | Einlagerung |
       And Calix's stored movements cannot be read
-      And the daily collection ran at 02.09.2026 05:00
+      And the daily collection ran at 03.01.2026 05:00
       When a member opens the overview
       Then the overview shows:
         | Avatar | Einlagerung | Nach Abzügen |
         | Calix  | –           | –            |
+        | Dorn   | 72          | 72           |
       And Calix's row is marked "Noch nicht berechnet."
       And the guild row is marked "Enthält mindestens eine Zeile, die noch nicht berechnet ist."
 
-    @wip
-    Scenario: On the guild's very first run a member whose recompute fails is shown as not yet computed
-      Today his row shows zeros and carries no mark.
-
-      Given no collection has ever run
-      And the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 01.09.2026 22:00 | Calix  | 10    | Eisenbarren | 100      | Einlagerung |
-        | 01.09.2026 22:05 | Dorn   | 10    | Eisenbarren | 100      | Einlagerung |
-      And Calix's stored movements cannot be read
-      And the daily collection ran at 02.09.2026 05:00
-      When a member opens the overview
-      Then the overview shows:
-        | Avatar | Einlagerung |
-        | Calix  | –           |
-        | Dorn   | 720         |
-      And Calix's row is marked "Noch nicht berechnet."
-      And the guild row is marked "Enthält mindestens eine Zeile, die noch nicht berechnet ist."
+      Examples:
+        | when                          | history                                      |
+        | after an earlier run          | the daily collection ran at 02.01.2026 05:00 |
+        | on the guild's very first run | no collection has ever run                   |
