@@ -68,9 +68,8 @@ is the author's decision ([engineering-handbook.md](engineering-handbook.md) §7
    - only the author pushes, when satisfied
 ```
 
-Step 0 is **suspended in this project** until the author picks the scenario catch-up from the
-backlog (handbook §5, "Status in this project"): until then every plan claims the §5 exemption
-explicitly and the pipeline starts at step 1.
+Step 0 is in force in this project (handbook §5, "Status in this project"): a plan without
+scenarios claims one of the §5 exemptions explicitly and then starts at step 1.
 
 ### FAIL-loop rules (when a falsifier or reviewer rejects)
 

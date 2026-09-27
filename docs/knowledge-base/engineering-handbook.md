@@ -137,12 +137,10 @@ scenarios, the author confirms them, and only then does implementation begin. Th
 the plan text, are what "done" means, and they stay in the repository as the executable
 specification.
 
-**Status in this project (author decision 2026-09-20): suspended until the author picks it up.**
-The runner is wired and carries no scenario; the catch-up is a low-priority backlog item, not a task
-of the current cut, and the `0.2.0` release goes first. Until the author selects that item
-explicitly, every strand claims the exemption below in its plan, out loud, and runs the §4 TDD cycle
-on unit and acceptance tests as before; nothing here is inferred as "BDD by default" in the
-meantime.
+**Status in this project (author decision 2026-09-27): in force for every strand.** The
+catch-up (`/bdd-catch-up`, picked up 2026-09-23) holds the reviewed scenarios `@wip` until their
+step definitions exist. Work with observable behavior starts with its scenarios; pure
+refactoring, `[doc]` and build/infra claim the exemption below explicitly, as before.
 
 **Scope.** Every feature with behavior a user, an operator or a caller can observe: new
 capabilities, API and UI changes. A bug fix gets a scenario when the bug is visible at the

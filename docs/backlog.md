@@ -22,8 +22,8 @@ blank line between two rows splits the table mid-body (DOC-11).
 
 - The process follows the template at version 4.2 (2026-09-20): `./verify` is the one build entry
   point, the template's hook suite gates every commit, and the acceptance runner (cucumber-jvm,
-  `RunAcceptanceScenariosTest`) is wired but carries no scenario; the scenario catch-up is a
-  backlog item (**G19**), suspended until the author picks it.
+  `RunAcceptanceScenariosTest`) carries the catch-up's reviewed scenarios, `@wip` until their step
+  definitions exist (**G19**), and BDD is in force for every strand (decision 2026-09-27).
 - `0.2.0` runs on the home server (2026-09-21, image revision `55a441a`, the tag `v0.2.0` on that
   commit is the author's act); the release, its rollback and the re-deploy were driven by
   `deploy/epc-deploy`.

@@ -34,9 +34,8 @@ produced on a tip other than the one you review, say so and stop instead of re-d
   *before* the implementation commits, confirmed by the author as the complete acceptance, armed by
   its own commit as the last TDD step, and passing now under `./verify all`? Refactor-phase commits
   change no behavior? A feature with observable behavior and no confirmed `.feature` is a FAIL
-  (handbook §5). An exemption (pure refactoring, `[doc]`, build/infra, or the standing one while
-  the scenario work is suspended in this project, handbook §5 "Status") must be explicit in the
-  plan, not inferred.
+  (handbook §5). An exemption (pure refactoring, `[doc]`, build/infra) must be explicit in the plan, not
+  inferred.
 - Real **red→green→refactor**? Commit sequence + messages reflect small steps, not one big dump?
   **One full cycle per commit**, and each commit green **on its own** (walk them; the tip's
   greenness says nothing about its predecessors). **Every cycle carries red evidence** in the

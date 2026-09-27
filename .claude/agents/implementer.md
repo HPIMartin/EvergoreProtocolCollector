@@ -26,8 +26,7 @@ messages. If a message no longer fits, stop and report instead of guessing.
 you never edit a scenario to match what the code now does, and you never commit a removed `@wip`
 before the arming step below. A scenario that turns out to be wrong goes back to the orchestrator as
 a scenario change, for the author. If you were handed no `.feature` and the work has observable
-behavior, stop and say so, unless the plan claims the handbook §5 exemption explicitly (while the
-scenario work is suspended in this project, handbook §5 "Status", every plan does).
+behavior, stop and say so, unless the plan claims the handbook §5 exemption explicitly.
 
 **Feature-branch track:** when the plan says so (the playbook's second track), write each step's
 protocol-conform one-line, present-tense-verb message yourself; stop and report only on scope or
