@@ -638,7 +638,8 @@ and the database is left untouched, so a broken scrape degrades to stale data ra
 it opens the connection source, so the first start of a new version migrates the live database. `V1` creates
 the pre-Flyway tables `IF NOT EXISTS`, so it is a no-op on a database that already has them and
 still repairs one that is missing a table; `V2` rebuilds all three tables with `NOT NULL` on every
-column, copying every row into the new table. What this means for a deploy:
+column, copying every row into the new table; `V3` adds an index on `(avatar, timeStamp)` to each
+ledger and touches no row. What this means for a deploy:
 
 - **Take the backup first** (step 1 of the deploy already does), because `V2` rewrites all three
   tables rather than altering them in place.
@@ -659,6 +660,11 @@ column, copying every row into the new table. What this means for a deploy:
   vacuums: 39.4 MB became 77.8 MB on the 03.09.2026 snapshot (row counts unchanged, meta rows grew
   from 169 to 295 through the recompute's new keys). With the backup and a rollback's superseded
   copy beside it, the mount briefly holds about four times the pre-migration size.
+- **`V3` takes seconds and does not grow a `V2`-rebuilt file.** Over a copy of the 03.09.2026
+  snapshot at `V2` (7,688 bank + 243,443 storage + 169 meta rows, 2026-09-27) the check found counts
+  and digests unchanged, `V3` recorded successful in 1.3 s on the bind mount, and a second run a
+  no-op. The two indexes take 2,656 pages (10.9 MB), which fill free pages `V2` left behind, so the
+  file stays at 77.8 MB; on a compact file they add the same 10.9 MB (39.4 MB → 50.3 MB).
 - A row that carries a `NULL` in any column **aborts the boot** instead of being dropped. That is
   the intended strict behaviour (engineering-handbook §3), and the production snapshot holds no such
   row in any of the three tables (ledgers measured 2026-09-06, `metaInformation` 2026-09-07). The

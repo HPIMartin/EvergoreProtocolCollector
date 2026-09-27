@@ -38,13 +38,7 @@ class ProductionSnapshotMigrationCheck {
 
 	@Test
 	void theMigrationKeepsEveryRowOfTheProductionSnapshotByteForByte() {
-		silentThrow(() -> {
-			assertThat(SNAPSHOT).as("the opt-in was given but no snapshot is there to migrate").exists();
-			Files.createDirectories(WORKING_DB.getParent());
-			Files.deleteIfExists(WORKING_DB);
-			Files.copy(SNAPSHOT, WORKING_DB);
-			return null;
-		});
+		copyTheSnapshot();
 
 		Map<String, Integer> countsBefore = counts();
 		Map<String, String> digestsBefore = digests();
@@ -61,6 +55,36 @@ class ProductionSnapshotMigrationCheck {
 
 		assertThat(counts()).isEqualTo(countsBefore);
 		assertThat(digests()).isEqualTo(digestsBefore);
+	}
+
+	@Test
+	void theMigratedProductionSnapshotReadsAnAvatarsLedgerPageThroughTheIndex() {
+		copyTheSnapshot();
+
+		migrate();
+
+		assertThat(query("SELECT name FROM sqlite_master WHERE type = 'index' AND sql IS NOT NULL AND tbl_name <> 'flyway_schema_history' ORDER BY name"))
+				.containsExactly("bankEntries_avatar_timeStamp_idx", "storageEntries_avatar_timeStamp_idx");
+		assertThat(planOfTheLedgerPage("bankEntries")).containsExactly("SEARCH bankEntries USING INDEX bankEntries_avatar_timeStamp_idx (avatar=?)");
+		assertThat(planOfTheLedgerPage("storageEntries")).containsExactly("SEARCH storageEntries USING INDEX storageEntries_avatar_timeStamp_idx (avatar=?)");
+	}
+
+	private static void copyTheSnapshot() {
+		silentThrow(() -> {
+			assertThat(SNAPSHOT).as("the opt-in was given but no snapshot is there to migrate").exists();
+			Files.createDirectories(WORKING_DB.getParent());
+			Files.deleteIfExists(WORKING_DB);
+			Files.copy(SNAPSHOT, WORKING_DB);
+			return null;
+		});
+	}
+
+	private static List<String> planOfTheLedgerPage(String ledger) {
+		String busiestAvatar = query("SELECT avatar FROM " + ledger + " GROUP BY avatar ORDER BY count(*) DESC LIMIT 1").get(0);
+		return query("EXPLAIN QUERY PLAN SELECT * FROM `" + ledger + "` WHERE `avatar` = '" + busiestAvatar + "' ORDER BY `timeStamp` DESC LIMIT 20 OFFSET 0")
+				.stream()
+				.map(row -> row.substring(row.lastIndexOf(SEPARATOR) + SEPARATOR.length()))
+				.toList();
 	}
 
 	private static void migrate() {

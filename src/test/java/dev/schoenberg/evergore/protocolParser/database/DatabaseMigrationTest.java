@@ -16,8 +16,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
@@ -138,6 +141,64 @@ class DatabaseMigrationTest {
 		assertThat(allRows()).containsExactly("a|2024-06-01 13:37:00.000000|Aurora|1000|EINLAGERUNG|");
 	}
 
+	@ParameterizedTest
+	@CsvSource({"bankEntries, SEARCH bankEntries USING INDEX bankEntries_avatar_timeStamp_idx (avatar=?)",
+			"storageEntries, SEARCH storageEntries USING INDEX storageEntries_avatar_timeStamp_idx (avatar=?)"})
+	void anEmptyDatabaseReadsAnAvatarsLedgerPageInTimeOrderFromAnIndex(String ledger, String plan) {
+		migrate();
+
+		assertThat(planOf(ledgerPageOf(ledger))).containsExactly(plan);
+	}
+
+	@ParameterizedTest
+	@CsvSource({"bankEntries, SEARCH bankEntries USING COVERING INDEX bankEntries_avatar_timeStamp_idx (avatar=?)",
+			"storageEntries, SEARCH storageEntries USING COVERING INDEX storageEntries_avatar_timeStamp_idx (avatar=?)"})
+	void anEmptyDatabaseCountsAnAvatarsLedgerFromTheIndexAlone(String ledger, String plan) {
+		migrate();
+
+		assertThat(planOf(ledgerCountOf(ledger))).containsExactly(plan);
+	}
+
+	@ParameterizedTest
+	@CsvSource({"bankEntries, SCAN bankEntries USING COVERING INDEX bankEntries_avatar_timeStamp_idx",
+			"storageEntries, SCAN storageEntries USING COVERING INDEX storageEntries_avatar_timeStamp_idx"})
+	void anEmptyDatabaseFindsEveryAvatarsLatestMovementFromTheIndexAlone(String ledger, String plan) {
+		migrate();
+
+		assertThat(planOf(latestPerAvatarOf(ledger))).containsExactly(plan);
+	}
+
+	@Test
+	void anExistingDatabaseGetsTheLedgerIndexThroughTheMigration() {
+		createLaxSchema();
+		execute("INSERT INTO bankEntries VALUES ('a', '2024-06-01 13:37:00.000000', 'Aurora', 1000, 'EINLAGERUNG')");
+		execute("INSERT INTO storageEntries VALUES ('s', '2024-06-02 08:00:00.000000', 'Boreas', 3, 'Drachenhaut', 80, 'AUSLAGERUNG')");
+
+		migrate();
+
+		assertThat(indexColumns())
+				.containsExactly("bankEntries|bankEntries_avatar_timeStamp_idx|0|avatar|", "bankEntries|bankEntries_avatar_timeStamp_idx|1|timeStamp|",
+						"storageEntries|storageEntries_avatar_timeStamp_idx|0|avatar|", "storageEntries|storageEntries_avatar_timeStamp_idx|1|timeStamp|");
+	}
+
+	@Test
+	void aDatabaseAlreadyCarryingAnIndexOfTheMigrationsNameAbortsWithoutHalfTheIndexesAndStaysRetryable() {
+		createLaxSchema();
+		migrateTo("2");
+		execute("CREATE INDEX `storageEntries_avatar_timeStamp_idx` ON `storageEntries` (`avatar`)");
+
+		assertThatThrownBy(this::migrate).hasMessageContaining("index storageEntries_avatar_timeStamp_idx already exists");
+
+		assertThat(indexColumns()).containsExactly("storageEntries|storageEntries_avatar_timeStamp_idx|0|avatar|");
+
+		execute("DROP INDEX `storageEntries_avatar_timeStamp_idx`");
+		migrate();
+
+		assertThat(indexColumns())
+				.containsExactly("bankEntries|bankEntries_avatar_timeStamp_idx|0|avatar|", "bankEntries|bankEntries_avatar_timeStamp_idx|1|timeStamp|",
+						"storageEntries|storageEntries_avatar_timeStamp_idx|0|avatar|", "storageEntries|storageEntries_avatar_timeStamp_idx|1|timeStamp|");
+	}
+
 	@Test
 	void migratingFromSeveralThreadsAtOnceMigratesTheDatabaseExactlyOnce() {
 		int threads = 8;
@@ -186,6 +247,18 @@ class DatabaseMigrationTest {
 		new DatabaseMigration(configurationFor(DB.toString()), logger).migrate();
 	}
 
+	private static void migrateTo(String version) {
+		Flyway
+				.configure()
+				.dataSource("jdbc:sqlite:" + DB, null, null)
+				.locations("classpath:db/migration")
+				.baselineOnMigrate(true)
+				.baselineVersion("0")
+				.target(version)
+				.load()
+				.migrate();
+	}
+
 	private void createLaxSchema() {
 		execute(LAX_BANK);
 		execute(LAX_STORAGE);
@@ -218,6 +291,28 @@ class DatabaseMigrationTest {
 
 	private static List<String> tableNames() {
 		return dump("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name", 1).stream().map(name -> name.replace("|", "")).toList();
+	}
+
+	private static String ledgerPageOf(String ledger) {
+		return "SELECT * FROM `" + ledger + "` WHERE `avatar` = 'Aurora' ORDER BY `timeStamp` DESC LIMIT 20 OFFSET 0";
+	}
+
+	private static String ledgerCountOf(String ledger) {
+		return "SELECT COUNT(*) FROM `" + ledger + "` WHERE `avatar` = 'Aurora'";
+	}
+
+	private static String latestPerAvatarOf(String ledger) {
+		return "SELECT avatar, MAX(timeStamp) AS timeStamp FROM " + ledger + " GROUP BY avatar";
+	}
+
+	private static List<String> planOf(String query) {
+		return dump("EXPLAIN QUERY PLAN " + query, 4).stream().map(row -> row.split("\\|")[3]).toList();
+	}
+
+	private static List<String> indexColumns() {
+		return dump(
+				"SELECT m.tbl_name, m.name, i.seqno, i.name FROM sqlite_master m, pragma_index_info(m.name) i WHERE m.type = 'index' AND m.sql IS NOT NULL AND m.tbl_name <> 'flyway_schema_history' ORDER BY m.name, i.seqno",
+				4);
 	}
 
 	private static void execute(String sql) {

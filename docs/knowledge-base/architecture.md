@@ -111,9 +111,9 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 - **Last activity comes from the ledgers, not from the meta store** (decision 2026-09-02): both
   ledger ports answer `latestTimestampPerAvatar()` with **one grouped query** per ledger
   (`MAX(timeStamp) GROUP BY avatar`), so the overview materializes one row per avatar instead of one
-  per ledger entry. SQLite still scans the table for it: neither `avatar` nor `timeStamp` is indexed,
-  and adding an index is DDL that now goes through a Flyway migration, so this is the
-  remaining scaling ceiling of the read path. The domain types are real instants, so nothing here reintroduces
+  per ledger entry. Both ledgers carry an index on `(avatar, timeStamp)` (migration `V3`), which
+  serves this query as a covering index and the per-avatar page and count as an index search, so
+  none of the three scans the table. The domain types are real instants, so nothing here reintroduces
   `MetaInformationKey.DateTimeKey`'s ambiguity and no key family joins the pending schema migration.
   The ledger's **storage** format is a separate matter: it persists wall-clock text, so these
   columns inherit **D14**'s DST fall-back defect until the epoch/UTC format lands, and today only
