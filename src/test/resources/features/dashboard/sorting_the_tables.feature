@@ -1,9 +1,8 @@
 @wip
 Feature: Sorting the tables
-  Every column of the overview and of the ledgers can sort its table: choosing a column sorts by it
-  in ascending order, choosing it again reverses the order, so a descending sort takes two choices.
-  Names sort alphabetically as German is sorted, figures by amount and times by the moment they
-  stand for. Until a column is chosen a table keeps the order it was delivered in: the overview
+  Every column of the overview and of the ledgers can sort its table, in ascending or in descending
+  order. Names sort alphabetically as German is sorted, figures by amount and times by the moment
+  they stand for. Until a column is chosen a table keeps the order it was delivered in: the overview
   alphabetically, a ledger newest first. One scenario per kind of column (name, figure, time)
   stands for every column of that kind.
 
@@ -12,42 +11,48 @@ Feature: Sorting the tables
     Background:
       Given the guild bank ledger holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 10.01.2024 10:00 | Ärger  | 9      | Einzahlung |
-        | 12.02.2024 10:00 | Bambor | 10     | Einzahlung |
-        | 01.02.2024 10:00 | Zorn   | 100    | Einzahlung |
+        | 01.01.2026 12:00 | Ärger  | 9      | Einzahlung |
+        | 02.01.2026 12:00 | Zorn   | 100    | Einzahlung |
+        | 03.01.2026 12:00 | Bambor | 10     | Einzahlung |
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 15.01.2024 10:00 | Ärger  | 10    | Eisenbarren | 100      | Einlagerung |
-        | 15.01.2024 10:00 | Bambor | 1     | Eisenbarren | 100      | Einlagerung |
-        | 15.01.2024 10:00 | Calix  | 10    | Eisenbarren | 100      | Einlagerung |
-        | 15.01.2024 10:00 | Zorn   | 100   | Eisenbarren | 100      | Einlagerung |
+        | 04.01.2026 12:00 | Ärger  | 10    | Eisenbarren | 100      | Einlagerung |
+        | 05.01.2026 12:00 | Bambor | 1     | Eisenbarren | 100      | Einlagerung |
+        | 06.01.2026 12:00 | Calix  | 10    | Eisenbarren | 100      | Einlagerung |
+        | 07.01.2026 12:00 | Zorn   | 100   | Eisenbarren | 100      | Einlagerung |
       And the daily collection has run
       And a member has opened the overview
 
-    @characterization
-    Scenario: Figures sort by amount, and choosing the column again reverses the order
-      When the member sorts the active table by "Bank-Einzahlung"
-      Then the active table lists "Calix, Ärger, Bambor, Zorn"
-      When the member sorts the active table by "Bank-Einzahlung" again
-      Then the active table lists "Zorn, Bambor, Ärger, Calix"
+    Scenario Outline: Figures sort by amount, in <direction> order
+      When the member sorts the active table by "Bank-Einzahlung" in <direction> order
+      Then the active table lists "<members>"
+
+      Examples:
+        | direction  | members                    |
+        | ascending  | Calix, Ärger, Bambor, Zorn |
+        | descending | Zorn, Bambor, Ärger, Calix |
 
     Scenario: Names sort as German is sorted
       When the member sorts the active table by "Avatar" in descending order
       Then the active table lists "Zorn, Calix, Bambor, Ärger"
 
-    @characterization
-    Scenario: Members with the same figure keep their alphabetical order in either direction
-      When the member sorts the active table by "Einlagerung"
-      Then the active table lists "Bambor, Ärger, Calix, Zorn"
-      When the member sorts the active table by "Einlagerung" again
-      Then the active table lists "Zorn, Ärger, Calix, Bambor"
+    Scenario Outline: Members with the same figure keep their alphabetical order, in <direction> order
+      When the member sorts the active table by "Einlagerung" in <direction> order
+      Then the active table lists "<members>"
 
-    @characterization
-    Scenario: A member without a date in the column sorts last in either direction
-      When the member sorts the active table by "Letzte Bankaktivität"
-      Then the active table lists "Ärger, Zorn, Bambor, Calix"
-      When the member sorts the active table by "Letzte Bankaktivität" again
-      Then the active table lists "Bambor, Zorn, Ärger, Calix"
+      Examples:
+        | direction  | members                    |
+        | ascending  | Bambor, Ärger, Calix, Zorn |
+        | descending | Zorn, Ärger, Calix, Bambor |
+
+    Scenario Outline: A member without a date in the column sorts last, in <direction> order
+      When the member sorts the active table by "Letzte Bankaktivität" in <direction> order
+      Then the active table lists "<members>"
+
+      Examples:
+        | direction  | members                    |
+        | ascending  | Ärger, Zorn, Bambor, Calix |
+        | descending | Bambor, Zorn, Ärger, Calix |
 
     Scenario: The guild row stays below the members however they are sorted
       When the member sorts the active table by "Einlagerung" in descending order
@@ -61,60 +66,55 @@ Feature: Sorting the tables
 
       Given the guild bank ledger holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 10.01.2024 10:00 | Kira   | 100    | Einzahlung |
+        | 01.01.2026 12:00 | Kira   | 100    | Einzahlung |
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 10.01.2024 11:00 | Anton  | 10    | Kupfererz  | 100      | Einlagerung |
+        | 02.01.2026 12:00 | Anton  | 10    | Kupfererz  | 100      | Einlagerung |
       And the daily collection has run
-      And a member has sorted the active table by "Nach Abzügen"
+      And a member has sorted the active table by "Nach Abzügen" in ascending order
       When the member switches the last column to "Vor Abzügen"
       Then the active table lists "Kira, Anton"
-      And the active table is still sorted by its last column
+      And the active table is sorted by "Vor Abzügen" in ascending order
 
   Rule: Each table sorts on its own
 
-    Scenario: Sorting the active table leaves the dormant table as it was
+    Background:
       Given the guild bank ledger holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 10.03.2024 10:00 | Aurora | 10     | Einzahlung |
-        | 10.03.2024 11:00 | Boreas | 20     | Einzahlung |
-        | 01.01.2024 10:00 | Calix  | 5      | Einzahlung |
-        | 01.01.2024 11:00 | Dorn   | 30     | Einzahlung |
+        | 01.01.2026 12:00 | Calix  | 5      | Einzahlung |
+        | 02.01.2026 12:00 | Dorn   | 30     | Einzahlung |
+        | 31.01.2026 12:00 | Aurora | 10     | Einzahlung |
+        | 15.02.2026 12:00 | Boreas | 20     | Einzahlung |
       And the daily collection has run
       And a member has opened the overview
-      When the member sorts the active table by "Bank-Einzahlung" in descending order
-      Then the active table lists "Boreas, Aurora"
-      And the dormant table lists "Calix, Dorn"
 
-    Scenario: Sorting the dormant table leaves the active table as it was
-      Given the guild bank ledger holds:
-        | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 10.03.2024 10:00 | Aurora | 10     | Einzahlung |
-        | 10.03.2024 11:00 | Boreas | 20     | Einzahlung |
-        | 01.01.2024 10:00 | Calix  | 5      | Einzahlung |
-        | 01.01.2024 11:00 | Dorn   | 30     | Einzahlung |
-      And the daily collection has run
-      And a member has opened the overview
-      When the member sorts the dormant table by "Bank-Einzahlung" in descending order
-      Then the dormant table lists "Dorn, Calix"
-      And the active table lists "Aurora, Boreas"
+    Scenario Outline: Sorting the <sorted> table leaves the <other> table as it was
+      When the member sorts the <sorted> table by "Bank-Einzahlung" in descending order
+      Then the <sorted> table lists "<sorted order>"
+      And the <other> table lists "<other order>"
+
+      Examples:
+        | sorted  | sorted order   | other   | other order    |
+        | active  | Boreas, Aurora | dormant | Calix, Dorn    |
+        | dormant | Dorn, Calix    | active  | Aurora, Boreas |
 
   Rule: A ledger sorts all of its movements, not only the page shown
     Today a ledger sorts only the hundred movements of the page shown. The two scenarios below state
-    the corrected behavior: the sort covers the whole ledger and stays when the page is opened
-    again from a bookmark.
+    the corrected behavior: the sort covers the whole ledger, on every page and in a bookmark of a
+    page.
+
+    Background:
+      Given Aurora has 150 movements of "Eisenbarren" in the guild storage ledger, the newest of quantity 1 and each older one of one more
 
     @wip
     Scenario: Sorting a ledger orders the whole ledger
-      Given Aurora has 150 movements of "Eisenbarren" in the guild storage ledger, the newest of quantity 1 and each older one of one more
-      And a member has opened the storage ledger of "Aurora"
+      Given a member has opened the storage ledger of "Aurora"
       When the member sorts the ledger by "Menge" in descending order
       Then the ledger's first row shows a quantity of 150
 
     @wip
-    Scenario: A sorted ledger keeps its order on the next page and when that page is opened again
-      Given Aurora has 150 movements of "Eisenbarren" in the guild storage ledger, the newest of quantity 1 and each older one of one more
-      And a member has sorted the storage ledger of "Aurora" by "Menge" in descending order
+    Scenario: A sorted ledger keeps its order on the next page and in a bookmark of that page
+      Given a member has sorted the storage ledger of "Aurora" by "Menge" in descending order
       And the member has followed "Weiter"
-      When the member opens that page again later from a bookmark
+      When the member later opens their bookmark of page 2 of the storage ledger of "Aurora"
       Then the ledger's first row shows a quantity of 50

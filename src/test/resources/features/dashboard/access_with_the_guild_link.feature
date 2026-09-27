@@ -4,12 +4,12 @@ Feature: Access with the guild's link
   guild's token; whoever opens that link sees the dashboard, and every link the dashboard shows
   opens its page for them as well. Without the token the figures stay closed: the start page says
   what is missing, and any other page of the dashboard shows nothing at all. The admin page opens
-  without the token (see "The admin page: how the daily collection is going").
+  without the token, for now (see "The admin page: how the daily collection is going").
 
   Scenario: The guild's link opens the overview
     Given the guild bank ledger holds:
       | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-      | 10.01.2024 10:00 | Aurora | 1000   | Einzahlung |
+      | 01.01.2026 12:00 | Aurora | 1000   | Einzahlung |
     And the daily collection has run
     When a member opens the guild's link
     Then the overview shows:

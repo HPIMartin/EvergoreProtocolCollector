@@ -10,7 +10,7 @@ Feature: How figures and times are shown
     Scenario Outline: A figure of <gold> gold is shown as "<shown>"
       Given the guild bank ledger holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang  |
-        | 10.01.2024 10:00 | Aurora | <gold> | Entnahme |
+        | 01.01.2026 12:00 | Aurora | <gold> | Entnahme |
       And the daily collection has run
       When a member opens the overview
       Then Aurora's "Bank-Auszahlung" is <shown>
@@ -26,14 +26,14 @@ Feature: How figures and times are shown
       Given the guild bank ledger holds:
         | Zeitpunkt | Avatar | Betrag | Vorgang    |
         | <when>    | Aurora | 100    | Einzahlung |
-      And the member's browser runs in the time zone "America/New_York"
+      And the member's browser runs on New York time
       When a member opens the bank ledger of "Aurora"
       Then the ledger shows a movement at <when>
 
       Examples:
         | season | when             |
-        | winter | 10.01.2024 10:00 |
-        | summer | 15.07.2024 10:00 |
+        | winter | 01.01.2026 12:00 |
+        | summer | 15.07.2026 12:00 |
 
   Rule: A member's figure is coloured by its column and its sign
     Deposits read as a credit and withdrawals as a debit; the last column is uncoloured until it
@@ -42,13 +42,13 @@ Feature: How figures and times are shown
     Background:
       Given the guild bank ledger holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 10.01.2024 10:00 | Aurora | 100    | Einzahlung |
-        | 10.01.2024 11:00 | Aurora | 300    | Entnahme   |
-        | 10.01.2024 12:00 | Boreas | 100    | Einzahlung |
+        | 01.01.2026 12:00 | Aurora | 100    | Einzahlung |
+        | 02.01.2026 12:00 | Aurora | 300    | Entnahme   |
+        | 03.01.2026 12:00 | Boreas | 100    | Einzahlung |
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 11.01.2024 10:00 | Aurora | 4     | Federn      | 100      | Einlagerung |
-        | 11.01.2024 11:00 | Aurora | 10    | Eisenbarren | 100      | Entnahme    |
+        | 04.01.2026 12:00 | Aurora | 4     | Federn      | 100      | Einlagerung |
+        | 05.01.2026 12:00 | Aurora | 10    | Eisenbarren | 100      | Entnahme    |
       And the daily collection has run
 
     Scenario Outline: <member>'s "<column>" of <value> shows <tone>
@@ -66,16 +66,20 @@ Feature: How figures and times are shown
         | Boreas | Einlagerung     | 0     | uncoloured           |
 
   Rule: A figure of the guild's position is coloured by its sign, the subsidies never as a credit
+    The storage value works out as 100 for the four "Federn" deposited, plus 120 given in raw ore (the
+    ten "Kupfererz" at 60 % of 20 each), less 40 craft subsidy (the "Federn" credited at their full
+    25 instead of 60 % of it), less 720 for the ten "Eisenbarren" withdrawn (60 % of 120 each):
+    100 + 120 - 40 - 720 = -540.
 
     Background:
       Given the guild bank ledger holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 10.01.2024 10:00 | Boreas | 100    | Einzahlung |
+        | 01.01.2026 12:00 | Boreas | 100    | Einzahlung |
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 11.01.2024 10:00 | Boreas | 10    | Kupfererz   | 100      | Einlagerung |
-        | 11.01.2024 11:00 | Boreas | 4     | Federn      | 100      | Einlagerung |
-        | 11.01.2024 12:00 | Boreas | 10    | Eisenbarren | 100      | Entnahme    |
+        | 02.01.2026 12:00 | Boreas | 10    | Kupfererz   | 100      | Einlagerung |
+        | 03.01.2026 12:00 | Boreas | 4     | Federn      | 100      | Einlagerung |
+        | 04.01.2026 12:00 | Boreas | 10    | Eisenbarren | 100      | Entnahme    |
       And the daily collection has run
 
     Scenario Outline: The guild's "<figure>" of <value> shows <tone>
