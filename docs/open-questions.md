@@ -263,6 +263,12 @@ table existed stand as dated decision rows above (2026-09-09, 2026-09-12, 2026-0
   warns; if the game writes it, large deposits are lost. The scenario "A gold amount written with a
   thousands separator is not read" (`collection/unreadable_protocol_lines.feature`) pins today's
   behavior; a yes turns it into a bug.
+- **D-15 (One item twice under one headline):** does the game ever list the same item in the same
+  quality on two lines of one protocol entry? The collection adds such lines into one movement
+  (`EntryFactory.deduplicate`), so the ledger shows one row with the summed quantity, while two
+  entries of the same minute stay two rows. The scenario "Lines of the same item in the same
+  quality are added together" (`collection/reading_protocol_entries.feature`) pins the adding;
+  whether the case occurs at all is unknown (the `+1` variant of an item does occur).
 - **D-11 (ToS / PII, enterprise-audit Pitfall #7):** the tool scrapes evergore.de and stores *other*
   guild members' bank/storage activity. No production pressure (Q2), but a deliberate stance is due:
   is the scraping within the site's ToS, and is storing other members' activity acceptable for the
