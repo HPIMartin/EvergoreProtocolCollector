@@ -27,11 +27,12 @@ Input: the feature's diff/commits (or branch range). Check:
    path or test name it names present at the commit it rides in (`git grep <name> <sha>` against
    that commit, never the working tree)?
 
-Then run the **rotating sweep**: pick one tracked doc statelessly and check it whole:
+Then run the **rotating sweep**: pick one tracked doc statelessly and check it whole, with `wt` set
+to the absolute path of the worktree under review (see Environment):
 
 ```
-docs=$(git ls-files '*.md' ':(exclude).template/*' | sort); n=$(echo "$docs" | wc -l)
-i=$(( $(git rev-list --count HEAD) % n ))
+docs=$(git -C "$wt" ls-files '*.md' ':(exclude).template/*' | sort); n=$(echo "$docs" | wc -l)
+i=$(( $(git -C "$wt" rev-list --count HEAD) % n ))
 echo "$docs" | sed -n "$((i+1))p"
 ```
 
