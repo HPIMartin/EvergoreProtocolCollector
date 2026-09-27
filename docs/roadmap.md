@@ -27,7 +27,7 @@
 | M7 | The overview states the guild's actual position | the catalog closed against the game, the release run (the stone renames, the deploy script) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the catalog work joins because the release publishes `Gildenspende` for the first time |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, opening balance, explanation page with the trader's figure (E29, E26, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
 | M9 | Clear the last bottleneck | D24 | The transactional ingest rests on the unified repositories, which every later read method needed first |
-| M10 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
+| M10 | What the bottlenecks release | D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
 | M11 | Product build-out | E12→E13, E9, E3, E6, E27 | E12 inherits D18's query shape, so it follows it |
 | M12 | Ops, security & environment | F1, H11, C1, C8, C10, C11→E28, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
 
@@ -124,9 +124,9 @@ Slice: a scrape that aborts midway leaves both ledgers where they were.
 
 Slice: the measured costs come down and the timezone hazard is fixed at its root.
 
-- [ ] Both ledgers carry an index on `(avatar, timeStamp)`, reaching an existing database through a
-      migration; the query plans show `SEARCH … USING INDEX` (backlog D17). Two of the three
-      affected queries sit in the request path.
+- [x] Both ledgers carry an index on `(avatar, timeStamp)`, reaching an existing database through a
+      migration; the query plans show `SEARCH … USING INDEX`. Two of the three affected queries sit
+      in the request path.
 - [ ] The recompute reads pre-grouped sums instead of loading whole ledgers into the JVM; per-avatar
       values stay identical on the production snapshot (backlog D18).
 - [ ] Timestamps and `last_updated` round-trip timezone-independently as instants (backlog D14),
