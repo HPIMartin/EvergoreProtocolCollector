@@ -15,54 +15,42 @@ Feature: Crafting is not a round trip
 
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand   | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 8     | Eichenholz   | 100      | Entnahme    |
-        | 01.01.2026 00:00 | Alrik  | 7     | Federn       | 100      | Entnahme    |
-        | 01.01.2026 00:00 | Alrik  | 2     | Pfeilharz    | 100      | Entnahme    |
-        | 01.01.2026 01:00 | Alrik  | 228   | Kriegspfeile | 100      | Einlagerung |
-        | 01.01.2026 02:00 | Alrik  | 8     | Eichenholz   | 100      | Einlagerung |
-        | 01.01.2026 02:00 | Alrik  | 7     | Federn       | 100      | Einlagerung |
-        | 01.01.2026 02:00 | Alrik  | 2     | Pfeilharz    | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Alrik  | 8     | Eichenholz   | 100      | Entnahme    |
+        | 01.01.2026 12:00 | Alrik  | 7     | Federn       | 100      | Entnahme    |
+        | 01.01.2026 12:00 | Alrik  | 2     | Pfeilharz    | 100      | Entnahme    |
+        | 01.01.2026 13:00 | Alrik  | 228   | Kriegspfeile | 100      | Einlagerung |
+        | 01.01.2026 14:00 | Alrik  | 8     | Eichenholz   | 100      | Einlagerung |
+        | 01.01.2026 14:00 | Alrik  | 7     | Federn       | 100      | Einlagerung |
+        | 01.01.2026 14:00 | Alrik  | 2     | Pfeilharz    | 100      | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page lists no suspected round trip
 
-    Scenario: What the recipe did not consume can still come back as a round trip
-      One batch of 135 "Pfeile" consumes 5 "Federn", so 5 of the 10 withdrawn are left.
-
-      Given the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 10    | Federn     | 100      | Entnahme    |
-        | 01.01.2026 01:00 | Alrik  | 135   | Pfeile     | 100      | Einlagerung |
-        | 01.01.2026 02:00 | Alrik  | 10    | Federn     | 100      | Einlagerung |
-      And the daily collection has run
-      When the admin opens the admin page
-      Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: 5 × Federn"
-
-    Scenario: Each trader good of a product's recipe is used up by its own share
+    Scenario: What a product's recipe did not consume can still come back, each trader good by its own share
       One batch of 100 "Gute Baumwollbinde" consumes 19 "Nähgarn" and 2 "Phasenkraut", so 6 of the
       25 "Nähgarn" and 8 of the 10 "Phasenkraut" withdrawn are left.
 
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand         | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 25    | Nähgarn            | 100      | Entnahme    |
-        | 01.01.2026 00:00 | Alrik  | 10    | Phasenkraut        | 100      | Entnahme    |
-        | 01.01.2026 01:00 | Alrik  | 100   | Gute Baumwollbinde | 100      | Einlagerung |
-        | 01.01.2026 02:00 | Alrik  | 25    | Nähgarn            | 100      | Einlagerung |
-        | 01.01.2026 02:00 | Alrik  | 10    | Phasenkraut        | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Alrik  | 25    | Nähgarn            | 100      | Entnahme    |
+        | 01.01.2026 12:00 | Alrik  | 10    | Phasenkraut        | 100      | Entnahme    |
+        | 01.01.2026 13:00 | Alrik  | 100   | Gute Baumwollbinde | 100      | Einlagerung |
+        | 01.01.2026 14:00 | Alrik  | 25    | Nähgarn            | 100      | Einlagerung |
+        | 01.01.2026 14:00 | Alrik  | 10    | Phasenkraut        | 100      | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: 6 × Nähgarn, Alrik: 8 × Phasenkraut"
 
     Scenario: A product deposited in two portions consumes what one deposit of both would
-      Five "Eisenbarren" consume 2 "Steinkohle", so two bars consume 1, whether deposited at once or
-      one at a time.
+      Five "Eisenbarren" consume 2 "Steinkohle", so two bars consume 0,8, which is rounded up to 1,
+      whether deposited at once or one at a time; rounding up each bar on its own would count 2.
 
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 2     | Steinkohle  | 100      | Entnahme    |
-        | 01.01.2026 00:30 | Alrik  | 1     | Eisenbarren | 100      | Einlagerung |
-        | 01.01.2026 01:00 | Alrik  | 1     | Eisenbarren | 100      | Einlagerung |
-        | 01.01.2026 02:00 | Alrik  | 2     | Steinkohle  | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Alrik  | 2     | Steinkohle  | 100      | Entnahme    |
+        | 01.01.2026 13:00 | Alrik  | 1     | Eisenbarren | 100      | Einlagerung |
+        | 01.01.2026 14:00 | Alrik  | 1     | Eisenbarren | 100      | Einlagerung |
+        | 01.01.2026 15:00 | Alrik  | 2     | Steinkohle  | 100      | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: 1 × Steinkohle"
@@ -70,9 +58,9 @@ Feature: Crafting is not a round trip
     Scenario: Depositing something the game does not craft consumes nothing
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 100   | Federn     | 100      | Entnahme    |
-        | 01.01.2026 01:00 | Alrik  | 10    | Kupfererz  | 100      | Einlagerung |
-        | 01.01.2026 02:00 | Alrik  | 100   | Federn     | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Alrik  | 100   | Federn     | 100      | Entnahme    |
+        | 01.01.2026 13:00 | Alrik  | 10    | Kupfererz  | 100      | Einlagerung |
+        | 01.01.2026 14:00 | Alrik  | 100   | Federn     | 100      | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: 100 × Federn"

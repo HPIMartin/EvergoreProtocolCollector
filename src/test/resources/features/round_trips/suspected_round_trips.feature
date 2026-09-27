@@ -10,26 +10,18 @@ Feature: Suspected round trips of trader goods
 
   Rule: A trader good withdrawn and deposited again within 48 hours is reported
 
-    Scenario: A trader good that goes out and comes back is reported with its quantity
-      Given the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 100   | Federn     | 100      | Entnahme    |
-        | 01.01.2026 01:00 | Alrik  | 100   | Federn     | 100      | Einlagerung |
-      And the daily collection has run
-      When the admin opens the admin page
-      Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: 100 × Federn"
-
     Scenario Outline: Only the quantity that went out and came back counts, whatever its quality: <out> out, <in> in
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität      | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | <out> | Federn     | <out quality> | Entnahme    |
-        | 01.01.2026 01:00 | Alrik  | <in>  | Federn     | <in quality>  | Einlagerung |
+        | 01.01.2026 12:00 | Alrik  | <out> | Federn     | <out quality> | Entnahme    |
+        | 01.01.2026 13:00 | Alrik  | <in>  | Federn     | <in quality>  | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: <round trip> × Federn"
 
       Examples:
         | out | out quality | in  | in quality | round trip |
+        | 100 | 100         | 100 | 100        | 100        |
         | 100 | 100         | 60  | 100        | 60         |
         | 50  | 100         | 80  | 100        | 50         |
         | 100 | 50          | 100 | 100        | 100        |
@@ -37,7 +29,7 @@ Feature: Suspected round trips of trader goods
     Scenario Outline: A deposit <when> is still reported
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 100   | Federn     | 100      | Entnahme    |
+        | 01.01.2026 12:00 | Alrik  | 100   | Federn     | 100      | Entnahme    |
         | <deposit time>   | Alrik  | 100   | Federn     | 100      | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
@@ -45,24 +37,15 @@ Feature: Suspected round trips of trader goods
 
       Examples:
         | when                                  | deposit time     |
-        | exactly 48 hours after the withdrawal | 03.01.2026 00:00 |
-        | in the same minute as the withdrawal  | 01.01.2026 00:00 |
+        | exactly 48 hours after the withdrawal | 03.01.2026 12:00 |
+        | in the same minute as the withdrawal  | 01.01.2026 12:00 |
 
-    Scenario: A deposit 48 hours and one minute after the withdrawal is no longer reported
+    Scenario: A deposit 48 hours and one minute after a withdrawal no longer answers it, a younger withdrawal still does
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 100   | Federn     | 100      | Entnahme    |
-        | 03.01.2026 00:01 | Alrik  | 100   | Federn     | 100      | Einlagerung |
-      And the daily collection has run
-      When the admin opens the admin page
-      Then the admin page lists no suspected round trip
-
-    Scenario: A withdrawal older than 48 hours is no longer matched, a younger one still is
-      Given the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 100   | Federn     | 100      | Entnahme    |
-        | 02.01.2026 23:00 | Alrik  | 50    | Federn     | 100      | Entnahme    |
-        | 03.01.2026 01:00 | Alrik  | 100   | Federn     | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Alrik  | 100   | Federn     | 100      | Entnahme    |
+        | 02.01.2026 12:00 | Alrik  | 50    | Federn     | 100      | Entnahme    |
+        | 03.01.2026 12:01 | Alrik  | 100   | Federn     | 100      | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: 50 × Federn"
@@ -73,10 +56,10 @@ Feature: Suspected round trips of trader goods
 
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 50    | Federn     | 100      | Entnahme    |
-        | 02.01.2026 16:00 | Alrik  | 50    | Federn     | 100      | Entnahme    |
-        | 02.01.2026 17:00 | Alrik  | 50    | Federn     | 100      | Einlagerung |
-        | 03.01.2026 12:00 | Alrik  | 50    | Federn     | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Alrik  | 50    | Federn     | 100      | Entnahme    |
+        | 02.01.2026 12:00 | Alrik  | 50    | Federn     | 100      | Entnahme    |
+        | 02.01.2026 13:00 | Alrik  | 50    | Federn     | 100      | Einlagerung |
+        | 03.01.2026 12:01 | Alrik  | 50    | Federn     | 100      | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: 100 × Federn"
@@ -84,10 +67,10 @@ Feature: Suspected round trips of trader goods
     Scenario: A member's round trips of one good add up
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 100   | Federn     | 100      | Entnahme    |
-        | 01.01.2026 01:00 | Alrik  | 100   | Federn     | 100      | Einlagerung |
-        | 10.01.2026 00:00 | Alrik  | 50    | Federn     | 100      | Entnahme    |
-        | 10.01.2026 01:00 | Alrik  | 50    | Federn     | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Alrik  | 100   | Federn     | 100      | Entnahme    |
+        | 01.01.2026 13:00 | Alrik  | 100   | Federn     | 100      | Einlagerung |
+        | 04.01.2026 12:00 | Alrik  | 50    | Federn     | 100      | Entnahme    |
+        | 04.01.2026 13:00 | Alrik  | 50    | Federn     | 100      | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: 150 × Federn"
@@ -95,9 +78,9 @@ Feature: Suspected round trips of trader goods
     Scenario: A deposit only answers the same member's withdrawal of the same good
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 100   | Federn     | 100      | Entnahme    |
-        | 01.01.2026 01:00 | Brynn  | 100   | Federn     | 100      | Einlagerung |
-        | 01.01.2026 02:00 | Alrik  | 100   | Harz       | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Alrik  | 100   | Federn     | 100      | Entnahme    |
+        | 01.01.2026 13:00 | Brynn  | 100   | Federn     | 100      | Einlagerung |
+        | 01.01.2026 14:00 | Alrik  | 100   | Harz       | 100      | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page lists no suspected round trip
@@ -109,8 +92,8 @@ Feature: Suspected round trips of trader goods
     Scenario Outline: "<item>" going out and coming back is not reported
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 01.01.2026 00:00 | Alrik  | 100   | <item>     | 100      | Entnahme    |
-        | 01.01.2026 01:00 | Alrik  | 100   | <item>     | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Alrik  | 100   | <item>     | 100      | Entnahme    |
+        | 01.01.2026 13:00 | Alrik  | 100   | <item>     | 100      | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page lists no suspected round trip
