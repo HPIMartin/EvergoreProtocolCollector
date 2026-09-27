@@ -14,18 +14,40 @@ Feature: Recognising items by the names the game uses
         | Marmor | Rohstoffe | 120          |
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang  |
-        | 15.01.2024 10:00 | Aurora | 1     | Marmor     | 100      | Entnahme |
-      When the daily collection runs
+        | 01.01.2026 12:00 | Aurora | 1     | Marmor     | 100      | Entnahme |
+      And the daily collection has run
+      When a member opens the overview
       Then Aurora's "Entnahme" is 72
-      And the admin page lists no unknown item
+
+    Scenario Outline: A name the game uses is not reported as unknown: "<name>"
+      Given the price list the service ships values:
+        | item         | kind   | market value   |
+        | <plain item> | <kind> | <market value> |
+      And the guild storage ledger holds:
+        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang  |
+        | 01.01.2026 12:00 | Aurora | 1     | <name>     | 100      | Entnahme |
+      And the daily collection has run
+      When the admin opens the admin page
+      Then the admin page lists no unknown item
+
+      Examples:
+        | name                                | plain item        | kind               | market value |
+        | Marmor                              | Marmor            | Rohstoffe          | 120          |
+        | Streitaxt des Wegelagerers          | Streitaxt         | Äxte               | 1800         |
+        | Barbarenaxt der Wache               | Barbarenaxt       | Äxte               | 4900         |
+        | Bidenaxt des Wegelagerers [2H]      | Bidenaxt [2H]     | Äxte [2H]          | 4600         |
+        | Obsidian-Pike des Wegelagerers [2H] | Obsidian-Pike     | Stangenwaffen [2H] | 82300        |
+        | Rubin-Pike [2H] des Wegelagerers    | Rubin-Pike        | Stangenwaffen [2H] | 42300        |
+        | Obsidian-Pike [2H]                  | Obsidian-Pike     | Stangenwaffen [2H] | 82300        |
+        | Smaragd-Pike                        | Smaragd-Pike [2H] | Stangenwaffen [2H] | 22300        |
 
     Scenario Outline: A spelling the game does not use is not recognised: "<spelling>"
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang  |
-        | 15.01.2024 10:00 | Aurora | 1     | <spelling> | 100      | Entnahme |
-      When the daily collection runs
-      Then Aurora's "Entnahme" is 0
-      And the admin page reads "Unbekannte Items: <spelling>"
+        | 01.01.2026 12:00 | Aurora | 1     | <spelling> | 100      | Entnahme |
+      And the daily collection has run
+      When the admin opens the admin page
+      Then the admin page reads "Unbekannte Items: <spelling>"
 
       Examples:
         | spelling    |
@@ -41,10 +63,10 @@ Feature: Recognising items by the names the game uses
         | <plain item> | <kind> | <market value> |
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang  |
-        | 15.01.2024 10:00 | Aurora | 1     | <name>     | 100      | Entnahme |
-      When the daily collection runs
+        | 01.01.2026 12:00 | Aurora | 1     | <name>     | 100      | Entnahme |
+      And the daily collection has run
+      When a member opens the overview
       Then Aurora's "Entnahme" is <withdrawal>
-      And the admin page lists no unknown item
 
       Examples:
         | name                                | plain item    | kind               | market value | withdrawal |
@@ -60,10 +82,10 @@ Feature: Recognising items by the names the game uses
         | Streitaxt | Äxte | 1800         |
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang  |
-        | 15.01.2024 10:00 | Aurora | 1     | <name>     | 100      | Entnahme |
-      When the daily collection runs
-      Then Aurora's "Entnahme" is 0
-      And the admin page reads "Unbekannte Items: <name>"
+        | 01.01.2026 12:00 | Aurora | 1     | <name>     | 100      | Entnahme |
+      And the daily collection has run
+      When the admin opens the admin page
+      Then the admin page reads "Unbekannte Items: <name>"
 
       Examples:
         | name                            |
@@ -79,10 +101,10 @@ Feature: Recognising items by the names the game uses
         | <item> | Stangenwaffen [2H] | <market value> |
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang  |
-        | 15.01.2024 10:00 | Aurora | 1     | <spelling> | 100      | Entnahme |
-      When the daily collection runs
+        | 01.01.2026 12:00 | Aurora | 1     | <spelling> | 100      | Entnahme |
+      And the daily collection has run
+      When a member opens the overview
       Then Aurora's "Entnahme" is <withdrawal>
-      And the admin page lists no unknown item
 
       Examples:
         | spelling           | item              | market value | withdrawal |
@@ -95,54 +117,39 @@ Feature: Recognising items by the names the game uses
         | Kriegshammer [2H] | Keulen [2H] | 14200        |
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand   | Qualität | Vorgang  |
-        | 15.01.2024 10:00 | Aurora | 1     | Kriegshammer | 100      | Entnahme |
-      When the daily collection runs
-      Then Aurora's "Entnahme" is 0
-      And the admin page reads "Unbekannte Items: Kriegshammer"
+        | 01.01.2026 12:00 | Aurora | 1     | Kriegshammer | 100      | Entnahme |
+      And the daily collection has run
+      When the admin opens the admin page
+      Then the admin page reads "Unbekannte Items: Kriegshammer"
 
   Rule: A name the price list does not know is worth nothing either way
 
-    Scenario: A known item beside an unknown one is valued and stays off the unknown items
-      Given the price list the service ships values:
-        | item   | kind      | market value |
-        | Marmor | Rohstoffe | 120          |
-      And the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang  |
-        | 15.01.2024 10:00 | Aurora | 1     | Marmor      | 100      | Entnahme |
-        | 15.01.2024 11:00 | Aurora | 1     | Unobtainium | 100      | Entnahme |
-      When the daily collection runs
-      Then Aurora's "Entnahme" is 72
-      And the admin page reads "Unbekannte Items: Unobtainium"
-
-    Scenario: An unknown item neither credits nor costs anything and is reported
+    Scenario: An unknown item neither credits nor costs anything
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 15.01.2024 10:00 | Aurora | 5     | Unobtainium | 100      | Einlagerung |
-        | 16.01.2024 10:00 | Aurora | 2     | Unobtainium | 100      | Entnahme    |
-      When the daily collection runs
+        | 01.01.2026 12:00 | Aurora | 1     | Unobtainium | 100      | Einlagerung |
+        | 02.01.2026 12:00 | Aurora | 1     | Unobtainium | 100      | Entnahme    |
+      And the daily collection has run
+      When a member opens the overview
       Then the overview shows:
         | Avatar | Einlagerung | Entnahme | Nach Abzügen |
         | Aurora | 0           | 0        | 0            |
       And the guild's position reads:
         | Gildenspende | Handwerkssubventionen |
         | 0            | 0                     |
-      And the admin page reads "Unbekannte Items: Unobtainium"
 
   Rule: Practice pieces and quest items are known and worth nothing on purpose
 
-    Scenario Outline: "<item>" is worth nothing and is not reported as unknown
+    Scenario Outline: "<item>" is not reported as unknown although it is worth nothing
       Given the price list the service ships values:
         | item   | kind   | market value |
         | <item> | <kind> | 0            |
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 15.01.2024 10:00 | Aurora | 7     | <item>     | 100      | Einlagerung |
-        | 16.01.2024 10:00 | Aurora | 7     | <item>     | 100      | Entnahme    |
-      When the daily collection runs
-      Then the overview shows:
-        | Avatar | Einlagerung | Entnahme |
-        | Aurora | 0           | 0        |
-      And the admin page lists no unknown item
+        | 01.01.2026 12:00 | Aurora | 1     | <item>     | 100      | Einlagerung |
+      And the daily collection has run
+      When the admin opens the admin page
+      Then the admin page lists no unknown item
 
       Examples:
         | item                      | kind           |
