@@ -22,7 +22,7 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M13 | The specification runs | G22, G23 → G24 → G19; the corrected behaviors E22–E25, E21, F9, B21 | Task 0 of the adopted process: every later strand builds on executable scenarios, and condensing before the step definitions keeps their steps from being written twice |
+| M13 | The specification runs | G22 → G24 → G19; the corrected behaviors E22–E25, E21, F9, B21 | Task 0 of the adopted process: every later strand builds on executable scenarios, and condensing before the step definitions keeps their steps from being written twice |
 | M5 | Overview truth | author steps only | Closing out; the code landed, two restated author checks remain |
 | M7 | The overview states the guild's actual position | the catalog closed against the game, the release run (the stone renames, the deploy script) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the catalog work joins because the release publishes `Gildenspende` for the first time |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition question, round-trip detection, the row rounding, opening balance, explanation page with the trader's figure (D-12, E26, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
@@ -37,7 +37,8 @@ Slice: the scenarios the catch-up derived and the author reviewed run under `./v
 scenario gate that reads as the stakeholder guards every new one.
 
 - [ ] A falsifier reads each draft as its stakeholder and against the whole suite (backlog G22).
-- [ ] Every point in time in a scenario can be placed without working it out (backlog G23).
+- [ ] Every point in time in a scenario can be placed without working it out: the time rules of
+  handbook §5 applied by the condensation (backlog G24).
 - [ ] The catch-up scenarios are condensed and carry the author's review notes (backlog G24).
 - [ ] Every confirmed scenario runs green, the member and the admin through the browser, the
       operator over HTTP and JSON, and the unclear ones are settled (backlog G19, which also meets

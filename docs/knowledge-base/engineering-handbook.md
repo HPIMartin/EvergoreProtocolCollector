@@ -185,6 +185,33 @@ officer's perspective, understandable without reading code:
   browser, as `DashboardBrowserSmokeTest` does today): "the shell is served" is not "the page shows
   data".
 
+**Points in time (author decision 2026-09-27): one calendar.** A reader places every moment
+without arithmetic, because the value itself tells its role; the scenario gate checks each rule on
+the scenario text alone. The catch-up scenarios are brought onto it by their condensation (**G24**).
+
+- **TIME-1 One year:** every date is in 2026.
+- **TIME-2 One month:** dates fall in January, from 01.01. on, in the order things happen. Three
+  exceptions, each only where the claim needs it: the newest movement moves to 15.02. when
+  something must lie clearly outside a 30-day window, 15.07. stands for summer time, and 31.12.
+  is a "now" long after every movement.
+- **TIME-3 Windows start on a round moment:** the 30 days run from 01.01. to 31.01., the 48 hours
+  from 01.01. 12:00 to 03.01. 12:00. January holds no clock change, so a window is its plain length.
+- **TIME-4 The time of day tells the role:** a movement at 12:00; the daily collection at 05:00 on
+  the morning after the movements it reads. Another time only where the claim rests on the minute:
+  a window's edge and one minute past it (11:59 beside 12:00), two movements in one minute, and
+  01.01. 00:00 for a movement that must lie outside a window ending on 31.01.
+- **TIME-5 "Now" only where the claim depends on it:** the clocks are set once, in the first
+  `Given` of the scenario or its Background, and nowhere else.
+- **TIME-6 Oldest first:** steps and ledger rows run in the order the moments happen, unless the
+  claim is about the order in which the game delivers them.
+- **TIME-7 A displayed time repeats its source:** a `Then` that shows a date shows the movement's or
+  the run's own value, and a UTC form is converted for that date's season (05:00 in January is
+  04:00Z).
+- **TIME-8 One keyword per time step:** cucumber-jvm binds a step without its keyword, so the tense
+  carries the role: the past (`ran at`, `has run`, `has been restarted since`) is a precondition
+  under `Given`, the present (`runs`) is the action under `When`, and a new time step takes one of
+  the two and never appears under the other.
+
 **Completeness (what the author confirms).** The planner declares the scenario set to be the
 *whole* acceptance of the feature, checked against this list, and names what is deliberately out of
 scope:
