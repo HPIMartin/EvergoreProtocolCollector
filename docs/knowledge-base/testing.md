@@ -564,7 +564,7 @@ of the Gradle command are load-bearing:
   collaborator wired in, the test is fake-green.
 - **BDD comes first and is mandatory** (handbook §5, author decision 2026-09-20): a feature with
   observable behavior begins with Gherkin scenarios in `src/test/resources/features/`, gated by the
-  scenario falsifier, **confirmed by the author as the complete acceptance**, and committed `@wip`
+  scenario gate, **confirmed by the author as the complete acceptance**, and committed `@wip`
   before any production code; TDD cycles drive them green, step definitions in
   `dev.schoenberg.evergore.protocolParser.acceptance` included, and the feature is armed (`@wip`
   removed) when they pass. `RunAcceptanceScenariosTest` is the one acceptance runner for the whole

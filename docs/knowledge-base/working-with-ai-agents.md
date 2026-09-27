@@ -47,8 +47,8 @@ cross-session memory.
   tests/build), then synthesize; faster than serial reading.
 - Decisions stay with the human; agents gather and draft. The repeatable loop: gather → persist →
   ask → decide → build.
-- Implementation: Planner (you + main session) → Scenario falsifier → Implementer → Falsifier panel
-  → Doc reviewer → Reviewer/Gate; defined in `.claude/agents/`, described in
+- Implementation: Planner (you + main session) → Scenario and stakeholder falsifiers → Implementer
+  → Falsifier panel → Doc reviewer → Reviewer/Gate; defined in `.claude/agents/`, described in
   [multi-agent-playbook.md](multi-agent-playbook.md), per-role models in the frontmatter and the
   playbook's roles table.
 - The author approves the commit plan and is the only one who pushes.

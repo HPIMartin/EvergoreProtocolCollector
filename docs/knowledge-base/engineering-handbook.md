@@ -152,22 +152,26 @@ explicitly* by the planner and named in the plan; it is never the silent default
 **The artifact: `.feature` files, executed.** Scenarios are Gherkin (`Feature`, `Rule`, `Scenario`,
 `Scenario Outline`) bound to step definitions and run by **cucumber-jvm** on the JUnit platform
 ([testing.md](testing.md) names the suite class, the tag filter and the glue package). They are the
-**primary review artifact between author and agents**, written in **product language** from the
-officer's perspective, understandable without reading code:
+**primary review artifact between author and agents**, written in **product language** from its
+stakeholder's view (below), understandable without reading code:
 
 > *(example)*
 >
 > ```gherkin
 > Feature: Guild contribution overview
->   Scenario: Deposits and crafted goods count toward a member's contribution
->     Given member "Bambor" deposited 58410 gold and crafted goods worth 169254
->     When the officer opens the overview
->     Then Bambor's "erzeugter Gildenmehrwert" shows 1170
+>   Scenario: Gold deposited in the guild bank counts toward a member's contribution
+>     Given the guild bank ledger holds:
+>       | Zeitpunkt        | Avatar | Betrag | Vorgang    |
+>       | 01.01.2026 12:00 | Bambor | 100    | Einzahlung |
+>     And the daily collection has run
+>     When a member opens the overview
+>     Then Bambor's "Bank-Einzahlung" is 100
 > ```
 
 - **Declarative, never imperative.** A step names a domain fact or outcome ("the entry is
   booked"), never a UI gesture ("click Save"); the step definition owns the *how*. Technical
-  vocabulary (type names, hashes, endpoints) in a scenario is a finding.
+  vocabulary (type names, hashes, endpoints) is a finding wherever the scenario's actor would not
+  see it ("One actor per scenario", below).
 - **One acceptance runner for the system:** cucumber-jvm drives the whole system, backend and SPA;
   the frontend keeps its Vitest unit tests only.
 - **Feature files live in `src/test/resources/features/`**, one place for the system, one file per
@@ -184,6 +188,31 @@ officer's perspective, understandable without reading code:
   user-visible earns **one** scenario through the real artifact (the real SPA bundle in a real
   browser, as `DashboardBrowserSmokeTest` does today): "the shell is served" is not "the page shows
   data".
+
+**Reading as the stakeholder** (author decisions 2026-09-23 and 2026-09-27,
+[open-questions.md](../open-questions.md)). A non-technical product owner must be able to judge
+every scenario without asking a developer:
+
+- **One actor per scenario**: "a member", "the admin" or "the operator", named as the one who acts
+  or reads (`When a member opens the overview`); a trigger with no person behind it (the daily
+  collection, a client's request) does not replace the actor who reads its outcome. A `Then`
+  asserts only what that actor sees or knows on their own surface: the member and the admin
+  through the UI, the operator through the health check (REST and JSON), the startup, the throttle
+  and the log. An address, a status code or an internal name never stands in a member's or an
+  admin's scenario; it belongs to the step definitions and the unit tests.
+- **One rule, stated once across the suite.** A rule counts wherever a scenario asserts it, in a
+  second `When`/`Then` pair too, not only where a title names it. Two scenarios asserting the same
+  rule for the same stakeholder with different data become one scenario, or one is dropped. The
+  same rule on two surfaces (the admin page and the health report) is one `Scenario Outline` over
+  the surface, each example row naming its own actor. Different stakeholders seeing different
+  consequences of one event (the game cannot be reached) stay apart, each asserting only what its
+  stakeholder needs.
+- **Every outcome reads on its own**: a `Then` names the state it expects ("in descending order"),
+  never one the reader must carry over from an earlier step ("again").
+- **Placeable time**: the "Points in time" rules below (TIME-1 to TIME-8).
+- **Checkable numbers**: an expected figure follows by mental arithmetic from the scenario's data
+  and the prices `valuation/` states, where alone the price-list step stands (quantity 1, round
+  amounts; gold where the price is incidental).
 
 **Points in time (author decision 2026-09-27): one calendar.** A reader places every moment
 without arithmetic, because the value itself tells its role; the scenario gate checks each rule on
@@ -227,9 +256,10 @@ set goes back to the author before that behavior is written.
 **The flow (mandatory order):**
 
 1. **Draft the `.feature` up-front**, before any production code, and run it through the
-   **scenario gate**: `falsifier-scenario` attacks it as a specification (ambiguity, tautology,
-   untestable steps, technical language, coverage), the `reviewer` in scenario mode gates on this
-   section; fix and re-gate.
+   **scenario gate**: `falsifier-scenario` attacks it as a specification against its ticket
+   (ambiguity, tautology, untestable steps, coverage), `falsifier-stakeholder` reads it as its
+   stakeholder and against every `.feature` file (the rules above), the `reviewer` in scenario mode
+   gates on this section with both reports; fix and re-gate.
 2. **► Author gate 1: the author confirms the scenarios and their completeness.** A real gate, not
    a notification: implementation does not start until the author has read the scenarios and said
    yes to the set. Wrong scenarios are cheap here and expensive after three TDD cycles have been
@@ -527,6 +557,9 @@ fresh falsifier and reviewer re-check. Bounds:
   like a clean result.
 - **A rule is never widened by the strand that needs the widening.** Propose the change as an
   author decision like any other; if it is not granted, drop the thing that needed it.
+- **The scenario gate reads the whole suite, not only the draft.** A lens that sees one file or
+  one cluster cannot see an overlap with another, so the stakeholder lens reads every `.feature`
+  file on every run and states how many it read.
 
 Governance is tool-neutral; agent-team mechanics (who runs falsify vs. review, harness-specific
 history-rewrite recipes) live in [multi-agent-playbook.md](multi-agent-playbook.md).

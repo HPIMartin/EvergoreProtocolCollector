@@ -58,8 +58,9 @@ so it carries `@characterization` until then, and a confirmation is a decision t
   language, tagged `@characterization`. The completeness list of handbook §5 applies with one twist:
   "should" is unknown, so every scenario states what the code does, and a path whose intent you
   cannot name becomes a question for the author, not a guess.
-- Run the **scenario gate**: `falsifier-scenario`, then `reviewer` in scenario mode. Coverage is
-  judged against the code paths you listed, since no ticket exists yet.
+- Run the **scenario gate**: `falsifier-scenario` and `falsifier-stakeholder` (it reads the draft
+  against every `.feature` file, the earlier runs' included), then `reviewer` in scenario mode with
+  both reports. Coverage is judged against the code paths you listed, since no ticket exists yet.
 - Write the step definitions (test code, handbook §6) and run `./verify focus <feature file>`. Every
   characterization scenario must pass against the current code before the author sees it.
 

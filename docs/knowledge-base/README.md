@@ -34,7 +34,7 @@ contribution metrics, automating a hand-maintained Google Sheet.
 | 08 | [glossary.md](glossary.md) | German ↔ English domain glossary (the domain is German) |
 | 09 | [engineering-handbook.md](engineering-handbook.md) | **How code looks & how we develop**: clean code, SOLID, hexagonal, TDD, BDD, commits, DoD |
 | 10 | [working-with-ai-agents.md](working-with-ai-agents.md) | The AI-assisted workflow: memory layers, session playbook, sub-agents, asking style |
-| 11 | [multi-agent-playbook.md](multi-agent-playbook.md) | The agent team: Planner · Scenario falsifier · Implementer · Falsifier panel · Doc reviewer · Reviewer; pipeline, roles, invocation |
+| 11 | [multi-agent-playbook.md](multi-agent-playbook.md) | The agent team: Planner · Scenario falsifier · Stakeholder falsifier · Implementer · Falsifier panel · Doc reviewer · Reviewer; pipeline, roles, invocation |
 | 12 | [dev-environment.md](dev-environment.md) | Fully-virtualized dev: the devcontainer, the in-container rule, JDK single-source & upgrade |
 | 13 | [agent-entry-template.md](agent-entry-template.md) | Per-tool session-bootstrap template: SHARED rules + TOOL-SPECIFIC skeleton + template version |
 | 14 | [frontend.md](frontend.md) | The React/TypeScript SPA and the JSON API it reads: stack, module structure & dependency rule, the wire contract, TDD conventions, Gradle/Docker/vulnScan wiring |
@@ -42,7 +42,7 @@ contribution metrics, automating a hand-maintained Google Sheet.
 ## Living documents (outside this folder)
 
 - [../../CLAUDE.md](../../CLAUDE.md): Claude Code entry file (from the template; auto-loaded).
-- [../../.claude/agents/](../../.claude/agents/): subagent definitions (implementer, scenario falsifier, code falsifiers, doc-reviewer, reviewer).
+- [../../.claude/agents/](../../.claude/agents/): subagent definitions (implementer, scenario falsifier, stakeholder falsifier, code falsifiers, doc-reviewer, reviewer).
 - The `.feature` files under `src/test/resources/features/`: the executable specification (handbook
   §5) and the author's primary review artifact ([testing.md](testing.md) names the runner).
 - [../backlog.md](../backlog.md): the "▶ Current status / next action" section every session reads

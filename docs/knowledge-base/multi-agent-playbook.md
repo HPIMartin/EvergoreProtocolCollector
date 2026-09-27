@@ -9,11 +9,12 @@ independent agents try to break it and gate the commit.** Part of the project's 
 | Role | Who / model | Spawned? | Input → Output |
 |------|-------------|----------|----------------|
 | **Planner** | You + me (main-session model), in chat | No, a *hat* | Backlog item → the feature's **author-confirmed `.feature`** (handbook §5) + approved, ordered commit/test list |
-| **Scenario falsifier** | `falsifier-scenario` (`model: sonnet`) | Yes (fresh) | A draft `.feature`, before implementation → skeptical verdict on it as a specification + concrete Gherkin rewrites |
+| **Scenario falsifier** | `falsifier-scenario` (`model: sonnet`) | Yes (fresh) | A draft `.feature`, before implementation → skeptical verdict on it as a specification against its ticket + concrete Gherkin rewrites |
+| **Stakeholder falsifier** | `falsifier-stakeholder` (`model: opus`) | Yes (fresh) | A draft `.feature` (or the whole suite) read against every `.feature` file → verdict on actor, product-owner readability, time, numbers + rewrites + merge proposals for overlaps |
 | **Implementer** | `implementer` (frontmatter `model: sonnet`) | Yes | Approved plan → red→green→refactor per step, commits each locally, arms the scenarios → summary |
 | **Falsifier panel** | `falsifier-domain` · `falsifier-robustness` · `falsifier-frontend` (each `model: sonnet`); spawned per touched surface (see cadence) | Yes (fresh) | Feature diff/commits → adversarial verdicts (domain math · test honesty/robustness · SPA behavior) + counter-tests |
 | **Doc reviewer** | `doc-reviewer` (`model: haiku`) | Yes (fresh) | Feature diff/commits → PASS/FAIL against the KB README's DOC checklist + findings with rule IDs |
-| **Reviewer / Gate** | `reviewer` (`model: opus`) | Yes (fresh, per gate) | Scenario gate: the draft `.feature` + the scenario falsifier's report → PASS/FAIL. Feature gate: feature commits + panel + doc-reviewer reports → PASS/FAIL + findings + proposed `process-learnings.md` entry |
+| **Reviewer / Gate** | `reviewer` (`model: opus`) | Yes (fresh, per gate) | Scenario gate: the draft `.feature` + both scenario-gate falsifiers' reports → PASS/FAIL. Feature gate: feature commits + panel + doc-reviewer reports → PASS/FAIL + findings + proposed `process-learnings.md` entry |
 
 **Non-negotiable:** falsifiers, doc-reviewer and Reviewer are **fresh, independent** agents, never
 the Implementer checking itself (independence is the point). Agents **never `git push`**; pushing
@@ -24,7 +25,8 @@ is the author's decision ([engineering-handbook.md](engineering-handbook.md) §7
 ```
 0. SPECIFY (you + me, chat), mandatory for any observable behavior (handbook §5)
    - draft the feature's `.feature` in product language, checked against the completeness list
-   - scenario gate: spawn `falsifier-scenario`, then `reviewer` in scenario mode; fix, re-gate
+   - scenario gate: spawn `falsifier-scenario` and `falsifier-stakeholder` in parallel, then
+     `reviewer` in scenario mode with both reports; fix, re-gate
    - ► AUTHOR GATE 1: YOU CONFIRM THE SCENARIOS AND THEIR COMPLETENESS (a gate, not a notification)
    - commit the confirmed scenarios tagged @wip (the default run excludes them: the build stays green)
    - the only way past this step is an explicitly claimed exemption: a pure refactoring,
@@ -174,14 +176,17 @@ Planner picks the track up-front and announces it (author can veto). Full rule:
 ## How to invoke
 
 Orchestrator = the main session (me), via the `Agent` tool: `subagent_type` = `implementer` /
-`falsifier-scenario` / `falsifier-domain` / `falsifier-robustness` / `falsifier-frontend` /
-`doc-reviewer` / `reviewer` (defined in `.claude/agents/`). Planner phase, commit-plan approvals and
+`falsifier-scenario` / `falsifier-stakeholder` / `falsifier-domain` / `falsifier-robustness` /
+`falsifier-frontend` / `doc-reviewer` / `reviewer` (defined in `.claude/agents/`). Planner phase, commit-plan approvals and
 pushes happen with **you** in chat.
 
 ## Handoff contracts (what each agent returns)
 
 - **Scenario falsifier:** `soundSpec: yes/no`; findings `{severity, scenario, why}`; concrete
   Gherkin rewrites; coverage gaps as proposed scenario titles.
+- **Stakeholder falsifier:** `filesRead: n of n`; `soundSpec: yes/no`; findings `{severity,
+  scenario, lens, why}`; concrete Gherkin rewrites; `merges: {keep, drop|merge, why}`, kept pairs
+  included with `none`.
 - **Implementer:** per-step status (red evidence: the failing test's name and failure line, or the
   recorded mutation for an adapted test; green; refactor), commit message used, focused-test
   result, the state of the `.feature` (armed, or which scenarios still fail), full-suite result
@@ -230,9 +235,9 @@ pushes happen with **you** in chat.
 
 ## Worked example (the storage-value evaluator feature)
 
-1. **Specify:** *Given* a member deposited crafted goods of a known recipe, *when* the officer
+1. **Specify:** *Given* a member deposited crafted goods of a known recipe, *when* a member
    opens the overview, *then* the member's storage sum shows the recipe value times quantity and
-   quality. Drafted as a `.feature`, gated by the scenario falsifier, **confirmed by the author as
+   quality. Drafted as a `.feature`, gated by the scenario gate, **confirmed by the author as
    complete**, committed `@wip`.
 2. **Plan:** test list for `EvergoreDataEvaluator` storage calc: ① place value = Σ storageValue·qty·quality/100 ② withdraw value uses withdrawlValue ③ unknown item → UNDEFINED+log ④ watermark advances. Messages approved.
 3. **Implement:** four red→green→refactor micro-commits with those messages; when the scenario

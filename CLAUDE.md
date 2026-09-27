@@ -66,10 +66,10 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
 ## Claude-Code mechanics (this tool only)
 
 - **Auto-load:** Claude Code reads this file at session start; keep it short and KB-pointing.
-- **Sub-agents:** the `implementer` / `falsifier-scenario` / `falsifier-domain` /
-  `falsifier-robustness` / `falsifier-frontend` (the SPA) / `doc-reviewer` / `reviewer` agent team
-  is defined in [`.claude/agents/`](.claude/agents/) and driven per the multi-agent playbook
-  (Planner = the main session together with the author).
+- **Sub-agents:** the `implementer` / `falsifier-scenario` / `falsifier-stakeholder` /
+  `falsifier-domain` / `falsifier-robustness` / `falsifier-frontend` (the SPA) / `doc-reviewer` /
+  `reviewer` agent team is defined in [`.claude/agents/`](.claude/agents/) and driven per the
+  multi-agent playbook (Planner = the main session together with the author).
 - **Bash stdout (host only):** a session started on the Windows host may not surface Bash stdout;
   redirect to a file (`cmd > out.txt 2>&1`) and `Read` it. Inside the devcontainer, Bash is normal.
 - **Permission-blocked** (per [`.claude/settings.json`](.claude/settings.json)): `git push`,
