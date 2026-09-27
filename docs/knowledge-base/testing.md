@@ -334,7 +334,7 @@ closed against the game on 2026-09-11 and was re-measured unchanged on 2026-09-2
 - The identity `net = Gildenbank + Gildenlagerwert - Gildenspende + Handwerkssubventionen` holds
   **exactly** in whole gold, per avatar and in the total, which is what makes the header checkable
   against the table.
-- The guild's trader lands at `-2.024.939` on about 90 Mio of goods moved, the break-even the
+- The guild's trader lands at `-2.189.599` (re-measured 2026-09-27) on about 90 Mio of goods moved, the break-even the
   100 % credit is meant to produce, and the split says why: `35.112.568` of the guild's whole
   `39.441.922` subsidy is that one avatar's, against a donation of only `897.138`.
 

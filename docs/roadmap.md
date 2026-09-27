@@ -25,7 +25,7 @@
 | M13 | The specification runs | G22 → G24 → G19; the corrected behaviors E22–E25, E21, F9, B21 | Task 0 of the adopted process: every later strand builds on executable scenarios, and condensing before the step definitions keeps their steps from being written twice |
 | M5 | Overview truth | author steps only | Closing out; the code landed, two restated author checks remain |
 | M7 | The overview states the guild's actual position | the catalog closed against the game, the release run (the stone renames, the deploy script) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the catalog work joins because the release publishes `Gildenspende` for the first time |
-| M8 | The numbers hold up | the remaining unvalued names and the ammunition question, round-trip detection, the row rounding, opening balance, explanation page with the trader's figure (D-12, E26, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
+| M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, opening balance, explanation page with the trader's figure (E29, E26, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
 | M9 | Clear the last bottleneck | D24 | The transactional ingest rests on the unified repositories, which every later read method needed first |
 | M10 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
 | M11 | Product build-out | E12→E13, E9, E3, E6, E27 | E12 inherits D18's query shape, so it follows it |
@@ -92,12 +92,12 @@ cannot decide it, and a member can follow how his own row comes about.
       of the 15 names over 31 rows, 13 are gem pieces no complete read priced and 2 are parser
       misses. The recompute was re-run on the 03.09.2026 snapshot and the guild position did not
       move ([testing.md](knowledge-base/testing.md)).
-- [ ] Whether bought ammunition is credited in full is decided, with the double payment to crafters
-      addressed by a rule the ledger can actually apply (open question D-12). It belongs here
-      because it changes what a deposit credits.
-- [ ] A member's row, the guild row and the header figures round as the author decided, from the
-      exact values where the decision says so (backlog E26). It changes what a row shows, so it
-      precedes the explanation page like every rule above it.
+- [ ] The three ammunition sorts the NPC sells are credited in full, every other sort at 60 %, as
+      decided 2026-09-27 (backlog E29): a rule the ledger can apply that bounds the double payment
+      to crafters. It belongs here because it changes what a deposit credits.
+- [ ] A member's row, the guild row and the header figures are each rounded once from the exact
+      values, as decided 2026-09-27 (backlog E26). It changes what a row shows, so it precedes the
+      explanation page like every rule above it.
 - [x] A member cycling trader goods through the storage is named with the item and the overlapping
       quantity, and a test proves the warning stays silent for a crafter who withdraws material and
       deposits the product.
