@@ -605,8 +605,8 @@ of the Gradle command are load-bearing:
   `@wip` scenarios, `./verify all` the armed ones; a `@characterization` scenario awaiting the
   author's confirmation (`/bdd-catch-up`) is excluded from `all` like `@wip`. Scenario language:
   English, with the game's German names quoted as the game spells them. The catch-up's
-  174 scenarios sit in seven cluster folders (`overview/`, `ledgers/`, `valuation/`, `round_trips/`,
+  scenarios sit in seven cluster folders (`overview/`, `ledgers/`, `valuation/`, `round_trips/`,
   `collection/`, `dashboard/`, `operations/`), committed `@wip` until their step definitions exist;
-  those the author left unclear or rejected carry `@characterization` besides (2026-09-24). The
+  a scenario the author has not settled carries `@characterization` besides. The
   collect→evaluate→overview flow is covered today by `ProtocolEvaluationAcceptanceTest` (scraper
   stubbed, real evaluation, asserted via HTTP + the meta repo).
