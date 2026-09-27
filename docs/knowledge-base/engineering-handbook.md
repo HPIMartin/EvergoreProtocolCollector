@@ -195,7 +195,9 @@ every scenario without asking a developer:
 
 - **One actor per scenario**: "a member", "the admin" or "the operator", named as the one who acts
   or reads (`When a member opens the overview`); a trigger with no person behind it (the daily
-  collection, a client's request) does not replace the actor who reads its outcome. A `Then`
+  collection, a client's request) does not replace the actor who reads its outcome, so a
+  scenario the throttle or a refused address answers names the operator in its `Then` (`Then the
+  operator finds the client turned away for sending too many requests`). A `Then`
   asserts only what that actor sees or knows on their own surface: the member and the admin
   through the UI, the operator through the health check (REST and JSON), the startup, the throttle
   and the log. An address, a status code or an internal name never stands in a member's or an
@@ -228,18 +230,23 @@ the scenario text alone. The catch-up scenarios are brought onto it by their con
 - **TIME-4 The time of day tells the role:** a movement at 12:00; the daily collection at 05:00 on
   the morning after the movements it reads. Another time only where the claim rests on the minute:
   a window's edge and one minute past it (11:59 beside 12:00), two movements in one minute, and
-  01.01. 00:00 for a movement that must lie outside a window ending on 31.01.
+  01.01. 00:00 for a movement that must lie outside a window ending on 31.01. Steps that must fall
+  inside one 48-hour window without testing its edge take consecutive hours of 01.01. (12:00,
+  13:00, 14:00). The item lines under one headline of the game's protocol are one entry, not two
+  movements in one minute.
 - **TIME-5 "Now" only where the claim depends on it:** the clocks are set once, in the first
   `Given` of the scenario or its Background, and nowhere else.
 - **TIME-6 Oldest first:** steps and ledger rows run in the order the moments happen, unless the
-  claim is about the order in which the game delivers them.
+  claim is about the order in which the game delivers them; the game's protocol text is written
+  newest first, as the game delivers it.
 - **TIME-7 A displayed time repeats its source:** a `Then` that shows a date shows the movement's or
   the run's own value, and a UTC form is converted for that date's season (05:00 in January is
   04:00Z).
 - **TIME-8 One keyword per time step:** cucumber-jvm binds a step without its keyword, so the tense
   carries the role: the past (`ran at`, `has run`, `has been restarted since`) is a precondition
   under `Given`, the present (`runs`) is the action under `When`, and a new time step takes one of
-  the two and never appears under the other.
+  the two and never appears under the other. A lasting state is no event: it stands under `Given` in the
+  present (`the clocks read 31.12.2026 12:00`).
 
 **Completeness (what the author confirms).** The planner declares the scenario set to be the
 *whole* acceptance of the feature, checked against this list, and names what is deliberately out of
