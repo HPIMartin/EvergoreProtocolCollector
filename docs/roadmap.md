@@ -14,18 +14,35 @@
 > knew none of the five items it produced. The explanation page must be revised in the same change
 > as any valuation rule it explains, so everything that changes what the numbers are lands before
 > it. A parked set stays explicitly out of this stage.
+> **Re-cut 2026-09-27** (author go on the plan after the scenario review, see open-questions.md):
+> the specification catch-up (M13) comes first and runs beside the other lanes; the row rounding
+> (E26) joins M8, ahead of the explanation page.
 
 ## Order
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
+| M13 | The specification runs | G22, G23 → G24 → G19; the corrected behaviors E22–E25, E21, F9, B21 | Task 0 of the adopted process: every later strand builds on executable scenarios, and condensing before the step definitions keeps their steps from being written twice |
 | M5 | Overview truth | author steps only | Closing out; the code landed, two restated author checks remain |
 | M7 | The overview states the guild's actual position | the catalog closed against the game, the release run (the stone renames, the deploy script) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the catalog work joins because the release publishes `Gildenspende` for the first time |
-| M8 | The numbers hold up | the remaining unvalued names and the ammunition question, round-trip detection, opening balance, explanation page with the trader's figure (D-12, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
+| M8 | The numbers hold up | the remaining unvalued names and the ammunition question, round-trip detection, the row rounding, opening balance, explanation page with the trader's figure (D-12, E26, E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
 | M9 | Clear the last bottleneck | D24 | The transactional ingest rests on the unified repositories, which every later read method needed first |
 | M10 | What the bottlenecks release | D17, D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
-| M11 | Product build-out | E12→E13, E9, E3, E6 | E12 inherits D18's query shape, so it follows it |
-| M12 | Ops, security & environment | F1, H11, C1, C8, C10, C11, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
+| M11 | Product build-out | E12→E13, E9, E3, E6, E27 | E12 inherits D18's query shape, so it follows it |
+| M12 | Ops, security & environment | F1, H11, C1, C8, C10, C11→E28, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
+
+## M13: The specification runs
+
+Slice: the scenarios the catch-up derived and the author reviewed run under `./verify all`, and a
+scenario gate that reads as the stakeholder guards every new one.
+
+- [ ] A falsifier reads each draft as its stakeholder and against the whole suite (backlog G22).
+- [ ] Every point in time in a scenario can be placed without working it out (backlog G23).
+- [ ] The catch-up scenarios are condensed and carry the author's review notes (backlog G24).
+- [ ] Every confirmed scenario runs green, the member and the admin through the browser, the
+      operator over HTTP and JSON, and the unclear ones are settled (backlog G19, which also meets
+      B31).
+- [ ] Each corrected behavior is green and armed (backlog E22, E23, E24, E25, E21, F9, B21).
 
 ## M5: Overview truth
 
@@ -77,6 +94,9 @@ cannot decide it, and a member can follow how his own row comes about.
 - [ ] Whether bought ammunition is credited in full is decided, with the double payment to crafters
       addressed by a rule the ledger can actually apply (open question D-12). It belongs here
       because it changes what a deposit credits.
+- [ ] A member's row, the guild row and the header figures round as the author decided, from the
+      exact values where the decision says so (backlog E26). It changes what a row shows, so it
+      precedes the explanation page like every rule above it.
 - [x] A member cycling trader goods through the storage is named with the item and the overlapping
       quantity, and a test proves the warning stays silent for a crafter who withdraws material and
       deposits the product.
@@ -127,6 +147,8 @@ its due.
 - [ ] Hunt-loot estimate (backlog E3). Its valuation half is decided; only the display estimate of
       open question D-4 still gates it.
 - [ ] History / time-series per avatar (backlog E6).
+- [ ] A load failure and a dead link each show a picture of their own, the "link dead" among
+      them, before 1.0 (backlog E27).
 
 ## M12: Ops, security & environment
 
@@ -139,6 +161,7 @@ reaches its current major.
 - [ ] `Configuration` is real and immutable (C1); `vulnScan` is at zero and gated (C8); every
       request is counted and logged whatever its target looks like (C10).
 - [ ] Auth, session and rate limiting move to JWT, so no credential travels in a URL (backlog C11).
+- [ ] The admin page leads to the members it names, on the roles above (backlog E28).
 - [ ] A `selenium/standalone-firefox` service backs an integration test (H2), and the
       server-booting tests split into their own Gradle set (H6).
 - [ ] Micronaut 5, endpoints 1:1 against the prod snapshot (H9). Precondition: the nets above.
