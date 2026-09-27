@@ -353,7 +353,9 @@ plus the corrected scenario tagged `@wip`.
     the worktrees it created under `.claude/worktrees/` (`git worktree remove [--force]`,
     `git worktree prune`) and the branches that have landed (`git branch -d`, and its `-C` form).
     Deliberately *git-native*, never `rm`: `git branch -d` refuses a branch that is not fully merged,
-    so the safety lives in the command instead of in the agent's judgment. After a `--ff-only`
+    so the safety lives in the command instead of in the agent's judgment. A directory a removal
+    leaves behind empty under `.claude/worktrees/` goes with `rmdir`, which refuses anything that is
+    not empty, so the same safety holds (author decision 2026-09-27). After a `--ff-only`
     landing, removing the worktree and deleting the branch is part of the landing, not a separate
     request; the commits live on in `main`, and the reflog still holds deleted tips for a while.
   - **`git branch -D` stays off the table** (deny floor, and a Claude Code built-in besides). A

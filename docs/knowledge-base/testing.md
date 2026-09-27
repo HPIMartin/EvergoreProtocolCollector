@@ -375,6 +375,10 @@ possible.
   without a snapshot at that path fails on the missing file instead of passing empty.
 - It writes only under `build/`, never to the snapshot. Always copy the snapshot; never open the
   original read-write.
+- Every other copy of production data, a probe's or a gate agent's, also lives only under the
+  worktree's own `build/`, never in `/tmp` or a session scratchpad: `clean` and
+  `git worktree remove` take it away with the worktree, while a copy outside it outlives the
+  session and carries the guild's personal data.
 
 ### The game-catalog scrape
 

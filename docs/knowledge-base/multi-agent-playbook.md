@@ -157,7 +157,8 @@ Planner picks the track up-front and announces it (author can veto). Full rule:
   the author's go. Conflict resolutions are the one place new, unreviewed content can appear, so
   both reviews stay exactly there. Pushing always stays with the author.
 - **Clean up merged strands immediately, without asking:** once a strand is fast-forward-merged into
-  `main`, `git worktree remove <path>` and `git branch -d <branch>`, then `git worktree prune`. This
+  `main`, `git worktree remove <path>` and `git branch -d <branch>`, then `git worktree prune`, and
+  `rmdir` a directory the removal left behind empty (handbook §7). This
   is the agent's own scaffolding and the agent owns it (handbook §7); the commits live on in `main`,
   the branch label and worktree are pure redundancy, and the reflog still holds deleted tips for a
   while. The safety is in the command, not in judgment: `git branch -d` refuses a branch that is not
@@ -209,6 +210,9 @@ pushes happen with **you** in chat.
 - **Probes live in the gitignored `src/probe/java`**, run via `./gradlew probe` and get cleared with
   `./gradlew clearProbes`, never with `rm` (→ [build-run-deploy.md](build-run-deploy.md),
   handbook §7): outside `check`/`build` and outside git, a leftover probe breaks nothing.
+- **Copies of production data stay in the worktree's own `build/`**, never in `/tmp` or a session
+  scratchpad, so they go with the worktree ([testing.md](testing.md), the production-snapshot
+  harness).
 - Focused tests during micro-steps (`./verify focus <path>`), the `@wip` scenarios via
   `./verify bdd`; the full `./verify all` before the gate, cache disabled, executed-proof read
   ([testing.md](testing.md)).
