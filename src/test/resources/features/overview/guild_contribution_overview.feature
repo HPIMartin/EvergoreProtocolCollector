@@ -75,14 +75,15 @@ Feature: Guild contribution overview
     When a member opens the overview
     Then the page says "Die Daten konnten nicht geladen werden. Bitte später erneut versuchen."
 
-  Rule: Each figure is rounded to whole gold on its own before anything adds it up
-    A member's column is rounded before the member's row is added up, and the guild row adds the
-    rounded rows, so every row and the guild row match what a member can add up by hand.
+  Rule: Every figure is rounded to whole gold once, from the exact values it is made of
+    A member's row, the guild row and the guild's position are each worked out from the exact
+    values and rounded only where they are shown, so a shown figure can differ from the sum of the
+    shown figures beside or above it.
 
     Scenario Outline: A storage value of <exact> gold is shown as <shown>
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität  | Vorgang     |
-        | 15.01.2024 10:00 | Aurora | 1     | <item>     | <quality> | Einlagerung |
+        | 01.01.2026 12:00 | Aurora | 1     | <item>     | <quality> | Einlagerung |
       And the daily collection has run
       When a member opens the overview
       Then the overview shows:
@@ -90,40 +91,71 @@ Feature: Guild contribution overview
         | Aurora | <shown>     | <shown>      |
 
       Examples:
-        | item   | quality | exact | shown |
-        | Pfeile | 100     | 1,8   | 2     |
-        | Pfeile | 70      | 1,26  | 1     |
-        | Federn | 2       | 0,5   | 1     |
+        | item         | quality | exact | shown |
+        | Kriegspfeile | 70      | 2,94  | 3     |
+        | Kriegspfeile | 30      | 1,26  | 1     |
+        | Federn       | 2       | 0,5   | 1     |
 
-    @characterization
-    Scenario: Each column is rounded before the row adds them up
-      Deposited 1,26 and withdrawn 0,54 show as 1 and 1, so the row reads 0 although the exact
-      difference, 0,72, would round to 1.
+    @wip
+    Scenario: A member's row is rounded from its exact value, not from its rounded columns
+      Aurora deposited goods worth 1,26 and withdrew goods worth 0,54, so she generated 0,72. Today
+      each column is rounded first, to 1 and 1, and the row reads 0. This states the corrected
+      behavior.
 
       Given the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 15.01.2024 10:00 | Aurora | 1     | Pfeile     | 70       | Einlagerung |
-        | 16.01.2024 10:00 | Aurora | 1     | Pfeile     | 30       | Entnahme    |
+        | Zeitpunkt        | Avatar | Menge | Gegenstand   | Qualität | Vorgang     |
+        | 01.01.2026 12:00 | Aurora | 1     | Kriegspfeile | 30       | Einlagerung |
+        | 02.01.2026 12:00 | Aurora | 1     | Götterstich  | 10       | Entnahme    |
       And the daily collection has run
       When a member opens the overview
       Then the overview shows:
         | Avatar | Einlagerung | Entnahme | Nach Abzügen |
-        | Aurora | 1           | 1        | 0            |
+        | Aurora | 1           | 1        | 1            |
 
-    Scenario: The guild row adds up the rows above it exactly
-      Each row is rounded to whole gold on its own, and the guild row adds the rounded rows, so it
-      matches the column a member can add up by hand rather than the unrounded guild total.
+    @wip
+    Scenario: The figure before the guild's share is rounded from its exact value
+      Aurora deposited feathers worth 0,5, credited in full, of which the guild paid 0,2 above its
+      own price, so before the guild's share she moved 0,3. Today the rounded 1 less the rounded 0
+      reads 1, in her row and in the guild row. This states the corrected behavior.
 
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 15.01.2024 10:00 | Aurora | 1     | Pfeile     | 70       | Einlagerung |
-        | 15.01.2024 11:00 | Boreas | 1     | Pfeile     | 70       | Einlagerung |
+        | 01.01.2026 12:00 | Aurora | 1     | Federn     | 2        | Einlagerung |
+      And the daily collection has run
+      And a member has opened the overview
+      When the member switches the last column to "Vor Abzügen"
+      Then the overview shows:
+        | Avatar | Vor Abzügen |
+        | Aurora | 0           |
+      And the guild row shows:
+        | Avatar | Vor Abzügen |
+        | Gilde  | 0           |
+
+    @wip
+    Scenario: The guild row and the guild's position are rounded from the guild's exact values
+      Aurora and Boreas each deposited goods credited 2,34 in all: the guild paid 0,6 above its own
+      price for the feathers and was given 0,36 for nothing in copper ore. Each row shows 2.
+      Exactly, the guild row is 4,68, the guild paid 1,2 above its price, was given 0,72 and holds
+      4,68 + 0,72 - 1,2 = 4,2. Today the guild row adds the rounded rows and reads 4, and the
+      guild's position adds rounded figures to 2, 0 and 2. This states the corrected behavior.
+
+      Given the guild storage ledger holds:
+        | Zeitpunkt        | Avatar | Menge | Gegenstand   | Qualität | Vorgang     |
+        | 01.01.2026 12:00 | Aurora | 1     | Kriegspfeile | 20       | Einlagerung |
+        | 02.01.2026 12:00 | Aurora | 1     | Federn       | 6        | Einlagerung |
+        | 03.01.2026 12:00 | Aurora | 1     | Kupfererz    | 3        | Einlagerung |
+        | 04.01.2026 12:00 | Boreas | 1     | Kriegspfeile | 20       | Einlagerung |
+        | 05.01.2026 12:00 | Boreas | 1     | Federn       | 6        | Einlagerung |
+        | 06.01.2026 12:00 | Boreas | 1     | Kupfererz    | 3        | Einlagerung |
       And the daily collection has run
       When a member opens the overview
       Then the overview shows:
         | Avatar | Einlagerung | Nach Abzügen |
-        | Aurora | 1           | 1            |
-        | Boreas | 1           | 1            |
+        | Aurora | 2           | 2            |
+        | Boreas | 2           | 2            |
       And the guild row shows:
-        | Avatar | Einlagerung | Nach Abzügen | Letzte Lageraktivität | Letzte Bankaktivität |
-        | Gilde  | 2           | 2            | –                     | –                    |
+        | Avatar | Einlagerung | Nach Abzügen |
+        | Gilde  | 5           | 5            |
+      And the guild's position reads:
+        | Gildenbank | Gildenlagerwert | Gildenspende | Handwerkssubventionen |
+        | 0          | 4               | 1            | 1                     |
