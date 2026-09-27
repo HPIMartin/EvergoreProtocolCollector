@@ -201,7 +201,9 @@ every scenario without asking a developer:
   asserts only what that actor sees or knows on their own surface: the member and the admin
   through the UI, the operator through the health check (REST and JSON), the startup, the throttle
   and the log. An address, a status code or an internal name never stands in a member's or an
-  admin's scenario; it belongs to the step definitions and the unit tests.
+  admin's scenario; it belongs to the step definitions and the unit tests. A description sentence
+  starting "Today" may quote word for word what the actor sees today, technical words included;
+  the `Then` never does.
 - **One rule, stated once across the suite.** A rule counts wherever a scenario asserts it, in a
   second `When`/`Then` pair too, not only where a title names it. Two scenarios asserting the same
   rule for the same stakeholder with different data become one scenario, or one is dropped. The
