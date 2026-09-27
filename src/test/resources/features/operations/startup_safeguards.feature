@@ -25,7 +25,8 @@ Feature: The service refuses to start on a setting that would break it silently
 
   Rule: The service runs only in a time zone with a fixed offset from UTC
     The ledgers store times as wall-clock text, which cannot tell the two passes of an hour apart
-    when the clocks are set back.
+    when the clocks are set back. A zone that once had summer time is refused as well: Tokyo kept
+    summer time from 1948 to 1951, although it has none today.
 
     Scenario Outline: A time zone whose offset has ever changed is refused: "<zone>"
       Given the service's time zone is "<zone>"
