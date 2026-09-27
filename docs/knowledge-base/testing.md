@@ -306,7 +306,7 @@ recomputed value per key.
   sides.
 - **Not measured, and not claimable from this:** whether the recompute computes the *right* number.
   Code and store carrying the same error would leave this diff empty by construction. That is
-  **B19**'s purpose and stays a separate item. The catalog gap above is a known instance: both sides
+  the purpose of the scripted 1:1 value comparison (**B19**), which stays a separate item. The catalog gap above is a known instance: both sides
   value an unknown item at zero, so it reproduces perfectly and this check stays silent on it.
 - **Not reproducible:** the per-avatar ratio band of `0.12`-`1.33` first reported from the 31.07.2026 file. No quantity tried (per key, per
   family, gross, deposits, withdrawals, net) yields a `0.12` lower bound on any surviving snapshot;
