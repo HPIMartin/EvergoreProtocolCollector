@@ -11,69 +11,67 @@ Feature: Reading the entries of the game's protocols
     Scenario Outline: A headline "<kind>" in the <protocol> protocol counts as "<column>"
       Given the game's <protocol> protocol shows:
         """
-        11.12.2025 13:37 Aurora <kind>
+        01.01.2026 12:00 Aurora <kind>
         <line>
         """
-      When the daily collection runs
+      And the daily collection ran at 02.01.2026 05:00
+      When a member opens the overview
       Then Aurora's "<column>" is <value>
 
       Examples:
-        | protocol | kind        | line           | column          | value |
-        | storage  | Einlagerung | 10 Eisenbarren | Einlagerung     | 720   |
-        | storage  | Entnahme    | 10 Eisenbarren | Entnahme        | 720   |
-        | bank     | Einzahlung  | 100 Gold       | Bank-Einzahlung | 100   |
-        | bank     | Entnahme    | 100 Gold       | Bank-Auszahlung | 100   |
+        | protocol | kind        | line          | column          | value |
+        | storage  | Einlagerung | 1 Eisenbarren | Einlagerung     | 72    |
+        | storage  | Entnahme    | 1 Eisenbarren | Entnahme        | 72    |
+        | bank     | Einzahlung  | 100 Gold      | Bank-Einzahlung | 100   |
+        | bank     | Entnahme    | 100 Gold      | Bank-Auszahlung | 100   |
 
-    Scenario: A member's name may consist of several words
+    Scenario Outline: A member's name may <shape>
       Given the game's storage protocol shows:
         """
-        11.12.2025 13:37 Hans Meyer Einlagerung
-        10 Eisenbarren
+        01.01.2026 12:00 <name> Einlagerung
+        1 Eisenbarren
         """
-      When the daily collection runs
-      Then the storage ledger of "Hans Meyer" shows exactly:
-        | Zeitpunkt        | Avatar     | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 11.12.2025 13:37 | Hans Meyer | 10    | Eisenbarren | 100      | Einlagerung |
+      And the daily collection ran at 02.01.2026 05:00
+      When a member opens the storage ledger of "<name>"
+      Then the storage ledger of "<name>" shows exactly:
+        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
+        | 01.01.2026 12:00 | <name> | 1     | Eisenbarren | 100      | Einlagerung |
 
-    Scenario: A member's name may contain the word for a kind of movement
-      Given the game's storage protocol shows:
-        """
-        11.12.2025 13:37 Entnahmefreund Einlagerung
-        10 Eisenbarren
-        """
-      When the daily collection runs
-      Then the storage ledger of "Entnahmefreund" shows exactly:
-        | Zeitpunkt        | Avatar         | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 11.12.2025 13:37 | Entnahmefreund | 10    | Eisenbarren | 100      | Einlagerung |
+      Examples:
+        | shape                                   | name           |
+        | consist of several words                | Hans Meyer     |
+        | contain the word for a kind of movement | Entnahmefreund |
 
     Scenario: Every headline opens an entry of its own
       Given the game's storage protocol shows:
         """
-        12.12.2025 09:00 Boreas Entnahme
-        2 Kupfererz
-        11.12.2025 13:37 Aurora Einlagerung
-        10 Eisenbarren
+        02.01.2026 12:00 Boreas Entnahme
+        1 Kupfererz
+        01.01.2026 12:00 Aurora Einlagerung
+        1 Eisenbarren
         """
-      When the daily collection runs
+      And the daily collection ran at 03.01.2026 05:00
+      When a member opens the storage ledgers of "Boreas" and "Aurora"
       Then the storage ledger of "Boreas" shows exactly:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang  |
-        | 12.12.2025 09:00 | Boreas | 2     | Kupfererz  | 100      | Entnahme |
+        | 02.01.2026 12:00 | Boreas | 1     | Kupfererz  | 100      | Entnahme |
       And the storage ledger of "Aurora" shows exactly:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 11.12.2025 13:37 | Aurora | 10    | Eisenbarren | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
 
   Rule: Each item line is one item of the entry, in its quantity and quality
 
     Scenario Outline: The item line "<line>" is <quantity> "<item>" of quality <quality>
       Given the game's storage protocol shows:
         """
-        11.12.2025 13:37 Aurora Einlagerung
+        01.01.2026 12:00 Aurora Einlagerung
         <line>
         """
-      When the daily collection runs
+      And the daily collection ran at 02.01.2026 05:00
+      When a member opens the storage ledger of "Aurora"
       Then the storage ledger of "Aurora" shows exactly:
         | Zeitpunkt        | Avatar | Menge      | Gegenstand | Qualität  | Vorgang     |
-        | 11.12.2025 13:37 | Aurora | <quantity> | <item>     | <quality> | Einlagerung |
+        | 01.01.2026 12:00 | Aurora | <quantity> | <item>     | <quality> | Einlagerung |
 
       Examples:
         | line                           | quantity | item                    | quality |
@@ -82,53 +80,51 @@ Feature: Reading the entries of the game's protocols
         | 200 Heilsamer Seidenverband +1 | 200      | Heilsamer Seidenverband | 100     |
         | 2 Kurzschwert (80) +1          | 2        | Kurzschwert             | 80      |
 
-    Scenario: Lines of the same item in the same quality are added together
-      Given the game's storage protocol shows:
-        """
-        11.12.2025 13:37 Aurora Einlagerung
-        2 Kupfererz
-        3 Kupfererz
-        """
-      When the daily collection runs
-      Then the storage ledger of "Aurora" shows exactly:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 11.12.2025 13:37 | Aurora | 5     | Kupfererz  | 100      | Einlagerung |
+    Scenario Outline: Lines of the same item in the same quality are added together
+      An item marked "+1" counts as the same item without the mark.
 
-    Scenario: An item marked "+1" is added to the same item without the mark
       Given the game's storage protocol shows:
         """
-        11.12.2025 13:37 Aurora Einlagerung
-        3 Heilsamer Seidenverband +1
-        5 Heilsamer Seidenverband
+        01.01.2026 12:00 Aurora Einlagerung
+        <first line>
+        <second line>
         """
-      When the daily collection runs
+      And the daily collection ran at 02.01.2026 05:00
+      When a member opens the storage ledger of "Aurora"
       Then the storage ledger of "Aurora" shows exactly:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand              | Qualität | Vorgang     |
-        | 11.12.2025 13:37 | Aurora | 8     | Heilsamer Seidenverband | 100      | Einlagerung |
+        | Zeitpunkt        | Avatar | Menge      | Gegenstand | Qualität | Vorgang     |
+        | 01.01.2026 12:00 | Aurora | <quantity> | <item>     | 100      | Einlagerung |
+
+      Examples:
+        | first line                   | second line               | quantity | item                    |
+        | 1 Kupfererz                  | 2 Kupfererz               | 3        | Kupfererz               |
+        | 1 Heilsamer Seidenverband +1 | 2 Heilsamer Seidenverband | 3        | Heilsamer Seidenverband |
 
     Scenario: Lines of the same item in different qualities stay apart
       Given the game's storage protocol shows:
         """
-        11.12.2025 13:37 Aurora Einlagerung
+        01.01.2026 12:00 Aurora Einlagerung
         1 Kurzschwert (50)
         2 Kurzschwert (60)
         """
-      When the daily collection runs
+      And the daily collection ran at 02.01.2026 05:00
+      When a member opens the storage ledger of "Aurora"
       Then the storage ledger of "Aurora" shows exactly:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 11.12.2025 13:37 | Aurora | 1     | Kurzschwert | 50       | Einlagerung |
-        | 11.12.2025 13:37 | Aurora | 2     | Kurzschwert | 60       | Einlagerung |
+        | 01.01.2026 12:00 | Aurora | 1     | Kurzschwert | 50       | Einlagerung |
+        | 01.01.2026 12:00 | Aurora | 2     | Kurzschwert | 60       | Einlagerung |
 
     Scenario: Text above the first entry and from the "Impressum" line on is not read
       Given the game's storage protocol shows:
         """
         Transaktionsbericht
-        11.12.2025 13:37 Aurora Einlagerung
-        10 Eisenbarren
+        01.01.2026 12:00 Aurora Einlagerung
+        1 Eisenbarren
         Impressum
-        5 Kupfererz
+        1 Kupfererz
         """
-      When the daily collection runs
+      And the daily collection ran at 02.01.2026 05:00
+      When a member opens the storage ledger of "Aurora"
       Then the storage ledger of "Aurora" shows exactly:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 11.12.2025 13:37 | Aurora | 10    | Eisenbarren | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |

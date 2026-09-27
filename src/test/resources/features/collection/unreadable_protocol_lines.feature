@@ -13,116 +13,142 @@ Feature: Protocol lines the collection cannot read
   Rule: A headline that cannot be read is skipped together with its items
 
     Scenario Outline: A headline <what is wrong> is skipped without touching its neighbours
+      Today a headline whose date is written with single digits opens no entry of its own: it is
+      taken as a line of the entry above, and the items below it are booked on that entry's member.
+      The tagged example states the corrected behavior.
+
       Given the game's storage protocol shows:
         """
-        01.01.2025 00:00 Anna Einlagerung
+        03.01.2026 12:00 Bert Entnahme
         1 Eisenbarren
         <headline>
-        5 Kupfererz
-        02.02.2025 12:00 Bert Entnahme
-        2 Eisenbarren
-        """
-      When the daily collection runs
-      Then the storage ledger of "Anna" shows exactly:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 01.01.2025 00:00 | Anna   | 1     | Eisenbarren | 100      | Einlagerung |
-      And the storage ledger of "Bert" shows exactly:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang  |
-        | 02.02.2025 12:00 | Bert   | 2     | Eisenbarren | 100      | Entnahme |
-      And the service's log names the skipped headline "<headline>"
-
-      Examples:
-        | what is wrong                              | headline                                   |
-        | with a garbled date                        | 11.12X2024 13:37 Bad Einlagerung           |
-        | with a date that does not exist            | 31.13.2024 25:99 Bad Einlagerung           |
-        | with a kind of movement the game never had | 11.12.2024 13:37 Name Auszahlung           |
-        | whose kind of movement is part of a word   | 11.12.2024 13:37 Anna Entnahmeübersicht    |
-        | whose kind of movement is set in dashes    | 11.12.2024 13:37 XX-Entnahme-XX            |
-        | whose kind of movement is glued to a name  | 11.12.2024 13:37 BobEntnahme               |
-        | whose name starts with a kind of movement  | 11.12.2024 13:37 Entnahmefreund Auszahlung |
-
-    @wip
-    Scenario: A headline whose date is written with single digits is skipped together with its items
-      Today such a headline opens no entry of its own: it is taken as a line of the entry above, and
-      the items below it are booked on that entry's member. This states the corrected behavior.
-
-      Given the game's storage protocol shows:
-        """
-        01.01.2025 00:00 Anna Einlagerung
+        1 Kupfererz
+        01.01.2026 12:00 Anna Einlagerung
         1 Eisenbarren
-        1.12.2025 13:37 Carl Einlagerung
-        5 Kupfererz
-        02.02.2025 12:00 Bert Entnahme
-        2 Eisenbarren
         """
-      When the daily collection runs
+      And the daily collection ran at 04.01.2026 05:00
+      When a member opens the storage ledgers of "Anna" and "Bert"
       Then the storage ledger of "Anna" shows exactly:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 01.01.2025 00:00 | Anna   | 1     | Eisenbarren | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Anna   | 1     | Eisenbarren | 100      | Einlagerung |
       And the storage ledger of "Bert" shows exactly:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang  |
-        | 02.02.2025 12:00 | Bert   | 2     | Eisenbarren | 100      | Entnahme |
-      And the service's log names the skipped headline "1.12.2025 13:37 Carl Einlagerung"
-
-  Rule: An item line whose number cannot be read is skipped and named, and the rest of the entry is kept
-
-    Scenario Outline: An item line whose <part> is too large to be a number is skipped
-      Given the game's storage protocol shows:
-        """
-        11.12.2025 13:37 Aurora Einlagerung
-        <line>
-        2 Eisenbarren
-        """
-      When the daily collection runs
-      Then the storage ledger of "Aurora" shows exactly:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 11.12.2025 13:37 | Aurora | 2     | Eisenbarren | 100      | Einlagerung |
-      And the service's log names the skipped item line "<line>"
+        | 03.01.2026 12:00 | Bert   | 1     | Eisenbarren | 100      | Entnahme |
 
       Examples:
-        | part     | line                      |
-        | quality  | 1 Kupfererz (99999999999) |
-        | quantity | 99999999999 Kupfererz     |
+        | what is wrong                                        | headline                                   |
+        | with a garbled date                                  | 02.01X2026 12:00 Bad Einlagerung           |
+        | with a date that does not exist                      | 31.13.2026 25:99 Bad Einlagerung           |
+        | with a kind of movement the game never had           | 02.01.2026 12:00 Name Auszahlung           |
+        | whose kind of movement is part of a word             | 02.01.2026 12:00 Anna Entnahmeübersicht    |
+        | whose kind of movement is set in dashes              | 02.01.2026 12:00 XX-Entnahme-XX            |
+        | whose kind of movement is glued to a name            | 02.01.2026 12:00 BobEntnahme               |
+        | whose only kind of movement is the start of its name | 02.01.2026 12:00 Entnahmefreund Auszahlung |
 
-    Scenario: An item line that starts with a blank instead of a quantity is skipped
-      The line below the headline is " Kupfererz", with one blank in front.
+      @wip
+      Examples: corrected behavior; today its items are booked on the member of the entry above
+        | what is wrong                            | headline                         |
+        | whose date is written with single digits | 2.01.2026 12:00 Carl Einlagerung |
+
+    Scenario Outline: A skipped headline <what is wrong> is named in the service's log
+      Today a headline whose date is written with single digits is named nowhere: it is taken as a
+      line of the entry above. The tagged example states the corrected behavior.
 
       Given the game's storage protocol shows:
         """
-        11.12.2025 13:37 Aurora Einlagerung
+        03.01.2026 12:00 Bert Entnahme
+        1 Eisenbarren
+        <headline>
+        1 Kupfererz
+        """
+      When the daily collection runs
+      Then the operator finds the skipped headline "<headline>" named in the service's log
+
+      Examples:
+        | what is wrong                                        | headline                                   |
+        | with a garbled date                                  | 02.01X2026 12:00 Bad Einlagerung           |
+        | with a date that does not exist                      | 31.13.2026 25:99 Bad Einlagerung           |
+        | with a kind of movement the game never had           | 02.01.2026 12:00 Name Auszahlung           |
+        | whose kind of movement is part of a word             | 02.01.2026 12:00 Anna Entnahmeübersicht    |
+        | whose kind of movement is set in dashes              | 02.01.2026 12:00 XX-Entnahme-XX            |
+        | whose kind of movement is glued to a name            | 02.01.2026 12:00 BobEntnahme               |
+        | whose only kind of movement is the start of its name | 02.01.2026 12:00 Entnahmefreund Auszahlung |
+
+      @wip
+      Examples: corrected behavior; today the log names nothing
+        | what is wrong                            | headline                         |
+        | whose date is written with single digits | 2.01.2026 12:00 Carl Einlagerung |
+
+  Rule: A line the collection cannot read is skipped, and the rest of its entry is kept
+
+    Scenario Outline: A line <what is wrong> is skipped and the rest of its entry is kept
+      Given the game's storage protocol shows:
+        """
+        01.01.2026 12:00 Aurora Einlagerung
+        <line>
+        1 Eisenbarren
+        """
+      And the daily collection ran at 02.01.2026 05:00
+      When a member opens the storage ledger of "Aurora"
+      Then the storage ledger of "Aurora" shows exactly:
+        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
+        | 01.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
+
+      Examples:
+        | what is wrong                              | line                      |
+        | whose quality is too large to be a number  | 1 Kupfererz (99999999999) |
+        | whose quantity is too large to be a number | 99999999999 Kupfererz     |
+        | without a quantity in front                | Kupfererz                 |
+
+  Rule: The log names an item line whose number cannot be read, and stays silent on a line not shaped like an item line
+
+    Scenario: A skipped item line whose number cannot be read is named in the service's log
+      The third line below the headline is " Kupfererz", with one blank where the quantity belongs;
+      the blank makes it an item line whose quantity cannot be read, unlike "Kupfererz" without it.
+
+      Given the game's storage protocol shows:
+        """
+        01.01.2026 12:00 Aurora Einlagerung
+        1 Kupfererz (99999999999)
+        99999999999 Kupfererz
          Kupfererz
-        2 Eisenbarren
+        1 Eisenbarren
         """
       When the daily collection runs
-      Then the storage ledger of "Aurora" shows exactly:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 11.12.2025 13:37 | Aurora | 2     | Eisenbarren | 100      | Einlagerung |
-      And the service's log names the skipped item line " Kupfererz"
+      Then the operator finds the skipped item line "1 Kupfererz (99999999999)" named in the service's log
+      And the operator finds the skipped item line "99999999999 Kupfererz" named in the service's log
+      And the operator finds the skipped item line " Kupfererz" named in the service's log
 
-  Rule: A line not shaped like an item line is skipped without a word
-
-    Scenario: A line without a quantity in front is skipped and not named
+    Scenario: A line without a quantity in front is not named in the service's log
       Given the game's storage protocol shows:
         """
-        11.12.2025 13:37 Aurora Einlagerung
+        01.01.2026 12:00 Aurora Einlagerung
         Kupfererz
-        2 Eisenbarren
+        1 Eisenbarren
         """
       When the daily collection runs
-      Then the storage ledger of "Aurora" shows exactly:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 11.12.2025 13:37 | Aurora | 2     | Eisenbarren | 100      | Einlagerung |
-      And the service's log names no skipped item line
+      Then the operator finds no skipped item line named in the service's log
+
+  Rule: An entry left with nothing to book books nothing and is named in the log
 
     Scenario: A gold amount written with a thousands separator is not read
-      The line is skipped like any other line not shaped like an item line; the log names the entry
-      because nothing of it is left.
+      The line is skipped like any other line not shaped like an item line, and nothing of the entry
+      is left to book.
 
       Given the game's bank protocol shows:
         """
-        11.12.2025 13:37 Aurora Einzahlung
+        01.01.2026 12:00 Aurora Einzahlung
+        1.000 Gold
+        """
+      And the daily collection ran at 02.01.2026 05:00
+      When a member opens the bank ledger of "Aurora"
+      Then the page says "Kein Avatar mit dem Namen Aurora."
+
+    Scenario: An entry with no readable line left is named in the service's log
+      Given the game's bank protocol shows:
+        """
+        01.01.2026 12:00 Aurora Einzahlung
         1.000 Gold
         """
       When the daily collection runs
-      Then the bank ledger of "Aurora" says "Kein Avatar mit dem Namen Aurora."
-      And the service's log says the entry "11.12.2025 13:37 Aurora Einzahlung" yielded nothing it could read
+      Then the operator finds the entry "01.01.2026 12:00 Aurora Einzahlung" named in the service's log as yielding nothing it could read

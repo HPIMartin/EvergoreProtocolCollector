@@ -11,125 +11,132 @@ Feature: Collecting the guild protocols from the game
   Scenario: A collection run stores the movements the game's protocols show
     Given the game's bank protocol shows:
       """
-      11.12.2025 13:37 Aurora Einzahlung
+      01.01.2026 12:00 Aurora Einzahlung
       100 Gold
       """
     And the game's storage protocol shows:
       """
-      12.12.2025 09:00 Boreas Einlagerung
-      10 Eisenbarren
-      2 Kurzschwert (80)
+      02.01.2026 12:00 Aurora Einlagerung
+      1 Eisenbarren
       """
-    When the daily collection runs
+    And the daily collection ran at 03.01.2026 05:00
+    When a member opens the bank ledger and the storage ledger of "Aurora"
     Then the bank ledger of "Aurora" shows exactly:
       | Zeitpunkt        | Avatar | Betrag |
-      | 11.12.2025 13:37 | Aurora | 100    |
-    And the storage ledger of "Boreas" shows exactly:
+      | 01.01.2026 12:00 | Aurora | 100    |
+    And the storage ledger of "Aurora" shows exactly:
       | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-      | 12.12.2025 09:00 | Boreas | 10    | Eisenbarren | 100      | Einlagerung |
-      | 12.12.2025 09:00 | Boreas | 2     | Kurzschwert | 80       | Einlagerung |
+      | 02.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
 
   Scenario: Protocols without an entry add nothing
     Given the guild bank ledger holds:
       | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-      | 01.06.2025 10:00 | Aurora | 500    | Einzahlung |
+      | 01.01.2026 12:00 | Aurora | 100    | Einzahlung |
     And the game's protocols show no entry
-    When the daily collection runs
+    And the daily collection ran at 02.01.2026 05:00
+    When a member opens the bank ledger and the storage ledger of "Aurora"
     Then the bank ledger of "Aurora" shows exactly:
       | Zeitpunkt        | Avatar | Betrag |
-      | 01.06.2025 10:00 | Aurora | 500    |
+      | 01.01.2026 12:00 | Aurora | 100    |
     And the storage ledger of "Aurora" says "Für Aurora ist hier kein Vorgang gespeichert."
 
   Scenario: Movements a run collected stay in the ledger when the guild's figures cannot be saved
     Given the game's storage protocol shows:
       """
-      11.12.2025 13:37 Aurora Einlagerung
-      10 Eisenbarren
+      01.01.2026 12:00 Aurora Einlagerung
+      1 Eisenbarren
       """
     And the guild's figures cannot be saved
-    When the daily collection runs
+    And the daily collection ran at 02.01.2026 05:00
+    When a member opens the storage ledger of "Aurora"
     Then the storage ledger of "Aurora" shows exactly:
       | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-      | 11.12.2025 13:37 | Aurora | 10    | Eisenbarren | 100      | Einlagerung |
+      | 01.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
 
   Rule: Each movement the game shows is stored once, however often a run reads it
 
     Scenario: A movement already stored is not stored again
       Given the game's bank protocol shows:
         """
-        11.12.2025 13:37 Aurora Einzahlung
+        01.01.2026 12:00 Aurora Einzahlung
         100 Gold
         """
-      And the daily collection has run
-      When the daily collection runs again
+      And the daily collection ran at 02.01.2026 05:00
+      And the daily collection ran at 03.01.2026 05:00
+      When a member opens the bank ledger of "Aurora"
       Then the bank ledger of "Aurora" shows exactly:
         | Zeitpunkt        | Avatar | Betrag |
-        | 11.12.2025 13:37 | Aurora | 100    |
+        | 01.01.2026 12:00 | Aurora | 100    |
 
     Scenario: Two identical movements in the same minute are both kept
       Given the game's bank protocol shows:
         """
-        11.12.2025 13:37 Aurora Einzahlung
+        01.01.2026 12:00 Aurora Einzahlung
         100 Gold
-        11.12.2025 13:37 Aurora Einzahlung
+        01.01.2026 12:00 Aurora Einzahlung
         100 Gold
         """
-      And the daily collection has run
-      When the daily collection runs again
+      And the daily collection ran at 02.01.2026 05:00
+      And the daily collection ran at 03.01.2026 05:00
+      When a member opens the bank ledger of "Aurora"
       Then the bank ledger of "Aurora" shows exactly:
         | Zeitpunkt        | Avatar | Betrag |
-        | 11.12.2025 13:37 | Aurora | 100    |
-        | 11.12.2025 13:37 | Aurora | 100    |
+        | 01.01.2026 12:00 | Aurora | 100    |
+        | 01.01.2026 12:00 | Aurora | 100    |
 
     Scenario: A movement an earlier run missed is added while the game still shows it
       Given the guild bank ledger holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 12.12.2025 08:00 | Aurora | 50     | Einzahlung |
+        | 02.01.2026 12:00 | Aurora | 50     | Einzahlung |
       And the game's bank protocol shows:
         """
-        12.12.2025 08:00 Aurora Einzahlung
+        02.01.2026 12:00 Aurora Einzahlung
         50 Gold
-        11.12.2025 13:37 Aurora Einzahlung
+        01.01.2026 12:00 Aurora Einzahlung
         100 Gold
         """
-      When the daily collection runs
+      And the daily collection ran at 03.01.2026 05:00
+      When a member opens the bank ledger of "Aurora"
       Then the bank ledger of "Aurora" shows exactly:
         | Zeitpunkt        | Avatar | Betrag |
-        | 12.12.2025 08:00 | Aurora | 50     |
-        | 11.12.2025 13:37 | Aurora | 100    |
+        | 02.01.2026 12:00 | Aurora | 50     |
+        | 01.01.2026 12:00 | Aurora | 100    |
 
     Scenario: Movements the game no longer shows stay in the ledger
       Given the guild bank ledger holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 01.06.2025 10:00 | Aurora | 500    | Einzahlung |
+        | 01.01.2026 12:00 | Aurora | 500    | Einzahlung |
       And the game's bank protocol shows:
         """
-        11.12.2025 13:37 Aurora Einzahlung
+        02.01.2026 12:00 Aurora Einzahlung
         100 Gold
         """
-      When the daily collection runs
+      And the daily collection ran at 03.01.2026 05:00
+      When a member opens the bank ledger of "Aurora"
       Then the bank ledger of "Aurora" shows exactly:
         | Zeitpunkt        | Avatar | Betrag |
-        | 11.12.2025 13:37 | Aurora | 100    |
-        | 01.06.2025 10:00 | Aurora | 500    |
+        | 02.01.2026 12:00 | Aurora | 100    |
+        | 01.01.2026 12:00 | Aurora | 500    |
 
   Rule: Every run recomputes the figures from the whole history
 
     Scenario: A second run recomputes the figures instead of adding to them
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 15.01.2024 10:00 | Aurora | 10    | Eisenbarren | 100      | Einlagerung |
-      And the daily collection has run
-      When the daily collection runs again
-      Then Aurora's "Einlagerung" is 720
+        | 01.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
+      And the daily collection ran at 02.01.2026 05:00
+      And the daily collection ran at 03.01.2026 05:00
+      When a member opens the overview
+      Then Aurora's "Einlagerung" is 72
 
     Scenario: When the game cannot be reached, the stored movements are still recomputed
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 15.01.2024 10:00 | Aurora | 10    | Eisenbarren | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
       And the game cannot be reached
-      When the daily collection runs
-      Then Aurora's "Einlagerung" is 720
+      And the daily collection ran at 02.01.2026 05:00
+      When a member opens the overview and the storage ledger of "Aurora"
+      Then Aurora's "Einlagerung" is 72
       And the storage ledger of "Aurora" shows exactly:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 15.01.2024 10:00 | Aurora | 10    | Eisenbarren | 100      | Einlagerung |
+        | 01.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
