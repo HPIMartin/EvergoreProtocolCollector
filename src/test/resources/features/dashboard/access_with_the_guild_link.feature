@@ -1,4 +1,3 @@
-@wip
 Feature: Access with the guild's link
   The guild's figures are for its members only. The guild hands out one link that carries the
   guild's token; whoever opens that link sees the dashboard, and every link the dashboard shows
