@@ -99,6 +99,11 @@ public class MemberLedgerSteps {
 		assertThat(queryParametersOf(opened)).as("the page the bookmark opened").contains("page=" + (page - 1));
 	}
 
+	@When("a member opens a bookmark of page {word} of the bank ledger of {string}")
+	public void aMemberOpensABookmarkOfPageOfTheBankLedgerOf(String page, String avatar) {
+		browser.open(BANK.pathOf(avatar) + "?page=" + queryPageOf(page));
+	}
+
 	@Then("the page is headed {string}")
 	public void thePageIsHeaded(String heading) {
 		assertThat(ledger().heading()).isEqualTo(heading);
@@ -212,5 +217,13 @@ public class MemberLedgerSteps {
 	private static List<String> queryParametersOf(URI address) {
 		String query = address.getRawQuery();
 		return query == null ? List.of() : List.of(query.split("&"));
+	}
+
+	private static String queryPageOf(String page) {
+		try {
+			return String.valueOf(Integer.parseInt(page) - 1);
+		} catch (NumberFormatException notANumber) {
+			return page;
+		}
 	}
 }
