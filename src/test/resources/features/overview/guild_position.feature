@@ -1,4 +1,3 @@
-@wip
 Feature: The guild's position
   Above the member table the overview states where the guild stands, in four figures kept side by
   side so that the header does not add measured gold to modelled goods: the gold in the guild bank

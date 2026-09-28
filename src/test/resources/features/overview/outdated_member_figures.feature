@@ -1,4 +1,3 @@
-@wip
 Feature: A member whose figures could not be refreshed
   A collection run recomputes every member's figures. When one member's stored movements cannot be
   read, that member keeps the figures of the last run that reached them and every other member is

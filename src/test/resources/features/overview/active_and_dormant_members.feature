@@ -1,4 +1,3 @@
-@wip
 Feature: Active and dormant members
   The overview splits the roster into two tables: members who moved something in the 30 days
   before the newest movement the guild ledgers hold stand in the active table above, everyone else

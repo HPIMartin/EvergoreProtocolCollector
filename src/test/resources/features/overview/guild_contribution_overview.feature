@@ -1,4 +1,3 @@
-@wip
 Feature: Guild contribution overview
   The overview replaces the sheet the guild used to keep by hand. It has one row per member the
   guild ledgers know, in the sheet's columns: the gold a member paid into and took out of the guild

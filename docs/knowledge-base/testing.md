@@ -152,6 +152,20 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   grows to its maximum while a worker blocks, so the parallelism alone does not bound it).
 - **Where no browser exists** (the production image's build stage) a browser-driven scenario is
   skipped (`TestAbortedException`), like the browser smoke tests.
+- **Measured** (2026-09-28, devcontainer, 12 cores, local headless Firefox unless named):
+
+  | Run | Scenarios run | Wall time |
+  |-----|---------------|-----------|
+  | `./verify bdd` (every `@wip` scenario) | 269 of 292: 259 end on an undefined step, 7 corrected ones fail as their "Today" says, 3 pass | 191 s, of which the suite 145 s |
+  | the acceptance suite inside `./verify all` | the 23 armed overview scenarios | 29 s (the whole gateway 535 s) |
+  | the overview's armed scenarios, one at a time | 23 | 74 s |
+  | the same, 2 / 4 / 6 at a time | 23 | 48 s / 41 s / 42 s |
+
+  - A worker's first scenario takes about 20 s, the browser's cold start and the first context;
+    every later one 3 to 4 s. Beyond 4 at a time the cold starts dominate a run this short.
+  - A scenario that ends on an undefined step still boots its service in `@Before`, so the
+    unbuilt clusters cost `./verify bdd` about 2 s each, half a second of wall time at 4 at a
+    time.
 
 ## Coverage map
 
