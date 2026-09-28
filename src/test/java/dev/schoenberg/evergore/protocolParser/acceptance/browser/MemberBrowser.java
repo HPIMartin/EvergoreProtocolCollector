@@ -122,6 +122,10 @@ public class MemberBrowser {
 		}
 	}
 
+	public Navigation navigation() {
+		return read("read-navigation.js", Navigation.class);
+	}
+
 	public Optional<String> markShownOnTheRowOf(String member) {
 		return noteShown(Map.of(MEMBER, member), Map.of(MARK, true));
 	}
