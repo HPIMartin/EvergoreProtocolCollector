@@ -27,7 +27,7 @@ public record Overview(Roster active, Roster dormant, List<Stat> position, List<
 
 	public record Roster(String caption, List<String> headers, String figureHeader, List<Row> rows, Row total, String emptyMessage) {}
 
-	public record Row(List<String> cells, String mark, List<String> notes) {}
+	public record Row(List<String> cells, String mark, List<String> notes, List<String> hrefs) {}
 
 	public record Placed(List<String> headers, Row row) {}
 

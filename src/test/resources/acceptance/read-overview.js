@@ -18,6 +18,7 @@ const rowOf = (row, markId, cellMarkId) => ({
   cells: [...row.children].map(textOf),
   mark: noteOf(row.querySelector(`[data-testid=${markId}]`)),
   notes: [...row.children].map((cell) => noteOf(cell.querySelector(`[data-testid=${cellMarkId}]`))),
+  hrefs: [...row.children].map((cell) => cell.querySelector('a')?.getAttribute('href') ?? null),
 })
 const rosterOf = (testId) => {
   const roster = document.querySelector(`[data-testid=${testId}]`)
