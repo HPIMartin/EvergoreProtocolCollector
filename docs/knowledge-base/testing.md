@@ -110,8 +110,8 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   test beans of the `acceptance.service` package carry `@Requires(env = "acceptance")`, so no
   `@MicronautTest` class sees them.
 - **The scenario's world** (`acceptance.world`) lives outside the context and is handed in with
-  `ApplicationContextBuilder.singletons`, so a restart keeps it; cucumber-picocontainer shares it
-  between the step classes of one scenario.
+  `ApplicationContextBuilder.singletons`, so it outlives any one context; cucumber-picocontainer
+  shares it between the step classes of one scenario.
   - `GameProtocols`: the game's bank and storage protocol pages, newest entry first; the
     `PageSource` bean reads them in place of `SeleniumPageSource`.
   - A ledger table under `Given` (`the guild bank ledger holds:`) writes its rows into the
@@ -136,9 +136,12 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
 - **The member through the browser** (`MemberBrowser`): a pool of browsers (`Browsers`), each
   started once and reused by later scenarios, at most one per scenario running at a time, cleared
   to `about:blank` between scenarios and quit in `@AfterAll`. The pool is the one run-scoped
-  static state the steps keep (author decision 2026-09-28, [open-questions.md](../open-questions.md)):
+  static state the steps keep (author decision 2026-09-28,
+  [open-questions.md](../open-questions.md)):
   cucumber-picocontainer knows no run scope, and a browser per scenario costs a cold start of
-  about 20 s.
+  about 20 s. The pool does not tell browsers apart: it holds one choice per run (the
+  `EPC_ACCEPTANCE_*` variables, read once), so a step that needs a second browser at the same time
+  has to give the pool a key first.
 - **Reading a page:** one `executeScript` (`src/test/resources/acceptance/read-overview.js`)
   returns the rendered text as JSON, a note's text the way a reader of the `role=note` gets it
   (none inside `aria-hidden`). A mark or a note a step names is also read the way the member
@@ -152,21 +155,22 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   grows to its maximum while a worker blocks, so the parallelism alone does not bound it).
 - **Where no browser exists** (the production image's build stage) a browser-driven scenario is
   skipped (`TestAbortedException`), like the browser smoke tests.
-- **Measured** (2026-09-28, devcontainer, 12 cores, local headless Firefox unless named):
+- **Measured** (2026-09-28, devcontainer, 12 cores, local headless Firefox unless named; what ran
+  is in the decision row of that day, [open-questions.md](../open-questions.md)):
 
-  | Run | Scenarios run | Wall time |
-  |-----|---------------|-----------|
-  | `./verify bdd` (every `@wip` scenario) | 269 of 292: 259 end on an undefined step, 7 corrected ones fail as their "Today" says, 3 pass | 191 s, of which the suite 145 s |
-  | the acceptance suite inside `./verify all` | the 23 armed overview scenarios | 29 s (the whole gateway 535 s) |
-  | the overview's armed scenarios, one at a time | 23 | 74 s |
-  | the same, 2 / 4 / 6 at a time | 23 | 48 s / 41 s / 42 s |
-  | the same on the grid, 4 at a time: Firefox / Chrome / Edge | 23 | 43 s / 41 s / 42 s |
+  | Run | Wall time |
+  |-----|-----------|
+  | `./verify bdd` (every `@wip` scenario) | 191 s, of which the suite 145 s |
+  | the acceptance suite inside `./verify all` | 29 s (the whole gateway 535 s) |
+  | the armed overview scenarios, one at a time | 74 s |
+  | the same, 2 / 4 / 6 at a time | 48 s / 41 s / 42 s |
+  | the same on the grid, 4 at a time: Firefox / Chrome / Edge | 43 s / 41 s / 42 s |
 
   - A worker's first scenario takes about 20 s, the browser's cold start and the first context;
     every later one 3 to 4 s. Beyond 4 at a time the cold starts dominate a run this short.
-  - A scenario that ends on an undefined step still boots its service in `@Before`, so the
-    unbuilt clusters cost `./verify bdd` about 2 s each, half a second of wall time at 4 at a
-    time.
+  - A scenario that ends on an undefined step still boots its service in `@Before`, so an
+    unbuilt cluster costs `./verify bdd` about 2 s a scenario, half a second of wall time at 4 at
+    a time.
 
 ## Coverage map
 
@@ -672,8 +676,8 @@ of the Gradle command are load-bearing:
   removed) when they pass. `RunAcceptanceScenariosTest` is the one acceptance runner for the whole
   system, backend and SPA; the frontend keeps its Vitest unit tests only. Its step definitions
   drive the member and the admin through the browser and the operator over HTTP and JSON
-  (handbook §5). `./verify bdd` runs the
-  `@wip` scenarios, `./verify all` the armed ones; a `@characterization` scenario awaiting the
+  (handbook §5). `./verify bdd` runs the `@wip` scenarios, `./verify all` the armed ones; a
+  `@characterization` scenario awaiting the
   author's confirmation (`/bdd-catch-up`) is excluded from `all` like `@wip`. Scenario language:
   English, with the game's German names quoted as the game spells them. The catch-up's
   scenarios sit in seven cluster folders (`overview/`, `ledgers/`, `valuation/`, `round_trips/`,
