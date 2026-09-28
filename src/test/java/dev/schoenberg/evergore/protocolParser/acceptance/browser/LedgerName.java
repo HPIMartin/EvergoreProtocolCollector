@@ -19,6 +19,10 @@ public enum LedgerName {
 	}
 
 	public String pathOf(String member) {
-		return "/avatars/" + URLEncoder.encode(member, UTF_8).replace("+", "%20") + "/" + segment;
+		return "/avatars/" + encodedLikeTheSinglePageApp(member) + "/" + segment;
+	}
+
+	private static String encodedLikeTheSinglePageApp(String member) {
+		return URLEncoder.encode(member, UTF_8).replace("+", "%20").replace("%27", "'").replace("%28", "(").replace("%29", ")").replace("%21", "!").replace("%7E", "~");
 	}
 }
