@@ -1,4 +1,3 @@
-@wip
 Feature: Products of unread recipe
   Gem-forged gear is crafted from blueprints whose ingredients no page of the game shows. When such
   a product is deposited, nobody can say whether it consumed a trader good the member had withdrawn,
