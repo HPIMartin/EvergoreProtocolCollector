@@ -1,4 +1,3 @@
-@wip
 Feature: How figures and times are shown
   The dashboard writes numbers and times the way the game and the guild's sheet did: gold in whole
   pieces with German digit grouping, times as German wall-clock time. A figure's colour tells a
