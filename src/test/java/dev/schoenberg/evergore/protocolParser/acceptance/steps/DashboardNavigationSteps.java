@@ -42,6 +42,11 @@ public class DashboardNavigationSteps {
 		assertThat(shown).isEqualTo(wanted);
 	}
 
+	@Then("no link on the page leads to the admin page")
+	public void noLinkOnThePageLeadsToTheAdminPage() {
+		assertThat(navigation().allHrefs()).noneMatch(href -> pathOnly(href).equals("/admin"));
+	}
+
 	private Navigation navigation() {
 		return browser.navigation();
 	}
