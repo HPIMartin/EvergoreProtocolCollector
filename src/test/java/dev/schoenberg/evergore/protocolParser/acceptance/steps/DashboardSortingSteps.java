@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.acceptance.steps;
 
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
@@ -12,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class DashboardSortingSteps {
 	private static final int MAX_CLICKS_TO_REACH_A_DIRECTION = 2;
 	private static final String ASCENDING = "ascending";
+	private static final String OVERVIEW = "/overview";
 
 	private final MemberBrowser browser;
 
@@ -22,6 +25,17 @@ public class DashboardSortingSteps {
 	@When("the member sorts the {roster} table by {string} in {direction} order")
 	public void theMemberSortsTheTableBy(RosterName roster, String header, String direction) {
 		sortRosterBy(roster, header, direction);
+	}
+
+	@Given("a member has sorted the {roster} table by {string} in {direction} order")
+	public void aMemberHasSortedTheTableBy(RosterName roster, String header, String direction) {
+		browser.open(OVERVIEW);
+		sortRosterBy(roster, header, direction);
+	}
+
+	@Then("the {roster} table is sorted by {string} in {direction} order")
+	public void theTableIsSortedBy(RosterName roster, String header, String direction) {
+		assertThat(sortOf(roster)).isEqualTo(new Sort(header, direction));
 	}
 
 	private void sortRosterBy(RosterName roster, String header, String direction) {
