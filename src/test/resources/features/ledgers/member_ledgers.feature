@@ -1,4 +1,3 @@
-@wip
 Feature: A member's bank and storage ledgers
   Every member has two ledgers: the gold they moved through the guild bank and the goods they moved
   through the guild storage, newest first. Each movement shows its time, member, amount or quantity,
