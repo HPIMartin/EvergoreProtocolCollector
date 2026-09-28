@@ -20,7 +20,7 @@ public class AdminStatusSteps {
 
 	@When("the admin opens the admin page without the guild's token")
 	public void theAdminOpensTheAdminPageWithoutTheToken() {
-		browser.openWithoutToken(ADMIN);
+		browser.openHref(ADMIN);
 	}
 
 	@Then("the admin page reads:")

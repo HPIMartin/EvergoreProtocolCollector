@@ -65,16 +65,16 @@ public class MemberBrowser {
 	}
 
 	public void open(String path) {
-		visit(path + tokenParameterSeparator(path) + "token=" + TOKEN);
+		openHref(path + tokenParameterSeparator(path) + "token=" + TOKEN);
 	}
 
-	public void openWithoutToken(String path) {
-		visit(path);
+	public void openTheStartPage(TokenChoice choice) {
+		openHref(choice == TokenChoice.WRONG_TOKEN ? "/?token=wrong-token" : "/");
 	}
 
-	private void visit(String address) {
+	public void openHref(String href) {
 		WebDriver browser = driver();
-		browser.get("http://" + choice.serviceHost() + ":" + service.port() + address);
+		browser.get("http://" + choice.serviceHost() + ":" + service.port() + href);
 		awaitSettled();
 		assertTheClockIsShifted();
 		rememberTheReachedUrl();
