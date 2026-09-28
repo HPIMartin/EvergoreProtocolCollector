@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 
 public class GameProtocol {
 	public static final DateTimeFormatter MINUTE = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+	public static final LocalDateTime BASE_MOVEMENT = LocalDateTime.of(2026, 1, 1, 0, 0);
 	private static final Pattern HEADLINE_MINUTE = Pattern.compile("^(\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}) ");
 
 	private final List<ProtocolEntry> entries = new CopyOnWriteArrayList<>();

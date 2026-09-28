@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Type;
-import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -50,6 +49,7 @@ public class MemberBrowser {
 	private WebDriver driver;
 	private Instant clock;
 	private String clockScript;
+	private String lastReachedUrl;
 
 	public MemberBrowser(RunningService service, BrowserChoice choice) {
 		this.service = service;
@@ -65,15 +65,11 @@ public class MemberBrowser {
 	}
 
 	public void open(String path) {
-		visit(path + "?token=" + TOKEN);
+		visit(path + tokenParameterSeparator(path) + "token=" + TOKEN);
 	}
 
 	public void openWithoutToken(String path) {
 		visit(path);
-	}
-
-	public boolean shows(String path) {
-		return driver != null && path.equals(URI.create(driver.getCurrentUrl()).getRawPath());
 	}
 
 	private void visit(String address) {
@@ -81,11 +77,13 @@ public class MemberBrowser {
 		browser.get("http://" + choice.serviceHost() + ":" + service.port() + address);
 		awaitSettled();
 		assertTheClockIsShifted();
+		rememberTheReachedUrl();
 	}
 
 	public void reload() {
 		driver().navigate().refresh();
 		awaitSettled();
+		rememberTheReachedUrl();
 	}
 
 	public void follow(String linkText) {
@@ -93,6 +91,18 @@ public class MemberBrowser {
 		driver().findElement(By.linkText(linkText)).click();
 		new WebDriverWait(driver(), HANG_GUARD).until(browser -> !before.equals(browser.getCurrentUrl()));
 		awaitSettled();
+		rememberTheReachedUrl();
+	}
+
+	public String lastReachedUrl() {
+		return lastReachedUrl;
+	}
+
+	public void openExactly(String href) {
+		driver().get(href);
+		awaitSettled();
+		assertTheClockIsShifted();
+		rememberTheReachedUrl();
 	}
 
 	public void choose(String optionLabel) {
@@ -196,8 +206,16 @@ public class MemberBrowser {
 		return ((HasBiDi) augmented).getBiDi();
 	}
 
+	private void rememberTheReachedUrl() {
+		lastReachedUrl = driver().getCurrentUrl();
+	}
+
 	private void awaitSettled() {
 		new WebDriverWait(driver(), HANG_GUARD).until(browser -> Boolean.TRUE.equals(javascript(browser).executeScript(SETTLED)));
+	}
+
+	private static String tokenParameterSeparator(String path) {
+		return path.indexOf('?') < 0 ? "?" : "&";
 	}
 
 	private static JavascriptExecutor javascript(WebDriver browser) {
