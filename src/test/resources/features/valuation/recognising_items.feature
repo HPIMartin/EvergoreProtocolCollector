@@ -1,4 +1,3 @@
-@wip
 Feature: Recognising items by the names the game uses
   A storage movement names its item the way the game's protocol spells it. The price list the
   service ships recognises that spelling, a magically named variant of an item, and a few fixed
