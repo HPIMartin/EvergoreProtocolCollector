@@ -45,6 +45,7 @@ dependencies {
 	testImplementation(platform("io.cucumber:cucumber-bom:7.22.1"))
 	testImplementation("io.cucumber:cucumber-java")
 	testImplementation("io.cucumber:cucumber-junit-platform-engine")
+	testImplementation("io.cucumber:cucumber-picocontainer")
 	testImplementation("org.junit.platform:junit-platform-suite")
 }
 
@@ -149,6 +150,12 @@ tasks.test {
 		failOnNoDiscoveredTests = false
 	}
 	providers.systemProperty("cucumber.features").orNull?.let { systemProperty("cucumber.features", it) }
+	listOf(
+		"EPC_ACCEPTANCE_PARALLELISM" to "cucumber.execution.parallel.config.fixed.parallelism",
+		"EPC_ACCEPTANCE_PARALLELISM" to "cucumber.execution.parallel.config.fixed.max-pool-size",
+	).forEach { (variable, property) ->
+		providers.environmentVariable(variable).orNull?.let { systemProperty(property, it) }
+	}
 
 	// Guard against re-adding `forkEvery`. Gradle restarts the test JVM per compiled *class file* of
 	// the test source set (198 here, only 28 of which hold tests), and `--tests` does not reduce that

@@ -18,6 +18,10 @@ public class OrphanedBrowserSweep implements BeforeAllCallback {
 
 	@Override
 	public void beforeAll(ExtensionContext context) {
+		sweep();
+	}
+
+	public static void sweep() {
 		failOnAnyLeftover(sweepOrphanedBrowsers());
 	}
 
