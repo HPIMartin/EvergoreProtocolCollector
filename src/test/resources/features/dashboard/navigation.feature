@@ -1,4 +1,3 @@
-@wip
 Feature: Finding one's way through the dashboard
   The dashboard has the overview and, for every member, a bank ledger and a storage ledger. Every
   page can be bookmarked, and the overview links from a member's name and last-activity dates to the
