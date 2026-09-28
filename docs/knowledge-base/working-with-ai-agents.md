@@ -77,7 +77,10 @@ to the prompt cache; minimize context size × session length:
 - **Workflow / fan-out tooling only for occasional large parallel audits** (explicit opt-in), never
   the interactive, human-gated commit loop (see [multi-agent-playbook.md](multi-agent-playbook.md)).
   Routine TDD runs lean: plan → implementer → falsifier panel → reviewer.
-- **Terse by default:** bullets, outcome first; expand on request.
+- **Eco mode by default:** no narration on the way; bullets, outcome first, expand on request.
+- **The closing message holds only what the author must act on:** gate verdicts, decisions, the
+  review range, blockers.
+- **Ultracode on:** name it once as the costliest mode.
 - **Keep the shared docs lean** (KB-current): condense, don't accrete; hygiene only works if the
   per-session entry docs stay small.
 
