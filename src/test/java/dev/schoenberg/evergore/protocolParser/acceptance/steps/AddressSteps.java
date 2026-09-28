@@ -9,10 +9,10 @@ import io.cucumber.java.en.When;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.Answer;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.ServiceRequests;
 
+import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class AddressSteps {
-	private static final String OVERVIEW = "/overview";
 	private static final int BAD_REQUEST = 400;
 	private static final int UNAUTHORIZED = 401;
 

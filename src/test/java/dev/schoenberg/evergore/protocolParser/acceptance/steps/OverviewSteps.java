@@ -16,10 +16,10 @@ import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview.Stat;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.RosterName;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Guild;
 
+import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class OverviewSteps {
-	private static final String OVERVIEW = "/overview";
 	private static final String GUILD_ROW = "Gilde";
 	private static final String NO_FIGURE = "–";
 	private static final String NAME_SEPARATOR = ", ";

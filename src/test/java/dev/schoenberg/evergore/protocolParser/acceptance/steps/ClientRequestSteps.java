@@ -21,6 +21,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
 import dev.schoenberg.evergore.protocolParser.rest.filter.AcceptanceClientIp;
 
+import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -63,7 +64,7 @@ public class ClientRequestSteps {
 			case "the dashboard's start page" -> START_PAGE;
 			case "a file the dashboard loads" -> aFileTheDashboardLoads();
 			case "the health check" -> "/health";
-			case "the overview" -> "/overview";
+			case "the overview" -> OVERVIEW;
 			default -> START_PAGE + "a".repeat(LONG_ADDRESS - START_PAGE.length());
 		};
 	}

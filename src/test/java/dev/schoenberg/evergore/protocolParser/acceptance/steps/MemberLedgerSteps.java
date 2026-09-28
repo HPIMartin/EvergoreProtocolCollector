@@ -22,11 +22,11 @@ import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerNa
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.STORAGE;
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger.MINUTE_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger.QUANTITY_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
 import static dev.schoenberg.evergore.protocolParser.acceptance.world.GameProtocol.BASE_MOVEMENT;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class MemberLedgerSteps {
-	private static final String OVERVIEW = "/overview";
 	private static final String ZURUECK = "Zurück";
 	private static final String WEITER = "Weiter";
 
