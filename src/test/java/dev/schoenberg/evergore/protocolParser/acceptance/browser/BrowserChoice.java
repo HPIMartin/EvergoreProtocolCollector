@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser.acceptance.browser;
 
 import java.io.File;
 import java.net.URI;
+import java.util.Map;
 
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.WebDriver;
@@ -9,6 +10,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
+import org.openqa.selenium.firefox.GeckoDriverService;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.opentest4j.TestAbortedException;
 
@@ -41,6 +43,20 @@ public class BrowserChoice {
 			throw new TestAbortedException("no firefox on the PATH: browser-driven scenario skipped");
 		}
 		return new FirefoxDriver(firefox());
+	}
+
+	WebDriver startInTimeZone(String zone) {
+		if (grid != null) {
+			throw new IllegalStateException("The grid does not run a browser's own time zone yet");
+		}
+		if (!FIREFOX.equals(browser)) {
+			throw new IllegalStateException("Only firefox runs its own time zone; " + browser + " has none");
+		}
+		if (!firefoxIsOnPath()) {
+			throw new TestAbortedException("no firefox on the PATH: browser-driven scenario skipped");
+		}
+		GeckoDriverService service = new GeckoDriverService.Builder().withEnvironment(Map.of("TZ", zone)).build();
+		return new FirefoxDriver(service, firefox());
 	}
 
 	private static Capabilities optionsFor(String browser) {

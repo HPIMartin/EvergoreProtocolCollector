@@ -27,9 +27,36 @@ public final class Browsers {
 		IDLE.add(driver);
 	}
 
+	static void discard(WebDriver driver) {
+		driver.quit();
+		STARTED.remove(driver);
+	}
+
 	public static void quitAll() {
 		IDLE.clear();
-		STARTED.forEach(WebDriver::quit);
-		STARTED.clear();
+		RuntimeException firstFailure = null;
+		try {
+			for (WebDriver driver : STARTED) {
+				firstFailure = quitting(driver, firstFailure);
+			}
+		} finally {
+			STARTED.clear();
+		}
+		if (firstFailure != null) {
+			throw firstFailure;
+		}
+	}
+
+	private static RuntimeException quitting(WebDriver driver, RuntimeException firstFailure) {
+		try {
+			driver.quit();
+			return firstFailure;
+		} catch (RuntimeException failure) {
+			if (firstFailure == null) {
+				return failure;
+			}
+			firstFailure.addSuppressed(failure);
+			return firstFailure;
+		}
 	}
 }

@@ -52,10 +52,16 @@ public class MemberBrowser {
 	private String clockScript;
 	private String lastReachedUrl;
 	private String requestedDeepLink;
+	private String timeZone;
+	private boolean dedicated;
 
 	public MemberBrowser(RunningService service, BrowserChoice choice) {
 		this.service = service;
 		this.choice = choice;
+	}
+
+	public void runsInTimeZone(String zone) {
+		timeZone = zone;
 	}
 
 	public void readsTheClock(Instant instant) {
@@ -160,16 +166,48 @@ public class MemberBrowser {
 		if (driver == null) {
 			return;
 		}
-		forgetTheShiftedClock();
-		driver.get("about:blank");
-		driver.manage().deleteAllCookies();
-		Browsers.release(driver);
+		try {
+			forgetTheShiftedClock();
+			driver.get("about:blank");
+			driver.manage().deleteAllCookies();
+		} catch (RuntimeException | Error cleanupFailure) {
+			giveTheDriverBackKeeping(cleanupFailure);
+			throw cleanupFailure;
+		}
+		giveTheDriverBack(true);
+	}
+
+	private void giveTheDriverBackKeeping(Throwable cleanupFailure) {
+		try {
+			giveTheDriverBack(false);
+		} catch (RuntimeException quitFailure) {
+			cleanupFailure.addSuppressed(quitFailure);
+		}
+	}
+
+	private void giveTheDriverBack(boolean cleaned) {
+		WebDriver leaving = driver;
+		boolean ownedByThisMember = dedicated;
 		driver = null;
+		dedicated = false;
+		if (ownedByThisMember) {
+			leaving.quit();
+		} else if (cleaned) {
+			Browsers.release(leaving);
+		} else {
+			Browsers.discard(leaving);
+		}
 	}
 
 	private WebDriver driver() {
 		if (driver == null) {
-			driver = Browsers.acquire(choice);
+			if (timeZone == null) {
+				driver = Browsers.acquire(choice);
+			} else {
+				driver = choice.startInTimeZone(timeZone);
+				dedicated = true;
+				assertTheBrowserRunsInTheRequestedTimeZone();
+			}
 			if (clock != null) {
 				shiftTheClock();
 			}
@@ -201,6 +239,12 @@ public class MemberBrowser {
 			bidi().send(new Command<Map<String, Object>>("script.removePreloadScript", Map.of("script", clockScript), BIDI_RESULT));
 			clockScript = null;
 		}
+	}
+
+	private void assertTheBrowserRunsInTheRequestedTimeZone() {
+		Object zone = javascript(driver).executeScript("return Intl.DateTimeFormat().resolvedOptions().timeZone");
+
+		assertThat(zone).as("the time zone of the member's dedicated browser").isEqualTo(timeZone);
 	}
 
 	private void assertTheClockIsShifted() {

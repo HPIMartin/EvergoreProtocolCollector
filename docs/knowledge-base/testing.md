@@ -162,7 +162,22 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   cucumber-picocontainer knows no run scope, and a browser per scenario costs a cold start of
   about 20 s. The pool does not tell browsers apart: it holds one choice per run (the
   `EPC_ACCEPTANCE_*` variables, read once), so a step that needs a second browser at the same time
-  has to give the pool a key first.
+  has to give the pool a key first. `MemberBrowser.leave()` returns a driver to the pool only after its
+  cleanup succeeded; a driver whose cleanup failed is quit and dropped (`Browsers.discard`, which
+  forgets it only once `quit` succeeded; `quitAll` quits every started driver, each in its own
+  `try`, clears the set whatever happens, and rethrows the first failure with the others suppressed,
+  so a `quit` that throws a runtime exception does not stop the others), and the cleanup failure stays the exception
+  `leave()` throws, with a failed `quit` attached as suppressed.
+- **A member's browser in its own real-world time zone** (`MemberBrowser.runsInTimeZone`,
+  `BrowserChoice.startInTimeZone`) skips the pool rather than keying it: geckodriver has no session
+  capability for the browser process's time zone, but `GeckoDriverService.Builder.withEnvironment`
+  sets `TZ` on the geckodriver process it starts, and geckodriver's child Firefox inherits it
+  (measured: the page's `resolvedOptions().timeZone` reads the given zone).
+  A dedicated `FirefoxDriver` is built once for the scenario that asks and quit in `leave()` instead
+  of returned to `Browsers`, since a `TZ` env var can only take effect at process start. Local
+  Firefox only; the grid has no equivalent wired up yet. Right after it starts, `MemberBrowser`
+  asserts the browser's own `resolvedOptions().timeZone` equals the requested zone, so a silent
+  fallback to the container's UTC fails loudly.
 - **Reading a page:** one `executeScript` per view (`read-overview.js`, `read-ledger.js`,
   `read-navigation.js`, `read-admin.js` under `src/test/resources/acceptance/`) returns the rendered
   text as JSON (`read-navigation.js`: the page frame's links with their `href` and current mark, plus
