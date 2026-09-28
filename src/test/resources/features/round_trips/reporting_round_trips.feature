@@ -1,4 +1,3 @@
-@wip
 Feature: How a suspected round trip is reported
   A suspected round trip is a note for the admin on the admin page and for the operator in the
   health report, listed by member in German alphabetical order (see "The health report: what the
