@@ -40,4 +40,9 @@ public class ParameterTypes {
 	public Tone tone(String phrase) {
 		return Tone.of(phrase);
 	}
+
+	@ParameterType("ascending|descending")
+	public String direction(String word) {
+		return word;
+	}
 }

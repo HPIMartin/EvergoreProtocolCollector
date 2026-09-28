@@ -25,7 +25,7 @@ public record Overview(Roster active, Roster dormant, List<Stat> position, List<
 		return Stream.of(active, dormant).filter(Objects::nonNull);
 	}
 
-	public record Roster(String caption, List<String> headers, String figureHeader, List<Row> rows, Row total, String emptyMessage) {}
+	public record Roster(String caption, List<String> headers, String figureHeader, List<Row> rows, Row total, String emptyMessage, Sort sort) {}
 
 	public record Row(List<String> cells, String mark, List<String> notes, List<String> hrefs) {}
 

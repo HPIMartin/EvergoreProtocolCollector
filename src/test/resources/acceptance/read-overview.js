@@ -20,6 +20,12 @@ const rowOf = (row, markId, cellMarkId) => ({
   notes: [...row.children].map((cell) => noteOf(cell.querySelector(`[data-testid=${cellMarkId}]`))),
   hrefs: [...row.children].map((cell) => cell.querySelector('a')?.getAttribute('href') ?? null),
 })
+const sortOf = (roster) => {
+  const sorted = [...roster.querySelectorAll('thead th')].find((th) => th.getAttribute('aria-sort') !== 'none')
+  return sorted === null || sorted === undefined
+    ? null
+    : { column: textOf(sorted.querySelector('[data-testid=column-label]')), direction: sorted.getAttribute('aria-sort') }
+}
 const rosterOf = (testId) => {
   const roster = document.querySelector(`[data-testid=${testId}]`)
   if (roster === null) {
@@ -36,6 +42,7 @@ const rosterOf = (testId) => {
     rows: [...roster.querySelectorAll('[data-testid=data-row]')].map((row) => rowOf(row, 'row-mark', 'cell-mark')),
     total: total === null ? null : rowOf(total, 'total-mark', 'total-cell-mark'),
     emptyMessage: textOf(roster.querySelector('tbody [data-testid=status-panel]')),
+    sort: sortOf(roster),
   }
 }
 return JSON.stringify({

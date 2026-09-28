@@ -129,6 +129,14 @@ public class MemberBrowser {
 		driver().findElement(By.xpath("//label[normalize-space(.)='" + optionLabel + "']/input")).click();
 	}
 
+	public void clickTheColumnHeader(RosterName roster, String header) {
+		clickTheColumnHeaderWithin("//*[@data-testid='" + (roster == RosterName.ACTIVE ? "active-roster" : "dormant-roster") + "']", header);
+	}
+
+	private void clickTheColumnHeaderWithin(String scopeXPath, String header) {
+		driver().findElement(By.xpath(scopeXPath + "//button[.//span[@data-testid='column-label'][normalize-space(text())='" + header + "']]")).click();
+	}
+
 	public void awaitUntil(String condition, Object... arguments) {
 		new WebDriverWait(driver(), HANG_GUARD).until(browser -> Boolean.TRUE.equals(javascript(browser).executeScript("return " + condition, arguments)));
 	}
