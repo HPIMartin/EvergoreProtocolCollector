@@ -601,7 +601,9 @@ of the Gradle command are load-bearing:
   before any production code; TDD cycles drive them green, step definitions in
   `dev.schoenberg.evergore.protocolParser.acceptance` included, and the feature is armed (`@wip`
   removed) when they pass. `RunAcceptanceScenariosTest` is the one acceptance runner for the whole
-  system, backend and SPA; the frontend keeps its Vitest unit tests only. `./verify bdd` runs the
+  system, backend and SPA; the frontend keeps its Vitest unit tests only. Its step definitions
+  drive the member and the admin through the browser and the operator over HTTP and JSON
+  (handbook §5). `./verify bdd` runs the
   `@wip` scenarios, `./verify all` the armed ones; a `@characterization` scenario awaiting the
   author's confirmation (`/bdd-catch-up`) is excluded from `all` like `@wip`. Scenario language:
   English, with the game's German names quoted as the game spells them. The catch-up's

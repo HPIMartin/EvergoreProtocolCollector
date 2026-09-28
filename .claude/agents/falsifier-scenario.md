@@ -29,7 +29,7 @@ file path or inline text).
   fact or outcome; the step definition owns the *how*.
 - **Completeness against the feature:** hold the set against the handbook §5 list: the happy path,
   every business rule and its variants, the error, empty and boundary cases a stakeholder would
-  name, and for a user-visible feature the one scenario through the real artifact. Any promised
+  name, and for a user-visible feature the rules the SPA applies on its own. Any promised
   behavior without a scenario, and any scenario promising behavior outside the feature, is a
   finding.
 - **Step reuse:** a new step phrasing where an existing one says the same thing.

@@ -49,7 +49,7 @@ is the author's decision ([engineering-handbook.md](engineering-handbook.md) §7
    - domain lens: value math, watermark/aggregation, parser fidelity
    - robustness lens: fake-green tests, edges, time/concurrency/resources, boundaries, secrets
    - frontend lens: fake-green component tests, user paths, async determinism, layer boundaries,
-     API contract, the one real-artifact scenario
+     API contract, the browser-driven scenarios
    - each returns verdict + counter-tests, and ends with the diff of the production tree against
      HEAD in its worktree (a left-behind probe is its own finding)
 4. REVIEW GATE (spawn `doc-reviewer` + `reviewer`, both fresh), once per FEATURE commit

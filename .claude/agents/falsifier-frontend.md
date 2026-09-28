@@ -1,6 +1,6 @@
 ---
 name: falsifier-frontend
-description: Adversarial verifier, frontend lens; spawned only when the change touches the SPA. Given a feature's diff/commits, tries hard to PROVE the SPA or its tests are wrong (fake-green component tests, untested user paths, async determinism, layer boundaries, API contract, the one real-artifact scenario). Returns a skeptical verdict + concrete counter-tests. Read-only; never commits or pushes.
+description: Adversarial verifier, frontend lens; spawned only when the change touches the SPA. Given a feature's diff/commits, tries hard to PROVE the SPA or its tests are wrong (fake-green component tests, untested user paths, async determinism, layer boundaries, API contract, the browser-driven scenarios). Returns a skeptical verdict + concrete counter-tests. Read-only; never commits or pushes.
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
@@ -32,9 +32,10 @@ Inspect the changed files and commits under `frontend/`.
 - **Layer boundaries & conventions:** the frontend.md dependency table holds (`domain` imports
   nothing under `src/`; `api`/`ui` import only `domain`; only `app` composes); check the lint
   boundary rules actually cover the new files. Semantic table HTML and stable `data-testid`s.
-- **The real-artifact scenario:** handbook §5 gives a user-visible feature one scenario through the
-  real SPA in a real browser (the `DashboardBrowserSmokeTest` shape). Does it exist, and can it
-  fail? Mutate the view in your own worktree, run only that scenario, and report whether it noticed.
+- **The browser-driven scenarios:** handbook §5 drives every member and admin scenario through the
+  real SPA bundle in a real browser. Does each SPA rule the change touches stand in one, and can it
+  fail? Mutate the view in your own worktree, run only that feature file
+  (`./verify focus <feature file>`), and report whether it noticed.
 - **Fidelity:** German domain strings (umlauts, item names) render and sort correctly; the
   existing endpoint paths stay the SPA's client routes.
 - Try to **construct a failing case**: write the counter-test as a snippet in your report and run

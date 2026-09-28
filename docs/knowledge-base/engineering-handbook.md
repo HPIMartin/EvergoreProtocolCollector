@@ -183,11 +183,12 @@ stakeholder's view (below), understandable without reading code:
 - **Step definitions are test code** and follow every test rule (§6; no comments; no logic that
   belongs in the domain). Reuse an existing step phrasing before inventing one; the runner's dry run
   lists the undefined steps, and that list is the glue work before TDD starts.
-- Scenarios run at the application boundary, driven through ports with **test-double fakes** (a
-  fake `PageSource`, a throwaway SQLite file): no browser, no live site. A feature whose value is
-  user-visible earns **one** scenario through the real artifact (the real SPA bundle in a real
-  browser, as `DashboardBrowserSmokeTest` does today): "the shell is served" is not "the page shows
-  data".
+- **Step definitions drive each actor the way that actor meets the system** (author decision
+  2026-09-23, [open-questions.md](../open-questions.md)): the member and the admin through the
+  real SPA bundle in a real browser, the operator over HTTP and JSON. Behind the application
+  boundary stand **test-double fakes** (a fake `PageSource`, a throwaway SQLite file), never the
+  live site. Many rules live only in the SPA, and only a browser-driven step proves what the member
+  sees.
 
 **Reading as the stakeholder** (author decisions 2026-09-23 and 2026-09-27,
 [open-questions.md](../open-questions.md)). A non-technical product owner must be able to judge
@@ -257,7 +258,7 @@ scope:
 - the happy path;
 - every business rule and each of its variants (`Rule:`, `Scenario Outline`);
 - the error, empty and boundary cases a stakeholder would name;
-- for a user-visible feature, the one scenario through the real artifact.
+- for a user-visible feature, the rules the SPA applies on its own beside those the server computes.
 
 An implementation that later needs a behavior no scenario names has found an incomplete set; the
 set goes back to the author before that behavior is written.
