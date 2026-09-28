@@ -11,10 +11,13 @@ import io.cucumber.java.en.When;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Navigation;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Navigation.FrameLink;
+import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.BANK;
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.STORAGE;
+import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.NO_VIEW_FOR_THAT_LINK;
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
+import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.UNKNOWN;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class DashboardNavigationSteps {
@@ -34,6 +37,16 @@ public class DashboardNavigationSteps {
 		browser.open(OVERVIEW);
 	}
 
+	@When("a member opens a link to a page the dashboard does not have")
+	public void aMemberOpensALinkToAPageTheDashboardDoesNotHave() {
+		browser.open(UNKNOWN);
+	}
+
+	@Then("the page says there is no view for that link")
+	public void thePageSaysThereIsNoViewForThatLink() {
+		assertThat(overview().messages()).anyMatch(message -> NO_VIEW_FOR_THAT_LINK.matcher(message).matches());
+	}
+
 	@Then("the page's frame offers exactly the links:")
 	public void thePagesFrameOffersExactlyTheLinks(DataTable expected) {
 		List<List<String>> shown = navigation().frame().stream().map(DashboardNavigationSteps::rowOf).toList();
@@ -49,6 +62,10 @@ public class DashboardNavigationSteps {
 
 	private Navigation navigation() {
 		return browser.navigation();
+	}
+
+	private Overview overview() {
+		return browser.read("read-overview.js", Overview.class);
 	}
 
 	private static List<String> rowOf(FrameLink link) {

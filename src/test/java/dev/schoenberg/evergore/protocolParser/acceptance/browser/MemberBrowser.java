@@ -32,7 +32,7 @@ public class MemberBrowser {
 	private static final String TOKEN = "test-token";
 	private static final Duration HANG_GUARD = Duration.ofSeconds(30);
 	private static final Duration CLOCK_TOLERANCE = Duration.ofMinutes(1);
-	private static final String SETTLED = "return document.querySelector('[data-testid=view-title]') !== null"
+	private static final String SETTLED = "const content = document.querySelector('[data-testid=page-content]'); return content !== null && content.children.length > 0"
 			+ " && document.querySelector('[data-testid=status-panel][data-variant=loading]') === null";
 	private static final String SHIFTED_CLOCK = "() => { const shift = %d - Date.now(); const RealDate = Date;"
 			+ " class ScenarioDate extends RealDate { constructor(...parts) { if (parts.length === 0) { super(RealDate.now() + shift) } else { super(...parts) } }"
