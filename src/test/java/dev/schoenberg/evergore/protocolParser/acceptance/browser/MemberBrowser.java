@@ -133,6 +133,10 @@ public class MemberBrowser {
 		clickTheColumnHeaderWithin("//*[@data-testid='" + (roster == RosterName.ACTIVE ? "active-roster" : "dormant-roster") + "']", header);
 	}
 
+	public void clickTheLedgerColumnHeader(String header) {
+		clickTheColumnHeaderWithin("//table[contains(concat(' ', normalize-space(@class), ' '), ' data-table ')]", header);
+	}
+
 	private void clickTheColumnHeaderWithin(String scopeXPath, String header) {
 		driver().findElement(By.xpath(scopeXPath + "//button[.//span[@data-testid='column-label'][normalize-space(text())='" + header + "']]")).click();
 	}
