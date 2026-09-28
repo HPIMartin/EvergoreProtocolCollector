@@ -35,4 +35,9 @@ public class ParameterTypes {
 	public TokenChoice tokenChoice(String phrase) {
 		return TokenChoice.of(phrase);
 	}
+
+	@ParameterType("in the credit colour|in the debit colour|uncoloured")
+	public Tone tone(String phrase) {
+		return Tone.of(phrase);
+	}
 }

@@ -184,7 +184,12 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   every `href` on the page), a
   note's text the way a reader of the `role=note` gets it (none inside `aria-hidden`). A mark or a
   note a step names is also read the way the member sees it: focused, then the text WebDriver
-  reports as displayed (`find-note.js`), so a note the stylesheet never shows fails. The admin reads through the same
+  reports as displayed (`find-note.js`), so a note the stylesheet never shows fails. A colour a step names is read as the browser computes
+  it, anchored to the design tokens (`colour-of-token.js` reads a token through a probe element,
+  `find-cell.js` finds the figure's cell, `colour-of-figure.js` reads the colour of the element
+  holding the figure's last text node, its text-fill colour where set, so a child element's colour or a text-fill colour overriding the cell cannot hide): a credit or debit figure equals `--color-positive`
+  or `--color-negative`, an uncoloured one equals `--color-text` and its parent's colour, and that
+  parent equals `--color-text` too, so a rule painting a whole row fails. The admin reads through the same
   `MemberBrowser`; no separate pool exists per actor (handbook §5).
 - **The operator reads over HTTP, not the browser** (handbook §5): `HealthReport`
   (`acceptance.world`) `GET`s `/health` on the running service's port, with the guild's token

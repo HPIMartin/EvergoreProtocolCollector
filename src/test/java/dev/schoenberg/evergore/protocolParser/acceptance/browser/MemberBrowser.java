@@ -162,6 +162,18 @@ public class MemberBrowser {
 		return noteShown(Map.of(GUILD, true), Map.of(COLUMN, column));
 	}
 
+	public String colourOfTheToken(String token) {
+		return (String) javascript(driver()).executeScript(scriptFrom("colour-of-token.js"), token);
+	}
+
+	public String colourOfTheCellOf(String member, int column) {
+		return colourOfTheFigureIn(cellAt(Map.of(MEMBER, member), Map.of(COLUMN, column)));
+	}
+
+	public String colourAroundTheCellOf(String member, int column) {
+		return cellAt(Map.of(MEMBER, member), Map.of(COLUMN, column)).findElement(By.xpath("..")).getCssValue("color");
+	}
+
 	public void leave() {
 		if (driver == null) {
 			return;
@@ -219,6 +231,14 @@ public class MemberBrowser {
 		Map<String, Object> added = bidi()
 				.send(new Command<Map<String, Object>>("script.addPreloadScript", Map.of("functionDeclaration", SHIFTED_CLOCK.formatted(clock.toEpochMilli())), BIDI_RESULT));
 		clockScript = (String) added.get("script");
+	}
+
+	private String colourOfTheFigureIn(WebElement holder) {
+		return (String) javascript(driver()).executeScript(scriptFrom("colour-of-figure.js"), holder);
+	}
+
+	private WebElement cellAt(Map<String, Object> row, Map<String, Object> cell) {
+		return (WebElement) javascript(driver()).executeScript(scriptFrom("find-cell.js"), row, cell);
 	}
 
 	private Optional<String> noteShown(Map<String, Object> row, Map<String, Object> cell) {
