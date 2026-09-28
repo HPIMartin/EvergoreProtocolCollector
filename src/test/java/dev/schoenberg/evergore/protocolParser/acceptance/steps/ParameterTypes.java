@@ -18,4 +18,9 @@ public class ParameterTypes {
 	public RosterName roster(String word) {
 		return RosterName.of(word);
 	}
+
+	@ParameterType("the admin page|the health report")
+	public Surface surface(String text) {
+		return Surface.of(text);
+	}
 }
