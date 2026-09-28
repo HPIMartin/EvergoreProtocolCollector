@@ -32,13 +32,16 @@ postCreate). The base image is pinned by digest, every feature by digest in
 
 | Feature | Setting | Why |
 |---|---|---|
-| `java` | `version: 25`, Maven off, Gradle off | The JDK; version single-sourced here (see below). |
+| `java` | `version: 25`, `jdkDistro: tem`, Maven off, Gradle off | The JDK; version single-sourced here (see below). Temurin, the distribution the production image builds on (`eclipse-temurin:25-jdk`). |
 | `node` | `version: 24.18.0` | IDE tooling only; **must match `gradle.properties` → `nodeVersion`**. |
 | `python` | defaults | Utility scripting. |
-| `github-cli` | defaults | `gh` for PR/issue metadata (Dependabot triage needs more than the git refs). |
-| `docker-outside-of-docker` | `moby: false` | Docker CE CLI against the **host** daemon: image build, deploy and H2's Selenium service from inside the container. |
+| `github-cli:1.1.3` | defaults | `gh` for PR/issue metadata (Dependabot triage needs more than the git refs). |
+| `docker-outside-of-docker:1.10.1` | `moby: false` | Docker CE CLI against the **host** daemon: image build, deploy and H2's Selenium service from inside the container. |
 | `trivy` | defaults | `./gradlew vulnScan` ([build-run-deploy.md](build-run-deploy.md)). |
 
+- `github-cli` and `docker-outside-of-docker` are referenced by their exact version, so a rebuild
+  takes no feature release the lockfile has not recorded; bump the tag and regenerate the lockfile
+  together.
 - The `node` feature reference is `node:2` (**major 2**, tag `1` would stay on 1.x forever). The 2.0
   break is the removal of the default yarn-v1 install; this project uses npm, so it does not apply.
 - The exact `24.18.0` is a second place holding the Node version. The `:frontend` build does **not**
