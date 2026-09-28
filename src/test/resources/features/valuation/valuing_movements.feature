@@ -1,4 +1,3 @@
-@wip
 Feature: Valuing the guild's movements
   Gold counts at face value. Goods are valued from the price list the service ships: a withdrawal
   costs the member 60 % of the item's market value, and a deposit credits them according to the
