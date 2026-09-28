@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Type;
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -50,6 +51,7 @@ public class MemberBrowser {
 	private Instant clock;
 	private String clockScript;
 	private String lastReachedUrl;
+	private String requestedDeepLink;
 
 	public MemberBrowser(RunningService service, BrowserChoice choice) {
 		this.service = service;
@@ -68,8 +70,20 @@ public class MemberBrowser {
 		openHref(path + tokenParameterSeparator(path) + "token=" + TOKEN);
 	}
 
-	public void openTheStartPage(TokenChoice choice) {
-		openHref(choice == TokenChoice.WRONG_TOKEN ? "/?token=wrong-token" : "/");
+	public void openTheStartPage(TokenChoice tokenChoice) {
+		openHref(tokenChoice == TokenChoice.WRONG_TOKEN ? "/?token=wrong-token" : "/");
+	}
+
+	public void openADeepLinkBookmark(String path, TokenChoice tokenChoice) {
+		String href = tokenChoice == TokenChoice.WRONG_TOKEN ? path + tokenParameterSeparator(path) + "token=wrong-token" : path;
+		requestedDeepLink = path;
+		driver().get("http://" + choice.serviceHost() + ":" + service.port() + href);
+	}
+
+	public boolean showsNoPageOfTheDashboard() {
+		new WebDriverWait(driver(), HANG_GUARD).until(browser -> "complete".equals(javascript(browser).executeScript("return document.readyState")));
+		boolean noBrand = Boolean.TRUE.equals(javascript(driver()).executeScript("return document.querySelector('[data-testid=page-brand]') === null"));
+		return noBrand && URI.create(driver().getCurrentUrl()).getRawPath().equals(URI.create(requestedDeepLink).getRawPath());
 	}
 
 	public void openHref(String href) {
