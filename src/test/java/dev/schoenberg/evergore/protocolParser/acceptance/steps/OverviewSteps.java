@@ -152,6 +152,14 @@ public class OverviewSteps {
 		assertThat(namesIn(overview.memberRows())).doesNotContain(guild.inGermanOrder().getLast());
 	}
 
+	@Then("{word}'s {string} is {word}")
+	public void figureIs(String member, String header, String figure) {
+		Placed row = rowOf(overview(), member);
+		int column = columnOf(row.headers(), header);
+
+		assertThat(row.row().cells().get(column)).isEqualTo(figure);
+	}
+
 	@Then("the guild's position reads:")
 	public void theGuildsPositionReads(DataTable expected) {
 		List<Stat> position = overview().position();
