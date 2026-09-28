@@ -1,4 +1,3 @@
-@wip
 Feature: Suspected round trips of trader goods
   Goods bought from the guild trader credit their full market value when deposited but cost only
   60 % when withdrawn, so taking them out and putting them back in earns 40 % out of nothing. The

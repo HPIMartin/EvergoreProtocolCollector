@@ -1,4 +1,3 @@
-@wip
 Feature: Crafting is not a round trip
   A crafter withdraws trader goods, deposits the product they became and later restocks the same
   goods. That is the guild working as intended, not a round trip. The published recipes tell the
