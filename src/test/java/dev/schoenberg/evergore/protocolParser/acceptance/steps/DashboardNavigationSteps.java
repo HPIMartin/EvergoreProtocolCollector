@@ -9,6 +9,7 @@ import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
+import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Navigation;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Navigation.FrameLink;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview;
@@ -35,6 +36,19 @@ public class DashboardNavigationSteps {
 	@When("a member opens a bookmark of the overview")
 	public void aMemberOpensABookmarkOfTheOverview() {
 		browser.open(OVERVIEW);
+	}
+
+	@When("the member follows the name of {string} in the overview")
+	public void theMemberFollowsTheNameOfInTheOverview(String member) {
+		browser.follow(member);
+	}
+
+	@Then("the ledger shows a movement of {word} gold")
+	public void theLedgerShowsAMovementOfGold(String gold) {
+		MemberLedger ledger = browser.read("read-ledger.js", MemberLedger.class);
+		int column = ledger.headers().indexOf("Betrag");
+
+		assertThat(ledger.rows()).extracting(row -> row.get(column)).contains(gold);
 	}
 
 	@When("a member opens a link to a page the dashboard does not have")
