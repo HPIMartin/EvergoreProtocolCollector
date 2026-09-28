@@ -174,6 +174,14 @@ public class MemberBrowser {
 		return cellAt(Map.of(MEMBER, member), Map.of(COLUMN, column)).findElement(By.xpath("..")).getCssValue("color");
 	}
 
+	public String colourOfTheStatLabelled(String label) {
+		return colourOfTheFigureIn(statValueLabelled(label));
+	}
+
+	public String colourAroundTheStatLabelled(String label) {
+		return statValueLabelled(label).findElement(By.xpath("..")).getCssValue("color");
+	}
+
 	public void leave() {
 		if (driver == null) {
 			return;
@@ -235,6 +243,10 @@ public class MemberBrowser {
 
 	private String colourOfTheFigureIn(WebElement holder) {
 		return (String) javascript(driver()).executeScript(scriptFrom("colour-of-figure.js"), holder);
+	}
+
+	private WebElement statValueLabelled(String label) {
+		return (WebElement) javascript(driver()).executeScript(scriptFrom("find-stat.js"), label);
 	}
 
 	private WebElement cellAt(Map<String, Object> row, Map<String, Object> cell) {

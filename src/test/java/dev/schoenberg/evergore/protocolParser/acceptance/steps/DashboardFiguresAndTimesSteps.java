@@ -11,6 +11,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview.Placed;
+import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview.Stat;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger.MINUTE_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.acceptance.world.GameProtocol.MINUTE;
@@ -69,6 +70,15 @@ public class DashboardFiguresAndTimesSteps {
 		};
 	}
 
+	@Then("the guild's {string} shows {int} {tone}")
+	public void theGuildsFigureShowsTone(String figure, int value, Tone tone) {
+		Stat stat = statOf(figure);
+		String colour = browser.colourOfTheStatLabelled(figure);
+
+		assertThat(stat.value()).isEqualTo(String.valueOf(value));
+		assertToneIsShown(tone, colour, () -> browser.colourAroundTheStatLabelled(figure), "the colour of the guild's " + figure);
+	}
+
 	@Then("the ledger shows a movement at {moment}")
 	public void theLedgerShowsAMovementAt(LocalDateTime moment) {
 		MemberLedger ledger = ledger();
@@ -79,6 +89,15 @@ public class DashboardFiguresAndTimesSteps {
 
 	private MemberLedger ledger() {
 		return browser.read("read-ledger.js", MemberLedger.class);
+	}
+
+	private Stat statOf(String figure) {
+		return overview()
+				.position()
+				.stream()
+				.filter(stat -> stat.label().equals(figure))
+				.findFirst()
+				.orElseThrow(() -> new AssertionError("The guild's position shows no figure labelled " + figure));
 	}
 
 	private Placed rowOf(String member) {
