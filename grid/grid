@@ -1,0 +1,38 @@
+#!/bin/sh
+set -eu
+
+network=epc-grid
+alias=epc-devcontainer
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+self=$(hostname)
+
+usage() {
+	printf 'usage: grid/grid up|down\n' >&2
+	exit 2
+}
+
+joined() {
+	docker network inspect "$network" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null |
+		grep -q "$(docker inspect --format '{{.Name}}' "$self" | tr -d /)"
+}
+
+[ $# -eq 1 ] || usage
+
+case "$1" in
+	up)
+		docker compose -f "$here/compose.yaml" up --detach --wait
+		if ! joined; then
+			docker network connect --alias "$alias" "$network" "$self"
+		fi
+		printf '[grid] hub http://selenium-hub:4444, the service is reached as %s\n' "$alias"
+		;;
+	down)
+		if joined; then
+			docker network disconnect "$network" "$self"
+		fi
+		docker compose -f "$here/compose.yaml" down
+		;;
+	*)
+		usage
+		;;
+esac

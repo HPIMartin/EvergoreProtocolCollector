@@ -160,6 +160,7 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   | the acceptance suite inside `./verify all` | the 23 armed overview scenarios | 29 s (the whole gateway 535 s) |
   | the overview's armed scenarios, one at a time | 23 | 74 s |
   | the same, 2 / 4 / 6 at a time | 23 | 48 s / 41 s / 42 s |
+  | the same on the grid, 4 at a time: Firefox / Chrome / Edge | 23 | 43 s / 41 s / 42 s |
 
   - A worker's first scenario takes about 20 s, the browser's cold start and the first context;
     every later one 3 to 4 s. Beyond 4 at a time the cold starts dominate a run this short.

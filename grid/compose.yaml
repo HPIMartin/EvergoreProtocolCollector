@@ -1,0 +1,28 @@
+name: epc-grid
+
+x-node: &node
+  depends_on:
+    - selenium-hub
+  shm_size: 2gb
+  environment:
+    SE_EVENT_BUS_HOST: selenium-hub
+    SE_NODE_GRID_URL: http://selenium-hub:4444
+    SE_NODE_MAX_SESSIONS: 4
+    SE_NODE_OVERRIDE_MAX_SESSIONS: "true"
+
+services:
+  selenium-hub:
+    image: selenium/hub:4.49.0-20260909
+  firefox:
+    <<: *node
+    image: selenium/node-firefox:4.49.0-20260909
+  chrome:
+    <<: *node
+    image: selenium/node-chrome:4.49.0-20260909
+  edge:
+    <<: *node
+    image: selenium/node-edge:4.49.0-20260909
+
+networks:
+  default:
+    name: epc-grid

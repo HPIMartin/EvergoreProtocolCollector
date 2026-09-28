@@ -150,7 +150,10 @@ tasks.test {
 		failOnNoDiscoveredTests = false
 	}
 	providers.systemProperty("cucumber.features").orNull?.let { systemProperty("cucumber.features", it) }
+	systemProperty("otel.logs.exporter", "none")
 	listOf(
+		"EPC_ACCEPTANCE_GRID" to "acceptance.grid",
+		"EPC_ACCEPTANCE_BROWSER" to "acceptance.browser",
 		"EPC_ACCEPTANCE_PARALLELISM" to "cucumber.execution.parallel.config.fixed.parallelism",
 		"EPC_ACCEPTANCE_PARALLELISM" to "cucumber.execution.parallel.config.fixed.max-pool-size",
 	).forEach { (variable, property) ->

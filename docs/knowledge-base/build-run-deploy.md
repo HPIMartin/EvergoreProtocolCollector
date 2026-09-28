@@ -784,6 +784,29 @@ requests in a row not earning a 429. That gap needs a Netty-level seam and is tr
   **JDK 25**, Maven off, Gradle via the wrapper); see [dev-environment.md](dev-environment.md).
   Dev only.
 
+## The browser grid (acceptance scenarios in other browsers)
+
+A Selenium Grid on the Docker daemon the devcontainer reaches (`docker-outside-of-docker`), so the
+acceptance scenarios run in Firefox, Chrome and Edge ([testing.md](testing.md), "The acceptance
+runner"). Test-only; the production scrape keeps its own browser.
+
+- `grid/compose.yaml`: `selenium/hub` and one `selenium/node-{firefox,chrome,edge}` each, all on
+  one pinned release tag, 4 sessions per node, on the network `epc-grid`. `SE_NODE_GRID_URL`
+  makes a node announce the hub, not itself, as the WebDriver BiDi endpoint, so the websocket
+  goes through the hub the devcontainer can reach.
+- `grid/grid up` starts it, waits for the healthy state and connects the devcontainer to
+  `epc-grid` under the alias `epc-devcontainer`, the name a browser in the grid opens the
+  scenario's service by; `grid/grid down` reverses both.
+- Run against it: `EPC_ACCEPTANCE_GRID=http://selenium-hub:4444 EPC_ACCEPTANCE_BROWSER=chrome
+  ./verify bdd` (or `focus`/`all`); `EPC_ACCEPTANCE_BROWSER` is `firefox` (the default), `chrome`
+  or `edge`. The `test` task forwards the variables as system properties; without a grid only the
+  local `firefox` runs. One browser per run: never two Gradle runs per worktree.
+- Not in the grid: Opera, whose node image stopped at Selenium 3 (2021), and Safari, which runs
+  only on macOS (`safaridriver`).
+- The test JVM sets `otel.logs.exporter=none`: Selenium 4.7.2 switches off OpenTelemetry's trace
+  and metrics exporters for a `RemoteWebDriver` but not the log exporter, whose OTLP default then
+  fails the session for want of the exporter.
+
 ## Notable runtime risks
 
 - **The overview's three modelled figures answer nothing until the first recompute of a new jar
