@@ -220,7 +220,7 @@ every scenario without asking a developer:
 
 **Points in time (author decision 2026-09-27): one calendar.** A reader places every moment
 without arithmetic, because the value itself tells its role; the scenario gate checks each rule on
-the scenario text alone. The catch-up scenarios are brought onto it by their condensation (**G24**).
+the scenario text alone.
 
 - **TIME-1 One year:** every date is in 2026.
 - **TIME-2 One month:** dates fall in January, from 01.01. on, in the order things happen. Three
