@@ -1,4 +1,3 @@
-@wip
 Feature: Sorting the tables
   Every column of the overview and of the ledgers can sort its table, in ascending or in descending
   order. Names sort alphabetically as German is sorted, figures by amount and times by the moment
