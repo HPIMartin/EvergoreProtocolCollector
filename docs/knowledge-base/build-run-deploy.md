@@ -333,7 +333,9 @@ docker images evergore-protocol-collector    # which tags are available to roll 
   confusion. An image built before the labels existed reports empty labels — that alone dates it as
   pre-`0.1.0`.
 - On a host where the invoking user is not in the `docker` group, every command in this file needs
-  `sudo`.
+  `sudo`. Being in the group is not enough on its own: the user's Docker CLI context can point at
+  another engine (Docker Desktop's `desktop-linux`), and `sudo docker` always reaches the system
+  engine. Check with `docker context show`, or stay with `sudo`.
 
 ## Deploy to the home server
 
@@ -378,8 +380,9 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
   attempt, after a rehearsal against the work machine's Docker daemon on a copy of the production
   snapshot had found and fixed three defects the same morning (recipe below). Start every release
   with `--dry-run` as its own step, and schedule it with time to read a log.
-- **Password-based hosts:** the home server is reached by password on its own port, and its user is
-  not in the `docker` group. `EPC_DEPLOY_SSH=deploy/ssh-with-password` with `EPC_DEPLOY_SSH_PORT`,
+- **Password-based hosts:** the home server is reached by password only (its user has no
+  authorized key) on its own port, and the deploy reaches the system engine through `sudo` (see
+  "Which stand is running?"). `EPC_DEPLOY_SSH=deploy/ssh-with-password` with `EPC_DEPLOY_SSH_PORT`,
   `EPC_DEPLOY_SSH_PASSWORD` and `EPC_DEPLOY_SUDO=1` covers that: ssh asks the script itself for the
   password (`SSH_ASKPASS`), and every remote command starts with `sudo -k -S -v`, which consumes
   the password from the first stdin line before the command sees the rest. The password reaches
@@ -403,6 +406,27 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
 - **A re-run of the same tag over a stand already running it stops at the rollback tag**: the
   `pre-<version>` tag names the previous image, not the running one. That is the intended refusal,
   not a defect.
+- **The script refuses to move the database directory**: the mount pre-flight compares the running
+  container's `/database` source with `--database-dir`, and a mismatch stops the run. That guards
+  against a typo mounting an empty directory. A move is therefore its own manual step, done with
+  the release that is already running (so the same-tag refusal above does not apply, and the image
+  and its `pre-` tag stay as they are):
+  1. `docker stop epc`, then copy the directory whole with modes kept (`rsync -a <old>/ <new>/`),
+     so the backups and superseded copies come along and uid 1200 can still write (release step 3).
+  2. `docker rename epc epc-old && docker update --restart no epc-old`: the old container stays as
+     the rollback to the old directory, and nothing starts it by itself.
+  3. Recreate `epc` with exactly the parameters `epc-deploy` uses (release step 5: image, `-p 80:8080`,
+     `--restart unless-stopped`, the 0600 env file with the three secrets and `TZ=UTC`), only the
+     `-v <new>:/database` changed.
+  4. Verify as in release step 6 (health `200`, an api call without a token `401`, `lastUpdated` current).
+  5. Set `EPC_DEPLOY_DATABASE_DIR` in `deploy.local.env` to the new directory, so the next
+     deploy's pre-flight matches. `epc-old` does not bother the next deploy, which only touches
+     `epc`; remove it once the new directory has run for a while.
+- **Moved on the home server 2026-09-29** (by the host's admins, by hand, per the steps above): the
+  old data disk was failing and is retired, so the database directory now lives on the system disk.
+  Same `0.2.0` image id, health `200`, the api `401` without a token; the old container is kept
+  stopped as the short-term rollback. Copies of release files that lived only on the old disk are
+  gone; the repository and the work machine are the authoritative copies.
 
 **Rehearsing on the work machine** (repeat before every release; nothing on the home server is
 touched):
@@ -657,7 +681,7 @@ ledger and touches no row. What this means for a deploy:
 - **Budget minutes, not seconds, on a slow mount.** The copy is fsync-heavy: the same rebuild took
   ~1 s on a local disk and **~4 min** on this devcontainer's `/workspaces` bind mount, 4 min 7 s
   inside the container on the same drive, and **2.2 s** on the home server's disk over the live
-  database (all 2026-09-21). The first
+  database (all 2026-09-21; that disk was retired 2026-09-29). The first
   boot blocks until it finishes, so do not kill the container because it looks hung; killing it is
   safe (the transaction rolls back) but buys nothing.
 - **The file roughly doubles.** The rebuild leaves the old tables' pages as free pages and nothing

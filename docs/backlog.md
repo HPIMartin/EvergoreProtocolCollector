@@ -26,7 +26,8 @@ blank line between two rows splits the table mid-body (DOC-11).
   definitions exist (**G19**), and BDD is in force for every strand (decision 2026-09-27).
 - `0.2.0` runs on the home server (2026-09-21, image revision `55a441a`, the tag `v0.2.0` on that
   commit is the author's act); the release, its rollback and the re-deploy were driven by
-  `deploy/epc-deploy`.
+  `deploy/epc-deploy`. Its database directory moved to the host's system disk on 2026-09-29, by
+  hand ([build-run-deploy.md](knowledge-base/build-run-deploy.md)).
 - The catalog is closed against the game: the three raw stones renamed, magic affixes normalised,
   156 entries priced as the game prices them, `Steinbrecher` and `Jagdpfeile` corrected, and
   `/health` counting deliberate zeros apart from unknown names, which fall from 124 to 15. Of
