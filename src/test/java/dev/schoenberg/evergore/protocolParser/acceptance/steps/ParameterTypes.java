@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import io.cucumber.java.ParameterType;
 
+import dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.RosterName;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.world.GameProtocol.MINUTE;
@@ -22,5 +23,10 @@ public class ParameterTypes {
 	@ParameterType("the admin page|the health report")
 	public Surface surface(String text) {
 		return Surface.of(text);
+	}
+
+	@ParameterType("bank|storage")
+	public LedgerName ledger(String word) {
+		return LedgerName.of(word);
 	}
 }

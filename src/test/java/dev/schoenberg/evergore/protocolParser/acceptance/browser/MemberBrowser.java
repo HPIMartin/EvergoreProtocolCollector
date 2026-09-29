@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Type;
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -64,8 +65,16 @@ public class MemberBrowser {
 	}
 
 	public void open(String path) {
+		visit(path + "?token=" + TOKEN);
+	}
+
+	public boolean shows(String path) {
+		return driver != null && path.equals(URI.create(driver.getCurrentUrl()).getRawPath());
+	}
+
+	private void visit(String address) {
 		WebDriver browser = driver();
-		browser.get("http://" + choice.serviceHost() + ":" + service.port() + path + "?token=" + TOKEN);
+		browser.get("http://" + choice.serviceHost() + ":" + service.port() + address);
 		awaitSettled();
 		assertTheClockIsShifted();
 	}

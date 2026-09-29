@@ -142,11 +142,11 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   about 20 s. The pool does not tell browsers apart: it holds one choice per run (the
   `EPC_ACCEPTANCE_*` variables, read once), so a step that needs a second browser at the same time
   has to give the pool a key first.
-- **Reading a page:** one `executeScript` per view (`read-overview.js`, `read-admin.js` under
-  `src/test/resources/acceptance/`) returns the rendered text as JSON, a note's text the way a
-  reader of the `role=note` gets it (none inside `aria-hidden`). A mark or a note a step names is
-  also read the way the member sees it: focused, then the text WebDriver reports as displayed
-  (`find-note.js`), so a note the stylesheet never shows fails. The admin reads through the same
+- **Reading a page:** one `executeScript` per view (`read-overview.js`, `read-ledger.js`,
+  `read-admin.js` under `src/test/resources/acceptance/`) returns the rendered text as JSON, a
+  note's text the way a reader of the `role=note` gets it (none inside `aria-hidden`). A mark or a
+  note a step names is also read the way the member sees it: focused, then the text WebDriver
+  reports as displayed (`find-note.js`), so a note the stylesheet never shows fails. The admin reads through the same
   `MemberBrowser`; no separate pool exists per actor (handbook §5).
 - **The operator reads over HTTP, not the browser** (handbook §5): `HealthReport`
   (`acceptance.world`) `GET`s `/health` on the running service's port and parses the `lastRun`
