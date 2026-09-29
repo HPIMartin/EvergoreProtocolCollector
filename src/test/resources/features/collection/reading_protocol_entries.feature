@@ -1,4 +1,3 @@
-@wip
 Feature: Reading the entries of the game's protocols
   The game's protocols list one entry per movement: a headline with the minute, the member and the
   kind of movement, followed by one line per item, or by the gold amount in the bank. The rules

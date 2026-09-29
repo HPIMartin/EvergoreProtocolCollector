@@ -1,4 +1,3 @@
-@wip
 Feature: Collecting the guild protocols from the game
   Once a day the service signs in to the game, reads the guild bank's and the guild storage's
   transaction protocols, adds every movement it has not stored yet to the guild ledgers, and then

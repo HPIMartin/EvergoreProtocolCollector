@@ -1,4 +1,3 @@
-@wip
 Feature: Protocol lines the collection cannot read
   No unreadable line stops the collection. A headline that starts with a date and a time in the
   game's two-digit form but cannot be read is skipped together with its items and named in the
