@@ -383,7 +383,11 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
   `EPC_DEPLOY_SSH_PASSWORD` and `EPC_DEPLOY_SUDO=1` covers that: ssh asks the script itself for the
   password (`SSH_ASKPASS`), and every remote command starts with `sudo -k -S -v`, which consumes
   the password from the first stdin line before the command sees the rest. The password reaches
-  no command line; `deploy/self-test` asserts that. Pin the host key first, because the transport
+  no command line; `deploy/self-test` asserts that. The transport offers **no key**
+  (`-o PubkeyAuthentication=no`): the host allows only a few sign-in attempts per connection and
+  bans an address after repeated failures, and every key an agent offers would count as one. So a
+  wrong password is fixed in `deploy.local.env` before the next run, never retried in a loop. Pin
+  the host key first, because the transport
   runs with `StrictHostKeyChecking=yes`: `ssh-keyscan -p <port> <host> >> ~/.ssh/known_hosts`, then
   compare the fingerprint with `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server.
 - **The parameters live in `deploy.local.env`** (gitignored by `*.local.*`, mode 600 because it
