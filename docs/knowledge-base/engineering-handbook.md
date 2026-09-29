@@ -356,6 +356,10 @@ plus the corrected scenario tagged `@wip`.
   not derive it: the "the rebased tip is byte-identical to `main`" argument covers the tip only, so
   walk the commits before making the claim
   (`for c in $(git rev-list --reverse main..HEAD); do git checkout $c && ./verify all; done`).
+  After a fold, the walk starts at the first commit whose tree changed: the commits before it prove
+  their trees unchanged (`git rev-parse <sha>^{tree}` against the walked ones), and a fold that
+  touched only docs proves the code tree unchanged instead of re-running (author decision
+  2026-09-29).
   A doc or test reference likewise lands no earlier than its referent.
 - **A track's shape follows the work, not the plan it started with** (author decision 2026-08-15).
   "Small track, one commit on `main`" is an estimate. When the work turns out to need several
@@ -536,6 +540,10 @@ fresh falsifier and reviewer re-check. Bounds:
   **Early-escalate** when two consecutive rounds raise the *same* finding.
 - **Process-only FAILs** (whitespace not separated, KB not updated, commit-message format) are
   cheap mechanical fixes; they don't consume a round.
+- **Past the cap, on the author's go to finish**, only a finding that can let a scenario pass
+  falsely or leak a resource is folded and re-proved; every lower one becomes a backlog row, with
+  no further round for it (author decision 2026-09-29). Each status to the author carries a time
+  estimate: a full round here costs about an hour.
 - Fixes are folded into the commit they belong to (§7), never a "fix review" commit, and folded at
   the moment of fixing rather than at the end of the round. The gate reads the branch log before
   the diff: a commit that names a repair of an earlier commit is itself a FAIL, and an "and" joining

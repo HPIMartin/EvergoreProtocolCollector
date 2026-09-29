@@ -132,6 +132,9 @@ Planner picks the track up-front and announces it (author can veto). Full rule:
 [engineering-handbook.md](engineering-handbook.md) §7. Gist:
 
 - **Small / single TDD cycle** → directly on `main`; one commit via propose→confirm→commit.
+- **Size signal**: a planned strand of more than about 15 commits is a candidate to split into
+  strands that land one after another, since each gate round re-checks every commit; a judgement
+  per strand, not a rule (author, 2026-09-29).
 - **Large / multi-cycle or new BDD scenarios** → feature branch. Implementer self-authors
   protocol-conform messages (no per-commit pre-approval; avoids N round-trips). Panel + reviewers
   review the **branch diff**; step 5 becomes the gateway: author + planner review the branch
