@@ -113,7 +113,10 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   `ApplicationContextBuilder.singletons`, so it outlives any one context; cucumber-picocontainer
   shares it between the step classes of one scenario.
   - `GameProtocols`: the game's bank and storage protocol pages, newest entry first; the
-    `PageSource` bean reads them in place of `SeleniumPageSource`.
+    `PageSource` bean reads them in place of `SeleniumPageSource`. `the game's bank protocol
+    shows:` (or `storage`) replaces that page with its text line for line, lines no entry can hold
+    included; a movement recorded into a page shown as text fails the step. `the game cannot be
+    reached` makes the read throw, as a failed sign-in does.
   - A ledger table under `Given` (`the guild bank ledger holds:`) writes its rows into the
     protocol and stores them through the real `EvergoreDataExtractor` at once: "the ledger holds"
     means the stored ledger, whether or not a collection follows. A later collection reads the
@@ -123,7 +126,13 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - `LedgerFaults`: a `java.lang.reflect.Proxy` around the ledger and meta ports, installed by
     `BeanCreatedEventListener`s (author choice 2026-09-28): a member's stored movements fail every
     read naming the member, only while a collection runs; withheld figures fail every read of the
-    meta store outside one. It knows the port types only, no method or schema.
+    meta store outside one, and figures that cannot be saved fail every call on it inside one, so
+    the recompute fails as a whole. It knows the port types only, no method or schema.
+  - `ServiceLog`: every line the service writes through its `Logger` port, recorded by
+    `RecordedLog` (a `BeanCreatedEventListener` wrapping the port) before it reaches SLF4J. "The
+    service's log" in a scenario is this record; the framework's own logging is not in it. A
+    collection against a reachable game fails its step unless it logs that it read the game, so a
+    scrape that crashes cannot pass for one that found nothing.
 - **The daily collection is fired by hand**: `ManualTaskScheduler` replaces the `scheduled`
   `TaskScheduler`, records the fixed-delay job `@Scheduled` registers instead of starting it, and
   runs it when a step says the collection runs, through the same runnable the scheduler would

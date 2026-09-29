@@ -9,6 +9,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.world.GameProtocols;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.LedgerFaults;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioDatabase;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 
 public class RunningService {
@@ -18,15 +19,17 @@ public class RunningService {
 	private final ScenarioTime time;
 	private final LedgerFaults faults;
 	private final ScenarioDatabase database;
+	private final ServiceLog log;
 	private ApplicationContext context;
 	private EmbeddedServer server;
 	private int collectionsRun;
 
-	public RunningService(GameProtocols protocols, ScenarioTime time, LedgerFaults faults, ScenarioDatabase database) {
+	public RunningService(GameProtocols protocols, ScenarioTime time, LedgerFaults faults, ScenarioDatabase database, ServiceLog log) {
 		this.protocols = protocols;
 		this.time = time;
 		this.faults = faults;
 		this.database = database;
+		this.log = log;
 	}
 
 	public void start() {
@@ -39,7 +42,7 @@ public class RunningService {
 				.deduceEnvironment(false)
 				.environments(TEST_ENVIRONMENT, AcceptanceEnvironment.NAME)
 				.properties(Map.of("micronaut.server.port", -1, "micronaut.health.monitor.enabled", false))
-				.singletons(protocols, time, faults, database)
+				.singletons(protocols, time, faults, database, log)
 				.start();
 		server = context.getBean(EmbeddedServer.class).start();
 	}

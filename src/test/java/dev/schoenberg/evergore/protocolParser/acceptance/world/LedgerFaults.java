@@ -12,6 +12,7 @@ public class LedgerFaults {
 	private final Set<String> unreadableMembers = ConcurrentHashMap.newKeySet();
 	private volatile boolean collecting;
 	private volatile boolean figuresWithheld;
+	private volatile boolean figuresRefused;
 
 	public void makeUnreadable(String member) {
 		unreadableMembers.add(member);
@@ -23,6 +24,14 @@ public class LedgerFaults {
 
 	public void withholdFigures() {
 		figuresWithheld = true;
+	}
+
+	public void refuseToSaveFigures() {
+		figuresRefused = true;
+	}
+
+	public void saveFiguresAgain() {
+		figuresRefused = false;
 	}
 
 	public <T> T duringCollection(Supplier<T> collection) {
@@ -39,7 +48,7 @@ public class LedgerFaults {
 	}
 
 	public <T> T guardFigures(Class<T> port, T figures) {
-		return guard(port, figures, arguments -> figuresWithheld && !collecting);
+		return guard(port, figures, arguments -> collecting ? figuresRefused : figuresWithheld);
 	}
 
 	private boolean namesAnUnreadableMember(Object[] arguments) {
