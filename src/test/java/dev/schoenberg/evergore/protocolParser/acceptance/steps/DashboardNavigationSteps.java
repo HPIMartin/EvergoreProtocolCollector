@@ -45,8 +45,8 @@ public class DashboardNavigationSteps {
 
 	@Then("the ledger shows a movement of {word} gold")
 	public void theLedgerShowsAMovementOfGold(String gold) {
-		MemberLedger ledger = browser.read("read-ledger.js", MemberLedger.class);
-		int column = ledger.headers().indexOf("Betrag");
+		MemberLedger ledger = browser.ledger();
+		int column = ledger.columnOf("Betrag");
 
 		assertThat(ledger.rows()).extracting(row -> row.get(column)).contains(gold);
 	}
@@ -58,23 +58,26 @@ public class DashboardNavigationSteps {
 
 	@Then("the page says there is no view for that link")
 	public void thePageSaysThereIsNoViewForThatLink() {
-		assertThat(overview().messages()).anyMatch(message -> NO_VIEW_FOR_THAT_LINK.matcher(message).matches());
+		Overview overview = browser.overview();
+		assertThat(overview.messages()).anyMatch(message -> NO_VIEW_FOR_THAT_LINK.matcher(message).matches());
 	}
 
 	@Then("in {word}'s row the {string} leads to the bank ledger of {string}")
 	public void inRowTheLeadsToTheBankLedgerOf(String owner, String header, String avatar) {
-		assertThat(pathLedTo(owner, header)).isEqualTo(BANK.pathOf(avatar));
+		String path = pathLedTo(owner, header);
+		assertThat(path).isEqualTo(BANK.pathOf(avatar));
 	}
 
 	@Then("in {word}'s row the {string} leads to the storage ledger of {string}")
 	public void inRowTheLeadsToTheStorageLedgerOf(String owner, String header, String avatar) {
-		assertThat(pathLedTo(owner, header)).isEqualTo(STORAGE.pathOf(avatar));
+		String path = pathLedTo(owner, header);
+		assertThat(path).isEqualTo(STORAGE.pathOf(avatar));
 	}
 
 	@Then("in {word}'s row the {string} shows {string} and leads nowhere")
 	public void inRowTheShowsAndLeadsNowhere(String owner, String header, String expected) {
-		Overview.Placed placed = rowOf(owner);
-		int column = columnOf(placed.headers(), header);
+		Overview.Placed placed = browser.overview().rowOf(owner);
+		int column = placed.columnOf(header);
 
 		assertThat(placed.row().cells().get(column)).isEqualTo(expected);
 		assertThat(placed.row().hrefs().get(column)).isNull();
@@ -90,38 +93,20 @@ public class DashboardNavigationSteps {
 
 	@Then("no link on the page leads to the admin page")
 	public void noLinkOnThePageLeadsToTheAdminPage() {
-		assertThat(navigation().allHrefs()).noneMatch(href -> pathOnly(href).equals("/admin"));
+		Navigation navigation = navigation();
+		assertThat(navigation.allHrefs()).noneMatch(href -> pathOnly(href).equals("/admin"));
 	}
 
 	private Navigation navigation() {
 		return browser.navigation();
 	}
 
-	private Overview overview() {
-		return browser.read("read-overview.js", Overview.class);
-	}
-
 	private String pathLedTo(String owner, String header) {
-		Overview.Placed placed = rowOf(owner);
-		int column = columnOf(placed.headers(), header);
+		Overview.Placed placed = browser.overview().rowOf(owner);
+		int column = placed.columnOf(header);
 		String href = placed.row().hrefs().get(column);
 		assertThat(href).as("a link in " + owner + "'s " + header + " cell").isNotNull();
 		return pathOnly(href);
-	}
-
-	private Overview.Placed rowOf(String owner) {
-		return overview()
-				.placedMemberRows()
-				.stream()
-				.filter(placed -> placed.row().cells().getFirst().equals(owner))
-				.findFirst()
-				.orElseThrow(() -> new AssertionError("The overview lists no row for " + owner));
-	}
-
-	private static int columnOf(List<String> headers, String header) {
-		int column = headers.indexOf(header);
-		assertThat(column).as("the overview's column " + header + " among " + headers).isNotNegative();
-		return column;
 	}
 
 	private static List<String> rowOf(FrameLink link) {

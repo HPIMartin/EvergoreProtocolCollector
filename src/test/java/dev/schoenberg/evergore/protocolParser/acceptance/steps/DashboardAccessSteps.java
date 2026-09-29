@@ -10,7 +10,6 @@ import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
-import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.TokenChoice;
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.GameProtocols;
@@ -79,7 +78,11 @@ public class DashboardAccessSteps {
 
 	@Then("the browser shows no page of the dashboard")
 	public void theBrowserShowsNoPageOfTheDashboard() {
-		assertThat(browser.showsNoPageOfTheDashboard()).isTrue();
+		boolean atRequestedDeepLink = browser.isAtTheRequestedDeepLink();
+		boolean noPageBrand = browser.showsNoPageBrand();
+
+		assertThat(atRequestedDeepLink).as("the browser stayed at the requested deep link").isTrue();
+		assertThat(noPageBrand).as("the dashboard shows no page brand").isTrue();
 	}
 
 	@When("a member follows the guild's link to the overview")
@@ -101,7 +104,7 @@ public class DashboardAccessSteps {
 		for (String href : hrefs) {
 			browser.openHref(href);
 			String reachedPath = URI.create(browser.lastReachedUrl()).getRawPath();
-			List<String> messages = browser.read("read-overview.js", Overview.class).messages();
+			List<String> messages = browser.overview().messages();
 
 			assertThat(reachedPath).as("the page the link " + href + " opened").isEqualTo(URI.create(href).getRawPath());
 			assertThat(messages).as("the token complaint on " + href).doesNotContain(forbiddenMessage);

@@ -86,10 +86,14 @@ public class MemberBrowser {
 		driver().get("http://" + choice.serviceHost() + ":" + service.port() + href);
 	}
 
-	public boolean showsNoPageOfTheDashboard() {
-		new WebDriverWait(driver(), HANG_GUARD).until(browser -> "complete".equals(javascript(browser).executeScript("return document.readyState")));
-		boolean noBrand = Boolean.TRUE.equals(javascript(driver()).executeScript("return document.querySelector('[data-testid=page-brand]') === null"));
-		return noBrand && URI.create(driver().getCurrentUrl()).getRawPath().equals(URI.create(requestedDeepLink).getRawPath());
+	public boolean isAtTheRequestedDeepLink() {
+		awaitTheDocumentLoaded();
+		return requestedDeepLink != null && URI.create(driver().getCurrentUrl()).getRawPath().equals(URI.create(requestedDeepLink).getRawPath());
+	}
+
+	public boolean showsNoPageBrand() {
+		awaitTheDocumentLoaded();
+		return Boolean.TRUE.equals(javascript(driver()).executeScript("return document.querySelector('[data-testid=page-brand]') === null"));
 	}
 
 	public void openHref(String href) {
@@ -152,6 +156,14 @@ public class MemberBrowser {
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
+	}
+
+	public Overview overview() {
+		return read("read-overview.js", Overview.class);
+	}
+
+	public MemberLedger ledger() {
+		return read("read-ledger.js", MemberLedger.class);
 	}
 
 	public Navigation navigation() {
@@ -314,6 +326,10 @@ public class MemberBrowser {
 
 	private void rememberTheReachedUrl() {
 		lastReachedUrl = driver().getCurrentUrl();
+	}
+
+	private void awaitTheDocumentLoaded() {
+		new WebDriverWait(driver(), HANG_GUARD).until(browser -> "complete".equals(javascript(browser).executeScript("return document.readyState")));
 	}
 
 	private void awaitSettled() {

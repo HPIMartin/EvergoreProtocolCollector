@@ -1,7 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.acceptance.steps;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.function.Supplier;
 
 import io.cucumber.java.en.Given;
@@ -9,7 +8,6 @@ import io.cucumber.java.en.Then;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger;
-import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview.Placed;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview.Stat;
 
@@ -36,8 +34,8 @@ public class DashboardFiguresAndTimesSteps {
 
 	@Then("{word}'s {string} shows {int} {tone}")
 	public void membersFigureShowsTone(String member, String header, int value, Tone tone) {
-		Placed placed = rowOf(member);
-		int column = columnOf(placed.headers(), header);
+		Placed placed = browser.overview().rowOf(member);
+		int column = placed.columnOf(header);
 		String colour = browser.colourOfTheCellOf(member, column);
 
 		assertThat(placed.row().cells().get(column)).isEqualTo(String.valueOf(value));
@@ -81,41 +79,19 @@ public class DashboardFiguresAndTimesSteps {
 
 	@Then("the ledger shows a movement at {moment}")
 	public void theLedgerShowsAMovementAt(LocalDateTime moment) {
-		MemberLedger ledger = ledger();
+		MemberLedger ledger = browser.ledger();
 		int column = ledger.columnOf(MINUTE_COLUMN);
 
 		assertThat(ledger.rows()).extracting(row -> row.get(column)).contains(MINUTE.format(moment));
 	}
 
-	private MemberLedger ledger() {
-		return browser.read("read-ledger.js", MemberLedger.class);
-	}
-
 	private Stat statOf(String figure) {
-		return overview()
+		return browser
+				.overview()
 				.position()
 				.stream()
 				.filter(stat -> stat.label().equals(figure))
 				.findFirst()
 				.orElseThrow(() -> new AssertionError("The guild's position shows no figure labelled " + figure));
-	}
-
-	private Placed rowOf(String member) {
-		return overview()
-				.placedMemberRows()
-				.stream()
-				.filter(placed -> placed.row().cells().getFirst().equals(member))
-				.findFirst()
-				.orElseThrow(() -> new AssertionError("The overview lists no row for " + member));
-	}
-
-	private Overview overview() {
-		return browser.read("read-overview.js", Overview.class);
-	}
-
-	private static int columnOf(List<String> headers, String header) {
-		int column = headers.indexOf(header);
-		assertThat(column).as("the overview's column " + header + " among " + headers).isNotNegative();
-		return column;
 	}
 }

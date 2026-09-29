@@ -106,7 +106,8 @@ public class MemberLedgerSteps {
 
 	@Then("the page is headed {string}")
 	public void thePageIsHeaded(String heading) {
-		assertThat(ledger().heading()).isEqualTo(heading);
+		MemberLedger ledger = browser.ledger();
+		assertThat(ledger.heading()).isEqualTo(heading);
 	}
 
 	@Then("the bank ledger of {string} shows exactly:")
@@ -122,48 +123,55 @@ public class MemberLedgerSteps {
 	@Then("the {ledger} ledger of {string} says {string}")
 	public void theNamedLedgerSays(LedgerName namedLedger, String member, String message) {
 		browser.open(namedLedger.pathOf(member));
-		assertThat(ledger().emptyMessage()).isEqualTo(message);
+		assertThat(browser.ledger().emptyMessage()).isEqualTo(message);
 	}
 
 	@Then("the ledger's caption reads {string}")
 	public void theLedgersCaptionReads(String caption) {
-		assertThat(ledger().caption()).isEqualTo(caption);
+		MemberLedger ledger = browser.ledger();
+		assertThat(ledger.caption()).isEqualTo(caption);
 	}
 
 	@Then("the ledger offers neither {string} nor {string}")
 	public void theLedgerOffersNeitherNor(String first, String second) {
-		assertThat(isOffered(first)).isFalse();
-		assertThat(isOffered(second)).isFalse();
+		MemberLedger ledger = browser.ledger();
+		assertThat(isOffered(ledger, first)).isFalse();
+		assertThat(isOffered(ledger, second)).isFalse();
 	}
 
 	@Then("the ledger offers {string} but not {string}")
 	public void theLedgerOffersButNot(String offered, String notOffered) {
-		assertThat(isOffered(offered)).isTrue();
-		assertThat(isOffered(notOffered)).isFalse();
+		MemberLedger ledger = browser.ledger();
+		assertThat(isOffered(ledger, offered)).isTrue();
+		assertThat(isOffered(ledger, notOffered)).isFalse();
 	}
 
 	@Then("the ledger says {string}")
 	public void theLedgerSays(String message) {
-		assertThat(ledger().emptyMessage()).isEqualTo(message);
+		MemberLedger ledger = browser.ledger();
+		assertThat(ledger.emptyMessage()).isEqualTo(message);
 	}
 
 	@Then("the ledger shows her {int} newest movements")
 	public void theLedgerShowsHerNewestMovements(int count) {
-		assertThat(quantitiesShown()).isEqualTo(descendingRange(movementsInTheStorageLedger, movementsInTheStorageLedger - count + 1));
+		List<Integer> quantities = quantitiesShown();
+		assertThat(quantities).isEqualTo(descendingRange(movementsInTheStorageLedger, movementsInTheStorageLedger - count + 1));
 	}
 
 	@Then("the ledger shows her {int} oldest movements")
 	public void theLedgerShowsHerOldestMovements(int count) {
-		assertThat(quantitiesShown()).isEqualTo(descendingRange(count, 1));
+		List<Integer> quantities = quantitiesShown();
+		assertThat(quantities).isEqualTo(descendingRange(count, 1));
 	}
 
 	@Then("the ledger shows her movements {int} to {int}, counted from the newest")
 	public void theLedgerShowsHerMovementsCountedFromTheNewest(int from, int to) {
-		assertThat(quantitiesShown()).isEqualTo(descendingRange(movementsInTheStorageLedger - from + 1, movementsInTheStorageLedger - to + 1));
+		List<Integer> quantities = quantitiesShown();
+		assertThat(quantities).isEqualTo(descendingRange(movementsInTheStorageLedger - from + 1, movementsInTheStorageLedger - to + 1));
 	}
 
 	private List<Integer> quantitiesShown() {
-		MemberLedger ledger = ledger();
+		MemberLedger ledger = browser.ledger();
 		int column = ledger.columnOf(QUANTITY_COLUMN);
 		return ledger.rows().stream().map(row -> Integer.parseInt(row.get(column))).toList();
 	}
@@ -174,7 +182,7 @@ public class MemberLedgerSteps {
 
 	private void assertLedgerShowsExactly(String avatar, LedgerName ledgerName, DataTable expected) {
 		browser.open(ledgerName.pathOf(avatar));
-		MemberLedger ledger = ledger();
+		MemberLedger ledger = browser.ledger();
 		assertThat(ledger.heading()).contains(avatar);
 		List<String> headers = expected.row(0);
 		assertThat(ledger.headers()).as("the ledger's columns in the order the scenario names them").containsSubsequence(headers);
@@ -201,17 +209,12 @@ public class MemberLedgerSteps {
 		return rows.stream().sorted(Comparator.comparing(List::toString)).toList();
 	}
 
-	private boolean isOffered(String label) {
-		MemberLedger ledger = ledger();
+	private static boolean isOffered(MemberLedger ledger, String label) {
 		return switch (label) {
 			case ZURUECK -> ledger.hasPrevious();
 			case WEITER -> ledger.hasNext();
 			default -> throw new IllegalArgumentException("Unknown pagination label: " + label);
 		};
-	}
-
-	private MemberLedger ledger() {
-		return browser.read("read-ledger.js", MemberLedger.class);
 	}
 
 	private static List<String> queryParametersOf(URI address) {

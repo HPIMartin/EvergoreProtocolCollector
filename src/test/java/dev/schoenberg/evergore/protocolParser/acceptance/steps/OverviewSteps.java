@@ -68,35 +68,35 @@ public class OverviewSteps {
 
 	@Then("the {roster} table lists {string}")
 	public void theTableLists(RosterName roster, String members) {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(namesIn(overview.roster(roster).rows())).isEqualTo(List.of(members.split(NAME_SEPARATOR)));
 	}
 
 	@Then("{string} stands in the {roster} table")
 	public void standsInTheTable(String member, RosterName roster) {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(namesIn(overview.roster(roster).rows())).contains(member);
 	}
 
 	@Then("the {roster} table's caption reads {string}")
 	public void theTablesCaptionReads(RosterName roster, String caption) {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(overview.roster(roster).caption()).isEqualTo(caption);
 	}
 
 	@Then("the {roster} table says {string}")
 	public void theTableSays(RosterName roster, String message) {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(overview.roster(roster).emptyMessage()).isEqualTo(message);
 	}
 
 	@Then("the {roster} table ends with the guild row")
 	public void theTableEndsWithTheGuildRow(RosterName roster) {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		Row total = overview.roster(roster).total();
 		assertThat(total).isNotNull();
@@ -105,64 +105,64 @@ public class OverviewSteps {
 
 	@Then("the {roster} table has no guild row")
 	public void theTableHasNoGuildRow(RosterName roster) {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(overview.roster(roster).total()).isNull();
 	}
 
 	@Then("the overview shows no guild row")
 	public void theOverviewShowsNoGuildRow() {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(overview.placedGuildRows()).isEmpty();
 	}
 
 	@Then("the overview shows:")
 	public void theOverviewShows(DataTable expected) {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(projected(rowsNamedIn(overview.placedMemberRows(), expected), expected)).isEqualTo(expected.cells().subList(1, expected.height()));
 	}
 
 	@Then("the guild row shows:")
 	public void theGuildRowShows(DataTable expected) {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(projected(overview.placedGuildRows(), expected)).isEqualTo(expected.cells().subList(1, expected.height()));
 	}
 
 	@Then("the overview lists {string}")
 	public void theOverviewLists(String members) {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(namesIn(overview.memberRows())).isEqualTo(List.of(members.split(NAME_SEPARATOR)));
 	}
 
 	@Then("the overview lists {int} members")
 	public void theOverviewListsMembers(int count) {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(overview.memberRows()).hasSize(count);
 	}
 
 	@Then("the member last in German alphabetical order is not listed")
 	public void theMemberLastInGermanOrderIsNotListed() {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(namesIn(overview.memberRows())).doesNotContain(guild.inGermanOrder().getLast());
 	}
 
 	@Then("{word}'s {string} is {word}")
 	public void figureIs(String member, String header, String figure) {
-		Placed row = rowOf(overview(), member);
-		int column = columnOf(row.headers(), header);
+		Placed row = browser.overview().rowOf(member);
+		int column = row.columnOf(header);
 
 		assertThat(row.row().cells().get(column)).isEqualTo(figure);
 	}
 
 	@Then("the guild's position reads:")
 	public void theGuildsPositionReads(DataTable expected) {
-		List<Stat> position = overview().position();
+		List<Stat> position = browser.overview().position();
 
 		List<String> shown = expected.row(0).stream().map(label -> valueOf(position, label)).toList();
 		assertThat(shown).isEqualTo(expected.row(1));
@@ -170,22 +170,22 @@ public class OverviewSteps {
 
 	@Then("the page says {string}")
 	public void thePageSays(String message) {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(overview.messages()).contains(message);
 	}
 
 	@Then("the last column reads {string}")
 	public void theLastColumnReads(String figure) {
-		Overview overview = overview();
+		Overview overview = browser.overview();
 
 		assertThat(overview.active().figureHeader()).isEqualTo(figure);
 	}
 
 	@Then("{word}'s {string} shows no figure, noted {string}")
 	public void showsNoFigureNoted(String member, String header, String note) {
-		Placed row = rowOf(overview(), member);
-		int column = columnOf(row.headers(), header);
+		Placed row = browser.overview().rowOf(member);
+		int column = row.columnOf(header);
 
 		Optional<String> shown = browser.noteShownInTheCellOf(member, column);
 		assertNoFigureNoted(row, column, note, shown);
@@ -193,8 +193,8 @@ public class OverviewSteps {
 
 	@Then("the guild row's {string} shows no figure, noted {string}")
 	public void theGuildRowShowsNoFigureNoted(String header, String note) {
-		Placed row = guildRowOf(overview());
-		int column = columnOf(row.headers(), header);
+		Placed row = guildRowOf(browser.overview());
+		int column = row.columnOf(header);
 
 		Optional<String> shown = browser.noteShownInTheGuildRowsCell(column);
 		assertNoFigureNoted(row, column, note, shown);
@@ -202,7 +202,7 @@ public class OverviewSteps {
 
 	@Then("{word}'s row is marked {string}")
 	public void rowIsMarked(String member, String mark) {
-		Placed row = rowOf(overview(), member);
+		Placed row = browser.overview().rowOf(member);
 
 		Optional<String> shown = browser.markShownOnTheRowOf(member);
 		assertThat(row.row().mark()).isEqualTo(mark);
@@ -211,14 +211,14 @@ public class OverviewSteps {
 
 	@Then("{word}'s row carries no mark")
 	public void rowCarriesNoMark(String member) {
-		Placed row = rowOf(overview(), member);
+		Placed row = browser.overview().rowOf(member);
 
 		assertThat(row.row().mark()).isNull();
 	}
 
 	@Then("the guild row is marked {string}")
 	public void theGuildRowIsMarked(String mark) {
-		Placed row = guildRowOf(overview());
+		Placed row = guildRowOf(browser.overview());
 
 		Optional<String> shown = browser.markShownOnTheGuildRow();
 		assertThat(row.row().mark()).isEqualTo(mark);
@@ -227,7 +227,7 @@ public class OverviewSteps {
 
 	@Then("the guild row carries no mark")
 	public void theGuildRowCarriesNoMark() {
-		Placed row = guildRowOf(overview());
+		Placed row = guildRowOf(browser.overview());
 
 		assertThat(row.row().mark()).isNull();
 	}
@@ -235,10 +235,6 @@ public class OverviewSteps {
 	private void switchTheLastColumnTo(String figure) {
 		browser.choose(figure);
 		browser.awaitUntil(FIGURE_HEADER_READS, figure);
-	}
-
-	private Overview overview() {
-		return browser.read("read-overview.js", Overview.class);
 	}
 
 	private static void assertNoFigureNoted(Placed row, int column, String note, Optional<String> shown) {
@@ -251,15 +247,6 @@ public class OverviewSteps {
 		return overview.placedGuildRows().stream().findFirst().orElseThrow(() -> new AssertionError("The overview shows no guild row"));
 	}
 
-	private static Placed rowOf(Overview overview, String member) {
-		return overview
-				.placedMemberRows()
-				.stream()
-				.filter(placed -> placed.row().cells().getFirst().equals(member))
-				.findFirst()
-				.orElseThrow(() -> new AssertionError("The overview lists no row for " + member));
-	}
-
 	private static List<Placed> rowsNamedIn(List<Placed> rows, DataTable expected) {
 		List<String> named = expected.column(0).subList(1, expected.height());
 		return rows.stream().filter(placed -> named.contains(placed.row().cells().getFirst())).toList();
@@ -270,13 +257,7 @@ public class OverviewSteps {
 	}
 
 	private static List<List<String>> projected(List<Placed> rows, DataTable expected) {
-		return rows.stream().map(placed -> expected.row(0).stream().map(header -> placed.row().cells().get(columnOf(placed.headers(), header))).toList()).toList();
-	}
-
-	private static int columnOf(List<String> headers, String header) {
-		int column = headers.indexOf(header);
-		assertThat(column).as("the overview's column " + header + " among " + headers).isNotNegative();
-		return column;
+		return rows.stream().map(placed -> expected.row(0).stream().map(header -> placed.row().cells().get(placed.columnOf(header))).toList()).toList();
 	}
 
 	private static String valueOf(List<Stat> position, String label) {

@@ -9,7 +9,6 @@ import io.cucumber.java.en.When;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger;
-import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.RosterName;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Sort;
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
@@ -71,7 +70,7 @@ public class DashboardSortingSteps {
 
 	@Then("the ledger's first row shows a quantity of {int}")
 	public void theLedgersFirstRowShowsAQuantityOf(int quantity) {
-		MemberLedger ledger = ledger();
+		MemberLedger ledger = browser.ledger();
 		int column = ledger.columnOf(QUANTITY_COLUMN);
 
 		assertThat(ledger.rows().getFirst().get(column)).isEqualTo(String.valueOf(quantity));
@@ -90,7 +89,8 @@ public class DashboardSortingSteps {
 
 	@Then("the {roster} table is sorted by {string} in {direction} order")
 	public void theTableIsSortedBy(RosterName roster, String header, String direction) {
-		assertThat(sortOf(roster)).isEqualTo(new Sort(header, direction));
+		Sort sort = sortOf(roster);
+		assertThat(sort).isEqualTo(new Sort(header, direction));
 	}
 
 	private void sortRosterBy(RosterName roster, String header, String direction) {
@@ -98,15 +98,11 @@ public class DashboardSortingSteps {
 	}
 
 	private Sort sortOf(RosterName roster) {
-		return overview().roster(roster).sort();
-	}
-
-	private Overview overview() {
-		return browser.read("read-overview.js", Overview.class);
+		return browser.overview().roster(roster).sort();
 	}
 
 	private void sortLedgerBy(String header, String direction) {
-		sortBy(() -> browser.clickTheLedgerColumnHeader(header), () -> ledger().sort(), header, direction);
+		sortBy(() -> browser.clickTheLedgerColumnHeader(header), () -> browser.ledger().sort(), header, direction);
 	}
 
 	private void sortBy(Runnable clickTheColumn, Supplier<Sort> currentSort, String header, String direction) {
@@ -124,9 +120,5 @@ public class DashboardSortingSteps {
 	private static boolean sortMatches(Supplier<Sort> currentSort, String header, String direction) {
 		Sort sort = currentSort.get();
 		return sort != null && sort.equals(new Sort(header, direction));
-	}
-
-	private MemberLedger ledger() {
-		return browser.read("read-ledger.js", MemberLedger.class);
 	}
 }
