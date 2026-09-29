@@ -1,4 +1,3 @@
-@wip
 Feature: The service refuses to start on a setting that would break it silently
   A missing secret or a throttle setting that makes no sense does not surface as an error while the
   service runs; it surfaces as a dashboard nobody can open, a collection that never signs in, a

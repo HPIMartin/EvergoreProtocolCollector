@@ -41,8 +41,7 @@ scenario gate that reads as the stakeholder guards every new one.
   handbook §5 applied by the condensation.
 - [x] The catch-up scenarios are condensed and carry the author's review notes.
 - [ ] Every confirmed scenario runs green, the member and the admin through the browser, the
-      operator over HTTP and JSON, and the unclear ones are settled (backlog G19, which also meets
-      B31).
+      operator over HTTP and JSON, and the unclear ones are settled (backlog G19).
 - [ ] Each corrected behavior is green and armed (backlog E22, E23, E24, E25, E21, F9, B21, C12).
 
 ## M5: Overview truth

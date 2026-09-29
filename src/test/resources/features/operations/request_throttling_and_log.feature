@@ -1,4 +1,3 @@
-@wip
 Feature: Request throttling and the request log
   The dashboard is reachable from the internet, so the operator needs the service to count the
   requests of every client network address, turn away a client that sends too many, and write every

@@ -1,4 +1,3 @@
-@wip
 Feature: The service's health check: its verdict
   The operator asks the service for its health, through monitoring and the deploy script. The
   verdict follows the last recompute of the guild's figures: unknown before any recompute was

@@ -1,4 +1,3 @@
-@wip
 Feature: The health report: what the last recompute found
   Beside its verdict the health report names what the last successful recompute found that the
   operator needs to act on: item names the price list does not know, items known to be worth

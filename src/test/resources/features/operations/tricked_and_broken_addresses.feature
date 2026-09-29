@@ -1,4 +1,3 @@
-@wip
 Feature: Tricked and broken addresses do not open the guild's figures
   The dashboard's pages open only with the guild's token. An address that tries to get around that
   check is refused like any other request without the token; an address that is garbled is refused

@@ -1,4 +1,3 @@
-@wip
 Feature: The admin page: how the daily collection is going
   The admin page tells the admin how the daily collection is going: the date of the figures on show
   ("Stand"), when the game was last read ("Letzter Scrape") and the figures last recomputed

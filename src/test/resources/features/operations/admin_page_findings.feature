@@ -1,4 +1,3 @@
-@wip
 Feature: The admin page: what the last recompute found
   Beside the dates, the admin page lists what the last successful recompute found that needs the
   admin's attention: item names the price list does not know ("Unbekannte Items") and members whose
