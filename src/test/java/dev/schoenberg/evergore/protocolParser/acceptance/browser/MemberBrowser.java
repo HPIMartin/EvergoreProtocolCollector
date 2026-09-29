@@ -68,6 +68,10 @@ public class MemberBrowser {
 		visit(path + "?token=" + TOKEN);
 	}
 
+	public void openWithoutToken(String path) {
+		visit(path);
+	}
+
 	public boolean shows(String path) {
 		return driver != null && path.equals(URI.create(driver.getCurrentUrl()).getRawPath());
 	}

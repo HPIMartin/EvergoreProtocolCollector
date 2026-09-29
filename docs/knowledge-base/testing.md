@@ -133,11 +133,23 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
     service's log" in a scenario is this record; the framework's own logging is not in it. A
     collection against a reachable game fails its step unless it logs that it read the game, so a
     scrape that crashes cannot pass for one that found nothing.
+  - `OperatorSettings`: the environment variables, throttle settings and time zone the operator
+    starts the service with.
 - **The daily collection is fired by hand**: `ManualTaskScheduler` replaces the `scheduled`
   `TaskScheduler`, records the fixed-delay job `@Scheduled` registers instead of starting it, and
   runs it when a step says the collection runs, through the same runnable the scheduler would
   call. The step asserts exactly one job ran; Micronaut's health monitor, the only other
   fixed-delay job, is switched off in this context (`micronaut.health.monitor.enabled`).
+- **The service as the operator deploys it**: the startup scenarios and the throttle restart the
+  service without the `test` environment, so `application.yml`'s throttle defaults hold and the
+  secrets come from `OperatorSettings` through a property source with Micronaut's
+  environment-variable convention, where a `Given` unsets or blanks one; the process's own
+  environment is left out. The zone the `TimezoneStartupValidator` checks is the settings' one
+  (`AcceptanceBeans` replaces `ApplicationFactory#effectiveZone`; default the JVM's). A start the
+  service refuses never reaches the server's start, so no port stays bound; Micronaut counts the
+  context as running only after its startup event, so the beans made before the refusal are left
+  undestroyed. `the service has been restarted since` closes the context and starts a new one on
+  the same SQLite file, with the run outcomes held in memory gone.
 - **Service work runs on a thread of its own** (`OwnThread`): Micronaut forks ForkJoin tasks while
   it starts, and on a worker of cucumber's parallel pool the join steals another scenario onto the
   same thread, which then shares the first one's world (measured: `Cannot stop. Current container
@@ -158,9 +170,19 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   reports as displayed (`find-note.js`), so a note the stylesheet never shows fails. The admin reads through the same
   `MemberBrowser`; no separate pool exists per actor (handbook §5).
 - **The operator reads over HTTP, not the browser** (handbook §5): `HealthReport`
-  (`acceptance.world`) `GET`s `/health` on the running service's port and parses the `lastRun`
-  indicator's `details`, so a step comparing "the admin page" against "the health report"
-  (`{surface}`, `acceptance.steps.Surface`) reads each the way its actor really would.
+  (`acceptance.world`) `GET`s `/health` on the running service's port, with the guild's token
+  unless the step says without, and parses the `lastRun` indicator's `details`, so a step comparing
+  "the admin page" against "the health report" (`{surface}`, `acceptance.steps.Surface`) reads
+  each the way its actor really would; `AdminReport` and `HealthFacts` (`acceptance.operator`) read
+  the same dates and name lists off either.
+- **A client's raw request** (`ServiceRequests`, `acceptance.operator`): an HTTP/1.0 `GET` written
+  on a socket, because `java.net.URI` refuses the garbled addresses the security scenarios send.
+  The client's network address travels in the `X-Acceptance-Client-Address` header, which
+  `AcceptanceClientIp` (test source in `rest.filter`, replacing `ClientIp` in the acceptance
+  environment) takes before the socket's own address: no local socket comes from `203.0.113.7`.
+  The throttle's windows move on `ScenarioTime`, starting off the clock's ten-second grid and 30 ms
+  a request, so neither a fixed window nor a count from the latest request passes; no step waits
+  one out.
 - **The browser's clock** is shifted with a WebDriver BiDi preload script
   (`script.addPreloadScript`) and checked with `script.evaluate` in the page's realm, because the
   classic `executeScript` runs in a sandbox that does not see the page's `Date`.

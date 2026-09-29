@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.acceptance.world;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -14,6 +15,14 @@ public class ScenarioTime {
 
 	public void setTo(LocalDateTime wallClock) {
 		now = wallClock.atZone(APP_ZONE).toInstant();
+	}
+
+	public void setTo(Instant instant) {
+		now = instant;
+	}
+
+	public void passes(Duration duration) {
+		now = now.plus(duration);
 	}
 
 	public Instant now() {
