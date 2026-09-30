@@ -90,11 +90,33 @@ taken, and the questions still open.
 - The **reasoning effort** to set, and separately the size estimate, so the author can plan time
   instead of inferring it.
 
-**The lanes.** Which steps run at the same time, grouped by the code they touch, and every
-constraint that survives the parallelism: one worktree per lane and never two Gradle runs in one
-tree; landings stay author-serialized however much runs in parallel; a step that changes a gate
-every other commit passes through lands before the other lanes start committing or after they
-land, never between; and the shared doc files the second lane to land has to rebase onto.
+**The start plan.** What the author opens when, as **waves**, not as a lane grid. A grid of lanes
+by ordinal columns ("first / then / later") failed in practice: the columns read as global phases
+while meaning per-lane order, two parallel sessions sat in one row as if sequential, and the
+session blocks gave start conditions the grid contradicted.
+
+- **Open with "start now".** The section's first line names the sessions to open right now, all
+  at once, and how many they are.
+- **Every later wave is headed by its trigger**, an event the author can observe ("once A has
+  landed", "once Z1 has landed", "after your go on the doc cut"), never an ordinal. It lists the
+  sessions started together when that event happens. Each session sits in exactly one wave.
+- **Two facts per session, kept separate:** *starts* (its wave's trigger) and, where one exists,
+  *must land before* (e.g. "before any lane's first feature gate"). Parallel start is not the
+  same thing as landing order, and mixing the two causes the confusion.
+- **One wording, everywhere.** The session block repeats its wave's trigger and landing
+  constraint verbatim. A block that says "now, parallel to A" while the plan files it under "then"
+  is a defect of the page.
+- **Lanes stay as the grouping inside a wave**: the code a chain of sessions touches, where each
+  next session's trigger is its predecessor's landing. Any visual keeps the invariant: *same row
+  means one after the other, different rows mean at the same time*, and a dependency across rows
+  is drawn or labelled, never left implicit.
+- **The author's own steps are triggers, not a lane**: they head the wave they unblock.
+
+Then every constraint that survives the parallelism: one worktree per lane and never two Gradle
+runs in one tree; landings stay author-serialized however much runs in parallel; a step that
+changes a gate every other commit passes through lands before the other lanes start committing or
+after they land, never between; and the shared doc files the second lane to land has to rebase
+onto.
 
 Keep the terminal reply to the headline finding, the recommendation, and the decisions you need.
 
