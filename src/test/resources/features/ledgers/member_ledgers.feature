@@ -3,16 +3,11 @@ Feature: A member's bank and storage ledgers
   through the guild storage, newest first. Each movement shows its time, member, amount or quantity,
   item and quality as the collection read them from the game's protocol (see "Reading the entries
   of the game's protocols"); its direction reads "Einlagerung" or "Entnahme" in the storage ledger.
-  The bank ledger is to name a deposit "Einzahlung", as the game does; today it shows "Einlagerung"
-  there too. A member can check their own row of the overview against the two ledgers. A ledger
-  that "shows exactly" some movements holds these and no others, newest first; movements of the
-  same minute may stand in either order.
+  The bank ledger names a deposit "Einzahlung", as the game does. A member can check their own row
+  of the overview against the two ledgers. A ledger that "shows exactly" some movements holds these
+  and no others, newest first; movements of the same minute may stand in either order.
 
-  @wip
   Scenario: The bank ledger lists a member's gold movements newest first, in the game's words
-    Today the bank ledger shows the two deposits as "Einlagerung". This states the corrected
-    behavior.
-
     Given the guild bank ledger holds:
       | Zeitpunkt        | Avatar | Betrag | Vorgang    |
       | 01.01.2026 12:00 | Aurora | 1000   | Einzahlung |
