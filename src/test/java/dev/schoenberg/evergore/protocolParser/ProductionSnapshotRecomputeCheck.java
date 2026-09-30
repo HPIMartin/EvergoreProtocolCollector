@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,21 +23,30 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageCraftSubsidy;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageDonation;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.api.PageRequest.MAX_SIZE;
 import static io.micronaut.http.HttpStatus.OK;
 import static java.util.Arrays.stream;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 @EnabledIfSystemProperty(named = "prodSnapshot.check", matches = "true", disabledReason = "on-demand: run with -DprodSnapshot.check=true and a local production snapshot")
 @MicronautTest
 class ProductionSnapshotRecomputeCheck {
 	private static final Path SNAPSHOT = Paths.get(System.getProperty("prodSnapshot.file", "temp.sqlite"));
+	private static final long FOUR_FIGURES_ROUNDED_BY_HALF_A_GOLD_EACH = 2;
 	private static final Path WORKING_DB = Paths.get("build/tmp/prodSnapshot/temp.sqlite");
 
 	private static StoredMetaSums sumsBeforeRecompute = new StoredMetaSums(Map.of());
@@ -92,7 +103,63 @@ class ProductionSnapshotRecomputeCheck {
 		long craftSubsidy = figures.getLong("craftSubsidy");
 		long storageValue = figures.getLong("storageDeposited") + donation - craftSubsidy - figures.getLong("storageWithdrawn");
 
-		assertThat(bank + storageValue - donation + craftSubsidy).as("the four figures must reconcile with the served net of %s", who).isEqualTo(figures.getLong("net"));
+		assertThat(bank + storageValue - donation + craftSubsidy)
+				.as("the four figures must reconcile with the served net of %s", who)
+				.isCloseTo(figures.getLong("net"), within(FOUR_FIGURES_ROUNDED_BY_HALF_A_GOLD_EACH));
+	}
+
+	@Test
+	void servesEveryFigureAsItsRecomputedExactValueRoundedOnceHalvesAwayFromZero() {
+		JSONObject summaries = new JSONObject(Unirest.get("/api/v1/avatars?size=" + MAX_SIZE + "&token=test-token").asString().getBody());
+		JSONArray rows = summaries.getJSONArray("items");
+		StoredMetaSums recomputed = StoredMetaSums.readFrom(WORKING_DB);
+		ExactFigures guild = ExactFigures.NOTHING;
+
+		assertThat(signals.exceptionOccurred()).as("a failed recompute would leave the snapshot's own sums to be compared with themselves").isFalse();
+		assertThat(recomputed.values()).as("no recomputed sum at all would compare zeros with zeros").isNotEmpty();
+		assertThat(rows.length()).as("a snapshot with no avatar would make the comparison vacuous").isPositive();
+		for (int index = 0; index < rows.length(); index++) {
+			JSONObject row = rows.getJSONObject(index);
+			ExactFigures exact = ExactFigures.of(recomputed, row.getString("avatar"));
+			assertServesTheRoundedExactFigures(row, exact, row.getString("avatar"));
+			guild = guild.plus(exact);
+		}
+		assertServesTheRoundedExactFigures(summaries.getJSONObject("totals"), guild, "the guild total");
+	}
+
+	private static void assertServesTheRoundedExactFigures(JSONObject served, ExactFigures exact, String who) {
+		assertThat(
+				List.of(served.getLong("storageDeposited"), served.getLong("storageWithdrawn"), served.getLong("net"), served.getLong("donation"), served.getLong("craftSubsidy")))
+				.as("the figures of %s, each its exact value rounded once", who)
+				.containsExactly(roundedOnce(exact.storageDeposited()), roundedOnce(exact.storageWithdrawn()), roundedOnce(exact.net()), roundedOnce(exact.donation()),
+						roundedOnce(exact.craftSubsidy()));
+	}
+
+	private static long roundedOnce(double exact) {
+		return new BigDecimal(exact).setScale(0, RoundingMode.HALF_UP).longValueExact();
+	}
+
+	private record ExactFigures(double bank, double storageDeposited, double storageWithdrawn, double donation, double craftSubsidy) {
+		static final ExactFigures NOTHING = new ExactFigures(0, 0, 0, 0, 0);
+
+		static ExactFigures of(StoredMetaSums recomputed, String avatar) {
+			return new ExactFigures(exactOf(recomputed, getBankPlacement(avatar)) - exactOf(recomputed, getBankWithdrawl(avatar)), exactOf(recomputed, getStoragePlacement(avatar)),
+					exactOf(recomputed, getStorageWithdrawl(avatar)), exactOf(recomputed, getStorageDonation(avatar)), exactOf(recomputed, getStorageCraftSubsidy(avatar)));
+		}
+
+		ExactFigures plus(ExactFigures other) {
+			return new ExactFigures(bank + other.bank, storageDeposited + other.storageDeposited, storageWithdrawn + other.storageWithdrawn, donation + other.donation,
+					craftSubsidy + other.craftSubsidy);
+		}
+
+		double net() {
+			return bank + storageDeposited - storageWithdrawn;
+		}
+
+		private static double exactOf(StoredMetaSums recomputed, MetaInformationKey<? extends Number> key) {
+			String raw = recomputed.values().get(key.id);
+			return raw == null ? 0 : key.deserialize(raw).doubleValue();
+		}
 	}
 
 	@Test

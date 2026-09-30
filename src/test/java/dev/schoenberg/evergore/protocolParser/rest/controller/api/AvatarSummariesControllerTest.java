@@ -193,7 +193,7 @@ class AvatarSummariesControllerTest {
 	}
 
 	@Test
-	void totalsTheRoundedContributionsRatherThanRoundingTheGuildsTrueSum() {
+	void roundsTheGuildTotalFromTheGuildsExactSumRatherThanAddingTheRoundedRows() {
 		bankRepo.seedAvatars(List.of("Aurora", "Boreas", "Calla"));
 		metaRepo.put(getStoragePlacement("Aurora"), 100.4);
 		metaRepo.put(getStoragePlacement("Boreas"), 100.4);
@@ -201,7 +201,8 @@ class AvatarSummariesControllerTest {
 
 		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
 
-		assertThat(page.totals().storageDeposited()).isEqualTo(300);
+		assertThat(page.items()).extracting(AvatarSummary::storageDeposited).containsExactly(100L, 100L, 100L);
+		assertThat(page.totals().storageDeposited()).isEqualTo(301);
 	}
 
 	@Test

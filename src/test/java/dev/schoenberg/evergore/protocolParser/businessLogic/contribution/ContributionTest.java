@@ -40,28 +40,61 @@ class ContributionTest {
 
 	@Test
 	void roundsEachStorageSumToWholeGoldAndLeavesTheBankSumsAlone() {
-		Contribution tested = new Contribution(1500, 200, 185.04, 300.5, Optional.of(GuildShare.NOTHING)).inWholeGold();
+		WholeGoldContribution tested = new Contribution(1500, 200, 185.04, 300.5, Optional.of(GuildShare.NOTHING)).inWholeGold();
 
-		assertThat(tested).isEqualTo(new Contribution(1500, 200, 185, 301, Optional.of(GuildShare.NOTHING)));
+		assertThat(tested)
+				.extracting(WholeGoldContribution::bankDeposited, WholeGoldContribution::bankWithdrawn, WholeGoldContribution::storageDeposited,
+						WholeGoldContribution::storageWithdrawn)
+				.containsExactly(1500L, 200L, 185L, 301L);
 	}
 
 	@Test
-	void answersAWholeNetOnceTheStorageSumsAreWholeGold() {
-		Contribution tested = new Contribution(1500, 200, 185.04, 300.5, Optional.of(GuildShare.NOTHING)).inWholeGold();
+	void roundsTheNetFromItsExactValueRatherThanFromTheRoundedStorageSums() {
+		WholeGoldContribution tested = new Contribution(0, 0, 1.26, 0.54, Optional.of(GuildShare.NOTHING)).inWholeGold();
 
-		assertThat(tested.net()).isEqualTo(1184);
+		assertThat(tested.net()).isEqualTo(1);
 	}
 
 	@Test
-	void totalsTheRoundedContributionsRatherThanRoundingTheirTrueSum() {
-		List<Contribution> rounded = List
-				.of(new Contribution(0, 0, 100.4, 0, Optional.of(GuildShare.NOTHING)).inWholeGold(),
-						new Contribution(0, 0, 100.4, 0, Optional.of(GuildShare.NOTHING)).inWholeGold(),
-						new Contribution(0, 0, 100.4, 0, Optional.of(GuildShare.NOTHING)).inWholeGold());
+	void roundsANegativeHalfOfTheNetAwayFromZero() {
+		WholeGoldContribution tested = new Contribution(0, 0, 0, 0.5, Optional.of(GuildShare.NOTHING)).inWholeGold();
 
-		Contribution total = Contribution.sumOf(rounded);
+		assertThat(tested.net()).isEqualTo(-1);
+	}
 
-		assertThat(total.storageDeposited()).isEqualTo(300);
+	@Test
+	void roundsANegativeHalfOfTheFigureBeforeTheGuildsShareAwayFromZero() {
+		WholeGoldContribution tested = new Contribution(0, 0, 0, 0.5, Optional.of(GuildShare.NOTHING)).inWholeGold();
+
+		assertThat(tested.guildShare()).map(WholeGoldShare::balance).contains(-1L);
+	}
+
+	@Test
+	void roundsANegativeHalfOfTheStorageValueAwayFromZero() {
+		WholeGoldContribution tested = new Contribution(0, 0, 0, 0.5, Optional.of(GuildShare.NOTHING)).inWholeGold();
+
+		assertThat(tested.guildShare()).map(WholeGoldShare::storageValue).contains(-1L);
+	}
+
+	@Test
+	void roundsTheFigureBeforeTheGuildsShareFromItsExactValue() {
+		WholeGoldContribution tested = new Contribution(0, 0, 0.5, 0, Optional.of(new GuildShare(0, 0.2))).inWholeGold();
+
+		assertThat(tested.guildShare()).map(WholeGoldShare::balance).contains(0L);
+	}
+
+	@Test
+	void addsTheDonationToTheFigureBeforeTheGuildsShareBeforeRoundingIt() {
+		WholeGoldContribution tested = new Contribution(0, 0, 0.3, 0, Optional.of(new GuildShare(0.4, 0))).inWholeGold();
+
+		assertThat(tested.guildShare()).map(WholeGoldShare::balance).contains(1L);
+	}
+
+	@Test
+	void roundsTheStorageValueFromItsExactValueRatherThanFromTheRoundedFlows() {
+		WholeGoldContribution tested = new Contribution(0, 0, 4.68, 0, Optional.of(new GuildShare(0.72, 1.2))).inWholeGold();
+
+		assertThat(tested.guildShare()).map(WholeGoldShare::storageValue).contains(4L);
 	}
 
 	@Test
@@ -73,9 +106,9 @@ class ContributionTest {
 
 	@Test
 	void roundsEachFlowOfTheGuildShareOnItsOwn() {
-		Contribution tested = new Contribution(0, 0, 100.4, 0, Optional.of(new GuildShare(0.5, 0.4))).inWholeGold();
+		WholeGoldContribution tested = new Contribution(0, 0, 100.4, 0, Optional.of(new GuildShare(0.5, 0.4))).inWholeGold();
 
-		assertThat(tested.guildShare()).contains(new GuildShare(1, 0));
+		assertThat(tested.guildShare()).map(share -> List.of(share.donation(), share.craftSubsidy())).contains(List.of(1L, 0L));
 	}
 
 	@Test
@@ -109,17 +142,5 @@ class ContributionTest {
 		Contribution total = Contribution.sumOf(perAvatar);
 
 		assertThat(total.guildShare()).contains(new GuildShare(50, 7));
-	}
-
-	@Test
-	void totalsWholeGoldToTheExactSumOfTheRoundedContributions() {
-		List<Contribution> rounded = List
-				.of(new Contribution(1500, 200, 185.04, 300.0, Optional.of(GuildShare.NOTHING)).inWholeGold(),
-						new Contribution(750, 0, 46.26, 0.0, Optional.of(GuildShare.NOTHING)).inWholeGold());
-
-		Contribution total = Contribution.sumOf(rounded);
-
-		assertThat(total.storageDeposited()).isEqualTo(231);
-		assertThat(total.net()).isEqualTo(1981);
 	}
 }

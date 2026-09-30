@@ -222,10 +222,11 @@ Handwerkssubventionen = craftSubsidy
 Nach Abzügen (net)    = Gildenbank + Gildenlagerwert - Gildenspende + Handwerkssubventionen
 ```
 
-The identity holds **exactly in whole gold**, per avatar and in the guild total, for any rounding of
-the four stored storage sums, because every derived figure is built from the same already-rounded
-values. It holds only where the figures are *known*: the two flows are stored per avatar, so an
-avatar the recompute has never reached carries neither, and the guild's `Gildenspende`,
+The identity holds **exactly on the exact values**, per avatar and in the guild total. Each figure is
+then rounded to whole gold on its own (`Contribution.inWholeGold()` below), so on the shown figures it
+holds **within two gold**: the net and the three modelled figures carry up to half a gold of rounding
+each, `Gildenbank` none. It holds only where the figures are *known*: the two flows are stored per
+avatar, so an avatar the recompute has never reached carries neither, and the guild's `Gildenspende`,
 `Handwerkssubventionen` and `Gildenlagerwert` are then **absent for the whole guild** rather than
 summed over the avatars that do carry them. That state is reachable and its window is named under
 the deploy in [build-run-deploy.md](build-run-deploy.md); the header says it cannot answer, and the
@@ -356,15 +357,17 @@ independent readings by design, and no figure is derived from both.
 - `businessLogic/contribution/Contribution` carries the four sums and answers
   `net() = bankDeposited − bankWithdrawn + storageDeposited − storageWithdrawn`, the formula the
   sheet's own column 5 was verified against.
-- `Contribution.inWholeGold()` rounds both storage sums to whole gold, and the read surface takes
-  the net and the guild total from the **rounded** record, so every served row adds up and a total is
-  the exact column sum of its rows (decision 2026-09-02). The unrounded record stays the domain's
-  truth; only the read surface rounds. Rounding per avatar rather than once over the whole guild is
-  what makes a row addable, at the price of a small deviation from the unrounded truth: up to half a
-  gold piece per rounded sum, so up to about a gold on `Gildenlagerwert`, which adds three of them,
-  and up to one and a half on the figure before the deductions, which adds the rounded net as well.
-  Measured on the 03.09.2026 snapshot, the guild's `Gildenlagerwert` is exactly one gold above the
-  unrounded value.
+- `Contribution.inWholeGold()` answers a `WholeGoldContribution`: every figure it carries (the two
+  storage sums, the net, both flows, the storage value and the figure before the guild's share) is
+  worked out from the exact record and rounded to whole gold **once**, halves away from zero
+  (decisions 2026-09-27 and 2026-09-30). The read surface takes the guild total the same way: the
+  exact records added up, then rounded, never the rounded rows added. The unrounded record stays the
+  domain's truth; only the read surface rounds. "Exact" is the stored `double` and the `double`
+  arithmetic on it: a half that only a floating-point error produces (`0.7 - 0.2` is
+  `0.49999999999999994`) may fall either way (decision 2026-09-30). The price: a shown figure can differ from the sum of
+  the shown figures beside or above it, a row's net from its columns by up to one gold, the guild
+  row from the sum of the shown rows by up to half a gold per row and half a gold more. The measured
+  figures: the guild position in [testing.md](testing.md).
 - `AvatarContribution` names the avatar behind one such record; `Contribution.sumOf` adds a
   collection of contributions into the guild's own, which is what the overview's total row shows.
 - `businessLogic/contribution/AvatarContributions` assembles one record per **known** avatar

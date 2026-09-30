@@ -17,6 +17,8 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarC
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContributions;
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.Contribution;
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.GuildContributions;
+import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.WholeGoldContribution;
+import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.WholeGoldShare;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummary;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AvatarSummaryPage;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.GuildTotals;
@@ -56,24 +58,24 @@ public class AvatarSummariesController {
 	}
 
 	private static GuildTotals totalsOf(GuildContributions recompute) {
-		Contribution total = Contribution.sumOf(recompute.avatars().stream().map(avatar -> avatar.contribution().inWholeGold()).toList());
+		WholeGoldContribution total = Contribution.sumOf(recompute.avatars().stream().map(AvatarContribution::contribution).toList()).inWholeGold();
 
-		return new GuildTotals(total.bankWithdrawn(), total.bankDeposited(), (long) total.storageWithdrawn(), (long) total.storageDeposited(), (long) total.net(),
-				wholeDonationOf(total), wholeCraftSubsidyOf(total), recompute.containsStaleSums());
+		return new GuildTotals(total.bankWithdrawn(), total.bankDeposited(), total.storageWithdrawn(), total.storageDeposited(), total.net(), donationOf(total),
+				craftSubsidyOf(total), recompute.containsStaleSums());
 	}
 
 	private static AvatarSummary summaryOf(AvatarContribution avatar) {
-		Contribution whole = avatar.contribution().inWholeGold();
+		WholeGoldContribution whole = avatar.contribution().inWholeGold();
 
-		return new AvatarSummary(avatar.avatar(), whole.bankWithdrawn(), whole.bankDeposited(), (long) whole.storageWithdrawn(), (long) whole.storageDeposited(),
-				(long) whole.net(), wholeDonationOf(whole), wholeCraftSubsidyOf(whole), avatar.lastBankActivity(), avatar.lastStorageActivity(), avatar.staleSumsFrom());
+		return new AvatarSummary(avatar.avatar(), whole.bankWithdrawn(), whole.bankDeposited(), whole.storageWithdrawn(), whole.storageDeposited(), whole.net(), donationOf(whole),
+				craftSubsidyOf(whole), avatar.lastBankActivity(), avatar.lastStorageActivity(), avatar.staleSumsFrom());
 	}
 
-	private static Long wholeDonationOf(Contribution contribution) {
-		return contribution.guildShare().map(share -> (long) share.donation()).orElse(null);
+	private static Long donationOf(WholeGoldContribution contribution) {
+		return contribution.guildShare().map(WholeGoldShare::donation).orElse(null);
 	}
 
-	private static Long wholeCraftSubsidyOf(Contribution contribution) {
-		return contribution.guildShare().map(share -> (long) share.craftSubsidy()).orElse(null);
+	private static Long craftSubsidyOf(WholeGoldContribution contribution) {
+		return contribution.guildShare().map(WholeGoldShare::craftSubsidy).orElse(null);
 	}
 }

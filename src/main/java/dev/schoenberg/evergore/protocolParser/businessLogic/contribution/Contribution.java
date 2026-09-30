@@ -10,8 +10,9 @@ public record Contribution(long bankDeposited, long bankWithdrawn, double storag
 		return bankDeposited - bankWithdrawn + storageDeposited - storageWithdrawn;
 	}
 
-	public Contribution inWholeGold() {
-		return new Contribution(bankDeposited, bankWithdrawn, Math.round(storageDeposited), Math.round(storageWithdrawn), guildShare.map(GuildShare::inWholeGold));
+	public WholeGoldContribution inWholeGold() {
+		return new WholeGoldContribution(bankDeposited, bankWithdrawn, wholeGoldOf(storageDeposited), wholeGoldOf(storageWithdrawn), wholeGoldOf(net()),
+				guildShare.map(this::wholeGoldShareOf));
 	}
 
 	public Contribution plus(Contribution other) {
@@ -25,5 +26,15 @@ public record Contribution(long bankDeposited, long bankWithdrawn, double storag
 
 	private static Optional<GuildShare> sumOf(Optional<GuildShare> one, Optional<GuildShare> other) {
 		return one.flatMap(share -> other.map(share::plus));
+	}
+
+	private WholeGoldShare wholeGoldShareOf(GuildShare share) {
+		double storageValue = storageDeposited + share.donation() - share.craftSubsidy() - storageWithdrawn;
+		double balance = net() + share.donation() - share.craftSubsidy();
+		return new WholeGoldShare(wholeGoldOf(share.donation()), wholeGoldOf(share.craftSubsidy()), wholeGoldOf(storageValue), wholeGoldOf(balance));
+	}
+
+	private static long wholeGoldOf(double exact) {
+		return exact < 0 ? -Math.round(-exact) : Math.round(exact);
 	}
 }

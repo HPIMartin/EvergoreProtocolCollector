@@ -274,21 +274,21 @@ service's only read surface.
 - **The four sums are the sheet's columns 1 to 4, `net` its column 5, and all of them are whole gold**
   (`long`, decision 2026-09-02): serving the raw `double` would put every value from 10^7 upward,
   where the real sums sit, on the wire in exponential notation. `net` is **derived per request** and
-  stored nowhere. The rounding rule behind the numbers, and why a served row adds up while the total
-  row is the exact column sum of the rows above it, lives in
+  stored nowhere. Each is its exact value rounded once, the totals' included, so a served figure can
+  differ from the sum of those beside or above it; the rule lives in
   [domain-model.md](domain-model.md).
 - **`donation` and `craftSubsidy` are the two flows between what a deposit credited and what it is
   worth to the guild** (decision 2026-09-10): what a member gave for nothing, and what the guild paid
   above its own price for bought trader goods. They are served per avatar and in `totals`, derived
-  per request from the rounded sums and stored nowhere, and they are the two numbers the header needs
+  per request from the exact sums, rounded once and stored nowhere, and they are the two numbers the header needs
   that the other five cannot yield. Both are **`null` while no recompute has produced them** (a fresh
   deployment before its first run), and `null` together rather than one at a time, because the read
   path only forms the pair when both are stored; guild-wide they are `null` as soon as they are
   missing for a single avatar. The SPA forms the other two header figures by subtraction, the bank as
   `bankDeposited - bankWithdrawn` and the storage value as
   `storageDeposited + donation - craftSubsidy - storageWithdrawn`; neither is a valuation rule, which
-  is why no separate header object is served. The valuation itself, and the identity that holds
-  exactly in whole gold, live in [domain-model.md](domain-model.md).
+  is why no separate header object is served. The valuation itself, and the identity behind the
+  header, live in [domain-model.md](domain-model.md).
 - **`lastBankActivity` / `lastStorageActivity` are `null` when the avatar never appeared in that
   ledger**, which is the case the sheet leaves blank. They are read from the ledger rows rather than
   from the meta store, so they are as fresh as the last ingest instead of as fresh as the last
