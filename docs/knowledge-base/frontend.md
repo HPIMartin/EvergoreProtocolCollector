@@ -155,8 +155,9 @@ Four top-level folders under `frontend/src/`:
 - **The views own their columns, the primitives own the rendering.** A view declares its
   `Column` list and hands `SortableTable` the domain rows; timestamps go in as ISO strings, which is
   what the column kind reads, and `format.ts` is the one place that turns them into Berlin
-  wall-clock. Transfer types are shown as `Einlagerung`/`Entnahme` from the domain, and the headers
-  are German, like the sheet's.
+  wall-clock. A transfer type is worded by the ledger's own entry type in the domain: the bank says
+  `Einzahlung`/`Entnahme` (`domain/bankEntry.ts`), the storage `Einlagerung`/`Entnahme`
+  (`domain/storageEntry.ts`). The headers are German, like the sheet's.
 - **The overview's columns are the sheet's, in the sheet's order, and both roster tables share the
   one definition:** `Bank-Einzahlung`,
   `Bank-Auszahlung`, `Einlagerung`, `Entnahme`, the switched figure `Nach Abzügen`/`Vor Abzügen` and then the
@@ -189,9 +190,9 @@ Four top-level folders under `frontend/src/`:
   `total.mark`, so the guild row states that it contains such a row even when the served page does
   not show it. The two activity columns of a marked row keep showing what the ledger says:
   suppressing a true fact to prevent a wrong inference is the wrong trade, and the marker is what
-  removes the inference. The wording lives in `domain/staleSums.ts` beside `germanNameOf`, and takes
-  an already formatted instant, so the German stays in `domain` while the Berlin wall clock stays in
-  `ui`'s `format.ts`. What the row cannot say, and why, is under the wire contract below.
+  removes the inference. The wording lives in `domain/staleSums.ts` beside the entry types' German
+  names, and takes an already formatted instant, so the German stays in `domain` while the Berlin
+  wall clock stays in `ui`'s `format.ts`. What the row cannot say, and why, is under the wire contract below.
 - **The guild-wide total row comes from the envelope, not from the loaded rows** (decision
   2026-09-02): the overview hands `totals` to the table's `total` prop and does no arithmetic, so the
   row keeps meaning the guild once the overview pages or a time window narrows the body. It is

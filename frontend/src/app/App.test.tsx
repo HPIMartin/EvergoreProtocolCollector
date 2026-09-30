@@ -1057,7 +1057,7 @@ describe('App', () => {
       alwaysServing(200, BANK_BODY),
     )
 
-    expect(rowTexts()).toStrictEqual(['05.08.2026 12:15Calix500Einlagerung'])
+    expect(rowTexts()).toStrictEqual(['05.08.2026 12:15Calix500Einzahlung'])
   })
 
   it('shows the storage ledger the path names', async () => {
@@ -1492,7 +1492,7 @@ describe('App', () => {
       address: window.location.pathname + window.location.search,
       lastAsked: server.askedFor.at(-1),
     }).toStrictEqual({
-      shown: ['05.08.2026 12:15Calix500Einlagerung'],
+      shown: ['05.08.2026 12:15Calix500Einzahlung'],
       address: '/avatars/Calix/bank?token=a-test-token',
       lastAsked:
         '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100',

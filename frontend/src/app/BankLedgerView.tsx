@@ -1,7 +1,7 @@
 import type { ProtocolApi } from '../api'
 import { windowOf } from '../api'
 import type { BankEntry } from '../domain'
-import { germanNameOf } from '../domain'
+import { germanTransferOfBankEntry } from '../domain'
 import type { Column } from '../ui'
 
 import { LedgerView } from './LedgerView.tsx'
@@ -41,7 +41,7 @@ const columns: readonly Column<BankEntry>[] = [
     key: 'transferType',
     header: 'Vorgang',
     kind: 'text',
-    value: (entry) => germanNameOf(entry.transferType),
+    value: (entry) => germanTransferOfBankEntry(entry),
   },
 ]
 

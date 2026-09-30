@@ -1,7 +1,7 @@
 import type { ProtocolApi } from '../api'
 import { windowOf } from '../api'
 import type { StorageEntry } from '../domain'
-import { germanNameOf } from '../domain'
+import { germanTransferOfStorageEntry } from '../domain'
 import type { Column } from '../ui'
 
 import { LedgerView } from './LedgerView.tsx'
@@ -54,7 +54,7 @@ const columns: readonly Column<StorageEntry>[] = [
     key: 'transferType',
     header: 'Vorgang',
     kind: 'text',
-    value: (entry) => germanNameOf(entry.transferType),
+    value: (entry) => germanTransferOfStorageEntry(entry),
   },
 ]
 

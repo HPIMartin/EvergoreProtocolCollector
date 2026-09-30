@@ -3,15 +3,8 @@ export const WITHDRAWAL = 'WITHDRAWAL'
 
 export type TransferType = typeof DEPOSIT | typeof WITHDRAWAL
 
-const germanNames: Record<TransferType, string> = {
-  [DEPOSIT]: 'Einlagerung',
-  [WITHDRAWAL]: 'Entnahme',
-}
+const wireNames: readonly string[] = [DEPOSIT, WITHDRAWAL]
 
 export function isTransferType(value: unknown): value is TransferType {
-  return typeof value === 'string' && Object.hasOwn(germanNames, value)
-}
-
-export function germanNameOf(type: TransferType): string {
-  return germanNames[type]
+  return typeof value === 'string' && wireNames.includes(value)
 }

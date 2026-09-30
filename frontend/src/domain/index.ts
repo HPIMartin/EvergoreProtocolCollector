@@ -5,6 +5,7 @@ export type {
 } from './adminStatus.ts'
 export type { AvatarSummary, GuildTotals, Overview } from './avatarSummary.ts'
 export type { BankEntry } from './bankEntry.ts'
+export { germanTransferOfBankEntry } from './bankEntry.ts'
 export type { GuildPosition } from './guildPosition.ts'
 export {
   UNCOMPUTED_BALANCE_NOTE,
@@ -19,10 +20,6 @@ export type { RosterSplit } from './rosterSplit.ts'
 export { ACTIVITY_WINDOW_DAYS, rosterSplitOf } from './rosterSplit.ts'
 export { GUILD_STALE_SUMS_NOTE, staleSumsNoteOf } from './staleSums.ts'
 export type { StorageEntry } from './storageEntry.ts'
+export { germanTransferOfStorageEntry } from './storageEntry.ts'
 export type { TransferType } from './transferType.ts'
-export {
-  DEPOSIT,
-  WITHDRAWAL,
-  germanNameOf,
-  isTransferType,
-} from './transferType.ts'
+export { DEPOSIT, WITHDRAWAL, isTransferType } from './transferType.ts'

@@ -113,8 +113,8 @@ class DashboardBrowserSmokeTest {
 		List<List<String>> rows = renderedRowsOf("/avatars/Aurora/bank");
 
 		assertThat(rows)
-				.containsExactly(List.of("12.01.2024 12:00", "Aurora", "200", "Entnahme"), List.of("11.01.2024 11:00", "Aurora", "500", "Einlagerung"),
-						List.of("10.01.2024 10:00", "Aurora", "1.000", "Einlagerung"));
+				.containsExactly(List.of("12.01.2024 12:00", "Aurora", "200", "Entnahme"), List.of("11.01.2024 11:00", "Aurora", "500", "Einzahlung"),
+						List.of("10.01.2024 10:00", "Aurora", "1.000", "Einzahlung"));
 	}
 
 	private List<String> renderedPositionLabelsOf(String clientRoute) {
