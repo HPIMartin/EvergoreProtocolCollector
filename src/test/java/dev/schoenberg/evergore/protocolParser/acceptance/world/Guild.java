@@ -1,10 +1,10 @@
 package dev.schoenberg.evergore.protocolParser.acceptance.world;
 
-import java.text.Collator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
+
+import dev.schoenberg.evergore.protocolParser.businessLogic.GermanOrder;
 
 public class Guild {
 	private final Set<String> members = new ConcurrentSkipListSet<>();
@@ -14,6 +14,6 @@ public class Guild {
 	}
 
 	public List<String> inGermanOrder() {
-		return members.stream().sorted(Collator.getInstance(Locale.GERMAN)).toList();
+		return members.stream().sorted(GermanOrder.NAMES).toList();
 	}
 }
