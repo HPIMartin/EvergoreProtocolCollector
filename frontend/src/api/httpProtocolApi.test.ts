@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import type { BankEntry, LedgerVisitor, StorageEntry } from '../domain'
 
-import { MalformedResponse, RequestFailed, Unauthorized } from './apiErrors.ts'
+import {
+  MalformedResponse,
+  NoSuchPage,
+  RequestFailed,
+  Unauthorized,
+} from './apiErrors.ts'
 import type { HttpGet } from './httpProtocolApi.ts'
 import { httpProtocolApi } from './httpProtocolApi.ts'
 import { FIRST_PAGE } from './pageWindow.ts'
@@ -287,16 +292,43 @@ describe('the HTTP protocol API', () => {
     await expect(reading).rejects.toBeInstanceOf(Unauthorized)
   })
 
-  it('reports a paging constraint violation with its status', async () => {
+  it('reports a page the bank ledger cannot have as a page that does not exist', async () => {
     const fetched = answering(400, '{"message":"page: must be at least 0"}')
     const tested = httpProtocolApi(fetched.get, TOKEN)
 
     const reading = tested.bankEntries('Calix', { page: -1, size: 100 })
 
-    await expect(reading).rejects.toThrow('The API answered 400')
+    await expect(reading).rejects.toBeInstanceOf(NoSuchPage)
     expect(fetched.urls).toStrictEqual([
       '/api/v1/avatars/Calix/bank?token=a-test-token&page=-1&size=100',
     ])
+  })
+
+  it('reports a page the storage ledger cannot have as a page that does not exist', async () => {
+    const fetched = answering(400, '{"message":"page: must be at least 0"}')
+    const tested = httpProtocolApi(fetched.get, TOKEN)
+
+    const reading = tested.storageEntries('Calix', { page: -1, size: 100 })
+
+    await expect(reading).rejects.toBeInstanceOf(NoSuchPage)
+  })
+
+  it('keeps any other ledger failure a failed request with its status', async () => {
+    const fetched = answering(500, null)
+    const tested = httpProtocolApi(fetched.get, TOKEN)
+
+    const reading = tested.bankEntries('Calix', FIRST_PAGE)
+
+    await expect(reading).rejects.toThrow('The API answered 500')
+  })
+
+  it('keeps a refused overview request a failed request with its status', async () => {
+    const fetched = answering(400, '{"message":"page: must be at least 0"}')
+    const tested = httpProtocolApi(fetched.get, TOKEN)
+
+    const reading = tested.overview({ page: -1, size: 100 })
+
+    await expect(reading).rejects.toThrow('The API answered 400')
   })
 
   it('keeps the token out of what it reports about a failure', async () => {

@@ -1,4 +1,9 @@
-export { MalformedResponse, RequestFailed, Unauthorized } from './apiErrors.ts'
+export {
+  MalformedResponse,
+  NoSuchPage,
+  RequestFailed,
+  Unauthorized,
+} from './apiErrors.ts'
 export type { HttpGet } from './httpProtocolApi.ts'
 export { httpProtocolApi } from './httpProtocolApi.ts'
 export type { PageWindow } from './pageWindow.ts'

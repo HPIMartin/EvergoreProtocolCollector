@@ -1,7 +1,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { RequestFailed, Unauthorized } from '../api'
+import { NoSuchPage, RequestFailed, Unauthorized } from '../api'
 
 import type { LoadVisitor } from './useLoad.ts'
 import { useLoad } from './useLoad.ts'
@@ -10,6 +10,7 @@ const describingVisitor: LoadVisitor<string, string> = {
   loading: () => 'still loading',
   loaded: (value) => `loaded ${value}`,
   unauthorized: () => 'the token was refused',
+  noSuchPage: () => 'the page does not exist',
   failed: (reason) => `failed: ${reason}`,
 }
 
@@ -47,6 +48,18 @@ describe('useLoad', () => {
 
     expect(load.result.current.accept(describingVisitor)).toBe(
       'the token was refused',
+    )
+  })
+
+  it('reports a page that does not exist as its own outcome', async () => {
+    const load = renderHook(() =>
+      useLoad(() => Promise.reject(new NoSuchPage()), 'a-key'),
+    )
+
+    await act(async () => undefined)
+
+    expect(load.result.current.accept(describingVisitor)).toBe(
+      'the page does not exist',
     )
   })
 

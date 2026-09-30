@@ -138,9 +138,10 @@ Four top-level folders under `frontend/src/`:
   `evergore.security.public-paths`, at the same trust level as `/health`.
 - The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
   malformed escape is "no view", not a crash.
-- **Every view passes through one of four outcomes** (`useLoad` + `LoadedView`): loading, loaded,
-  token refused, failed with a reason. A ledger view additionally tells **"known avatar, no
-  entries"** from **"unknown avatar"**, which is the client side of the 404 decision below.
+- **Every view passes through one of five outcomes** (`useLoad` + `LoadedView`): loading, loaded,
+  token refused, no such page (a ledger read the API answers 400), failed with a reason. A ledger
+  view additionally tells **"known avatar, no entries"** from **"unknown avatar"**, which is the
+  client side of the 404 decision below.
 - **The token is read once from the address** (`?token=`) and carried into every request and every
   in-app link; it is kept nowhere else (no cookie, no `localStorage`), so a link is the whole
   credential and closing the tab ends the session.
@@ -149,9 +150,11 @@ Four top-level folders under `frontend/src/`:
   the address (`route.ts`'s `PAGE` param), so `Pagination` (`ui/Pagination.tsx`) can build "Zurück"/
   "Weiter" links from it via `hrefOf`. A page past the end is not a failure: the API answers 200 with
   `items: []`, rendered as the existing empty state. An invalid page (negative or non-numeric) is
-  passed through **unclamped**, so the API's `@Min(0)` violation answers 400 and surfaces as the
-  existing generic failure, because clamping it client-side would hide a bad link instead of
-  showing it.
+  passed through **unclamped**, so the API's `@Min(0)` violation answers 400 and the ledger says
+  "Diese Seite gibt es nicht.", because clamping it client-side would hide a bad link instead of
+  showing it. Only a ledger read maps a 400 that way, because the page number is the only
+  request value the client does not fix (the size is constant, a bad token answers 401); on the
+  overview or the admin page a 400 is a plain failure.
 - **The views own their columns, the primitives own the rendering.** A view declares its
   `Column` list and hands `SortableTable` the domain rows; timestamps go in as ISO strings, which is
   what the column kind reads, and `format.ts` is the one place that turns them into Berlin

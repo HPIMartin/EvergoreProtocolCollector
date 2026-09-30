@@ -1,7 +1,12 @@
 import type { Ledger, Page } from '../domain'
 import { entriesOf, unknownAvatar } from '../domain'
 
-import { MalformedResponse, RequestFailed, Unauthorized } from './apiErrors.ts'
+import {
+  MalformedResponse,
+  NoSuchPage,
+  RequestFailed,
+  Unauthorized,
+} from './apiErrors.ts'
 import type { PageWindow } from './pageWindow.ts'
 import type { ProtocolApi } from './protocolApi.ts'
 import {
@@ -16,6 +21,7 @@ export type HttpGet = (url: string) => Promise<Response>
 const AVATARS = '/api/v1/avatars'
 const ADMIN_STATUS = '/api/v1/admin/status'
 const UNAUTHORIZED = 401
+const BAD_REQUEST = 400
 const NOT_FOUND = 404
 
 export function httpProtocolApi(
@@ -58,6 +64,9 @@ export function httpProtocolApi(
     const response = await get(urlOf(path, window))
     if (response.status === NOT_FOUND) {
       return unknownAvatar<E>(avatar)
+    }
+    if (response.status === BAD_REQUEST) {
+      throw new NoSuchPage()
     }
 
     return entriesOf(pageFrom(await bodyOf(response)))

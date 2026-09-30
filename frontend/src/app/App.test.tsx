@@ -1580,7 +1580,7 @@ describe('App', () => {
     expect(shownStatus()).toBe('Für Calix ist hier kein Vorgang gespeichert.')
   })
 
-  it('surfaces an unclamped invalid page as a visible failure', async () => {
+  it('says in German that an unclamped invalid page does not exist', async () => {
     const body = '{"message":"page: must be at least 0"}'
     const server = alwaysServing(400, body)
 
@@ -1590,11 +1590,22 @@ describe('App', () => {
       shown: shownStatus(),
       askedFor: server.askedFor,
     }).toStrictEqual({
-      shown: 'Fehler: The API answered 400',
+      shown: 'Diese Seite gibt es nicht.',
       askedFor: [
         '/api/v1/avatars/Calix/bank?token=a-test-token&page=-1&size=100',
       ],
     })
+  })
+
+  it('says in German that a storage ledger page does not exist', async () => {
+    const body = '{"message":"page: must be at least 0"}'
+
+    await shellAt(
+      `/avatars/Calix/storage?token=${TOKEN}&page=-1`,
+      alwaysServing(400, body),
+    )
+
+    expect(shownStatus()).toBe('Diese Seite gibt es nicht.')
   })
 
   it('passes a blank page value through to the API unchanged, not defaulted', async () => {

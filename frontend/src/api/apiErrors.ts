@@ -10,4 +10,10 @@ export class RequestFailed extends Error {
   }
 }
 
+export class NoSuchPage extends Error {
+  constructor() {
+    super('The API refused the page number')
+  }
+}
+
 export class MalformedResponse extends Error {}

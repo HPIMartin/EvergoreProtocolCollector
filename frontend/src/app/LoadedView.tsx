@@ -19,6 +19,9 @@ export function LoadedView<T>({ load, children }: LoadedViewProps<T>) {
         message="Kein gültiges Token: der Link braucht ein token in der Adresse."
       />
     ),
+    noSuchPage: () => (
+      <StatusPanel variant="error" message="Diese Seite gibt es nicht." />
+    ),
     failed: (reason) => (
       <StatusPanel variant="error" message={`Fehler: ${reason}`} />
     ),

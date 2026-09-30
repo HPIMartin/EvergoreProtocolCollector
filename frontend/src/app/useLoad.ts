@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 
-import { Unauthorized } from '../api'
+import { NoSuchPage, Unauthorized } from '../api'
 
 export interface LoadVisitor<T, R> {
   loading: () => R
   loaded: (value: T) => R
   unauthorized: () => R
+  noSuchPage: () => R
   failed: (reason: string) => R
 }
 
@@ -55,6 +56,10 @@ function loadedWith<T>(value: T): Load<T> {
 function failureOf<T>(reason: unknown): Load<T> {
   if (reason instanceof Unauthorized) {
     return { accept: (visitor) => visitor.unauthorized() }
+  }
+
+  if (reason instanceof NoSuchPage) {
+    return { accept: (visitor) => visitor.noSuchPage() }
   }
 
   const message = reason instanceof Error ? reason.message : String(reason)
