@@ -591,14 +591,14 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      earlier success); the recompute's timestamp sits at
      **`details.lastRun.details.lastSuccessfulRecompute`**, next to
      `unknownItemCount` and `unknownItemNames`. Neither is an error: they are the catalog gap
-     (testing.md). **`unknownItemCount` counts occurrences, `unknownItemNames` distinct names**, so
-     the two differ by an order of magnitude. Measured on the production snapshot 2026-09-03:
-     **31 occurrences over 15 names**, and the 31 matches the snapshot's own row count for those
-     names exactly. `zeroValuedItemCount` and `zeroValuedItemNames` sit beside them and carry what the
-     catalog knows and deliberately values at nothing, 690 occurrences over 17 names, so a catalog
+     (testing.md). **Every count of names is the number of distinct names in the list beside it**,
+     and every name list is in German alphabetical order (`GermanOrder`). `zeroValuedItemCount` and
+     `zeroValuedItemNames` sit beside them and carry what the catalog knows and deliberately values
+     at nothing, so a catalog
      gap stays distinguishable from a deliberate zero. The admin status API deliberately does not
      carry the pair; `/health` is the operator surface for it. `roundTripCount` and `roundTrips`
-     (`"<avatar>: <quantity> × <item ingameName>"` lines, sorted by avatar then item) carry the last run's
+     (`"<avatar>: <quantity> × <item ingameName>"` lines, in German order by avatar then item)
+     carry the last run's
      `RoundTripDetector` findings, and `roundTripAbstentionCount`/`roundTripAbstentions` (`"<avatar>: <item ingameName>"` lines, in the same order) carry the avatar/item pairs it could not judge because a
      deposited product's recipe is unread; both are omitted when empty, the same as every other
      `lastRun` detail pair.

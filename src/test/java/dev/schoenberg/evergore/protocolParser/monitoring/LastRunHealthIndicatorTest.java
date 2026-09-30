@@ -68,7 +68,7 @@ class LastRunHealthIndicatorTest {
 		Map<String, Object> details = (Map<String, Object>) result.getDetails();
 		assertThat(details.get("unknownItemCount")).isEqualTo(1);
 		assertThat(details.get("unknownItemNames")).isEqualTo(List.of("Unobtainium"));
-		assertThat(details.get("zeroValuedItemCount")).isEqualTo(3);
+		assertThat(details.get("zeroValuedItemCount")).isEqualTo(2);
 		assertThat(details.get("zeroValuedItemNames")).isEqualTo(List.of("Mystischer Pfeil", "Übungsstück-Sorandilaxt"));
 	}
 
@@ -104,8 +104,25 @@ class LastRunHealthIndicatorTest {
 
 		@SuppressWarnings("unchecked")
 		Map<String, Object> details = (Map<String, Object>) result.getDetails();
-		assertThat(details).containsEntry("unknownItemCount", 2);
+		assertThat(details).containsEntry("unknownItemCount", 1);
 		assertThat(details).containsEntry("unknownItemNames", List.of("Unobtainium"));
+	}
+
+	@Test
+	void listsEveryNameListInGermanOrderAndCountsEachNameOnce() {
+		lastRunStatus
+				.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"),
+						new EvaluationResult(List.of("Zunder", "Äxtchen", "Zunder"), List.of("Übungsstück-Wollrüstung", "Übungsstück-Ätherrüstung", "Übungsstück-Wollrüstung"),
+								List.of("Zeder", "Ähre", "Zeder"), List.of(new RoundTrip("Zorn", FEDERN, 1), new RoundTrip("Ärger", FEDERN, 1)),
+								List.of(new RoundTripAbstention("Zorn", FEDERN), new RoundTripAbstention("Ärger", FEDERN))));
+
+		Map<String, Object> details = details();
+
+		assertThat(details).containsEntry("unknownItemNames", List.of("Äxtchen", "Zunder")).containsEntry("unknownItemCount", 2);
+		assertThat(details).containsEntry("zeroValuedItemNames", List.of("Übungsstück-Ätherrüstung", "Übungsstück-Wollrüstung")).containsEntry("zeroValuedItemCount", 2);
+		assertThat(details).containsEntry("failedAvatarNames", List.of("Ähre", "Zeder")).containsEntry("failedAvatarCount", 2);
+		assertThat(details).containsEntry("roundTrips", List.of("Ärger: 1 × Federn", "Zorn: 1 × Federn")).containsEntry("roundTripCount", 2);
+		assertThat(details).containsEntry("roundTripAbstentions", List.of("Ärger: Federn", "Zorn: Federn")).containsEntry("roundTripAbstentionCount", 2);
 	}
 
 	@Test
@@ -212,6 +229,11 @@ class LastRunHealthIndicatorTest {
 		Map<String, Object> details = (Map<String, Object>) result.getDetails();
 		assertThat(details).doesNotContainKey("roundTripAbstentionCount");
 		assertThat(details).doesNotContainKey("roundTripAbstentions");
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> details() {
+		return (Map<String, Object>) singleResult().getDetails();
 	}
 
 	private HealthResult singleResult() {

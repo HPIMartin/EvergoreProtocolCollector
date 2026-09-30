@@ -262,8 +262,9 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   → `UNDEFINED`, valued 0, **logged at WARN**; every miss is collected into the `EvaluationResult`
   returned by `evaluateData()` and surfaced via `/health`'s `lastRun` detail as `unknownItemCount` +
   distinct `unknownItemNames`, so a catalog gap is loud, not silent; since evaluation is a full
-  recompute, this count is unknown-item rows across **the entire stored history of every avatar the
-  run could read**, recomputed each run, not just those new since the previous run; an avatar whose
+  recompute, the misses are collected across **the entire stored history of every avatar the
+  run could read**, recomputed each run, not just those new since the previous run, and the count
+  is the number of distinct names listed beside it; an avatar whose
   ledger read throws reports none, because both ledger adapters materialise their result before
   returning it, so the throw precedes every item lookup; the repository interface does not require
   that), then add `itemValue × quantity × (quality / 100)` into `placement` / `withdrawl`, where

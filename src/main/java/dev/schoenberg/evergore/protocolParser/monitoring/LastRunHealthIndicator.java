@@ -1,6 +1,5 @@
 package dev.schoenberg.evergore.protocolParser.monitoring;
 
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,18 +13,15 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
+import dev.schoenberg.evergore.protocolParser.businessLogic.GermanOrder;
 import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTrip;
 import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTripAbstention;
+import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTripOrder;
 
 @Singleton
 public class LastRunHealthIndicator implements HealthIndicator {
 
 	private static final String NAME = "lastRun";
-	private static final Comparator<RoundTrip> BY_AVATAR_THEN_ITEM = Comparator.comparing(RoundTrip::avatar).thenComparing(roundTrip -> roundTrip.item().ingameName);
-	private static final Comparator<RoundTripAbstention> ABSTENTIONS_BY_AVATAR_THEN_ITEM = Comparator
-			.comparing(RoundTripAbstention::avatar)
-			.thenComparing(abstention -> abstention.item().ingameName);
-
 	private final LastRunStatus lastRunStatus;
 
 	public LastRunHealthIndicator(LastRunStatus lastRunStatus) {
@@ -66,35 +62,30 @@ public class LastRunHealthIndicator implements HealthIndicator {
 		snapshot.lastScrapeFailure().ifPresent(failure -> details.put("lastScrapeFailure", failure.toString()));
 		snapshot.lastRecomputeFailure().ifPresent(failure -> details.put("lastRecomputeFailure", failure.toString()));
 
-		List<String> unknownItemNames = snapshot.unknownItemNames();
-		if (!unknownItemNames.isEmpty()) {
-			details.put("unknownItemCount", unknownItemNames.size());
-			details.put("unknownItemNames", unknownItemNames.stream().distinct().sorted().toList());
-		}
-		List<String> zeroValuedItemNames = snapshot.zeroValuedItemNames();
-		if (!zeroValuedItemNames.isEmpty()) {
-			details.put("zeroValuedItemCount", zeroValuedItemNames.size());
-			details.put("zeroValuedItemNames", zeroValuedItemNames.stream().distinct().sorted().toList());
-		}
-
-		List<String> failedAvatarNames = snapshot.failedAvatarNames();
-		if (!failedAvatarNames.isEmpty()) {
-			details.put("failedAvatarCount", failedAvatarNames.size());
-			details.put("failedAvatarNames", failedAvatarNames.stream().distinct().sorted().toList());
-		}
+		putNames(details, "unknownItemCount", "unknownItemNames", snapshot.unknownItemNames());
+		putNames(details, "zeroValuedItemCount", "zeroValuedItemNames", snapshot.zeroValuedItemNames());
+		putNames(details, "failedAvatarCount", "failedAvatarNames", snapshot.failedAvatarNames());
 
 		List<RoundTrip> roundTrips = snapshot.roundTrips();
 		if (!roundTrips.isEmpty()) {
 			details.put("roundTripCount", roundTrips.size());
-			details.put("roundTrips", roundTrips.stream().sorted(BY_AVATAR_THEN_ITEM).map(LastRunHealthIndicator::describe).toList());
+			details.put("roundTrips", roundTrips.stream().sorted(RoundTripOrder.TRIPS).map(LastRunHealthIndicator::describe).toList());
 		}
 		List<RoundTripAbstention> roundTripAbstentions = snapshot.roundTripAbstentions();
 		if (!roundTripAbstentions.isEmpty()) {
 			details.put("roundTripAbstentionCount", roundTripAbstentions.size());
-			details.put("roundTripAbstentions", roundTripAbstentions.stream().sorted(ABSTENTIONS_BY_AVATAR_THEN_ITEM).map(LastRunHealthIndicator::describe).toList());
+			details.put("roundTripAbstentions", roundTripAbstentions.stream().sorted(RoundTripOrder.ABSTENTIONS).map(LastRunHealthIndicator::describe).toList());
 		}
 
 		return details;
+	}
+
+	private static void putNames(Map<String, Object> details, String countKey, String namesKey, List<String> recorded) {
+		List<String> names = GermanOrder.distinctSorted(recorded);
+		if (!names.isEmpty()) {
+			details.put(countKey, names.size());
+			details.put(namesKey, names);
+		}
 	}
 
 	private static String describe(RoundTrip roundTrip) {

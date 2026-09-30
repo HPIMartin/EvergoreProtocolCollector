@@ -44,7 +44,9 @@ Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut man
                         recompute outcomes are tracked independently, so the details also carry
                         lastSuccessfulScrape/lastScrapeFailure/lastRecomputeFailure when present,
                         telling "could not scrape" apart from
-                        "could not recompute", + unknownItemCount/unknownItemNames when the last run hit
+                        "could not recompute", + unknownItemCount/unknownItemNames
+                        (the count is the number of distinct names, the names are in German order;
+                        every name list and its count follow this rule) when the last run hit
                         unknown items, + failedAvatarCount/failedAvatarNames when an avatar could not be
                         recomputed, + roundTripCount/roundTrips when the last run's RoundTripDetector
                         reported one, + roundTripAbstentionCount/roundTripAbstentions when it abstained
