@@ -37,10 +37,8 @@ Feature: The health report: what the last recompute found
         | the health report | the operator asks the service for its health |
 
   Rule: A count says how many different names its list holds
-    Today a count says how often a name occurred in the ledgers, so it can be larger than its list.
-    The outline below states the corrected behavior.
+    A name that occurs several times in the ledgers is listed once and counted once.
 
-    @wip
     Scenario Outline: An <finding> that occurs twice is counted once
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
@@ -56,11 +54,9 @@ Feature: The health report: what the last recompute found
         | item worth nothing | Übungsstück-Kupferschwert |
 
   Rule: Every name list on the admin page and in the health report is in German alphabetical order
-    Today the lists are sorted letter by letter with umlauts after "z", so "Ärger" follows "Zorn",
-    unlike the overview. The outline below states the corrected behavior. The admin page shows no
-    list of items worth nothing.
+    "Ärger" comes before "Zorn", as in the overview.
+    The admin page shows no list of items worth nothing.
 
-    @wip
     Scenario Outline: <surface> lists <list> in German alphabetical order
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand               | Qualität | Vorgang     |
