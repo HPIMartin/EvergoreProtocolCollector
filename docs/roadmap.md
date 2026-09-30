@@ -30,6 +30,7 @@
 | M10 | What the bottlenecks release | D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
 | M11 | Product build-out | E12→E13, E9, E3, E6, E27 | E12 inherits D18's query shape, so it follows it |
 | M12 | Ops, security & environment | F1, H11, C1, C8, C10, C11→E28, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
+| M14 | The guild's skills | E31→E32→E33, E34 | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open, D-16). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
 
 ## M13: The specification runs
 
@@ -165,6 +166,20 @@ reaches its current major.
 - [ ] A `selenium/standalone-firefox` service backs an integration test (H2), and the
       server-booting tests split into their own Gradle set (H6).
 - [ ] Micronaut 5, endpoints 1:1 against the prod snapshot (H9). Precondition: the nets above.
+
+## M14: The guild's skills
+
+Slice: every member's skill levels are read from the game each week and shown on a page of their
+own, replacing the hand-kept skills sheet. **After 1.0.**
+
+- [ ] What the game's ranking shows is read once and written down, before the collection is built on
+      it (backlog E31).
+- [ ] The levels are read at the start and every 7 days after, and each reading is kept with its
+      date (backlog E32).
+- [ ] The overview links a skills page that shows the newest reading per skill and as a member ×
+      skill matrix, switchable (backlog E33).
+- [ ] A member's level carries a progress mark once about six months of readings exist (backlog
+      E34). **Last in this milestone**, and gated on time rather than work.
 
 ## Ongoing (no milestone; pull into any gap)
 
