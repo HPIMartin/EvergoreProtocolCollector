@@ -86,12 +86,10 @@ Feature: A member's bank and storage ledgers
       | bank    |
       | storage |
 
-  @wip
   Scenario Outline: A bookmark of page <page>, <why>, says in plain German that the page does not exist
     A ledger's pages count from 1. A bookmark names a page no ledger can have only when someone has
     edited its address by hand. A page number past the end is another case: it shows an empty page
-    (see "A page past the end of a ledger is an empty page, not a failure"). Today the page says
-    "Fehler: The API answered 400". This states the corrected behavior.
+    (see "A page past the end of a ledger is an empty page, not a failure").
 
     Given the guild bank ledger holds:
       | Zeitpunkt        | Avatar | Betrag | Vorgang    |

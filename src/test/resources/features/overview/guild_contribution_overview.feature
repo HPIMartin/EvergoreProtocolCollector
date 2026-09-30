@@ -68,10 +68,8 @@ Feature: Guild contribution overview
       | Avatar | Bank-Einzahlung |
       | Gilde  | 101             |
 
-  @wip
   Scenario: When the figures cannot be loaded, the overview says so in plain German
-    Today the page says "Fehler: The API answered 500". This states the corrected behavior; the
-    overview stands for every page of the dashboard, which all show a failure the same way.
+    The overview stands for every page of the dashboard, which all show a failure the same way.
 
     Given the figures cannot be loaded
     When a member opens the overview
