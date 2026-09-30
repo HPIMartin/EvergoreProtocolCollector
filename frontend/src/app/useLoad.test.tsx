@@ -11,7 +11,7 @@ const describingVisitor: LoadVisitor<string, string> = {
   loaded: (value) => `loaded ${value}`,
   unauthorized: () => 'the token was refused',
   noSuchPage: () => 'the page does not exist',
-  failed: (reason) => `failed: ${reason}`,
+  failed: () => 'the load failed',
 }
 
 function neverAnswering(): Promise<string> {
@@ -63,7 +63,7 @@ describe('useLoad', () => {
     )
   })
 
-  it('reports any other failure with its reason', async () => {
+  it('reports any other failure as a failed load', async () => {
     const load = renderHook(() =>
       useLoad(() => Promise.reject(new RequestFailed(500)), 'a-key'),
     )
@@ -71,7 +71,7 @@ describe('useLoad', () => {
     await act(async () => undefined)
 
     expect(load.result.current.accept(describingVisitor)).toBe(
-      'failed: The API answered 500',
+      'the load failed',
     )
   })
 
@@ -83,7 +83,7 @@ describe('useLoad', () => {
     await act(async () => undefined)
 
     expect(load.result.current.accept(describingVisitor)).toBe(
-      'failed: the network is gone',
+      'the load failed',
     )
   })
 

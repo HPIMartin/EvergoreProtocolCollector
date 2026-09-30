@@ -25,8 +25,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class DashboardAccessSteps {
 	private static final String START_PAGE = "/";
-	private static final Pattern LOAD_FAILURE = Pattern.compile("Fehler: .*");
-	private static final String NO_SUCH_PAGE = "Diese Seite gibt es nicht.";
+	private static final Pattern TECHNICAL_FAILURE = Pattern.compile("Fehler: .*");
+	private static final List<String> LOAD_FAILURES = List.of("Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.", "Diese Seite gibt es nicht.");
 
 	private final MemberBrowser browser;
 	private final GameProtocols protocols;
@@ -110,8 +110,8 @@ public class DashboardAccessSteps {
 			assertThat(reachedPath).as("the page the link " + href + " opened").isEqualTo(URI.create(href).getRawPath());
 			assertThat(messages).as("the token complaint on " + href).doesNotContain(forbiddenMessage);
 			assertThat(messages).as("an unknown-view message on " + href).noneMatch(message -> NO_VIEW_FOR_THAT_LINK.matcher(message).matches());
-			assertThat(messages).as("a load-failure message on " + href).noneMatch(message -> LOAD_FAILURE.matcher(message).matches());
-			assertThat(messages).as("a no-such-page message on " + href).doesNotContain(NO_SUCH_PAGE);
+			assertThat(messages).as("a load-failure message on " + href).doesNotContainAnyElementsOf(LOAD_FAILURES);
+			assertThat(messages).as("a technical failure message on " + href).noneMatch(message -> TECHNICAL_FAILURE.matcher(message).matches());
 		}
 	}
 }

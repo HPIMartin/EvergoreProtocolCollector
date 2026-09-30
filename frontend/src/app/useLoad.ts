@@ -7,7 +7,7 @@ export interface LoadVisitor<T, R> {
   loaded: (value: T) => R
   unauthorized: () => R
   noSuchPage: () => R
-  failed: (reason: string) => R
+  failed: () => R
 }
 
 export interface Load<T> {
@@ -62,7 +62,5 @@ function failureOf<T>(reason: unknown): Load<T> {
     return { accept: (visitor) => visitor.noSuchPage() }
   }
 
-  const message = reason instanceof Error ? reason.message : String(reason)
-
-  return { accept: (visitor) => visitor.failed(message) }
+  return { accept: (visitor) => visitor.failed() }
 }

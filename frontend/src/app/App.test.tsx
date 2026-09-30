@@ -1118,7 +1118,7 @@ describe('App', () => {
     })
   })
 
-  it('surfaces a malformed overview body as a failure, not a blank page', async () => {
+  it('says in German that a malformed overview body could not be loaded, not a blank page', async () => {
     const body = JSON.stringify({
       page: 0,
       size: 100,
@@ -1129,14 +1129,16 @@ describe('App', () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, body))
 
     expect(shownStatus()).toBe(
-      'Fehler: The API answered an envelope without guild-wide totals',
+      'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
     )
   })
 
-  it('shows a failure of the API with its reason', async () => {
+  it('says in German that the API could not be loaded, without its status', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(500, null))
 
-    expect(shownStatus()).toBe('Fehler: The API answered 500')
+    expect(shownStatus()).toBe(
+      'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
+    )
   })
 
   it('is loading before the first answer arrives', () => {
@@ -1169,10 +1171,12 @@ describe('App', () => {
     })
   })
 
-  it('shows a failure of the admin status request with its reason', async () => {
+  it('says in German that the admin status could not be loaded, without its status', async () => {
     await shellAt('/admin', alwaysServing(500, null))
 
-    expect(shownStatus()).toBe('Fehler: The API answered 500')
+    expect(shownStatus()).toBe(
+      'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
+    )
   })
 
   it('shows the admin status page before any collection has run', async () => {

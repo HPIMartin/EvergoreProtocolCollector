@@ -22,8 +22,11 @@ export function LoadedView<T>({ load, children }: LoadedViewProps<T>) {
     noSuchPage: () => (
       <StatusPanel variant="error" message="Diese Seite gibt es nicht." />
     ),
-    failed: (reason) => (
-      <StatusPanel variant="error" message={`Fehler: ${reason}`} />
+    failed: () => (
+      <StatusPanel
+        variant="error"
+        message="Die Daten konnten nicht geladen werden. Bitte später erneut versuchen."
+      />
     ),
   })
 }

@@ -139,9 +139,10 @@ Four top-level folders under `frontend/src/`:
 - The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
   malformed escape is "no view", not a crash.
 - **Every view passes through one of five outcomes** (`useLoad` + `LoadedView`): loading, loaded,
-  token refused, no such page (a ledger read the API answers 400), failed with a reason. A ledger
-  view additionally tells **"known avatar, no entries"** from **"unknown avatar"**, which is the
-  client side of the 404 decision below.
+  token refused, no such page (a ledger read the API answers 400), failed. A failure shows one
+  fixed German text and never the API's status or message. A ledger view additionally tells
+  **"known avatar, no entries"** from **"unknown avatar"**, which is the client side of the 404
+  decision below.
 - **The token is read once from the address** (`?token=`) and carried into every request and every
   in-app link; it is kept nowhere else (no cookie, no `localStorage`), so a link is the whole
   credential and closing the tab ends the session.
