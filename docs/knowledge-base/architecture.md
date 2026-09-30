@@ -54,7 +54,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
                         ▶ lastUpdated read from AvatarContributions/MetaInformationRepository (persisted,
                         stamped on the last completed evaluation) + the four scrape/recompute outcome
                         instants, unknownItemNames/failedAvatarNames and roundTrips/roundTripAbstentions
-                        (sorted by avatar then item, item = ingameName) read from LastRunStatus
+                        (names in German order, each once; round trips by avatar then item,
+                        item = ingameName, in German order) read from LastRunStatus
                         (in-memory, the same source /health uses). It serves the facts; /health keeps the
                         UP/DOWN verdict derived from them
 ```
