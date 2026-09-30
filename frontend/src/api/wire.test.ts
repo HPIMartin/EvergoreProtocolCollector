@@ -20,6 +20,8 @@ const overviewBody = {
     net: 2350,
     donation: 400,
     craftSubsidy: 80,
+    balance: 2670,
+    storageValue: 620,
     containsStaleSums: true,
   },
   items: [
@@ -32,6 +34,7 @@ const overviewBody = {
       net: 2500,
       donation: 400,
       craftSubsidy: 80,
+      balance: 2820,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
@@ -45,6 +48,7 @@ const overviewBody = {
       net: -150,
       donation: null,
       craftSubsidy: null,
+      balance: null,
       lastBankActivity: null,
       lastStorageActivity: '2026-07-31T21:05:00Z',
       staleSumsFrom: '2026-07-30T01:12:00Z',
@@ -108,6 +112,8 @@ describe('the overview wire shape', () => {
       net: 2350,
       donation: 400,
       craftSubsidy: 80,
+      balance: 2670,
+      storageValue: 620,
       containsStaleSums: true,
     })
   })
@@ -136,6 +142,7 @@ describe('the overview wire shape', () => {
       net: 2500,
       donation: 400,
       craftSubsidy: 80,
+      balance: 2820,
       lastBankActivity: new Date('2026-08-04T09:30:00Z'),
       lastStorageActivity: new Date('2026-08-05T10:15:00Z'),
       staleSumsFrom: null,
@@ -189,6 +196,27 @@ describe('the overview wire shape', () => {
 
     const reading = () =>
       overviewFrom({ ...overviewBody, items: [rowWithoutAFlow] })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it("reads the figure before the guild's share of a row as served", () => {
+    const overview = overviewFrom(overviewBody)
+
+    expect([
+      overview.items[0]?.balance,
+      overview.items[1]?.balance,
+    ]).toStrictEqual([2820, null])
+  })
+
+  it("refuses a row that carries no field for the figure before the guild's share", () => {
+    const rowWithoutABalance: Record<string, unknown> = {
+      ...overviewBody.items[0],
+    }
+    delete rowWithoutABalance['balance']
+
+    const reading = () =>
+      overviewFrom({ ...overviewBody, items: [rowWithoutABalance] })
 
     expect(reading).toThrow(MalformedResponse)
   })

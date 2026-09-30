@@ -92,16 +92,21 @@ class ProductionSnapshotRecomputeCheck {
 
 		assertThat(rows.length()).as("a snapshot with no avatar would make the reconciliation vacuous").isPositive();
 		for (int index = 0; index < rows.length(); index++) {
-			assertReconciles(rows.getJSONObject(index), rows.getJSONObject(index).getString("avatar"));
+			JSONObject row = rows.getJSONObject(index);
+			assertReconciles(row, storageValueWorkedOutFrom(row), row.getString("avatar"));
 		}
-		assertReconciles(summaries.getJSONObject("totals"), "the guild total");
+		JSONObject totals = summaries.getJSONObject("totals");
+		assertReconciles(totals, totals.getLong("storageValue"), "the guild total");
 	}
 
-	private static void assertReconciles(JSONObject figures, String who) {
+	private static long storageValueWorkedOutFrom(JSONObject row) {
+		return row.getLong("storageDeposited") + row.getLong("donation") - row.getLong("craftSubsidy") - row.getLong("storageWithdrawn");
+	}
+
+	private static void assertReconciles(JSONObject figures, long storageValue, String who) {
 		long bank = figures.getLong("bankDeposited") - figures.getLong("bankWithdrawn");
 		long donation = figures.getLong("donation");
 		long craftSubsidy = figures.getLong("craftSubsidy");
-		long storageValue = figures.getLong("storageDeposited") + donation - craftSubsidy - figures.getLong("storageWithdrawn");
 
 		assertThat(bank + storageValue - donation + craftSubsidy)
 				.as("the four figures must reconcile with the served net of %s", who)
@@ -124,15 +129,18 @@ class ProductionSnapshotRecomputeCheck {
 			assertServesTheRoundedExactFigures(row, exact, row.getString("avatar"));
 			guild = guild.plus(exact);
 		}
-		assertServesTheRoundedExactFigures(summaries.getJSONObject("totals"), guild, "the guild total");
+		JSONObject totals = summaries.getJSONObject("totals");
+		assertServesTheRoundedExactFigures(totals, guild, "the guild total");
+		assertThat(totals.getLong("storageValue")).as("the guild's storage value, its exact value rounded once").isEqualTo(roundedOnce(guild.storageValue()));
 	}
 
 	private static void assertServesTheRoundedExactFigures(JSONObject served, ExactFigures exact, String who) {
-		assertThat(
-				List.of(served.getLong("storageDeposited"), served.getLong("storageWithdrawn"), served.getLong("net"), served.getLong("donation"), served.getLong("craftSubsidy")))
+		assertThat(List
+				.of(served.getLong("storageDeposited"), served.getLong("storageWithdrawn"), served.getLong("net"), served.getLong("donation"), served.getLong("craftSubsidy"),
+						served.getLong("balance")))
 				.as("the figures of %s, each its exact value rounded once", who)
 				.containsExactly(roundedOnce(exact.storageDeposited()), roundedOnce(exact.storageWithdrawn()), roundedOnce(exact.net()), roundedOnce(exact.donation()),
-						roundedOnce(exact.craftSubsidy()));
+						roundedOnce(exact.craftSubsidy()), roundedOnce(exact.balance()));
 	}
 
 	private static long roundedOnce(double exact) {
@@ -154,6 +162,14 @@ class ProductionSnapshotRecomputeCheck {
 
 		double net() {
 			return bank + storageDeposited - storageWithdrawn;
+		}
+
+		double balance() {
+			return net() + donation - craftSubsidy;
+		}
+
+		double storageValue() {
+			return storageDeposited + donation - craftSubsidy - storageWithdrawn;
 		}
 
 		private static double exactOf(StoredMetaSums recomputed, MetaInformationKey<? extends Number> key) {

@@ -26,6 +26,8 @@ const OVERVIEW_BODY = JSON.stringify({
     net: 2500,
     donation: 400,
     craftSubsidy: 100,
+    balance: 2800,
+    storageValue: 600,
     containsStaleSums: false,
   },
   items: [
@@ -38,6 +40,7 @@ const OVERVIEW_BODY = JSON.stringify({
       net: 2500,
       donation: 400,
       craftSubsidy: 100,
+      balance: 2800,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,

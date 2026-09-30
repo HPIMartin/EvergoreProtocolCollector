@@ -42,6 +42,8 @@ function totalsFrom(value: unknown): GuildTotals {
     net: numberFrom(totals, 'net'),
     donation: optionalNumberFrom(totals, 'donation'),
     craftSubsidy: optionalNumberFrom(totals, 'craftSubsidy'),
+    balance: optionalNumberFrom(totals, 'balance'),
+    storageValue: optionalNumberFrom(totals, 'storageValue'),
     containsStaleSums: booleanFrom(totals, 'containsStaleSums'),
   }
 }
@@ -149,6 +151,7 @@ function summaryFrom(item: unknown): AvatarSummary {
     net: numberFrom(summary, 'net'),
     donation: optionalNumberFrom(summary, 'donation'),
     craftSubsidy: optionalNumberFrom(summary, 'craftSubsidy'),
+    balance: optionalNumberFrom(summary, 'balance'),
     lastBankActivity: optionalInstantFrom(summary, 'lastBankActivity'),
     lastStorageActivity: optionalInstantFrom(summary, 'lastStorageActivity'),
     staleSumsFrom: optionalInstantFrom(summary, 'staleSumsFrom'),

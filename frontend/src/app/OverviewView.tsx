@@ -8,7 +8,6 @@ import {
   GUILD_STALE_SUMS_NOTE,
   UNCOMPUTED_BALANCE_NOTE,
   UNCOMPUTED_NOTE,
-  balanceOf,
   guildPositionOf,
   rosterSplitOf,
   staleSumsNoteOf,
@@ -250,7 +249,7 @@ function figureColumn(figure: Figure): Column<AvatarSummary> {
       header,
       kind: 'number',
       tone: 'neutral',
-      value: (summary) => balanceOf(summary),
+      value: (summary) => summary.balance,
       missingNote: UNCOMPUTED_BALANCE_NOTE,
     }
   }

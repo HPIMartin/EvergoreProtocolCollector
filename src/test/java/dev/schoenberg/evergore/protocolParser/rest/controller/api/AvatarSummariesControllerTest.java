@@ -63,7 +63,7 @@ class AvatarSummariesControllerTest {
 
 		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
 
-		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", 0, 0, 0, 0, 0, null, null, null, null, null));
+		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", 0, 0, 0, 0, 0, null, null, null, null, null, null));
 	}
 
 	@Test
@@ -89,6 +89,55 @@ class AvatarSummariesControllerTest {
 
 		assertThat(summary.donation()).isEqualTo(140L);
 		assertThat(summary.craftSubsidy()).isEqualTo(20L);
+	}
+
+	@Test
+	void servesTheFigureBeforeTheGuildsShareRoundedFromItsExactValue() {
+		bankRepo.seedAvatars(List.of("Aurora"));
+		metaRepo.put(getStoragePlacement("Aurora"), 0.5);
+		metaRepo.put(getStorageDonation("Aurora"), 0.0);
+		metaRepo.put(getStorageCraftSubsidy("Aurora"), 0.2);
+
+		AvatarSummary summary = tested.summaries(0, WHOLE_PAGE).items().get(0);
+
+		assertThat(summary.balance()).isEqualTo(0L);
+	}
+
+	@Test
+	void servesNoFigureBeforeTheGuildsShareWhileNoRecomputeHasProducedTheFlows() {
+		bankRepo.seedAvatars(List.of("Aurora"));
+		metaRepo.put(getStoragePlacement("Aurora"), 308.4);
+
+		AvatarSummary summary = tested.summaries(0, WHOLE_PAGE).items().get(0);
+
+		assertThat(summary.balance()).isNull();
+	}
+
+	@Test
+	void servesTheGuildsStorageValueAndTheFigureBeforeItsShareRoundedFromTheGuildsExactSums() {
+		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
+		for (String avatar : List.of("Aurora", "Boreas")) {
+			metaRepo.put(getStoragePlacement(avatar), 2.34);
+			metaRepo.put(getStorageDonation(avatar), 0.36);
+			metaRepo.put(getStorageCraftSubsidy(avatar), 0.0);
+		}
+
+		GuildTotals totals = tested.summaries(0, WHOLE_PAGE).totals();
+
+		assertThat(List.of(totals.storageValue(), totals.balance())).containsExactly(5L, 5L);
+	}
+
+	@Test
+	void servesNoGuildStorageValueNorFigureBeforeItsShareWhileOneAvatarIsMissingHisFlows() {
+		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
+		metaRepo.put(getStoragePlacement("Aurora"), 10.0);
+		metaRepo.put(getStorageDonation("Aurora"), 140.0);
+		metaRepo.put(getStorageCraftSubsidy("Aurora"), 20.0);
+
+		GuildTotals totals = tested.summaries(0, WHOLE_PAGE).totals();
+
+		assertThat(totals.storageValue()).isNull();
+		assertThat(totals.balance()).isNull();
 	}
 
 	@Test

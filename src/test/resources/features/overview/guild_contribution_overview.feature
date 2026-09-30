@@ -96,11 +96,8 @@ Feature: Guild contribution overview
         | Kriegspfeile | 30      | 1,26  | 1     |
         | Federn       | 2       | 0,5   | 1     |
 
-    @wip
     Scenario: A member's row is rounded from its exact value, not from its rounded columns
-      Aurora deposited goods worth 1,26 and withdrew goods worth 0,54, so she generated 0,72. Today
-      each column is rounded first, to 1 and 1, and the row reads 0. This states the corrected
-      behavior.
+      Aurora deposited goods worth 1,26 and withdrew goods worth 0,54, so she generated 0,72.
 
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand   | Qualität | Vorgang     |
@@ -112,11 +109,9 @@ Feature: Guild contribution overview
         | Avatar | Einlagerung | Entnahme | Nach Abzügen |
         | Aurora | 1           | 1        | 1            |
 
-    @wip
     Scenario: The figure before the guild's share is rounded from its exact value
       Aurora deposited feathers worth 0,5, credited in full, of which the guild paid 0,2 above its
-      own price, so before the guild's share she moved 0,3. Today the rounded 1 less the rounded 0
-      reads 1, in her row and in the guild row. This states the corrected behavior.
+      own price, so before the guild's share she moved 0,3.
 
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
@@ -131,13 +126,11 @@ Feature: Guild contribution overview
         | Avatar | Vor Abzügen |
         | Gilde  | 0           |
 
-    @wip
     Scenario: The guild row and the guild's position are rounded from the guild's exact values
       Aurora and Boreas each deposited goods credited 2,34 in all: the guild paid 0,6 above its own
       price for the feathers and was given 0,36 for nothing in copper ore. Each row shows 2.
       Exactly, the guild row is 4,68, the guild paid 1,2 above its price, was given 0,72 and holds
-      4,68 + 0,72 - 1,2 = 4,2. Today the guild row adds the rounded rows and reads 4, and the
-      guild's position adds rounded figures to 2, 0 and 2. This states the corrected behavior.
+      4,68 + 0,72 - 1,2 = 4,2.
 
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand   | Qualität | Vorgang     |

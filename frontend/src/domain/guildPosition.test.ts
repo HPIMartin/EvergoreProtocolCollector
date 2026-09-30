@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { AvatarSummary, GuildTotals } from './avatarSummary.ts'
-import { balanceOf, guildPositionOf } from './guildPosition.ts'
+import type { GuildTotals } from './avatarSummary.ts'
+import { guildPositionOf } from './guildPosition.ts'
 
 const TOTALS: GuildTotals = {
   bankWithdrawn: 1400,
@@ -11,21 +11,9 @@ const TOTALS: GuildTotals = {
   net: 2350,
   donation: 400,
   craftSubsidy: 100,
+  balance: 2650,
+  storageValue: 600,
   containsStaleSums: false,
-}
-
-const SUMMARY: AvatarSummary = {
-  avatar: 'Calix',
-  bankWithdrawn: 1200,
-  bankDeposited: 3400,
-  storageWithdrawn: 200,
-  storageDeposited: 500,
-  net: 2500,
-  donation: 400,
-  craftSubsidy: 100,
-  lastBankActivity: null,
-  lastStorageActivity: null,
-  staleSumsFrom: null,
 }
 
 describe('the guild position behind the overview', () => {
@@ -35,10 +23,10 @@ describe('the guild position behind the overview', () => {
     expect(position.bank).toBe(2050)
   })
 
-  it('measures the storage in what it holds rather than in what it credited', () => {
-    const position = guildPositionOf(TOTALS)
+  it('states the storage value the server rounded once rather than adding up its rounded parts', () => {
+    const position = guildPositionOf({ ...TOTALS, storageValue: 599 })
 
-    expect(position.storageValue).toBe(600)
+    expect(position.storageValue).toBe(599)
   })
 
   it('states the two flows apart, the donation and what the guild pays traders on top', () => {
@@ -59,8 +47,8 @@ describe('the guild position behind the overview', () => {
     expect(position.bank).toBe(2050)
   })
 
-  it('cannot answer the storage value while no recompute has produced the two flows', () => {
-    const position = guildPositionOf({ ...TOTALS, donation: null })
+  it('cannot answer the storage value while the server has none, as before its first recompute', () => {
+    const position = guildPositionOf({ ...TOTALS, storageValue: null })
 
     expect(position.storageValue).toBeNull()
   })
@@ -73,17 +61,5 @@ describe('the guild position behind the overview', () => {
     })
 
     expect(position.bank).toBe(2050)
-  })
-
-  it('answers a row balance as its contribution plus what the guild kept of its deposits', () => {
-    const balance = balanceOf(SUMMARY)
-
-    expect(balance).toBe(2800)
-  })
-
-  it('cannot answer a row balance while that row is missing either flow', () => {
-    const balance = balanceOf({ ...SUMMARY, craftSubsidy: null })
-
-    expect(balance).toBeNull()
   })
 })

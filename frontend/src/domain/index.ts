@@ -10,7 +10,6 @@ export type { GuildPosition } from './guildPosition.ts'
 export {
   UNCOMPUTED_BALANCE_NOTE,
   UNCOMPUTED_NOTE,
-  balanceOf,
   guildPositionOf,
 } from './guildPosition.ts'
 export type { Ledger, LedgerVisitor } from './ledger.ts'

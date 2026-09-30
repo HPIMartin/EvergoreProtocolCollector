@@ -74,13 +74,13 @@ class ProtocolEvaluationAcceptanceTest {
 		assertThat(body.getLong("totalCount")).isEqualTo(4);
 		assertThat(body.getJSONArray("items").toString())
 				.isEqualTo(
-						"[{\"avatar\":\"Aurora\",\"bankWithdrawn\":200,\"bankDeposited\":1500,\"storageWithdrawn\":300,\"storageDeposited\":308,\"net\":1308,\"donation\":120,\"craftSubsidy\":0,"
+						"[{\"avatar\":\"Aurora\",\"bankWithdrawn\":200,\"bankDeposited\":1500,\"storageWithdrawn\":300,\"storageDeposited\":308,\"net\":1308,\"donation\":120,\"craftSubsidy\":0,\"balance\":1428,"
 								+ "\"lastBankActivity\":\"2024-01-12T11:00:00Z\",\"lastStorageActivity\":\"2024-01-17T11:00:00Z\",\"staleSumsFrom\":null},"
-								+ "{\"avatar\":\"Boreas\",\"bankWithdrawn\":0,\"bankDeposited\":750,\"storageWithdrawn\":0,\"storageDeposited\":77,\"net\":827,\"donation\":0,\"craftSubsidy\":0,"
+								+ "{\"avatar\":\"Boreas\",\"bankWithdrawn\":0,\"bankDeposited\":750,\"storageWithdrawn\":0,\"storageDeposited\":77,\"net\":827,\"donation\":0,\"craftSubsidy\":0,\"balance\":827,"
 								+ "\"lastBankActivity\":\"2024-02-01T08:00:00Z\",\"lastStorageActivity\":\"2024-02-05T08:00:00Z\",\"staleSumsFrom\":null},"
-								+ "{\"avatar\":\"Brynja\",\"bankWithdrawn\":0,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":1217,\"net\":1217,\"donation\":0,\"craftSubsidy\":240,"
+								+ "{\"avatar\":\"Brynja\",\"bankWithdrawn\":0,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":1217,\"net\":1217,\"donation\":0,\"craftSubsidy\":240,\"balance\":977,"
 								+ "\"lastBankActivity\":null,\"lastStorageActivity\":\"2024-02-06T09:00:00Z\",\"staleSumsFrom\":null},"
-								+ "{\"avatar\":\"Calix\",\"bankWithdrawn\":300,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":-300,\"donation\":0,\"craftSubsidy\":0,"
+								+ "{\"avatar\":\"Calix\",\"bankWithdrawn\":300,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":-300,\"donation\":0,\"craftSubsidy\":0,\"balance\":-300,"
 								+ "\"lastBankActivity\":\"2024-03-01T07:00:00Z\",\"lastStorageActivity\":null,\"staleSumsFrom\":null}]");
 	}
 
@@ -150,6 +150,8 @@ class ProtocolEvaluationAcceptanceTest {
 		assertThat(totals.getLong("net")).isEqualTo(3052);
 		assertThat(totals.getLong("donation")).isEqualTo(120);
 		assertThat(totals.getLong("craftSubsidy")).isEqualTo(240);
+		assertThat(totals.getLong("balance")).isEqualTo(2932);
+		assertThat(totals.getLong("storageValue")).isEqualTo(1182);
 	}
 
 	@Test

@@ -24,6 +24,7 @@ function summaryOf(
     net: 0,
     donation: 0,
     craftSubsidy: 0,
+    balance: 0,
     lastBankActivity,
     lastStorageActivity,
     staleSumsFrom: null,

@@ -27,6 +27,8 @@ const OVERVIEW_BODY = JSON.stringify({
     net: 2350,
     donation: 400,
     craftSubsidy: 100,
+    balance: 2650,
+    storageValue: 600,
     containsStaleSums: false,
   },
   items: [
@@ -39,6 +41,7 @@ const OVERVIEW_BODY = JSON.stringify({
       net: 2500,
       donation: 400,
       craftSubsidy: 100,
+      balance: 2800,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
@@ -52,6 +55,7 @@ const OVERVIEW_BODY = JSON.stringify({
       net: -150,
       donation: 0,
       craftSubsidy: 0,
+      balance: -150,
       lastBankActivity: null,
       lastStorageActivity: '2026-07-31T21:05:00Z',
       staleSumsFrom: null,
@@ -71,6 +75,8 @@ const OVERVIEW_BODY_WITH_A_STALE_ROW = JSON.stringify({
     net: 2350,
     donation: 400,
     craftSubsidy: 100,
+    balance: 2650,
+    storageValue: 600,
     containsStaleSums: true,
   },
   items: [
@@ -83,6 +89,7 @@ const OVERVIEW_BODY_WITH_A_STALE_ROW = JSON.stringify({
       net: 2500,
       donation: 400,
       craftSubsidy: 100,
+      balance: 2800,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
@@ -96,6 +103,7 @@ const OVERVIEW_BODY_WITH_A_STALE_ROW = JSON.stringify({
       net: -150,
       donation: 0,
       craftSubsidy: 0,
+      balance: -150,
       lastBankActivity: '2026-08-05T09:58:00Z',
       lastStorageActivity: '2026-07-31T21:05:00Z',
       staleSumsFrom: '2026-07-30T01:12:00Z',
@@ -115,6 +123,8 @@ const OVERVIEW_BODY_WHOSE_STALE_ROW_IS_OFF_THE_PAGE = JSON.stringify({
     net: 2350,
     donation: 400,
     craftSubsidy: 100,
+    balance: 2650,
+    storageValue: 600,
     containsStaleSums: true,
   },
   items: [
@@ -127,6 +137,7 @@ const OVERVIEW_BODY_WHOSE_STALE_ROW_IS_OFF_THE_PAGE = JSON.stringify({
       net: 2500,
       donation: 400,
       craftSubsidy: 100,
+      balance: 2800,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
@@ -146,6 +157,8 @@ const OVERVIEW_BODY_WITHOUT_THE_FLOWS = JSON.stringify({
     net: 2350,
     donation: null,
     craftSubsidy: null,
+    balance: null,
+    storageValue: null,
     containsStaleSums: false,
   },
   items: [
@@ -158,6 +171,7 @@ const OVERVIEW_BODY_WITHOUT_THE_FLOWS = JSON.stringify({
       net: 2500,
       donation: null,
       craftSubsidy: null,
+      balance: null,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
@@ -177,6 +191,8 @@ const TWO_ROWS_WITHOUT_FLOWS = JSON.stringify({
     net: 2350,
     donation: null,
     craftSubsidy: null,
+    balance: null,
+    storageValue: null,
     containsStaleSums: false,
   },
   items: [
@@ -189,6 +205,7 @@ const TWO_ROWS_WITHOUT_FLOWS = JSON.stringify({
       net: 2500,
       donation: null,
       craftSubsidy: null,
+      balance: null,
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
@@ -202,6 +219,7 @@ const TWO_ROWS_WITHOUT_FLOWS = JSON.stringify({
       net: -150,
       donation: null,
       craftSubsidy: null,
+      balance: null,
       lastBankActivity: null,
       lastStorageActivity: '2026-07-31T21:05:00Z',
       staleSumsFrom: null,
@@ -217,6 +235,8 @@ const NO_TOTALS = {
   net: 0,
   donation: 0,
   craftSubsidy: 0,
+  balance: 0,
+  storageValue: 0,
   containsStaleSums: false,
 }
 
@@ -244,6 +264,7 @@ function rosterBodyOf(
       net: 0,
       donation: 0,
       craftSubsidy: 0,
+      balance: 0,
       staleSumsFrom: null,
     })),
   })
@@ -699,6 +720,19 @@ describe('App', () => {
     ])
   })
 
+  it('states the storage value in the header as the server rounded it rather than adding up its rounded parts', async () => {
+    const body = JSON.parse(OVERVIEW_BODY) as {
+      totals: { storageValue: number }
+    }
+    body.totals.storageValue = 599
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, JSON.stringify(body)),
+    )
+
+    expect(statTexts()[1]).toBe('Gildenlagerwert599')
+  })
+
   it('tones the bank as a credit and leaves the subsidy untoned', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
@@ -793,12 +827,34 @@ describe('App', () => {
     expect(names).toStrictEqual(['figure', 'figure'])
   })
 
-  it('sums the guild balance in the total row of the switched column', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+  it("states the guild's figure before the deductions in the total row as the server rounded it", async () => {
+    const body = JSON.parse(OVERVIEW_BODY) as { totals: { balance: number } }
+    body.totals.balance = 2649
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, JSON.stringify(body)),
+    )
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
-    expect(screen.getByTestId('total-row').textContent).toContain('2.650')
+    expect(screen.getByTestId('total-row').textContent).toContain('2.649')
+  })
+
+  it("states a row's figure before the deductions as the server rounded it rather than adding up its rounded parts", async () => {
+    const body = JSON.parse(OVERVIEW_BODY) as { items: { balance: number }[] }
+    const [calix] = body.items
+    if (calix === undefined) {
+      throw new TypeError('The fixture lost its first row')
+    }
+    calix.balance = 2799
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, JSON.stringify(body)),
+    )
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(screen.getByText('2.799')).toBeTruthy()
   })
 
   it('tones the switched column like the contribution it replaces', async () => {
@@ -899,7 +955,7 @@ describe('App', () => {
     expect(screen.queryByTestId('cell-mark')).toBeNull()
   })
 
-  it('shows a row before the deductions as its figure after them plus what the guild kept', async () => {
+  it("shows a row's figure before the deductions in the switched column", async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))

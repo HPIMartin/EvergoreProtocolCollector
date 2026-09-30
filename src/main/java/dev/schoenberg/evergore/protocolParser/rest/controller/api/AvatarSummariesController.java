@@ -61,14 +61,14 @@ public class AvatarSummariesController {
 		WholeGoldContribution total = Contribution.sumOf(recompute.avatars().stream().map(AvatarContribution::contribution).toList()).inWholeGold();
 
 		return new GuildTotals(total.bankWithdrawn(), total.bankDeposited(), total.storageWithdrawn(), total.storageDeposited(), total.net(), donationOf(total),
-				craftSubsidyOf(total), recompute.containsStaleSums());
+				craftSubsidyOf(total), balanceOf(total), storageValueOf(total), recompute.containsStaleSums());
 	}
 
 	private static AvatarSummary summaryOf(AvatarContribution avatar) {
 		WholeGoldContribution whole = avatar.contribution().inWholeGold();
 
 		return new AvatarSummary(avatar.avatar(), whole.bankWithdrawn(), whole.bankDeposited(), whole.storageWithdrawn(), whole.storageDeposited(), whole.net(), donationOf(whole),
-				craftSubsidyOf(whole), avatar.lastBankActivity(), avatar.lastStorageActivity(), avatar.staleSumsFrom());
+				craftSubsidyOf(whole), balanceOf(whole), avatar.lastBankActivity(), avatar.lastStorageActivity(), avatar.staleSumsFrom());
 	}
 
 	private static Long donationOf(WholeGoldContribution contribution) {
@@ -77,5 +77,13 @@ public class AvatarSummariesController {
 
 	private static Long craftSubsidyOf(WholeGoldContribution contribution) {
 		return contribution.guildShare().map(WholeGoldShare::craftSubsidy).orElse(null);
+	}
+
+	private static Long balanceOf(WholeGoldContribution contribution) {
+		return contribution.guildShare().map(WholeGoldShare::balance).orElse(null);
+	}
+
+	private static Long storageValueOf(WholeGoldContribution contribution) {
+		return contribution.guildShare().map(WholeGoldShare::storageValue).orElse(null);
 	}
 }

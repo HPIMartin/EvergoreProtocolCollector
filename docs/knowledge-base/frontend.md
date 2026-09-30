@@ -176,14 +176,15 @@ Four top-level folders under `frontend/src/`:
   modelled material and no figure has to net a donation against a payout to fit one label.
   `OptionSwitch` toggles the table's sixth column between `Nach Abzügen`, what the guild credits the
   member, and `Vor Abzügen`, what he moved before the guild's share is taken off; the two differ by
-  exactly that row's `donation - craftSubsidy`. The table keeps its eight columns and its density
-  either way, and the sixth column keeps **one key** (`figure`), changing only its header and value,
-  because the table remembers a sort by column key and would otherwise throw on a sort the switch
-  renamed away. `domain/guildPosition.ts` derives the figures and a row's balance from the served
-  numbers, so the view holds no arithmetic and `ui` stays presentational. A figure the flows are
-  missing for renders the note from `domain` instead of a number, marked `data-absent`, while the
-  bank still answers because it is measured rather than modelled; the note names no next run, because
-  an avatar whose recompute keeps failing would never bring one.
+  that row's `donation - craftSubsidy`, give or take a gold, since each is rounded from its exact
+  value. The table keeps its eight columns and its density either way, and the sixth column keeps
+  **one key** (`figure`), changing only its header and value, because the table remembers a sort by
+  column key and would otherwise throw on a sort the switch renamed away. `domain/guildPosition.ts`
+  gathers the header's figures from the served numbers and derives only the bank, so the view holds
+  no arithmetic and `ui` stays presentational. A figure the flows are missing for renders the note
+  from `domain` instead of a number, marked `data-absent`, while the bank still answers because it
+  is measured rather than modelled; the note names no next run, because an avatar whose recompute
+  keeps failing would never bring one.
 - **The chosen figure is view state, not address state:** it resets to `Nach Abzügen` on a reload and on
   a route round trip, unlike the ledger's page number, which `route.ts` round-trips on purpose. A
   shared link therefore always opens on `Nach Abzügen`.
@@ -278,17 +279,20 @@ service's only read surface.
   differ from the sum of those beside or above it; the rule lives in
   [domain-model.md](domain-model.md).
 - **`donation` and `craftSubsidy` are the two flows between what a deposit credited and what it is
-  worth to the guild** (decision 2026-09-10): what a member gave for nothing, and what the guild paid
-  above its own price for bought trader goods. They are served per avatar and in `totals`, derived
-  per request from the exact sums, rounded once and stored nowhere, and they are the two numbers the header needs
-  that the other five cannot yield. Both are **`null` while no recompute has produced them** (a fresh
-  deployment before its first run), and `null` together rather than one at a time, because the read
-  path only forms the pair when both are stored; guild-wide they are `null` as soon as they are
-  missing for a single avatar. The SPA forms the other two header figures by subtraction, the bank as
-  `bankDeposited - bankWithdrawn` and the storage value as
-  `storageDeposited + donation - craftSubsidy - storageWithdrawn`; neither is a valuation rule, which
-  is why no separate header object is served. The valuation itself, and the identity behind the
-  header, live in [domain-model.md](domain-model.md).
+  worth to the guild** (decision 2026-09-10): what a member gave for nothing, and what the guild
+  paid above its own price for bought trader goods. They are served per avatar and in `totals`,
+  derived per request from the exact sums, rounded once and stored nowhere, and they are the two
+  numbers the header needs that the other five cannot yield. Both are **`null` while no recompute
+  has produced them** (a fresh deployment before its first run), and `null` together rather than one
+  at a time, because the read path only forms the pair when both are stored; guild-wide they are
+  `null` as soon as they are missing for a single avatar. The SPA forms only the bank by
+  subtraction, `bankDeposited - bankWithdrawn`, which is measured gold and exact, so no separate
+  header object is served. The valuation itself, and the identity behind the header, live in
+  [domain-model.md](domain-model.md).
+- **`balance` is the figure before the guild's share, served per avatar and in `totals`, and
+  `storageValue`, the header's `Gildenlagerwert`, only in `totals`** (decision 2026-09-27): each is
+  its exact value rounded once, which the SPA could not work out from the rounded figures beside it
+  without a second rounding. Both are `null` exactly when `donation` and `craftSubsidy` are.
 - **`lastBankActivity` / `lastStorageActivity` are `null` when the avatar never appeared in that
   ledger**, which is the case the sheet leaves blank. They are read from the ledger rows rather than
   from the meta store, so they are as fresh as the last ingest instead of as fresh as the last
