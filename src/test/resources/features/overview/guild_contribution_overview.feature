@@ -78,23 +78,28 @@ Feature: Guild contribution overview
   Rule: Every figure is rounded to whole gold once, from the exact values it is made of
     A member's row, the guild row and the guild's position are each worked out from the exact
     values and rounded only where they are shown, so a shown figure can differ from the sum of the
-    shown figures beside or above it.
+    shown figures beside or above it. A figure goes to the nearer whole gold, above zero as below
+    it, and half a gold counts as a whole one: 0,5 shows as 1 and -0,5 as -1.
 
-    Scenario Outline: A storage value of <exact> gold is shown as <shown>
+    Scenario Outline: A member who generated <exact> gold is shown <shown>
+      Depositing a Kriegspfeil credits what withdrawing it costs, so a withdrawal mirrors a
+      deposit below zero. A figure nearer to 0 than to -1 shows as 0, with no minus sign.
+
       Given the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität  | Vorgang     |
-        | 01.01.2026 12:00 | Aurora | 1     | <item>     | <quality> | Einlagerung |
+        | Zeitpunkt        | Avatar | Menge | Gegenstand   | Qualität  | Vorgang    |
+        | 01.01.2026 12:00 | Aurora | 1     | Kriegspfeile | <quality> | <movement> |
       And the daily collection has run
       When a member opens the overview
       Then the overview shows:
-        | Avatar | Einlagerung | Nach Abzügen |
-        | Aurora | <shown>     | <shown>      |
+        | Avatar | <movement> | Nach Abzügen |
+        | Aurora | <value>    | <shown>      |
 
       Examples:
-        | item         | quality | exact | shown |
-        | Kriegspfeile | 70      | 2,94  | 3     |
-        | Kriegspfeile | 30      | 1,26  | 1     |
-        | Federn       | 2       | 0,5   | 1     |
+        | quality | movement    | value | exact | shown |
+        | 70      | Einlagerung | 3     | 2,94  | 3     |
+        | 30      | Einlagerung | 1     | 1,26  | 1     |
+        | 30      | Entnahme    | 1     | -1,26 | -1    |
+        | 10      | Entnahme    | 0     | -0,42 | 0     |
 
     Scenario: A member's row is rounded from its exact value, not from its rounded columns
       Aurora deposited goods worth 1,26 and withdrew goods worth 0,54, so she generated 0,72.
@@ -108,6 +113,26 @@ Feature: Guild contribution overview
       Then the overview shows:
         | Avatar | Einlagerung | Entnahme | Nach Abzügen |
         | Aurora | 1           | 1        | 1            |
+
+    Scenario: Half a gold is shown as a whole one, above zero as below it
+      Aurora took 1 gold from the guild bank and deposited feathers worth 0,5, credited in full,
+      so she generated -0,5. Her deposit of 0,5 shows as 1, and her -0,5 shows as -1, not as 0,
+      in her row and in the guild row, which holds only her.
+
+      Given the guild bank ledger holds:
+        | Zeitpunkt        | Avatar | Betrag | Vorgang  |
+        | 01.01.2026 12:00 | Aurora | 1      | Entnahme |
+      And the guild storage ledger holds:
+        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
+        | 02.01.2026 12:00 | Aurora | 1     | Federn     | 2        | Einlagerung |
+      And the daily collection has run
+      When a member opens the overview
+      Then the overview shows:
+        | Avatar | Einlagerung | Nach Abzügen |
+        | Aurora | 1           | -1           |
+      And the guild row shows:
+        | Avatar | Nach Abzügen |
+        | Gilde  | -1           |
 
     Scenario: The figure before the guild's share is rounded from its exact value
       Aurora deposited feathers worth 0,5, credited in full, of which the guild paid 0,2 above its
