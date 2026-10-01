@@ -47,4 +47,12 @@ fi
 in_worktree check-ignore -q gate.local.d \
 	|| refuse ignored "git does not ignore gate.local.d, so the evidence could be committed or cleaned with the tree (playbook, The gate dossier)"
 
+byte_order_mark=$(printf '\357\273\277')
+for evidence in "$dossier"/*; do
+	[ -f "$evidence" ] || continue
+	named=$(sed -n "1s/^$byte_order_mark//; 1s/^tip: //p" "$evidence" | tr -d '\r' | sed 's/[[:space:]]*$//')
+	[ "$named" = "$tip" ] \
+		|| refuse tip "${evidence#"$dossier"/} names tip '${named:-none}', not the tip under review $tip (handbook §9)"
+done
+
 verdict

@@ -68,6 +68,8 @@ report as a finding (`docs/knowledge-base/working-with-ai-agents.md`, "Instructi
 
 ## Return (your final message = data for the orchestrator)
 
+- first line `tip: <full SHA of the commit you reviewed>`; the gate dossier refuses a report that
+  names no tip or another one
 - `verdict: PASS | FAIL` (task-scoped findings only)
 - findings: list of `{rule: DOC-n, where: file(:line), what, fix}` (fix = one concrete edit)
 - sweep: the swept doc + its findings in the same format (informational, never a FAIL)

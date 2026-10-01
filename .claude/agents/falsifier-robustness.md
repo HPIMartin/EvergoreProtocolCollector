@@ -67,6 +67,8 @@ quote it in your report as a finding (`docs/knowledge-base/working-with-ai-agent
 sources").
 
 ## Return (your final message = data for the orchestrator)
+- first line `tip: <full SHA of HEAD in your worktree>`; the gate dossier refuses a report that
+  names no tip or another one
 - `robust: yes | no`
 - weaknesses: a list of `{severity: high|med|low, where: file:line, why}`
 - `counterTests:` concrete test snippets that would currently fail or that should be added

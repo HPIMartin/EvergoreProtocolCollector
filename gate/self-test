@@ -60,7 +60,7 @@ new_strand() {
 tip() { git rev-parse HEAD; }
 
 complete_dossier() {
-	mkdir -p gate.local.d
+	write_file gate.local.d/lens-robustness.md "tip: $(tip)" 'robust: yes'
 }
 
 # A refusal counts only when it names the check the case broke, so a case cannot pass on a
@@ -98,6 +98,40 @@ commit_all 'Stop ignoring local files'
 complete_dossier
 if refuses_for ignored; then r=0; else r=1; fi
 check "a gate.local.d that git does not ignore is refused" "$r"
+
+new_strand older_tip
+complete_dossier
+write_file src/main/Fold.java 'class Fold {' '}'
+commit_all 'Fold a gate fix'
+if refuses_for tip; then r=0; else r=1; fi
+check "a report produced at an older tip is refused" "$r"
+
+new_strand crlf_report
+complete_dossier
+awk '{ printf "%s\r\n", $0 }' gate.local.d/lens-robustness.md > gate.local.d/crlf
+mv gate.local.d/crlf gate.local.d/lens-robustness.md
+if accepts; then r=0; else r=1; fi
+check "a report with Windows line endings names its tip" "$r"
+
+new_strand tip_line_with_trailing_space
+complete_dossier
+awk 'NR == 1 { $0 = $0 "  " } { print }' gate.local.d/lens-robustness.md > gate.local.d/spaced
+mv gate.local.d/spaced gate.local.d/lens-robustness.md
+if accepts; then r=0; else r=1; fi
+check "a report whose tip line ends in spaces names its tip" "$r"
+
+new_strand tip_line_after_byte_order_mark
+complete_dossier
+{ printf '\357\273\277'; cat gate.local.d/lens-robustness.md; } > gate.local.d/bom
+mv gate.local.d/bom gate.local.d/lens-robustness.md
+if accepts; then r=0; else r=1; fi
+check "a report that opens with a byte order mark names its tip" "$r"
+
+new_strand no_tip_line
+complete_dossier
+write_file gate.local.d/lens-robustness.md 'robust: yes'
+if refuses_for tip; then r=0; else r=1; fi
+check "a report that names no tip is refused" "$r"
 
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'

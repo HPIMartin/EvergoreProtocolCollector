@@ -195,10 +195,12 @@ pushes happen with **you** in chat.
   recorded mutation for an adapted test; green; refactor), commit message used, focused-test
   result, the state of the `.feature` (armed, or which scenarios still fail), full-suite result
   before hand-off, any deviation from the plan (with reason).
-- **Falsifier (each code lens):** `robust: yes/no`; weaknesses `{severity, where (file:line),
-  why}`; concrete counter-test snippets; `treeDiff`, the production-tree diff against `HEAD` in
-  its worktree, taken last. Bias to skepticism: if unsure, flag it.
-- **Doc reviewer:** `PASS|FAIL`; findings `{rule: DOC-n, where, what, fix}`.
+- **Falsifier (each code lens):** first line `tip: <full SHA>` (the commit it read);
+  `robust: yes/no`; weaknesses `{severity, where (file:line), why}`; concrete counter-test
+  snippets; `treeDiff`, the production-tree diff against `HEAD` in its worktree, taken last. Bias to
+  skepticism: if unsure, flag it.
+- **Doc reviewer:** first line `tip: <full SHA>` (the commit it read); `PASS|FAIL`; findings
+  `{rule: DOC-n, where, what, fix}`.
 - **Reviewer:** `PASS|FAIL`; findings `{category: process|cleancode|solid|hexagonal|tests|security|docs,
   where, fix}`; ready-to-paste `process-learnings.md` row if a process rule slipped.
 
@@ -212,6 +214,9 @@ lives.
 - **Location:** `<strand worktree>/gate.local.d/`, ignored by git (`*.local.*`), so no build
   cleans it and the worktree's removal takes it along. A dossier anywhere else, or a symlink in its
   place, is refused.
+- **Reports and logs at the top level** (each lens report and the doc-reviewer's, verbatim; the
+  runs made at the tip) open with `tip: <sha>`, the full SHA they were produced at; one naming any
+  other tip is refused. Evidence that predates the tip lives in subdirectories.
 
 ## Environment gotchas (tell every agent)
 
