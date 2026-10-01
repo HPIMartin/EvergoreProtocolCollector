@@ -478,6 +478,16 @@ describe('the admin status wire shape', () => {
     expect(reading).toThrow(MalformedResponse)
   })
 
+  it.each([0, -5])('refuses a round trip of %d pieces', (quantity) => {
+    const reading = () =>
+      adminStatusFrom({
+        ...adminStatusBody,
+        roundTrips: [{ avatar: 'Alrik', item: 'Federn', quantity }],
+      })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
   it('refuses a body without the round-trip abstentions', () => {
     const reading = () =>
       adminStatusFrom({ ...adminStatusBody, roundTripAbstentions: undefined })

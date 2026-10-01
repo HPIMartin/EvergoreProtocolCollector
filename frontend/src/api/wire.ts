@@ -73,11 +73,17 @@ export function adminStatusFrom(body: unknown): AdminStatus {
 
 function roundTripFrom(item: unknown): RoundTrip {
   const roundTrip = objectFrom(item)
+  const quantity = numberFrom(roundTrip, 'quantity')
+  if (quantity <= 0) {
+    throw new MalformedResponse(
+      `The API answered a round trip of ${quantity} pieces`,
+    )
+  }
 
   return {
     avatar: stringFrom(roundTrip, 'avatar'),
     item: stringFrom(roundTrip, 'item'),
-    quantity: numberFrom(roundTrip, 'quantity'),
+    quantity,
   }
 }
 

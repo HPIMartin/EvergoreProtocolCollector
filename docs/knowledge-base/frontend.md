@@ -131,7 +131,8 @@ Four top-level folders under `frontend/src/`:
   Two further lists, also shown only when non-empty, read the round-trip facts the same envelope
   carries: "Verdacht auf Warenkreislauf" lists each `avatar: quantity × item` round trip, and "Nicht
   beurteilbar (Rezept ungelesen)" lists each `avatar: item` the guild could not judge for lack of a
-  read recipe.
+  read recipe. A round trip of fewer than one piece is refused as a malformed answer
+  (`roundTripFrom`), as the server refuses to build one.
   It states facts only; the UP/DOWN verdict over them stays `/health`'s job.
   Deliberately not in `navigationOf`'s link set, so a guild member never sees it; reachable only by
   its direct URL. Needs no token: the page and the endpoint it reads are both in
