@@ -223,6 +223,9 @@ lives.
 - **Gate reports:** `lens-<lens>.md` per falsifier lens and `doc-reviewer.md`, each the agent's
   final message verbatim; a file without its contract's fields (`robust:` and `treeDiff:`, or `verdict:`;
   → Handoff contracts) is a summary and is refused.
+- **Required reports** follow the strand's diff against its base: `doc-reviewer.md` always; any
+  path outside `*.md` adds `lens-robustness.md`, one under `src/` adds `lens-domain.md`, one under
+  `frontend/` adds `lens-frontend.md` (→ Cadence). A docs-only strand needs the doc-reviewer alone.
 
 ## Environment gotchas (tell every agent)
 

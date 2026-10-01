@@ -60,9 +60,14 @@ new_strand() {
 tip() { git rev-parse HEAD; }
 
 complete_dossier() {
-	write_file gate.local.d/lens-robustness.md "tip: $(tip)" '- `robust: yes`' \
-		'- weaknesses: none found after a genuine attempt' '- `counterTests:` none' '- `treeDiff:` (empty)'
+	lens_report robustness
+	lens_report domain
 	write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+}
+
+lens_report() {
+	write_file "gate.local.d/lens-$1.md" "tip: $(tip)" '- `robust: yes`' \
+		'- weaknesses: none found after a genuine attempt' '- `counterTests:` none' '- `treeDiff:` (empty)'
 }
 
 # A refusal counts only when it names the check the case broke, so a case cannot pass on a
@@ -209,6 +214,51 @@ complete_dossier
 write_file gate.local.d/doc-reviewer.md "tip: $(tip)" 'The doc-reviewer passed the docs.'
 if refuses_for report; then r=0; else r=1; fi
 check "a doc-reviewer summary in place of its report is refused" "$r"
+
+new_strand no_domain_lens
+complete_dossier
+mv gate.local.d/lens-domain.md gate.local.d/notes-domain.txt
+if refuses_for lens; then r=0; else r=1; fi
+check "a backend change without the domain lens is refused" "$r"
+
+new_strand no_frontend_lens
+write_file frontend/src/Page.tsx 'export const page = 1;'
+commit_all 'Add a page'
+complete_dossier
+if refuses_for lens; then r=0; else r=1; fi
+check "a frontend change without the frontend lens is refused" "$r"
+
+new_strand no_doc_reviewer
+complete_dossier
+mv gate.local.d/doc-reviewer.md gate.local.d/notes-doc.txt
+if refuses_for lens; then r=0; else r=1; fi
+check "a dossier without the doc-reviewer's report is refused" "$r"
+
+new_strand no_robustness_lens
+complete_dossier
+mv gate.local.d/lens-robustness.md gate.local.d/notes-robustness.txt
+if refuses_for lens; then r=0; else r=1; fi
+check "a code change without the robustness lens is refused" "$r"
+
+new_strand non_ascii_src
+git checkout -q main
+git checkout -q -B strand
+write_file 'src/main/Ärger.java' 'class Aerger {' '}'
+commit_all 'Add a class with a non-ASCII name'
+complete_dossier
+mv gate.local.d/lens-domain.md gate.local.d/notes-domain.txt
+if refuses_for lens; then r=0; else r=1; fi
+check "a change to a non-ASCII path under src/ still calls for the domain lens" "$r"
+
+new_strand docs_only
+git checkout -q main
+git checkout -q -B strand
+write_file docs/guide.md '# Guide'
+commit_all '[doc] Add the guide'
+mkdir -p gate.local.d
+write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+if accepts; then r=0; else r=1; fi
+check "a docs-only strand passes with the doc-reviewer's report alone" "$r"
 
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'

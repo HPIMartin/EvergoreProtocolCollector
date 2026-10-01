@@ -71,6 +71,18 @@ for evidence in "$dossier"/*; do
 		|| refuse tip "${evidence#"$dossier"/} names tip '${named:-none}', not the tip under review $tip (handbook §9)"
 done
 
+changed=$(in_worktree diff --name-only "$base" "$tip")
+code_changed=$(printf '%s\n' "$changed" | grep -v '\.md$' || true)
+needs() {
+	printf '%s\n' "$2" | grep -Eq "$3" || return 0
+	[ -f "$dossier/$1" ] \
+		|| refuse lens "the diff touches $4, so the gate needs $1 (playbook, Cadence)"
+}
+needs doc-reviewer.md "$changed" . 'the strand'
+needs lens-robustness.md "$code_changed" . 'code'
+needs lens-domain.md "$code_changed" '^src/' 'src/'
+needs lens-frontend.md "$code_changed" '^frontend/' 'frontend/'
+
 for report in "$dossier"/lens-*.md; do
 	[ -f "$report" ] || continue
 	grep -Eq '(^|[^A-Za-z])robust:' "$report" && grep -Eq '(^|[^A-Za-z])treeDiff:' "$report" \
