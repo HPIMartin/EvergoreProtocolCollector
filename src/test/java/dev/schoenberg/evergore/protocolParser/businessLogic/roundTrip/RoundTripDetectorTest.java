@@ -20,8 +20,11 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KRISTAL
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KUPFERERZ;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MAGIEESSENZ;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.PFEILE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.SCHMIEDEOEL;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STEINKOHLE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STREITAXT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RoundTripDetectorTest {
 	private static final Instant T = Instant.parse("2026-01-01T00:00:00Z");
@@ -193,6 +196,23 @@ class RoundTripDetectorTest {
 		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
 		assertThat(report.roundTrips()).containsExactly(new RoundTrip("Alrik", STEINKOHLE, 1));
+	}
+
+	@Test
+	void consumesWhatALargeProductDepositsRecipeUsesEvenWhenTheProductOfQuantityAndIngredientExceedsAnInt() {
+		List<ResolvedStorageEntry> entries = List
+				.of(withdrawal("Alrik", FEDERN, 10, T), deposit("Alrik", JAGDPFEILE, 300_000_000, T.plusSeconds(3600)), deposit("Alrik", FEDERN, 10, T.plusSeconds(7200)));
+
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(report.roundTrips()).isEmpty();
+	}
+
+	@Test
+	void refusesARecipeConsumptionTooLargeForAnInt() {
+		List<ResolvedStorageEntry> entries = List.of(withdrawal("Alrik", SCHMIEDEOEL, 7, T), deposit("Alrik", STREITAXT, 400_000_000, T.plusSeconds(3600)));
+
+		assertThatThrownBy(() -> RoundTripDetector.detect("Alrik", entries)).isInstanceOf(ArithmeticException.class);
 	}
 
 	@Test

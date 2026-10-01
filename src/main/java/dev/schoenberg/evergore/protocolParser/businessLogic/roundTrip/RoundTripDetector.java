@@ -113,14 +113,14 @@ public final class RoundTripDetector {
 		}
 
 		private int attribute(EvergoreItem product, int depositedSoFar, Published recipe, Ingredient ingredient) {
-			int consumedSoFar = ceilingDivide(depositedSoFar * ingredient.amount, recipe.amount);
+			int consumedSoFar = ceilingDivide((long) depositedSoFar * ingredient.amount, recipe.amount);
 			Integer attributedBefore = ingredientsAttributed.computeIfAbsent(product, ignored -> new TreeMap<>()).put(ingredient.item, consumedSoFar);
 			return consumedSoFar - (attributedBefore == null ? 0 : attributedBefore);
 		}
 	}
 
-	private static int ceilingDivide(int dividend, int divisor) {
-		return (dividend + divisor - 1) / divisor;
+	private static int ceilingDivide(long dividend, int divisor) {
+		return Math.toIntExact((dividend + divisor - 1) / divisor);
 	}
 
 	private static void dropExpiredLots(Deque<Lot> lots, Instant at) {

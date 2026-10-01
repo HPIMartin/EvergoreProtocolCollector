@@ -407,8 +407,9 @@ member rather than minting, and an item credited at 60 % comes out even, so neit
 **A crafter who withdraws material and deposits the product it becomes is not a round trip.** A
 deposit of a *different* item whose `recipe` is `Recipe.Published` and names the watched item as an
 ingredient consumes what the recipe has used for **all** of that product the avatar has deposited so
-far, `ceil(depositedSoFar × ingredient.amount / recipe.amount)`, less what earlier deposits of it
-already used up, from that item's open lots, oldest first, same window rule, before any later
+far, `ceil(depositedSoFar × ingredient.amount / recipe.amount)` (computed in `long`; a result beyond
+an `int` throws `ArithmeticException`, which fails that avatar's recompute and names it in `/health`
+rather than printing an impossible figure), less what earlier deposits of it already used up, from that item's open lots, oldest first, same window rule, before any later
 same-item deposit can match them; nothing is reported for that consumption. Counting cumulatively is
 what makes a craft logged as two deposit lines consume exactly what one line for the same quantity
 would, so splitting a deposit can neither hide nor invent a round trip. A product that is watched
