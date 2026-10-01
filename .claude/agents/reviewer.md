@@ -31,6 +31,12 @@ Read `CLAUDE.md`, `docs/knowledge-base/engineering-handbook.md` (esp. §1–§9)
 **`doc-reviewer`**. The orchestrator hands you every prior verdict; if one is missing, or was
 produced on a tip other than the one you review, say so and stop instead of re-deriving it.
 
+At the feature gate, your first act is `gate/dossier-check <strand worktree> <tip>`, run from the
+strand worktree. The gate's evidence lives in `<strand worktree>/gate.local.d/`
+(`docs/knowledge-base/multi-agent-playbook.md`, "The gate dossier"), and its PASS line opens your
+brief. On a FAIL, or a brief that does not open with its PASS line, stop and return `verdict:
+FAIL` with the refusals quoted; do not review a dossier the check refuses.
+
 ## Process checks (the author cares about these)
 
 - **Were the scenario gate and author gate 1 honored?** The `.feature` committed tagged `@wip`

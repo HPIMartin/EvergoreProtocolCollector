@@ -550,8 +550,10 @@ fresh falsifier and reviewer re-check. Bounds:
   the diff: a commit that names a repair of an earlier commit is itself a FAIL, and an "and" joining
   two clauses in a proposed message is the signal to split.
 - **A gate agent's report is an input to the next gate agent**, not a message to the author alone:
-  every prior verdict travels into the reviewer's brief, and a lens whose tip is no longer the one
-  under review is re-run.
+  every prior lens and doc-reviewer verdict reaches the reviewer verbatim in the gate dossier, and
+  a lens whose tip is no longer the one under review is re-run. The gate dossier check refuses an
+  incomplete dossier before the reviewer starts ([multi-agent-playbook.md](multi-agent-playbook.md),
+  "The gate dossier").
 - **The gate verifies the claim, not the intent.** Every claimed fix is stated with the evidence
   that it landed on the branch (`git show <sha> -- <file>`, produced from the strand's worktree with
   `git -C`, never from an inherited working directory), and the reviewer ticks off each of its own

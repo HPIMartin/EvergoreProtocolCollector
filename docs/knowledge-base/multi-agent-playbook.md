@@ -53,6 +53,8 @@ is the author's decision ([engineering-handbook.md](engineering-handbook.md) §7
    - each returns verdict + counter-tests, and ends with the diff of the production tree against
      HEAD in its worktree (a left-behind probe is its own finding)
 4. REVIEW GATE (spawn `doc-reviewer` + `reviewer`, both fresh), once per FEATURE commit
+   - the reviewer starts only on a green `gate/dossier-check <worktree> <tip>`, whose PASS line is
+     the first line of its brief (see "The gate dossier")
    - doc-reviewer: docs hygiene per the DOC checklist, task-scoped, plus a stateless
      rotating one-doc sweep (pick = commit count mod doc count; see the agent definition)
    - reviewer: process adherence (scenario gate and author gate 1 honored? real
@@ -117,8 +119,8 @@ the feature commit**, not per micro-commit.
   against `HEAD` in its worktree, so a left-behind change shows up in its own report rather than in
   the next build.
 - **Every prior verdict is an input to the next gate agent**, not a message to the author alone: the
-  falsifiers' and the doc-reviewer's reports go into the reviewer's brief verbatim, and a lens whose
-  tip is no longer the one under review is re-run, never quoted.
+  falsifiers' and the doc-reviewer's reports go into the gate dossier verbatim, where the reviewer
+  reads them, and a lens whose tip is no longer the one under review is re-run, never quoted.
 - **Pure documentation/process changes (`[doc]` scope) skip the falsifier panel:** the
   `doc-reviewer` is the gate; add the `reviewer` only when process adherence is genuinely in doubt.
 - **Escalation:** features touching valuation math, time/timezones, concurrency, data migration or
@@ -211,6 +213,9 @@ worktree> <tip>` refuses a dossier that breaks a rule below; its proof is `gate/
 by `pre-commit` whenever a commit touches `gate/`. This section says where each piece of evidence
 lives.
 
+- **When:** after the panel and the doc-reviewer have reported, before the reviewer is spawned. Its
+  PASS line opens the reviewer's brief, and the reviewer runs it again as its first act; a FAIL
+  means the dossier is fixed, never that the reviewer starts anyway.
 - **Location:** `<strand worktree>/gate.local.d/`, ignored by git (`*.local.*`), so no build
   cleans it and the worktree's removal takes it along. A dossier anywhere else, or a symlink in its
   place, is refused.
