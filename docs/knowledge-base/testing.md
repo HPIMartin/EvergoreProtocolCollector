@@ -458,27 +458,31 @@ recomputed value per key.
 Measured with the same opt-in check after the valuation moved to the announced rule, against the
 03.09.2026 snapshot, 42 avatars, read out of the check's own
 `overview-after-recompute.json` rather than computed beside it. The table stands for the catalog as
-closed against the game on 2026-09-11 and for every figure rounded once from its exact value
-(re-measured 2026-09-30):
+closed against the game on 2026-09-11, for every figure rounded once from its exact value and for
+the full credit of the ammunition the game's own trader sells (re-measured 2026-10-01):
 
 | figure | value |
 | --- | --- |
 | Gildenbank (bank in less bank out, measured gold) | `119.334.247` |
 | Gildenlagerwert (what the storage holds at the guild's own price) | `25.145.110` |
 | Gildenspende (deposits the guild credits nothing for) | `107.075.238` |
-| Handwerkssubventionen (what the guild credits above its own price) | `39.441.922` |
-| Einlagerung, the table's total row | `279.290.795` |
-| Nach Abzügen, the table's total row | `76.846.041` |
+| Handwerkssubventionen (what the guild credits above its own price) | `43.437.570` |
+| Einlagerung, the table's total row | `283.286.443` |
+| Nach Abzügen, the table's total row | `80.841.689` |
 | Vor Abzügen, the table's total row | `144.479.357` |
 
 - The identity `net = Gildenbank + Gildenlagerwert - Gildenspende + Handwerkssubventionen` holds
   exactly on the exact values and within two gold on the shown ones, which is what makes the header
   checkable against the table; the check's reconciliation asserts that tolerance. On this snapshot
-  the guild total and 35 of the 42 rows reconcile exactly; the other 7, whose net rounds
+  the guild total and 37 of the 42 rows reconcile exactly; the other 5, whose net rounds
   differently from their rounded storage sums, are one gold off.
-- The guild's trader lands at `-2.189.599` (re-measured 2026-09-27) on about 90 Mio of goods moved, the break-even the
-  100 % credit is meant to produce, and the split says why: `35.112.568` of the guild's whole
-  `39.441.922` subsidy is that one avatar's, against a donation of only `897.138`.
+- The guild's trader lands at `+1.456.343` (re-measured 2026-10-01) on about 90 Mio of goods moved,
+  the break-even the 100 % credit is meant to produce, and the split says why: `38.758.510` of the
+  guild's whole `43.437.570` subsidy is that one avatar's, against a donation of only `897.138`.
+- The full credit of `Pfeile`, `Bolzen` and `Magieessenz` raised `Handwerkssubventionen`, the
+  table's `Einlagerung` and `Nach Abzügen` by `3.995.648` each and left `Gildenlagerwert`,
+  `Gildenspende` and `Vor Abzügen` where they were: `3.645.942` of it reached the trader, who moved
+  from `-2.189.599`, and `349.706` the other members, whose 41 rounded rows add up to `349.704`.
 
 ### The ledger index on real data (2026-09-27)
 

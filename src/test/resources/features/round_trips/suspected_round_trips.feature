@@ -89,7 +89,6 @@ Feature: Suspected round trips of trader goods
     Any other good credits at most the 60 % its withdrawal costs, so taking it out and bringing it
     back earns nothing.
 
-    @wip
     Scenario: The ammunition the game's own trader sells is reported when it goes out and comes back
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |

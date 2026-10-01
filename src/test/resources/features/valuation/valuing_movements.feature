@@ -74,14 +74,12 @@ Feature: Valuing the guild's movements
         | Eisenbarren        | verarbeitete Rohstoffe | 120          | 60 %  | 72     |
         | Gute Baumwollbinde | Bandagen               | 65           | 60 %  | 39     |
 
-      @wip
       Examples: ammunition the game's own trader sells
         | item        | kind                | market value | share | credit |
         | Pfeile      | Munition Bögen      | 3            | 100 % | 3      |
         | Bolzen      | Munition Armbrüste  | 12           | 100 % | 12     |
         | Magieessenz | Munition Magiestäbe | 4            | 100 % | 4      |
 
-      @wip
       Examples: ammunition that can only be crafted
         | item          | kind                | market value | share | credit |
         | Jagdpfeile    | Munition Bögen      | 5            | 60 %  | 3      |
@@ -137,7 +135,6 @@ Feature: Valuing the guild's movements
         | Federn      | Handwerksmaterial      | 25           | 1        | a subsidy             | 25     | 0    | 10      |
         | Eisenbarren | verarbeitete Rohstoffe | 120          | 1        | neither               | 72     | 0    | 0       |
 
-      @wip
       Examples: ammunition the game's own trader sells
         | item   | kind           | market value | quantity | what the guild booked | credit | gift | subsidy |
         | Pfeile | Munition Bögen | 3            | 5        | a subsidy             | 15     | 0    | 6       |
@@ -157,11 +154,9 @@ Feature: Valuing the guild's movements
 
   Rule: Crafting earns what the product credits less what its ingredients cost
 
-    @wip
     Scenario: The guild's announced example: arrows crafted from beech and feathers
       The guild announced this example with the arrows credited at 60 %: 243 for a gain of 96.
-      "Pfeile" are ammunition the game's own trader sells and credit in full. Today the overview
-      shows 243 and 96.
+      "Pfeile" are ammunition the game's own trader sells and credit in full.
 
       Given the price list the service ships values:
         | item       | kind              | market value |

@@ -26,7 +26,6 @@ Feature: Products of unread recipe
         | trader good | pairs                            |
         | Federn      | Alrik: Federn, Alrik: Kristallat |
 
-      @wip
       Examples: ammunition the game's own trader sells
         | trader good | pairs                            |
         | Pfeile      | Alrik: Kristallat, Alrik: Pfeile |

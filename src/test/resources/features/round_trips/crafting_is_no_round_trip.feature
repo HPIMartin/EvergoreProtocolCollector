@@ -71,7 +71,6 @@ Feature: Crafting is not a round trip
     sort coming back is the plainest reading of the ledger; counting it as crafted first would let
     "Federn" the member took out of the guild storage hide a round trip of the "Pfeile".
 
-    @wip
     Scenario Outline: <deposited> "Pfeile" brought back after 135 "Pfeile" and <withdrawn> "Federn" went out: <what counts>
       One batch of 135 "Pfeile" consumes 6 "Buchenholz" and 5 "Federn"; "Federn" are trader goods.
 
