@@ -9,18 +9,27 @@ Feature: Products of unread recipe
     A withdrawal is still open while it lies at most 48 hours back and has not come back or gone
     into a product of published recipe.
 
-    Scenario: Every trader good still open when the product arrives is left unjudged
+    Scenario Outline: Every trader good still open when the product arrives is left unjudged: "<trader good>" beside "Kristallat"
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand     | Qualität | Vorgang     |
         | 01.01.2026 12:00 | Alrik  | 100   | Kristallat     | 100      | Entnahme    |
-        | 01.01.2026 12:00 | Alrik  | 20    | Federn         | 100      | Entnahme    |
+        | 01.01.2026 12:00 | Alrik  | 20    | <trader good>  | 100      | Entnahme    |
         | 01.01.2026 13:00 | Alrik  | 1     | Achat-Armbrust | 100      | Einlagerung |
         | 01.01.2026 14:00 | Alrik  | 100   | Kristallat     | 100      | Einlagerung |
-        | 01.01.2026 14:00 | Alrik  | 20    | Federn         | 100      | Einlagerung |
+        | 01.01.2026 14:00 | Alrik  | 20    | <trader good>  | 100      | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page lists no suspected round trip
-      And the admin page reads "Nicht beurteilbar (Rezept ungelesen): Alrik: Federn, Alrik: Kristallat"
+      And the admin page reads "Nicht beurteilbar (Rezept ungelesen): <pairs>"
+
+      Examples:
+        | trader good | pairs                            |
+        | Federn      | Alrik: Federn, Alrik: Kristallat |
+
+      @wip
+      Examples: ammunition the game's own trader sells
+        | trader good | pairs                            |
+        | Pfeile      | Alrik: Kristallat, Alrik: Pfeile |
 
     Scenario: Abstaining on a good also silences the member's earlier and later round trips of it
       Each withdrawal lies more than 48 hours after the one before.

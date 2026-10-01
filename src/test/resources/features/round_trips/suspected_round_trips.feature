@@ -1,11 +1,12 @@
 Feature: Suspected round trips of trader goods
-  Goods bought from the guild trader credit their full market value when deposited but cost only
-  60 % when withdrawn, so taking them out and putting them back in earns 40 % out of nothing. The
-  guild's rule relies on trust; the service does not prevent a round trip, it makes one visible:
-  after each collection the admin page names every member who withdrew a trader good and deposited
-  it again within 48 hours, with the quantity that went round, unless a crafted product explains it
-  (see "Crafting is not a round trip"). All times are German wall-clock time, as the game shows
-  them.
+  Trader goods are the goods a member pays a trader for: goods bought from the guild trader, and the
+  ammunition the game's own trader sells ("Pfeile", "Bolzen" and "Magieessenz"). They credit their
+  full market value when deposited but cost only 60 % when withdrawn, so taking them out and putting
+  them back in earns 40 % out of nothing. The guild's rule relies on trust; the service does not
+  prevent a round trip, it makes one visible: after each collection the admin page names every
+  member who withdrew a trader good and deposited it again within 48 hours, with the quantity that
+  went round, unless a crafted product explains it (see "Crafting is not a round trip"). All times
+  are German wall-clock time, as the game shows them.
 
   Rule: A trader good withdrawn and deposited again within 48 hours is reported
 
@@ -84,9 +85,23 @@ Feature: Suspected round trips of trader goods
       When the admin opens the admin page
       Then the admin page lists no suspected round trip
 
-  Rule: Only goods bought from the guild trader are watched
+  Rule: Only trader goods are watched
     Any other good credits at most the 60 % its withdrawal costs, so taking it out and bringing it
     back earns nothing.
+
+    @wip
+    Scenario: The ammunition the game's own trader sells is reported when it goes out and comes back
+      Given the guild storage ledger holds:
+        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
+        | 01.01.2026 12:00 | Alrik  | 100   | Pfeile      | 100      | Entnahme    |
+        | 01.01.2026 12:00 | Alrik  | 100   | Bolzen      | 100      | Entnahme    |
+        | 01.01.2026 12:00 | Alrik  | 100   | Magieessenz | 100      | Entnahme    |
+        | 01.01.2026 13:00 | Alrik  | 100   | Pfeile      | 100      | Einlagerung |
+        | 01.01.2026 13:00 | Alrik  | 100   | Bolzen      | 100      | Einlagerung |
+        | 01.01.2026 13:00 | Alrik  | 100   | Magieessenz | 100      | Einlagerung |
+      And the daily collection has run
+      When the admin opens the admin page
+      Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: 100 × Bolzen, Alrik: 100 × Magieessenz, Alrik: 100 × Pfeile"
 
     Scenario Outline: "<item>" going out and coming back is not reported
       Given the guild storage ledger holds:
@@ -101,3 +116,4 @@ Feature: Suspected round trips of trader goods
         | item        |
         | Kupfererz   |
         | Eisenbarren |
+        | Jagdpfeile  |

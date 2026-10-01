@@ -63,3 +63,29 @@ Feature: Crafting is not a round trip
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: 100 × Federn"
+
+  Rule: Ammunition the game's own trader sells comes back as itself before it counts as crafted
+    "Pfeile", "Bolzen" and "Magieessenz" are trader goods themselves, and their recipes consume
+    other trader goods. A deposit of one of them first answers what of the same sort went out; only
+    the quantity beyond that counts as crafted and uses up the trader goods of its recipe. The same
+    sort coming back is the plainest reading of the ledger; counting it as crafted first would let
+    "Federn" the member took out of the guild storage hide a round trip of the "Pfeile".
+
+    @wip
+    Scenario Outline: <deposited> "Pfeile" brought back after 135 "Pfeile" and <withdrawn> "Federn" went out: <what counts>
+      One batch of 135 "Pfeile" consumes 6 "Buchenholz" and 5 "Federn"; "Federn" are trader goods.
+
+      Given the guild storage ledger holds:
+        | Zeitpunkt        | Avatar | Menge       | Gegenstand | Qualität | Vorgang     |
+        | 01.01.2026 12:00 | Alrik  | 135         | Pfeile     | 100      | Entnahme    |
+        | 01.01.2026 12:00 | Alrik  | <withdrawn> | Federn     | 100      | Entnahme    |
+        | 01.01.2026 13:00 | Alrik  | <deposited> | Pfeile     | 100      | Einlagerung |
+        | 01.01.2026 14:00 | Alrik  | <withdrawn> | Federn     | 100      | Einlagerung |
+      And the daily collection has run
+      When the admin opens the admin page
+      Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: 5 × Federn, Alrik: 135 × Pfeile"
+
+      Examples:
+        | deposited | withdrawn | what counts                                                     |
+        | 135       | 5         | the arrows came back, nothing was crafted                       |
+        | 270       | 10        | 135 came back, the other 135 were crafted and used 5 "Federn"   |
