@@ -249,6 +249,12 @@ lives.
 - **`kb-guard.log`:** whenever a commit is proven by a run on other docs than its own (a docs-only
   fold, a `[doc]` commit), a `./verify focus` run of `KbCitationGuardTest` at the tip, since that
   test reads the KB prose; it shows the command, a bare `> Task :test` and `BUILD SUCCESSFUL`.
+- **`findings.txt`:** one line per finding the reports raise (a lens's list items that open with
+  `{severity:`, the doc-reviewer's that open with `{rule: DOC-`, one finding per line, numbered
+  1..n per report in their order, each traced once; a `robust: no` or `verdict: FAIL` report lists
+  at least one): `<lens>-<n> fixed <strand commit>`,
+  `<lens>-<n> backlog <ID>` (a row `docs/backlog.md` holds at the tip) or `<lens>-<n> rejected
+  <reason>`; the doc-reviewer's findings count as `doc-reviewer-<n>`. Anything else is refused.
 
 ## Environment gotchas (tell every agent)
 

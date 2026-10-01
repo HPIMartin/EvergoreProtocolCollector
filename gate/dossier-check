@@ -409,4 +409,65 @@ if [ -f "$dossier/doc-reviewer.md" ]; then
 		|| refuse report "doc-reviewer.md lacks the verdict: field of the doc-reviewer's report, so it is a summary, not the report verbatim (playbook, Handoff contracts; handbook §9)"
 fi
 
+findings_file="$dossier/findings.txt"
+if [ -f "$findings_file" ]; then
+	tr -d '\r' < "$findings_file" > "$scratch/findings.txt"
+	findings_file=$scratch/findings.txt
+fi
+for report in "$dossier"/lens-*.md "$dossier/doc-reviewer.md"; do
+	[ -f "$report" ] || continue
+	name=${report##*/}
+	name=${name%.md}
+	name=${name#lens-}
+	case "$name" in
+		doc-reviewer) raised_pattern='rule: *DOC-' alarm='verdict:[[:space:]]*FAIL' ;;
+		*) raised_pattern='severity:' alarm='robust:[[:space:]]*no' ;;
+	esac
+	entry="^[[:space:]]*([-*+]|[0-9]+[.)])?[[:space:]]*\`?\{$raised_pattern"
+	raised=$(grep -Ec -- "$entry" "$report" || true)
+	if grep -E -- "$entry" "$report" | grep -Eq -- "\{$raised_pattern.*\{$raised_pattern"; then
+		refuse finding "${report##*/} lists two findings on one line, so they cannot be counted (playbook, The gate dossier)"
+	fi
+	if [ "${raised:-0}" -eq 0 ] && grep -Eq -- "$alarm" "$report"; then
+		refuse report "${report##*/} reports '$(grep -Eo -- "$alarm" "$report" | head -1)' but lists no finding as a counted entry (playbook, The gate dossier)"
+	fi
+	traced=$(grep -c "^$name-[0-9][0-9]* " "$findings_file" 2>/dev/null || true)
+	[ "${raised:-0}" -eq "${traced:-0}" ] \
+		|| refuse finding "${report##*/} raises ${raised:-0} finding(s), but findings.txt traces ${traced:-0} as $name-<n> (handbook §9)"
+	n=1
+	while [ "$n" -le "${raised:-0}" ]; do
+		[ "$(grep -c "^$name-$n " "$findings_file" 2>/dev/null || true)" = 1 ] \
+			|| refuse finding "findings.txt does not trace $name-$n exactly once (handbook §9)"
+		n=$((n + 1))
+	done
+done
+
+if [ -f "$findings_file" ]; then
+	backlog=$(in_worktree show "$tip:docs/backlog.md" 2>/dev/null || true)
+	while read -r id disposition rest; do
+		[ -n "$id" ] || continue
+		case "$disposition" in
+			fixed)
+				printf '%s\n' "$rest" | grep -Eqx '[0-9a-f]{7,40}' \
+					&& in_worktree rev-parse --verify --quiet "$rest^{commit}" >/dev/null \
+					&& in_worktree merge-base --is-ancestor "$rest" "$tip" \
+					&& ! in_worktree merge-base --is-ancestor "$rest" "$base" \
+					|| refuse finding "$id is marked fixed at '$rest', which is no commit of the strand; a rebase rewrites a fix's SHA, so name its current one (handbook §9)"
+				;;
+			backlog)
+				printf '%s\n' "$backlog" | grep -qF "**$rest**" \
+					|| refuse finding "$id is traced to backlog row '$rest', which docs/backlog.md at the tip does not hold (handbook §9)"
+				;;
+			rejected)
+				[ -n "$rest" ] || refuse finding "$id is rejected without its reason (handbook §9)"
+				;;
+			*)
+				refuse finding "$id is '$disposition $rest': a finding is fixed at a strand commit, traced to a backlog row or rejected with its reason (handbook §9)"
+				;;
+		esac
+	done <<FINDINGS
+$(sed 1d "$findings_file")
+FINDINGS
+fi
+
 verdict

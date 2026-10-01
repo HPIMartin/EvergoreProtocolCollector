@@ -51,6 +51,7 @@ new_strand() {
 	git config core.autocrlf false
 	write_file .gitignore '*.local.*'
 	write_file src/main/Seed.java 'class Seed {' '}'
+	write_file docs/backlog.md '| ID | Item |' '|---|---|' '| **G99** | A finding traced as live work |'
 	commit_all 'Add the seed'
 	git checkout -q -b strand
 	write_file src/main/Feature.java 'class Feature {' '}'
@@ -91,6 +92,15 @@ walk_log() {
 kb_guard_log() {
 	write_file gate.local.d/kb-guard.log "tip: $(tip)" \
 		'$ ./verify focus src/test/java/dev/example/arch/KbCitationGuardTest.java' '> Task :test' "$@"
+}
+
+lens_with_findings() {
+	write_file gate.local.d/lens-robustness.md "tip: $(tip)" '- `robust: no`' '- weaknesses:' "$@" \
+		'- `counterTests:` none' '- `treeDiff:` (empty)'
+}
+
+findings() {
+	write_file gate.local.d/findings.txt "tip: $(tip)" "$@"
 }
 
 lens_report() {
@@ -1198,6 +1208,175 @@ tip_reports
 kb_guard_log '> Task :test FAILED' 'BUILD FAILED in 1m 1s'
 if refuses_for kb-guard; then r=0; else r=1; fi
 check "a failed KbCitationGuardTest run is refused" "$r"
+
+new_strand untraced_finding
+complete_dossier
+lens_with_findings '  - {severity: low, where: A.java:3, why: one}' '  - {severity: med, where: B.java:9, why: two}'
+findings 'robustness-1 backlog G99'
+if refuses_for finding; then r=0; else r=1; fi
+check "a lens finding with no disposition is refused" "$r"
+
+new_strand not_acted_on
+complete_dossier
+lens_with_findings '  - {severity: low, where: A.java:3, why: one}'
+findings 'robustness-1 not acted on'
+if refuses_for finding; then r=0; else r=1; fi
+check "a finding marked not acted on is refused" "$r"
+
+new_strand unknown_backlog_row
+complete_dossier
+lens_with_findings '  - {severity: low, where: A.java:3, why: one}'
+findings 'robustness-1 backlog G42'
+if refuses_for finding; then r=0; else r=1; fi
+check "a finding traced to a backlog row the tip does not hold is refused" "$r"
+
+new_strand rejected_without_reason
+complete_dossier
+lens_with_findings '  - {severity: low, where: A.java:3, why: one}'
+findings 'robustness-1 rejected'
+if refuses_for finding; then r=0; else r=1; fi
+check "a finding rejected without its reason is refused" "$r"
+
+new_strand fixed_outside_strand
+complete_dossier
+lens_with_findings '  - {severity: low, where: A.java:3, why: one}'
+findings "robustness-1 fixed $(git rev-parse main)"
+if refuses_for finding; then r=0; else r=1; fi
+check "a finding fixed at a commit outside the strand is refused" "$r"
+
+new_strand untraced_doc_finding
+complete_dossier
+write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings:' \
+	'  - {rule: DOC-2, where: docs/guide.md:4, what: stale count, fix: drop it}'
+if refuses_for finding; then r=0; else r=1; fi
+check "a doc-reviewer finding with no disposition is refused" "$r"
+
+new_strand twice_traced
+complete_dossier
+lens_with_findings '  - {severity: low, where: A.java:3, why: one}' '  - {severity: med, where: B.java:9, why: two}'
+findings 'robustness-1 backlog G99' 'robustness-1 backlog G99'
+if refuses_for finding; then r=0; else r=1; fi
+check "a finding traced twice while another stays untraced is refused" "$r"
+
+new_strand severity_in_prose
+complete_dossier
+write_file gate.local.d/lens-robustness.md "tip: $(tip)" '- `robust: yes`' \
+	'- no high severity: none found; the counter-tests below name a severity: once more' '- `treeDiff:` (empty)'
+if accepts; then r=0; else r=1; fi
+check "prose that mentions a severity raises no finding" "$r"
+
+new_strand findings_as_other_lists
+complete_dossier
+lens_with_findings '  * {severity: high, where: A.java:3, why: one}' '  1. {severity: low, where: B.java:3, why: two}' \
+	'  `{severity: low, where: C.java:5, why: three}`'
+if refuses_for finding; then r=0; else r=1; fi
+check "findings listed with other bullets are still counted" "$r"
+
+new_strand two_findings_one_line
+complete_dossier
+lens_with_findings '  - {severity: high, where: A.java:3, why: one} {severity: low, where: B.java:3, why: two}'
+findings 'robustness-1 backlog G99'
+if refuses_for finding; then r=0; else r=1; fi
+check "two findings on one line are refused" "$r"
+
+new_strand robust_no_uncounted
+complete_dossier
+lens_with_findings '- see the prose above'
+if refuses_for report; then r=0; else r=1; fi
+check "a robust: no report that lists no counted finding is refused" "$r"
+
+new_strand doc_fail_uncounted
+complete_dossier
+write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: FAIL`' '- findings: two stale counts'
+if refuses_for report; then r=0; else r=1; fi
+check "a doc-reviewer FAIL that lists no counted finding is refused" "$r"
+
+new_strand fixed_off_the_tip
+complete_dossier
+git checkout -q -b side
+write_file src/main/Side.java 'class Side {' '}'
+commit_all 'Work on the side'
+off_tip=$(git rev-parse HEAD)
+git checkout -q strand
+lens_with_findings '  - {severity: low, where: A.java:3, why: one}'
+findings "robustness-1 fixed $off_tip"
+if refuses_for finding; then r=0; else r=1; fi
+check "a finding fixed at a commit the tip does not contain is refused" "$r"
+
+new_strand backlog_id_prefix
+complete_dossier
+lens_with_findings '  - {severity: low, where: A.java:3, why: one}'
+findings 'robustness-1 backlog G9'
+if refuses_for finding; then r=0; else r=1; fi
+check "a finding traced to a backlog ID that only starts another row's ID is refused" "$r"
+
+new_strand over_traced
+complete_dossier
+lens_with_findings '  - {severity: low, where: A.java:3, why: one}'
+findings 'robustness-1 backlog G99' 'robustness-2 backlog G99'
+if refuses_for finding; then r=0; else r=1; fi
+check "a trace for a finding the report does not raise is refused" "$r"
+
+new_strand fixed_by_name
+complete_dossier
+lens_with_findings '  - {severity: low, where: A.java:3, why: one}'
+findings 'robustness-1 fixed HEAD'
+if refuses_for finding; then r=0; else r=1; fi
+check "a finding marked fixed at a ref name instead of a commit is refused" "$r"
+
+new_strand crlf_findings
+complete_dossier
+lens_with_findings '  - {severity: low, where: A.java:3, why: one}' '  - {severity: low, where: B.java:3, why: two}'
+findings "robustness-1 fixed $(tip)" 'robustness-2 backlog G99'
+awk '{ printf "%s\r\n", $0 }' gate.local.d/findings.txt > gate.local.d/crlf
+mv gate.local.d/crlf gate.local.d/findings.txt
+if accepts; then r=0; else r=1; fi
+check "a findings.txt with Windows line endings traces its findings" "$r"
+
+new_strand twelve_findings
+complete_dossier
+n=1
+entries=
+traces=
+while [ "$n" -le 12 ]; do
+	entries="$entries  - {severity: low, where: A$n.java:1, why: finding $n}
+"
+	traces="${traces}robustness-$n backlog G99
+"
+	n=$((n + 1))
+done
+write_file gate.local.d/lens-robustness.md "tip: $(tip)" '- `robust: no`' '- weaknesses:' "${entries%?}" '- `counterTests:` none' \
+	'- `treeDiff:` (empty)'
+write_file gate.local.d/findings.txt "tip: $(tip)" "${traces%?}"
+if accepts; then r=0; else r=1; fi
+check "twelve findings each traced once pass" "$r"
+
+new_strand numbered_findings
+complete_dossier
+lens_with_findings '  1. {severity: low, where: A.java:3, why: one}'
+if refuses_for finding; then r=0; else r=1; fi
+check "a finding listed as a numbered item is counted" "$r"
+
+new_strand backticked_findings
+complete_dossier
+lens_with_findings '  `{severity: low, where: A.java:3, why: one}`'
+if refuses_for finding; then r=0; else r=1; fi
+check "a finding written in backticks is counted" "$r"
+
+new_strand fixed_by_short_sha
+complete_dossier
+lens_with_findings '  - {severity: low, where: A.java:3, why: one}'
+findings "robustness-1 fixed $(git rev-parse --short=4 HEAD)"
+if refuses_for finding; then r=0; else r=1; fi
+check "a finding marked fixed at an abbreviation shorter than seven digits is refused" "$r"
+
+new_strand traced_findings
+complete_dossier
+lens_with_findings '  - {severity: high, where: A.java:3, why: one}' '  - {severity: low, where: B.java:9, why: two}' \
+	'  - {severity: low, where: C.java:1, why: three}'
+findings "robustness-1 fixed $(tip)" 'robustness-2 backlog G99' 'robustness-3 rejected the lens read a probe left in its worktree'
+if accepts; then r=0; else r=1; fi
+check "findings each fixed in the strand, traced to a backlog row or rejected with a reason pass" "$r"
 
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'
