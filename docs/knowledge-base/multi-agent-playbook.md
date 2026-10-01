@@ -241,6 +241,11 @@ lives.
   cannot read to its end is refused. A test moved to another file or renamed reads as new and
   needs its recorded mutation. The check proves that such a line exists, not that the test
   fails for the right reason; that judgement stays the reviewer's (handbook §4).
+- **`walk/`:** one `./verify all` log per code tree (the commit's tree without `*.md`) at the path
+  `gate/dossier-check --walk-log <worktree> <commit>` prints; it shows `BUILD SUCCESSFUL`, bare
+  `> Task :test` and `> Task :frontend:npmTest` lines
+  and a non-zero `[verify] executed test classes`. A commit whose code tree is unchanged since the
+  last walk, or since `main`, reuses that proof, so after a fold only the changed trees run again.
 
 ## Environment gotchas (tell every agent)
 

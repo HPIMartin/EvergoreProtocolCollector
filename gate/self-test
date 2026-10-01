@@ -63,9 +63,29 @@ tip() { git rev-parse HEAD; }
 complete_dossier() {
 	write_file gate.local.d/red/feature.txt 'commit: Add the feature' 'FeatureTest > featureWorks() FAILED' \
 		'    org.opentest4j.AssertionFailedError at FeatureTest.java:4'
+	walk_logs
+	tip_reports
+}
+
+# The reports produced at the tip; a case that moves the tip writes them again.
+tip_reports() {
 	lens_report robustness
 	lens_report domain
 	write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+}
+
+# One green full-suite log per commit, at the path the check itself names for that commit's code tree.
+walk_logs() {
+	for commit in $(git rev-list main..strand 2>/dev/null); do
+		walk_log "$commit" '> Task :test' '> Task :frontend:npmTest' '[verify] executed test classes: 12' \
+			'BUILD SUCCESSFUL in 4m 2s'
+	done
+}
+
+walk_log() {
+	commit=$1
+	shift
+	write_file "$("$dossier_check" --walk-log "$repo" "$commit")" "tree: $(git rev-parse "$commit^{tree}")" "$@"
 }
 
 lens_report() {
@@ -1010,6 +1030,93 @@ write_file gate.local.d/red/edge.txt 'commit: Cover the edge' 'exempt: green by 
 write_file gate.local.d/mutation/edge.txt 'EdgeTest > edgeHolds() FAILED'
 if refuses_for mutation; then r=0; else r=1; fi
 check "a recorded mutation without its diff is refused" "$r"
+
+new_strand unwalked_fold
+complete_dossier
+write_file src/main/Feature.java 'class Feature {' '	int folded;' '}'
+commit_all 'Fold the feature fix'
+if refuses_for walk; then r=0; else r=1; fi
+check "a commit whose code tree has no full-suite log is refused" "$r"
+
+new_strand cached_test_task
+complete_dossier
+walk_log "$(tip)" '> Task :test FROM-CACHE' '> Task :frontend:npmTest' '[verify] executed test classes: 12' \
+	'BUILD SUCCESSFUL in 9s'
+if refuses_for walk; then r=0; else r=1; fi
+check "a full-suite log whose :test task did not execute is refused" "$r"
+
+new_strand skipped_frontend_task
+complete_dossier
+walk_log "$(tip)" '> Task :test' '> Task :frontend:npmTest UP-TO-DATE' '[verify] executed test classes: 12' \
+	'BUILD SUCCESSFUL in 3m 9s'
+if refuses_for walk; then r=0; else r=1; fi
+check "a full-suite log whose :frontend:npmTest task did not execute is refused" "$r"
+
+new_strand failed_walk
+complete_dossier
+walk_log "$(tip)" '> Task :test' '> Task :frontend:npmTest' '[verify] executed test classes: 12' 'BUILD FAILED in 3m 1s'
+if refuses_for walk; then r=0; else r=1; fi
+check "a full-suite log of a failed build is refused" "$r"
+
+new_strand no_test_classes
+complete_dossier
+walk_log "$(tip)" '> Task :test' '> Task :frontend:npmTest' '[verify] executed test classes: 0' \
+	'BUILD SUCCESSFUL in 41s'
+if refuses_for walk; then r=0; else r=1; fi
+check "a full-suite log that counts no executed test classes is refused" "$r"
+
+new_strand unwalked_middle
+write_file src/main/Second.java 'class Second {' '}'
+commit_all 'Add a second class'
+complete_dossier
+mv "$("$dossier_check" --walk-log "$repo" HEAD~1)" "$work/unwalked-middle.log"
+if refuses_for walk; then r=0; else r=1; fi
+check "an earlier commit without a full-suite log is refused" "$r"
+
+new_strand code_fold_walked
+complete_dossier
+write_file src/main/Feature.java 'class Feature {' '	int folded;' '}'
+commit_all 'Fold the feature fix'
+tip_reports
+walk_logs
+if accepts; then r=0; else r=1; fi
+check "a code fold that changes no test passes on its own full-suite log" "$r"
+
+new_strand crlf_walk_log
+complete_dossier
+walk_log_path=$("$dossier_check" --walk-log "$repo" HEAD)
+awk '{ printf "%s\r\n", $0 }' "$walk_log_path" > gate.local.d/crlf
+mv gate.local.d/crlf "$walk_log_path"
+if accepts; then r=0; else r=1; fi
+check "a full-suite log with Windows line endings proves its commit" "$r"
+
+new_strand code_tree_awk_fails
+complete_dossier
+mv gate.local.d/walk gate.local.d/walk-gone
+mkdir -p "$work/shim"
+printf '%s\n' '#!/bin/sh' 'case "$*" in *".md\$"*) exit 2 ;; esac' "exec $(command -v awk) \"\$@\"" > "$work/shim/awk"
+chmod +x "$work/shim/awk"
+if PATH="$work/shim:$PATH" "$dossier_check" "$repo" strand > "$work/out" 2>&1; then
+	r=1
+elif grep -q '^refused \[walk\]' "$work/out"; then
+	r=0
+else
+	r=1
+fi
+check "a code-tree key that cannot be computed is a refusal, not a strand without code changes" "$r"
+
+new_strand unknown_commit
+if "$dossier_check" --walk-log "$repo" no-such-commit > "$work/out" 2>&1; then r=1; else r=0; fi
+check "naming the log of a commit that does not exist fails" "$r"
+
+new_strand docs_only_fold
+complete_dossier
+write_file docs/guide.md '# Guide, folded'
+git add -A
+git commit -q --no-verify --amend --no-edit
+tip_reports
+if accepts; then r=0; else r=1; fi
+check "a fold that changes only docs is proven by the log of its unchanged code tree" "$r"
 
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'

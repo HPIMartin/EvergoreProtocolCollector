@@ -5,8 +5,22 @@ set -eu
 
 usage() {
 	printf 'usage: gate/dossier-check <strand worktree> <tip>\n' >&2
+	printf '       gate/dossier-check --walk-log <strand worktree> <commit>\n' >&2
 	exit 2
 }
+
+code_tree_key() {
+	listing=$(git -c core.quotepath=off -C "$1" ls-tree -r "$2") || return 1
+	code=$(printf '%s\n' "$listing" | awk -F '\t' '$2 !~ /\.md$/') || return 1
+	printf '%s\n' "$code" | git hash-object --stdin
+}
+
+if [ "${1:-}" = --walk-log ]; then
+	[ $# -eq 3 ] || usage
+	key=$(code_tree_key "$2" "$3") || usage
+	printf '%s/gate.local.d/walk/%s.log\n' "$2" "$key"
+	exit 0
+fi
 
 [ $# -eq 2 ] || usage
 worktree=$1
@@ -335,6 +349,35 @@ while IFS="$tab" read -r file name shown; do
 done <<NEW_TESTS
 $new_tests
 NEW_TESTS
+
+base_key=$(code_tree_key "$worktree" "$base") || {
+	refuse walk "the code tree of the base could not be read, so no commit can be matched to its full-suite log (playbook, The gate dossier)"
+	verdict
+}
+for commit in $(in_worktree rev-list --reverse "$base..$tip"); do
+	key=$(code_tree_key "$worktree" "$commit") || {
+		refuse walk "the code tree of $commit could not be read, so its full-suite log cannot be matched (playbook, The gate dossier)"
+		continue
+	}
+	[ "$key" != "$base_key" ] || continue
+	log="$dossier/walk/$key.log"
+	label="'$(in_worktree log -1 --format=%s "$commit")'"
+	if [ ! -f "$log" ]; then
+		refuse walk "$label has no full-suite log for its code tree; expected walk/$key.log, a './verify all' run at that commit (handbook §7)"
+		continue
+	fi
+	tr -d '\r' < "$log" > "$scratch/walk.log"
+	log=$scratch/walk.log
+	grep -q '^BUILD SUCCESSFUL' "$log" \
+		|| refuse walk "walk/$key.log of $label shows no successful build (handbook §7)"
+	for task in ':test' ':frontend:npmTest'; do
+		grep -qx "> Task $task" "$log" \
+			|| refuse walk "walk/$key.log of $label has no bare '> Task $task' line, so the run is not shown to have executed it (handbook §8)"
+	done
+	classes=$(sed -n 's/^\[verify\] executed test classes: \([0-9][0-9]*\)$/\1/p' "$log")
+	[ "${classes:-0}" -gt 0 ] \
+		|| refuse walk "walk/$key.log of $label counts no executed test classes (handbook §8)"
+done
 
 for report in "$dossier"/lens-*.md; do
 	[ -f "$report" ] || continue
