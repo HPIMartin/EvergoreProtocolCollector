@@ -77,7 +77,8 @@ class RoundTripDetectorTest {
 	@Test
 	void matchesADepositAgainstTheOldestOpenLotThatIsStillInsideTheWindow() {
 		List<ResolvedStorageEntry> entries = List
-				.of(withdrawal("Alrik", FEDERN, 100, T), withdrawal("Alrik", FEDERN, 100, T.plusSeconds(47 * 3600)), deposit("Alrik", FEDERN, 100, T.plusSeconds(49 * 3600)));
+				.of(withdrawal("Alrik", FEDERN, 100, T), withdrawal("Alrik", FEDERN, 50, T.plusSeconds(47 * 3600)), deposit("Alrik", FEDERN, 50, T.plusSeconds(47 * 3600 + 1800)),
+						deposit("Alrik", FEDERN, 100, T.plusSeconds(49 * 3600)));
 
 		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
