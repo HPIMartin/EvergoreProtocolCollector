@@ -227,6 +227,10 @@ This project's configuration and legs on top of the shipped suite:
 - **The deploy leg in `pre-commit`:** whenever a commit touches `deploy/`, `sh deploy/self-test`
   must exist and pass, the same shape as the `hooks/` and `stacks/` legs, so neither a weakened
   deploy check nor its deletion can land; `hooks/self-test` carries four cases for it.
+- **The gate leg in `pre-commit`:** whenever a commit touches `gate/`, `sh gate/self-test` must
+  exist and pass, the same shape, so neither a weakened gate dossier check nor its deletion can
+  land ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier"); `hooks/self-test`
+  carries four cases for it.
 - **The SHARED-section leg** compares `CLAUDE.md` with `agent-entry-template.md` whenever a commit
   touches either, and the wrapper has to record the template's version ([README.md](README.md),
   step 0).

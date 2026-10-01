@@ -1,0 +1,50 @@
+#!/bin/sh
+# Refuses a feature gate's dossier before the reviewer is spawned. The rules it checks live in the
+# engineering handbook (§4, §7, §9); every refusal names its section instead of restating it.
+set -eu
+
+usage() {
+	printf 'usage: gate/dossier-check <strand worktree> <tip>\n' >&2
+	exit 2
+}
+
+[ $# -eq 2 ] || usage
+worktree=$1
+tip_ref=$2
+dossier="$worktree/gate.local.d"
+refusals=0
+
+refuse() {
+	printf 'refused [%s]: %s\n' "$1" "$2"
+	refusals=$((refusals + 1))
+}
+
+verdict() {
+	if [ "$refusals" -eq 0 ]; then
+		printf 'dossier-check: PASS %s on main %s\n' "$tip" "$main"
+		exit 0
+	fi
+	printf 'dossier-check: FAIL, %s refusal(s); do not spawn the reviewer\n' "$refusals"
+	exit 1
+}
+
+in_worktree() { git -c core.quotepath=off -C "$worktree" "$@"; }
+
+tip=$(in_worktree rev-parse --verify --quiet "$tip_ref^{commit}") || usage
+main=$(in_worktree rev-parse --verify --quiet 'main^{commit}') || {
+	printf 'dossier-check: %s has no main branch to check the strand against\n' "$worktree" >&2
+	exit 2
+}
+
+if [ -L "$dossier" ]; then
+	refuse location "$dossier is a symlink, so a build could clean what it points to: keep the evidence in the directory itself (playbook, The gate dossier)"
+	verdict
+fi
+if [ ! -d "$dossier" ]; then
+	refuse location "no dossier at $dossier: gate evidence lives in the strand worktree's gate.local.d, where no build cleans it (playbook, The gate dossier)"
+	verdict
+fi
+in_worktree check-ignore -q gate.local.d \
+	|| refuse ignored "git does not ignore gate.local.d, so the evidence could be committed or cleaned with the tree (playbook, The gate dossier)"
+
+verdict

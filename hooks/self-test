@@ -881,6 +881,40 @@ clean_file Elsewhere
 if accepts "Add elsewhere class"; then r=0; else r=1; fi
 check "a commit touching nothing under deploy/ runs no deploy self-test" "$r"
 
+# The gate leg mirrors the deploy leg: the dossier check ships its own self-test under gate/.
+new_repo gateleg_red
+write_file gate/self-test '#!/bin/sh' 'exit 1'
+git add -A
+git commit -q --no-verify -m "Add the gate self-test"
+write_file gate/dossier-check '#!/bin/sh' 'exit 1'
+if refuses "Add the dossier check"; then r=0; else r=1; fi
+check "a failing gate self-test leaves no commit behind" "$r"
+
+new_repo gateleg_green
+write_file gate/self-test '#!/bin/sh' 'exit 0'
+git add -A
+git commit -q --no-verify -m "Add the gate self-test"
+write_file gate/dossier-check '#!/bin/sh' 'exit 0'
+if accepts "Add the dossier check"; then r=0; else r=1; fi
+check "a passing gate self-test lets the commit through" "$r"
+
+new_repo gateleg_gone
+write_file gate/self-test '#!/bin/sh' 'exit 0'
+write_file gate/dossier-check '#!/bin/sh' 'exit 0'
+git add -A
+git commit -q --no-verify -m "Add the dossier check"
+git rm -q gate/self-test
+if refuses "Remove the gate self-test"; then r=0; else r=1; fi
+check "removing the gate self-test leaves no commit behind" "$r"
+
+new_repo gateleg_scope
+write_file gate/self-test '#!/bin/sh' 'exit 1'
+git add -A
+git commit -q --no-verify -m "Add the gate self-test"
+clean_file Elsewhere
+if accepts "Add elsewhere class"; then r=0; else r=1; fi
+check "a commit touching nothing under gate/ runs no gate self-test" "$r"
+
 # A hook staged non-executable is skipped outright by git on POSIX, so the gate would not narrate,
 # it would not run at all; core.fileMode=false on a Windows host hides that from every local check.
 # Fix a finding here with: git update-index --chmod=+x hooks/<name>

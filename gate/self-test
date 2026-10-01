@@ -1,0 +1,107 @@
+#!/bin/sh
+# Proves gate/dossier-check refuses each slip it claims to refuse. Every case starts from one
+# complete dossier the check accepts and breaks exactly one thing in it, so a refusal can only come
+# from the thing that case broke. Runs without the project's build tool.
+set -eu
+
+gate_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+dossier_check="$gate_dir/dossier-check"
+
+# git exports GIT_DIR, GIT_INDEX_FILE and friends to the hook that runs this test, so a throwaway
+# repo below would otherwise operate on the repo whose commit is being gated.
+for leaked in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do
+	unset "$leaked"
+done
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+failures=0
+
+check() {
+	if [ "$2" -eq 0 ]; then
+		printf '  ok   %s\n' "$1"
+	else
+		printf '  FAIL %s\n' "$1"
+		failures=$((failures + 1))
+	fi
+}
+
+# One line per argument, so a fixture stays a single readable call.
+write_file() {
+	target=$1
+	shift
+	case "$target" in */*) mkdir -p "${target%/*}" ;; esac
+	printf '%s\n' "$@" > "$target"
+}
+
+commit_all() {
+	git add -A
+	git commit -q --no-verify -m "$1"
+}
+
+# A main with one commit and a strand branch with one more, checked out in the repo itself, which
+# stands in for the strand worktree.
+new_strand() {
+	repo="$work/$1"
+	mkdir -p "$repo"
+	cd "$repo"
+	git init -q -b main .
+	git config user.email gate@example.com
+	git config user.name Gate
+	git config core.autocrlf false
+	write_file .gitignore '*.local.*'
+	write_file src/main/Seed.java 'class Seed {' '}'
+	commit_all 'Add the seed'
+	git checkout -q -b strand
+	write_file src/main/Feature.java 'class Feature {' '}'
+	commit_all 'Add the feature'
+}
+
+tip() { git rev-parse HEAD; }
+
+complete_dossier() {
+	mkdir -p gate.local.d
+}
+
+# A refusal counts only when it names the check the case broke, so a case cannot pass on a
+# refusal some other, incidental breakage caused.
+refuses_for() {
+	if "$dossier_check" "$repo" strand > "$work/out" 2>&1; then return 1; fi
+	grep -q "^refused \[$1\]" "$work/out"
+}
+
+accepts() { "$dossier_check" "$repo" strand > "$work/out" 2>&1; }
+
+new_strand complete
+complete_dossier
+if accepts; then r=0; else r=1; fi
+check "a complete dossier passes" "$r"
+
+new_strand under_build
+mkdir -p build
+complete_dossier
+mv gate.local.d build/gate-dossier
+if refuses_for location; then r=0; else r=1; fi
+check "a dossier kept under build/ is refused" "$r"
+
+new_strand symlinked
+mkdir -p build
+complete_dossier
+mv gate.local.d build/gate-dossier
+ln -s build/gate-dossier gate.local.d
+if refuses_for location; then r=0; else r=1; fi
+check "a gate.local.d that links into build/ is refused" "$r"
+
+new_strand not_ignored
+write_file .gitignore 'build/'
+commit_all 'Stop ignoring local files'
+complete_dossier
+if refuses_for ignored; then r=0; else r=1; fi
+check "a gate.local.d that git does not ignore is refused" "$r"
+
+if [ "$failures" -eq 0 ]; then
+	printf 'gate self-test: all cases pass\n'
+else
+	printf 'gate self-test: %s case(s) FAILED\n' "$failures" >&2
+fi
+exit "$failures"

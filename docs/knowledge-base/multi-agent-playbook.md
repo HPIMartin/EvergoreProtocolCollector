@@ -202,6 +202,17 @@ pushes happen with **you** in chat.
 - **Reviewer:** `PASS|FAIL`; findings `{category: process|cleancode|solid|hexagonal|tests|security|docs,
   where, fix}`; ready-to-paste `process-learnings.md` row if a process rule slipped.
 
+## The gate dossier
+
+A feature gate's evidence, gathered before the reviewer is spawned. `gate/dossier-check <strand
+worktree> <tip>` refuses a dossier that breaks a rule below; its proof is `gate/self-test`, run
+by `pre-commit` whenever a commit touches `gate/`. This section says where each piece of evidence
+lives.
+
+- **Location:** `<strand worktree>/gate.local.d/`, ignored by git (`*.local.*`), so no build
+  cleans it and the worktree's removal takes it along. A dossier anywhere else, or a symlink in its
+  place, is refused.
+
 ## Environment gotchas (tell every agent)
 
 - **Sessions share the machine.** Every build goes through `./verify`, in a gate agent's worktree

@@ -37,6 +37,14 @@ if git diff --cached --name-only --diff-filter=ACMD -- 'deploy/*' | grep -q .; t
 	sh deploy/self-test >/dev/null 2>&1 || reject "deploy/self-test fails, so the deploy no longer refuses what it claims to refuse. Run 'sh deploy/self-test' and read its output."
 fi
 
+# The gate dossier check ships its own self-test (gate/self-test); the same guard shape keeps a
+# weakened check, or its deletion, from landing.
+if git diff --cached --name-only --diff-filter=ACMD -- 'gate/*' | grep -q .; then
+	printf '[pre-commit] gate self-test...\n'
+	[ -f gate/self-test ] || reject "gate/self-test is missing, so nothing proves the dossier check refuses what it claims to refuse. Restore it."
+	sh gate/self-test >/dev/null 2>&1 || reject "gate/self-test fails, so the dossier check no longer refuses what it claims to refuse. Run 'sh gate/self-test' and read its output."
+fi
+
 # The agent entry files carry one section verbatim. It is compared from the staged blobs, falling
 # back to HEAD for the file the commit does not touch, so editing one of the two alone is caught.
 entry_wrapper=CLAUDE.md

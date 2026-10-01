@@ -399,9 +399,10 @@ plus the corrected scenario tagged `@wip`.
     commit is left alone, so the emergency valve stays one.
   - **Never read a hook's output as the verdict on the commit that follows it;** ask the history.
     `hooks/self-test` asserts exactly that (resulting history, never printed text). `pre-commit`
-    runs it on every commit that touches `hooks/`, and `deploy/self-test` on every commit that
-    touches `deploy/`, so neither a weakened gate nor a weakened deploy check can land; it refuses a
-    commit that lets the SHARED sections of `CLAUDE.md` and the agent entry template drift apart.
+    runs it on every commit that touches `hooks/`, `deploy/self-test` on every commit that touches
+    `deploy/` and `gate/self-test` on every commit that touches `gate/`, so no weakened gate, deploy
+    check or dossier check can land; it refuses a commit that lets the SHARED sections of
+    `CLAUDE.md` and the agent entry template drift apart.
   - Safety net, not substitute; `--no-verify` only for genuine emergencies. Mechanics:
     [`hooks/README.md`](../../hooks/README.md); this project's gate configuration:
     [build-run-deploy.md](build-run-deploy.md).
