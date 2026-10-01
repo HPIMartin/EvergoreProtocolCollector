@@ -133,6 +133,57 @@ write_file gate.local.d/lens-robustness.md 'robust: yes'
 if refuses_for tip; then r=0; else r=1; fi
 check "a report that names no tip is refused" "$r"
 
+new_strand main_moved
+complete_dossier
+git checkout -q main
+write_file src/main/Elsewhere.java 'class Elsewhere {' '}'
+commit_all 'Land another strand'
+git checkout -q strand
+if refuses_for base; then r=0; else r=1; fi
+check "a strand whose merge-base main has moved past is refused" "$r"
+
+new_strand empty_strand
+git checkout -q -B strand main
+complete_dossier
+if refuses_for base; then r=0; else r=1; fi
+check "a strand with no commit beyond main is refused" "$r"
+
+new_strand empty_commits_only
+git checkout -q -B strand main
+git commit -q --allow-empty --no-verify -m 'Change nothing'
+complete_dossier
+if refuses_for base; then r=0; else r=1; fi
+check "a strand whose commits change no file is refused" "$r"
+
+new_strand unrelated_history
+git checkout -q --orphan alone
+write_file src/main/Alone.java 'class Alone {' '}'
+commit_all 'Start an unrelated history'
+git branch -q -f strand alone
+git checkout -q strand
+complete_dossier
+if refuses_for base; then r=0; else r=1; fi
+check "a strand that shares no history with main is refused" "$r"
+
+new_strand no_main
+git branch -q -m main trunk
+complete_dossier
+"$dossier_check" "$repo" strand > "$work/out" 2>&1 && status=0 || status=$?
+if [ "$status" -eq 2 ] && grep -q 'no main branch' "$work/out"; then r=0; else r=1; fi
+check "a strand worktree without a main branch is named, not checked" "$r"
+
+new_strand dirty_tree
+complete_dossier
+write_file src/main/Probe.java 'class Probe {' '}'
+if refuses_for freeze; then r=0; else r=1; fi
+check "a strand worktree with uncommitted changes is refused" "$r"
+
+new_strand other_head
+complete_dossier
+git checkout -q --detach main
+if refuses_for freeze; then r=0; else r=1; fi
+check "a strand worktree checked out at another commit than the tip is refused" "$r"
+
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'
 else

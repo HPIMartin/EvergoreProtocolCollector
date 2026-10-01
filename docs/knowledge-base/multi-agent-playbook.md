@@ -217,6 +217,9 @@ lives.
 - **Reports and logs at the top level** (each lens report and the doc-reviewer's, verbatim; the
   runs made at the tip) open with `tip: <sha>`, the full SHA they were produced at; one naming any
   other tip is refused. Evidence that predates the tip lives in subdirectories.
+- **Base and freeze** are read live, not from the dossier: the strand's merge-base must equal
+  `git rev-parse main` at the moment of the check, the tip's tree must differ from main's, and the
+  strand worktree must be clean and checked out at the tip.
 
 ## Environment gotchas (tell every agent)
 

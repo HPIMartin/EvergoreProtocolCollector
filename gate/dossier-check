@@ -47,6 +47,22 @@ fi
 in_worktree check-ignore -q gate.local.d \
 	|| refuse ignored "git does not ignore gate.local.d, so the evidence could be committed or cleaned with the tree (playbook, The gate dossier)"
 
+base=$(in_worktree merge-base "$tip" "$main") || {
+	refuse base "the tip and main share no history, so the strand has no base to review against (handbook §7)"
+	verdict
+}
+[ "$base" = "$main" ] \
+	|| refuse base "the strand's merge-base is $base, but main is at $main now: rebase onto main and re-run the gate on the rebased tip (handbook §7)"
+[ "$(in_worktree rev-parse "$tip^{tree}")" != "$(in_worktree rev-parse "$main^{tree}")" ] \
+	|| refuse base "the tip's tree is main's, so the strand changes nothing to review"
+
+head=$(in_worktree rev-parse HEAD)
+[ "$head" = "$tip" ] \
+	|| refuse freeze "the strand worktree is checked out at $head, not at the tip under review $tip (handbook §7)"
+changes=$(in_worktree status --porcelain)
+[ -z "$changes" ] \
+	|| refuse freeze "the strand worktree has uncommitted changes, so no verdict reads the tip as committed (handbook §7): $(printf '%s' "$changes" | tr '\n' ' ')"
+
 byte_order_mark=$(printf '\357\273\277')
 for evidence in "$dossier"/*; do
 	[ -f "$evidence" ] || continue
