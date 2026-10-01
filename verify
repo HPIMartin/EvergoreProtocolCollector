@@ -2,7 +2,7 @@
 set -eu
 
 usage() {
-	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln\n' >&2
+	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln|stop\n' >&2
 	exit 2
 }
 
@@ -22,6 +22,9 @@ fi
 root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$root"
 target=${target#"$root"/}
+
+GRADLE_OPTS="${GRADLE_OPTS:+$GRADLE_OPTS }-Dorg.gradle.daemon.registry.base=\"$root/registry.local.d\""
+export GRADLE_OPTS
 
 run_in() {
 	dir=$1
@@ -60,7 +63,7 @@ acceptance_suite='*RunAcceptanceScenariosTest'
 frontend=frontend
 
 case "$cmd" in
-	format|focus|bdd|all|outdated|vuln) ;;
+	format|focus|bdd|all|outdated|vuln|stop) ;;
 	*) usage ;;
 esac
 
@@ -113,6 +116,9 @@ case "$cmd" in
 		;;
 	vuln)
 		report ./gradlew --console=plain vulnScan
+		;;
+	stop)
+		run ./gradlew --stop
 		;;
 esac
 

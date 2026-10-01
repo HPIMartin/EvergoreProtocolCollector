@@ -161,7 +161,8 @@ Planner picks the track up-front and announces it (author can veto). Full rule:
   the author's go. Conflict resolutions are the one place new, unreviewed content can appear, so
   both reviews stay exactly there. Pushing always stays with the author.
 - **Clean up merged strands immediately, without asking:** once a strand is fast-forward-merged into
-  `main`, `git worktree remove <path>` and `git branch -d <branch>`, then `git worktree prune`, and
+  `main`, `./verify stop` in its worktree, then `git worktree remove <path>` and
+  `git branch -d <branch>`, then `git worktree prune`, and
   `rmdir` a directory the removal left behind empty (handbook §7). This
   is the agent's own scaffolding and the agent owns it (handbook §7); the commits live on in `main`,
   the branch label and worktree are pure redundancy, and the reflog still holds deleted tips for a
@@ -203,6 +204,9 @@ pushes happen with **you** in chat.
 
 ## Environment gotchas (tell every agent)
 
+- **Sessions share the machine.** Every build goes through `./verify`, in a gate agent's worktree
+  too, and daemons are stopped with `./verify stop`, never `./gradlew --stop`
+  ([dev-environment.md](dev-environment.md), "Several sessions on one machine").
 - **Bash stdout** may not surface on the Windows host: redirect to a file
   (`./verify all > out.txt 2>&1`) and `Read` it; in-container, Bash is normal.
 - Permission-blocked commands + reset-free rewrite: see the FAIL-loop section. Prefer Read/Grep/Glob.

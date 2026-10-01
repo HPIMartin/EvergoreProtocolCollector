@@ -106,6 +106,17 @@ enforces it today since `javac` reads none of it (that would be backlog **G6**).
 > commit in one shell process (write, `git add`, `git commit`) so the commit captures the content, then
 > verify `HEAD`.
 
+## Several sessions on one machine
+
+Sessions in parallel worktrees share the container: its CPU, memory, disk and Gradle user home.
+
+- **Build only through `./verify`.** Its Gradle runs keep their daemons in the worktree's own
+  registry, so no other session can reach them; the mechanics are in
+  [build-run-deploy.md](build-run-deploy.md), "The verify script".
+- **Stop daemons with `./verify stop`**, after a batch of builds and before a worktree is removed;
+  it stops this worktree's daemons only. Never `./gradlew --stop`: it stops every daemon of the
+  shared registry, other sessions' direct Gradle runs included.
+
 ## Rule for all contributors
 
 **Never install or run toolchains (JDK/Gradle/Firefox) natively on the host**; run `./gradlew …`,

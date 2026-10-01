@@ -156,10 +156,18 @@ so the script needs no second stack of its own.
 | `./verify all` | `./gradlew clean build --no-build-cache --console=plain` (Java and frontend tests, lint, format, the armed scenarios), then the count of `TEST-*.xml` under `build/test-results/` | before every gate, after every rebase |
 | `./verify outdated` | refuses with the reason: no Gradle freshness task is installed, Dependabot reports freshness for every ecosystem of this project | the modernisation track, on demand |
 | `./verify vuln` | `./gradlew vulnScan` (Trivy over both dependency graphs, below), report-only | on demand; gating is a delivery decision |
+| `./verify stop` | `./gradlew --stop` against the worktree's own daemon registry | after a batch of builds; before the worktree is removed |
 
 - Exit code 0 or 1; a usage error exits 2. A relative `focus` path resolves against the caller's
   directory. `all` prints the executed test-class count, so a cached or skipped run cannot pass as a
   green one ([testing.md](testing.md), "Proving a run really executed").
+- Every Gradle run the script starts appends `-Dorg.gradle.daemon.registry.base="<worktree>/registry.local.d"`
+  to `GRADLE_OPTS`, after the caller's own options and quoted, since `gradlew` splits the variable
+  at spaces: the worktree's daemons register only there (gitignored by `*.local.*`, outside `build/`
+  so `clean` leaves a running daemon's registry alone), and a `stop` reaches no other worktree's
+  build or commit hook. Gradle starts no daemon on a relative registry path (`Cannot convert
+  relative path … to an absolute file`), so `gradle.properties` cannot carry it; a direct
+  `./gradlew` run still registers in the shared `~/.gradle/daemon`.
 - The `test` task forwards `cucumber.filter.tags` and `cucumber.features` into the test JVM and
   relaxes `failOnNoDiscoveredTests` for exactly those runs; `junit-platform.properties` holds the
   default filter `not @wip and not @characterization`.
