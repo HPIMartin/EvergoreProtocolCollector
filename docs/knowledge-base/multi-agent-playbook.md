@@ -199,8 +199,8 @@ pushes happen with **you** in chat.
   `robust: yes/no`; weaknesses `{severity, where (file:line), why}`; concrete counter-test
   snippets; `treeDiff`, the production-tree diff against `HEAD` in its worktree, taken last. Bias to
   skepticism: if unsure, flag it.
-- **Doc reviewer:** first line `tip: <full SHA>` (the commit it read); `PASS|FAIL`; findings
-  `{rule: DOC-n, where, what, fix}`.
+- **Doc reviewer:** first line `tip: <full SHA>` (the commit it read); `verdict: PASS|FAIL`;
+  findings `{rule: DOC-n, where, what, fix}`.
 - **Reviewer:** `PASS|FAIL`; findings `{category: process|cleancode|solid|hexagonal|tests|security|docs,
   where, fix}`; ready-to-paste `process-learnings.md` row if a process rule slipped.
 
@@ -220,6 +220,9 @@ lives.
 - **Base and freeze** are read live, not from the dossier: the strand's merge-base must equal
   `git rev-parse main` at the moment of the check, the tip's tree must differ from main's, and the
   strand worktree must be clean and checked out at the tip.
+- **Gate reports:** `lens-<lens>.md` per falsifier lens and `doc-reviewer.md`, each the agent's
+  final message verbatim; a file without its contract's fields (`robust:` and `treeDiff:`, or `verdict:`;
+  → Handoff contracts) is a summary and is refused.
 
 ## Environment gotchas (tell every agent)
 

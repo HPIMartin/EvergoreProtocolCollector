@@ -60,7 +60,9 @@ new_strand() {
 tip() { git rev-parse HEAD; }
 
 complete_dossier() {
-	write_file gate.local.d/lens-robustness.md "tip: $(tip)" 'robust: yes'
+	write_file gate.local.d/lens-robustness.md "tip: $(tip)" '- `robust: yes`' \
+		'- weaknesses: none found after a genuine attempt' '- `counterTests:` none' '- `treeDiff:` (empty)'
+	write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
 }
 
 # A refusal counts only when it names the check the case broke, so a case cannot pass on a
@@ -129,7 +131,7 @@ check "a report that opens with a byte order mark names its tip" "$r"
 
 new_strand no_tip_line
 complete_dossier
-write_file gate.local.d/lens-robustness.md 'robust: yes'
+write_file gate.local.d/lens-robustness.md '- `robust: yes`' '- `treeDiff:` (empty)'
 if refuses_for tip; then r=0; else r=1; fi
 check "a report that names no tip is refused" "$r"
 
@@ -183,6 +185,30 @@ complete_dossier
 git checkout -q --detach main
 if refuses_for freeze; then r=0; else r=1; fi
 check "a strand worktree checked out at another commit than the tip is refused" "$r"
+
+new_strand lens_summary
+complete_dossier
+write_file gate.local.d/lens-robustness.md "tip: $(tip)" 'Robustness lens: PASS, two lows, both fixed.'
+if refuses_for report; then r=0; else r=1; fi
+check "a lens summary in place of the lens report is refused" "$r"
+
+new_strand lens_without_tree_diff
+complete_dossier
+write_file gate.local.d/lens-robustness.md "tip: $(tip)" '- `robust: yes`' '- weaknesses: none found after a genuine attempt'
+if refuses_for report; then r=0; else r=1; fi
+check "a lens report without its treeDiff field is refused" "$r"
+
+new_strand lens_without_verdict_field
+complete_dossier
+write_file gate.local.d/lens-robustness.md "tip: $(tip)" '- weaknesses: none found after a genuine attempt' '- `treeDiff:` (empty)'
+if refuses_for report; then r=0; else r=1; fi
+check "a lens report without its robust field is refused" "$r"
+
+new_strand doc_summary
+complete_dossier
+write_file gate.local.d/doc-reviewer.md "tip: $(tip)" 'The doc-reviewer passed the docs.'
+if refuses_for report; then r=0; else r=1; fi
+check "a doc-reviewer summary in place of its report is refused" "$r"
 
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'

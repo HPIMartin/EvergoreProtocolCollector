@@ -71,4 +71,14 @@ for evidence in "$dossier"/*; do
 		|| refuse tip "${evidence#"$dossier"/} names tip '${named:-none}', not the tip under review $tip (handbook §9)"
 done
 
+for report in "$dossier"/lens-*.md; do
+	[ -f "$report" ] || continue
+	grep -Eq '(^|[^A-Za-z])robust:' "$report" && grep -Eq '(^|[^A-Za-z])treeDiff:' "$report" \
+		|| refuse report "${report#"$dossier"/} lacks the robust: or treeDiff: field of a lens report, so it is a summary, not the report verbatim (playbook, Handoff contracts; handbook §9)"
+done
+if [ -f "$dossier/doc-reviewer.md" ]; then
+	grep -Eq '(^|[^A-Za-z])verdict:' "$dossier/doc-reviewer.md" \
+		|| refuse report "doc-reviewer.md lacks the verdict: field of the doc-reviewer's report, so it is a summary, not the report verbatim (playbook, Handoff contracts; handbook §9)"
+fi
+
 verdict
