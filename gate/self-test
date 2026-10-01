@@ -54,12 +54,15 @@ new_strand() {
 	commit_all 'Add the seed'
 	git checkout -q -b strand
 	write_file src/main/Feature.java 'class Feature {' '}'
+	write_file src/test/FeatureTest.java 'class FeatureTest {' '	@Test' '	void featureWorks() {' '	}' '}'
 	commit_all 'Add the feature'
 }
 
 tip() { git rev-parse HEAD; }
 
 complete_dossier() {
+	write_file gate.local.d/red/feature.txt 'commit: Add the feature' 'FeatureTest > featureWorks() FAILED' \
+		'    org.opentest4j.AssertionFailedError at FeatureTest.java:4'
 	lens_report robustness
 	lens_report domain
 	write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
@@ -259,6 +262,754 @@ mkdir -p gate.local.d
 write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
 if accepts; then r=0; else r=1; fi
 check "a docs-only strand passes with the doc-reviewer's report alone" "$r"
+
+# A later commit that edits the feature's test without adding one, so only its own record is missing.
+tighten_feature_test() {
+	write_file src/test/FeatureTest.java 'class FeatureTest {' '	@Test' '	void featureWorks() {' '		int tightened = 1;' '	}' '}'
+	commit_all 'Tighten the feature test'
+}
+
+new_strand no_red_file
+tighten_feature_test
+complete_dossier
+if refuses_for red; then r=0; else r=1; fi
+check "a commit that changes tests without a red record is refused" "$r"
+
+new_strand green_red_file
+tighten_feature_test
+complete_dossier
+write_file gate.local.d/red/tighten.txt 'commit: Tighten the feature test' 'FeatureTest > featureWorks() PASSED'
+if refuses_for red; then r=0; else r=1; fi
+check "a red record that shows no failure is refused" "$r"
+
+new_strand exempt_commit
+write_file src/test/FeatureTest.java 'class FeatureTest {' '	@Test' '	void featureWorks() {' '		int unused = 0;' '	}' '}'
+commit_all 'Inline the feature fixture'
+complete_dossier
+write_file gate.local.d/red/inline.txt 'commit: Inline the feature fixture' 'exempt: a test refactoring, no behaviour changes'
+if accepts; then r=0; else r=1; fi
+check "a test-changing commit claimed exempt with its reason passes" "$r"
+
+new_strand java_test_never_red
+write_file src/test/EdgeTest.java 'class EdgeTest {' '	@Test' '	void edgeHolds() {' '	}' '}'
+commit_all 'Cover the edge'
+complete_dossier
+write_file gate.local.d/red/edge.txt 'commit: Cover the edge' 'FeatureTest > featureWorks() FAILED'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a new Java test never seen red is refused" "$r"
+
+new_strand vitest_never_red
+write_file frontend/src/Page.test.tsx "it('shows the page', () => {});"
+commit_all 'Show the page'
+complete_dossier
+lens_report frontend
+write_file gate.local.d/red/page.txt 'commit: Show the page' ' FAIL  src/Other.test.tsx > shows another page'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a new vitest test never seen red is refused" "$r"
+
+new_strand self_test_case_never_red
+write_file tools/self-test 'check "a broken input is refused" "$r"'
+commit_all 'Refuse a broken input'
+complete_dossier
+write_file gate.local.d/red/tools.txt 'commit: Refuse a broken input' '  FAIL an empty input is refused'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a new self-test case never seen red is refused" "$r"
+
+new_strand red_by_mutation
+write_file src/test/EdgeTest.java 'class EdgeTest {' '	@Test' '	void edgeHolds() {' '	}' '}'
+commit_all 'Cover the edge'
+complete_dossier
+write_file gate.local.d/red/edge.txt 'commit: Cover the edge' 'exempt: green by design on the stub; red through the recorded mutation'
+write_file gate.local.d/mutation/edge.txt '@@ -1 +1 @@' '-	return edge;' '+	return 0;' 'EdgeTest > edgeHolds() FAILED'
+if accepts; then r=0; else r=1; fi
+check "a new test seen red only through a recorded mutation passes" "$r"
+
+new_strand java_test_renamed
+git checkout -q main
+write_file src/test/SeedTest.java 'class SeedTest {' '	@Test' '	void old() {' '	}' '}'
+commit_all 'Cover the seed'
+git checkout -q strand
+git rebase -q main
+write_file src/test/SeedTest.java 'class SeedTest {' '	@Test' '	void theNewBehaviour() {' '	}' '}'
+commit_all 'Replace the seed behaviour'
+complete_dossier
+write_file gate.local.d/red/seed.txt 'commit: Replace the seed behaviour' 'exempt: a refactoring'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a test renamed under an unchanged @Test line and never seen red is refused" "$r"
+
+new_strand vitest_multiline_each
+write_file frontend/src/Route.test.ts "describe('route', () => {" '	it.each([' "		'a'," "		'b'," \
+	"	])('refuses %s as a page', (value) => {});" '});'
+commit_all 'Refuse a page'
+complete_dossier
+lens_report frontend
+write_file gate.local.d/red/route.txt 'commit: Refuse a page' 'exempt: a refactoring'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a multi-line it.each test never seen red is refused" "$r"
+
+new_strand parameterized_display
+write_file src/test/DepositTest.java 'class DepositTest {' '	@ParameterizedTest(name = "{0} deposited")' \
+	'	void depositsAnItem(String item) {' '	}' '}'
+commit_all 'Deposit an item'
+complete_dossier
+write_file gate.local.d/red/deposit.txt 'commit: Deposit an item' 'DepositTest > Marmor deposited FAILED'
+if accepts; then r=0; else r=1; fi
+check "a parameterized test seen red under its display name passes" "$r"
+
+new_strand unrecorded_first
+write_file src/main/Second.java 'class Second {' '}'
+commit_all 'Add a second class'
+complete_dossier
+mv gate.local.d/red/feature.txt gate.local.d/notes-feature.txt
+if refuses_for red; then r=0; else r=1; fi
+check "an earlier test-changing commit without a red record is refused" "$r"
+
+new_strand doc_tag_edits_test
+complete_dossier
+write_file src/test/FeatureTest.java 'class FeatureTest {' '	@Test' '	void featureWorks() {' '		int weakened = 0;' '	}' '}'
+commit_all '[doc] Tweak the test'
+complete_dossier
+if refuses_for red; then r=0; else r=1; fi
+check "a [doc]-tagged commit that changes a test still needs a red record" "$r"
+
+new_strand crlf_red_record
+complete_dossier
+awk '{ printf "%s\r\n", $0 }' gate.local.d/red/feature.txt > gate.local.d/crlf
+mv gate.local.d/crlf gate.local.d/red/feature.txt
+if accepts; then r=0; else r=1; fi
+check "a red record with Windows line endings names its commit" "$r"
+
+new_strand display_zero
+write_file src/test/PlaceTest.java 'class PlaceTest {' '	@ParameterizedTest(name = "{0}")' '	void placesAnything(String item) {' '	}' '}'
+commit_all 'Place anything'
+complete_dossier
+write_file gate.local.d/red/place.txt 'commit: Place anything' 'FeatureTest > featureWorks() FAILED'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a {0} parameterized test is not seen red through another class's failing line" "$r"
+
+# A seed test file on main, so the strand can edit, add beside or move tests that already exist.
+seed_test_on_main() {
+	git checkout -q main
+	write_file src/test/SeedTest.java 'class SeedTest {' '	@Test' '	void rejectsEmpty() {' '	}' '}'
+	commit_all 'Cover the seed'
+	git checkout -q strand
+	git rebase -q main
+}
+
+new_strand same_name_elsewhere
+seed_test_on_main
+write_file src/test/SeedTest.java 'class SeedTest {' '	@Test' '	void rejectsEmpty() {' '		int tightened = 1;' '	}' '}'
+write_file src/test/OtherTest.java 'class OtherTest {' '	@Test' '	void rejectsEmpty() {' '	}' '}'
+commit_all 'Cover the other input'
+complete_dossier
+write_file gate.local.d/red/other.txt 'commit: Cover the other input' 'SeedTest > rejectsEmpty() FAILED'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a new test named like one in another changed file is not seen red through it" "$r"
+
+new_strand longer_name_red
+seed_test_on_main
+write_file src/test/SeedTest.java 'class SeedTest {' '	@Test' '	void rejectsEmpty() {' '	}' '	@Test' '	void rejects() {' '	}' '}'
+commit_all 'Cover a rejection'
+complete_dossier
+write_file gate.local.d/red/rejects.txt 'commit: Cover a rejection' 'SeedTest > rejectsEmpty() FAILED'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a new test is not seen red through a longer test name" "$r"
+
+new_strand moved_test_file
+seed_test_on_main
+git mv src/test/SeedTest.java src/test/MovedSeedTest.java
+write_file src/test/MovedSeedTest.java 'class MovedSeedTest {' '	@Test' '	void rejectsEmpty() {' '	}' '}'
+commit_all 'Move the seed test'
+complete_dossier
+write_file gate.local.d/red/moved.txt 'commit: Move the seed test' 'exempt: a move, no behaviour changes'
+if accepts; then r=0; else r=1; fi
+check "a moved test file adds no new test" "$r"
+
+new_strand commented_annotation
+write_file src/test/HelperTest.java 'class HelperTest {' '	// @Test was here' '	void arrangeTheLedger() {' '	}' '}'
+commit_all 'Add a test helper'
+complete_dossier
+write_file gate.local.d/red/helper.txt 'commit: Add a test helper' 'exempt: a helper, no test'
+if accepts; then r=0; else r=1; fi
+check "an annotation in a comment makes no test" "$r"
+
+new_strand factory_then_helper
+write_file src/test/DynamicTest.java 'class DynamicTest {' '	@TestFactory' '	Stream<DynamicNode> coversEveryItem() {' '	}' \
+	'	void arrangeTheItems() {' '	}' '}'
+commit_all 'Cover every item'
+complete_dossier
+write_file gate.local.d/red/dynamic.txt 'commit: Cover every item' 'DynamicTest > coversEveryItem() FAILED'
+if accepts; then r=0; else r=1; fi
+check "a non-void test factory is the test, not the helper after it" "$r"
+
+new_strand vitest_table_each
+write_file frontend/src/Sum.test.ts 'it.each`' '  a | b' '  1 | 2' "\`('adds \$a and \$b', ({ a, b }) => {});"
+commit_all 'Add a sum'
+complete_dossier
+lens_report frontend
+write_file gate.local.d/red/sum.txt 'commit: Add a sum' 'exempt: a refactoring'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a tagged-template it.each test never seen red is refused" "$r"
+
+new_strand vitest_only
+write_file frontend/src/Pin.test.ts "it.only('pins the page', () => {});"
+commit_all 'Pin the page'
+complete_dossier
+lens_report frontend
+write_file gate.local.d/red/pin.txt 'commit: Pin the page' 'exempt: a refactoring'
+if refuses_for new-test; then r=0; else r=1; fi
+check "an it.only test never seen red is refused" "$r"
+
+new_strand vitest_escaped_quote
+write_file frontend/src/Break.test.ts "it('doesn\\'t break the page', () => {});"
+commit_all 'Keep the page whole'
+complete_dossier
+lens_report frontend
+write_file gate.local.d/red/break.txt 'commit: Keep the page whole' " FAIL  src/Break.test.ts > doesn't break the page"
+if accepts; then r=0; else r=1; fi
+check "a vitest title with an escaped quote is seen red under its printed title" "$r"
+
+new_strand csv_rows_with_parentheses
+write_file src/test/PathTest.java 'class PathTest {' '	@ParameterizedTest' \
+	'	@CsvSource(delimiter = '"'|'"', value = {"Aurora|/a/Aurora",' '			"A(b)!~|/a/A(b)!~"})' \
+	'	void encodesAMembersName(String member, String path) {' '	}' '}'
+commit_all 'Encode a name'
+complete_dossier
+write_file gate.local.d/red/encode.txt 'commit: Encode a name' \
+	'PathTest > encodesAMembersName(String, String) > [2] A(b)!~, /a/A(b)!~ FAILED'
+if accepts; then r=0; else r=1; fi
+check "a test whose CsvSource rows hold parentheses is seen red under its method name" "$r"
+
+new_strand vitest_title_in_other_file
+write_file frontend/src/B.test.tsx "it('renders the page', () => {});"
+commit_all 'Render the page'
+complete_dossier
+lens_report frontend
+write_file gate.local.d/red/render.txt 'commit: Render the page' ' FAIL  src/A.test.tsx > renders the page'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a vitest title seen red only in another test file is refused" "$r"
+
+new_strand failure_word_in_passing_line
+write_file src/test/WrapTest.java 'class WrapTest {' '	@Test' '	void wrapsAnAssertionErrorForTheCaller() {' '	}' '}'
+commit_all 'Wrap errors'
+complete_dossier
+write_file gate.local.d/red/wrap.txt 'commit: Wrap errors' 'WrapTest > wrapsAnAssertionErrorForTheCaller() PASSED'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a PASSED line whose test name holds a failure word is not red" "$r"
+
+new_strand failure_word_in_subject
+write_file src/test/FeatureTest.java 'class FeatureTest {' '	@Test' '	void featureWorks() {' '		int tightened = 1;' '	}' '}'
+commit_all 'Refuse a FAILED import'
+complete_dossier
+write_file gate.local.d/red/import.txt 'commit: Refuse a FAILED import' 'FeatureTest > featureWorks() PASSED'
+if refuses_for red; then r=0; else r=1; fi
+check "a red record whose only failure word is its commit subject is refused" "$r"
+
+new_strand unreadable_annotation
+write_file src/test/BlockTest.java 'class BlockTest {' '	@ParameterizedTest' '	@CsvSource(textBlock = """' '		a (b, 1' \
+	'		c, 2' '		""")' '	void readsTheRows(String s, int i) {' '	}' '' '	@Test' '	void nextTest() {' '	}' '}'
+commit_all 'Read the rows'
+complete_dossier
+write_file gate.local.d/red/rows.txt 'commit: Read the rows' 'exempt: nothing is red'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a test file the check cannot read to its end is refused, not read as holding no new test" "$r"
+
+new_strand parenthesis_in_string
+write_file src/test/SmileTest.java 'class SmileTest {' '	@ParameterizedTest' '	@CsvSource({"smile :(|x",' '		"b|y"})' \
+	'	void keepsSmiles(String a, String b) {' '	}' '}'
+commit_all 'Keep smiles'
+complete_dossier
+write_file gate.local.d/red/smile.txt 'commit: Keep smiles' 'SmileTest > keepsSmiles(String, String) > [1] smile :(, x FAILED'
+if accepts; then r=0; else r=1; fi
+check "an unbalanced parenthesis inside a string does not rename the test" "$r"
+
+new_strand nested_call_in_annotation
+write_file src/test/TimedTest.java 'class TimedTest {' '	@Test' '	@Timeout(value = Math.max(1, 2), unit = unit(SECONDS))' \
+	'	void finishesInTime() {' '	}' '}'
+commit_all 'Finish in time'
+complete_dossier
+write_file gate.local.d/red/timed.txt 'commit: Finish in time' 'TimedTest > finishesInTime() FAILED'
+if accepts; then r=0; else r=1; fi
+check "nested calls in annotation arguments do not rename the test" "$r"
+
+new_strand annotation_over_lines
+write_file src/test/SourcedTest.java 'class SourcedTest {' '	@ParameterizedTest' '	@MethodSource(value =' \
+	'		names(), other = 1)' '	void readsEveryName(String name) {' '	}' '}'
+commit_all 'Read every name'
+complete_dossier
+write_file gate.local.d/red/sourced.txt 'commit: Read every name' 'SourcedTest > readsEveryName(String) > [1] Aurora FAILED'
+if accepts; then r=0; else r=1; fi
+check "an annotation continued on the next line does not rename the test" "$r"
+
+new_strand comment_with_parenthesis
+write_file src/test/NotedTest.java 'class NotedTest {' '	@Test' '	// the (first) row is the oldest' '	void ordersByAge() {' '	}' '}'
+commit_all 'Order by age'
+complete_dossier
+write_file gate.local.d/red/noted.txt 'commit: Order by age' 'NotedTest > ordersByAge() FAILED'
+if accepts; then r=0; else r=1; fi
+check "a line comment with a parenthesis between annotation and method does not rename the test" "$r"
+
+new_strand block_comment
+write_file src/test/PickTest.java 'class PickTest {' '	@Test' '	/* the first' '	   pick(one) of many */' '	void picksOne() {' '	}' '}'
+commit_all 'Pick one'
+complete_dossier
+write_file gate.local.d/red/pick.txt 'commit: Pick one' 'PickTest > picksOne() FAILED'
+if accepts; then r=0; else r=1; fi
+check "a block comment over lines between annotation and method does not rename the test" "$r"
+
+new_strand display_name
+write_file src/test/ShownTest.java 'class ShownTest {' '	@DisplayName("a shown name fails")' '	@Test' '	void displayed() {' '	}' '}'
+commit_all 'Show a name'
+complete_dossier
+write_file gate.local.d/red/shown.txt 'commit: Show a name' 'ShownTest > a shown name fails FAILED'
+if accepts; then r=0; else r=1; fi
+check "a @DisplayName test is seen red under the name Gradle prints for it" "$r"
+
+new_strand nested_class_red
+seed_test_on_main
+write_file src/test/SeedTest.java 'class SeedTest {' '	@Test' '	void rejectsEmpty() {' '	}' '	@Nested' '	class Inner {' \
+	'		@Test' '		void rejectsEmpty() {' '		}' '	}' '}'
+commit_all 'Cover the inner case'
+complete_dossier
+write_file gate.local.d/red/inner.txt 'commit: Cover the inner case' 'SeedTest > Inner > rejectsEmpty() FAILED'
+if accepts; then r=0; else r=1; fi
+check "a test in a nested class is seen red under its printed chain" "$r"
+
+new_strand repeated_name_unseen
+seed_test_on_main
+write_file src/test/SeedTest.java 'class SeedTest {' '	@Test' '	void rejectsEmpty() {' '	}' '	@Nested' '	class Inner {' \
+	'		@Test' '		void rejectsEmpty() {' '		}' '	}' '}'
+commit_all 'Cover the inner case'
+complete_dossier
+write_file gate.local.d/red/inner.txt 'commit: Cover the inner case' 'exempt: nothing is red'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a second test of a name the file already declares counts as new" "$r"
+
+new_strand class_name_suffix
+write_file src/test/SmokeTest.java 'class SmokeTest {' '	@Test' '	void servesTheShell() {' '	}' '}'
+commit_all 'Cover the shell'
+complete_dossier
+write_file gate.local.d/red/smoke.txt 'commit: Cover the shell' 'DashboardBrowserSmokeTest > servesTheShell() FAILED'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a failing line of a class that ends in the test's class name is not its red" "$r"
+
+new_strand vitest_describe_chain
+write_file frontend/src/ui/Deep.test.tsx "describe('outer', () => {" "  describe('inner', () => {" "    it('deep fails', () => {});" \
+	"  });" "});" "it.each([[1], [2]])('each %s fails', () => {});"
+commit_all 'Add the deep tests'
+complete_dossier
+lens_report frontend
+write_file gate.local.d/red/deep.txt 'commit: Add the deep tests' ' FAIL  src/ui/Deep.test.tsx > outer > inner > deep fails' \
+	' FAIL  src/ui/Deep.test.tsx > each 1 fails'
+if accepts; then r=0; else r=1; fi
+check "a vitest test inside describe blocks is seen red under its printed chain" "$r"
+
+new_strand vitest_title_prefix
+write_file frontend/src/Render.test.ts "it('renders', () => {});"
+commit_all 'Render something'
+complete_dossier
+lens_report frontend
+write_file gate.local.d/red/render.txt 'commit: Render something' ' FAIL  src/Render.test.ts > renders the page'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a vitest title is not seen red through a longer title" "$r"
+
+new_strand self_test_name_prefix
+write_file tools/self-test 'check "a broken input is refused" "$r"'
+commit_all 'Refuse a broken input'
+complete_dossier
+write_file gate.local.d/red/tools.txt 'commit: Refuse a broken input' '  FAIL a broken input is refused twice'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a self-test case is not seen red through a longer case name" "$r"
+
+new_strand subject_reads_as_red
+write_file src/test/WrapTest.java 'class WrapTest {' '	@Test' '	void wraps() {' '	}' '}'
+commit_all 'Pin WrapTest > wraps() FAILED'
+complete_dossier
+write_file gate.local.d/red/wrap.txt 'commit: Pin WrapTest > wraps() FAILED' 'WrapTest > wraps() PASSED'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a commit subject that reads like a failing line is not red evidence" "$r"
+
+new_strand empty_exemption
+tighten_feature_test
+complete_dossier
+write_file gate.local.d/red/tighten.txt 'commit: Tighten the feature test' 'exempt:   '
+if refuses_for red; then r=0; else r=1; fi
+check "an exemption without its reason is refused" "$r"
+
+# A Java test file added on the strand with its red record, so a case varies only the file's shape.
+java_case() {
+	file=$1
+	record=$2
+	shift 2
+	write_file "src/test/$file" "$@"
+	commit_all "Add ${file%.java}"
+	complete_dossier
+	write_file "gate.local.d/red/${file%.java}.txt" "commit: Add ${file%.java}" "$record"
+}
+
+new_strand arch_rule_never_red
+java_case RuleTest.java 'exempt: nothing is red' 'class RuleTest {' '	@ArchTest' '	static final ArchRule keepsTheCore = noClasses()' \
+	'			.should().dependOnClassesThat().resideInAPackage("..adapter..");' '}'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a new ArchUnit rule never seen red is refused" "$r"
+
+new_strand arch_rule_seen_red
+java_case RuleTest.java 'RuleTest > keepsTheCore FAILED' 'class RuleTest {' '	@ArchTest' '	static final ArchRule keepsTheCore = noClasses()' \
+	'			.should().dependOnClassesThat().resideInAPackage("..adapter..");' '}'
+if accepts; then r=0; else r=1; fi
+check "a new ArchUnit rule seen red under its field name passes" "$r"
+
+new_strand factory_never_red
+java_case FactoryTest.java 'FactoryTest > arrangeTheItems() FAILED' 'class FactoryTest {' '	@TestFactory' \
+	'	Stream<DynamicNode> coversEveryItem() {' '	}' '	void arrangeTheItems() {' '	}' '}'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a test factory seen red only through the helper after it is refused" "$r"
+
+new_strand repeated_never_red
+java_case AgainTest.java 'exempt: nothing is red' 'class AgainTest {' '	@RepeatedTest(3)' '	void holdsEachTime() {' '	}' '}'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a new repeated test never seen red is refused" "$r"
+
+new_strand template_never_red
+java_case TemplateTest.java 'exempt: nothing is red' 'class TemplateTest {' '	@TestTemplate' '	void holdsPerContext() {' '	}' '}'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a new test template never seen red is refused" "$r"
+
+new_strand test_instance_is_no_test
+java_case LifeTest.java 'exempt: a lifecycle setting, no test' '@TestInstance(Lifecycle.PER_CLASS)' 'class LifeTest {' \
+	'	void arrange() {' '	}' '}'
+if accepts; then r=0; else r=1; fi
+check "an annotation that only starts with @Test makes no test" "$r"
+
+new_strand qualified_annotation_never_red
+java_case QualifiedTest.java 'exempt: nothing is red' 'class QualifiedTest {' '	@org.junit.jupiter.api.Test' '	void holds() {' '	}' '}'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a test under a fully qualified annotation never seen red is refused" "$r"
+
+new_strand non_ascii_method
+java_case UmlautTest.java 'UmlautTest > ändertSich() FAILED' 'class UmlautTest {' '	@Test' '	void ändertSich() {' '	}' '}'
+if accepts; then r=0; else r=1; fi
+check "a test with a non-ASCII method name is seen red under its whole name" "$r"
+
+new_strand abstract_base
+java_case BaseTest.java 'ConcreteTest > coversTheBase() FAILED' 'abstract class BaseTest {' '	@Test' '	void coversTheBase() {' '	}' '}'
+if accepts; then r=0; else r=1; fi
+check "a test of an abstract class is seen red under the class that runs it" "$r"
+
+new_strand commented_out_test
+java_case DormantTest.java 'exempt: a commented-out test, no test' 'class DormantTest {' '	/*' '	@Test' '	void dormant() {' '	}' '	*/' '}'
+if accepts; then r=0; else r=1; fi
+check "a test inside a block comment is no test" "$r"
+
+new_strand char_literal_parenthesis
+java_case SplitTest.java 'SplitTest > splitsTheRow(String) > [1] a FAILED' 'class SplitTest {' '	@ParameterizedTest' \
+	"	@MethodSource(value = ')', extra = pick(1))" '	void splitsTheRow(String row) {' '	}' '}'
+if accepts; then r=0; else r=1; fi
+check "a parenthesis in a char literal does not rename the test" "$r"
+
+new_strand code_after_block_comment
+java_case NoteTest.java 'NoteTest > notedAfter() FAILED' 'class NoteTest {' '	@Test' '	/* a note */ void notedAfter() {' '	}' '}'
+if accepts; then r=0; else r=1; fi
+check "a method after a closed block comment on its line is the test" "$r"
+
+new_strand display_after_test
+java_case LateTest.java 'LateTest > shown after FAILED' 'class LateTest {' '	@Test' '	@DisplayName("shown after")' '	void late() {' '	}' '}'
+if accepts; then r=0; else r=1; fi
+check "a @DisplayName after @Test is the name Gradle prints" "$r"
+
+new_strand stale_display_name
+java_case StaleTest.java 'StaleTest > stale FAILED' 'class StaleTest {' '	@DisplayName("stale")' '	void helper() {' '	}' \
+	'	@Test' '	void real() {' '	}' '}'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a @DisplayName of a method that is no test names no later test" "$r"
+
+# A vitest file added on the strand with its red record.
+vitest_case() {
+	file=$1
+	record=$2
+	shift 2
+	write_file "frontend/src/$file" "$@"
+	commit_all "Add ${file%%.*}"
+	complete_dossier
+	lens_report frontend
+	write_file "gate.local.d/red/${file%%.*}.txt" "commit: Add ${file%%.*}" "$record"
+}
+
+new_strand vitest_test_alias
+vitest_case Count.test.ts 'exempt: nothing is red' "test('counts the rows', () => {});"
+if refuses_for new-test; then r=0; else r=1; fi
+check "a vitest test() never seen red is refused" "$r"
+
+new_strand vitest_concurrent
+vitest_case Together.test.ts 'exempt: nothing is red' "it.concurrent('runs together', async () => {});"
+if refuses_for new-test; then r=0; else r=1; fi
+check "a concurrent vitest test never seen red is refused" "$r"
+
+new_strand vitest_js_file
+vitest_case Plain.test.js 'exempt: nothing is red' "it('reads plain script', () => {});"
+if refuses_for new-test; then r=0; else r=1; fi
+check "a vitest test in a .js file never seen red is refused" "$r"
+
+new_strand vitest_call_named_like_it
+vitest_case Form.test.ts 'exempt: a helper call, no test' "const sent = submit('the form');"
+if accepts; then r=0; else r=1; fi
+check "a call whose name ends in it is no vitest test" "$r"
+
+new_strand vitest_dollar_placeholder
+vitest_case Sum.test.ts ' FAIL  src/Sum.test.ts > adds 1 and 2' 'it.each`' '  a | b' '  1 | 2' "\`('adds \$a and \$b', ({ a, b }) => {});"
+if accepts; then r=0; else r=1; fi
+check "a tagged-template it.each test is seen red with its placeholders filled" "$r"
+
+new_strand vitest_regex_title
+vitest_case Paren.test.ts ' FAIL  src/Paren.test.ts > renders (empty) + more? [x] | y' "it('renders (empty) + more? [x] | y', () => {});"
+if accepts; then r=0; else r=1; fi
+check "a vitest title with regex characters is seen red under its printed title" "$r"
+
+new_strand vitest_regex_title_literal
+vitest_case Dot.test.ts ' FAIL  src/Dot.test.ts > shows aXb' "it('shows a.b', () => {});"
+if refuses_for new-test; then r=0; else r=1; fi
+check "a vitest title's regex characters match only themselves" "$r"
+
+new_strand vitest_line_start
+vitest_case Start.test.ts '   ✓ was FAIL  src/Start.test.ts > renders' "it('renders', () => {});"
+if refuses_for new-test; then r=0; else r=1; fi
+check "a vitest FAIL line counts only at the start of its line" "$r"
+
+new_strand self_test_line_start
+write_file tools/self-test 'check "a broken input is refused" "$r"'
+commit_all 'Refuse a broken input'
+complete_dossier
+write_file gate.local.d/red/tools.txt 'commit: Refuse a broken input' '  ok   FAIL a broken input is refused'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a self-test FAIL line counts only at the start of its line" "$r"
+
+new_strand self_test_variable_name
+write_file tools/self-test 'check "a $kind input is refused" "$r"'
+commit_all 'Refuse a kind of input'
+complete_dossier
+write_file gate.local.d/red/tools.txt 'commit: Refuse a kind of input' 'exempt: nothing is red'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a self-test case named with a variable never seen red is refused" "$r"
+
+new_strand self_test_variable_seen
+write_file tools/self-test 'check "a $kind input is refused" "$r"'
+commit_all 'Refuse a kind of input'
+complete_dossier
+write_file gate.local.d/red/tools.txt 'commit: Refuse a kind of input' '  FAIL a typed input is refused'
+if accepts; then r=0; else r=1; fi
+check "a self-test case named with a variable is seen red with the variable filled" "$r"
+
+new_strand self_test_escaped_quote
+write_file tools/self-test 'check "a \"quoted\" input is refused" "$r"'
+commit_all 'Refuse a quoted input'
+complete_dossier
+write_file gate.local.d/red/tools.txt 'commit: Refuse a quoted input' '  FAIL a "quoted" input is refused'
+if accepts; then r=0; else r=1; fi
+check "a self-test case with an escaped quote in its name is seen red under its printed name" "$r"
+
+real_awk=$(command -v awk)
+
+new_strand extractor_fails
+java_case EdgeTest.java 'exempt: nothing is red' 'class EdgeTest {' '	@Test' '	void edgeHolds() {' '	}' '}'
+mkdir -p "$work/shim"
+printf '%s\n' '#!/bin/sh' 'case "$*" in *unreadable*) exit 2 ;; esac' "exec $real_awk \"\$@\"" > "$work/shim/awk"
+chmod +x "$work/shim/awk"
+if PATH="$work/shim:$PATH" "$dossier_check" "$repo" strand > "$work/out" 2>&1; then
+	r=1
+elif grep -q '^refused \[new-test\]' "$work/out"; then
+	r=0
+else
+	r=1
+fi
+check "a test extractor that fails is a refusal, not a file without new tests" "$r"
+
+new_strand arch_rule_method
+java_case RuleMethodTest.java 'RuleMethodTest > keepsTheCore FAILED' 'class RuleMethodTest {' '	@ArchTest' \
+	'	static void keepsTheCore(JavaClasses classes) {' '	}' '}'
+if accepts; then r=0; else r=1; fi
+check "an ArchUnit rule method is seen red under its name without parentheses" "$r"
+
+new_strand arch_rule_non_ascii
+java_case GroesseTest.java 'GroesseTest > größeBleibt FAILED' 'class GroesseTest {' '	@ArchTest' \
+	'	static final ArchRule größeBleibt = noClasses();' '}'
+if accepts; then r=0; else r=1; fi
+check "an ArchUnit rule with a non-ASCII field name is seen red under its whole name" "$r"
+
+new_strand display_name_escaped_quote
+java_case QuoteTest.java 'QuoteTest > says "hi" loudly FAILED' 'class QuoteTest {' '	@DisplayName("says \"hi\" loudly")' '	@Test' \
+	'	void greets() {' '	}' '}'
+if accepts; then r=0; else r=1; fi
+check "a @DisplayName with an escaped quote is seen red under the name Gradle prints" "$r"
+
+new_strand red_by_assertion_error
+tighten_feature_test
+complete_dossier
+write_file gate.local.d/red/tighten.txt 'commit: Tighten the feature test' '    java.lang.AssertionError at FeatureTest.java:4'
+if accepts; then r=0; else r=1; fi
+check "a red record that shows an AssertionError is a failing run" "$r"
+
+new_strand red_by_assertion_failed_error
+tighten_feature_test
+complete_dossier
+write_file gate.local.d/red/tighten.txt 'commit: Tighten the feature test' '    org.opentest4j.AssertionFailedError at FeatureTest.java:4'
+if accepts; then r=0; else r=1; fi
+check "a red record that shows an AssertionFailedError is a failing run" "$r"
+
+new_strand vitest_regex_call
+vitest_case Re.test.ts 'exempt: a regex call, no test' "const ok = /^a+\$/.test('aaa');"
+if accepts; then r=0; else r=1; fi
+check "a regex test() call is no vitest test" "$r"
+
+new_strand vitest_pipe_title
+vitest_case Pipe.test.ts ' FAIL  src/Other.test.ts > other b' "it('a | b', () => {});"
+if refuses_for new-test; then r=0; else r=1; fi
+check "a pipe in a vitest title matches only itself" "$r"
+
+new_strand vitest_backtick_title
+vitest_case Shell.test.ts ' FAIL  src/Shell.test.ts > renders the shell' 'it(`renders the shell`, () => {});'
+if accepts; then r=0; else r=1; fi
+check "a vitest title in backticks is seen red under its printed title" "$r"
+
+new_strand vitest_backtick_never_red
+vitest_case Bare.test.ts 'exempt: nothing is red' 'it(`renders the bare shell`, () => {});'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a vitest test titled in backticks never seen red is refused" "$r"
+
+new_strand vitest_each_without_call
+vitest_case Rows.test.ts 'exempt: nothing is red' 'const table = it.each([1, 2]);' "it('reads the rows', () => {});"
+if refuses_for new-test; then r=0; else r=1; fi
+check "a test after an it.each that is never called is still read" "$r"
+
+new_strand vitest_commented_test
+vitest_case Wait.test.ts 'exempt: a commented-out test, no test' "// it('waits for the archive', () => {});"
+if accepts; then r=0; else r=1; fi
+check "a vitest test in a line comment is no test" "$r"
+
+new_strand self_test_single_quotes
+write_file tools/self-test "check 'a single-quoted input is refused' \"\$r\""
+commit_all 'Refuse a single-quoted input'
+complete_dossier
+write_file gate.local.d/red/tools.txt 'commit: Refuse a single-quoted input' 'exempt: nothing is red'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a self-test case in single quotes never seen red is refused" "$r"
+
+new_strand self_test_after_semicolon
+write_file tools/self-test 'r=0;check "a chained input is refused" "$r"'
+commit_all 'Refuse a chained input'
+complete_dossier
+write_file gate.local.d/red/tools.txt 'commit: Refuse a chained input' 'exempt: nothing is red'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a self-test case after a semicolon never seen red is refused" "$r"
+
+new_strand self_test_check_in_argument
+write_file tools/self-test "write_file gate/dossier-check '#!/bin/sh' 'exit 1'" 'check "a real case" "$r"'
+commit_all 'Add the tools self-test'
+complete_dossier
+write_file gate.local.d/red/tools.txt 'commit: Add the tools self-test' '  FAIL a real case'
+if accepts; then r=0; else r=1; fi
+check "a check inside a command argument is no self-test case" "$r"
+
+new_strand self_test_check_in_fixture
+write_file tools/self-test "write_file tools/self-test 'r=0; check \"a fixture case\" \"\$r\"'" 'check "a real case" "$r"'
+commit_all 'Add the tools self-test'
+complete_dossier
+write_file gate.local.d/red/tools.txt 'commit: Add the tools self-test' '  FAIL a real case'
+if accepts; then r=0; else r=1; fi
+check "a check inside a quoted fixture string is no self-test case" "$r"
+
+new_strand self_test_check_in_comment
+write_file tools/self-test '# a note; check "a commented case" "$r"' 'check "a real case" "$r"'
+commit_all 'Add the tools self-test'
+complete_dossier
+write_file gate.local.d/red/tools.txt 'commit: Add the tools self-test' '  FAIL a real case'
+if accepts; then r=0; else r=1; fi
+check "a check in a shell comment is no self-test case" "$r"
+
+new_strand self_test_check_after_then
+write_file tools/self-test 'if true; then check "a guarded case" "$r"; fi'
+commit_all 'Add the tools self-test'
+complete_dossier
+write_file gate.local.d/red/tools.txt 'commit: Add the tools self-test' 'exempt: nothing is red'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a check after then is a self-test case" "$r"
+
+new_strand arch_rule_method_never_red
+java_case RuleMethodTest.java 'exempt: nothing is red' 'class RuleMethodTest {' '	@ArchTest' \
+	'	static void keepsTheCore(JavaClasses classes) {' '	}' '}'
+if refuses_for new-test; then r=0; else r=1; fi
+check "an ArchUnit rule method never seen red is refused" "$r"
+
+new_strand qualified_arch_rule_method
+java_case QualifiedRuleTest.java 'QualifiedRuleTest > keepsTheCore FAILED' 'class QualifiedRuleTest {' \
+	'	@com.tngtech.archunit.junit.ArchTest' '	static void keepsTheCore(JavaClasses classes) {' '	}' '}'
+if accepts; then r=0; else r=1; fi
+check "a qualified ArchUnit rule method is seen red under its name without parentheses" "$r"
+
+new_strand duplicate_names_unchanged
+git checkout -q main
+write_file src/test/TwinTest.java 'class TwinTest {' '	@Nested' '	class First {' '		@Test' '		void works() {' '		}' '	}' \
+	'	@Nested' '	class Second {' '		@Test' '		void works() {' '		}' '	}' '}'
+commit_all 'Cover the twins'
+git checkout -q strand
+git rebase -q main
+write_file src/test/TwinTest.java 'class TwinTest {' '	@Nested' '	class First {' '		@Test' '		void works() {' '			int tightened = 1;' '		}' '	}' \
+	'	@Nested' '	class Second {' '		@Test' '		void works() {' '		}' '	}' '}'
+commit_all 'Tighten the twins'
+complete_dossier
+write_file gate.local.d/red/twins.txt 'commit: Tighten the twins' 'exempt: a tightened fixture'
+if accepts; then r=0; else r=1; fi
+check "a name a file declares twice at the base and the tip is no new test" "$r"
+
+new_strand java_text_block
+java_case BlockTextTest.java 'exempt: a text block, no test' 'class BlockTextTest {' '	static final String SOURCE = """' '		@Test' \
+	'		void quoted() {' '		}' '		""";' '}'
+if accepts; then r=0; else r=1; fi
+check "a test inside a Java text block is no test" "$r"
+
+new_strand display_name_on_the_test_line
+java_case InlineTest.java 'InlineTest > says hi FAILED' 'class InlineTest {' '	@Test @DisplayName("says hi") void greets() {' '	}' '}'
+if accepts; then r=0; else r=1; fi
+check "a @DisplayName on the line of its @Test is the name Gradle prints" "$r"
+
+new_strand display_name_over_two_lines
+java_case WrappedTest.java 'WrappedTest > a display name long enough to wrap FAILED' 'class WrappedTest {' '	@DisplayName(' \
+	'		"a display name long enough to wrap")' '	@Test' '	void wraps() {' '	}' '}'
+if accepts; then r=0; else r=1; fi
+check "a @DisplayName wrapped onto its next line is the name Gradle prints" "$r"
+
+new_strand dollar_in_method_name
+java_case DollarTest.java 'DollarTest > covers$edge() FAILED' 'class DollarTest {' '	@Test' '	void covers$edge() {' '	}' '}'
+if accepts; then r=0; else r=1; fi
+check "a test with a dollar in its method name is seen red under its whole name" "$r"
+
+new_strand vitest_block_comment
+vitest_case Muted.test.ts 'exempt: a commented-out test, no test' "/* it('waits for the archive', () => {}); */"
+if accepts; then r=0; else r=1; fi
+check "a vitest test in a block comment is no test" "$r"
+
+new_strand vitest_in_string
+vitest_case Quoted.test.ts 'exempt: a string, no test' "const source = \"it('is only text', () => {});\";"
+if accepts; then r=0; else r=1; fi
+check "a vitest call inside a string literal is no test" "$r"
+
+new_strand vitest_for
+vitest_case Each.test.ts 'exempt: nothing is red' "it.for([1, 2])('handles %i', (n) => {});"
+if refuses_for new-test; then r=0; else r=1; fi
+check "an it.for test never seen red is refused" "$r"
+
+new_strand vitest_run_if
+vitest_case Maybe.test.ts 'exempt: nothing is red' "it.runIf(process.env.CI)('runs in CI', () => {});"
+if refuses_for new-test; then r=0; else r=1; fi
+check "an it.runIf test never seen red is refused" "$r"
+
+new_strand mutation_without_diff
+write_file src/test/EdgeTest.java 'class EdgeTest {' '	@Test' '	void edgeHolds() {' '	}' '}'
+commit_all 'Cover the edge'
+complete_dossier
+write_file gate.local.d/red/edge.txt 'commit: Cover the edge' 'exempt: green by design on the stub; red through the recorded mutation'
+write_file gate.local.d/mutation/edge.txt 'EdgeTest > edgeHolds() FAILED'
+if refuses_for mutation; then r=0; else r=1; fi
+check "a recorded mutation without its diff is refused" "$r"
 
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'

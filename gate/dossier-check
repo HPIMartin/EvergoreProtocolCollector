@@ -83,6 +83,259 @@ needs lens-robustness.md "$code_changed" . 'code'
 needs lens-domain.md "$code_changed" '^src/' 'src/'
 needs lens-frontend.md "$code_changed" '^frontend/' 'frontend/'
 
+failure_marker='FAILED|FAIL |×|✗|AssertionError|AssertionFailedError'
+test_path_re='(^|/)src/test/|\.test\.[jt]sx?$|(^|/)self-test$'
+
+command -v awk > /dev/null 2>&1 || {
+	printf 'dossier-check: no awk on PATH, so the tests of the strand cannot be read\n' >&2
+	exit 2
+}
+
+red_record_of() {
+	for record in "$dossier"/red/*; do
+		[ -f "$record" ] || continue
+		if [ "$(sed -n 1p "$record" | tr -d '\r')" = "commit: $1" ]; then
+			printf '%s\n' "$record"
+			return 0
+		fi
+	done
+	return 1
+}
+
+for commit in $(in_worktree rev-list --reverse "$base..$tip"); do
+	subject=$(in_worktree log -1 --format=%s "$commit")
+	in_worktree diff-tree --no-commit-id --name-only -r "$commit" | grep -Eq "$test_path_re" || continue
+	if ! record=$(red_record_of "$subject"); then
+		refuse red "'$subject' changes tests, but no file in red/ opens with 'commit: $subject' (handbook §4)"
+	elif ! sed 1d "$record" | grep -Eq "$failure_marker" && ! grep -Eq '^exempt:[[:space:]]*[^[:space:]]' "$record"; then
+		refuse red "red/${record##*/} shows no failing run and claims no exemption (handbook §4)"
+	fi
+done
+
+for record in "$dossier"/mutation/*; do
+	[ -f "$record" ] || continue
+	grep -Eq '^(@@ |diff )' "$record" && grep -Eq "$failure_marker" "$record" \
+		|| refuse mutation "mutation/${record##*/} lacks the mutation's diff or its failing run (handbook §4)"
+done
+
+tab=$(printf '\t')
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
+
+# One line per test a test file declares at a commit: its name, a tab, and how a failing line shows
+# it: a Java test's display name or its pattern, a vitest title with its placeholders kept, or
+# nothing. A Java file whose last test annotation never closes yields a name no failing line has.
+declared_tests() {
+	in_worktree cat-file -e "$1:$2" 2>/dev/null || return 0
+	case "$2" in
+		*.java)
+			in_worktree show "$1:$2" | awk -v unreadable="?unreadable@$1" '
+				function unquote(text,    at, c, out) {
+					for (at = 1; at <= length(text); at++) {
+						c = substr(text, at, 1)
+						if (c == "\\") { at++; out = out substr(text, at, 1); continue }
+						if (c == "\"") break
+						out = out c
+					}
+					return out
+				}
+				in_text { if (gsub(/"""/, "&") % 2) in_text = 0; next }
+				!annotated && gsub(/"""/, "&") % 2 { in_text = 1; next }
+				in_block { if (index($0, "*/")) in_block = 0; next }
+				want_display && /^[ \t]*"/ {
+					quoted = $0; sub(/^[ \t]*"/, "", quoted); shown = unquote(quoted); want_display = 0
+					if (annotated && display == "") display = shown
+					if (!annotated) next
+				}
+				/^[ \t]*@DisplayName[ \t]*\([ \t]*$/ { want_display = 1 }
+				!annotated && /^[ \t]*\/\*/ && !index($0, "*/") { in_block = 1; next }
+				/^[ \t]*@DisplayName[ \t]*\([ \t]*"/ {
+					quoted = $0; sub(/^[ \t]*@DisplayName[ \t]*\([ \t]*"/, "", quoted); shown = unquote(quoted)
+					if (annotated && display == "") display = shown
+				}
+				/^[ \t]*@([A-Za-z0-9_]+\.)*(Test|ParameterizedTest|RepeatedTest|TestFactory|TestTemplate|ArchTest)([^A-Za-z0-9_]|$)/ {
+					annotated = 1; display = shown; arch = ($0 ~ /@([A-Za-z0-9_]+\.)*ArchTest/)
+					if (match($0, /@DisplayName[ \t]*\([ \t]*"/)) display = unquote(substr($0, RSTART + RLENGTH))
+					if (match($0, /name[ \t]*=[ \t]*"[^"]*"/)) {
+						display = substr($0, RSTART, RLENGTH); sub(/^name[ \t]*=[ \t]*"/, "", display); sub(/"$/, "", display)
+					}
+				}
+				annotated {
+					line = $0
+					gsub(/"([^"\\]|\\.)*"/, "\"\"", line)
+					gsub(/\047([^\047\\]|\\.)*\047/, "\047\047", line)
+					pending = pending " " line
+					while (1) {
+						sub(/^[ \t]+/, "", pending)
+						if (pending ~ /^\/\*/) {
+							closes = index(pending, "*/")
+							if (!closes) { in_block = 1; pending = ""; break }
+							pending = substr(pending, closes + 2)
+							continue
+						}
+						if (pending ~ /^(\/\/|\*)/) { pending = ""; break }
+						if (match(pending, /^@[A-Za-z0-9_.]+[ \t]*/)) {
+							rest = substr(pending, RLENGTH + 1)
+							if (substr(rest, 1, 1) != "(") { pending = rest; continue }
+							depth = 0; closed_at = 0
+							for (at = 1; at <= length(rest); at++) {
+								c = substr(rest, at, 1)
+								if (c == "(") depth++
+								else if (c == ")" && --depth == 0) { closed_at = at; break }
+							}
+							if (!closed_at) break
+							pending = substr(rest, closed_at + 1)
+							continue
+						}
+						if (match(pending, /^[^(=]*([A-Za-z0-9_$]|[\200-\377])[ \t]*=/)) {
+							name = substr(pending, 1, RLENGTH); sub(/[ \t]*=$/, "", name); sub(/.*[^A-Za-z0-9_$\200-\377]/, "", name)
+							print name "\t" name; annotated = 0; pending = ""; shown = ""
+						} else if (match(pending, /([A-Za-z0-9_$]|[\200-\377])+[ \t]*\(/)) {
+							name = substr(pending, RSTART, RLENGTH); sub(/[ \t]*\($/, "", name)
+							print name "\t" (arch ? name : display); annotated = 0; pending = ""; shown = ""
+						}
+						break
+					}
+					next
+				}
+				!/^[ \t]*(@|$)/ { shown = "" }
+				END { if (annotated) print unreadable "\t" }
+			'
+			;;
+		*.test.ts|*.test.tsx|*.test.js|*.test.jsx)
+			in_worktree show "$1:$2" | awk '
+				/^[ \t]*\/\// { next }
+				{ text = text " " $0 }
+				END {
+					gsub(/\/\*([^*]|\*+[^*\/])*\*+\//, " ", text)
+					while (match(text, /(^|[^A-Za-z0-9_.$"\047`])(it|test)(\.(only|concurrent|fails|sequential))*(\.(each|for|runIf|skipIf))?[ \t]*[(`]/)) {
+						head = substr(text, RSTART, RLENGTH)
+						text = substr(text, RSTART + RLENGTH)
+						call = text
+						if (head ~ /`$/) {
+							table_end = index(call, "`")
+							if (!table_end) continue
+							call = substr(call, table_end + 1)
+							sub(/^[ \t]*\(/, "", call)
+						} else if (head ~ /\.(each|for|runIf|skipIf)/) {
+							call_at = index(call, ")(")
+							if (!call_at) continue
+							call = substr(call, call_at + 2)
+						}
+						sub(/^[ \t]*/, "", call)
+						quote = substr(call, 1, 1)
+						if (quote != "\047" && quote != "\"" && quote != "`") continue
+						title = ""
+						for (at = 2; at <= length(call); at++) {
+							c = substr(call, at, 1)
+							if (c == "\\") { at++; title = title substr(call, at, 1); continue }
+							if (c == quote) break
+							title = title c
+						}
+						if (at <= length(call) && title != "") print title "\t" title
+					}
+				}
+			'
+			;;
+		*self-test)
+			in_worktree show "$1:$2" | awk '
+				{
+					quote = ""; command = 1
+					for (at = 1; at <= length($0); at++) {
+						c = substr($0, at, 1)
+						if (quote == "\"") { if (c == "\\") at++; else if (c == "\"") quote = ""; continue }
+						if (quote == "\047") { if (c == "\047") quote = ""; continue }
+						if (c == "\"" || c == "\047") { quote = c; command = 0; continue }
+						if (c == ";" || c == "&" || c == "|") { command = 1; continue }
+						if (c == " " || c == "\t") continue
+						if (c == "#" && (at == 1 || substr($0, at - 1, 1) ~ /[ \t]/)) break
+						rest = substr($0, at)
+						if (command && match(rest, /^(then|do|else|if|!)[ \t]/)) { at += RLENGTH - 1; continue }
+						if (command && match(rest, /^check[ \t]+("([^"\\]|\\.)*"|\047[^\047]*\047)/)) {
+							name = substr(rest, 1, RLENGTH); sub(/^check[ \t]+["\047]/, "", name); sub(/["\047]$/, "", name)
+							gsub(/\\"/, "\"", name)
+							print name "\t"
+							at += RLENGTH - 1
+						}
+						command = 0
+					}
+				}
+			'
+			;;
+	esac
+}
+
+# An extended regex matching $1 literally, with each placeholder of a display name or a vitest
+# title ({0}, %s, $name, ${...}) standing for any text.
+literal_pattern() {
+	printf '%s' "$1" | sed -e 's/{[^}]*}/@ANY@/g' -e 's/%[a-z#%]/@ANY@/g' -e 's/\$[{]*[A-Za-z0-9_.]*[}]*/@ANY@/g' \
+		-e 's/[][\.*^$+?(){}|]/\\&/g' -e 's/@ANY@/.*/g'
+}
+
+# The failing line a runner prints for a test: Gradle's "Class > [Nested > ]name(…) FAILED" or its
+# display name, vitest's "FAIL  file > [describe > ]title", the self-tests' "FAIL name".
+frontend_root=frontend
+
+failing_line_pattern() {
+	case "$1" in
+		*.java)
+			class=${1##*/}
+			class=${class%.java}
+			if in_worktree show "$tip:$1" 2>/dev/null | grep -Eq '(^|[[:space:]])abstract[[:space:]]+class[[:space:]]'; then
+				class='[A-Za-z0-9_]+'
+			fi
+			if [ -n "$3" ]; then
+				shown="|$(literal_pattern "$3")"
+			else
+				shown=
+			fi
+			printf '(^|[^A-Za-z0-9_])%s > ([^>]* > )*(%s\\(.*%s) FAILED[[:space:]]*$' "$class" \
+				"$(printf '%s' "$2" | sed -e 's/[][\.*^$+?(){}|]/\\&/g')" "$shown"
+			;;
+		*self-test) printf '^[[:space:]]*FAIL %s$' "$(literal_pattern "$2")" ;;
+		*)
+			printf '^[[:space:]]*FAIL[[:space:]]+%s > ([^>]* > )*%s[[:space:]]*$' \
+				"$(literal_pattern "${1#"$frontend_root"/}")" "$(literal_pattern "$3")"
+			;;
+	esac
+}
+
+renames=$(in_worktree diff -M --name-status "$base" "$tip" | awk -F "$tab" '$1 ~ /^R/ { print $3 "\t" $2 }')
+cat "$dossier"/red/* "$dossier"/mutation/* 2>/dev/null | tr -d '\r' | grep -v '^commit: ' | grep -E "$failure_marker" \
+	> "$scratch/failing" || true
+
+new_tests=$(printf '%s\n' "$changed" | grep -E "$test_path_re" | while IFS= read -r file; do
+	before=$(printf '%s\n' "$renames" | awk -F "$tab" -v new="$file" '$1 == new { print $2; exit }')
+	if ! declared_tests "$base" "${before:-$file}" > "$scratch/base.raw" \
+		|| ! declared_tests "$tip" "$file" > "$scratch/tip.raw"; then
+		printf '%s\t?extractor-failed\t\n' "$file"
+		continue
+	fi
+	cut -f1 "$scratch/base.raw" > "$scratch/base"
+	awk -F "$tab" -v file="$file" -v base="$scratch/base" '
+		FILENAME == base { declared[$0]++; next }
+		{ seen[$1]++; if (seen[$1] > declared[$1]) print file "\t" $0 }
+	' "$scratch/base" "$scratch/tip.raw" || printf '%s\t?extractor-failed\t\n' "$file"
+done)
+
+while IFS="$tab" read -r file name shown; do
+	[ -n "$name" ] || continue
+	case "$name" in
+		'?unreadable@'*)
+			refuse new-test "$file holds a test annotation the check cannot read to its end, so its tests cannot be counted (playbook, The gate dossier)"
+			continue
+			;;
+		'?extractor-failed')
+			refuse new-test "the check's test extractor failed on $file, so its tests cannot be counted (playbook, The gate dossier)"
+			continue
+			;;
+	esac
+	grep -Eq -- "$(failing_line_pattern "$file" "$name" "$shown")" "$scratch/failing" \
+		|| refuse new-test "the new test '$name' of $file is never seen red: no failing line in red/ or mutation/ shows it (handbook §4)"
+done <<NEW_TESTS
+$new_tests
+NEW_TESTS
+
 for report in "$dossier"/lens-*.md; do
 	[ -f "$report" ] || continue
 	grep -Eq '(^|[^A-Za-z])robust:' "$report" && grep -Eq '(^|[^A-Za-z])treeDiff:' "$report" \

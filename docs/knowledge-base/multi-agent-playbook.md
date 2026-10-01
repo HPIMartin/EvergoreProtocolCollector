@@ -226,6 +226,21 @@ lives.
 - **Required reports** follow the strand's diff against its base: `doc-reviewer.md` always; any
   path outside `*.md` adds `lens-robustness.md`, one under `src/` adds `lens-domain.md`, one under
   `frontend/` adds `lens-frontend.md` (→ Cadence). A docs-only strand needs the doc-reviewer alone.
+- **`red/`:** one record per commit that changes a test path (`src/test/`, `*.test.[jt]s(x)`, a
+  `self-test`), whatever its tag, opening with `commit: <its subject>` (stable across rebases)
+  and holding the failing run, or an `exempt: <reason>` line for a test refactoring. As for a new
+  test, the check proves a failing run exists, not that it fails for the right reason.
+- **`mutation/`:** one record per test that cannot start red: the mutation's diff, the failing run,
+  the revert. Every test the strand adds (a JUnit `@Test`-family method, a vitest `it`/`test`
+  title, a self-test `check` name; one a file declares more often at the tip than at the base, a
+  moved file read under its old path) must appear on a failing line in `red/` or `mutation/` as its
+  runner prints it: Gradle's `Class > [Nested > ]method(…) FAILED`, or `Class > <display name>
+  FAILED` for a `@DisplayName` or `@ParameterizedTest(name = ...)`, `Class > rule FAILED` for an
+  `@ArchTest` rule (a test of an abstract class under any class), vitest's `FAIL  <file> > … >
+  title`, `FAIL name`; a record's `commit:` line counts for nothing, and a test file the check
+  cannot read to its end is refused. A test moved to another file or renamed reads as new and
+  needs its recorded mutation. The check proves that such a line exists, not that the test
+  fails for the right reason; that judgement stays the reviewer's (handbook §4).
 
 ## Environment gotchas (tell every agent)
 
