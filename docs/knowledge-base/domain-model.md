@@ -400,7 +400,8 @@ goods and the three ammunition sorts the game's own trader sells. A withdrawal o
 opens a lot of that quantity; a deposit of the same item consumes the avatar's open lots for that item **oldest first**,
 after dropping lots the window has already passed (a deposit exactly 48 h after the withdrawal still
 matches, one minute later does not), and the consumed quantity is reported as one `RoundTrip` per
-avatar/item pair, summed over the walk, only when positive. Quality is ignored; only quantities
+avatar/item pair, summed over the walk, only when positive; a `RoundTrip` refuses a quantity below
+one where it is built, so an arithmetic slip fails the recompute instead of reaching the admin page. Quality is ignored; only quantities
 move. An item that is not watched opens no lot and closes none: a raw-material round trip costs the
 member rather than minting, and an item credited at 60 % comes out even, so neither is reported.
 
