@@ -161,6 +161,23 @@ so the script needs no second stack of its own.
 - Exit code 0 or 1; a usage error exits 2. A relative `focus` path resolves against the caller's
   directory. `all` prints the executed test-class count, so a cached or skipped run cannot pass as a
   green one ([testing.md](testing.md), "Proving a run really executed").
+- `focus`, `bdd`, `all` and `vuln` take the machine-wide lock `/tmp/epc-build.lock` (`flock`) once
+  their arguments and tools have checked out, and hold it until the run ends, so only one of them
+  runs on the machine at a time (a gate build beside another failed its frontend stage, decision
+  2026-09-30). A later one prints `[verify] waiting for /tmp/epc-build.lock: …` and waits its turn;
+  `format`, which the commit hooks run, `stop` and `outdated` never wait.
+  - A run started inside a process that already holds the lock (`flock /tmp/epc-build.lock
+    ./verify …`, or one `./verify` run under another) finds the held descriptor among the ones it
+    inherited (`/proc/<pid>/fdinfo` lists its lock) and goes on instead of waiting for itself.
+  - The file is opened for reading only, so one that another user (a root session) created still
+    serves; an unreadable one stops the run with `[verify] cannot read …`, exit 1.
+  - The lock is released when the last process holding it ends: a run killed together with its
+    Gradle client or `npm` releases it at once, an orphaned or hung one holds it until it ends;
+    `fuser -v /tmp/epc-build.lock` lists every process that has it open, holders and waiters
+    alike.
+  - Never delete the file while a build runs: the next run would start beside the holder. A run that
+    waited on the deleted file notices and queues on the new one.
+  - A direct `./gradlew` or `npm` run takes no lock.
 - Every Gradle run the script starts appends `-Dorg.gradle.daemon.registry.base="<worktree>/registry.local.d"`
   to `GRADLE_OPTS`, after the caller's own options and quoted, since `gradlew` splits the variable
   at spaces: the worktree's daemons register only there (gitignored by `*.local.*`, outside `build/`

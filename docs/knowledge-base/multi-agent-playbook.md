@@ -205,7 +205,9 @@ pushes happen with **you** in chat.
 ## Environment gotchas (tell every agent)
 
 - **Sessions share the machine.** Every build goes through `./verify`, in a gate agent's worktree
-  too, and daemons are stopped with `./verify stop`, never `./gradlew --stop`
+  too: it queues on one machine-wide lock and may first wait out other sessions' gate builds, longer
+  than a foreground tool call's 10-minute cap, so a `./verify all` runs in the background. Daemons
+  are stopped with `./verify stop`, never `./gradlew --stop`
   ([dev-environment.md](dev-environment.md), "Several sessions on one machine").
 - **Bash stdout** may not surface on the Windows host: redirect to a file
   (`./verify all > out.txt 2>&1`) and `Read` it; in-container, Bash is normal.

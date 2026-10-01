@@ -110,9 +110,16 @@ enforces it today since `javac` reads none of it (that would be backlog **G6**).
 
 Sessions in parallel worktrees share the container: its CPU, memory, disk and Gradle user home.
 
-- **Build only through `./verify`.** Its Gradle runs keep their daemons in the worktree's own
-  registry, so no other session can reach them; the mechanics are in
+- **Build and test through `./verify`.** Its `focus`, `bdd`, `all` and `vuln` queue on one
+  machine-wide lock, so a gate build never runs beside another, while the commit hooks' `format`
+  check never waits; its Gradle runs keep their daemons in the worktree's own registry, so no other
+  session can reach them. Nobody locks by hand or sets a registry. The direct Gradle tasks
+  (`./gradlew probe`, `./gradlew clearProbes`) and a direct `npm` run take neither, and a direct
+  test run loads the machine beside a gate build. The mechanics are in
   [build-run-deploy.md](build-run-deploy.md), "The verify script".
+- **A run may first wait out the builds queued ahead of it**, a full `./verify all` each, and says
+  so (`[verify] waiting for …`); give the call a timeout that covers the wait, or run it in the
+  background.
 - **Stop daemons with `./verify stop`**, after a batch of builds and before a worktree is removed;
   it stops this worktree's daemons only. Never `./gradlew --stop`: it stops every daemon of the
   shared registry, other sessions' direct Gradle runs included.

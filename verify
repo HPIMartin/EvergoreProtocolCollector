@@ -58,6 +58,36 @@ report() {
 	printf '[verify] %s reported findings (exit %s)\n' "$1" "$status"
 }
 
+build_lock=/tmp/epc-build.lock
+
+fd_holds_build_lock() {
+	[ "/proc/$$/fd/$1" -ef "$build_lock" ] && grep -q '^lock:.*FLOCK' "/proc/$$/fdinfo/$1" 2>/dev/null
+}
+
+hold_build_lock() {
+	require flock
+	for fd in /proc/$$/fd/*; do
+		if fd_holds_build_lock "${fd##*/}"; then
+			return 0
+		fi
+	done
+	while :; do
+		[ -e "$build_lock" ] || touch "$build_lock" 2>/dev/null || true
+		if ! (exec 9<"$build_lock") 2>/dev/null; then
+			printf '[verify] cannot read %s, the machine-wide build lock; its owner can make it readable\n' "$build_lock" >&2
+			exit 1
+		fi
+		exec 9<"$build_lock"
+		if ! flock -n 9; then
+			printf '[verify] waiting for %s: another build on this machine holds it\n' "$build_lock" >&2
+			flock 9
+		fi
+		if [ "/proc/$$/fd/9" -ef "$build_lock" ]; then
+			return 0
+		fi
+	done
+}
+
 every_tag='@wip or not @wip'
 acceptance_suite='*RunAcceptanceScenariosTest'
 frontend=frontend
@@ -77,13 +107,16 @@ case "$cmd" in
 		case "$target" in
 			"$frontend"/*)
 				require npm
+				hold_build_lock
 				run_in "$frontend" npm test -- "${target#"$frontend"/}"
 				;;
 			src/test/resources/features/*.feature)
+				hold_build_lock
 				run ./gradlew test --no-build-cache --console=plain --tests "$acceptance_suite" \
 					-Dcucumber.features="$target" -Dcucumber.filter.tags="$every_tag"
 				;;
 			src/main/*|src/test/*)
+				hold_build_lock
 				run ./gradlew test --no-build-cache --console=plain \
 					--tests "$(basename "$target" .java)"
 				;;
@@ -95,10 +128,12 @@ case "$cmd" in
 		esac
 		;;
 	bdd)
+		hold_build_lock
 		run ./gradlew test --no-build-cache --console=plain --tests "$acceptance_suite" \
 			-Dcucumber.filter.tags='@wip'
 		;;
 	all)
+		hold_build_lock
 		run ./gradlew clean build --no-build-cache --console=plain
 		results=$(mktemp)
 		trap 'rm -f "$results"' EXIT
@@ -115,6 +150,7 @@ case "$cmd" in
 		exit 1
 		;;
 	vuln)
+		hold_build_lock
 		report ./gradlew --console=plain vulnScan
 		;;
 	stop)
