@@ -20,7 +20,9 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Categor
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.HANDWERKSMATERIAL;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.JAGDBEUTEN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.KEULEN_2H;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.MUNITION_ARMBRUESTE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.MUNITION_BOEGEN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.MUNITION_MAGIESTAEBE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.ROHSTOFFE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.SCHWERTER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.STANGENWAFFEN_2H;
@@ -31,8 +33,9 @@ public class ValuationSteps {
 	private static final Map<String, Category> KINDS = Map
 			.ofEntries(Map.entry("Rohstoffe", ROHSTOFFE), Map.entry("Jagdbeuten", JAGDBEUTEN), Map.entry("Edelsteine", EDELSTEINE),
 					Map.entry("Handwerksmaterial", HANDWERKSMATERIAL), Map.entry("verarbeitete Rohstoffe", VERARBEITETE_ROHSTOFFE), Map.entry("Bandagen", BANDAGEN),
-					Map.entry("Munition Bögen", MUNITION_BOEGEN), Map.entry("Bögen", BOEGEN), Map.entry("Äxte", AEXTE), Map.entry("Äxte [2H]", AEXTE_2H),
-					Map.entry("Stangenwaffen [2H]", STANGENWAFFEN_2H), Map.entry("Schwerter", SCHWERTER), Map.entry("Keulen [2H]", KEULEN_2H));
+					Map.entry("Munition Bögen", MUNITION_BOEGEN), Map.entry("Munition Armbrüste", MUNITION_ARMBRUESTE), Map.entry("Munition Magiestäbe", MUNITION_MAGIESTAEBE),
+					Map.entry("Bögen", BOEGEN), Map.entry("Äxte", AEXTE), Map.entry("Äxte [2H]", AEXTE_2H), Map.entry("Stangenwaffen [2H]", STANGENWAFFEN_2H),
+					Map.entry("Schwerter", SCHWERTER), Map.entry("Keulen [2H]", KEULEN_2H));
 	private static final String UNKNOWN_ITEMS_PREFIX = "Unbekannte Items";
 
 	private final MemberBrowser browser;

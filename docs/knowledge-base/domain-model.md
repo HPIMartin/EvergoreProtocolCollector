@@ -53,7 +53,9 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
 - **`marketValue`**: base gold value (Goldwert). For the simple ammunition types it is the price the
   **NPC trader charges**, confirmed by the author 2026-09-10 against the game: `PFEILE` 3, `BOLZEN` 12,
   `MAGIEESSENZ` 4, exactly the catalog's numbers. So a member can buy those for `marketValue` rather
-  than craft them, which is what makes a 60 % credit a real loss of gold for whoever buys them.
+  than craft them, which is what makes a 60 % credit a real loss of gold for whoever buys them; their
+  entries are marked `SOLD_BY_THE_GAMES_TRADER` and a deposit of them credits in full ("The value
+  math" below).
 - **The game prices the catalog, and the wiki is only a convenience.** Two of the game's own pages
   carry a price: the guild storage lists what it holds per piece at that piece's quality, so a value
   is read from a holding at quality 100 and a stored blueprint carries the gold value of the item it
@@ -102,7 +104,8 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
 - **`category`**: one of the `Category` values (weapon/armor families, `ROHSTOFFE`,
   `JAGDBEUTEN` (hunt loot), `EDELSTEINE` (gems), `HANDWERKSMATERIAL`, …). Each category carries
   two multipliers, `placement` (what a deposit credits) and `withdrawl` (what a withdrawal costs),
-  and the category alone decides both.
+  and the category decides both, except that an entry marked `SOLD_BY_THE_GAMES_TRADER`
+  (`EvergoreItem.Trade`) credits in full whatever its category (`EvergoreItem.placement()`).
 - **`recipe`**: a `Recipe`, one of three types the compiler tells apart rather than two equal
   instances of one class (`sealed interface Recipe permits Recipe.Published, Recipe.NotCraftable,
   Recipe.Unread`). `Recipe.Published(amount, Ingredient…)` names what the recipe consumes, where
@@ -162,7 +165,8 @@ The rule has two sources, and the difference matters. The **60 % price in both d
 in 2020; the source document is the author's local copy of those announcements, deliberately outside
 the repo (gitignored beside `zugang.txt`), so the rule itself is recorded here. The **100 % credit for
 goods bought from the guild trader** and the **60 % credit for boards and bars** are author decisions
-of 2026-09-10 that knowingly depart from that announcement, each for a reason given below.
+of 2026-09-10, and the **100 % credit for the ammunition the game's own trader sells** one of
+2026-09-27, that knowingly depart from that announcement, each for a reason given below.
 
 **Withdrawal cost**: what *taking an item out* costs the member, for every category:
 ```
@@ -171,21 +175,25 @@ getWithdrawlValue() = marketValue × category.withdrawl      // withdrawl is 0.6
 - `KUPFERERZ`: 20 × 0.6 = **12** ✓
 - `KRISTALL` (gem): 500 × 0.6 = **300** ✓
 
-**Deposit credit**: what *putting an item in* credits the member, decided by its category alone:
+**Deposit credit**: what *putting an item in* credits the member, decided by its category, and for
+the three sorts the game's own trader sells by the entry:
 ```
-getStorageValue() = marketValue × category.placement
+getStorageValue() = marketValue × placement()     // category.placement, or 1.0 for SOLD_BY_THE_GAMES_TRADER
 ```
 
 | `placement` | Categories | Source | Why |
 |---|---|---|---|
 | **0** | `ROHSTOFFE`, `JAGDBEUTEN`, `EDELSTEINE` | announced | Mined or hunted, so they cost the member only time; depositing them **is** the guild's tax, which is what lets the guild run without levying one in gold |
 | **1.0** | `HANDWERKSMATERIAL` | **departs from the announcement**, which names only raw materials and gems as exceptions | Bought from the guild trader with the member's own gold, and gold is measured 1:1, so a 60 % credit confiscates 40 % of every purchase and leaves the trader role unable to come out positive however well it haggles |
+| **1.0** | `PFEILE`, `BOLZEN`, `MAGIEESSENZ` (marked `SOLD_BY_THE_GAMES_TRADER`; their categories are `MUNITION_*`) | **departs from the announcement**, which credits all ammunition at 60 % | The game's own trader sells them at their catalog value, so a member who bought them paid it in gold and a 60 % credit confiscates 40 %; the ledger cannot tell a bought one from a crafted one, but it knows which sorts the trader sells, and measured on the 03.09.2026 snapshot 91 % of what was deposited of them is the guild trader's. The credit is decided per entry because the three share their categories with sorts that can only be crafted, which stay at 60 % |
 | **0.6** | everything else | announced | The guild's price for goods, the same in both directions, so moving something out and back is neutral and crafting earns the margin between ingredients and product |
 | **0.6** | `VERARBEITETE_ROHSTOFFE` | **departs from the announcement**, which counts boards and bars as raw materials and says their gain is not credited to the character | The announcement gives two reasons for excluding them and the second is a limit of the sheet it was written for ("wir diese aktuell nicht gesondert in unserer Übersicht behandeln"), which no longer applies; their recipes also consume bought trader goods, so a zero credit would take that gold |
 
 - `MAGISCHE_AETHERBINDE` (`BANDAGEN`, market value 257): 257 × 0.6 = **154.2** ✓
 - `MAGIESPLITTER` (`HANDWERKSMATERIAL`, market value 60): 60 × 1.0 = **60** ✓
 - `EISENBARREN` (`VERARBEITETE_ROHSTOFFE`, market value 120): 120 × 0.6 = **72** ✓
+- `PFEILE` (`MUNITION_BOEGEN`, sold by the game's trader, market value 3): 3 × 1.0 = **3** ✓, beside
+  `JAGDPFEILE` (`MUNITION_BOEGEN`, crafted only, market value 5): 5 × 0.6 = **3** ✓
 
 **How the guild's rule 2 is implemented, without a rule of its own.** The announcement lets a member
 withdraw crafting material **free** as long as every product comes back. The software has no notion
@@ -196,12 +204,15 @@ member who withdraws and never deposits keeps the charge, which is what "and onl
 the software genuinely cannot see is which of the two happened, so a withdrawal that was a **sale**
 rather than an input reads identically to one that will come back.
 
-**Why crafting pays.** A crafting gain is always `0.6 × (the product's market value less its
-ingredients')`, because `withdrawl` is 0.6 in every category: an ingredient's credit tier changes
-what *depositing* it would earn, never what *withdrawing* it costs. The guild announced that gain
-with one worked example, which holds here to the gold:
+**Why crafting pays.** A crafting gain is what the product credits less `0.6 ×` its ingredients'
+market value, because `withdrawl` is 0.6 in every category: an ingredient's credit tier changes
+what *depositing* it would earn, never what *withdrawing* it costs. For a product credited at 60 %
+that is `0.6 × (the product's market value less its ingredients')`; a product credited in full
+earns more, its whole market value less 60 % of its inputs. The guild announced the gain with one
+worked example, and the full credit for its product departs from it:
 - 6 `BUCHENHOLZ` + 5 `FEDERN` withdrawn cost 6·12 + 5·15 = 147; the 135 `PFEILE` they craft credit
-  135 · 1.8 = 243, a gain of **96**.
+  135 · 3 = 405, a gain of **258**. The announcement credits the arrows at 60 %, 135 · 1.8 = 243, a
+  gain of 96.
 
 A second example, derived here rather than announced, pins the same rule one production step down:
 5 `EISENERZ` + 2 `STEINKOHLE` withdrawn cost 5·24 + 2·60 = 240, the 5 `EISENBARREN` credit
@@ -281,7 +292,8 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   `placement` with what it credits the member, and, against `getWithdrawlValue()` as the guild's own
   price for the same goods, into **`donation`** where the credit falls short of that price (mined,
   hunted and gem deposits, which credit nothing) and into **`craftSubsidy`** where it exceeds it
-  (trader goods, credited at 100 % of a price the guild values at 60 %). Exactly one of the two can
+  (trader goods and the ammunition the game's own trader sells, credited at 100 % of a price the
+  guild values at 60 %). Exactly one of the two can
   be non-zero per deposit. A withdrawal counts into `withdrawl` alone.
 - Results are keyed per avatar (`getBankPlacement(avatar)`, `getBankWithdrawl`,
   `getStoragePlacement`, `getStorageWithdrawl`, `getStorageDonation`, `getStorageCraftSubsidy`) and handed to `MetaInformationRepository.add` as

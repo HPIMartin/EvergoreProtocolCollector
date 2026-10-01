@@ -36,6 +36,7 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Categor
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.WASSERSTAEBE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.NOT_CRAFTABLE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.UNKNOWN_RECIPE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Trade.SOLD_BY_THE_GAMES_TRADER;
 
 public enum EvergoreItem {
 	UNDEFINED("undefined", 0, ROHSTOFFE, NOT_CRAFTABLE),
@@ -548,7 +549,7 @@ public enum EvergoreItem {
 			new Published(1, new Ingredient(52, EIBENBRETTER), new Ingredient(6, MAGIESPLITTER), new Ingredient(12, PHASENKRAUT), new Ingredient(32, ERDENBLUT))),
 	ONYX_LUFTSTAB("Onyx-Luftstab", 82300, LUFTSTAEBE, UNKNOWN_RECIPE),
 	PYRIT_LUFTSTAB("Pyrit-Luftstab", 5500, LUFTSTAEBE, UNKNOWN_RECIPE),
-	BOLZEN("Bolzen", 12, MUNITION_ARMBRUESTE, new Published(33, new Ingredient(6, BUCHENHOLZ), new Ingredient(5, FEDERN))),
+	BOLZEN("Bolzen", 12, MUNITION_ARMBRUESTE, SOLD_BY_THE_GAMES_TRADER, new Published(33, new Ingredient(6, BUCHENHOLZ), new Ingredient(5, FEDERN))),
 	DAEMONENDORN("Dämonendorn", 36, MUNITION_ARMBRUESTE, new Published(90, new Ingredient(11, ESCHENHOLZ), new Ingredient(10, FEDERN), new Ingredient(5, PFEILHARZ))),
 	JAGDBOLZEN("Jagdbolzen", 20, MUNITION_ARMBRUESTE, new Published(40, new Ingredient(6, BIRKENHOLZ), new Ingredient(10, FEDERN))),
 	KRIEGSBOLZEN("Kriegsbolzen", 28, MUNITION_ARMBRUESTE, new Published(57, new Ingredient(8, EICHENHOLZ), new Ingredient(7, FEDERN), new Ingredient(2, PFEILHARZ))),
@@ -561,8 +562,8 @@ public enum EvergoreItem {
 	MYSTISCHER_PFEIL("Mystischer Pfeil", 0, MUNITION_BOEGEN, NOT_CRAFTABLE),
 	PANZERBRECHER("Panzerbrecher", 11, MUNITION_BOEGEN,
 			new Published(610, new Ingredient(16, EIBENHOLZ), new Ingredient(9, FEDERN), new Ingredient(8, PFEILHARZ), new Ingredient(1, DRACHINSCHNEIDEN))),
-	PFEILE("Pfeile", 3, MUNITION_BOEGEN, new Published(135, new Ingredient(6, BUCHENHOLZ), new Ingredient(5, FEDERN))),
-	MAGIEESSENZ("Magieessenz", 4, MUNITION_MAGIESTAEBE, new Published(100, new Ingredient(6, MAGIESTAUB), new Ingredient(2, MAGIESPLITTER))),
+	PFEILE("Pfeile", 3, MUNITION_BOEGEN, SOLD_BY_THE_GAMES_TRADER, new Published(135, new Ingredient(6, BUCHENHOLZ), new Ingredient(5, FEDERN))),
+	MAGIEESSENZ("Magieessenz", 4, MUNITION_MAGIESTAEBE, SOLD_BY_THE_GAMES_TRADER, new Published(100, new Ingredient(6, MAGIESTAUB), new Ingredient(2, MAGIESPLITTER))),
 	MONDESSENZ("Mondessenz", 12, MUNITION_MAGIESTAEBE, new Published(270, new Ingredient(11, MONDSTAUB), new Ingredient(7, MAGIESPLITTER), new Ingredient(3, PHASENKRAUT))),
 	MYSTISCHE_ESSENZ("Mystische Essenz", 0, MUNITION_MAGIESTAEBE, NOT_CRAFTABLE),
 	SCHATTENESSENZ("Schattenessenz", 9, MUNITION_MAGIESTAEBE,
@@ -820,12 +821,18 @@ public enum EvergoreItem {
 	public final int marketValue;
 	public final Category category;
 	public final Recipe recipe;
+	private final Trade trade;
 	private final List<String> alternativeNames;
 
 	EvergoreItem(String ingameName, int marketValue, Category category, Recipe recipe, String... alternativeNames) {
+		this(ingameName, marketValue, category, Trade.NOT_SOLD_BY_THE_GAMES_TRADER, recipe, alternativeNames);
+	}
+
+	EvergoreItem(String ingameName, int marketValue, Category category, Trade trade, Recipe recipe, String... alternativeNames) {
 		this.ingameName = ingameName;
 		this.marketValue = marketValue;
 		this.category = category;
+		this.trade = trade;
 		this.recipe = recipe;
 		this.alternativeNames = List.of(alternativeNames);
 	}
@@ -838,12 +845,21 @@ public enum EvergoreItem {
 		return Stream.concat(Stream.of(ingameName), alternativeNames.stream()).toList();
 	}
 
+	public double placement() {
+		return trade == Trade.SOLD_BY_THE_GAMES_TRADER ? Category.HANDWERKSMATERIAL.placement : category.placement;
+	}
+
 	public double getStorageValue() {
-		return marketValue * category.placement;
+		return marketValue * placement();
 	}
 
 	public double getWithdrawlValue() {
 		return marketValue * category.withdrawl;
+	}
+
+	public enum Trade {
+		NOT_SOLD_BY_THE_GAMES_TRADER,
+		SOLD_BY_THE_GAMES_TRADER
 	}
 
 	public enum Category {

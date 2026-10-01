@@ -15,6 +15,7 @@ import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Ingredient;
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.Published;
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.Unread;
 
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.BOLZEN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.EDELSTEINE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.HANDWERKSMATERIAL;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.JAGDBEUTEN;
@@ -26,9 +27,11 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Categor
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.SCHWERE_RUESTUNG_METALL;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.EISENBARREN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.GRANIT;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.JAGDBOLZEN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.JAGDPFEILE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KRISTALL;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KUPFERERZ;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MAGIEESSENZ;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MAGIESPLITTER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MAGISCHE_AETHERBINDE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MARMOR;
@@ -40,6 +43,7 @@ import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.SCHIEFER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.SMARAGD_PIKE_2H;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STEINBRECHER;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STERNENESSENZ;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STERNENSTAUB;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UEBUNGSSTUECK_KUPFERSCHWERT;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UNDEFINED;
@@ -59,6 +63,7 @@ class EvergoreItemTest {
 			.of("Schmiedeöl", "Bogensalbe", "Harz", "Zwirn", "Steinkohle", "Nähgarn", "Lederfett", "Magiesplitter", "Federn", "Salz", "Mörtel", "Schleifstein", "Elbenhaar",
 					"Wattierung", "Granitharz", "Glaszwirn", "Drachenzunder", "Schutzpolster", "Ledernieten", "Phasenkraut", "Pfeilharz", "Kristallat", "Edelmörtel", "Griffband",
 					"Nieten", "Vulkandraht", "Beschläge", "Erdenblut", "Drachinschneiden");
+	private static final Set<String> AMMUNITION_THE_GAMES_TRADER_SELLS = Set.of("Pfeile", "Bolzen", "Magieessenz");
 
 	@Test
 	void everyItemCostsSixtyPercentOfItsMarketValueWhenWithdrawn() {
@@ -98,6 +103,24 @@ class EvergoreItemTest {
 	}
 
 	@Test
+	void depositingTheAmmunitionTheGamesTraderSellsCreditsItsFullMarketValue() {
+		for (EvergoreItem ammunition : List.of(PFEILE, BOLZEN, MAGIEESSENZ)) {
+			double credited = ammunition.getStorageValue();
+
+			assertThat(credited).as("credit of %s", ammunition.name()).isCloseTo(ammunition.marketValue, within(0.0001d));
+		}
+	}
+
+	@Test
+	void depositingAmmunitionThatCanOnlyBeCraftedCreditsSixtyPercentOfItsMarketValue() {
+		for (EvergoreItem ammunition : List.of(JAGDPFEILE, JAGDBOLZEN, STERNENESSENZ)) {
+			double credited = ammunition.getStorageValue();
+
+			assertThat(credited).as("credit of %s", ammunition.name()).isCloseTo(ammunition.marketValue * 0.6d, within(0.0001d));
+		}
+	}
+
+	@Test
 	void depositingCraftedGoodsCreditsSixtyPercentOfTheirMarketValue() {
 		double credited = MAGISCHE_AETHERBINDE.getStorageValue();
 
@@ -121,10 +144,10 @@ class EvergoreItemTest {
 	}
 
 	@Test
-	void onlyTheGoodsBoughtFromTheGuildTraderAreCreditedInFull() {
-		Set<String> creditedInFull = stream(EvergoreItem.values()).filter(item -> item.category.placement == 1d).map(item -> item.ingameName).collect(toSet());
+	void onlyTheGoodsBoughtFromTheGuildTraderAndTheAmmunitionTheGamesTraderSellsAreCreditedInFull() {
+		Set<String> creditedInFull = stream(EvergoreItem.values()).filter(item -> item.placement() == 1d).map(item -> item.ingameName).collect(toSet());
 
-		assertThat(creditedInFull).isEqualTo(TRADER_GOODS);
+		assertThat(creditedInFull).containsExactlyInAnyOrderElementsOf(Stream.concat(TRADER_GOODS.stream(), AMMUNITION_THE_GAMES_TRADER_SELLS.stream()).toList());
 	}
 
 	@Test
@@ -135,10 +158,10 @@ class EvergoreItemTest {
 	}
 
 	@Test
-	void theGuildsArrowExampleGainsNinetySixGold() {
+	void theGuildsArrowExampleGainsTwoHundredFiftyEightGoldWithTheArrowsCreditedInFull() {
 		double gain = valueGainOfCrafting(PFEILE);
 
-		assertThat(gain).isCloseTo(96d, within(0.0001d));
+		assertThat(gain).isCloseTo(258d, within(0.0001d));
 	}
 
 	@Test
@@ -163,7 +186,7 @@ class EvergoreItemTest {
 	}
 
 	@Test
-	void aCraftingGainIsSixtyPercentOfTheMarginBetweenProductAndIngredients() {
+	void aCraftingGainIsSixtyPercentOfTheMarginBetweenProductAndIngredientsForAProductCreditedAtSixtyPercent() {
 		double gain = valueGainOfCrafting(EISENBARREN);
 
 		assertThat(gain).isCloseTo(0.6d * (EISENBARREN.marketValue * amountOf(EISENBARREN) - ingredientMarketValueOf(EISENBARREN)), within(0.0001d));
