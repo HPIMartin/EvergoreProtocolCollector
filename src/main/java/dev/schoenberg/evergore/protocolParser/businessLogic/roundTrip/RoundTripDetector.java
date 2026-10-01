@@ -19,8 +19,6 @@ import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.NotCraf
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.Published;
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.Unread;
 
-import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.HANDWERKSMATERIAL;
-
 public final class RoundTripDetector {
 	public static final Duration WINDOW = Duration.ofHours(48);
 
@@ -44,22 +42,25 @@ public final class RoundTripDetector {
 			EvergoreItem item = resolved.item();
 			StorageEntry entry = resolved.entry();
 
-			if (item.category != HANDWERKSMATERIAL) {
-				if (entry.type() == TransferType.EINLAGERUNG) {
-					handleProductDeposit(item, entry.quantity(), entry.timeStamp(), openLots, abstainedItems, consumption);
+			if (entry.type() == TransferType.ENTNAHME) {
+				if (item.creditsMoreThanItsWithdrawalCosts()) {
+					openLots.computeIfAbsent(item, ignored -> new ArrayDeque<>()).addLast(new Lot(entry.timeStamp(), entry.quantity()));
 				}
 				continue;
 			}
 
-			Deque<Lot> lots = openLots.computeIfAbsent(item, ignored -> new ArrayDeque<>());
-			if (entry.type() == TransferType.ENTNAHME) {
-				lots.addLast(new Lot(entry.timeStamp(), entry.quantity()));
-			} else {
+			int crafted = entry.quantity();
+			if (item.creditsMoreThanItsWithdrawalCosts()) {
+				Deque<Lot> lots = openLots.computeIfAbsent(item, ignored -> new ArrayDeque<>());
 				dropExpiredLots(lots, entry.timeStamp());
-				int matched = consumeLots(lots, entry.quantity());
+				int matched = consumeLots(lots, crafted);
 				if (matched > 0) {
 					roundTripQuantities.merge(item, matched, Integer::sum);
 				}
+				crafted -= matched;
+			}
+			if (crafted > 0) {
+				handleProductDeposit(item, crafted, entry.timeStamp(), openLots, abstainedItems, consumption);
 			}
 		}
 

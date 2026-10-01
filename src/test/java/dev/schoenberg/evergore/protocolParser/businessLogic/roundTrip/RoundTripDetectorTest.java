@@ -10,12 +10,15 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem;
 
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.ACHAT_ARMBRUST;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.BOLZEN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.BUCHENHOLZ;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.EISENBARREN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.FEDERN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.HARZ;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.JAGDPFEILE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KRISTALLAT;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.KUPFERERZ;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.MAGIEESSENZ;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.PFEILE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.STEINKOHLE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -114,6 +117,61 @@ class RoundTripDetectorTest {
 		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
 
 		assertThat(report.roundTrips()).isEmpty();
+	}
+
+	@Test
+	void reportsTheAmmunitionTheGamesTraderSellsWithdrawnAndDepositedAgain() {
+		List<ResolvedStorageEntry> entries = List
+				.of(withdrawal("Alrik", PFEILE, 100, T), withdrawal("Alrik", BOLZEN, 100, T), withdrawal("Alrik", MAGIEESSENZ, 100, T),
+						deposit("Alrik", PFEILE, 100, T.plusSeconds(3600)), deposit("Alrik", BOLZEN, 100, T.plusSeconds(3600)),
+						deposit("Alrik", MAGIEESSENZ, 100, T.plusSeconds(3600)));
+
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(report.roundTrips())
+				.containsExactlyInAnyOrder(new RoundTrip("Alrik", PFEILE, 100), new RoundTrip("Alrik", BOLZEN, 100), new RoundTrip("Alrik", MAGIEESSENZ, 100));
+	}
+
+	@Test
+	void ignoresAmmunitionThatCanOnlyBeCrafted() {
+		List<ResolvedStorageEntry> entries = List.of(withdrawal("Alrik", JAGDPFEILE, 100, T), deposit("Alrik", JAGDPFEILE, 100, T.plusSeconds(3600)));
+
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(report.roundTrips()).isEmpty();
+	}
+
+	@Test
+	void aDepositOfAmmunitionTheGamesTraderSellsAnswersItsOwnWithdrawalBeforeItCountsAsCrafted() {
+		List<ResolvedStorageEntry> entries = List
+				.of(withdrawal("Alrik", PFEILE, 135, T), withdrawal("Alrik", FEDERN, 5, T), deposit("Alrik", PFEILE, 135, T.plusSeconds(3600)),
+						deposit("Alrik", FEDERN, 5, T.plusSeconds(7200)));
+
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(report.roundTrips()).containsExactlyInAnyOrder(new RoundTrip("Alrik", PFEILE, 135), new RoundTrip("Alrik", FEDERN, 5));
+	}
+
+	@Test
+	void onlyTheAmmunitionBeyondItsOwnOpenWithdrawalCountsAsCraftedAndUsesUpItsRecipe() {
+		List<ResolvedStorageEntry> entries = List
+				.of(withdrawal("Alrik", PFEILE, 135, T), withdrawal("Alrik", FEDERN, 10, T), deposit("Alrik", PFEILE, 270, T.plusSeconds(3600)),
+						deposit("Alrik", FEDERN, 10, T.plusSeconds(7200)));
+
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(report.roundTrips()).containsExactlyInAnyOrder(new RoundTrip("Alrik", PFEILE, 135), new RoundTrip("Alrik", FEDERN, 5));
+	}
+
+	@Test
+	void abstainsFromAnOpenWithdrawalOfAmmunitionTheGamesTraderSellsWhenAnUnreadRecipeDepositArrives() {
+		List<ResolvedStorageEntry> entries = List
+				.of(withdrawal("Alrik", PFEILE, 100, T), deposit("Alrik", ACHAT_ARMBRUST, 1, T.plusSeconds(3600)), deposit("Alrik", PFEILE, 100, T.plusSeconds(7200)));
+
+		RoundTripReport report = RoundTripDetector.detect("Alrik", entries);
+
+		assertThat(report.roundTrips()).isEmpty();
+		assertThat(report.abstentions()).containsExactly(new RoundTripAbstention("Alrik", PFEILE));
 	}
 
 	@Test

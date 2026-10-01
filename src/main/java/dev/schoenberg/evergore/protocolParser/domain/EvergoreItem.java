@@ -849,6 +849,10 @@ public enum EvergoreItem {
 		return trade == Trade.SOLD_BY_THE_GAMES_TRADER ? Category.HANDWERKSMATERIAL.placement : category.placement;
 	}
 
+	public boolean creditsMoreThanItsWithdrawalCosts() {
+		return placement() > category.withdrawl;
+	}
+
 	public double getStorageValue() {
 		return marketValue * placement();
 	}

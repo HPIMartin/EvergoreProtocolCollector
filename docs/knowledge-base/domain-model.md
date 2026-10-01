@@ -250,8 +250,9 @@ the guild position in [testing.md](testing.md).
 > exactly. Measured 2026-09-10: a tier of 0.25 breaks it in 1,494 cases, one of 0.2 in 4,305. A new
 > tier far from 0.6 would need that checked again.
 
-> **Where the 100 % credit can be gamed:** a `HANDWERKSMATERIAL` deposit credits 100 % while its
-> withdrawal costs 60 %, so cycling the same goods earns 40 % of their value out of nothing.
+> **Where the 100 % credit can be gamed:** a `HANDWERKSMATERIAL` deposit, and one of the three
+> ammunition sorts the game's own trader sells, credits 100 % while its withdrawal costs 60 %, so
+> cycling the same goods earns 40 % of their value out of nothing.
 > Detecting that is the round-trip detection below ("The round-trip detection: `RoundTripDetector`");
 > the guild's rule is trust-based, and the software's job is
 > to make a breach visible rather than to prevent it. The unknown-item fallback `UNDEFINED` therefore
@@ -389,17 +390,19 @@ independent readings by design, and no figure is derived from both.
 ### The round-trip detection: `RoundTripDetector`
 
 `businessLogic/roundTrip/RoundTripDetector` answers the "Where the 100 % credit can be gamed" note
-above: it reports, per avatar and per `HANDWERKSMATERIAL` item, the quantity withdrawn and deposited
+above: it reports, per avatar and per watched item, the quantity withdrawn and deposited
 again within **48 hours** (`RoundTripDetector.WINDOW = Duration.ofHours(48)`, author decision
 2026-09-22). It walks one avatar's `ResolvedStorageEntry` list sorted by timestamp, withdrawals
 before deposits at an equal timestamp (the game stamps to the minute, so a same-minute out-and-in
-is exactly the cycle the rule is about): a withdrawal of a trader-tier item opens a lot of that
-quantity; a deposit of the same item consumes the avatar's open lots for that item **oldest first**,
+is exactly the cycle the rule is about). An item is watched when its deposit credits more than its
+withdrawal costs (`EvergoreItem.creditsMoreThanItsWithdrawalCosts()`): the `HANDWERKSMATERIAL`
+goods and the three ammunition sorts the game's own trader sells. A withdrawal of a watched item
+opens a lot of that quantity; a deposit of the same item consumes the avatar's open lots for that item **oldest first**,
 after dropping lots the window has already passed (a deposit exactly 48 h after the withdrawal still
 matches, one minute later does not), and the consumed quantity is reported as one `RoundTrip` per
 avatar/item pair, summed over the walk, only when positive. Quality is ignored; only quantities
-move. An item outside `HANDWERKSMATERIAL` opens no lot and closes none: a raw-material round trip
-costs the member rather than minting, so it is never reported.
+move. An item that is not watched opens no lot and closes none: a raw-material round trip costs the
+member rather than minting, and an item credited at 60 % comes out even, so neither is reported.
 
 **A crafter who withdraws material and deposits the product it becomes is not a round trip.** A
 deposit of a *different* item whose `recipe` is `Recipe.Published` and names the watched item as an
@@ -408,7 +411,11 @@ far, `ceil(depositedSoFar × ingredient.amount / recipe.amount)`, less what earl
 already used up, from that item's open lots, oldest first, same window rule, before any later
 same-item deposit can match them; nothing is reported for that consumption. Counting cumulatively is
 what makes a craft logged as two deposit lines consume exactly what one line for the same quantity
-would, so splitting a deposit can neither hide nor invent a round trip. A product the game does not craft (`NOT_CRAFTABLE`)
+would, so splitting a deposit can neither hide nor invent a round trip. A product that is watched
+itself, one of the three ammunition sorts, first answers its own open lots as above, and only the
+quantity beyond them counts as deposited product and consumes its recipe's ingredients (author
+decision 2026-10-01): the same sort coming back is the plainest reading of the ledger, and counting
+it as crafted first would let withdrawn `Federn` hide a round trip of `Pfeile`. A product the game does not craft (`NOT_CRAFTABLE`)
 consumes nothing, so a withdrawal followed by an unrelated deposit and then the same withdrawal
 amount coming back is still reported in full. The detector reads all three `Recipe` cases through an
 exhaustive `switch`, so a fourth case the compiler adds later cannot fall through silently.
@@ -420,7 +427,9 @@ consumes a currently open withdrawal or not. Rather than guess either way, it ch
 has an open lot at that moment (after dropping the ones the window has already passed): each one it
 finds becomes an abstained avatar/item pair, reported as a `RoundTripAbstention(avatar, item)`
 instead of a `RoundTrip`, however the rest of the walk goes for that pair; an item with no open lot
-at that moment is untouched. `RoundTripDetector.detect` therefore answers a
+at that moment is untouched. An open lot of the three ammunition sorts is abstained like any other
+(author decision 2026-10-01): no surface shows a gem blueprint's ingredients, so nobody can rule
+out that it consumes ammunition. `RoundTripDetector.detect` therefore answers a
 `RoundTripReport(roundTrips, abstentions)`. Silence would read as innocence, so the abstention is
 listed rather than dropped: it is the measure of what a read gem recipe would buy.
 
