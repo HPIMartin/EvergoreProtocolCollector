@@ -88,6 +88,11 @@ walk_log() {
 	write_file "$("$dossier_check" --walk-log "$repo" "$commit")" "tree: $(git rev-parse "$commit^{tree}")" "$@"
 }
 
+kb_guard_log() {
+	write_file gate.local.d/kb-guard.log "tip: $(tip)" \
+		'$ ./verify focus src/test/java/dev/example/arch/KbCitationGuardTest.java' '> Task :test' "$@"
+}
+
 lens_report() {
 	write_file "gate.local.d/lens-$1.md" "tip: $(tip)" '- `robust: yes`' \
 		'- weaknesses: none found after a genuine attempt' '- `counterTests:` none' '- `treeDiff:` (empty)'
@@ -280,6 +285,7 @@ write_file docs/guide.md '# Guide'
 commit_all '[doc] Add the guide'
 mkdir -p gate.local.d
 write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
 if accepts; then r=0; else r=1; fi
 check "a docs-only strand passes with the doc-reviewer's report alone" "$r"
 
@@ -1115,8 +1121,83 @@ write_file docs/guide.md '# Guide, folded'
 git add -A
 git commit -q --no-verify --amend --no-edit
 tip_reports
+kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
 if accepts; then r=0; else r=1; fi
 check "a fold that changes only docs is proven by the log of its unchanged code tree" "$r"
+
+new_strand docs_fold_unguarded
+complete_dossier
+write_file docs/guide.md '# Guide, folded'
+git add -A
+git commit -q --no-verify --amend --no-edit
+tip_reports
+if refuses_for kb-guard; then r=0; else r=1; fi
+check "a docs-only fold without a KbCitationGuardTest run at the tip is refused" "$r"
+
+new_strand docs_strand_unguarded
+git checkout -q main
+git checkout -q -B strand
+write_file docs/guide.md '# Guide'
+commit_all '[doc] Add the guide'
+mkdir -p gate.local.d
+write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+if refuses_for kb-guard; then r=0; else r=1; fi
+check "a docs-only strand without a KbCitationGuardTest run at the tip is refused" "$r"
+
+new_strand kb_guard_other_test
+complete_dossier
+write_file docs/guide.md '# Guide, folded'
+git add -A
+git commit -q --no-verify --amend --no-edit
+tip_reports
+write_file gate.local.d/kb-guard.log "tip: $(tip)" '$ ./verify focus src/test/java/dev/example/arch/OtherTest.java' \
+	'> Task :test' 'BUILD SUCCESSFUL in 1m 3s'
+if refuses_for kb-guard; then r=0; else r=1; fi
+check "a docs-only fold proven by a run of another test is refused" "$r"
+
+new_strand kb_guard_cached
+complete_dossier
+write_file docs/guide.md '# Guide, folded'
+git add -A
+git commit -q --no-verify --amend --no-edit
+tip_reports
+write_file gate.local.d/kb-guard.log "tip: $(tip)" \
+	'$ ./verify focus src/test/java/dev/example/arch/KbCitationGuardTest.java' '> Task :test FROM-CACHE' 'BUILD SUCCESSFUL in 2s'
+if refuses_for kb-guard; then r=0; else r=1; fi
+check "a KbCitationGuardTest run taken from the cache is refused" "$r"
+
+new_strand non_ascii_doc
+git checkout -q main
+git checkout -q -B strand
+write_file 'docs/Ärger.md' '# Ärger'
+commit_all '[doc] Add a page with a non-ASCII name'
+mkdir -p gate.local.d
+write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
+if accepts; then r=0; else r=1; fi
+check "a non-ASCII doc file leaves the code tree unchanged" "$r"
+
+new_strand crlf_kb_guard
+complete_dossier
+write_file docs/guide.md '# Guide, folded'
+git add -A
+git commit -q --no-verify --amend --no-edit
+tip_reports
+kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
+awk '{ printf "%s\r\n", $0 }' gate.local.d/kb-guard.log > gate.local.d/crlf
+mv gate.local.d/crlf gate.local.d/kb-guard.log
+if accepts; then r=0; else r=1; fi
+check "a KbCitationGuardTest run with Windows line endings proves the docs-only fold" "$r"
+
+new_strand kb_guard_failed
+complete_dossier
+write_file docs/guide.md '# Guide, folded'
+git add -A
+git commit -q --no-verify --amend --no-edit
+tip_reports
+kb_guard_log '> Task :test FAILED' 'BUILD FAILED in 1m 1s'
+if refuses_for kb-guard; then r=0; else r=1; fi
+check "a failed KbCitationGuardTest run is refused" "$r"
 
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'

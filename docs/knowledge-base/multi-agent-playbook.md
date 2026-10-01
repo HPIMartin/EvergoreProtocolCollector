@@ -242,10 +242,13 @@ lives.
   needs its recorded mutation. The check proves that such a line exists, not that the test
   fails for the right reason; that judgement stays the reviewer's (handbook §4).
 - **`walk/`:** one `./verify all` log per code tree (the commit's tree without `*.md`) at the path
-  `gate/dossier-check --walk-log <worktree> <commit>` prints; it shows `BUILD SUCCESSFUL`, bare
-  `> Task :test` and `> Task :frontend:npmTest` lines
+  `gate/dossier-check --walk-log <worktree> <commit>` prints, opening with `tree: <the commit's
+  tree SHA>`; it shows `BUILD SUCCESSFUL`, bare `> Task :test` and `> Task :frontend:npmTest` lines
   and a non-zero `[verify] executed test classes`. A commit whose code tree is unchanged since the
   last walk, or since `main`, reuses that proof, so after a fold only the changed trees run again.
+- **`kb-guard.log`:** whenever a commit is proven by a run on other docs than its own (a docs-only
+  fold, a `[doc]` commit), a `./verify focus` run of `KbCitationGuardTest` at the tip, since that
+  test reads the KB prose; it shows the command, a bare `> Task :test` and `BUILD SUCCESSFUL`.
 
 ## Environment gotchas (tell every agent)
 
