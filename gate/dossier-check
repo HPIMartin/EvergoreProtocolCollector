@@ -470,4 +470,94 @@ $(sed 1d "$findings_file")
 FINDINGS
 fi
 
+bdd_log="$dossier/bdd.log"
+expected="$dossier/wip.expected"
+wip_at_tip=$(in_worktree ls-tree -r --name-only "$tip" -- src/test/resources/features | grep '\.feature$' \
+	| while IFS= read -r feature; do
+		in_worktree show "$tip:$feature" | awk '
+			function flush() { if (name != "" && wip) print name; name = "" }
+			{ sub(/^[ \t]+/, "") }
+			/^("""|```)/ { in_docstring = !in_docstring; next }
+			in_docstring { next }
+			/^#/ || $0 == "" { next }
+			/^@/ { tags = tags " " $0; next }
+			/^Feature:/ { flush(); feature_wip = (tags ~ /@wip([^A-Za-z0-9_-]|$)/); rule_wip = 0; tags = ""; next }
+			/^Rule:/ { flush(); rule_wip = (tags ~ /@wip([^A-Za-z0-9_-]|$)/); tags = ""; next }
+			/^(Scenario|Scenario Outline|Scenario Template|Example):/ {
+				flush(); name = $0; sub(/^[^:]*:[ \t]*/, "", name)
+				wip = feature_wip || rule_wip || (tags ~ /@wip([^A-Za-z0-9_-]|$)/); tags = ""; next
+			}
+			/^(Examples|Scenarios):/ { if (tags ~ /@wip([^A-Za-z0-9_-]|$)/) wip = 1; tags = ""; next }
+			{ tags = "" }
+			END { flush() }
+		' || printf '?unread-feature@%s\n' "$feature"
+	done)
+
+for unread in $(printf '%s\n' "$wip_at_tip" | sed -n 's/^?unread-feature@//p'); do
+	refuse wip "the check could not read the scenarios of $unread, so its @wip scenarios cannot be listed (playbook, The gate dossier)"
+done
+wip_at_tip=$(printf '%s\n' "$wip_at_tip" | grep -v '^?unread-feature@' || true)
+if printf '%s\n' "$code_changed" | grep -Eq '^(src|frontend)/'; then
+	for evidence in "$bdd_log" "$expected"; do
+		[ -f "$evidence" ] || continue
+		tr -d '\r' < "$evidence" > "$scratch/${evidence##*/}"
+	done
+	[ -f "$bdd_log" ] && bdd_log=$scratch/bdd.log
+	[ -f "$expected" ] && expected=$scratch/wip.expected
+	if [ ! -f "$bdd_log" ] || ! grep -qx '> Task :test' "$bdd_log"; then
+		refuse wip "bdd.log, a './verify bdd' run at the tip with a bare '> Task :test' line, is missing (handbook §5)"
+	else
+		failed_lines=$(grep -v '^> Task ' "$bdd_log" | grep -c ' FAILED$' || true)
+		summary_failed=$(sed -n 's/^[0-9][0-9]* tests\{0,1\} completed, \([0-9][0-9]*\) failed.*/\1/p' "$bdd_log" | head -1)
+		if ! grep -q '^BUILD SUCCESSFUL' "$bdd_log" && [ "${summary_failed:-none}" != "${failed_lines:-0}" ]; then
+			refuse wip "bdd.log shows neither a successful run nor a test summary that counts its FAILED lines, so it is not shown to have run the scenarios (handbook §5)"
+		fi
+		expected_keys=$(sed 1d "$expected" 2>/dev/null | sed -n 's/ | .*//p')
+		while IFS= read -r line; do
+			[ -n "$line" ] || continue
+			key=${line%% | *}
+			reason=${line#* | }
+			case "$line" in
+				*' | '*[![:space:]]*) ;;
+				*)
+					refuse wip "wip.expected names '$key' without the failure line it is expected to fail with (playbook, The gate dossier)"
+					continue
+					;;
+			esac
+			got=$(awk -v failed="$key FAILED" 'found { print; exit } $0 == failed { found = 1 }' "$bdd_log")
+			if [ -z "$got" ]; then
+				refuse wip "'$key' is expected to fail, but bdd.log shows it not failing (handbook §5)"
+			else
+				printf '%s\n' "$got" | grep -qF -- "$reason" \
+					|| refuse wip "'$key' fails with '$got', not with its documented reason '$reason' (handbook §5)"
+			fi
+		done <<EXPECTED
+$(sed 1d "$expected" 2>/dev/null)
+EXPECTED
+		while IFS= read -r failed; do
+			[ -n "$failed" ] || continue
+			printf '%s\n' "$expected_keys" | grep -qxF -- "$failed" \
+				|| refuse wip "'$failed' fails, but wip.expected does not name it (handbook §5)"
+		done <<FAILED
+$(sed -n '/^> Task /d; s/ FAILED$//p' "$bdd_log")
+FAILED
+		while IFS= read -r name; do
+			[ -n "$name" ] || continue
+			printf '%s\n' "$expected_keys" | awk -v n="> $name" '
+				{
+					line = $0
+					while ((at = index(line, n)) > 0) {
+						rest = substr(line, at + length(n))
+						if (rest == "" || substr(rest, 1, 2) == " >") listed = 1
+						line = substr(line, at + 1)
+					}
+				}
+				END { exit !listed }
+			' || refuse wip "'$name' is tagged @wip at the tip, but wip.expected names no failure of it (handbook §5)"
+		done <<WIP
+$wip_at_tip
+WIP
+	fi
+fi
+
 verdict

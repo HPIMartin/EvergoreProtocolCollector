@@ -255,6 +255,13 @@ lives.
   at least one): `<lens>-<n> fixed <strand commit>`,
   `<lens>-<n> backlog <ID>` (a row `docs/backlog.md` holds at the tip) or `<lens>-<n> rejected
   <reason>`; the doc-reviewer's findings count as `doc-reviewer-<n>`. Anything else is refused.
+- **`bdd.log` and `wip.expected`:** for a strand that touches `src/` or `frontend/`, the
+  `./verify bdd` run at the tip, and one line per expected
+  failure, `<the failing test's line without FAILED> | <its failure line>`, the failure line never
+  empty; with no `@wip` scenario left, the run shows a bare `> Task :test` and `BUILD SUCCESSFUL`. The log shows
+  `BUILD SUCCESSFUL` or a test summary counting its FAILED lines; those failures must be exactly
+  the listed ones, each with its line, and every scenario tagged `@wip` at the tip
+  (on itself, its feature, its rule or one of its `Examples`) must be among them.
 
 ## Environment gotchas (tell every agent)
 

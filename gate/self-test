@@ -52,6 +52,12 @@ new_strand() {
 	write_file .gitignore '*.local.*'
 	write_file src/main/Seed.java 'class Seed {' '}'
 	write_file docs/backlog.md '| ID | Item |' '|---|---|' '| **G99** | A finding traced as live work |'
+	write_file src/test/resources/features/ledger.feature 'Feature: Sorting the tables' '' '  @wip' \
+		'  Scenario: Sorting a ledger orders the whole ledger' '    Given a ledger' '' \
+		'  Scenario: An armed scenario' '    Given a ledger' '' \
+		'  Scenario Outline: A headline <what> is skipped' '    Given a ledger' '' \
+		"    Examples: today's behaviour" '      | what |' '      | ok   |' '' \
+		'    @wip' '    Examples: corrected behavior' '      | what  |' '      | wrong |'
 	commit_all 'Add the seed'
 	git checkout -q -b strand
 	write_file src/main/Feature.java 'class Feature {' '}'
@@ -68,8 +74,30 @@ complete_dossier() {
 	tip_reports
 }
 
+sorting_failure='RunAcceptanceScenariosTest > Sorting the tables > Sorting a ledger orders the whole ledger'
+headline_failure='RunAcceptanceScenariosTest > Sorting the tables > A headline <what> is skipped > corrected behavior > Example #2.1'
+
+# The two @wip places of the seed feature, each failing for the reason wip.expected names.
+wip_run() {
+	failed=$(printf '%s\n' "$@" | grep -c ' FAILED$' || true)
+	write_file gate.local.d/bdd.log "tip: $(tip)" '> Task :test' "$@" "$((failed + 1)) tests completed, $failed failed, 1 skipped" \
+		'> Task :test FAILED' 'BUILD FAILED in 3m 57s'
+	write_file gate.local.d/wip.expected "tip: $(tip)" \
+		"$sorting_failure | AssertionFailedError at DashboardSortingSteps.java:76" \
+		"$headline_failure | AssertionError at ServiceLogSteps.java:31"
+}
+
+sorting_fails() {
+	printf '%s FAILED\n    org.opentest4j.AssertionFailedError at DashboardSortingSteps.java:%s\n' "$sorting_failure" "$1"
+}
+
+headline_fails() {
+	printf '%s FAILED\n    java.lang.AssertionError at ServiceLogSteps.java:31\n' "$headline_failure"
+}
+
 # The reports produced at the tip; a case that moves the tip writes them again.
 tip_reports() {
+	wip_run "$(sorting_fails 76)" "$(headline_fails)"
 	lens_report robustness
 	lens_report domain
 	write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
@@ -1377,6 +1405,268 @@ lens_with_findings '  - {severity: high, where: A.java:3, why: one}' '  - {sever
 findings "robustness-1 fixed $(tip)" 'robustness-2 backlog G99' 'robustness-3 rejected the lens read a probe left in its worktree'
 if accepts; then r=0; else r=1; fi
 check "findings each fixed in the strand, traced to a backlog row or rejected with a reason pass" "$r"
+
+new_strand wip_now_passes
+complete_dossier
+wip_run "$(headline_fails)"
+if refuses_for wip; then r=0; else r=1; fi
+check "a @wip scenario that no longer fails is refused" "$r"
+
+new_strand wip_other_reason
+complete_dossier
+wip_run "$(sorting_fails 91)" "$(headline_fails)"
+if refuses_for wip; then r=0; else r=1; fi
+check "a @wip scenario failing for another reason than documented is refused" "$r"
+
+new_strand unexpected_failure
+complete_dossier
+wip_run "$(sorting_fails 76)" "$(headline_fails)" \
+	'RunAcceptanceScenariosTest > Sorting the tables > An armed scenario FAILED' '    java.lang.AssertionError at A.java:1'
+if refuses_for wip; then r=0; else r=1; fi
+check "a failure the expected list does not name is refused" "$r"
+
+new_strand wip_examples_unlisted
+complete_dossier
+wip_run "$(sorting_fails 76)"
+write_file gate.local.d/wip.expected "tip: $(tip)" "$sorting_failure | AssertionFailedError at DashboardSortingSteps.java:76"
+if refuses_for wip; then r=0; else r=1; fi
+check "a @wip Examples block missing from the expected failures is refused" "$r"
+
+new_strand wip_name_inside_feature_name
+write_file src/test/resources/features/sorting.feature 'Feature: Sorting the tables' '' '  @wip' '  Scenario: Sorting' \
+	'    Given a ledger'
+commit_all 'Specify sorting'
+complete_dossier
+write_file gate.local.d/red/sorting.txt 'commit: Specify sorting' 'exempt: a scenario committed @wip, red by design'
+wip_run "$(sorting_fails 76)" "$(headline_fails)" \
+	'RunAcceptanceScenariosTest > Sorting the tables > Sorting FAILED' '    java.lang.AssertionError at SortingSteps.java:1'
+printf '%s\n' 'RunAcceptanceScenariosTest > Sorting the tables > Sorting | AssertionError at SortingSteps.java:1' \
+	>> gate.local.d/wip.expected
+if accepts; then r=0; else r=1; fi
+check "a @wip scenario named like the start of its feature is found among the expected failures" "$r"
+
+new_strand wip_inside_docstring
+write_file src/test/resources/features/quoting.feature 'Feature: Quoting' '' '  Scenario: Quoting a scenario' \
+	'    Given the text:' '      """' '      @wip' '      Scenario: Not a scenario' '      """'
+commit_all 'Specify quoting'
+complete_dossier
+write_file gate.local.d/red/quoting.txt 'commit: Specify quoting' 'exempt: an armed scenario over existing behaviour'
+if accepts; then r=0; else r=1; fi
+check "a @wip line inside a docstring tags no scenario" "$r"
+
+new_strand tooling_without_bdd_run
+git checkout -q main
+git checkout -q -B strand
+write_file tools/run.sh '#!/bin/sh' 'exit 0'
+commit_all 'Add a tool'
+complete_dossier
+mv gate.local.d/bdd.log gate.local.d/notes-bdd.txt
+mv gate.local.d/wip.expected gate.local.d/notes-wip.txt
+if accepts; then r=0; else r=1; fi
+check "a strand that touches neither src/ nor frontend/ needs no @wip run" "$r"
+
+new_strand armed_with_dead_run
+write_file src/test/resources/features/ledger.feature 'Feature: Sorting the tables' '' \
+	'  Scenario: Sorting a ledger orders the whole ledger' '    Given a ledger'
+commit_all 'Arm the scenarios'
+complete_dossier
+write_file gate.local.d/red/arm.txt 'commit: Arm the scenarios' 'exempt: arming, red by design until now'
+write_file gate.local.d/bdd.log "tip: $(tip)" '> Task :test' "Process 'Gradle Test Executor 1' finished with non-zero exit value 137" \
+	'> Task :test FAILED' 'BUILD FAILED in 1m 2s'
+write_file gate.local.d/wip.expected "tip: $(tip)"
+if refuses_for wip; then r=0; else r=1; fi
+check "a @wip run whose test JVM died is refused" "$r"
+
+new_strand one_wip_scenario
+write_file src/test/resources/features/ledger.feature 'Feature: Sorting the tables' '' '  @wip' \
+	'  Scenario: Sorting a ledger orders the whole ledger' '    Given a ledger'
+commit_all 'Narrow the feature'
+complete_dossier
+write_file gate.local.d/red/narrow.txt 'commit: Narrow the feature' 'exempt: a narrowed fixture'
+write_file gate.local.d/bdd.log "tip: $(tip)" '> Task :test' "$(sorting_fails 76)" '1 test completed, 1 failed' \
+	'> Task :test FAILED' 'BUILD FAILED in 1m 2s'
+write_file gate.local.d/wip.expected "tip: $(tip)" "$sorting_failure | AssertionFailedError at DashboardSortingSteps.java:76"
+if accepts; then r=0; else r=1; fi
+check "a @wip run of one scenario, summed up in the singular, is accepted" "$r"
+
+# A feature added on the strand, with its red record, so a case can vary the tags of one scenario.
+add_feature() {
+	write_file src/test/resources/features/extra.feature "$@"
+	commit_all 'Specify the extra feature'
+	complete_dossier
+	write_file gate.local.d/red/extra.txt 'commit: Specify the extra feature' 'exempt: a scenario committed red by design'
+}
+
+new_strand wipe_tag
+add_feature 'Feature: Wiping' '' '  @wipe' '  Scenario: Wiping the ledger' '    Given a ledger'
+if accepts; then r=0; else r=1; fi
+check "a tag that only starts with @wip tags no @wip scenario" "$r"
+
+new_strand feature_level_wip
+add_feature '@wip' 'Feature: Archiving' '' '  Scenario: Archiving the ledger' '    Given a ledger'
+if refuses_for wip; then r=0; else r=1; fi
+check "a scenario under a @wip feature missing from the expected failures is refused" "$r"
+
+new_strand rule_level_wip
+add_feature 'Feature: Archiving' '' '  @wip' '  Rule: Old entries move away' '' '    Scenario: Archiving the ledger' \
+	'      Given a ledger'
+if refuses_for wip; then r=0; else r=1; fi
+check "a scenario under a @wip rule missing from the expected failures is refused" "$r"
+
+new_strand wip_name_starts_a_listed_one
+add_feature 'Feature: Sorting the tables' '' '  @wip' '  Scenario: Sorting a ledger' '    Given a ledger'
+if refuses_for wip; then r=0; else r=1; fi
+check "a @wip scenario whose name only starts a listed one is refused" "$r"
+
+new_strand unexpected_failure_prefix
+complete_dossier
+wip_run "$(sorting_fails 76)" "$(headline_fails)" \
+	'RunAcceptanceScenariosTest > Sorting the tables > Sorting a ledger FAILED' '    java.lang.AssertionError at A.java:1'
+if refuses_for wip; then r=0; else r=1; fi
+check "a failure whose line only starts an expected one is refused" "$r"
+
+new_strand cached_bdd_run
+write_file src/test/resources/features/ledger.feature 'Feature: Sorting the tables' '' '  Scenario: An armed scenario' '    Given a ledger'
+commit_all 'Arm every scenario'
+complete_dossier
+write_file gate.local.d/red/arm.txt 'commit: Arm every scenario' 'exempt: arming'
+write_file gate.local.d/bdd.log "tip: $(tip)" '> Task :test UP-TO-DATE' 'BUILD SUCCESSFUL in 1s'
+write_file gate.local.d/wip.expected "tip: $(tip)"
+if refuses_for wip; then r=0; else r=1; fi
+check "a cached @wip run is not shown to have run the scenarios" "$r"
+
+new_strand frontend_needs_bdd_run
+git checkout -q main
+git checkout -q -B strand
+write_file frontend/src/page.ts 'export const page = 2;'
+commit_all 'Change the page'
+complete_dossier
+lens_report frontend
+mv gate.local.d/bdd.log gate.local.d/notes-bdd.txt
+if refuses_for wip; then r=0; else r=1; fi
+check "a frontend change without the @wip run at the tip is refused" "$r"
+
+new_strand feature_level_wipe
+add_feature '@wipe' 'Feature: Wiping' '' '  Scenario: Wiping the ledger' '    Given a ledger'
+if accepts; then r=0; else r=1; fi
+check "a feature tag that only starts with @wip tags no scenario" "$r"
+
+new_strand rule_level_wipe
+add_feature 'Feature: Wiping' '' '  @wipe' '  Rule: Old entries go' '' '    Scenario: Wiping the ledger' '      Given a ledger'
+if accepts; then r=0; else r=1; fi
+check "a rule tag that only starts with @wip tags no scenario" "$r"
+
+new_strand examples_level_wipe
+add_feature 'Feature: Wiping' '' '  Scenario Outline: Wiping <what>' '    Given a ledger' '' '    @wipe' '    Examples:' \
+	'      | what |' '      | all  |'
+if accepts; then r=0; else r=1; fi
+check "an Examples tag that only starts with @wip tags no scenario" "$r"
+
+new_strand comment_between_tag_and_scenario
+add_feature 'Feature: Archiving' '' '  @wip' '  # waits for the archive' '  Scenario: Archiving the ledger' '    Given a ledger'
+if refuses_for wip; then r=0; else r=1; fi
+check "a @wip tag above a comment still tags the scenario below it" "$r"
+
+new_strand tags_on_two_lines
+add_feature 'Feature: Archiving' '' '  @slow' '  @wip' '  Scenario: Archiving the ledger' '    Given a ledger'
+if refuses_for wip; then r=0; else r=1; fi
+check "a @wip tag on the second tag line still tags the scenario" "$r"
+
+new_strand scenario_template_keyword
+add_feature 'Feature: Archiving' '' '  @wip' '  Scenario Template: Archiving <what>' '    Given a ledger' '' '    Examples:' \
+	'      | what |' '      | all  |'
+if refuses_for wip; then r=0; else r=1; fi
+check "a @wip Scenario Template is read as a scenario" "$r"
+
+new_strand scenarios_keyword
+add_feature 'Feature: Archiving' '' '  Scenario Outline: Archiving <what>' '    Given a ledger' '' '    @wip' '    Scenarios:' \
+	'      | what |' '      | all  |'
+if refuses_for wip; then r=0; else r=1; fi
+check "a @wip Scenarios block is read as an Examples block" "$r"
+
+new_strand crlf_bdd_run
+complete_dossier
+for evidence in bdd.log wip.expected; do
+	awk '{ printf "%s\r\n", $0 }' "gate.local.d/$evidence" > gate.local.d/crlf
+	mv gate.local.d/crlf "gate.local.d/$evidence"
+done
+if accepts; then r=0; else r=1; fi
+check "a @wip run and its expected failures with Windows line endings pass" "$r"
+
+new_strand expected_without_reason
+complete_dossier
+write_file gate.local.d/wip.expected "tip: $(tip)" "$sorting_failure | " \
+	"$headline_failure | AssertionError at ServiceLogSteps.java:31"
+if refuses_for wip; then r=0; else r=1; fi
+check "an expected failure without its failure line is refused" "$r"
+
+new_strand wip_on_the_first_tag_line
+add_feature 'Feature: Archiving' '' '  @wip' '  @slow' '  Scenario: Archiving the ledger' '    Given a ledger'
+if refuses_for wip; then r=0; else r=1; fi
+check "a @wip tag above a second tag line still tags the scenario" "$r"
+
+new_strand example_keyword
+add_feature 'Feature: Archiving' '' '  @wip' '  Example: Archiving the ledger' '    Given a ledger'
+if refuses_for wip; then r=0; else r=1; fi
+check "a @wip Example is read as a scenario" "$r"
+
+new_strand examples_tag_with_dash
+add_feature 'Feature: Wiping' '' '  Scenario Outline: Wiping <what>' '    Given a ledger' '' '    @wip-later' '    Examples:' \
+	'      | what |' '      | all  |'
+if accepts; then r=0; else r=1; fi
+check "an Examples tag that continues @wip with a dash tags no scenario" "$r"
+
+new_strand reason_from_the_exact_line
+complete_dossier
+wip_run "x$sorting_failure FAILED " '    org.opentest4j.AssertionFailedError at DashboardSortingSteps.java:76' \
+	"$sorting_failure FAILED" '    java.lang.AssertionError at Other.java:1' "$(headline_fails)"
+if refuses_for wip; then r=0; else r=1; fi
+check "an expected failure's reason is read from its own failing line" "$r"
+
+new_strand all_scenarios_armed
+write_file src/test/resources/features/ledger.feature 'Feature: Sorting the tables' '' '  Scenario: Sorting a ledger orders the whole ledger' \
+	'    Given a ledger'
+commit_all 'Arm the last scenarios'
+complete_dossier
+write_file gate.local.d/red/arm.txt 'commit: Arm the last scenarios' 'exempt: arming, red by design until now'
+write_file gate.local.d/bdd.log "tip: $(tip)" '> Task :test' 'BUILD SUCCESSFUL in 1m 2s'
+write_file gate.local.d/wip.expected "tip: $(tip)"
+if accepts; then r=0; else r=1; fi
+check "a strand with no @wip scenario left passes on a successful @wip run" "$r"
+
+new_strand gherkin_awk_fails
+complete_dossier
+mkdir -p "$work/shim"
+printf '%s\n' '#!/bin/sh' 'case "$*" in *in_docstring*) exit 2 ;; esac' "exec $(command -v awk) \"\$@\"" > "$work/shim/awk"
+chmod +x "$work/shim/awk"
+if PATH="$work/shim:$PATH" "$dossier_check" "$repo" strand > "$work/out" 2>&1; then
+	r=1
+elif grep -q '^refused \[wip\]' "$work/out"; then
+	r=0
+else
+	r=1
+fi
+check "a feature file the check cannot read is a refusal, not a file without @wip scenarios" "$r"
+
+new_strand reason_after_its_exact_line
+complete_dossier
+wip_run "$(sorting_fails 76)" "x$sorting_failure FAILED " '    java.lang.AssertionError at Other.java:1' "$(headline_fails)"
+if accepts; then r=0; else r=1; fi
+check "an expected failure's reason is taken from its exact line, not a later one holding its key" "$r"
+
+new_strand reason_with_regex_characters
+complete_dossier
+wip_run "$sorting_failure FAILED" '    org.opentest4j.AssertionFailedError: expected: <[a]> but was: <b>' "$(headline_fails)"
+write_file gate.local.d/wip.expected "tip: $(tip)" "$sorting_failure | expected: <[a]> but was" \
+	"$headline_failure | AssertionError at ServiceLogSteps.java:31"
+if accepts; then r=0; else r=1; fi
+check "an expected failure line with regex characters matches only itself" "$r"
+
+new_strand no_bdd_run
+complete_dossier
+mv gate.local.d/bdd.log gate.local.d/notes-bdd.txt
+if refuses_for wip; then r=0; else r=1; fi
+check "a code change without the @wip run at the tip is refused" "$r"
 
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'
