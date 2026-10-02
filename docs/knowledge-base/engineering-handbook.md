@@ -355,7 +355,8 @@ plus the corrected scenario tagged `@wip`.
   change belongs in the **first** commit that uses it, not the one it was written for. Verify it, do
   not derive it: the "the rebased tip is byte-identical to `main`" argument covers the tip only, so
   walk the commits before making the claim
-  (`for c in $(git rev-list --reverse main..HEAD); do git checkout $c && ./verify all; done`).
+  (`for c in $(git rev-list --reverse main..HEAD); do git switch --detach $c && ./verify all; done`;
+  `git switch`, because `git checkout` sits in the `ask` tier, which prompts in auto mode too).
   After a fold, the walk starts at the first commit whose tree changed: the commits before it prove
   their trees unchanged (`git rev-parse <sha>^{tree}` against the walked ones), and a fold that
   touched only docs proves the code tree unchanged instead of re-running (author decision
