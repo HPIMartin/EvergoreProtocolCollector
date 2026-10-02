@@ -357,6 +357,21 @@ table existed stand as dated decision rows above (2026-09-09, 2026-09-12, 2026-0
   guild members' bank/storage activity. No production pressure (Q2), but a deliberate stance is due:
   is the scraping within the site's ToS, and is storing other members' activity acceptable for the
   guild's use? Low priority; logged so it isn't silently ignored.
+- **D-17 (The feature-gate reviewer's own build):** `.claude/agents/reviewer.md` tells the reviewer
+  to run the full `./verify all`, while the gate dossier already holds a checked `./verify all` log
+  per code tree (`walk/`), and the dossier-check gate of 2026-10-02 briefed its reviewer to run no
+  build. Options, recommended first: the reviewer reads the walk log of the tip's code tree and runs
+  no build, so nothing builds in the strand worktree while the gate reads it; the reviewer runs
+  `./verify all` at the tip as well (7 to 12 minutes in this strand's walk), as its brief says
+  today.
+- **D-18 (Comments in the `gate/` and `deploy/` scripts):** handbook §3 lets only `hooks/*` and the
+  ignore files carry prose; the extensionless scripts under `gate/` and `deploy/` carry whole-line
+  comments that `content-gate` does not scan (backlog G31). Options, recommended first: `gate/`
+  joins the carve-out as process scaffolding of the same kind as `hooks/`, and the `deploy/`
+  comments are deleted, since §3 allows none in infrastructure; both are deleted and
+  `content-gate` scans extensionless scripts by shebang outside `hooks/`; both join the carve-out.
+  The recommended option lets the dossier-check strand's own `gate/` comments stand, so it lands
+  only as the author's own grant, never through that strand (§9; process learning 2026-08-05).
 
 ## Assumptions currently baked into the plan (challenge if wrong)
 
