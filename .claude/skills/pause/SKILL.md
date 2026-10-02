@@ -21,6 +21,10 @@ running subagent tasks to complete, but never abort them either.
 2. Capture reality:
    - `git status` and `git diff --stat` (redirect to a file + Read if Bash stdout isn't surfaced).
    - `git worktree list` — note every in-flight strand (worktree path + branch) a subagent works in.
+   - `git fetch --prune origin` (a failed fetch is noted, never waited on), then
+     `git branch -r --list 'origin/claude/*'`: note per strand
+     whether its pushed copy matches the local tip; a `[wip]` tip stays on this machine, so that
+     strand resumes only here.
    - Note what is committed vs uncommitted-on-disk, and where a TDD cycle stands (e.g. "test X is
      red, mid red→green") and whether the tree currently compiles.
 
@@ -39,7 +43,8 @@ running subagent tasks to complete, but never abort them either.
    personal/host data before parking. A `[wip]` commit is a checkpoint, not history: /continue
    replaces it through the normal commit gateway; it never reaches the review gateway or a push.
 
-5. Never `git push`. Never discard the working tree (`git reset --hard`, `rm -rf`).
+5. Never push: a `[wip]` commit never leaves the machine (handbook §7). Never discard the working
+   tree (`git reset --hard`, `rm -rf`).
 
 Optional note from the author: $ARGUMENTS
 

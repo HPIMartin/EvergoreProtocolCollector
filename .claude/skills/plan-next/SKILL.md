@@ -33,6 +33,7 @@ items mean, or a release approaches.
 
 ## 1. Orient
 
+- `git fetch --prune origin`, so the checks below see what other machines pushed
 - `docs/knowledge-base/README.md` (the map; then only the KB docs your findings actually touch)
 - `docs/backlog.md`, the "▶ Current status / next action" section
 - `docs/open-questions.md`, newest decisions first, plus the newest rows of `docs/process-learnings.md`
@@ -54,8 +55,9 @@ checks, each of which has found something real in practice:
 3. **Acceptance that can no longer be met.** For each unticked checkbox and each acceptance column
    you are weighing, ask whether a later decision made it unachievable or meaningless as written. A
    check nobody can perform is worse than no check, because it silently blocks its milestone.
-4. **Unlanded commits.** `git worktree list`, then `git rev-list --count main..<branch>` per branch,
-   and read whatever is ahead. A leftover strand can hold knowledge or work that never landed.
+4. **Unlanded commits.** `git worktree list` and `git branch -r --list 'origin/claude/*'`, then
+   `git rev-list --count main..<branch>` per branch (`origin/main..` for a pushed one), and read
+   whatever is ahead. A leftover strand can hold knowledge or work that never landed.
 5. **Recurrences.** Look for the same failure twice in the newest process-learnings rows. A
    recurrence is the argument for giving a mechanical fix a real slot instead of writing the rule
    down a third time.

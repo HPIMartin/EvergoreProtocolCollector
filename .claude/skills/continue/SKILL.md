@@ -13,11 +13,22 @@ session; its rules and KB pointers apply without re-reading it here.
    - `docs/open-questions.md` (decisions + open questions) and `docs/process-learnings.md`
 
 2. Determine the ACTUAL state from git, not just the docs (the tree may have moved on):
+   - `git fetch --prune origin` first, then `git merge --ff-only origin/main` in the primary
+     checkout: other machines land and push too. A refusal means local `main` diverged; surface
+     it, never force it (handbook §7).
    - `git status` and `git log --oneline -15` (if Bash stdout isn't surfaced, redirect to a file and Read it).
    - `git worktree list` — a pause may have left in-flight strands in worktrees (see the backlog's
      per-strand notes); drive such a strand **by absolute path** from this checkout, never by
      relocating the session or by a relative path (handbook §7). A worktree whose branch is already
      merged is stale: clean it up (`git worktree remove` + `git branch -d`) before resuming.
+   - `git branch -r --list 'origin/claude/*'`: the pushed strands, each name checked as handbook §7
+     says before it goes into a command. One whose tip `origin/main`
+     contains has landed: delete it (`git push origin --delete claude/<topic>`; the classifier
+     may hold back on another session's branch, then report it). One without a local branch is
+     unlanded work from another machine or session, maybe parked further there: report
+     it, and resume it only on the author's word, in a worktree of its own with no upstream
+     (`git worktree add --no-track -b claude/<topic> <path> origin/claude/<topic>`, handbook §7).
+     Where a local branch of that name exists, compare the two tips before touching either.
    - A tip commit starting with `[wip]` is parked pause work: resolve it FIRST — finish or rework it,
      then replace it with a properly gated commit (one confirmed message; rewrite via the reset-free
      recipe in the playbook). A `[wip]` commit never reaches the review gateway or a push (handbook §7).
