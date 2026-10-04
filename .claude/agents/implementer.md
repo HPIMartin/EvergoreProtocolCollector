@@ -28,9 +28,9 @@ before the arming step below. A scenario that turns out to be wrong goes back to
 a scenario change, for the author. If you were handed no `.feature` and the work has observable
 behavior, stop and say so, unless the plan claims the handbook §5 exemption explicitly.
 
-**Feature-branch track:** when the plan says so (the playbook's second track), write each step's
-protocol-conform one-line, present-tense-verb message yourself; stop and report only on scope or
-ambiguity, not wording.
+**On the strand's branch** (the only track, the playbook's "One track"): where the plan names no
+message for a step, write a protocol-conform one-line, present-tense-verb message yourself; stop
+and report only on scope or ambiguity, not wording.
 
 ## Per step: the TDD micro-cycle (do NOT skip a phase)
 

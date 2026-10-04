@@ -37,7 +37,9 @@ running subagent tasks to complete, but never abort them either.
    Keep it short — a pointer, not a changelog (git holds history).
 
 4. Park, don't gate — pause never waits for a confirmation. Anything uncommitted (green or not) is
-   committed as ONE parking commit `[wip] <one-line state>` on the current branch via
+   committed as ONE parking commit `[wip] <one-line state>` on the strand's branch, never on
+   `main` (work sitting in the primary checkout moves to a new `claude/<topic>` branch first,
+   `git switch -c`, and the checkout returns to `main` after the parking commit, handbook §7), via
    `git commit --no-verify` (WIP legitimately fails the hooks; the only sanctioned bypass →
    handbook §7). The bypass skips the secret scan too, so glance over the diff for secrets or
    personal/host data before parking. A `[wip]` commit is a checkpoint, not history: /continue

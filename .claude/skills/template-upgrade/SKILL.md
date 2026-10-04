@@ -91,8 +91,8 @@ author keeps on purpose.
   merged hooks and settings, the interview decisions), messages confirmed, pushed only on the
   strand's `claude/<topic>` branch; the last one sets the version (`Upgrade the process template to
   version M`).
-- Land through the gateway: rebase, `./verify all`, the compare range for the author, `--ff-only`,
-  cleanup. In-flight strands then rebase and finish under the rules they started with plus the
-  mechanical gates now on `main`.
+- Land through the gateway: rebase, `./verify all`, the compare range for the author, the author's
+  landing, cleanup. In-flight strands then rebase and finish under the rules they started with plus
+  the mechanical gates now on `main`.
 
 Optional incoming path from the author: $ARGUMENTS

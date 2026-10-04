@@ -3,7 +3,7 @@
 > Auto-loaded by Claude Code at the start of every session. This is a **thin wrapper**: the rules live
 > in the knowledge base (the [single source of truth](docs/knowledge-base/README.md)) and this file
 > only points to them and adds Claude-Code mechanics. **Based on
-> [`agent-entry-template`](docs/knowledge-base/agent-entry-template.md) version: 6.**
+> [`agent-entry-template`](docs/knowledge-base/agent-entry-template.md) version: 7.**
 > At session start, quick-check that the SHARED section below still matches the template (re-sync on a
 > version bump).
 
@@ -21,9 +21,11 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
 0. If your tool has **no native entry file**, build one now from
    [`agent-entry-template.md`](docs/knowledge-base/agent-entry-template.md) and record the template
    version (bootstrap step in the [KB README](docs/knowledge-base/README.md)).
-1. Read the knowledge base **map** first, [`docs/knowledge-base/README.md`](docs/knowledge-base/README.md);
-   then read only the sections relevant to the task. Do **not** blindly re-scan the codebase or read
-   the big docs whole (token hygiene → working-with-ai-agents.md).
+1. Sync first (a subagent skips this; the session that spawned it synced): `git fetch origin`,
+   fast-forward local `main` and check that `push.default` is `nothing` (handbook §7). Then read
+   the knowledge base **map**, [`docs/knowledge-base/README.md`](docs/knowledge-base/README.md), and
+   only the sections relevant to the task. Do **not** blindly re-scan the codebase or read the big
+   docs whole (token hygiene → working-with-ai-agents.md).
 2. Check the backlog's **"▶ Current status / next action"** section in
    [`docs/backlog.md`](docs/backlog.md) and any decisions touching your task in
    [`docs/open-questions.md`](docs/open-questions.md).
@@ -35,13 +37,17 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
 
 - **Commit protocol, branching, merge & the review gateway** → handbook §7. Propose **one** one-line,
   present-tense-verb message (optional `[doc]` tag), get the author's confirmation, then commit.
-  Worktree per context, cut from a freshly fetched `main` → rebase → review the rebased tip →
-  `--ff-only`.
+  Every change on a `claude/<topic>` branch in its own worktree, cut from a freshly synced
+  `main` → rebase → review the rebased tip → the author lands it on `origin/main`.
 - **Pushing** → handbook §7. Every branch an agent pushes is named `claude/<topic>`; an agent
   pushes only its own, forces only with `--force-with-lease`, never pushes a `[wip]` commit, and
   deletes a landed `claude/` branch on the remote, whoever pushed it.
-- **Protected branch: `main`; tags are protected too.** No agent pushes either, in any form; only
-  the author does, `main` after the `--ff-only` landing.
+- **Protected branch: `main`; tags are protected too** → handbook §7. No agent moves either in any
+  form (a push, a merged pull request, an API call), and no commit is made on `main`; only the
+  author lands a reviewed tip on `origin/main`, as a fast-forward.
+- **`main` follows `origin/main`** → handbook §7. `git fetch origin` at session start, before a
+  strand, before the gateway rebase and before every landing; local `main` only fast-forwards; a
+  `main` ahead of or diverged from `origin/main` is reported with both SHAs, never resolved.
 - **BDD first, then TDD** → handbook §5/§4. A feature with observable behavior starts with executable
   Gherkin scenarios in product language, gated by the scenario falsifier and **confirmed by the
   author as complete** before any production code; committed `@wip`, driven green by TDD cycles,

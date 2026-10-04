@@ -113,8 +113,10 @@ offending sha, whereupon `pre-commit` refuses every further commit until that sh
   record `version: N`, so a bump lands in the template and in every wrapper together.
 - **`pre-applypatch`** / **`pre-merge-commit`**: the gates for `git am` and for a merge commit, both
   of which git builds without asking any commit hook. They run on the applied or resolved index
-  *before* their commit exists, so they refuse outright. `pre-merge-commit` guards the merge somebody
-  makes by mistake; the sanctioned landing is `git merge --ff-only`, which creates no commit to gate.
+  *before* their commit exists, so they refuse outright. `pre-merge-commit` gates the content of a
+  merge somebody makes by mistake, not the merge itself; `main` advances only by fast-forwards (the
+  author's landing push, `git merge --ff-only refs/remotes/origin/main`), which create no commit to
+  gate.
 - **`post-rewrite`** (amend and rebase): compares the rewritten commit's findings with the
   **pre-image's**, with commit label and line numbers stripped. Identical findings are replayed
   history, not a breach, so rebasing over old commits raises nothing while a commit that adds a

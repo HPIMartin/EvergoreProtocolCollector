@@ -8,14 +8,14 @@
 ## Conventions
 
 - Active branch: **`main`**, the single mainline (old `master`/`Rebuild` consolidated into it).
-- GitHub (`origin`) is the hub: `main` is pushed after every landing and protected by a ruleset (no
-  direct push, no force push, no deletion; only the author may bypass it). Strand branches are
+- GitHub (`origin`) is the hub: every landing reaches `main` there first, and a ruleset protects it
+  (no direct push, no force push, no deletion; only the author may bypass it). Strand branches are
   `claude/<topic>` ([engineering-handbook.md](engineering-handbook.md) §7).
 - Fine-grained, focused commits, one logical change each.
 - Commit messages: **single line, present-tense verb first, no body, no footers** (see
   [engineering-handbook.md](engineering-handbook.md) §7); **the commit log *is* the changelog.**
-- The author confirms each commit message; agents push only their own `claude/<topic>` branches,
-  and **only the author pushes `main`** ([engineering-handbook.md](engineering-handbook.md) §7).
+- The author confirms each commit message and **alone moves `origin/main`**; agents push only their
+  own `claude/<topic>` branches ([engineering-handbook.md](engineering-handbook.md) §7).
 - **LF line endings** enforced via `.gitattributes` (`* text=auto eol=lf`; binaries marked
   `binary`). Why: the repo originally had no `.gitattributes` and mixed CRLF/LF, making
   working-tree diffs look enormous (~95% line-ending churn). If a diff ever looks huge again,

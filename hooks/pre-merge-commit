@@ -1,9 +1,9 @@
 #!/bin/sh
 # git builds a merge commit itself and asks pre-commit for none of them, so a merge gets its own
 # hook. It runs on the resolved index before the merge commit exists, so like pre-applypatch it
-# refuses outright rather than recording after the fact. The sanctioned landing is
-# `git merge --ff-only` (handbook §7), which fast-forwards and creates no commit at all; this
-# guards the merge somebody makes by mistake.
+# refuses outright rather than recording after the fact. `main` advances only by fast-forwards
+# (the author's landing push, `git merge --ff-only refs/remotes/origin/main`, handbook §7), which
+# create no commit at all; this gates the content of a merge somebody makes by mistake.
 set -eu
 
 cd "$(git rev-parse --show-toplevel)"

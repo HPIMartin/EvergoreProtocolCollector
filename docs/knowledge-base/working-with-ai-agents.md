@@ -24,9 +24,10 @@ cross-session memory.
 
 ## Session playbook
 
-1. **Orient:** read the tool's entry file, `docs/knowledge-base/README.md` (the map), the backlog's
-   "▶ Current status / next action" section and the decisions touching the task. No whole-codebase
-   scans or whole-doc reads (see "Context & token hygiene").
+1. **Sync, then orient:** `git fetch origin` and fast-forward local `main` (handbook §7); then read
+   the tool's entry file, `docs/knowledge-base/README.md` (the map), the backlog's "▶ Current
+   status / next action" section and the decisions touching the task. No whole-codebase scans or
+   whole-doc reads (see "Context & token hygiene").
 2. **Pick one backlog item** (smallest valuable slice); confirm scope.
 3. **Clarify by asking:** author decisions get multiple-choice options (see "How to ask
    questions"); record the answer in `open-questions.md` under Decisions.
@@ -53,7 +54,7 @@ cross-session memory.
   → Falsifier panel → Doc reviewer → Reviewer/Gate; defined in `.claude/agents/`, described in
   [multi-agent-playbook.md](multi-agent-playbook.md), per-role models in the frontmatter and the
   playbook's roles table.
-- The author approves the commit plan and is the only one who pushes `main`.
+- The author approves the commit plan and is the only one who moves `origin/main` (handbook §7).
 
 ## Context & token hygiene
 
@@ -201,10 +202,10 @@ command) inside guardrails. Two files:
   transcripts for approvals.
 - **Autonomous cleanup, inside the same floor.** The agent removes the scaffolding it created
   itself: `git worktree remove` / `prune` for its own worktrees, `git branch -d` for landed branches
-  and `git push origin --delete` for a landed `claude/<topic>` branch once `origin/main` holds it
-  (handbook §7). That is git-native on purpose: git refuses to remove a dirty worktree or an
-  unmerged branch, the remote copy goes only after the check that `origin/main` holds it, and `rm`
-  (all forms) plus `git branch -D` stay on the deny floor.
+  and the remote copy of a landed `claude/<topic>` branch, leased on its tip, once `origin/main`
+  holds it (handbook §7). That is git-native on purpose: git refuses to remove a dirty worktree or
+  an unmerged branch, the remote copy goes only after the check that `origin/main` holds it, and
+  `rm` (all forms) plus `git branch -D` stay on the deny floor.
 
 ## Instruction sources (what an agent may act on)
 

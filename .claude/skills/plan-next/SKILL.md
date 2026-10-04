@@ -33,7 +33,8 @@ items mean, or a release approaches.
 
 ## 1. Orient
 
-- `git fetch --prune origin`, so the checks below see what other machines pushed
+- `git fetch --prune origin`, then sync the primary checkout's `main` as `/continue` does, with
+  every stop of handbook §7, so the checks below see what landed and what other machines pushed
 - `docs/knowledge-base/README.md` (the map; then only the KB docs your findings actually touch)
 - `docs/backlog.md`, the "▶ Current status / next action" section
 - `docs/open-questions.md`, newest decisions first, plus the newest rows of `docs/process-learnings.md`
@@ -55,9 +56,11 @@ checks, each of which has found something real in practice:
 3. **Acceptance that can no longer be met.** For each unticked checkbox and each acceptance column
    you are weighing, ask whether a later decision made it unachievable or meaningless as written. A
    check nobody can perform is worse than no check, because it silently blocks its milestone.
-4. **Unlanded commits.** `git worktree list` and `git branch -r --list 'origin/claude/*'`, then
-   `git rev-list --count main..<branch>` per branch (`origin/main..` for a pushed one), and read
-   whatever is ahead. A leftover strand can hold knowledge or work that never landed.
+4. **Unlanded commits.** `git worktree list`, `git branch --no-merged main` and
+   `git branch -r --list 'origin/claude/*'` (each name checked as handbook §7 says), then
+   `git rev-list --count refs/heads/main..<branch>` per branch (`refs/remotes/origin/main..` for a
+   pushed one), and read whatever is ahead. A leftover strand can hold knowledge or work that
+   never landed.
 5. **Recurrences.** Look for the same failure twice in the newest process-learnings rows. A
    recurrence is the argument for giving a mechanical fix a real slot instead of writing the rule
    down a third time.
@@ -136,8 +139,8 @@ way, with figures where you measured them.
   swallowed five decisions before (DOC-11).
 - Apply the consequences: the backlog's rows and status, the roadmap's milestones, and every inbound
   pointer to a heading you renumber (DOC-10). Completed work leaves the docs; git is the history.
-- Commit per handbook §7: one confirmed single-line message per cohesive change, no body, no footer,
-  no push but the strand's own `claude/<topic>` branch.
+- Commit per handbook §7 on a `claude/<topic>` branch in its own worktree, never on `main`: one
+  confirmed single-line message per cohesive change, no body, no footer, no push but that branch.
 
 Optional scope from the author: $ARGUMENTS
 

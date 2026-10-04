@@ -364,10 +364,10 @@ plus the corrected scenario tagged `@wip`.
   touched only docs proves the code tree unchanged instead of re-running (author decision
   2026-09-29).
   A doc or test reference likewise lands no earlier than its referent.
-- **A track's shape follows the work, not the plan it started with** (author decision 2026-08-15).
-  "Small track, one commit on `main`" is an estimate. When the work turns out to need several
-  commits, switch to a worktree and the rebase gateway below; never inflate one commit to honour the
-  original estimate. Clean code covers the history too.
+- **A strand's shape follows the work, not the plan it started with** (author decision
+  2026-08-15). A planned commit count is an estimate: when the work needs more commits, it gets
+  them; never inflate one commit to honour the original estimate. Clean code covers the history
+  too.
 - **Always able to build, not always allowed to deliver.** `./verify all` must be unconditionally
   able to run green: never attach vulnerability or quality gates (CVE thresholds, quality metrics)
   to the build/check tasks the inner dev loop runs. Such gates live on separate on-demand tasks
@@ -396,8 +396,9 @@ plus the corrected scenario tagged `@wip`.
   - **A hook that only prints is not a gate.** **git asks `pre-commit` only for `git commit`**, so
     every commit the sequencer creates (rebase, `cherry-pick`, `revert`) is ungated at the moment it
     is made; `post-rewrite` and `post-commit` record it afterwards, and a recorded commit blocks
-    every further commit until it is gone. `git am` and a merge commit are refused outright, by
-    `pre-applypatch` and `pre-merge-commit`, which run before their commit exists. A `--no-verify`
+    every further commit until it is gone. `git am` and a merge commit that break a rule are
+    refused outright, by `pre-applypatch` and `pre-merge-commit`, which run before their commit
+    exists. A `--no-verify`
     commit is left alone, so the emergency valve stays one.
   - **Never read a hook's output as the verdict on the commit that follows it;** ask the history.
     `hooks/self-test` asserts exactly that (resulting history, never printed text). `pre-commit`
@@ -413,7 +414,9 @@ plus the corrected scenario tagged `@wip`.
   hooks; the one sanctioned non-emergency bypass; no-secrets rule unchanged, eyeball the diff
   first). A checkpoint, not history: `/continue` resolves it first (finish or rework, replace via
   the normal confirmed-message protocol; reset-free rewrite recipe → multi-agent playbook). Never
-  survives to the review gateway or a push; parked on `main`, resolved before any new work.
+  survives to the review gateway or a push; parked on the strand's branch, never on `main` (work in
+  the primary checkout moves to a new `claude/<topic>` branch first, and the checkout returns to
+  `main`), and resolved before any new work.
 - **Deleting project content is the author's act; cleaning up the scaffolding is not.** The rule
   protects the author's ownership of *his* files, and a deletion no rebase undoes.
   - **The agent never runs `rm`** (deny floor, `rm -rf` included). Anything tracked by git and
@@ -427,28 +430,50 @@ plus the corrected scenario tagged `@wip`.
     Deliberately *git-native*, never `rm`: `git branch -d` refuses a branch that is not fully merged,
     so the safety lives in the command instead of in the agent's judgment. A directory a removal
     leaves behind empty under `.claude/worktrees/` goes with `rmdir`, which refuses anything that is
-    not empty, so the same safety holds (author decision 2026-09-27). After a `--ff-only`
-    landing, removing the worktree and deleting the branch is part of the landing, not a separate
+    not empty, so the same safety holds (author decision 2026-09-27). After a landing,
+    removing the worktree and deleting the branch is part of the landing, not a separate
     request; the commits live on in `main`, and the reflog still holds deleted tips for a while.
   - **`git branch -D` stays off the table** (deny floor, and a Claude Code built-in besides). A
     branch that is not merged holds work nobody reviewed; discarding it is the author's call. Drop a
     genuinely stale scratch ref with `git update-ref -d refs/heads/<name>` only where the playbook's
     reset-free fold calls for it.
 
-### Branching, merge & the review gateway (revised 2026-06-27)
+### Branching, merge & the review gateway
 
 **Isolate the working tree, not just the history.** A branch isolates commits, not the working
 directory; two writers on one checkout race (index/HEAD flicker, clobbered staged work). git
 worktrees (own directory + HEAD + index) make parallel work safe.
 
-- **Default: a worktree per context.** Each problem/feature/context gets its own branch in its own
+- **A worktree per context.** Each problem/feature/context gets its own branch in its own
   worktree under `.claude/worktrees/`; parallel contexts (incl. other-model agents) = parallel
-  worktrees; the primary checkout stays on `main`. Worktrees branch from a freshly fetched `main`:
-  `git fetch origin`, then `git merge --ff-only origin/main` in the primary checkout (a refusal
-  means local `main` diverged from `origin`: stop and surface it), then
-  `git worktree add -b claude/<topic> <path> main`. `worktree.baseRef: "head"` makes the harness's
-  subagent worktrees branch from that same `main`; `"fresh"` would branch from `origin`'s default
-  branch, fetched at most once a day, and drop a landing the author has not pushed yet.
+  worktrees; the primary checkout stays on `main`. Worktrees branch from a freshly synced `main`
+  (below): `git worktree add -b claude/<topic> <path> main`. `worktree.baseRef: "head"` makes the
+  harness's subagent worktrees branch from that same `main`; `"fresh"` would branch from
+  `origin`'s default branch as Claude Code last fetched it, up to a day old, and miss that day's
+  landings.
+- **`main` follows `origin/main` on every machine** (author decision 2026-10-04): `origin/main`
+  moves only by the author's landings and the pull requests the author merges on GitHub
+  (Dependabot's), so a machine that does not fetch works on a stale `main`.
+  - **Fetch at fixed points:** `git fetch origin` at the start of every session (`/continue`,
+    `/plan-next`), before a strand is cut, before the gateway's rebase and before every landing;
+    fetching is allowed at any other time too.
+  - **Local `main` only fast-forwards:** in the clean primary checkout, on `main`,
+    `git merge --ff-only refs/remotes/origin/main` or `git pull --ff-only`; never a merge, a rebase
+    or a plain `git pull` on `main`. The refs are spelled out because git resolves a tag or a local
+    branch before a remote-tracking ref: a tag `main`, a tag `origin/main` or a local branch
+    `origin/main` would stand in for the branch. On a case-insensitive file system, such as the
+    author's PC's checkout, a ref that differs only in case does the same: a fetched branch `Main`
+    takes over `refs/remotes/origin/main`, and a tag `MAIN` stands in for `main`.
+  - **Nothing is resolved by hand:** the sync stops, and both SHAs go to the author, on a failed
+    fetch, on a refused fast-forward, on a `main` holding what `origin/main` lacks
+    (`git rev-list --count refs/remotes/origin/main..refs/heads/main` above 0, which a fast-forward
+    reports as "Already up to date") and on such a stand-in in any case, which
+    `git for-each-ref --ignore-case refs/heads/main refs/heads/origin/main refs/tags/main
+    refs/tags/origin/main refs/remotes/origin/main` shows as a ref other than `refs/heads/main` and
+    `refs/remotes/origin/main` (one fetched later shadows `main` until the next sync).
+  - **No commit is made on `main`**, on any machine: every change, a one-commit fix included, runs
+    on a `claude/<topic>` branch and reaches `main` only through the gateway below; it is a rule, no
+    hook enforces it.
 - **Pushing** (author decision 2026-10-02; what guards a push: working-with-ai-agents.md):
   - **Every branch an agent pushes is named `claude/<topic>`**, the strand's branch from its first
     commit; an agent pushes only its own, the one exception being the deletion of a landed
@@ -479,22 +504,15 @@ worktrees (own directory + HEAD + index) make parallel work safe.
     claude/<topic>`.
   - **A `[wip]` commit is never pushed:** no push from a tip whose `main..` range holds a `[wip]`
     subject.
-  - **`main` is the author's:** it lands by rebase and `--ff-only` after the author's review, and
-    only the author pushes it, after every landing ([git-state.md](git-state.md) names the
-    ruleset that protects it). Tags are the author's too.
-- **Carve-out: direct on `main`**, only as sole writer of the primary `main` checkout **and**
-  expecting exactly one commit. A second commit or parallel work ⇒ move to worktree+branch, land
-  via the gateway. Promote before commit #1 if foreseeable (`git switch -c` / worktree); if #1
-  already landed standalone-valid, continue on a branch off now-current `main`. (Git forbids `main`
-  in two worktrees, so parallel work auto-avoids this path; background/tool agents auto-isolate
-  into worktrees; a second **foreground** session creates its worktree with `git worktree` and
-  drives it from the primary checkout by absolute path.)
+  - **`main` is the author's, tags too:** no agent moves either in any form (a push, a merged pull
+    request, an API call); a strand reaches `main` only by the author's landing of the reviewed tip
+    (the gateway below; [git-state.md](git-state.md) names the ruleset on it and its bypass).
 - **On the branch**: the implementer runs the full TDD loop and commits each red→green→refactor
   step itself, protocol-conform messages, no per-commit pre-approval.
 - **The review gateway (per feature, serialized):**
   1. Everything committed in the worktree.
-  2. `git fetch origin`, fast-forward local `main` from `origin/main`, then rebase onto it,
-     resolving conflicts there.
+  2. `git fetch origin`, sync local `main` from `origin/main` (above, with its stop), then rebase
+     onto it, resolving conflicts there.
   3. Review the rebased tip: with rebase + fast-forward it is byte-identical to what `main`
      becomes, so reviewing it *is* reviewing the final state, one feature, no merge artifacts
      (falsifier + reviewer gate here). Then push it (above), so the author can review it after a
@@ -502,20 +520,24 @@ worktrees (own directory + HEAD + index) make parallel work safe.
      branch before that review, and deleting it does not unpublish it: a secret or host detail
      found then is purged by rewrite, a secret rotated ("No secrets" above). Always state the full
      worktree name (branch and absolute path) so the author can open it in the editor and review
-     all changes before the merge; the hand-off also carries the compare range, `<tip>..<base>`
+     all changes before the landing; the hand-off also carries the compare range, `<tip>..<base>`
      (below).
-  4. On PASS, fast-forward `main` from the primary checkout: `git merge --ff-only <branch>`
-     (precondition: primary checkout clean, else stop and surface it). The author then pushes
-     `main`.
-  5. Remove the worktree and delete the landed branch (`git worktree remove` + `git branch -d`),
-     and its remote copy once `origin/main` holds it: after a `git fetch`,
-     `git merge-base --is-ancestor origin/claude/<topic> origin/main`, then
-     `git push origin --delete claude/<topic>`; autonomously, as part of the landing. Until the
-     author has pushed `main`, the remote branch is the only copy off the machine, so it waits for
-     the next session's sweep.
+  4. On PASS and the author's review, the author lands the tip: `git fetch origin`, then
+     `git push origin <tip>:main`, a fast-forward without force, which `git push` refuses once
+     `origin/main` has moved (then back to step 2).
+  5. Once `origin/main` holds the tip (`git fetch origin` and the sync's checks above, then
+     `git merge-base --is-ancestor <tip> refs/remotes/origin/main`), fast-forward the primary
+     checkout's `main` (precondition: clean, else stop and surface it), remove the worktree and
+     delete the landed branch (`git worktree remove` + `git branch -d`), and delete its remote copy
+     once that copy's current tip is in `origin/main` too (`git merge-base --is-ancestor
+     refs/remotes/origin/claude/<topic> refs/remotes/origin/main`, then, leased on that tip,
+     `git push --force-with-lease=claude/<topic>:<tip> origin --delete claude/<topic>`); a copy
+     that moved past the tip is unlanded work: report it. Autonomously, as part of the landing.
+     Every other machine fast-forwards at its next fetch.
 - **The gateway is two steps and is never collapsed into one.** (1) Present the full reviewable
   statement (the rebased branch log **and** the full diff) and *wait* for the author's explicit
-  review verdict; (2) only then `--ff-only`. An "execute the gateway" approval is not the review.
+  review verdict; (2) only then the landing (step 4). An "execute the gateway" approval is not the
+  review.
 - **Freeze the tree for the length of a gate round.** Before spawning a gate agent, the strand's
   `git status --porcelain` is empty and quoted in the briefing; no rebase, no amend and no build
   runs in that worktree until every agent of the round has reported. A finding that arrives while
@@ -523,22 +545,22 @@ worktrees (own directory + HEAD + index) make parallel work safe.
 - **Merge strategy (hard rule): rebase + fast-forward only.** No merge commits, no squashing (rare
   exceptions): history stays linear and keeps the small commits.
 - **Landings are author-serialized**: one feature at a time in rebase→review→fast-forward; several
-  ready ⇒ the author picks the order. `git merge --ff-only` is the hard guard: a branch not rebased
-  onto latest `main` is refused (re-rebase, re-review the delta). No automatic cross-session
-  coordination (heterogeneous tools can't discover each other); the author is the single
-  serialization point.
+  ready ⇒ the author picks the order. `git push` itself is the guard, since the author lands without
+  force: a landing that is not a fast-forward of `origin/main` is refused (re-rebase, re-review the
+  delta). No automatic cross-session coordination (heterogeneous tools can't discover each other);
+  the author is the single serialization point.
 - **Every rebase is followed by the full gateway build.** `./verify all` runs again on the rebased
-  tip, cache disabled, executed-proof read ([testing.md](testing.md)), before anything else
-  happens: a rebase that applied cleanly can still break semantically. When `main` moved after the
-  author's review, a re-rebase that ran clean and builds green fast-forwards without a second
-  review; a re-rebase that needed a conflict resolution re-opens the **panel** (falsifiers and
-  reviewer on the resolved tip) and then the **author's review**, because resolutions are the one
-  place unreviewed content enters.
+  tip, cache disabled, executed-proof read ([testing.md](testing.md)), before anything else happens:
+  a rebase that applied cleanly can still break semantically. When `main` moved after the author's
+  review, a re-rebase that ran clean and builds green goes to the landing without a second review; a
+  re-rebase that needed a conflict resolution re-opens the **panel** (falsifiers and reviewer on the
+  resolved tip) and then the **author's review**, because resolutions are the one place unreviewed
+  content enters.
 - **Every commit landing on `main` is verified-good, not merely green.** Defective = builds red,
   OR falsifier-exposed fake-green (tests pass, assert nothing real), OR reviewer-rejected as not
   implementing what it claims; none may land. Red states are never committed (TDD red is transient;
   `@wip`-tagged Gherkin keeps the build green). A gateway defect is repaired by rebase into the
-  commit it belongs to, before the merge: never left on `main`, never a follow-up "fix" commit.
+  commit it belongs to, before the landing: never left on `main`, never a follow-up "fix" commit.
 - **Asking the author to review** means handing him the GitLens compare statement for the range
   (`<tip>..<base>`) and the pushed branch, never a description of where to look →
   working-with-ai-agents.md.

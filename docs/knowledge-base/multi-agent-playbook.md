@@ -19,7 +19,7 @@ independent agents try to break it and gate the commit.** Part of the project's 
 **Non-negotiable:** falsifiers, doc-reviewer and Reviewer are **fresh, independent** agents, never
 the Implementer checking itself (independence is the point). Subagents **never push**; the
 session that owns the strand pushes its `claude/<topic>` branch at the gateway, and only the author
-pushes `main` ([engineering-handbook.md](engineering-handbook.md) §7).
+moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
 
 ## The pipeline (per backlog item)
 
@@ -66,12 +66,12 @@ pushes `main` ([engineering-handbook.md](engineering-handbook.md) §7).
      process-learning if a rule slipped
 5. ► AUTHOR GATE 2 (handbook §7 gateway): fetch, rebase onto current main, run ./verify all on
    the rebased tip, push it with a lease, present the reviewable statement (pushed branch,
-   worktree identity, compare range), YOU review the rebased tip; on your go `git merge --ff-only`,
-   then the worktree, the branch and, once origin/main holds it, its remote copy are cleaned up
-   - a re-rebase after your review: clean and green → ff without a second review; a conflict
-     resolution → panel and your review again
-6. PUSH MAIN (YOU)
-   - only the author pushes main, after every landing
+   worktree identity, compare range), YOU review the rebased tip
+   - a re-rebase after your review: clean and green → landed without a second review; a
+     conflict resolution → panel and your review again
+6. LANDING (YOU): `git push origin <tip>:main`, a fast-forward
+   - once origin/main holds the tip, the agent fast-forwards main and cleans up the worktree,
+     the branch and its remote copy
 ```
 
 Step 0 is in force in this project (handbook §5, "Status in this project"): a plan without
@@ -132,23 +132,22 @@ the feature commit**, not per micro-commit.
   with a one-off `model` override on the strongest available tier (`fable`, else `opus`);
   frontmatter defaults stay unchanged.
 
-## Two tracks: direct-on-main vs. feature branch (decided 2026-06-20)
+## One track: every change on a branch (decided 2026-10-04)
 
-Planner picks the track up-front and announces it (author can veto). Full rule:
-[engineering-handbook.md](engineering-handbook.md) §7. Gist:
+Every change, a one-commit fix included, runs on a `claude/<topic>` branch in its own worktree
+and lands through the gateway; no commit is made on `main`
+([engineering-handbook.md](engineering-handbook.md) §7).
 
-- **Small / single TDD cycle** → directly on `main`; one commit via propose→confirm→commit.
 - **Size signal**: a planned strand of more than about 15 commits is a candidate to split into
   strands that land one after another, since each gate round re-checks every commit; a judgement
   per strand, not a rule (author, 2026-09-29).
-- **Large / multi-cycle or new BDD scenarios** → feature branch. Implementer self-authors
-  protocol-conform messages (no per-commit pre-approval; avoids N round-trips). Panel + reviewers
-  review the **branch diff**; step 5 becomes the gateway: author + planner review the branch
-  `git log`, reword if needed (scripted rebase), land by **rebase + fast-forward only** (no merge
-  commit, no squash). **Every commit on `main` builds green**; broken branch commits are repaired
-  by rebase before the merge. Only the author pushes `main`.
-- "Small" item balloons mid-flight → move uncommitted WIP onto a branch (`git switch -c`); `main`
-  stays clean. Parallel/benchmark runs use git worktrees (`Agent` tool `isolation: "worktree"`).
+- The implementer commits the messages the plan approved and writes protocol-conform ones only where
+  the plan names none (no per-commit pre-approval; avoids N round-trips). Panel + reviewers review
+  the **branch diff**; at the gateway author + planner review the branch `git log`, reword if needed
+  (scripted rebase), and the author lands it by **rebase + fast-forward only** (no merge commit, no
+  squash). **Every commit on `main` builds green**; broken branch commits are repaired by rebase
+  before the landing.
+- Parallel/benchmark runs use git worktrees (`Agent` tool `isolation: "worktree"`).
 
 ### Gateway hand-off and cleanup (the agent's side)
 
@@ -158,41 +157,44 @@ Planner picks the track up-front and announces it (author can veto). Full rule:
   pushed under that name first. The author opens that path in the editor, or fetches the branch on
   another machine, and pastes the range into GitLens; a hand-off missing any of the three stalls
   the gateway.
-- **Rebase autonomously, merge conditionally:** fetch and rebase a feature strand onto the current
+- **Rebase autonomously, land conditionally:** fetch and rebase a feature strand onto the current
   `main` without asking first, and run the full `./verify all` on the rebased tip every time
-  (handbook §7): a clean rebase is not a green one until the build says so, and only a green tip
-  is pushed again with a lease. If the strand was already
-  author-reviewed **and** the rebase ran clean (no conflicts, no judgment-call resolutions) **and**
-  that build is green, fast-forward-merge it without a further review round-trip. When the rebase
-  hit a conflict: resolve it, run the full build, **re-run the falsifier panel and the reviewer on
-  the resolved tip**, then present exactly what was resolved plus the compare range and wait for
-  the author's go. Conflict resolutions are the one place new, unreviewed content can appear, so
-  both reviews stay exactly there. Pushing `main` always stays with the author.
-- **Clean up merged strands immediately, without asking:** once a strand is fast-forward-merged into
-  `main`, `./verify stop` in its worktree, then `git worktree remove <path>` and
-  `git branch -d <branch>`, then `git worktree prune`, and `rmdir` a directory the removal left
-  behind empty, and the remote branch once `origin/main` holds it (handbook §7). This is the
-  agent's own scaffolding and the agent owns it (handbook §7); the commits live on in `main`, the
-  branch label and worktree are pure redundancy, and the reflog still holds deleted tips for a
-  while. The safety is in the command, not in judgment: `git branch -d` refuses a branch that is not
-  fully merged, and `git branch -D` stays denied. Never reach for `rm` here.
-- **Sweep the stale ones periodically.** `git worktree list`, `git branch --merged main` and, after
-  `git fetch --prune origin`, `git branch -r --list 'origin/claude/*'` are the inventory; a worktree
-  whose branch is merged, or whose session is long gone, is removed the same way, and a remote
-  branch whose tip `origin/main` contains is deleted (`git push origin --delete`). A worktree or
-  remote branch that is *not* merged is unlanded work: reported to the author, never removed.
-- **Landing moves a branch that a worktree holds, so land inside that worktree** (`git merge
-  --ff-only`), not by moving the ref with plumbing: a ref moved under a checkout leaves the index
-  and files on the old commit, the strand reads as if it had reverted itself, and `git log` cannot
-  see it. When plumbing is genuinely unavoidable, run `git status` in the receiving worktree
-  afterwards and read it; never report a landing without it.
+  (handbook §7): a clean rebase is not a green one until the build says so, and only a green tip is
+  pushed again with a lease. If the strand was already author-reviewed **and** the rebase ran clean
+  (no conflicts, no judgment-call resolutions) **and** that build is green, it goes to the author's
+  landing without a further review round-trip. When the rebase hit a conflict: resolve it, run the
+  full build, **re-run the falsifier panel and the reviewer on the resolved tip**, then present
+  exactly what was resolved plus the compare range and wait for the author's go. Conflict
+  resolutions are the one place new, unreviewed content can appear, so both reviews stay exactly
+  there. Moving `origin/main` always stays with the author.
+- **Clean up landed strands immediately, without asking:** once `origin/main` holds a strand's tip
+  and the primary checkout's `main` has fast-forwarded to it, `./verify stop` in its worktree, then
+  `git worktree remove <path>` and `git branch -d <branch>`, then `git worktree prune`, `rmdir` a
+  directory the removal left behind empty, and the remote copy, leased, once its current tip is in
+  `origin/main` too (handbook §7). This is the agent's own scaffolding and the agent owns it
+  (handbook §7); the commits live on in `main`, the branch label and worktree are pure redundancy,
+  and the reflog still holds deleted tips for a while. The safety is in the command, not in
+  judgment: `git branch -d` refuses a branch that is not fully merged, and `git branch -D` stays
+  denied. Never reach for `rm` here.
+- **Sweep the stale ones periodically.** `git worktree list`, `git branch --merged main`, `git
+  branch --no-merged main` (a parked branch without a worktree) and, after `git fetch --prune
+  origin`, `git branch -r --list 'origin/claude/*'` (each name checked as handbook §7 says) are the
+  inventory; a worktree whose branch is merged, or whose session is long gone, is removed the same
+  way, and a remote branch whose tip `origin/main` contains is deleted, leased on that tip (handbook
+  §7). A worktree or remote branch that is *not* merged is unlanded work: reported to the author,
+  never removed.
+- **A fast-forward moves a branch that a worktree holds, so run it inside that worktree** (the sync
+  of handbook §7, in the primary checkout), not by moving the ref with plumbing: a ref moved under a
+  checkout leaves the index and files on the old commit, the strand reads as if it had reverted
+  itself, and `git log` cannot see it. When plumbing is genuinely unavoidable, run `git status` in
+  the receiving worktree afterwards and read it; never report a landing without it.
 
 ## How to invoke
 
 Orchestrator = the main session (me), via the `Agent` tool: `subagent_type` = `implementer` /
 `falsifier-scenario` / `falsifier-stakeholder` / `falsifier-domain` / `falsifier-robustness` /
 `falsifier-frontend` / `doc-reviewer` / `reviewer` (defined in `.claude/agents/`). Planner phase
-and commit-plan approvals happen with **you** in chat; pushing `main` is yours.
+and commit-plan approvals happen with **you** in chat; moving `origin/main` is yours.
 
 ## Handoff contracts (what each agent returns)
 
@@ -328,8 +330,8 @@ lives.
    that net.
 4. **Falsify:** domain lens recomputes ① ② by hand; robustness lens: does ③ assert the log? quality=0 edge? is green real if the production line is reverted? → counter-tests.
 5. **Review gate:** doc-reviewer: `domain-model.md`/`testing.md` updated, backlog row removed? reviewer: boundaries clean, messages one-line verb-first? → PASS.
-6. **You, author gate 2:** the rebased tip with its compare range on your review, `--ff-only` on
-   your go; then you push `main`.
+6. **You, author gate 2:** the rebased tip with its compare range on your review; you land it
+   with `git push origin <tip>:main`.
 
 ## Evolution
 
