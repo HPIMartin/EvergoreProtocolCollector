@@ -192,15 +192,17 @@ so the script needs no second stack of its own.
 ## Git hooks (local enforcement)
 
 The repo ships the process template's POSIX-sh hook suite in `hooks/`, activated via
-`core.hooksPath` (hooks are **not** shared by clone). Ensure they're active with:
+`core.hooksPath` (hooks are **not** shared by clone). Ensure they're active, and that a push
+without a refspec fails (`push.default`, handbook §7), with:
 
 ```sh
 git config core.hooksPath hooks
+git config push.default nothing
 ```
 
-The devcontainer `postCreate` runs this automatically, but it only applies on the **next container
+The devcontainer `postCreate` runs both automatically, but only on the **next container
 rebuild** (the devcontainer image is built outside the devcontainer; see
-[dev-environment.md](dev-environment.md)), so run it once by hand in an existing checkout. The
+[dev-environment.md](dev-environment.md)), so run them once by hand in an existing checkout. The
 path is relative on purpose: git resolves it against the worktree it runs in, so every worktree is
 gated by its own `hooks/`.
 
@@ -320,7 +322,7 @@ tests) remains the gate for landing on `main`.
 
   ```sh
   git tag -a v0.2.0 -m "Release 0.2.0"
-  git push origin v0.2.0      # a push is the author's decision alone, tags included
+  git push origin v0.2.0      # tags are the author's to push, like main
   ```
 
   Annotated, not lightweight, so the tag carries its own author and date.

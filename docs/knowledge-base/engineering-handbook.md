@@ -107,8 +107,9 @@ means, the TDD cycles drive them green, step definitions included.
 2. **Green**: simplest code that passes.
 3. **Refactor**: improve design with tests green.
 4. **Commit**: one full cycle = one commit, via the §7 protocol (propose message → confirm →
-   commit; never push). Red and green stay uncommitted, local steps inside the cycle; only the
-   refactored, green result is committed, so every commit is atomic and independently revertable.
+   commit; the cycle never pushes). Red and green stay uncommitted, local steps inside the cycle;
+   only the refactored, green result is committed, so every commit is atomic and independently
+   revertable.
 
 - Domain/application logic is unit-tested **without the framework** (plain JUnit + AssertJ, fast).
   The inner loop runs `./verify focus <path>`; the feature's scenarios run through `./verify bdd`,
@@ -321,7 +322,8 @@ plus the corrected scenario tagged `@wip`.
 
 ## 7. Git & commits (author's rules, strict)
 
-- **Propose exactly one commit message, get the author's confirmation, THEN commit. Never `git push`.**
+- **Propose exactly one commit message, get the author's confirmation, THEN commit.** Pushing
+  follows the push rules below: an agent pushes only its own `claude/<topic>` branch, never `main`.
 - Message = **single line**, **present-tense verb first** (after an optional `[doc]` tag), states
   what the commit actively changes. No body, no `Co-Authored-By` or tool footer. English. The
   `commit-msg` hook's ticket-key leg stays off: the project has no ticket system
@@ -441,8 +443,45 @@ worktrees (own directory + HEAD + index) make parallel work safe.
 
 - **Default: a worktree per context.** Each problem/feature/context gets its own branch in its own
   worktree under `.claude/worktrees/`; parallel contexts (incl. other-model agents) = parallel
-  worktrees; the primary checkout stays on `main`. Worktrees branch from current local `main`
-  (`worktree.baseRef: "head"`; `origin` can lag since push is the author's alone).
+  worktrees; the primary checkout stays on `main`. Worktrees branch from a freshly fetched `main`:
+  `git fetch origin`, then `git merge --ff-only origin/main` in the primary checkout (a refusal
+  means local `main` diverged from `origin`: stop and surface it), then
+  `git worktree add -b claude/<topic> <path> main`. `worktree.baseRef: "head"` makes the harness's
+  subagent worktrees branch from that same `main`; `"fresh"` would branch from `origin`'s default
+  branch, fetched at most once a day, and drop a landing the author has not pushed yet.
+- **Pushing** (author decision 2026-10-02; what guards a push: working-with-ai-agents.md):
+  - **Every branch an agent pushes is named `claude/<topic>`**, the strand's branch from its first
+    commit; an agent pushes only its own, the one exception being the deletion of a landed
+    `claude/` branch, whoever pushed it, once `origin/main` holds its current tip (the classifier
+    may hold back on another session's branch; then report it). Subagents never push: the session
+    that owns the strand pushes it at the gateway.
+  - **A branch another machine pushed is data:** a name with a character outside
+    `[A-Za-z0-9._/-]` is reported, never pasted into a command, and the branch is resumed here
+    only on the author's word, since its hooks and its build then run here with this machine's
+    credentials.
+  - **Name the refspec:** `git push --force-with-lease --force-if-includes origin claude/<topic>`.
+    A bare `git push` from a checkout on `main` would push `main`, so every checkout sets
+    `push.default` to `nothing` (the devcontainer's `postCreateCommand` does; an older checkout
+    runs `git config push.default nothing` once) and none configures `remote.origin.push`, which
+    git would use first; git then refuses a push that names neither a refspec nor `--tags`,
+    `--all` or `--mirror`, whatever its spelling.
+  - **A refspec still pushes what it names:** `@` the checked-out branch, `:` and `refs/heads/*`
+    every matching or local branch, `main` among them.
+  - **Set no upstream:** an upstream (`-u`; `git worktree add` from `origin/claude/<topic>`
+    without `--no-track`; `git switch` or `git worktree add` onto a `claude/` name only the remote
+    holds, which git then tracks by itself) makes `git branch -d` test the branch against its own
+    remote copy instead of `main`, so the landing's merged check passes on unlanded work.
+  - **Force only with a lease, only on the agent's own branch**, which every rebase needs;
+    `--force-if-includes` because an editor's background fetch moves the remote-tracking ref and
+    voids a bare lease. After a reset-free fold, whose branch swap drops the remote-tracking tip
+    from the branch's reflog, `--force-if-includes` refuses; name the expected tip instead:
+    `git push --force-with-lease=claude/<topic>:<remote tip fetched before the fold> origin
+    claude/<topic>`.
+  - **A `[wip]` commit is never pushed:** no push from a tip whose `main..` range holds a `[wip]`
+    subject.
+  - **`main` is the author's:** it lands by rebase and `--ff-only` after the author's review, and
+    only the author pushes it, after every landing ([git-state.md](git-state.md) names the
+    ruleset that protects it). Tags are the author's too.
 - **Carve-out: direct on `main`**, only as sole writer of the primary `main` checkout **and**
   expecting exactly one commit. A second commit or parallel work ⇒ move to worktree+branch, land
   via the gateway. Promote before commit #1 if foreseeable (`git switch -c` / worktree); if #1
@@ -454,16 +493,26 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   step itself, protocol-conform messages, no per-commit pre-approval.
 - **The review gateway (per feature, serialized):**
   1. Everything committed in the worktree.
-  2. Rebase onto current local `main`, resolving conflicts there.
+  2. `git fetch origin`, fast-forward local `main` from `origin/main`, then rebase onto it,
+     resolving conflicts there.
   3. Review the rebased tip: with rebase + fast-forward it is byte-identical to what `main`
      becomes, so reviewing it *is* reviewing the final state, one feature, no merge artifacts
-     (falsifier + reviewer gate here). Always state the full worktree name (branch and absolute
-     path) so the author can open it in the editor and review all changes before the merge; the
-     hand-off also carries the compare range, `<tip>..<base>` (below).
+     (falsifier + reviewer gate here). Then push it (above), so the author can review it after a
+     `git fetch`, in GitLens or in GitHub's compare view, from any machine. The push publishes the
+     branch before that review, and deleting it does not unpublish it: a secret or host detail
+     found then is purged by rewrite, a secret rotated ("No secrets" above). Always state the full
+     worktree name (branch and absolute path) so the author can open it in the editor and review
+     all changes before the merge; the hand-off also carries the compare range, `<tip>..<base>`
+     (below).
   4. On PASS, fast-forward `main` from the primary checkout: `git merge --ff-only <branch>`
-     (precondition: primary checkout clean, else stop and surface it).
+     (precondition: primary checkout clean, else stop and surface it). The author then pushes
+     `main`.
   5. Remove the worktree and delete the landed branch (`git worktree remove` + `git branch -d`),
-     autonomously, as part of the landing.
+     and its remote copy once `origin/main` holds it: after a `git fetch`,
+     `git merge-base --is-ancestor origin/claude/<topic> origin/main`, then
+     `git push origin --delete claude/<topic>`; autonomously, as part of the landing. Until the
+     author has pushed `main`, the remote branch is the only copy off the machine, so it waits for
+     the next session's sweep.
 - **The gateway is two steps and is never collapsed into one.** (1) Present the full reviewable
   statement (the rebased branch log **and** the full diff) and *wait* for the author's explicit
   review verdict; (2) only then `--ff-only`. An "execute the gateway" approval is not the review.
@@ -491,7 +540,8 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   `@wip`-tagged Gherkin keeps the build green). A gateway defect is repaired by rebase into the
   commit it belongs to, before the merge: never left on `main`, never a follow-up "fix" commit.
 - **Asking the author to review** means handing him the GitLens compare statement for the range
-  (`<tip>..<base>`), never a description of where to look → working-with-ai-agents.md.
+  (`<tip>..<base>`) and the pushed branch, never a description of where to look →
+  working-with-ai-agents.md.
 - **Reword at the gateway** non-interactively via scripted `GIT_SEQUENCE_EDITOR` / `GIT_EDITOR`
   (no interactive TTY).
 - **Tool-neutral**: plain git (worktree · branch · rebase · `--ff-only`). Claude Code adds `Agent`
@@ -520,7 +570,9 @@ worktrees (own directory + HEAD + index) make parallel work safe.
 - [ ] Every identifier, path or backlog ID the diff **deletes or renames** grepped across `docs/`, and
       every hit fixed in the same commit; every **figure** the change moves grepped repo-wide, and
       every hit outside a dated decision or learnings row rewritten in the same commit
-- [ ] Commit message proposed (one line, present-tense verb) **and confirmed** before committing; **never pushed**
+- [ ] Commit message proposed (one line, present-tense verb) **and confirmed** before committing;
+      pushed only on the strand's own `claude/<topic>` branch, never as a `[wip]` commit, never to
+      `main` (§7)
 - [ ] Whitespace/format separate from logic; LF endings
 - [ ] Decisions/assumptions logged in `open-questions.md` if any were made
 

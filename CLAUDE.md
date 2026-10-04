@@ -3,7 +3,7 @@
 > Auto-loaded by Claude Code at the start of every session. This is a **thin wrapper**: the rules live
 > in the knowledge base (the [single source of truth](docs/knowledge-base/README.md)) and this file
 > only points to them and adds Claude-Code mechanics. **Based on
-> [`agent-entry-template`](docs/knowledge-base/agent-entry-template.md) version: 5.**
+> [`agent-entry-template`](docs/knowledge-base/agent-entry-template.md) version: 6.**
 > At session start, quick-check that the SHARED section below still matches the template (re-sync on a
 > version bump).
 
@@ -35,7 +35,13 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
 
 - **Commit protocol, branching, merge & the review gateway** → handbook §7. Propose **one** one-line,
   present-tense-verb message (optional `[doc]` tag), get the author's confirmation, then commit.
-  **Never `git push`.** Worktree per context → rebase → review the rebased tip → `--ff-only`.
+  Worktree per context, cut from a freshly fetched `main` → rebase → review the rebased tip →
+  `--ff-only`.
+- **Pushing** → handbook §7. Every branch an agent pushes is named `claude/<topic>`; an agent
+  pushes only its own, forces only with `--force-with-lease`, never pushes a `[wip]` commit, and
+  deletes a landed `claude/` branch on the remote, whoever pushed it.
+- **Protected branch: `main`; tags are protected too.** No agent pushes either, in any form; only
+  the author does, `main` after the `--ff-only` landing.
 - **BDD first, then TDD** → handbook §5/§4. A feature with observable behavior starts with executable
   Gherkin scenarios in product language, gated by the scenario falsifier and **confirmed by the
   author as complete** before any production code; committed `@wip`, driven green by TDD cycles,

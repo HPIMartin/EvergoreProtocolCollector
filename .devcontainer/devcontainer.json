@@ -28,7 +28,7 @@
 		"source=evergore-gradle,target=/home/vscode/.gradle,type=volume",
 		"source=evergore-npm,target=/home/vscode/.npm,type=volume"
 	],
-	"postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.gradle /home/vscode/.npm && git config core.hooksPath hooks && ./gradlew --no-daemon build -x test",
+	"postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.gradle /home/vscode/.npm && git config core.hooksPath hooks && git config push.default nothing && ./gradlew --no-daemon build -x test",
 	"customizations": {
 		"vscode": {
 			"extensions": [

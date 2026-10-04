@@ -37,7 +37,9 @@ cross-session memory.
 5. **TDD:** red → green → refactor until the scenarios pass (handbook §4).
 6. **Update the KB** in the same change as the code.
 7. **Commit (gated):** propose one one-line, present-tense-verb message, confirm with the author,
-   commit. **Never push.** LF endings; whitespace separate from logic.
+   commit. **Push only the strand's own `claude/<topic>` branch**, leased after a rebase, never a
+   `[wip]` commit; `main` is the author's (handbook §7). LF endings; whitespace separate from
+   logic.
 8. **Log decisions/assumptions** for the next session; process slips go to
    `docs/process-learnings.md`.
 
@@ -51,7 +53,7 @@ cross-session memory.
   → Falsifier panel → Doc reviewer → Reviewer/Gate; defined in `.claude/agents/`, described in
   [multi-agent-playbook.md](multi-agent-playbook.md), per-role models in the frontmatter and the
   playbook's roles table.
-- The author approves the commit plan and is the only one who pushes.
+- The author approves the commit plan and is the only one who pushes `main`.
 
 ## Context & token hygiene
 
@@ -198,8 +200,10 @@ command) inside guardrails. Two files:
   `settings.local.json` or as one reviewed diff of the committed file, rather than mining
   transcripts for approvals.
 - **Autonomous cleanup, inside the same floor.** The agent removes the scaffolding it created
-  itself: `git worktree remove` / `prune` for its own worktrees and `git branch -d` for landed
-  branches (handbook §7). That is git-native on purpose, so the safety sits in the command, and `rm`
+  itself: `git worktree remove` / `prune` for its own worktrees, `git branch -d` for landed branches
+  and `git push origin --delete` for a landed `claude/<topic>` branch once `origin/main` holds it
+  (handbook §7). That is git-native on purpose: git refuses to remove a dirty worktree or an
+  unmerged branch, the remote copy goes only after the check that `origin/main` holds it, and `rm`
   (all forms) plus `git branch -D` stay on the deny floor.
 
 ## Instruction sources (what an agent may act on)
@@ -249,5 +253,8 @@ command) inside guardrails. Two files:
 - Nothing else belongs in the statement: no `git` prefix, no branch names, no arrows. The two SHAs
   and the two dots. The worktree identity (branch and absolute path) stands beside it as its own
   line (handbook §7).
+- **The branch is pushed before the hand-off**, under the name the identity line gives
+  (`claude/<topic>`), so the author can `git fetch` and review it in GitLens or in GitHub's compare
+  view on any machine.
 - At author gate 1 the artifact under review is the `.feature` itself; the range then covers only
   the commit that adds it.

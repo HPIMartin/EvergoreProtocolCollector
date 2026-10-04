@@ -6,7 +6,7 @@ equivalent). It exists so every tool bootstraps from the **same** rules without 
 knowledge base: a wrapper *points* into the KB and adds only that tool's own mechanics. The KB
 (`docs/knowledge-base/` + `backlog.md` + `open-questions.md`) is the single source of truth.
 
-**Template version: 5.** Bump this on any change to the SHARED section below. Every wrapper records the
+**Template version: 6.** Bump this on any change to the SHARED section below. Every wrapper records the
 version it was built from and, at session start, quick-checks that its SHARED section still matches,
 re-syncing on a bump. See the [KB README](README.md). This counter belongs to the SHARED section
 alone; the payload's `TEMPLATE-VERSION` at the repo root is a different counter, and the two need
@@ -53,7 +53,13 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
 
 - **Commit protocol, branching, merge & the review gateway** → handbook §7. Propose **one** one-line,
   present-tense-verb message (optional `[doc]` tag), get the author's confirmation, then commit.
-  **Never `git push`.** Worktree per context → rebase → review the rebased tip → `--ff-only`.
+  Worktree per context, cut from a freshly fetched `main` → rebase → review the rebased tip →
+  `--ff-only`.
+- **Pushing** → handbook §7. Every branch an agent pushes is named `claude/<topic>`; an agent
+  pushes only its own, forces only with `--force-with-lease`, never pushes a `[wip]` commit, and
+  deletes a landed `claude/` branch on the remote, whoever pushed it.
+- **Protected branch: `main`; tags are protected too.** No agent pushes either, in any form; only
+  the author does, `main` after the `--ff-only` landing.
 - **BDD first, then TDD** → handbook §5/§4. A feature with observable behavior starts with executable
   Gherkin scenarios in product language, gated by the scenario falsifier and **confirmed by the
   author as complete** before any production code; committed `@wip`, driven green by TDD cycles,

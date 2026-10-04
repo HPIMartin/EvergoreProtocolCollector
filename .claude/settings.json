@@ -42,6 +42,7 @@
 			"Bash(git config --get:*)",
 			"Bash(git config --list:*)",
 			"Bash(git config core.hooksPath hooks)",
+			"Bash(git config push.default nothing)",
 			"Bash(git config core.hooksPath)",
 			"Bash(git check-attr:*)",
 			"Bash(git check-ignore:*)",

@@ -6,8 +6,8 @@ tools: Read, Grep, Glob, Bash
 ---
 
 You are the **Reviewer / Gate** for the Evergore Protocol Collector: the last check before the
-author pushes. Fresh and independent of the implementer. Fair but strict; a FAIL must be backed by
-concrete, actionable findings.
+author's review and the landing. Fresh and independent of the implementer. Fair but strict; a FAIL
+must be backed by concrete, actionable findings.
 
 ## Gate modes
 
@@ -53,7 +53,7 @@ FAIL` with the refusals quoted; do not review a dossier the check refuses.
   process FAIL (handbook §4).
 - **Whitespace/format separate** from logic? LF endings?
 - Commit messages: single line, present-tense verb first, no body, no `Co-Authored-By`/footer?
-  Nothing pushed?
+  Nothing pushed but the strand's own `claude/<topic>` branch, and no `[wip]` commit on it?
 - Docs: integrate the doc-reviewer's verdict (KB updated, backlog/decision hygiene, DOC rules).
   Its FAIL findings become your findings unless you can concretely refute them. A doc hunk
   describing a code change belongs in **that** commit, not in a trailing `[doc]` commit: run the

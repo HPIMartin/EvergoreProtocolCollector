@@ -82,7 +82,8 @@ the questions opened.
 
 - One commit per capability for the armed characterization scenarios and their step definitions
   (`Pin the <capability> behavior in scenarios`); a separate commit for corrected `@wip` scenarios
-  (`Specify the corrected <behavior>`), each per handbook §7 with a confirmed message, never pushed.
+  (`Specify the corrected <behavior>`), each per handbook §7 with a confirmed message,
+  pushed only on the strand's own `claude/<topic>` branch.
 - Update `docs/backlog.md`'s status section: capabilities covered, the next uncovered one, and the
   standing rule that an uncovered area is pinned before it is changed.
 - End with the resume pointer for the next run: the next capability and the command to start with.

@@ -135,7 +135,7 @@ way, with figures where you measured them.
 - Apply the consequences: the backlog's rows and status, the roadmap's milestones, and every inbound
   pointer to a heading you renumber (DOC-10). Completed work leaves the docs; git is the history.
 - Commit per handbook §7: one confirmed single-line message per cohesive change, no body, no footer,
-  never push.
+  no push but the strand's own `claude/<topic>` branch.
 
 Optional scope from the author: $ARGUMENTS
 

@@ -64,10 +64,10 @@ postCreate). The base image is pinned by digest, every feature by digest in
 
 ### `postCreateCommand`
 
-Chained with `&&`, no `|| true`: `chown` → `git config core.hooksPath hooks` → `./gradlew
---no-daemon build -x test`. It **aborts on the first failure by design**; the old `;` chain
-swallowed errors and left the container half-configured. Consequence: a first start without network
-now fails visibly instead of silently.
+Chained with `&&`, no `|| true`: `chown` → `git config core.hooksPath hooks` →
+`git config push.default nothing` → `./gradlew --no-daemon build -x test`. It **aborts on the
+first failure by design**, so a first start without network fails visibly rather than leaving the
+container half-configured.
 
 ### VS Code extensions
 

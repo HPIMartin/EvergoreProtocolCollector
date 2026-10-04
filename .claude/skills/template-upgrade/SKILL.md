@@ -5,16 +5,16 @@ argument-hint: [optional: path of the extracted new template payload, default .t
 
 You are upgrading the Evergore Protocol Collector to a newer version of the AI-assisted development process
 template. CLAUDE.md is auto-loaded every session; its rules and KB pointers apply without re-reading
-them here. Ask, don't guess (multiple-choice, recommended first); never push; hand every deletion of
-project content to the author as an exact command; your own worktree and branch you clean up
-yourself after the landing (handbook §7).
+them here. Ask, don't guess (multiple-choice, recommended first); push only the strand's own
+`claude/<topic>` branch; hand every deletion of project content to the author as an exact command;
+your own worktree and branch you clean up yourself after the landing (handbook §7).
 
 **The mechanism.** Adoption keeps two things for this moment: `TEMPLATE-VERSION`, the version the
 project was built from, and `.template/baseline/`, the **unmodified payload** of that version,
 committed. Every template file can therefore be merged three ways (baseline, the new version, the
 project's adapted copy), and only genuine conflicts need the author. An upgrade is a multi-commit
-strand: it runs in its own worktree and branch (`template-upgrade-<new version>`) and lands through
-the review gateway like any feature (handbook §7).
+strand: it runs in its own worktree and branch (`claude/template-upgrade-<new version>`) and lands
+through the review gateway like any feature (handbook §7).
 
 ## 1. Preflight
 
@@ -88,8 +88,9 @@ author keeps on purpose.
 - Replace `.template/baseline/` with the incoming payload (it is the next baseline), set
   `TEMPLATE-VERSION` to M, and hand the author the removal command for `.template/incoming/`.
 - Commit per handbook §7 in reviewable slices (the baseline bootstrap, the merged process docs, the
-  merged hooks and settings, the interview decisions), messages confirmed, never pushed; the last
-  one sets the version (`Upgrade the process template to version M`).
+  merged hooks and settings, the interview decisions), messages confirmed, pushed only on the
+  strand's `claude/<topic>` branch; the last one sets the version (`Upgrade the process template to
+  version M`).
 - Land through the gateway: rebase, `./verify all`, the compare range for the author, `--ff-only`,
   cleanup. In-flight strands then rebase and finish under the rules they started with plus the
   mechanical gates now on `main`.

@@ -33,7 +33,8 @@ session; its rules and KB pointers apply without re-reading it here.
    before any production code; check whether the parked work already has one and whether its
    scenarios are still `@wip` or already armed, `./verify bdd` tells); clean code, hexagonal,
    in-container-only → handbook §1–§3 + dev-environment.md; commit protocol (one confirmed one-line
-   message, never push) → handbook §7; planned features run through the agent pipeline →
+   message; push only the strand's own `claude/<topic>` branch, never a `[wip]` commit) → handbook
+   §7; planned features run through the agent pipeline →
    multi-agent-playbook.md.
 
 Optional focus from the author: $ARGUMENTS
