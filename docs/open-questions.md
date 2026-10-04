@@ -387,6 +387,22 @@ table existed stand as dated decision rows above (2026-09-09, 2026-09-12, 2026-0
   `refs/heads/claude/*`, `refs/heads/main` or a tag, any `[wip]` subject in the pushed range and
   any pushed commit `content-gate` refuses (a `[wip]` commit skips the hooks), with its
   `hooks/self-test` checks, as a build/infra strand that also goes back into the template.
+- **D-20 (How the author merges a pull request on GitHub):** `origin/main` also moves by the pull
+  requests the author merges there (Dependabot's), and GitHub's merge button can make a merge
+  commit or a commit with a multi-line message, which no hook or gate sees, while handbook §7 wants
+  rebase and fast-forward only, one-line messages and every landed commit verified-good. Options,
+  recommended first: merge only with "Rebase and merge" once the branch's build is green and every
+  commit on it is Dependabot's (the agent machine's key can write `dependabot/` branches); allow a
+  merge commit for Dependabot alone; squash with a one-line message.
+- **D-21 (Case-sensitive refs on the author's PC):** the PC's checkout lies on a case-insensitive
+  drive, where git's file-based refs collide when names differ only in case: a fetched branch
+  `Main` takes over `refs/remotes/origin/main`, and a tag `MAIN` stands in for `main`. Handbook
+  §7's case check stops every sync that sees one, but a background fetch between that check and a
+  later use of the ref goes unchecked. Options, recommended first: move the PC checkout's refs to
+  reftable (`git refs migrate --ref-format=reftable`), which keeps them out of the file system and
+  which every git that opens the checkout, the host's included, must then read; keep the
+  file-based refs and the case check alone; make the checkout's directory case-sensitive on the
+  Windows host.
 
 ## Assumptions currently baked into the plan (challenge if wrong)
 
