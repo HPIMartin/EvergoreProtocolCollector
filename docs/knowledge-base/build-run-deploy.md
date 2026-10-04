@@ -834,11 +834,11 @@ requests in a row not earning a 429. That gap needs a Netty-level seam and is tr
 
 ## CI / dev environment
 
-- **No real CI.** No `.github/workflows/`. `.github/` has only `dependabot.yml` (`devcontainers`
+- **No real CI.** No `.github/workflows/`. `.github/` has `dependabot.yml` (`devcontainers`
   ecosystem for the root, `docker` for `/.devcontainer` — the features lock does not cover the
   base image — and `npm` for `/frontend`, all weekly) and
-  `.github/modernize/java-upgrade/` (local Copilot/VS Code "Java upgrade" agent instrumentation:
-  hook scripts that log tool use, not a pipeline).
+  `.github/rulesets/`, a reconstruction of the live `main` ruleset and two rulesets prepared for
+  import ([git-state.md](git-state.md), "What GitHub enforces").
 - `.devcontainer/`: Java dev container (digest-pinned bookworm base + apt tools, `java` feature with
   **JDK 25**, Maven off, Gradle via the wrapper); see [dev-environment.md](dev-environment.md).
   Dev only.

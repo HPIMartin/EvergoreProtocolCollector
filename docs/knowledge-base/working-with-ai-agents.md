@@ -160,8 +160,9 @@ command) inside guardrails. Two files:
     (single trusted author, accident threat model). Never weaken the deny floor; route anything
     genuinely destructive or outward-facing through the human.
 - **Managed settings sit above the project.** The managed policy, Claude Code's managed settings, is
-  the top settings layer; its `deny` rules and its auto-mode rules hold in every session, and no
-  project rule loosens them.
+  the top settings layer; its `deny` rules and its auto-mode rules hold in every session that
+  receives the policy (whether the agent machine's sessions do is not recorded), and no project rule
+  loosens them.
   - **Its push denies** match the common literal spellings of a push naming `main` or `master`, a
     force without a lease (`--force`, a standalone `-f`), a `+` refspec, `--all`, `--mirror` and
     `--prune`, and only in commands that begin with `git push` and spell those words unquoted.
@@ -172,6 +173,9 @@ command) inside guardrails. Two files:
     `master`, let an agent push, lease-force and delete its own `claude/<topic>` branches, and hold
     back on a branch a project's `CLAUDE.md` names as protected; a spelling no pattern names rests
     on that judgment and the author's supervision.
+  - **On the author's PC nothing else guards a push** beyond this policy and the project's narrow
+    plain denies (git-state.md, "What GitHub enforces"); the machine's untracked
+    `settings.local.json` can widen what runs unprompted beside them.
   - **The project's own rules apply only while the policy leaves `allowManagedPermissionRulesOnly`
     unset;** with it set, every project `deny`, `ask` and `allow` is ignored, so after any policy
     change a harmless command the floor must stop (`rm` of a path that does not exist) proves it is

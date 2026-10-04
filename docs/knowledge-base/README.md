@@ -30,12 +30,12 @@ contribution metrics, automating a hand-maintained Google Sheet.
 | 04 | [architecture.md](architecture.md) | Layers, data-flow pipeline, ports & adapters, hexagonal gap analysis |
 | 05 | [build-run-deploy.md](build-run-deploy.md) | Docker build, config, secrets, endpoints, the scheduled job |
 | 06 | [testing.md](testing.md) | Test inventory, coverage map, biggest gaps |
-| 07 | [git-state.md](git-state.md) | Git conventions; **git is the source of truth for history** (docs don't duplicate it) |
+| 07 | [git-state.md](git-state.md) | Git conventions; **git is the source of truth for history** (docs don't duplicate it); what GitHub enforces and whom it binds |
 | 08 | [glossary.md](glossary.md) | German ↔ English domain glossary (the domain is German) |
 | 09 | [engineering-handbook.md](engineering-handbook.md) | **How code looks & how we develop**: clean code, SOLID, hexagonal, TDD, BDD, commits, DoD |
 | 10 | [working-with-ai-agents.md](working-with-ai-agents.md) | The AI-assisted workflow: memory layers, session playbook, sub-agents, asking style |
 | 11 | [multi-agent-playbook.md](multi-agent-playbook.md) | The agent team: Planner · Scenario falsifier · Stakeholder falsifier · Implementer · Falsifier panel · Doc reviewer · Reviewer; pipeline, roles, invocation |
-| 12 | [dev-environment.md](dev-environment.md) | Fully-virtualized dev: the devcontainer, the in-container rule, JDK single-source & upgrade |
+| 12 | [dev-environment.md](dev-environment.md) | Fully-virtualized dev: the devcontainer, the in-container rule, where agents run, JDK single-source & upgrade |
 | 13 | [agent-entry-template.md](agent-entry-template.md) | Per-tool session-bootstrap template: SHARED rules + TOOL-SPECIFIC skeleton + template version |
 | 14 | [frontend.md](frontend.md) | The React/TypeScript SPA and the JSON API it reads: stack, module structure & dependency rule, the wire contract, TDD conventions, Gradle/Docker/vulnScan wiring |
 

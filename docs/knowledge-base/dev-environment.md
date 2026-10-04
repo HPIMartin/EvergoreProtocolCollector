@@ -1,7 +1,8 @@
 # 12: Dev Environment & Virtualization
 
 - **Principle: fully virtualized.** Nothing (JDK, Gradle, Firefox) is installed or run on the host;
-  all work (builds, tests, the app, the AI agents) runs in the **devcontainer** or via Docker.
+  builds, tests and the app run in the **devcontainer** or via Docker, and so do the AI agents,
+  except a session started on the host ("Where agents run").
 - Why: clean host; toolchain upgrades (e.g. a future Java bump) become a one-line image change.
 
 ## The devcontainer (`.devcontainer/`)
@@ -123,6 +124,22 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
 - **Stop daemons with `./verify stop`**, after a batch of builds and before a worktree is removed;
   it stops this worktree's daemons only. Never `./gradlew --stop`: it stops every daemon of the
   shared registry, other sessions' direct Gradle runs included.
+
+## Where agents run
+
+| Machine | Environment | GitHub credential | Reach beyond the container | Supervision |
+|---|---|---|---|---|
+| The author's PC | this devcontainer | the author's own, forwarded by VS Code's Dev Containers credential helper | the host's Docker socket (`docker-outside-of-docker`) | the author starts and steers every session |
+| The author's PC, a session started on the host | the Windows host, no container | the author's own, from the host's credential store | the whole host | the author's own session |
+| The agent machine | an agent container, driven through a Claude Code Remote Control server | a deploy key with write access, `origin` over SSH; none of the author's credentials | none, as the author states it: no Docker socket, no access to the local network | unattended |
+
+- **Unattended agents run only on the agent machine; the PC stays simple** (decision 2026-10-04,
+  [open-questions.md](../open-questions.md)).
+- **An agent on the PC holds the author's rights in practice**, through the credential and the
+  Docker socket in the table; accepted on purpose. What GitHub binds: [git-state.md](git-state.md),
+  "What GitHub enforces".
+- **The agent container is built by hand;** a reproducible build from `.devcontainer/` is a strand
+  of its own. A commit it has not pushed lives only in that container.
 
 ## Rule for all contributors
 
