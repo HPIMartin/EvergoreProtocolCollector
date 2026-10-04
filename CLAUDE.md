@@ -72,10 +72,12 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
   multi-agent playbook (Planner = the main session together with the author).
 - **Bash stdout (host only):** a session started on the Windows host may not surface Bash stdout;
   redirect to a file (`cmd > out.txt 2>&1`) and `Read` it. Inside the devcontainer, Bash is normal.
-- **Permission-blocked** (per [`.claude/settings.json`](.claude/settings.json)): `git push`,
-  `git reset` (all forms), `git clean`, `git branch -D`, `rm` (all forms), and `EnterWorktree` (a
-  session stays in the primary checkout and reaches a worktree by absolute path; subagent worktree
-  isolation is untouched). Reset-free history-rewrite recipe → the playbook's FAIL-loop section.
+- **Permission-blocked** (per [`.claude/settings.json`](.claude/settings.json) and the managed policy
+  above it): `git reset`, `git clean` and `git branch -D`, each in every plain form, `rm` (all
+  forms) and `EnterWorktree` (a session stays in the primary checkout and reaches a worktree by
+  absolute path; subagent worktree isolation is untouched). What guards a push, and which `git -C`
+  rules fire: working-with-ai-agents.md, "Permissions & autonomy". Reset-free history-rewrite
+  recipe → the playbook's FAIL-loop section.
 - **Git hooks are the mechanical half of the rules** ([`hooks/`](hooks/README.md), active via
   `git config core.hooksPath hooks`). git asks `pre-commit` only for `git commit`, so a
   rebase/cherry-pick/revert commit is recorded after the fact and blocks the next commit; never read

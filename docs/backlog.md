@@ -228,11 +228,11 @@ doc is intentionally **not** committed; its value lives here.
   `AvoidStarImport` for the import gap, neither of which the formatter can fill, see build-run-deploy.md.
   The "general linter" rejection still stands.)*
 - **maven-enforcer**: fabricated origin, BOM-managed deps, in-container fixed JDK → low value.
-- **commit-message *skill***: rule already in CLAUDE.md + reviewer gate + the `git push` deny; a skill adds context cost, not enforcement (use **G8** `/commit`, or a git `commit-msg` hook).
+- **commit-message *skill***: rule already in CLAUDE.md + reviewer gate + the `commit-msg` hook; a skill adds context cost, not enforcement (use **G8** `/commit`).
 - **security-auditor *subagent***: redundant with the reviewer's `security` category; OWASP ceremony for a no-prod-pressure scraper. Keep only "extend reviewer + secret-scan hook", which lives on in the staged-content scan hooks (**G13**).
 - **ADRs (`docs/adr/`)** duplicate the `open-questions.md` Decisions table ("git is history; docs are knowledge").
 - **format-on-save hook**: premature; folded into the shared-formatter adoption (needs a formatter + CI first).
-- **block-dangerous-bash hook**: now largely covered by the hardened permission **deny** (`git push`, `rm -rf`, `git reset --hard`, added 2026-06-15; `-C` worktree variants + `git -C * clean` added 2026-06-28); revisit only for force-push/rebase nuance.
+- **block-dangerous-bash hook**: now largely covered by the permission **deny** floor (`rm`, `git reset`, `git clean` and `git branch -D` in their plain spellings, and the narrow plain push denies) and the managed policy above it, which carries the rest of the push guard; revisit only for rebase nuance.
 - **N/A / enterprise-only:** Spring Modulith (not Spring), CLAUDE.md <200-line guard (it's 76), `.mcp.json`/Jira/GitHub MCP (solo, no tracker), `output-styles/`, path-scoped `rules/`, directory-level `CLAUDE.md`, a `docs-writer`/`tdd-runner` agent (tdd = existing `implementer`), quarterly surface audit, English-in-repo (already decided).
 
 ---

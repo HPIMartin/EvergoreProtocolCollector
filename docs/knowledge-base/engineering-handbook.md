@@ -379,10 +379,9 @@ plus the corrected scenario tagged `@wip`.
   - The Claude Code "always allow" flow can write path-bearing rules into the committed
     `settings.json`: prefer bare commands matching the portable `Bash(<cmd>:*)` rules;
     machine-specific permissions (e.g. absolute-path `cd`) go in `.claude/settings.local.json`.
-  - Worktree commands need the portable, path-eliding form: `Bash(git <sub>:*)` rules don't match
-    `git -C …`, so always-allow would re-pin a host-path rule per worktree hash. One committed
-    `Bash(git -C *.claude/worktrees/*)` covers every worktree with no host detail; `-C` deny
-    variants (`push`, `reset --hard`, `clean`) keep that broad allow from destructive git.
+  - A `git -C …` command matches no `Bash(git <sub>:*)` rule, so always-allow would pin a
+    host-path rule per worktree hash. What a `git -C` command meets instead:
+    working-with-ai-agents.md, "Permissions & autonomy".
 - **The commit log is the changelog**: no separate `CHANGELOG`, no mirroring history/diffs in docs;
   `git log` / `git diff` are the source of truth for what changed.
 - **Git enforcement hooks (must be active)**: POSIX-sh hooks in `hooks/`, wired via
@@ -493,7 +492,7 @@ worktrees (own directory + HEAD + index) make parallel work safe.
 - **Asking the author to review** means handing him the GitLens compare statement for the range
   (`<tip>..<base>`), never a description of where to look → working-with-ai-agents.md.
 - **Reword at the gateway** non-interactively via scripted `GIT_SEQUENCE_EDITOR` / `GIT_EDITOR`
-  (no interactive TTY). `git push` stays the author's alone (deny in `.claude/settings.json`).
+  (no interactive TTY).
 - **Tool-neutral**: plain git (worktree · branch · rebase · `--ff-only`). Claude Code adds `Agent`
   worktree-isolation for tool agents; other tools/humans use `git worktree` directly.
 - **A session never relocates into a worktree** (`EnterWorktree`, denied in

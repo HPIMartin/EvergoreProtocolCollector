@@ -93,12 +93,13 @@ repeated finding; process-only FAILs don't consume a round) is canonical in
   commit must split.
 - **Apply a panel finding to the whole diff, not to the file it was raised against.** When a finding
   is a *rule*, re-grep every file the strand touches for that pattern before reporting it resolved.
-- **Permission-blocked in this harness:** `git push`, `git reset` (all forms), `git clean`,
-  `git branch -D`, `rm` (**all** forms: the agent's own cleanup is git-native, `git worktree
+- **Permission-blocked in this harness:** `git reset`, `git clean` and `git branch -D`, each in every
+  plain form, and `rm` (**all** forms: the agent's own cleanup is git-native, `git worktree
   remove`/`prune` and `git branch -d`, run autonomously; anything else is handed to the author or
   removed by a committed build task such as `./gradlew clearProbes`, handbook §7). Built-in
   guardrails override project `allow`; the committed `deny` list encodes the same floor for tools
-  without the built-ins. If you ever reset outside the tool: prefer `git reset --soft`, never
+  without the built-ins. What guards a push, and which `git -C` rules fire:
+  working-with-ai-agents.md. If you ever reset outside the tool: prefer `git reset --soft`, never
   `--hard` (discards the working tree).
 - **Reset-free fold** (works for deep commits): save the corrected tree as a WIP commit → branch
   afresh off the feature base → per logical group `git checkout <wip-tip> -- <files>` + commit →
