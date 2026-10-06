@@ -151,6 +151,7 @@ function statsOf(totals: GuildTotals): readonly Stat[] {
       label: 'Gildenbank',
       value: position.bank,
       positiveTone: 'credit',
+      absentNote: UNCOMPUTED_NOTE,
     },
     {
       key: 'storage',

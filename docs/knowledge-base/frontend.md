@@ -184,8 +184,10 @@ Four top-level folders under `frontend/src/`:
   gathers the header's figures from the served numbers and derives only the bank, so the view holds
   no arithmetic and `ui` stays presentational. A figure the flows are missing for renders the note
   from `domain` instead of a number, marked `data-absent`, while the bank still answers because it
-  is measured rather than modelled; the note names no next run, because an avatar whose recompute
-  keeps failing would never bring one.
+  is measured rather than modelled; only while a member is not yet computed, and the totals come
+  without sums, does the bank read the same note, since leaving his gold out would be wrong without
+  a trace. The note names no next run, because an avatar whose recompute keeps failing would never
+  bring one.
 - **The chosen figure is view state, not address state:** it resets to `Nach Abzügen` on a reload and on
   a route round trip, unlike the ledger's page number, which `route.ts` round-trips on purpose. A
   shared link therefore always opens on `Nach Abzügen`.

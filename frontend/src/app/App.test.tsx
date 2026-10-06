@@ -1134,6 +1134,21 @@ describe('App', () => {
     ])
   })
 
+  it('states all four figures as not yet computed while a member is not yet computed, the bank included', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
+    )
+
+    expect(statTexts()).toStrictEqual([
+      'GildenbankNoch nicht berechnet.',
+      'GildenlagerwertNoch nicht berechnet.',
+      'GildenspendeNoch nicht berechnet.',
+      'HandwerkssubventionenNoch nicht berechnet.',
+    ])
+    expect(screen.getByTestId('stat-bank').dataset.absent).toBe('true')
+  })
+
   it('tones each of the four figures the way its meaning asks for', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
