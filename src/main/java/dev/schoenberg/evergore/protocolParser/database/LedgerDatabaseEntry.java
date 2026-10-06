@@ -10,6 +10,7 @@ public abstract class LedgerDatabaseEntry {
 	public static final String ID_COLUMN = "id";
 	public static final String TIMESTAMP_COLUMN = "timeStamp";
 	public static final String AVATAR_COLUMN = "avatar";
+	public static final String TYPE_COLUMN = "type";
 
 	@DatabaseField(columnName = ID_COLUMN, generatedId = true, allowGeneratedIdInsert = true, canBeNull = false)
 	public UUID id;
@@ -20,7 +21,7 @@ public abstract class LedgerDatabaseEntry {
 	@DatabaseField(columnName = AVATAR_COLUMN, canBeNull = false)
 	public String avatar;
 
-	@DatabaseField(columnName = "type", canBeNull = false)
+	@DatabaseField(columnName = TYPE_COLUMN, canBeNull = false)
 	public String type;
 
 	protected LedgerDatabaseEntry(Date timeStamp, String avatar, String type) {

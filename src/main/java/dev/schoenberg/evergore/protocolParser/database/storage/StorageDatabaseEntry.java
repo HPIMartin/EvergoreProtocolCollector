@@ -10,14 +10,17 @@ import dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry;
 @DatabaseTable(tableName = StorageDatabaseEntry.TABLE)
 public class StorageDatabaseEntry extends LedgerDatabaseEntry {
 	public static final String TABLE = "storageEntries";
+	public static final String QUANTITY_COLUMN = "quantity";
+	public static final String NAME_COLUMN = "name";
+	public static final String QUALITY_COLUMN = "quality";
 
-	@DatabaseField(columnName = "quantity", canBeNull = false, throwIfNull = true)
+	@DatabaseField(columnName = QUANTITY_COLUMN, canBeNull = false, throwIfNull = true)
 	public int quantity;
 
-	@DatabaseField(columnName = "name", canBeNull = false)
+	@DatabaseField(columnName = NAME_COLUMN, canBeNull = false)
 	public String name;
 
-	@DatabaseField(columnName = "quality", canBeNull = false, throwIfNull = true)
+	@DatabaseField(columnName = QUALITY_COLUMN, canBeNull = false, throwIfNull = true)
 	public int quality;
 
 	public StorageDatabaseEntry(Date timeStamp, String avatar, int quantity, String name, int quality, String type) {

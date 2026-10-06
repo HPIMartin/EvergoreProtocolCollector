@@ -10,8 +10,9 @@ import dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry;
 @DatabaseTable(tableName = BankDatabaseEntry.TABLE)
 public class BankDatabaseEntry extends LedgerDatabaseEntry {
 	public static final String TABLE = "bankEntries";
+	public static final String AMOUNT_COLUMN = "amount";
 
-	@DatabaseField(columnName = "amount", canBeNull = false, throwIfNull = true)
+	@DatabaseField(columnName = AMOUNT_COLUMN, canBeNull = false, throwIfNull = true)
 	public int amount;
 
 	public BankDatabaseEntry(Date timeStamp, String avatar, int amount, String type) {

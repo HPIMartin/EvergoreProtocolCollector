@@ -4,10 +4,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-public interface LedgerRepository<E> {
+public interface LedgerRepository<E, K> {
 	void add(List<E> newEntries);
 
-	List<E> getAllFor(String avatar, long page, long size);
+	List<E> getAllFor(String avatar, LedgerSort<K> sort, long page, long size);
 
 	List<E> getAllFor(String avatar);
 

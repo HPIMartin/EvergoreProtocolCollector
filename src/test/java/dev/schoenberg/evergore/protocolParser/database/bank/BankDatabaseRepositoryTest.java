@@ -12,11 +12,15 @@ import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankSortKey;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.LedgerSort;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 import dev.schoenberg.evergore.protocolParser.database.SqliteFile;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
+import static dev.schoenberg.evergore.protocolParser.businessLogic.base.SortDirection.ASCENDING;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.base.SortDirection.DESCENDING;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -47,9 +51,53 @@ class BankDatabaseRepositoryTest {
 		BankEntry stored = bankEntry("Aurora", BOUNDARY, 1000);
 		repo.add(List.of(stored));
 
-		List<BankEntry> found = repo.getAllFor("Aurora", 0, 10);
+		List<BankEntry> found = repo.getAllFor("Aurora", new LedgerSort<>(BankSortKey.TIMESTAMP, DESCENDING), 0, 10);
 
 		assertThat(found).containsExactly(stored);
+	}
+
+	@Test
+	void aPageSortedByAmountStartsWithTheLargestAmountOfTheWholeLedger() {
+		BankDatabaseRepository repo = repository();
+		repo.add(List.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 500), bankEntry("Aurora", BOUNDARY, 20), bankEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 10)));
+
+		List<BankEntry> firstPage = repo.getAllFor("Aurora", new LedgerSort<>(BankSortKey.AMOUNT, DESCENDING), 0, 1);
+
+		assertThat(firstPage).extracting(BankEntry::amount).containsExactly(500);
+	}
+
+	@Test
+	void aBankPageSortedByTheTransferPutsDepositsFirstThenNewestFirst() {
+		BankDatabaseRepository repo = repository();
+		BankEntry olderWithdrawal = new BankEntry(ONE_MINUTE_BEFORE_BOUNDARY.minusSeconds(60), "Aurora", 5, TransferType.ENTNAHME);
+		BankEntry olderDeposit = bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 50);
+		BankEntry newerDeposit = bankEntry("Aurora", BOUNDARY, 7);
+		BankEntry newerWithdrawal = new BankEntry(ONE_MINUTE_AFTER_BOUNDARY, "Aurora", 1000, TransferType.ENTNAHME);
+		repo.add(List.of(olderWithdrawal, olderDeposit, newerDeposit, newerWithdrawal));
+
+		List<BankEntry> sorted = repo.getAllFor("Aurora", new LedgerSort<>(BankSortKey.TRANSFER_TYPE, ASCENDING), 0, 4);
+
+		assertThat(sorted).containsExactly(newerDeposit, olderDeposit, newerWithdrawal, olderWithdrawal);
+	}
+
+	@Test
+	void aBankPageSortedByTimeAscendingStartsWithTheOldestMovement() {
+		BankDatabaseRepository repo = repository();
+		repo.add(List.of(bankEntry("Aurora", BOUNDARY, 20), bankEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 10), bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 500)));
+
+		List<BankEntry> sorted = repo.getAllFor("Aurora", new LedgerSort<>(BankSortKey.TIMESTAMP, ASCENDING), 0, 3);
+
+		assertThat(sorted).extracting(BankEntry::amount).containsExactly(500, 20, 10);
+	}
+
+	@Test
+	void sortingTheBankByTheAvatarKeepsItNewestFirstSinceEveryRowIsThatAvatars() {
+		BankDatabaseRepository repo = repository();
+		repo.add(List.of(bankEntry("Aurora", BOUNDARY, 20), bankEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 10), bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 500)));
+
+		List<BankEntry> sorted = repo.getAllFor("Aurora", new LedgerSort<>(BankSortKey.AVATAR, ASCENDING), 0, 3);
+
+		assertThat(sorted).extracting(BankEntry::amount).containsExactly(10, 20, 500);
 	}
 
 	@Test

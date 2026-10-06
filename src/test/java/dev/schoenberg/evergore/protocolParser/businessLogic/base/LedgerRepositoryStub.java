@@ -12,7 +12,7 @@ import java.util.function.Function;
 import static java.util.Comparator.naturalOrder;
 import static java.util.stream.Collectors.toMap;
 
-public abstract class LedgerRepositoryStub<E> implements LedgerRepository<E> {
+public abstract class LedgerRepositoryStub<E, K> implements LedgerRepository<E, K> {
 	private final Map<String, List<E>> entriesByAvatar = new HashMap<>();
 	private List<String> avatars = new ArrayList<>();
 	private final Set<String> unreadableAvatars = new HashSet<>();
@@ -67,7 +67,7 @@ public abstract class LedgerRepositoryStub<E> implements LedgerRepository<E> {
 	}
 
 	@Override
-	public List<E> getAllFor(String avatar, long page, long size) {
+	public List<E> getAllFor(String avatar, LedgerSort<K> sort, long page, long size) {
 		throw new UnsupportedOperationException();
 	}
 

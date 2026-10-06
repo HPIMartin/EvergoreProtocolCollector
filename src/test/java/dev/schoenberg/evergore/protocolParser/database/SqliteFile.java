@@ -37,10 +37,14 @@ public class SqliteFile {
 	}
 
 	public List<Integer> committedValues(String table, String column) {
+		return committedValues(table, column, column);
+	}
+
+	public List<Integer> committedValues(String table, String column, String orderColumn) {
 		return silentThrow(() -> {
 			try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + path);
 					Statement statement = connection.createStatement();
-					ResultSet rows = statement.executeQuery("SELECT " + column + " FROM " + table + " ORDER BY " + column)) {
+					ResultSet rows = statement.executeQuery("SELECT " + column + " FROM " + table + " ORDER BY " + orderColumn)) {
 				List<Integer> values = new ArrayList<>();
 				while (rows.next()) {
 					values.add(rows.getInt(1));

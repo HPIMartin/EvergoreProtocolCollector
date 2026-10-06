@@ -6,18 +6,22 @@ import java.util.Map;
 
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.dao.GenericRawResults;
+import com.j256.ormlite.stmt.QueryBuilder;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.LedgerRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.LedgerSort;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.exceptions.NoElementFound;
 
+import static dev.schoenberg.evergore.protocolParser.businessLogic.base.SortDirection.ASCENDING;
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.AVATAR_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.ID_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.TIMESTAMP_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static java.sql.Timestamp.from;
 import static java.util.stream.Collectors.toMap;
 
-public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry> implements LedgerRepository<E> {
+public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry, K> implements LedgerRepository<E, K> {
 	private final SqliteDatabase database;
 	private final Class<R> rowType;
 	private final TransferTypeDatabaseVisitor transferTypeVisitor = new TransferTypeDatabaseVisitor();
@@ -28,8 +32,8 @@ public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry>
 	}
 
 	@Override
-	public List<E> getAllFor(String avatar, long page, long size) {
-		List<R> result = silentThrow(() -> rows().queryBuilder().orderBy(TIMESTAMP_COLUMN, false).limit(size).offset(page * size).where().eq(AVATAR_COLUMN, avatar).query());
+	public List<E> getAllFor(String avatar, LedgerSort<K> sort, long page, long size) {
+		List<R> result = silentThrow(() -> orderedBy(sort, rows().queryBuilder()).limit(size).offset(page * size).where().eq(AVATAR_COLUMN, avatar).query());
 
 		if (result.isEmpty()) {
 			throw new NoElementFound(avatar);
@@ -91,6 +95,8 @@ public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry>
 		});
 	}
 
+	protected abstract String columnOf(K key);
+
 	protected abstract E toEntry(R row);
 
 	protected abstract R toRow(E entry);
@@ -101,6 +107,15 @@ public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry>
 
 	protected String storedFormOf(TransferType type) {
 		return transferTypeVisitor.convert(type);
+	}
+
+	private QueryBuilder<R, String> orderedBy(LedgerSort<K> sort, QueryBuilder<R, String> query) {
+		String column = columnOf(sort.key());
+		query.orderBy(column, sort.direction() == ASCENDING);
+		if (!column.equals(TIMESTAMP_COLUMN)) {
+			query.orderBy(TIMESTAMP_COLUMN, false);
+		}
+		return query.orderBy(ID_COLUMN, true);
 	}
 
 	private Dao<R, String> rows() {

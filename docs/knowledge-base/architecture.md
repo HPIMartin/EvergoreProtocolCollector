@@ -101,6 +101,13 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     210 ms. A row a constraint refuses keeps at most the rows before it and fails every run until it
     leaves the game's 30-day window; an error on which SQLite rolls the transaction back itself
     loses the whole batch; the extractor writes oldest first, so any stored part is the oldest rows.
+    A ledger page is read in a **total order** (decision 2026-10-05): the chosen column in the chosen
+    direction, then `timeStamp` newest first (left out when the time is the chosen column), then the
+    row `id` ascending, so a page boundary inside a run of ties neither repeats a row nor drops one;
+    the `id` is a random UUID, so rows that tie on everything before it stand in a stable but
+    arbitrary order. The port names the column by a key per ledger
+    (`BankSortKey`, `StorageSortKey`), and each ledger maps its keys to its own column constants
+    (`columnOf`), so no column name from a request reaches the SQL.
     `database/{bank,storage}/*` add only their row and the mapping between that row and its entry
     record.
   - `database/metaInformation/*`, the meta store: a recompute's batch is written in one
