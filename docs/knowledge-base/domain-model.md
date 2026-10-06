@@ -306,13 +306,15 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   that throws while an avatar is being recomputed is caught per avatar, logged at `error`, and the
   avatar's name is collected into the `EvaluationResult` and surfaced via `/health`'s `lastRun`
   detail as `failedAvatarCount` + `failedAvatarNames`, the same way an unknown item is. That avatar
-  keeps its previously stored sums; every healthy avatar still refreshes in the same batch. Writing
+  keeps its previously stored sums, and one whose very first recompute fails has none to keep, so
+  he stays not yet computed (`AvatarContributions` below); every healthy avatar still refreshes in
+  the same batch. Writing
   the whole run as one batch would otherwise have widened one bad ledger row from "one avatar goes
   stale" to "no avatar ever updates again", since a single unguarded `timeStamp` dereference in
   `getAllFor(avatar)` throws before the batch is written. Two consequences, both deliberate: the
-  guild-wide total then adds a stale contribution to current ones, its two guild-share flows are
-  absent so the guild's three modelled figures answer nothing at all until it recomputes, and that
-  avatar's row can show a
+  guild-wide total then adds a stale contribution to current ones (his kept flows included, or, for
+  sums stored before the flows existed, none, so the guild's three modelled figures answer nothing
+  until he recomputes), and that avatar's row can show a
   **last activity newer than its own sums**, because the activity columns are read live from the
   ledger while the sums come from the last recompute that reached him. Confining that to one row is
   the point: when the evaluator still wrote each avatar immediately, an unreadable row aborted the
@@ -382,10 +384,21 @@ independent readings by design, and no figure is derived from both.
   row from the sum of the shown rows by up to half a gold per row and half a gold more. The measured
   figures: the guild position in [testing.md](testing.md).
 - `AvatarContribution` names the avatar behind one such record; `Contribution.sumOf` adds a
-  collection of contributions into the guild's own, which is what the overview's total row shows.
-- `businessLogic/contribution/AvatarContributions` assembles one record per **known** avatar
-  (`KnownAvatars`, German collation) out of the stored keys, a missing key counting as zero, so an
-  avatar who only ever moved items keeps his row.
+  collection of contributions into the guild's own, which `GuildContributions.total()` answers for
+  the overview's total row.
+- `businessLogic/contribution/AvatarContributions` assembles one entry per **known** avatar
+  (`KnownAvatars`, German collation) out of the stored keys, so an avatar who only ever moved items
+  keeps his row. An avatar whose four ledger sums are not all stored
+  (`MetaInformationSnapshot.storesSumsOf`, the one definition of "computed") has **no contribution**
+  (`Optional.empty()`) and no stale instant, never zeros: no recompute has reached him, whatever
+  recompute instant is stored for him, and that instant does not date the last collection either,
+  which is the newest instant of the avatars whose sums are stored (decisions 2026-09-23 and
+  2026-10-06). `total()` is empty as
+  soon as one avatar has none, so no guild figure leaves him out without saying so. A member a
+  scrape meets for the first time therefore turns every guild figure into "not yet computed" from
+  the moment his first ledger row is stored, during the scrape, until a recompute reaches him: for
+  the rest of that run as a rule, and with no bound while his own recompute keeps failing (author
+  choice 2026-10-06), a state `/health` names in `failedAvatarNames`.
 
 ### The round-trip detection: `RoundTripDetector`
 

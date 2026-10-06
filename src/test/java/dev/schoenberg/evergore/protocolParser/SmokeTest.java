@@ -34,6 +34,8 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.EINLAGERUNG;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static java.time.Instant.EPOCH;
 import static java.util.Arrays.asList;
@@ -103,7 +105,8 @@ class SmokeTest {
 		MetaInformation<Long> withdrawl = new MetaInformation<>(getBankWithdrawl(avatar), 42L);
 		try (SqliteDatabase database = SqliteDatabase.open(config, () -> {}, logger)) {
 			new BankDatabaseRepository(database).add(asList(new BankEntry(EPOCH, avatar, 0, EINLAGERUNG)));
-			new MetaInformationDatabaseRepository(database).add(asList(placement, withdrawl));
+			new MetaInformationDatabaseRepository(database)
+					.add(asList(placement, withdrawl, new MetaInformation<>(getStoragePlacement(avatar), 0.0), new MetaInformation<>(getStorageWithdrawl(avatar), 0.0)));
 		}
 
 		HttpResponse<String> response = get("/api/v1/avatars");

@@ -636,7 +636,8 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    - `/` serves the SPA shell without a token (~480 bytes, `text/html`, carrying `<div id="root">`
      and the bundle `<script>`); the SPA then fetches the API with the token from its URL.
    - `/api/v1/avatars?token=…` answers `{page, size, totalCount, items[]}` with
-     `{avatar, bankDeposited, bankWithdrawn}` per item. Check `totalCount` against what the previous
+     `{avatar, bankDeposited, bankWithdrawn}` per item, `null` for a member no recompute has
+     reached yet. Check `totalCount` against what the previous
      stand served, and `lastUpdated` from `/api/v1/admin/status`; that is the cheapest proof the
      mounted database is the intended one and not an empty new file.
    - **Rate limit:** 30 requests per 10 s per client IP, then a 1-minute block. Nothing is exempt,
@@ -868,6 +869,11 @@ runner"). Test-only; the production scrape keeps its own browser.
 
 ## Notable runtime risks
 
+- **A member a scrape meets for the first time blanks every guild figure until a recompute reaches
+  him.** From his first stored ledger row on, all four header figures and the guild row read "Noch
+  nicht berechnet." and his own row says so too: for the rest of that run as a rule, and with no
+  bound while his own recompute keeps failing (author choice 2026-10-06). `/api/v1/admin/status`
+  names him in `failedAvatarNames`; the mechanism is in [domain-model.md](domain-model.md).
 - **The overview's three modelled figures answer nothing until the first recompute of a new jar
   completes.** The two guild-share sums per avatar are written by the recompute alone, so between the
   container starting and that run finishing (the collector's initial delay plus a full scrape)

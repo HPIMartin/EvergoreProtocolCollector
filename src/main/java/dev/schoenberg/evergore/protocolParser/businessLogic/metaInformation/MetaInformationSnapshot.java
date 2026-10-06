@@ -4,7 +4,12 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getSumsRecomputedAt;
 import static java.util.Comparator.naturalOrder;
 
@@ -15,6 +20,10 @@ public record MetaInformationSnapshot(Map<String, String> serializedValues) {
 
 	public <T> Optional<T> get(MetaInformationKey<T> key) {
 		return Optional.ofNullable(serializedValues.get(key.id)).map(key::deserialize);
+	}
+
+	public boolean storesSumsOf(String avatar) {
+		return Stream.of(getBankPlacement(avatar), getBankWithdrawl(avatar), getStoragePlacement(avatar), getStorageWithdrawl(avatar)).allMatch(key -> get(key).isPresent());
 	}
 
 	public Optional<Instant> lastRecomputeOf(Collection<String> avatars) {

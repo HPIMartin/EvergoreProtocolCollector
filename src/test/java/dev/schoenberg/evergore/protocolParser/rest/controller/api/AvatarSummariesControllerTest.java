@@ -57,18 +57,54 @@ class AvatarSummariesControllerTest {
 	}
 
 	@Test
-	void carriesZerosForAnAvatarWithoutAnyStoredSum() {
+	void servesNoSumsForAnAvatarNoRecomputeHasReachedRatherThanZeros() {
 		bankRepo.seedAvatars(List.of());
 		storageRepo.seedAvatars(List.of("Brynja"));
 
 		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
 
-		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", 0, 0, 0, 0, 0, null, null, null, null, null, null));
+		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", null, null, null, null, null, null, null, null, null, null, null));
+	}
+
+	@Test
+	void servesNoGuildFiguresWhileOneAvatarIsNotYetComputedRatherThanLeavingHimOut() {
+		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
+		recomputedAt("Aurora", LAST_COLLECTION);
+		metaRepo.put(getBankPlacement("Aurora"), 1500L);
+		metaRepo.put(getStorageDonation("Aurora"), 140.0);
+		metaRepo.put(getStorageCraftSubsidy("Aurora"), 20.0);
+
+		GuildTotals totals = tested.summaries(0, WHOLE_PAGE).totals();
+
+		assertThat(totals).isEqualTo(new GuildTotals(null, null, null, null, null, null, null, null, null, false));
+	}
+
+	@Test
+	void keepsAnsweringWhetherTheGuildContainsStaleSumsWhileItsFiguresAreAbsent() {
+		bankRepo.seedAvatars(List.of("Aurora", "Boreas", "Calix"));
+		recomputedAt("Aurora", THE_RUN_BEFORE);
+		recomputedAt("Boreas", LAST_COLLECTION);
+
+		GuildTotals totals = tested.summaries(0, WHOLE_PAGE).totals();
+
+		assertThat(totals).isEqualTo(new GuildTotals(null, null, null, null, null, null, null, null, null, true));
+	}
+
+	@Test
+	void keepsServingTheComputedRowsBesideOneNotYetComputed() {
+		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
+		recomputedAt("Aurora", LAST_COLLECTION);
+		metaRepo.put(getBankPlacement("Aurora"), 1500L);
+
+		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
+
+		assertThat(page.items()).extracting(AvatarSummary::avatar, AvatarSummary::bankDeposited).containsExactly(tuple("Aurora", 1500L), tuple("Boreas", null));
 	}
 
 	@Test
 	void roundsAFractionalStorageSumBeforeServingItRatherThanTruncatingTheNet() {
 		bankRepo.seedAvatars(List.of("Aurora"));
+		recomputed("Aurora");
 		metaRepo.put(getStoragePlacement("Aurora"), 0.4);
 		metaRepo.put(getStorageWithdrawl("Aurora"), 1.0);
 
@@ -80,6 +116,7 @@ class AvatarSummariesControllerTest {
 	@Test
 	void servesBothFlowsOfTheGuildShareBesideTheLedgerSums() {
 		bankRepo.seedAvatars(List.of("Aurora"));
+		recomputed("Aurora");
 		metaRepo.put(getStoragePlacement("Aurora"), 308.4);
 		metaRepo.put(getStorageWithdrawl("Aurora"), 300.0);
 		metaRepo.put(getStorageDonation("Aurora"), 140.0);
@@ -94,6 +131,7 @@ class AvatarSummariesControllerTest {
 	@Test
 	void servesTheFigureBeforeTheGuildsShareRoundedFromItsExactValue() {
 		bankRepo.seedAvatars(List.of("Aurora"));
+		recomputed("Aurora");
 		metaRepo.put(getStoragePlacement("Aurora"), 0.5);
 		metaRepo.put(getStorageDonation("Aurora"), 0.0);
 		metaRepo.put(getStorageCraftSubsidy("Aurora"), 0.2);
@@ -106,6 +144,7 @@ class AvatarSummariesControllerTest {
 	@Test
 	void servesNoFigureBeforeTheGuildsShareWhileNoRecomputeHasProducedTheFlows() {
 		bankRepo.seedAvatars(List.of("Aurora"));
+		recomputed("Aurora");
 		metaRepo.put(getStoragePlacement("Aurora"), 308.4);
 
 		AvatarSummary summary = tested.summaries(0, WHOLE_PAGE).items().get(0);
@@ -117,6 +156,7 @@ class AvatarSummariesControllerTest {
 	void servesTheGuildsStorageValueAndTheFigureBeforeItsShareRoundedFromTheGuildsExactSums() {
 		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
 		for (String avatar : List.of("Aurora", "Boreas")) {
+			recomputed(avatar);
 			metaRepo.put(getStoragePlacement(avatar), 2.34);
 			metaRepo.put(getStorageDonation(avatar), 0.36);
 			metaRepo.put(getStorageCraftSubsidy(avatar), 0.0);
@@ -130,6 +170,8 @@ class AvatarSummariesControllerTest {
 	@Test
 	void servesNoGuildStorageValueNorFigureBeforeItsShareWhileOneAvatarIsMissingHisFlows() {
 		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
+		recomputed("Aurora");
+		recomputed("Boreas");
 		metaRepo.put(getStoragePlacement("Aurora"), 10.0);
 		metaRepo.put(getStorageDonation("Aurora"), 140.0);
 		metaRepo.put(getStorageCraftSubsidy("Aurora"), 20.0);
@@ -143,6 +185,7 @@ class AvatarSummariesControllerTest {
 	@Test
 	void servesNeitherFlowWhileNoRecomputeHasProducedThemYet() {
 		bankRepo.seedAvatars(List.of("Aurora"));
+		recomputed("Aurora");
 		metaRepo.put(getStoragePlacement("Aurora"), 308.4);
 		metaRepo.put(getStorageWithdrawl("Aurora"), 300.0);
 
@@ -155,6 +198,7 @@ class AvatarSummariesControllerTest {
 	@Test
 	void servesNeitherFlowWhileOnlyOneOfTheTwoWasStored() {
 		bankRepo.seedAvatars(List.of("Aurora"));
+		recomputed("Aurora");
 		metaRepo.put(getStorageDonation("Aurora"), 140.0);
 
 		AvatarSummary summary = tested.summaries(0, WHOLE_PAGE).items().get(0);
@@ -165,6 +209,8 @@ class AvatarSummariesControllerTest {
 	@Test
 	void servesNoGuildFlowsWhileOneAvatarIsMissingHisOwn() {
 		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
+		recomputed("Aurora");
+		recomputed("Boreas");
 		metaRepo.put(getStorageDonation("Aurora"), 140.0);
 		metaRepo.put(getStorageCraftSubsidy("Aurora"), 20.0);
 
@@ -176,6 +222,8 @@ class AvatarSummariesControllerTest {
 	@Test
 	void keepsTheGuildFlowsAndEveryRowsFlowsFromDisagreeingAboutWhatIsKnown() {
 		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
+		recomputed("Aurora");
+		recomputed("Boreas");
 		metaRepo.put(getStorageDonation("Aurora"), 140.0);
 		metaRepo.put(getStorageCraftSubsidy("Aurora"), 20.0);
 
@@ -188,6 +236,8 @@ class AvatarSummariesControllerTest {
 	@Test
 	void servesTheGuildFlowsAsTheSumOfEveryAvatarsOwn() {
 		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
+		recomputed("Aurora");
+		recomputed("Boreas");
 		metaRepo.put(getStorageDonation("Aurora"), 140.0);
 		metaRepo.put(getStorageCraftSubsidy("Aurora"), 20.0);
 		metaRepo.put(getStorageDonation("Boreas"), 60.0);
@@ -219,6 +269,8 @@ class AvatarSummariesControllerTest {
 	@Test
 	void totalsEveryKnownAvatarRatherThanOnlyTheAvatarsOfTheServedPage() {
 		bankRepo.seedAvatars(List.of("Aurora", "Calix"));
+		recomputed("Aurora");
+		recomputed("Calix");
 		metaRepo.put(getBankPlacement("Aurora"), 1500L);
 		metaRepo.put(getBankPlacement("Calix"), 500L);
 
@@ -232,6 +284,8 @@ class AvatarSummariesControllerTest {
 	void totalsTheWholeGoldNetOfEveryKnownAvatarAcrossBothLedgers() {
 		bankRepo.seedAvatars(List.of("Aurora"));
 		storageRepo.seedAvatars(List.of("Brynja"));
+		recomputed("Aurora");
+		recomputed("Brynja");
 		metaRepo.put(getBankPlacement("Aurora"), 1500L);
 		metaRepo.put(getStorageWithdrawl("Aurora"), 300.0);
 		metaRepo.put(getStoragePlacement("Brynja"), 370.08);
@@ -244,6 +298,9 @@ class AvatarSummariesControllerTest {
 	@Test
 	void roundsTheGuildTotalFromTheGuildsExactSumRatherThanAddingTheRoundedRows() {
 		bankRepo.seedAvatars(List.of("Aurora", "Boreas", "Calla"));
+		recomputed("Aurora");
+		recomputed("Boreas");
+		recomputed("Calla");
 		metaRepo.put(getStoragePlacement("Aurora"), 100.4);
 		metaRepo.put(getStoragePlacement("Boreas"), 100.4);
 		metaRepo.put(getStoragePlacement("Calla"), 100.4);
@@ -257,8 +314,8 @@ class AvatarSummariesControllerTest {
 	@Test
 	void servesNoStaleInstantForARowThatTheLastCollectionRefreshed() {
 		bankRepo.seedAvatars(List.of("Aurora", "Calix"));
-		metaRepo.put(getSumsRecomputedAt("Aurora"), LAST_COLLECTION);
-		metaRepo.put(getSumsRecomputedAt("Calix"), LAST_COLLECTION);
+		recomputedAt("Aurora", LAST_COLLECTION);
+		recomputedAt("Calix", LAST_COLLECTION);
 
 		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
 
@@ -269,8 +326,8 @@ class AvatarSummariesControllerTest {
 	@Test
 	void servesTheInstantARowsSumsComeFromWhenTheLastCollectionMissedIt() {
 		bankRepo.seedAvatars(List.of("Aurora", "Calix"));
-		metaRepo.put(getSumsRecomputedAt("Aurora"), THE_RUN_BEFORE);
-		metaRepo.put(getSumsRecomputedAt("Calix"), LAST_COLLECTION);
+		recomputedAt("Aurora", THE_RUN_BEFORE);
+		recomputedAt("Calix", LAST_COLLECTION);
 
 		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
 
@@ -280,13 +337,25 @@ class AvatarSummariesControllerTest {
 	@Test
 	void statesThatTheGuildTotalContainsStaleSumsEvenWhenThePageDoesNotShowThatRow() {
 		bankRepo.seedAvatars(List.of("Aurora", "Calix"));
-		metaRepo.put(getSumsRecomputedAt("Aurora"), LAST_COLLECTION);
-		metaRepo.put(getSumsRecomputedAt("Calix"), THE_RUN_BEFORE);
+		recomputedAt("Aurora", LAST_COLLECTION);
+		recomputedAt("Calix", THE_RUN_BEFORE);
 
 		AvatarSummaryPage page = tested.summaries(0, 1);
 
 		assertThat(page.items()).extracting(AvatarSummary::avatar).containsExactly("Aurora");
 		assertThat(page.totals().containsStaleSums()).isTrue();
+	}
+
+	private void recomputed(String avatar) {
+		metaRepo.put(getBankPlacement(avatar), 0L);
+		metaRepo.put(getBankWithdrawl(avatar), 0L);
+		metaRepo.put(getStoragePlacement(avatar), 0.0);
+		metaRepo.put(getStorageWithdrawl(avatar), 0.0);
+	}
+
+	private void recomputedAt(String avatar, Instant at) {
+		recomputed(avatar);
+		metaRepo.put(getSumsRecomputedAt(avatar), at);
 	}
 
 	private static List<String> avatarsOf(AvatarSummaryPage page) {

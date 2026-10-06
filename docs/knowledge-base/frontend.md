@@ -206,6 +206,7 @@ Four top-level folders under `frontend/src/`:
   as "moved nothing", and the guild row served without sums reads "Enthält mindestens eine Zeile,
   die noch nicht berechnet ist." even when it also contains an outdated row. `domain/uncomputedSums.ts`
   holds the guild wording and `isUncomputed`; the row's wording is the header's `UNCOMPUTED_NOTE`.
+  When the server serves such a row is under the wire contract below.
 - **The guild-wide total row comes from the envelope, not from the loaded rows** (decision
   2026-09-02): the overview hands `totals` to the table's `total` prop and does no arithmetic, so the
   row keeps meaning the guild once the overview pages or a time window narrows the body. It is
@@ -281,11 +282,17 @@ service's only read surface.
   a **400**, not a clamp, so a client bug stays visible. `totalCount` is the unpaged total, so the
   SPA can size its navigation instead of inferring the end from a short page.
 - **The four sums are the sheet's columns 1 to 4, `net` its column 5, and all of them are whole gold**
-  (`long`, decision 2026-09-02): serving the raw `double` would put every value from 10^7 upward,
+  (decision 2026-09-02): serving the raw `double` would put every value from 10^7 upward,
   where the real sums sit, on the wire in exponential notation. `net` is **derived per request** and
   stored nowhere. Each is its exact value rounded once, the totals' included, so a served figure can
   differ from the sum of those beside or above it; the rule lives in
   [domain-model.md](domain-model.md).
+- **The five sums are `null` together exactly when no recompute has reached the avatar**
+  (decisions 2026-09-23 and 2026-10-06): such a row is "not yet computed", never zeros, and its
+  flows, `balance` and `staleSumsFrom` are `null` too, so the server tells "never computed" from
+  "outdated" and the SPA reads it off the wire. `totals` serves every figure as `null` as soon as
+  one avatar is not yet computed, since a guild figure must not leave him out, while
+  `containsStaleSums` still answers. How the SPA shows the state is under the views above.
 - **The SPA reads a row or `totals` whose five sums are all `null` as carrying none**
   (`sumsFrom` in `api/wire.ts`), and refuses one with only some of them absent, or without them
   but with a flow, `balance` or `storageValue` (`refuseFiguresWithoutSums`), as a malformed answer,

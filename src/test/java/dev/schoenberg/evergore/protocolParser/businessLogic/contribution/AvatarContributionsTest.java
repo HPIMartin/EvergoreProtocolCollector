@@ -3,13 +3,19 @@ package dev.schoenberg.evergore.protocolParser.businessLogic.contribution;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.FakeMetaInformationRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation;
+import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
 
@@ -43,8 +49,8 @@ class AvatarContributionsTest {
 	@Test
 	void reportsNoStaleSumsWhileEveryAvatarWasRecomputedInTheSameRun() {
 		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
-		metaRepo.put(getSumsRecomputedAt("Aurora"), LATER);
-		metaRepo.put(getSumsRecomputedAt("Brynja"), LATER);
+		recomputed("Aurora", LATER);
+		recomputed("Brynja", LATER);
 
 		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
@@ -54,8 +60,8 @@ class AvatarContributionsTest {
 	@Test
 	void reportsTheStoredInstantOfAnAvatarWhoseSumsAreOlderThanTheLastCollection() {
 		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
-		metaRepo.put(getSumsRecomputedAt("Aurora"), EARLIER);
-		metaRepo.put(getSumsRecomputedAt("Brynja"), LATER);
+		recomputed("Aurora", EARLIER);
+		recomputed("Brynja", LATER);
 
 		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
@@ -74,7 +80,11 @@ class AvatarContributionsTest {
 	@Test
 	void reportsNoStaleSumsForAnAvatarThatCarriesNoRecomputeInstantAtAll() {
 		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
-		metaRepo.put(getSumsRecomputedAt("Brynja"), LATER);
+		metaRepo.put(getBankPlacement("Aurora"), 0L);
+		metaRepo.put(getBankWithdrawl("Aurora"), 0L);
+		metaRepo.put(getStoragePlacement("Aurora"), 0.0);
+		metaRepo.put(getStorageWithdrawl("Aurora"), 0.0);
+		recomputed("Brynja", LATER);
 
 		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
@@ -84,8 +94,8 @@ class AvatarContributionsTest {
 	@Test
 	void statesThatTheGuildContainsStaleSumsWhenOneAvatarLagsBehindTheLastCollection() {
 		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
-		metaRepo.put(getSumsRecomputedAt("Aurora"), EARLIER);
-		metaRepo.put(getSumsRecomputedAt("Brynja"), LATER);
+		recomputed("Aurora", EARLIER);
+		recomputed("Brynja", LATER);
 
 		assertThat(tested.ofEveryKnownAvatar().containsStaleSums()).isTrue();
 	}
@@ -93,8 +103,8 @@ class AvatarContributionsTest {
 	@Test
 	void statesThatTheGuildContainsNoStaleSumsWhileEveryAvatarIsCurrent() {
 		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
-		metaRepo.put(getSumsRecomputedAt("Aurora"), LATER);
-		metaRepo.put(getSumsRecomputedAt("Brynja"), LATER);
+		recomputed("Aurora", LATER);
+		recomputed("Brynja", LATER);
 
 		assertThat(tested.ofEveryKnownAvatar().containsStaleSums()).isFalse();
 	}
@@ -109,16 +119,86 @@ class AvatarContributionsTest {
 
 		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
-		assertThat(all).containsExactly(new AvatarContribution("Aurora", new Contribution(1500, 200, 185.04, 300.0, Optional.empty()), null, null, null));
+		assertThat(all).containsExactly(new AvatarContribution("Aurora", Optional.of(new Contribution(1500, 200, 185.04, 300.0, Optional.empty())), null, null, null));
 	}
 
 	@Test
-	void countsAnAvatarWithoutAnyStoredSumAsZeroRatherThanLeavingHimOut() {
+	void answersNoContributionForAnAvatarNoRecomputeHasReachedRatherThanZeros() {
 		storageRepo.seedAvatars(List.of("Brynja"));
 
 		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
-		assertThat(all).containsExactly(new AvatarContribution("Brynja", new Contribution(0, 0, 0, 0, Optional.empty()), null, null, null));
+		assertThat(all).containsExactly(new AvatarContribution("Brynja", Optional.empty(), null, null, null));
+	}
+
+	@ParameterizedTest(name = "answers no contribution while only the {0} of the four sums is missing")
+	@MethodSource("eachOfTheFourSums")
+	void answersNoContributionWhileAnyOneOfTheFourSumsIsMissing(String sum, MetaInformationKey<?> missing) {
+		bankRepo.seedAvatars(List.of("Aurora"));
+		recomputedWithout(missing, "Aurora");
+
+		AvatarContribution aurora = tested.ofEveryKnownAvatar().avatars().getFirst();
+
+		assertThat(aurora.contribution()).isEmpty();
+	}
+
+	static Stream<Arguments> eachOfTheFourSums() {
+		return Stream
+				.of(Arguments.of("bank placement", getBankPlacement("Aurora")), Arguments.of("bank withdrawal", getBankWithdrawl("Aurora")),
+						Arguments.of("storage placement", getStoragePlacement("Aurora")), Arguments.of("storage withdrawal", getStorageWithdrawl("Aurora")));
+	}
+
+	@Test
+	void answersNoContributionWhileOneOfTheFourSumsIsMissingRatherThanCountingItAsZero() {
+		bankRepo.seedAvatars(List.of("Aurora"));
+		metaRepo.put(getBankPlacement("Aurora"), 1500L);
+		metaRepo.put(getBankWithdrawl("Aurora"), 200L);
+		metaRepo.put(getStoragePlacement("Aurora"), 185.04);
+
+		AvatarContribution aurora = tested.ofEveryKnownAvatar().avatars().getFirst();
+
+		assertThat(aurora.contribution()).isEmpty();
+	}
+
+	@Test
+	void reportsNoStaleSumsForAnAvatarNoRecomputeHasReachedEvenWhenAnOlderInstantIsStoredForHim() {
+		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
+		metaRepo.put(getSumsRecomputedAt("Aurora"), EARLIER);
+		recomputed("Brynja", LATER);
+
+		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
+
+		assertThat(all).extracting(AvatarContribution::avatar, AvatarContribution::staleSumsFrom).containsExactly(tuple("Aurora", null), tuple("Brynja", null));
+	}
+
+	@Test
+	void datesTheLastCollectionByTheComputedAvatarsAloneSoThatAnInstantWithoutSumsMarksNobodyStale() {
+		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
+		metaRepo.put(getSumsRecomputedAt("Aurora"), LATER);
+		recomputed("Brynja", EARLIER);
+
+		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
+
+		assertThat(all).extracting(AvatarContribution::avatar, AvatarContribution::staleSumsFrom).containsExactly(tuple("Aurora", null), tuple("Brynja", null));
+	}
+
+	@Test
+	void totalsNothingWhileOneAvatarIsNotYetComputedRatherThanLeavingHimOut() {
+		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
+		recomputed("Aurora", LATER);
+
+		assertThat(tested.ofEveryKnownAvatar().total()).isEmpty();
+	}
+
+	@Test
+	void totalsTheContributionsOfEveryAvatarWhileAllOfThemAreComputed() {
+		bankRepo.seedAvatars(List.of("Aurora", "Brynja"));
+		recomputed("Aurora", LATER);
+		recomputed("Brynja", LATER);
+		metaRepo.put(getBankPlacement("Aurora"), 1500L);
+		metaRepo.put(getStorageWithdrawl("Brynja"), 300.0);
+
+		assertThat(tested.ofEveryKnownAvatar().total()).contains(new Contribution(1500, 0, 0, 300.0, Optional.empty()));
 	}
 
 	@Test
@@ -151,5 +231,21 @@ class AvatarContributionsTest {
 		List<String> named = tested.ofEveryKnownAvatar().avatars().stream().map(AvatarContribution::avatar).toList();
 
 		assertThat(named).containsExactly("Anna", "Ärger", "Zorn");
+	}
+
+	private void recomputed(String avatar, Instant at) {
+		metaRepo.put(getBankPlacement(avatar), 0L);
+		metaRepo.put(getBankWithdrawl(avatar), 0L);
+		metaRepo.put(getStoragePlacement(avatar), 0.0);
+		metaRepo.put(getStorageWithdrawl(avatar), 0.0);
+		metaRepo.put(getSumsRecomputedAt(avatar), at);
+	}
+
+	private void recomputedWithout(MetaInformationKey<?> missing, String avatar) {
+		List<MetaInformation<?>> sums = List
+				.of(new MetaInformation<>(getBankPlacement(avatar), 0L), new MetaInformation<>(getBankWithdrawl(avatar), 0L),
+						new MetaInformation<>(getStoragePlacement(avatar), 0.0), new MetaInformation<>(getStorageWithdrawl(avatar), 0.0));
+		metaRepo.add(sums.stream().filter(sum -> !sum.key().id.equals(missing.id)).toList());
+		metaRepo.put(getSumsRecomputedAt(avatar), LATER);
 	}
 }

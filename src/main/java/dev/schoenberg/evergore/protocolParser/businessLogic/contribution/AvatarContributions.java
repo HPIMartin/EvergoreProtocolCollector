@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.contribution;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,22 +39,34 @@ public class AvatarContributions {
 		Map<String, Instant> lastBankActivity = bankRepo.latestTimestampPerAvatar();
 		Map<String, Instant> lastStorageActivity = storageRepo.latestTimestampPerAvatar();
 		List<String> guild = knownAvatars.sortedByName();
-		Optional<Instant> lastCollection = recompute.lastRecomputeOf(guild);
+		Map<String, Contribution> computed = new LinkedHashMap<>();
+		guild.forEach(avatar -> recomputedContributionOf(recompute, avatar).ifPresent(contribution -> computed.put(avatar, contribution)));
+		Optional<Instant> lastCollection = recompute.lastRecomputeOf(computed.keySet());
 
 		List<AvatarContribution> avatars = guild
 				.stream()
-				.map(avatar -> contributionOf(recompute, avatar, lastBankActivity.get(avatar), lastStorageActivity.get(avatar), lastCollection))
+				.map(avatar -> contributionOf(recompute, avatar, Optional.ofNullable(computed.get(avatar)), lastBankActivity.get(avatar), lastStorageActivity.get(avatar),
+						lastCollection))
 				.toList();
 
 		return new GuildContributions(recompute.get(getLastUpdatedKey()), avatars);
 	}
 
-	private static AvatarContribution contributionOf(MetaInformationSnapshot recompute, String avatar, Instant lastBankActivity, Instant lastStorageActivity,
-			Optional<Instant> lastCollection) {
-		Contribution contribution = new Contribution(recompute.get(getBankPlacement(avatar)).orElse(0L), recompute.get(getBankWithdrawl(avatar)).orElse(0L),
-				recompute.get(getStoragePlacement(avatar)).orElse(0D), recompute.get(getStorageWithdrawl(avatar)).orElse(0D), guildShareOf(recompute, avatar));
+	private static AvatarContribution contributionOf(MetaInformationSnapshot recompute, String avatar, Optional<Contribution> contribution, Instant lastBankActivity,
+			Instant lastStorageActivity, Optional<Instant> lastCollection) {
+		Instant staleSumsFrom = contribution.isPresent() ? staleSumsFrom(recompute, avatar, lastCollection) : null;
 
-		return new AvatarContribution(avatar, contribution, lastBankActivity, lastStorageActivity, staleSumsFrom(recompute, avatar, lastCollection));
+		return new AvatarContribution(avatar, contribution, lastBankActivity, lastStorageActivity, staleSumsFrom);
+	}
+
+	private static Optional<Contribution> recomputedContributionOf(MetaInformationSnapshot recompute, String avatar) {
+		if (!recompute.storesSumsOf(avatar)) {
+			return Optional.empty();
+		}
+
+		return Optional
+				.of(new Contribution(recompute.get(getBankPlacement(avatar)).orElseThrow(), recompute.get(getBankWithdrawl(avatar)).orElseThrow(),
+						recompute.get(getStoragePlacement(avatar)).orElseThrow(), recompute.get(getStorageWithdrawl(avatar)).orElseThrow(), guildShareOf(recompute, avatar)));
 	}
 
 	private static Optional<GuildShare> guildShareOf(MetaInformationSnapshot recompute, String avatar) {

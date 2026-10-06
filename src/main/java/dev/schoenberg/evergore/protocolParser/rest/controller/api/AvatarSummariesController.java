@@ -1,6 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller.api;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.function.ToLongFunction;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -58,32 +60,28 @@ public class AvatarSummariesController {
 	}
 
 	private static GuildTotals totalsOf(GuildContributions recompute) {
-		WholeGoldContribution total = Contribution.sumOf(recompute.avatars().stream().map(AvatarContribution::contribution).toList()).inWholeGold();
+		Optional<WholeGoldContribution> total = recompute.total().map(Contribution::inWholeGold);
 
-		return new GuildTotals(total.bankWithdrawn(), total.bankDeposited(), total.storageWithdrawn(), total.storageDeposited(), total.net(), donationOf(total),
-				craftSubsidyOf(total), balanceOf(total), storageValueOf(total), recompute.containsStaleSums());
+		return new GuildTotals(figureOf(total, WholeGoldContribution::bankWithdrawn), figureOf(total, WholeGoldContribution::bankDeposited),
+				figureOf(total, WholeGoldContribution::storageWithdrawn), figureOf(total, WholeGoldContribution::storageDeposited), figureOf(total, WholeGoldContribution::net),
+				shareOf(total, WholeGoldShare::donation), shareOf(total, WholeGoldShare::craftSubsidy), shareOf(total, WholeGoldShare::balance),
+				shareOf(total, WholeGoldShare::storageValue), recompute.containsStaleSums());
 	}
 
 	private static AvatarSummary summaryOf(AvatarContribution avatar) {
-		WholeGoldContribution whole = avatar.contribution().inWholeGold();
+		Optional<WholeGoldContribution> whole = avatar.contribution().map(Contribution::inWholeGold);
 
-		return new AvatarSummary(avatar.avatar(), whole.bankWithdrawn(), whole.bankDeposited(), whole.storageWithdrawn(), whole.storageDeposited(), whole.net(), donationOf(whole),
-				craftSubsidyOf(whole), balanceOf(whole), avatar.lastBankActivity(), avatar.lastStorageActivity(), avatar.staleSumsFrom());
+		return new AvatarSummary(avatar.avatar(), figureOf(whole, WholeGoldContribution::bankWithdrawn), figureOf(whole, WholeGoldContribution::bankDeposited),
+				figureOf(whole, WholeGoldContribution::storageWithdrawn), figureOf(whole, WholeGoldContribution::storageDeposited), figureOf(whole, WholeGoldContribution::net),
+				shareOf(whole, WholeGoldShare::donation), shareOf(whole, WholeGoldShare::craftSubsidy), shareOf(whole, WholeGoldShare::balance), avatar.lastBankActivity(),
+				avatar.lastStorageActivity(), avatar.staleSumsFrom());
 	}
 
-	private static Long donationOf(WholeGoldContribution contribution) {
-		return contribution.guildShare().map(WholeGoldShare::donation).orElse(null);
+	private static Long figureOf(Optional<WholeGoldContribution> contribution, ToLongFunction<WholeGoldContribution> figure) {
+		return contribution.map(whole -> figure.applyAsLong(whole)).orElse(null);
 	}
 
-	private static Long craftSubsidyOf(WholeGoldContribution contribution) {
-		return contribution.guildShare().map(WholeGoldShare::craftSubsidy).orElse(null);
-	}
-
-	private static Long balanceOf(WholeGoldContribution contribution) {
-		return contribution.guildShare().map(WholeGoldShare::balance).orElse(null);
-	}
-
-	private static Long storageValueOf(WholeGoldContribution contribution) {
-		return contribution.guildShare().map(WholeGoldShare::storageValue).orElse(null);
+	private static Long shareOf(Optional<WholeGoldContribution> contribution, ToLongFunction<WholeGoldShare> figure) {
+		return contribution.flatMap(WholeGoldContribution::guildShare).map(share -> figure.applyAsLong(share)).orElse(null);
 	}
 }
