@@ -40,6 +40,11 @@ export type Column<Row> =
       readonly href: (row: Row) => string
     })
 
+export type DeliveredOrder = {
+  readonly sort: Sort | null
+  readonly choose: (sort: Sort) => void
+}
+
 export type Total<Row> = {
   readonly label: string
   readonly row: Row
@@ -54,6 +59,7 @@ export type SortableTableProps<Row> = {
   readonly emptyMessage: string
   readonly total?: Total<Row>
   readonly initialSort?: Sort
+  readonly deliveredOrder?: DeliveredOrder
   readonly onFollow?: (href: string) => void
   readonly mark?: (row: Row) => string | null
 }
@@ -248,14 +254,17 @@ export function SortableTable<Row>({
   emptyMessage,
   total,
   initialSort,
+  deliveredOrder,
   onFollow,
   mark,
 }: SortableTableProps<Row>) {
-  const [sort, setSort] = useState<Sort | null>(initialSort ?? null)
+  const [ownSort, setOwnSort] = useState<Sort | null>(initialSort ?? null)
+  const sort = deliveredOrder === undefined ? ownSort : deliveredOrder.sort
 
-  const visibleRows = sort
-    ? sortedBy(rows, columnOf(columns, sort.columnKey), sort.direction)
-    : rows
+  const visibleRows =
+    deliveredOrder === undefined && sort
+      ? sortedBy(rows, columnOf(columns, sort.columnKey), sort.direction)
+      : rows
   const totalMark = total === undefined ? null : shownMark(total.mark)
 
   return (
@@ -277,7 +286,11 @@ export function SortableTable<Row>({
                 type="button"
                 className="data-table__sort"
                 onClick={() => {
-                  setSort((current) => nextSort(current, column.key))
+                  if (deliveredOrder === undefined) {
+                    setOwnSort((current) => nextSort(current, column.key))
+                  } else {
+                    deliveredOrder.choose(nextSort(sort, column.key))
+                  }
                 }}
               >
                 <span data-testid="column-label">{column.header}</span>

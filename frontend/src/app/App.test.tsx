@@ -1913,6 +1913,264 @@ describe('App', () => {
     })
   })
 
+  it('asks the API for the whole ledger sorted when a column is chosen', async () => {
+    const server = alwaysServing(200, STORAGE_BODY)
+    await shellAt(`/avatars/Calix/storage?token=${TOKEN}`, server)
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Menge/ }))
+    })
+
+    expect({
+      address: window.location.pathname + window.location.search,
+      lastAsked: server.askedFor.at(-1),
+    }).toStrictEqual({
+      address:
+        '/avatars/Calix/storage?token=a-test-token&sort=quantity&direction=ascending',
+      lastAsked:
+        '/api/v1/avatars/Calix/storage?token=a-test-token&page=0&size=100&sort=quantity&direction=ascending',
+    })
+  })
+
+  it('starts a newly chosen sort on the first page', async () => {
+    const thirdPage = JSON.stringify({
+      ...(JSON.parse(STORAGE_BODY) as object),
+      page: 2,
+      totalCount: 340,
+    })
+    await shellAt(
+      `/avatars/Calix/storage?token=${TOKEN}&page=2`,
+      alwaysServing(200, thirdPage),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Gegenstand/ }))
+    })
+
+    expect(window.location.search).toBe(
+      '?token=a-test-token&sort=name&direction=ascending',
+    )
+  })
+
+  it('asks for the other direction when the sorted column is chosen again', async () => {
+    await shellAt(
+      `/avatars/Calix/storage?token=${TOKEN}&sort=quantity&direction=ascending`,
+      alwaysServing(200, STORAGE_BODY),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Menge/ }))
+    })
+
+    expect(window.location.search).toBe(
+      '?token=a-test-token&sort=quantity&direction=descending',
+    )
+  })
+
+  it('asks the bank route for the sort the address names and again for a chosen one', async () => {
+    const server = alwaysServing(200, BANK_BODY)
+    await shellAt(
+      `/avatars/Calix/bank?token=${TOKEN}&sort=amount&direction=descending`,
+      server,
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Betrag/ }))
+    })
+
+    expect(server.askedFor).toStrictEqual([
+      '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100&sort=amount&direction=descending',
+      '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100&sort=amount&direction=ascending',
+    ])
+  })
+
+  it.each([
+    ['bank', 'Zeitpunkt', 'timestamp', BANK_BODY],
+    ['bank', 'Avatar', 'avatar', BANK_BODY],
+    ['bank', 'Betrag', 'amount', BANK_BODY],
+    ['bank', 'Vorgang', 'transferType', BANK_BODY],
+    ['storage', 'Zeitpunkt', 'timestamp', STORAGE_BODY],
+    ['storage', 'Avatar', 'avatar', STORAGE_BODY],
+    ['storage', 'Menge', 'quantity', STORAGE_BODY],
+    ['storage', 'Gegenstand', 'name', STORAGE_BODY],
+    ['storage', 'Qualität', 'quality', STORAGE_BODY],
+    ['storage', 'Vorgang', 'transferType', STORAGE_BODY],
+  ])(
+    'asks the %s ledger for its column when %s is chosen, by the wire name %s',
+    async (ledger, header, wireName, body) => {
+      const server = alwaysServing(200, body)
+      await shellAt(`/avatars/Calix/${ledger}?token=${TOKEN}`, server)
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: header }))
+      })
+
+      expect(server.askedFor.at(-1)).toContain(`&sort=${wireName}&`)
+    },
+  )
+
+  it('marks the column the address sorts the bank ledger by', async () => {
+    await shellAt(
+      `/avatars/Calix/bank?token=${TOKEN}&sort=amount&direction=ascending`,
+      alwaysServing(200, BANK_BODY),
+    )
+
+    const marks = screen
+      .getAllByRole('columnheader')
+      .map((header) => header.getAttribute('aria-sort'))
+
+    expect(marks).toStrictEqual(['none', 'none', 'ascending', 'none'])
+  })
+
+  it('reverses the sort of the bank ledger when its column is chosen again', async () => {
+    await shellAt(
+      `/avatars/Calix/bank?token=${TOKEN}&sort=amount&direction=ascending`,
+      alwaysServing(200, BANK_BODY),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Betrag/ }))
+    })
+
+    expect(window.location.search).toBe(
+      '?token=a-test-token&sort=amount&direction=descending',
+    )
+  })
+
+  it('keeps the sort of the bank ledger in the link to the next page', async () => {
+    const body = JSON.stringify({
+      ...(JSON.parse(BANK_BODY) as object),
+      totalCount: 340,
+    })
+
+    await shellAt(
+      `/avatars/Calix/bank?token=${TOKEN}&sort=amount&direction=ascending`,
+      alwaysServing(200, body),
+    )
+
+    expect(screen.getByTestId('pagination-next').getAttribute('href')).toBe(
+      '/avatars/Calix/bank?token=a-test-token&page=1&sort=amount&direction=ascending',
+    )
+  })
+
+  it('marks no column when the address names a direction the table does not know', async () => {
+    await shellAt(
+      `/avatars/Calix/storage?token=${TOKEN}&sort=quantity&direction=up`,
+      alwaysServing(200, STORAGE_BODY),
+    )
+
+    const marks = screen
+      .getAllByRole('columnheader')
+      .map((header) => header.getAttribute('aria-sort'))
+
+    expect(marks).toStrictEqual(Array<string>(6).fill('none'))
+  })
+
+  it('links the bank and the storage ledger without the sort of the sorted address', async () => {
+    await shellAt(
+      `/avatars/Calix/storage?token=${TOKEN}&sort=quantity&direction=descending`,
+      alwaysServing(200, STORAGE_BODY),
+    )
+
+    const ledgers = ['Bank', 'Lager'].map((name) =>
+      screen.getByRole('link', { name }).getAttribute('href'),
+    )
+
+    expect(ledgers).toStrictEqual([
+      '/avatars/Calix/bank?token=a-test-token',
+      '/avatars/Calix/storage?token=a-test-token',
+    ])
+  })
+
+  it('completes an address that names only its column with the descending direction, in the request and in the mark', async () => {
+    const server = alwaysServing(200, BANK_BODY)
+
+    await shellAt(`/avatars/Calix/bank?token=${TOKEN}&sort=amount`, server)
+
+    expect({
+      askedFor: server.askedFor,
+      marks: screen
+        .getAllByRole('columnheader')
+        .map((header) => header.getAttribute('aria-sort')),
+    }).toStrictEqual({
+      askedFor: [
+        '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100&sort=amount&direction=descending',
+      ],
+      marks: ['none', 'none', 'descending', 'none'],
+    })
+  })
+
+  it('marks the column the address sorts the ledger by', async () => {
+    await shellAt(
+      `/avatars/Calix/storage?token=${TOKEN}&sort=quantity&direction=descending`,
+      alwaysServing(200, STORAGE_BODY),
+    )
+
+    const marks = screen
+      .getAllByRole('columnheader')
+      .map((header) => header.getAttribute('aria-sort'))
+
+    expect(marks).toStrictEqual([
+      'none',
+      'none',
+      'descending',
+      'none',
+      'none',
+      'none',
+    ])
+  })
+
+  it('shows the rows in the order the API sorted them rather than sorting them again', async () => {
+    const body = JSON.stringify({
+      page: 0,
+      size: 100,
+      totalCount: 2,
+      items: ['Stahlbarren', 'Stahl-Rüstung'].map((name) => ({
+        timestamp: '2026-08-05T10:15:00Z',
+        avatar: 'Calix',
+        quantity: 1,
+        name,
+        quality: 7,
+        transferType: 'DEPOSIT',
+      })),
+    })
+
+    await shellAt(
+      `/avatars/Calix/storage?token=${TOKEN}&sort=name&direction=descending`,
+      alwaysServing(200, body),
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Gegenstand/ }))
+    })
+
+    expect(
+      screen.getAllByTestId('cell-name').map((cell) => cell.textContent),
+    ).toStrictEqual(['Stahlbarren', 'Stahl-Rüstung'])
+  })
+
+  it('keeps the sort in the links to the next and the previous page', async () => {
+    const body = JSON.stringify({
+      page: 1,
+      size: 100,
+      totalCount: 340,
+      items: [],
+    })
+
+    await shellAt(
+      `/avatars/Calix/storage?token=${TOKEN}&page=1&sort=quantity&direction=descending`,
+      alwaysServing(200, body),
+    )
+
+    expect({
+      previous: screen.getByTestId('pagination-previous').getAttribute('href'),
+      next: screen.getByTestId('pagination-next').getAttribute('href'),
+    }).toStrictEqual({
+      previous:
+        '/avatars/Calix/storage?token=a-test-token&sort=quantity&direction=descending',
+      next: '/avatars/Calix/storage?token=a-test-token&page=2&sort=quantity&direction=descending',
+    })
+  })
+
   it('renders the empty state for a page past the end, not an error', async () => {
     await shellAt(
       `/avatars/Calix/bank?token=${TOKEN}&page=50`,

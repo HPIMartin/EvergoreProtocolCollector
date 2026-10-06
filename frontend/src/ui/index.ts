@@ -10,6 +10,7 @@ export type { NavigationLink, PageFrameProps } from './PageFrame.tsx'
 export { SortableTable } from './SortableTable.tsx'
 export type {
   Column,
+  DeliveredOrder,
   Sort,
   SortableTableProps,
   SortDirection,

@@ -66,6 +66,7 @@ export function BankLedgerView({
       load={load}
       columns={columns}
       token={token}
+      sort={sort}
       pathOf={bankPath}
       onFollow={onFollow}
     />

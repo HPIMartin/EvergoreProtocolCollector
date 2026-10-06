@@ -113,9 +113,7 @@ public class MemberBrowser {
 	public void follow(String linkText) {
 		String before = driver().getCurrentUrl();
 		driver().findElement(By.linkText(linkText)).click();
-		new WebDriverWait(driver(), HANG_GUARD).until(browser -> !before.equals(browser.getCurrentUrl()));
-		awaitSettled();
-		rememberTheReachedUrl();
+		awaitTheMoveFrom(before);
 	}
 
 	public String lastReachedUrl() {
@@ -138,7 +136,9 @@ public class MemberBrowser {
 	}
 
 	public void clickTheLedgerColumnHeader(String header) {
+		String before = driver().getCurrentUrl();
 		clickTheColumnHeaderWithin("//table[contains(concat(' ', normalize-space(@class), ' '), ' data-table ')]", header);
+		awaitTheMoveFrom(before);
 	}
 
 	private void clickTheColumnHeaderWithin(String scopeXPath, String header) {
@@ -322,6 +322,12 @@ public class MemberBrowser {
 	private BiDi bidi() {
 		WebDriver augmented = driver instanceof HasBiDi ? driver : new Augmenter().augment(driver);
 		return ((HasBiDi) augmented).getBiDi();
+	}
+
+	private void awaitTheMoveFrom(String before) {
+		new WebDriverWait(driver(), HANG_GUARD).until(browser -> !before.equals(browser.getCurrentUrl()));
+		awaitSettled();
+		rememberTheReachedUrl();
 	}
 
 	private void rememberTheReachedUrl() {

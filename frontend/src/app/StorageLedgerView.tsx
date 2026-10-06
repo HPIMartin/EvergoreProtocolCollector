@@ -79,6 +79,7 @@ export function StorageLedgerView({
       load={load}
       columns={columns}
       token={token}
+      sort={sort}
       pathOf={storagePath}
       onFollow={onFollow}
     />

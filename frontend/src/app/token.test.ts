@@ -74,4 +74,26 @@ describe('token', () => {
 
     expect(href).toBe('/avatars/Calix/bank?page=2')
   })
+
+  it('names the sort in the built link, after the page', () => {
+    const href = hrefOf('/avatars/Calix/storage', 'a-test-token', 2, {
+      column: 'quantity',
+      direction: 'descending',
+    })
+
+    expect(href).toBe(
+      '/avatars/Calix/storage?token=a-test-token&page=2&sort=quantity&direction=descending',
+    )
+  })
+
+  it('names the sort on the first page too', () => {
+    const href = hrefOf('/avatars/Calix/storage', 'a-test-token', 0, {
+      column: 'quantity',
+      direction: 'ascending',
+    })
+
+    expect(href).toBe(
+      '/avatars/Calix/storage?token=a-test-token&sort=quantity&direction=ascending',
+    )
+  })
 })

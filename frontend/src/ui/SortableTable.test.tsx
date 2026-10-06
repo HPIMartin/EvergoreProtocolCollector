@@ -8,7 +8,7 @@ import {
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { SortableTable } from './SortableTable.tsx'
-import type { Column, SortableTableProps } from './SortableTable.tsx'
+import type { Column, Sort, SortableTableProps } from './SortableTable.tsx'
 import type { Tone } from './tone.ts'
 
 type Member = {
@@ -397,6 +397,72 @@ describe('SortableTable sorting by click', () => {
       .map((header) => header.getAttribute('aria-sort'))
 
     expect(marks).toEqual(['descending', 'none', 'none'])
+  })
+})
+
+describe('SortableTable ordered by its source', () => {
+  afterEach(cleanup)
+
+  const chosenIn = (sort: Sort | null): Sort[] => {
+    const chosen: Sort[] = []
+    renderTable({
+      deliveredOrder: {
+        sort,
+        choose: (next) => {
+          chosen.push(next)
+        },
+      },
+    })
+    return chosen
+  }
+
+  it('leaves the rows as they were delivered when a column is chosen', () => {
+    chosenIn(null)
+
+    fireEvent.click(headerOf('Eingezahlt'))
+
+    expect(cellsOf('name')).toEqual(['Zoe', 'Ärger', 'alessia', 'Bambor'])
+  })
+
+  it('asks its source for the ascending order of a column it is not sorted by', () => {
+    const chosen = chosenIn({ columnKey: 'name', direction: 'descending' })
+
+    fireEvent.click(headerOf('Eingezahlt'))
+
+    expect(chosen).toEqual([{ columnKey: 'deposited', direction: 'ascending' }])
+  })
+
+  it('asks its source for the other direction of the column it is sorted by', () => {
+    const chosen = chosenIn({ columnKey: 'name', direction: 'ascending' })
+
+    fireEvent.click(headerOf('Avatar'))
+
+    expect(chosen).toEqual([{ columnKey: 'name', direction: 'descending' }])
+  })
+
+  it('keeps the rows in the order they were delivered in, whatever sort they name', () => {
+    chosenIn({ columnKey: 'name', direction: 'ascending' })
+
+    expect(cellsOf('name')).toEqual(['Zoe', 'Ärger', 'alessia', 'Bambor'])
+  })
+
+  it('does not sort its rows by an initial sort while its source orders them', () => {
+    renderTable({
+      initialSort: { columnKey: 'name', direction: 'ascending' },
+      deliveredOrder: { sort: null, choose: () => undefined },
+    })
+
+    expect(cellsOf('name')).toEqual(['Zoe', 'Ärger', 'alessia', 'Bambor'])
+  })
+
+  it('marks the column its rows were delivered sorted by', () => {
+    chosenIn({ columnKey: 'deposited', direction: 'descending' })
+
+    const marks = screen
+      .getAllByRole('columnheader')
+      .map((header) => header.getAttribute('aria-sort'))
+
+    expect(marks).toEqual(['none', 'descending', 'none'])
   })
 })
 

@@ -72,7 +72,7 @@ Four top-level folders under `frontend/src/`:
 |-----------|---------|
 | `PageFrame` | Banner with brand and navigation (`aria-current="page"` marks the current link), `<main>` for the view. |
 | `Link` | An `<a href>` that reports a **plain** click to its `onFollow` and leaves a modified or middle click to the browser, so in-app navigation costs no reload while bookmarking and open-in-new-tab keep working. `PageFrame` and a `link` column render through it. |
-| `SortableTable<Row>` | Semantic `<table>`; a column is `text`, `number`, `timestamp` or `link`; a `timestamp` may carry an `href` and then links what it shows; a header click sorts, a second click reverses; an optional `total` adds a `tfoot` row; an optional `mark` flags single rows. |
+| `SortableTable<Row>` | Semantic `<table>`; a column is `text`, `number`, `timestamp` or `link`; a `timestamp` may carry an `href` and then links what it shows; a header click sorts, a second click reverses; given a `deliveredOrder`, it sorts nothing itself and hands the chosen sort to its source instead, marking the column the rows arrived sorted by; an optional `total` adds a `tfoot` row; an optional `mark` flags single rows. |
 | `StatusPanel` | The `loading` / `empty` / `error` states; `role="alert"` for the error, `role="status"` otherwise. |
 
 - `format.ts` carries the German domain notation: gold with `de-DE` grouping, instants as Berlin
@@ -81,7 +81,9 @@ Four top-level folders under `frontend/src/`:
 - **Sorting**: text by German collation (`Intl.Collator('de-DE')`, so `Ärger` sorts under `A`), numbers
   numerically, timestamps by instant (an offset other than `Z` still lands in the right place). Missing
   values sort last in **both** directions, equal keys keep their given order, and a table without
-  `initialSort` renders the order it was handed, which is the API's newest-first.
+  `initialSort` renders the order it was handed, which is the API's newest-first. This is the
+  roster tables' sort, which covers the loaded rows; a ledger sorts on the server (below), because
+  its rows are one page of many.
 - **Tone**: a number column declares itself `credit`, `debit` or `neutral`; a negative value is always
   `debit` and a zero always `neutral`, so "nothing moved" stays uncoloured.
 - **The row mark**: an optional `mark` (`(row) => string | null`) flags single rows without adding a
@@ -162,6 +164,12 @@ Four top-level folders under `frontend/src/`:
   API's defaults (`timestamp`, `descending`), and the view asks the API for that order. A value
   the API does not know is passed through unchanged, like an invalid page, so its 400 reads "Diese
   Seite gibt es nicht."; an address without either asks for no sort and gets the newest first.
+  A ledger's column head therefore sorts the **whole ledger**: the ledger view hands its table a
+  `deliveredOrder`, so a click follows a link to the chosen order on the **first page**, and the
+  table shows the rows in the order the API answered rather than sorting them again, since the
+  SPA's ICU collation and the server's `GermanOrder` order punctuation differently (**F13**).
+  "Zurück" and "Weiter" carry the sort, so a page of a sorted ledger is a bookmark of that order.
+  The "Bank" and "Lager" links in the frame carry none: the two ledgers sort by different columns.
 - **The views own their columns, the primitives own the rendering.** A view declares its
   `Column` list and hands `SortableTable` the domain rows; timestamps go in as ISO strings, which is
   what the column kind reads, and `format.ts` is the one place that turns them into Berlin
