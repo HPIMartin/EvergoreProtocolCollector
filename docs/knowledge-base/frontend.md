@@ -257,8 +257,8 @@ service's only read surface.
 | Route | Answers |
 |-------|---------|
 | `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, the two flows `donation` and `craftSubsidy`, plus `lastBankActivity`, `lastStorageActivity` and `staleSumsFrom`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
-| `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first. |
-| `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first. |
+| `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first unless `sort` names another order. |
+| `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first unless `sort` names another order. |
 | `GET /api/v1/admin/status` | Anonymous, `token`-exempt (same trust level as `/health`): `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, `roundTrips`, `roundTripAbstentions`, every key always rendered (the two round-trip arrays as `[]` rather than `null` when empty). The operator-facing facts that used to sit on the overview; see below. |
 
 - **One envelope for every collection**: `page`, `size`, `totalCount`, `items`. `/api/v1/avatars`
@@ -281,6 +281,15 @@ service's only read surface.
 - **Paging**: `?page=` (zero-based, `@Min(0)`) and `?size=` (default 100, `1..1000`); a violation is
   a **400**, not a clamp, so a client bug stays visible. `totalCount` is the unpaged total, so the
   SPA can size its navigation instead of inferring the end from a short page.
+- **Sorting a ledger** (decision 2026-10-05): `?sort=` names a column as the wire names its field
+  (bank: `timestamp`, `avatar`, `amount`, `transferType`; storage: `timestamp`, `avatar`,
+  `quantity`, `name`, `quality`, `transferType`) and `?direction=` is `ascending` or `descending`;
+  they default to `timestamp` and `descending`. The server sorts the whole ledger before it pages,
+  in a total order whose last keys are the time and the row id
+  ([architecture.md](architecture.md)), and item names in German order. An unknown column, a
+  column of the other ledger, an unknown direction or any other spelling is a **400**, checked
+  before the avatar is looked up; `SortRequest` holds the only list of accepted names, so no name
+  from the request reaches the SQL. Deposits sort before withdrawals in ascending order.
 - **The four sums are the sheet's columns 1 to 4, `net` its column 5, and all of them are whole gold**
   (decision 2026-09-02): serving the raw `double` would put every value from 10^7 upward,
   where the real sums sit, on the wire in exponential notation. `net` is **derived per request** and

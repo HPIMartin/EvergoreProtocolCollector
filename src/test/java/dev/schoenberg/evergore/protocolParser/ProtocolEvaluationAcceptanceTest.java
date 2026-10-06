@@ -6,6 +6,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.regex.Pattern;
 
 import jakarta.inject.Inject;
 
@@ -129,6 +131,43 @@ class ProtocolEvaluationAcceptanceTest {
 						+ "{\"timestamp\":\"2024-01-17T11:00:00Z\",\"avatar\":\"Aurora\",\"quantity\":1,\"name\":\"Kristall\",\"quality\":100,\"transferType\":\"WITHDRAWAL\"},"
 						+ "{\"timestamp\":\"2024-01-16T10:00:00Z\",\"avatar\":\"Aurora\",\"quantity\":2,\"name\":\"Magische Ätherbinde\",\"quality\":100,\"transferType\":\"DEPOSIT\"},"
 						+ "{\"timestamp\":\"2024-01-15T09:00:00Z\",\"avatar\":\"Aurora\",\"quantity\":10,\"name\":\"Kupfererz\",\"quality\":100,\"transferType\":\"DEPOSIT\"}]}");
+	}
+
+	@Test
+	void aStoragePageSortedByQuantityStartsWithTheLargestMovement() {
+		HttpResponse<String> response = get("/api/v1/avatars/Aurora/storage?sort=quantity&direction=descending");
+
+		assertThat(valuesOf("quantity", response.getBody())).containsExactly(10, 2, 1);
+	}
+
+	@Test
+	void aBankPageSortedByAmountStartsWithTheLargestAmount() {
+		HttpResponse<String> response = get("/api/v1/avatars/Aurora/bank?sort=amount&direction=descending");
+
+		assertThat(valuesOf("amount", response.getBody())).containsExactly(1000, 500, 200);
+	}
+
+	@Test
+	void aStoragePageSortedByNameAscendingListsTheItemsByName() {
+		HttpResponse<String> response = get("/api/v1/avatars/Aurora/storage?sort=name&direction=ascending");
+
+		assertThat(namesOf(response.getBody())).containsExactly("Kristall", "Kupfererz", "Magische Ätherbinde");
+	}
+
+	@Test
+	void aValidSortOnAnUnknownAvatarIsStillNotFound() {
+		int status = statusOfGet("/api/v1/avatars/Nobody/storage?sort=quantity&direction=ascending");
+
+		assertThat(status).isEqualTo(NOT_FOUND.getCode());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"/api/v1/avatars/Aurora/storage?sort=amount", "/api/v1/avatars/Aurora/bank?sort=quantity", "/api/v1/avatars/Aurora/storage?direction=up",
+			"/api/v1/avatars/Aurora/bank?sort=", "/api/v1/avatars/Aurora/storage?sort=quantity%20DESC%2C%20name", "/api/v1/avatars/Nobody/storage?sort=amount"})
+	void rejectsASortTheLedgerDoesNotKnow(String endpoint) {
+		int status = statusOfGet(endpoint);
+
+		assertThat(status).isEqualTo(BAD_REQUEST.getCode());
 	}
 
 	@Test
@@ -294,6 +333,14 @@ class ProtocolEvaluationAcceptanceTest {
 
 	private LocalDateTime storedLastUpdated() {
 		return server.getApplicationContext().getBean(MetaInformationRepository.class).snapshot().get(getLastUpdatedKey()).orElseThrow();
+	}
+
+	private static List<Integer> valuesOf(String field, String body) {
+		return Pattern.compile("\"" + field + "\":(\\d+)").matcher(body).results().map(match -> Integer.valueOf(match.group(1))).toList();
+	}
+
+	private static List<String> namesOf(String body) {
+		return Pattern.compile("\"name\":\"([^\"]*)\"").matcher(body).results().map(match -> match.group(1)).toList();
 	}
 
 	private static int statusOfGet(String endpoint) {

@@ -30,12 +30,17 @@ import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.EntryPage
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.StorageEntryView;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.TransferTypeWireNames;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.base.SortDirection.DESCENDING;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.api.PageRequest.DEFAULT_PAGE;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.api.PageRequest.DEFAULT_SIZE;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.api.PageRequest.MAX_SIZE;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.api.PageRequest.PAGE;
 import static dev.schoenberg.evergore.protocolParser.rest.controller.api.PageRequest.SIZE;
+import static dev.schoenberg.evergore.protocolParser.rest.controller.api.SortRequest.DEFAULT_DIRECTION;
+import static dev.schoenberg.evergore.protocolParser.rest.controller.api.SortRequest.DEFAULT_SORT;
+import static dev.schoenberg.evergore.protocolParser.rest.controller.api.SortRequest.DIRECTION;
+import static dev.schoenberg.evergore.protocolParser.rest.controller.api.SortRequest.SORT;
+import static dev.schoenberg.evergore.protocolParser.rest.controller.api.SortRequest.bankSortOf;
+import static dev.schoenberg.evergore.protocolParser.rest.controller.api.SortRequest.storageSortOf;
 import static io.micronaut.http.MediaType.APPLICATION_JSON;
 
 @Validated
@@ -59,19 +64,21 @@ public class AvatarEntriesController {
 	@Get("/bank")
 	@Produces(APPLICATION_JSON)
 	public EntryPage<BankEntryView> bankEntries(@PathVariable(PATH_VAR_AVATAR) String avatar, @QueryValue(value = PAGE, defaultValue = DEFAULT_PAGE) @Min(0) int page,
-			@QueryValue(value = SIZE, defaultValue = DEFAULT_SIZE) @Positive @Max(MAX_SIZE) int size) {
+			@QueryValue(value = SIZE, defaultValue = DEFAULT_SIZE) @Positive @Max(MAX_SIZE) int size, @QueryValue(value = SORT, defaultValue = DEFAULT_SORT) String sort,
+			@QueryValue(value = DIRECTION, defaultValue = DEFAULT_DIRECTION) String direction) {
+		LedgerSort<BankSortKey> order = bankSortOf(sort, direction);
 		PageRequest window = new PageRequest(page, size);
-		return pageOf(avatar, window, () -> bankRepo.countFor(avatar), () -> bankRepo.getAllFor(avatar, new LedgerSort<>(BankSortKey.TIMESTAMP, DESCENDING), page, size),
-				this::toView);
+		return pageOf(avatar, window, () -> bankRepo.countFor(avatar), () -> bankRepo.getAllFor(avatar, order, page, size), this::toView);
 	}
 
 	@Get("/storage")
 	@Produces(APPLICATION_JSON)
 	public EntryPage<StorageEntryView> storageEntries(@PathVariable(PATH_VAR_AVATAR) String avatar, @QueryValue(value = PAGE, defaultValue = DEFAULT_PAGE) @Min(0) int page,
-			@QueryValue(value = SIZE, defaultValue = DEFAULT_SIZE) @Positive @Max(MAX_SIZE) int size) {
+			@QueryValue(value = SIZE, defaultValue = DEFAULT_SIZE) @Positive @Max(MAX_SIZE) int size, @QueryValue(value = SORT, defaultValue = DEFAULT_SORT) String sort,
+			@QueryValue(value = DIRECTION, defaultValue = DEFAULT_DIRECTION) String direction) {
+		LedgerSort<StorageSortKey> order = storageSortOf(sort, direction);
 		PageRequest window = new PageRequest(page, size);
-		return pageOf(avatar, window, () -> storageRepo.countFor(avatar), () -> storageRepo.getAllFor(avatar, new LedgerSort<>(StorageSortKey.TIMESTAMP, DESCENDING), page, size),
-				this::toView);
+		return pageOf(avatar, window, () -> storageRepo.countFor(avatar), () -> storageRepo.getAllFor(avatar, order, page, size), this::toView);
 	}
 
 	private <E, V> EntryPage<V> pageOf(String avatar, PageRequest window, LongSupplier count, Supplier<List<E>> read, Function<E, V> toView) {
