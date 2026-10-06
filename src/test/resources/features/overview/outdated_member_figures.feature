@@ -54,12 +54,7 @@ Feature: A member whose figures could not be refreshed
     Dorn deposited on 01.01., Calix on 02.01., and Calix's first recompute, in the run of
     03.01.2026 05:00, fails. Whether an earlier run had computed Dorn before makes no difference.
 
-    @wip
     Scenario Outline: A member whose first recompute fails <when> is shown as not yet computed
-      Today Calix's row shows zeros: after an earlier run it is marked "Veraltete Zahlen. Letzte
-      erfolgreiche Aktualisierung vom 02.01.2026 05:00.", the date of that run, and on the guild's
-      very first run it carries no mark. This states the corrected behavior for both histories.
-
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
         | 01.01.2026 12:00 | Dorn   | 1     | Eisenbarren | 100      | Einlagerung |

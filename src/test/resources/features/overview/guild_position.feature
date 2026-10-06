@@ -68,11 +68,7 @@ Feature: The guild's position
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |
         | 07.01.2026 12:00 | Boreas | 750    | Einzahlung |
 
-    @wip
     Scenario: While a member is not yet computed, the guild's position says so
-      Today "Gildenbank" leaves his gold out without a note (1.300). This states the corrected
-      behavior.
-
       When a member opens the overview
       Then the guild's position reads:
         | Gildenbank            | Gildenlagerwert       | Gildenspende          | Handwerkssubventionen |
