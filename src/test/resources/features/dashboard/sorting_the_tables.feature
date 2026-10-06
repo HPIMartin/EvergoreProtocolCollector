@@ -98,20 +98,16 @@ Feature: Sorting the tables
         | dormant | Dorn, Calix    | active  | Aurora, Boreas |
 
   Rule: A ledger sorts all of its movements, not only the page shown
-    Today a ledger sorts only the hundred movements of the page shown. The two scenarios below state
-    the corrected behavior: the sort covers the whole ledger, on every page and in a bookmark of a
-    page.
+    The sort covers the whole ledger, on every page and in a bookmark of a page.
 
     Background:
       Given Aurora has 150 movements of "Eisenbarren" in the guild storage ledger, the newest of quantity 1 and each older one of one more
 
-    @wip
     Scenario: Sorting a ledger orders the whole ledger
       Given a member has opened the storage ledger of "Aurora"
       When the member sorts the ledger by "Menge" in descending order
       Then the ledger's first row shows a quantity of 150
 
-    @wip
     Scenario: A sorted ledger keeps its order on the next page and in a bookmark of that page
       Given a member has sorted the storage ledger of "Aurora" by "Menge" in descending order
       And the member has followed "Weiter"
