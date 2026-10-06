@@ -199,6 +199,11 @@ Four top-level folders under `frontend/src/`:
   removes the inference. The wording lives in `domain/staleSums.ts` beside the entry types' German
   names, and takes an already formatted instant, so the German stays in `domain` while the Berlin
   wall clock stays in `ui`'s `format.ts`. What the row cannot say, and why, is under the wire contract below.
+- **A row served without its five sums is marked "Noch nicht berechnet.", and that mark wins over
+  the outdated one** (decision 2026-09-23): its five number columns show the dash, so no zero reads
+  as "moved nothing", and the guild row served without sums reads "Enthält mindestens eine Zeile,
+  die noch nicht berechnet ist." even when it also contains an outdated row. `domain/uncomputedSums.ts`
+  holds the guild wording and `isUncomputed`; the row's wording is the header's `UNCOMPUTED_NOTE`.
 - **The guild-wide total row comes from the envelope, not from the loaded rows** (decision
   2026-09-02): the overview hands `totals` to the table's `total` prop and does no arithmetic, so the
   row keeps meaning the guild once the overview pages or a time window narrows the body. It is
@@ -283,7 +288,8 @@ service's only read surface.
   (`sumsFrom` in `api/wire.ts`), and refuses one with only some of them absent, or without them
   but with a flow, `balance` or `storageValue` (`refuseFiguresWithoutSums`), as a malformed answer,
   and so a page whose row carries no sums while its `totals` still do, or one that holds the whole
-  guild with every row computed while its `totals` carry none.
+  guild with every row computed while its `totals` carry none. An age beside absent sums is
+  tolerated rather than refused, because the not-yet-computed mark wins over the outdated one anyway.
 - **`donation` and `craftSubsidy` are the two flows between what a deposit credited and what it is
   worth to the guild** (decision 2026-09-10): what a member gave for nothing, and what the guild
   paid above its own price for bought trader goods. They are served per avatar and in `totals`,

@@ -6,9 +6,11 @@ import type { AvatarSummary, GuildTotals, Overview } from '../domain'
 import {
   ACTIVITY_WINDOW_DAYS,
   GUILD_STALE_SUMS_NOTE,
+  GUILD_UNCOMPUTED_SUMS_NOTE,
   UNCOMPUTED_BALANCE_NOTE,
   UNCOMPUTED_NOTE,
   guildPositionOf,
+  isUncomputed,
   rosterSplitOf,
   staleSumsNoteOf,
 } from '../domain'
@@ -95,7 +97,7 @@ function RosterTables({ columns, onFollow, overview }: RosterTablesProps) {
             rowKey={(summary) => summary.avatar}
             emptyMessage={table.emptyMessage}
             total={table.total}
-            mark={markOfStaleSums}
+            mark={markOf}
             onFollow={onFollow}
           />
         </div>
@@ -129,8 +131,15 @@ function guildTotalOf(totals: GuildTotals): Total<AvatarSummary> {
   return {
     label: GUILD_LABEL,
     row: guildRowOf(totals),
-    mark: totals.containsStaleSums ? GUILD_STALE_SUMS_NOTE : undefined,
+    mark: guildMarkOf(totals),
   }
+}
+
+function guildMarkOf(totals: GuildTotals): string | undefined {
+  if (isUncomputed(totals)) {
+    return GUILD_UNCOMPUTED_SUMS_NOTE
+  }
+  return totals.containsStaleSums ? GUILD_STALE_SUMS_NOTE : undefined
 }
 
 function statsOf(totals: GuildTotals): readonly Stat[] {
@@ -167,7 +176,10 @@ function statsOf(totals: GuildTotals): readonly Stat[] {
   ]
 }
 
-function markOfStaleSums(summary: AvatarSummary): string | null {
+function markOf(summary: AvatarSummary): string | null {
+  if (isUncomputed(summary)) {
+    return UNCOMPUTED_NOTE
+  }
   return summary.staleSumsFrom === null
     ? null
     : staleSumsNoteOf(formatTimestamp(summary.staleSumsFrom.toISOString()))

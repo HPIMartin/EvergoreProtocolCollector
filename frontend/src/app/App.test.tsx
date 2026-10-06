@@ -227,6 +227,62 @@ const TWO_ROWS_WITHOUT_FLOWS = JSON.stringify({
   ],
 })
 
+const NO_SUMS = {
+  bankWithdrawn: null,
+  bankDeposited: null,
+  storageWithdrawn: null,
+  storageDeposited: null,
+  net: null,
+  donation: null,
+  craftSubsidy: null,
+  balance: null,
+}
+
+const OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED = JSON.stringify({
+  page: 0,
+  size: 100,
+  totalCount: 2,
+  totals: { ...NO_SUMS, storageValue: null, containsStaleSums: true },
+  items: [
+    {
+      avatar: 'Calix',
+      bankWithdrawn: 1200,
+      bankDeposited: 3400,
+      storageWithdrawn: 200,
+      storageDeposited: 500,
+      net: 2500,
+      donation: 400,
+      craftSubsidy: 100,
+      balance: 2800,
+      lastBankActivity: '2026-08-04T09:30:00Z',
+      lastStorageActivity: '2026-08-05T10:15:00Z',
+      staleSumsFrom: '2026-07-30T01:12:00Z',
+    },
+    {
+      avatar: 'Erde-Eibenlanze',
+      ...NO_SUMS,
+      lastBankActivity: '2026-08-05T09:58:00Z',
+      lastStorageActivity: null,
+      staleSumsFrom: null,
+    },
+  ],
+})
+
+const OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED_THAT_ALSO_STATES_AN_AGE =
+  JSON.stringify({
+    ...(JSON.parse(OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED) as object),
+    totalCount: 1,
+    items: [
+      {
+        avatar: 'Erde-Eibenlanze',
+        ...NO_SUMS,
+        lastBankActivity: '2026-08-05T09:58:00Z',
+        lastStorageActivity: null,
+        staleSumsFrom: '2026-07-30T01:12:00Z',
+      },
+    ],
+  })
+
 const NO_TOTALS = {
   bankWithdrawn: 0,
   bankDeposited: 0,
@@ -607,6 +663,37 @@ describe('App', () => {
     expect(screen.getByTestId('total-row').dataset.stale).toBeUndefined()
   })
 
+  it('marks no row and no guild row as not yet computed while only the guild share is unknown', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS),
+    )
+
+    expect(screen.queryByTestId('row-mark')).toBeNull()
+    expect(screen.queryByTestId('total-mark')).toBeNull()
+    expect(screen.getByTestId('total-row').dataset.stale).toBeUndefined()
+  })
+
+  it('marks no row whose sums were computed as zero', async () => {
+    const body = JSON.parse(OVERVIEW_BODY) as {
+      items: Record<string, unknown>[]
+    }
+    body.items[0] = {
+      ...body.items[0],
+      bankWithdrawn: 0,
+      bankDeposited: 0,
+      storageWithdrawn: 0,
+      storageDeposited: 0,
+      net: 0,
+    }
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, JSON.stringify(body)),
+    )
+
+    expect(screen.queryByTestId('row-mark')).toBeNull()
+  })
+
   it('says the guild contains stale sums even when that row is off the page', async () => {
     await shellAt(
       `/overview?token=${TOKEN}`,
@@ -617,6 +704,135 @@ describe('App', () => {
     expect(screen.getByTestId('total-row').dataset.stale).toBe('true')
     expect(screen.getByTestId('total-mark').textContent).toContain(
       'Enthält mindestens eine Zeile mit veralteten Zahlen.',
+    )
+  })
+
+  it('marks a row no recompute has reached as not yet computed', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
+    )
+
+    const marks = screen
+      .getAllByTestId('row-mark')
+      .map((mark) => mark.textContent)
+    expect(marks).toStrictEqual([
+      '!Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom 30.07.2026 03:12.',
+      '!Noch nicht berechnet.',
+    ])
+    expect(
+      screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
+    ).toStrictEqual(['true', 'true'])
+  })
+
+  it('shows no figure in the five number columns of a row not yet computed, rather than zeros', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
+    )
+
+    const cells = Array.from(
+      screen.getAllByTestId('data-row')[1]?.querySelectorAll('td') ?? [],
+    ).map((cell) => cell.textContent)
+    expect(cells.slice(1, 6)).toStrictEqual(['–', '–', '–', '–', '–'])
+  })
+
+  it('keeps the activity of a row not yet computed beside its dashes', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
+    )
+
+    const cells = Array.from(
+      screen.getAllByTestId('data-row')[1]?.querySelectorAll('td') ?? [],
+    ).map((cell) => cell.textContent)
+    expect(cells.slice(6)).toStrictEqual(['–', '05.08.2026 11:58'])
+  })
+
+  it('shows no figure in the guild row while a member is not yet computed, rather than a total without him', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
+    )
+
+    const cells = [
+      'bankDeposited',
+      'bankWithdrawn',
+      'storageDeposited',
+      'storageWithdrawn',
+      'figure',
+    ].map((key) => screen.getByTestId(`total-${key}`).textContent)
+    expect(cells).toStrictEqual(['–', '–', '–', '–', '–'])
+  })
+
+  it('keeps the mark of a row not yet computed beside the note on its figure before the deductions', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
+    )
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    const row = screen.getAllByTestId('data-row')[1]
+    expect(
+      row === undefined
+        ? null
+        : within(row).getByTestId('row-mark').textContent,
+    ).toBe('!Noch nicht berechnet.')
+    expect(
+      row === undefined
+        ? null
+        : within(row).getByTestId('cell-mark').textContent,
+    ).toContain('Kein Saldo')
+  })
+
+  it('says the guild contains a row not yet computed even when that row is off the page', async () => {
+    const body = JSON.parse(OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED) as {
+      items: unknown[]
+      totals: Record<string, unknown>
+    }
+    const firstPage = {
+      ...body,
+      size: 1,
+      items: body.items.slice(0, 1),
+      totals: { ...body.totals, containsStaleSums: false },
+    }
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, JSON.stringify(firstPage)),
+    )
+
+    expect(screen.getByTestId('row-mark').textContent).toBe(
+      '!Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom 30.07.2026 03:12.',
+    )
+    expect(screen.getByTestId('total-mark').textContent).toBe(
+      '!Enthält mindestens eine Zeile, die noch nicht berechnet ist.',
+    )
+  })
+
+  it('marks a row not yet computed as such even when it also states an age, because that mark wins', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(
+        200,
+        OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED_THAT_ALSO_STATES_AN_AGE,
+      ),
+    )
+
+    expect(screen.getByTestId('row-mark').textContent).toBe(
+      '!Noch nicht berechnet.',
+    )
+  })
+
+  it('says on the guild row that it contains a row not yet computed, ahead of the outdated rows it also contains', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
+    )
+
+    expect(screen.getByTestId('total-row').dataset.stale).toBe('true')
+    expect(screen.getByTestId('total-mark').textContent).toBe(
+      '!Enthält mindestens eine Zeile, die noch nicht berechnet ist.',
     )
   })
 
