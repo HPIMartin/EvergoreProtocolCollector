@@ -62,4 +62,17 @@ describe('the guild position behind the overview', () => {
 
     expect(position.bank).toBe(2050)
   })
+
+  it('cannot answer the bank while a member is not yet computed, rather than leaving him out', () => {
+    const position = guildPositionOf({
+      ...TOTALS,
+      bankWithdrawn: null,
+      bankDeposited: null,
+      storageWithdrawn: null,
+      storageDeposited: null,
+      net: null,
+    })
+
+    expect(position.bank).toBeNull()
+  })
 })

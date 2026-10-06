@@ -2,11 +2,11 @@ import type { Page } from './page.ts'
 
 export interface AvatarSummary {
   readonly avatar: string
-  readonly bankWithdrawn: number
-  readonly bankDeposited: number
-  readonly storageWithdrawn: number
-  readonly storageDeposited: number
-  readonly net: number
+  readonly bankWithdrawn: number | null
+  readonly bankDeposited: number | null
+  readonly storageWithdrawn: number | null
+  readonly storageDeposited: number | null
+  readonly net: number | null
   readonly donation: number | null
   readonly craftSubsidy: number | null
   readonly balance: number | null
@@ -16,11 +16,11 @@ export interface AvatarSummary {
 }
 
 export interface GuildTotals {
-  readonly bankWithdrawn: number
-  readonly bankDeposited: number
-  readonly storageWithdrawn: number
-  readonly storageDeposited: number
-  readonly net: number
+  readonly bankWithdrawn: number | null
+  readonly bankDeposited: number | null
+  readonly storageWithdrawn: number | null
+  readonly storageDeposited: number | null
+  readonly net: number | null
   readonly donation: number | null
   readonly craftSubsidy: number | null
   readonly balance: number | null

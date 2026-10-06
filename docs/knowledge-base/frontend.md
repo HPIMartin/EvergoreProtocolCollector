@@ -279,6 +279,11 @@ service's only read surface.
   stored nowhere. Each is its exact value rounded once, the totals' included, so a served figure can
   differ from the sum of those beside or above it; the rule lives in
   [domain-model.md](domain-model.md).
+- **The SPA reads a row or `totals` whose five sums are all `null` as carrying none**
+  (`sumsFrom` in `api/wire.ts`), and refuses one with only some of them absent, or without them
+  but with a flow, `balance` or `storageValue` (`refuseFiguresWithoutSums`), as a malformed answer,
+  and so a page whose row carries no sums while its `totals` still do, or one that holds the whole
+  guild with every row computed while its `totals` carry none.
 - **`donation` and `craftSubsidy` are the two flows between what a deposit credited and what it is
   worth to the guild** (decision 2026-09-10): what a member gave for nothing, and what the guild
   paid above its own price for bought trader goods. They are served per avatar and in `totals`,

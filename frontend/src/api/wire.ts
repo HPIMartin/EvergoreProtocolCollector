@@ -19,10 +19,25 @@ type WireObject = Record<string, unknown>
 export function overviewFrom(body: unknown): Overview {
   const envelope = objectFrom(body)
   const page = pageFrom(envelope, summaryFrom)
+  const totals = totalsFrom(envelope['totals'])
+  if (totals.net !== null && page.items.some((item) => item.net === null)) {
+    throw new MalformedResponse(
+      'The API answered guild-wide sums beside a row without sums',
+    )
+  }
+  if (
+    totals.net === null &&
+    page.items.length === page.totalCount &&
+    page.items.every((item) => item.net !== null)
+  ) {
+    throw new MalformedResponse(
+      'The API answered no guild-wide sums for a whole guild whose every row carries them',
+    )
+  }
 
   return {
     ...page,
-    totals: totalsFrom(envelope['totals']),
+    totals,
   }
 }
 
@@ -34,16 +49,18 @@ function totalsFrom(value: unknown): GuildTotals {
   }
   const totals = value as WireObject
 
-  return {
-    bankWithdrawn: numberFrom(totals, 'bankWithdrawn'),
-    bankDeposited: numberFrom(totals, 'bankDeposited'),
-    storageWithdrawn: numberFrom(totals, 'storageWithdrawn'),
-    storageDeposited: numberFrom(totals, 'storageDeposited'),
-    net: numberFrom(totals, 'net'),
+  const sums = sumsFrom(totals)
+  const share = {
     donation: optionalNumberFrom(totals, 'donation'),
     craftSubsidy: optionalNumberFrom(totals, 'craftSubsidy'),
     balance: optionalNumberFrom(totals, 'balance'),
     storageValue: optionalNumberFrom(totals, 'storageValue'),
+  }
+  refuseFiguresWithoutSums(sums, share)
+
+  return {
+    ...sums,
+    ...share,
     containsStaleSums: booleanFrom(totals, 'containsStaleSums'),
   }
 }
@@ -147,20 +164,80 @@ function pageFrom<E>(
 
 function summaryFrom(item: unknown): AvatarSummary {
   const summary = objectFrom(item)
-
-  return {
-    avatar: stringFrom(summary, 'avatar'),
-    bankWithdrawn: numberFrom(summary, 'bankWithdrawn'),
-    bankDeposited: numberFrom(summary, 'bankDeposited'),
-    storageWithdrawn: numberFrom(summary, 'storageWithdrawn'),
-    storageDeposited: numberFrom(summary, 'storageDeposited'),
-    net: numberFrom(summary, 'net'),
+  const sums = sumsFrom(summary)
+  const share = {
     donation: optionalNumberFrom(summary, 'donation'),
     craftSubsidy: optionalNumberFrom(summary, 'craftSubsidy'),
     balance: optionalNumberFrom(summary, 'balance'),
+  }
+  refuseFiguresWithoutSums(sums, share)
+
+  return {
+    avatar: stringFrom(summary, 'avatar'),
+    ...sums,
+    ...share,
     lastBankActivity: optionalInstantFrom(summary, 'lastBankActivity'),
     lastStorageActivity: optionalInstantFrom(summary, 'lastStorageActivity'),
     staleSumsFrom: optionalInstantFrom(summary, 'staleSumsFrom'),
+  }
+}
+
+interface Sums {
+  readonly bankWithdrawn: number | null
+  readonly bankDeposited: number | null
+  readonly storageWithdrawn: number | null
+  readonly storageDeposited: number | null
+  readonly net: number | null
+}
+
+const SUM_FIELDS = [
+  'bankWithdrawn',
+  'bankDeposited',
+  'storageWithdrawn',
+  'storageDeposited',
+  'net',
+] as const
+
+function sumsFrom(source: WireObject): Sums {
+  const absent = SUM_FIELDS.filter((field) => source[field] === null)
+  if (absent.length === SUM_FIELDS.length) {
+    return {
+      bankWithdrawn: null,
+      bankDeposited: null,
+      storageWithdrawn: null,
+      storageDeposited: null,
+      net: null,
+    }
+  }
+  if (absent.length > 0) {
+    throw new MalformedResponse(
+      `The API answered a row without its ${absent.join(', ')} but with its other sums`,
+    )
+  }
+
+  return {
+    bankWithdrawn: numberFrom(source, 'bankWithdrawn'),
+    bankDeposited: numberFrom(source, 'bankDeposited'),
+    storageWithdrawn: numberFrom(source, 'storageWithdrawn'),
+    storageDeposited: numberFrom(source, 'storageDeposited'),
+    net: numberFrom(source, 'net'),
+  }
+}
+
+function refuseFiguresWithoutSums(
+  sums: Sums,
+  figures: Record<string, number | null>,
+): void {
+  if (sums.net !== null) {
+    return
+  }
+  const present = Object.keys(figures).filter(
+    (field) => figures[field] !== null,
+  )
+  if (present.length > 0) {
+    throw new MalformedResponse(
+      `The API answered a row without sums but with its ${present.join(', ')}`,
+    )
   }
 }
 

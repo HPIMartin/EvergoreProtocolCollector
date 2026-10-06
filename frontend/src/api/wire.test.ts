@@ -100,6 +100,43 @@ function summaryWithout(field: string): Record<string, unknown> {
   )
 }
 
+const SUMS = [
+  'bankWithdrawn',
+  'bankDeposited',
+  'storageWithdrawn',
+  'storageDeposited',
+  'net',
+] as const
+
+const NO_SUMS = {
+  bankWithdrawn: null,
+  bankDeposited: null,
+  storageWithdrawn: null,
+  storageDeposited: null,
+  net: null,
+}
+
+const SOME_SUMS = {
+  bankWithdrawn: 1,
+  bankDeposited: 2,
+  storageWithdrawn: 3,
+  storageDeposited: 4,
+  net: 2,
+}
+
+const NO_TOTALS = {
+  ...NO_SUMS,
+  donation: null,
+  craftSubsidy: null,
+  balance: null,
+  storageValue: null,
+}
+
+const TOTALS_WITHOUT_SUMS = {
+  ...overviewBody.totals,
+  ...NO_TOTALS,
+}
+
 describe('the overview wire shape', () => {
   it('reads the guild-wide totals of the envelope', () => {
     const overview = overviewFrom(overviewBody)
@@ -147,6 +184,238 @@ describe('the overview wire shape', () => {
       lastStorageActivity: new Date('2026-08-05T10:15:00Z'),
       staleSumsFrom: null,
     })
+  })
+
+  it('reads a row no recompute has reached as carrying none of its five sums', () => {
+    const overview = overviewFrom({
+      ...overviewBody,
+      totals: { ...overviewBody.totals, ...NO_TOTALS },
+      items: [{ ...overviewBody.items[1], ...NO_SUMS }],
+    })
+
+    const row = overview.items[0]
+    expect(SUMS.map((field) => row?.[field])).toStrictEqual([
+      null,
+      null,
+      null,
+      null,
+      null,
+    ])
+  })
+
+  it('reads a page that holds the whole guild with one row not yet computed beside totals without sums', () => {
+    const overview = overviewFrom({
+      ...overviewBody,
+      totals: TOTALS_WITHOUT_SUMS,
+      items: [overviewBody.items[0], { ...overviewBody.items[1], ...NO_SUMS }],
+    })
+
+    expect(overview.items.map((row) => row.net)).toStrictEqual([2500, null])
+    expect(overview.totals.net).toBeNull()
+  })
+
+  it.each(SUMS)('refuses a row that leaves only its %s absent', (field) => {
+    const reading = () =>
+      overviewFrom({
+        ...overviewBody,
+        totals: TOTALS_WITHOUT_SUMS,
+        items: [{ ...overviewBody.items[0], [field]: null }],
+      })
+
+    expect(reading).toThrow(
+      new RegExp(`without its ${field} but with its other sums`),
+    )
+  })
+
+  it.each(['donation', 'craftSubsidy', 'balance'])(
+    'refuses a row without sums that still carries its %s',
+    (field) => {
+      const reading = () =>
+        overviewFrom({
+          ...overviewBody,
+          totals: TOTALS_WITHOUT_SUMS,
+          items: [{ ...overviewBody.items[1], ...NO_SUMS, [field]: 5 }],
+        })
+
+      expect(reading).toThrow(MalformedResponse)
+    },
+  )
+
+  it.each(SUMS)(
+    'refuses a row without flows that leaves only its %s absent',
+    (field) => {
+      const reading = () =>
+        overviewFrom({
+          ...overviewBody,
+          totals: TOTALS_WITHOUT_SUMS,
+          items: [{ ...overviewBody.items[1], [field]: null }],
+        })
+
+      expect(reading).toThrow(
+        new RegExp(`without its ${field} but with its other sums`),
+      )
+    },
+  )
+
+  it.each(SUMS)(
+    'refuses totals without flows that leave only their %s absent',
+    (field) => {
+      const reading = () =>
+        overviewFrom({
+          ...overviewBody,
+          totalCount: 3,
+          totals: {
+            ...overviewBody.totals,
+            ...NO_TOTALS,
+            ...SOME_SUMS,
+            [field]: null,
+          },
+        })
+
+      expect(reading).toThrow(
+        new RegExp(`without its ${field} but with its other sums`),
+      )
+    },
+  )
+
+  it('refuses a row that leaves two of its sums absent but keeps the rest', () => {
+    const reading = () =>
+      overviewFrom({
+        ...overviewBody,
+        totals: TOTALS_WITHOUT_SUMS,
+        items: [
+          { ...overviewBody.items[1], storageWithdrawn: null, net: null },
+        ],
+      })
+
+    expect(reading).toThrow(
+      /without its storageWithdrawn, net but with its other sums/,
+    )
+  })
+
+  it.each(SUMS)(
+    'refuses a row that keeps only its %s and leaves the other four sums absent',
+    (field) => {
+      const reading = () =>
+        overviewFrom({
+          ...overviewBody,
+          totals: TOTALS_WITHOUT_SUMS,
+          items: [{ ...overviewBody.items[1], ...NO_SUMS, [field]: 7 }],
+        })
+
+      expect(reading).toThrow(
+        `without its ${SUMS.filter((sum) => sum !== field).join(', ')} but with its other sums`,
+      )
+    },
+  )
+
+  it('refuses a row that omits all five sums rather than reading it as not yet computed', () => {
+    const rowWithoutSums = Object.fromEntries(
+      Object.entries(overviewBody.items[1] as Record<string, unknown>).filter(
+        ([name]) => !(SUMS as readonly string[]).includes(name),
+      ),
+    )
+
+    const reading = () =>
+      overviewFrom({
+        ...overviewBody,
+        totals: TOTALS_WITHOUT_SUMS,
+        items: [rowWithoutSums],
+      })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it('refuses totals that omit all five sums rather than reading them as not yet computed', () => {
+    const totalsWithoutSumKeys = Object.fromEntries(
+      Object.entries(TOTALS_WITHOUT_SUMS).filter(
+        ([name]) => !(SUMS as readonly string[]).includes(name),
+      ),
+    )
+
+    const reading = () =>
+      overviewFrom({
+        ...overviewBody,
+        totalCount: 3,
+        totals: totalsWithoutSumKeys,
+      })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it('refuses a page that holds the whole guild with every row computed while its totals carry no sums', () => {
+    const reading = () =>
+      overviewFrom({ ...overviewBody, totals: TOTALS_WITHOUT_SUMS })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it('names the absent sum when a row keeps the other four', () => {
+    const reading = () =>
+      overviewFrom({
+        ...overviewBody,
+        totals: TOTALS_WITHOUT_SUMS,
+        items: [{ ...overviewBody.items[1], net: null }],
+      })
+
+    expect(reading).toThrow(/without its net but with its other sums/)
+  })
+
+  it('refuses a page whose row is not yet computed while its totals still carry sums', () => {
+    const reading = () =>
+      overviewFrom({
+        ...overviewBody,
+        items: [
+          overviewBody.items[0],
+          { ...overviewBody.items[1], ...NO_SUMS },
+        ],
+      })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it('reads totals without sums while a member is not yet computed', () => {
+    const overview = overviewFrom({
+      ...overviewBody,
+      totalCount: 3,
+      totals: { ...overviewBody.totals, ...NO_TOTALS },
+    })
+
+    const totals = overview.totals
+    expect(SUMS.map((field) => totals[field])).toStrictEqual([
+      null,
+      null,
+      null,
+      null,
+      null,
+    ])
+  })
+
+  it.each(['donation', 'craftSubsidy', 'balance', 'storageValue'])(
+    'refuses totals without sums that still carry their %s',
+    (field) => {
+      const reading = () =>
+        overviewFrom({
+          ...overviewBody,
+          totalCount: 3,
+          totals: { ...overviewBody.totals, ...NO_TOTALS, [field]: 5 },
+        })
+
+      expect(reading).toThrow(MalformedResponse)
+    },
+  )
+
+  it.each(SUMS)('refuses totals that leave only their %s absent', (field) => {
+    const reading = () =>
+      overviewFrom({
+        ...overviewBody,
+        totalCount: 3,
+        totals: { ...overviewBody.totals, [field]: null },
+      })
+
+    expect(reading).toThrow(
+      new RegExp(`without its ${field} but with its other sums`),
+    )
   })
 
   it('reads the last activity of both ledgers as instants', () => {
