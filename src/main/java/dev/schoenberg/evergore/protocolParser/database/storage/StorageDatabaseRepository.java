@@ -4,11 +4,14 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageSortKey;
 import dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.database.SortColumn;
 import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.AVATAR_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.TIMESTAMP_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.TYPE_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.SortColumn.germanOrderOf;
+import static dev.schoenberg.evergore.protocolParser.database.SortColumn.of;
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.NAME_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.QUALITY_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseEntry.QUANTITY_COLUMN;
@@ -20,14 +23,14 @@ public class StorageDatabaseRepository extends LedgerDatabaseRepository<StorageE
 	}
 
 	@Override
-	protected String columnOf(StorageSortKey key) {
+	protected SortColumn columnOf(StorageSortKey key) {
 		return switch (key) {
-			case TIMESTAMP -> TIMESTAMP_COLUMN;
-			case AVATAR -> AVATAR_COLUMN;
-			case QUANTITY -> QUANTITY_COLUMN;
-			case NAME -> NAME_COLUMN;
-			case QUALITY -> QUALITY_COLUMN;
-			case TRANSFER_TYPE -> TYPE_COLUMN;
+			case TIMESTAMP -> of(TIMESTAMP_COLUMN);
+			case AVATAR -> of(AVATAR_COLUMN);
+			case QUANTITY -> of(QUANTITY_COLUMN);
+			case NAME -> germanOrderOf(NAME_COLUMN);
+			case QUALITY -> of(QUALITY_COLUMN);
+			case TRANSFER_TYPE -> of(TYPE_COLUMN);
 		};
 	}
 

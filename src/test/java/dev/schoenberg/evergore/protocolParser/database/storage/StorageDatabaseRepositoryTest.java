@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +25,7 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.SortDirection.ASCENDING;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.SortDirection.DESCENDING;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageSortKey.AVATAR;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageSortKey.NAME;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageSortKey.QUALITY;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageSortKey.QUANTITY;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageSortKey.TIMESTAMP;
@@ -318,6 +320,30 @@ class StorageDatabaseRepositoryTest {
 		List<Integer> paged = everyPageOf(tested, sortedBy(TIMESTAMP, ASCENDING));
 
 		assertThat(paged).containsExactlyElementsOf(databaseFile.committedValues(StorageDatabaseEntry.TABLE, QUALITY_COLUMN, ID_COLUMN));
+	}
+
+	@Test
+	void itemNamesSortInGermanOrder() {
+		StorageDatabaseRepository tested = repository();
+		tested.add(Stream.of("Zwiebel", "Stahl-Rüstung", "Äpfel", "Stahlbarren", "Apfel").map(name -> namedEntry(BOUNDARY, name, 1)).toList());
+
+		List<StorageEntry> sorted = tested.getAllFor("Aurora", sortedBy(NAME, ASCENDING), 0, 5);
+
+		assertThat(sorted).extracting(StorageEntry::name).containsExactly("Apfel", "Äpfel", "Stahlbarren", "Stahl-Rüstung", "Zwiebel");
+	}
+
+	@Test
+	void itemsOfOneNameStandNewestFirstBehindTheGermanOrder() {
+		StorageDatabaseRepository tested = repository();
+		tested.add(List.of(namedEntry(ONE_MINUTE_BEFORE_BOUNDARY, "Äpfel", 1), namedEntry(BOUNDARY, "Zwiebel", 2), namedEntry(ONE_MINUTE_AFTER_BOUNDARY, "Äpfel", 3)));
+
+		List<StorageEntry> sorted = tested.getAllFor("Aurora", sortedBy(NAME, DESCENDING), 0, 3);
+
+		assertThat(sorted).extracting(StorageEntry::quality).containsExactly(2, 3, 1);
+	}
+
+	private static StorageEntry namedEntry(Instant timeStamp, String name, int quality) {
+		return new StorageEntry(timeStamp, "Aurora", 1, name, quality, TransferType.EINLAGERUNG);
 	}
 
 	private static List<StorageEntry> rowsTiedOnEverythingButQuality() {

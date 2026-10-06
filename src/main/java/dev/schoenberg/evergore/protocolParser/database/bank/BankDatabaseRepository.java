@@ -4,11 +4,13 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankSortKey;
 import dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.database.SortColumn;
 import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.AVATAR_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.TIMESTAMP_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.TYPE_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.SortColumn.of;
 import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.AMOUNT_COLUMN;
 import static java.sql.Timestamp.from;
 
@@ -18,12 +20,12 @@ public class BankDatabaseRepository extends LedgerDatabaseRepository<BankEntry, 
 	}
 
 	@Override
-	protected String columnOf(BankSortKey key) {
+	protected SortColumn columnOf(BankSortKey key) {
 		return switch (key) {
-			case TIMESTAMP -> TIMESTAMP_COLUMN;
-			case AVATAR -> AVATAR_COLUMN;
-			case AMOUNT -> AMOUNT_COLUMN;
-			case TRANSFER_TYPE -> TYPE_COLUMN;
+			case TIMESTAMP -> of(TIMESTAMP_COLUMN);
+			case AVATAR -> of(AVATAR_COLUMN);
+			case AMOUNT -> of(AMOUNT_COLUMN);
+			case TRANSFER_TYPE -> of(TYPE_COLUMN);
 		};
 	}
 

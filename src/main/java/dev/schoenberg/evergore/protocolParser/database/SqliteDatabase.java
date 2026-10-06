@@ -5,7 +5,6 @@ import java.time.Duration;
 import java.util.concurrent.Callable;
 
 import com.j256.ormlite.dao.Dao;
-import com.j256.ormlite.jdbc.JdbcPooledConnectionSource;
 import com.j256.ormlite.misc.TransactionManager;
 import com.j256.ormlite.support.ConnectionSource;
 
@@ -36,7 +35,7 @@ public class SqliteDatabase implements AutoCloseable {
 			new DatabaseMigration(config, logger).migrate();
 			String url = "jdbc:sqlite:" + dbPath;
 			logger.info("Connecting to: " + url);
-			return new SqliteDatabase(new JdbcPooledConnectionSource(url + "?busy_timeout=" + BUSY_TIMEOUT.toMillis()));
+			return new SqliteDatabase(new GermanOrderConnectionSource(url + "?busy_timeout=" + BUSY_TIMEOUT.toMillis()));
 		});
 	}
 

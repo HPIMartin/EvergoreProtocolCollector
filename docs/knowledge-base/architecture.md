@@ -107,7 +107,22 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     the `id` is a random UUID, so rows that tie on everything before it stand in a stable but
     arbitrary order. The port names the column by a key per ledger
     (`BankSortKey`, `StorageSortKey`), and each ledger maps its keys to its own column constants
-    (`columnOf`), so no column name from a request reaches the SQL.
+    (`columnOf`), so no column name from a request reaches the SQL. The item name sorts `COLLATE
+    GERMAN_ORDER`, a collation that `GermanOrderConnectionSource` registers on every connection the
+    pool opens, so "Äpfel" sorts before "Zwiebel" rather than after it as SQLite's byte order would
+    put it. Each registration compares with a collator of its own (`GermanOrder.ownCollator()`), the
+    rules `GermanOrder` sorts by: a `Collator` compares under a lock, and one shared by every
+    connection queued concurrent name sorts (a synthetic probe, 16 sorts of 13,739 rows on 8
+    threads: 5.9 to 8.9 s shared, 0.55 s with one per connection). The avatar, the same on every
+    row of one avatar's ledger, sorts without the collation. The source subclasses
+    ORMLite's pool because `makeConnection` is the only per-connection hook it offers, and it
+    overrides `close()` to declare `SQLException`: ORMLite's `close() throws Exception` raises
+    `-Xlint:try` on every subclass, and the warning is fixed rather than suppressed (decision
+    2026-10-06). ORMLite 6.1's `close()` throws only `SQLException`; any other checked exception a
+    later version throws is wrapped in one. A connection whose registration fails is closed before the failure propagates,
+    so the pool never loses an open connection to it. The source keeps no record of the collations it
+    registers: a collation holds its connection, so any record would hold every connection the pool
+    ever opened; a test records them through the registration it hands the source instead.
     `database/{bank,storage}/*` add only their row and the mapping between that row and its entry
     record.
   - `database/metaInformation/*`, the meta store: a recompute's batch is written in one

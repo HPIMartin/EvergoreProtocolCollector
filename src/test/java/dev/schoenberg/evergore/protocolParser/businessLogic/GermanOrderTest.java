@@ -1,5 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic;
 
+import java.text.Collator;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,24 @@ class GermanOrderTest {
 		List<String> sorted = GermanOrder.distinctSorted(List.of("Federn", "Federn", "Achat-Armbrust"));
 
 		assertThat(sorted).containsExactly("Achat-Armbrust", "Federn");
+	}
+
+	@Test
+	void anOwnCollatorOrdersNamesAsTheSharedOrderDoes() {
+		List<String> names = List.of("Zwiebel", "Stahl-Rüstung", "A'c", "Äpfel", "Stahl Rüstung", "Stahlbarren", "Apfel", "A b", "Ab");
+
+		List<String> sorted = names.stream().sorted(GermanOrder.ownCollator()::compare).toList();
+
+		assertThat(sorted).containsExactlyElementsOf(names.stream().sorted(GermanOrder.NAMES).toList());
+	}
+
+	@Test
+	void everyOwnCollatorIsItsOwnSoNoTwoCallersQueueOnOne() {
+		Collator first = GermanOrder.ownCollator();
+
+		Collator second = GermanOrder.ownCollator();
+
+		assertThat(first).isNotSameAs(second);
 	}
 
 	@Test

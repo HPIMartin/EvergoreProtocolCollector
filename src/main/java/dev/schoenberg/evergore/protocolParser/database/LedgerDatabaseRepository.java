@@ -95,7 +95,7 @@ public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry,
 		});
 	}
 
-	protected abstract String columnOf(K key);
+	protected abstract SortColumn columnOf(K key);
 
 	protected abstract E toEntry(R row);
 
@@ -110,9 +110,14 @@ public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry,
 	}
 
 	private QueryBuilder<R, String> orderedBy(LedgerSort<K> sort, QueryBuilder<R, String> query) {
-		String column = columnOf(sort.key());
-		query.orderBy(column, sort.direction() == ASCENDING);
-		if (!column.equals(TIMESTAMP_COLUMN)) {
+		SortColumn column = columnOf(sort.key());
+		boolean ascending = sort.direction() == ASCENDING;
+		if (column.inGermanOrder()) {
+			query.orderByRaw(column.name() + " COLLATE " + GermanOrderCollation.NAME + (ascending ? " ASC" : " DESC"));
+		} else {
+			query.orderBy(column.name(), ascending);
+		}
+		if (!column.name().equals(TIMESTAMP_COLUMN)) {
 			query.orderBy(TIMESTAMP_COLUMN, false);
 		}
 		return query.orderBy(ID_COLUMN, true);

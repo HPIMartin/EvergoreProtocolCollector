@@ -12,6 +12,10 @@ public final class GermanOrder {
 
 	private GermanOrder() {}
 
+	public static Collator ownCollator() {
+		return Collator.getInstance(Locale.GERMANY);
+	}
+
 	public static List<String> distinctSorted(List<String> names) {
 		return names.stream().distinct().sorted(NAMES).toList();
 	}
