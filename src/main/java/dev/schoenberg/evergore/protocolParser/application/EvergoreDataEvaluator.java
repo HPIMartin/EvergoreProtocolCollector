@@ -69,7 +69,7 @@ public class EvergoreDataEvaluator {
 		MetaInformationSnapshot beforeThisRun = metaRepo.snapshot();
 		Instant runInstant = clock.instant();
 		List<String> guild = knownAvatars.sortedByName();
-		Optional<Instant> runBeforeThisOne = beforeThisRun.lastRecomputeOf(guild);
+		Optional<Instant> runBeforeThisOne = beforeThisRun.lastRecomputeOf(guild.stream().filter(beforeThisRun::storesSumsOf).toList());
 
 		guild.forEach(avatar -> collectInformationOf(avatar, runInstant, recomputed, unknownItemNames, zeroValuedItemNames, failedAvatarNames, roundTrips, roundTripAbstentions));
 		failedAvatarNames.forEach(avatar -> seedRecomputeInstantOf(avatar, beforeThisRun, runBeforeThisOne, recomputed));
@@ -82,7 +82,7 @@ public class EvergoreDataEvaluator {
 
 	private static void seedRecomputeInstantOf(String avatar, MetaInformationSnapshot beforeThisRun, Optional<Instant> runBeforeThisOne, List<MetaInformation<?>> recomputed) {
 		MetaInformationKey<Instant> key = getSumsRecomputedAt(avatar);
-		if (beforeThisRun.get(key).isPresent()) {
+		if (!beforeThisRun.storesSumsOf(avatar) || beforeThisRun.get(key).isPresent()) {
 			return;
 		}
 

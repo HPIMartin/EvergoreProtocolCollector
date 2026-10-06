@@ -23,7 +23,9 @@ public record MetaInformationSnapshot(Map<String, String> serializedValues) {
 	}
 
 	public boolean storesSumsOf(String avatar) {
-		return Stream.of(getBankPlacement(avatar), getBankWithdrawl(avatar), getStoragePlacement(avatar), getStorageWithdrawl(avatar)).allMatch(key -> get(key).isPresent());
+		return Stream
+				.of(getBankPlacement(avatar), getBankWithdrawl(avatar), getStoragePlacement(avatar), getStorageWithdrawl(avatar))
+				.allMatch(key -> serializedValues.containsKey(key.id));
 	}
 
 	public Optional<Instant> lastRecomputeOf(Collection<String> avatars) {

@@ -334,17 +334,25 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   recomputed**, as **epoch millis**, written in the same batch as his four sums. Epoch millis rather
   than the wall-clock text `last_updated` uses, because that format cannot tell the two Berlin
   fall-back hours apart (backlog **D14**) and a second wall-clock key would double the defect. An
-  avatar whose recompute fails keeps the instant of the last run that reached him; one who has no
-  such instant yet gets one at the end of the run, seeded from the **newest instant these keys
-  already held before that run**, so the key is absent only while no avatar carries one at all.
-  "Older than the last collection" is therefore decidable server-side as "older than the newest of
-  these keys", with no second run-level key to keep in step.
-- **The seed deliberately does not read `last_updated`** (falsifier probe 2026-09-09):
-  reconstructing an instant from that wall-clock text resolves the Berlin fall-back hour to the
-  earlier of its two passes, which dated a seeded avatar a full hour before the run that actually
-  produced his sums and marked him stale against an avatar stamped in that very run. The store
-  already holds the previous run exactly, in epoch millis, so the seed reads that instead and the
-  comparison never leaves the epoch-millis domain.
+  avatar whose recompute fails keeps the instant of the last run that reached him, and one no run
+  has reached gets none: he has no sums for an instant to date, and is not yet computed rather than
+  outdated. A failed avatar whose four sums are stored **without** an instant (sums written before
+  these keys existed) is seeded with the newest instant the avatars with stored sums held before
+  that run, so he comes to read as outdated instead of current (decision 2026-10-06). The seed has
+  two limits. First, he reads as current until a run stamps an avatar with stored sums after the
+  run whose instant seeds him, which can be the seeding run itself; before that, the run that
+  stamps the first instants has none to seed from, and a run in which every avatar fails stamps
+  nobody with its own instant. Second, the seeded date is a bound, not the date of his sums, which
+  predate it.
+- The run asks whether sums are stored by the keys' presence (`storesSumsOf`), never by their
+  values, and asks it before it reads a failed avatar's instant, so a stored sum that cannot be
+  read, or an unreadable instant of an avatar without sums, does not stop the run ahead of the
+  per-avatar guard; the avatar's next successful recompute overwrites such a sum, and until then the
+  overview, which reads every stored sum, cannot be served. "Older than the last collection" is
+  decidable server-side as "older than the newest of these keys among the avatars whose sums are
+  stored", with no second run-level key to keep in step. Neither the comparison nor the seed reads the wall-clock
+  `last_updated`, whose fall-back hour resolves to the earlier of its two passes and would date a
+  seeded avatar an hour before the run that produced his sums.
 
 This makes evaluation **idempotent** (a second run yields identical sums) and **self-healing per
 avatar**: a failing avatar's own sums are withheld and recomputed cleanly on the next run that
