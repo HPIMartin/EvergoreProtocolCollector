@@ -1428,6 +1428,68 @@ describe('App', () => {
     )
   })
 
+  it('says in German that the data could not be loaded when the request itself is rejected', async () => {
+    const unreachable: HttpGet = () =>
+      Promise.reject(new TypeError('Failed to fetch'))
+
+    window.history.replaceState(null, '', `/overview?token=${TOKEN}`)
+    render(<App get={unreachable} />)
+    await act(async () => undefined)
+
+    expect({
+      shown: shownStatus(),
+      english: document.body.textContent.includes('Failed to fetch'),
+    }).toStrictEqual({
+      shown:
+        'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
+      english: false,
+    })
+  })
+
+  it('says in German that the admin status could not be loaded when it answers 400, without the status or its English', async () => {
+    await shellAt('/admin', alwaysServing(400, '{"message":"Bad Request"}'))
+
+    expect({
+      shown: shownStatus(),
+      status: document.body.textContent.includes('400'),
+      english: document.body.textContent.includes('Bad Request'),
+    }).toStrictEqual({
+      shown:
+        'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
+      status: false,
+      english: false,
+    })
+  })
+
+  it('says in German that a ledger could not be loaded when it answers 500, without the status or its English', async () => {
+    await shellAt(
+      `/avatars/Calix/bank?token=${TOKEN}`,
+      alwaysServing(500, '{"message":"Internal Server Error"}'),
+    )
+
+    expect({
+      shown: shownStatus(),
+      status: document.body.textContent.includes('500'),
+      english: document.body.textContent.includes('Internal Server Error'),
+    }).toStrictEqual({
+      shown:
+        'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
+      status: false,
+      english: false,
+    })
+  })
+
+  it('says a storage ledger refused its token instead of calling it a failure', async () => {
+    await shellAt(
+      '/avatars/Calix/storage?token=a-wrong-token',
+      alwaysServing(401, null),
+    )
+
+    expect(shownStatus()).toBe(
+      'Kein gültiges Token: der Link braucht ein token in der Adresse.',
+    )
+  })
+
   it('is loading before the first answer arrives', () => {
     window.history.replaceState(null, '', `/overview?token=${TOKEN}`)
     const server = serving(() => ({ status: 200, body: OVERVIEW_BODY }))
@@ -2216,6 +2278,22 @@ describe('App', () => {
     expect(server.askedFor).toStrictEqual([
       '/api/v1/avatars/Calix/bank?token=a-test-token&page=NaN&size=100',
     ])
+  })
+
+  it('passes a page written as a word through to the API as no number and says the page does not exist', async () => {
+    const server = alwaysServing(400, '{"message":"Bad Request"}')
+
+    await shellAt(`/avatars/Calix/bank?token=${TOKEN}&page=zwei`, server)
+
+    expect({
+      shown: shownStatus(),
+      askedFor: server.askedFor,
+    }).toStrictEqual({
+      shown: 'Diese Seite gibt es nicht.',
+      askedFor: [
+        '/api/v1/avatars/Calix/bank?token=a-test-token&page=NaN&size=100',
+      ],
+    })
   })
 
   it('offers the ledgers of the avatar it shows in its navigation', async () => {
