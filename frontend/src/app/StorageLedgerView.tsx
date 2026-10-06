@@ -1,4 +1,4 @@
-import type { ProtocolApi } from '../api'
+import type { LedgerSort, ProtocolApi } from '../api'
 import { windowOf } from '../api'
 import type { StorageEntry } from '../domain'
 import { germanTransferOfStorageEntry } from '../domain'
@@ -14,6 +14,7 @@ export interface StorageLedgerViewProps {
   readonly avatar: string
   readonly token: string | null
   readonly page: number
+  readonly sort: LedgerSort | null
   readonly onFollow: (href: string) => void
 }
 
@@ -63,11 +64,12 @@ export function StorageLedgerView({
   avatar,
   token,
   page,
+  sort,
   onFollow,
 }: StorageLedgerViewProps) {
   const load = useLoad(
-    () => api.storageEntries(avatar, windowOf(page)),
-    requestKeyOf('storage', avatar, token, page),
+    () => api.storageEntries(avatar, windowOf(page), sort),
+    requestKeyOf('storage', avatar, token, page, sort),
   )
 
   return (

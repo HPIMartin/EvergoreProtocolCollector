@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import type { LedgerSort } from '../api'
+
 import type { RouteVisitor } from './route.ts'
 import {
   adminPath,
@@ -9,11 +11,17 @@ import {
   storagePath,
 } from './route.ts'
 
+function sortedBy(sort: LedgerSort | null): string {
+  return sort === null ? '' : ` sorted by ${sort.column} ${sort.direction}`
+}
+
 const describingVisitor: RouteVisitor<string> = {
   overview: () => 'the overview',
   admin: () => 'the admin status page',
-  bank: (avatar, page) => `the bank of ${avatar} at page ${String(page)}`,
-  storage: (avatar, page) => `the storage of ${avatar} at page ${String(page)}`,
+  bank: (avatar, page, sort) =>
+    `the bank of ${avatar} at page ${String(page)}${sortedBy(sort)}`,
+  storage: (avatar, page, sort) =>
+    `the storage of ${avatar} at page ${String(page)}${sortedBy(sort)}`,
   unknownPath: (path) => `no view for ${path}`,
 }
 
@@ -88,6 +96,47 @@ describe('route', () => {
     )
 
     expect(described).toBe('the bank of Calix at page NaN')
+  })
+
+  it('reads the sort a ledger address names', () => {
+    const described = routeOf(
+      '/avatars/Calix/storage',
+      '?page=2&sort=quantity&direction=descending',
+    ).accept(describingVisitor)
+
+    expect(described).toBe(
+      'the storage of Calix at page 2 sorted by quantity descending',
+    )
+  })
+
+  it('completes a sort that names only its column with the descending direction', () => {
+    const described = routeOf('/avatars/Calix/bank', '?sort=amount').accept(
+      describingVisitor,
+    )
+
+    expect(described).toBe(
+      'the bank of Calix at page 0 sorted by amount descending',
+    )
+  })
+
+  it('completes a sort that names only its direction with the time', () => {
+    const described = routeOf(
+      '/avatars/Calix/bank',
+      '?direction=ascending',
+    ).accept(describingVisitor)
+
+    expect(described).toBe(
+      'the bank of Calix at page 0 sorted by timestamp ascending',
+    )
+  })
+
+  it('passes a sort the ledger does not know through unchanged instead of dropping it', () => {
+    const described = routeOf(
+      '/avatars/Calix/storage',
+      '?sort=Menge&direction=up',
+    ).accept(describingVisitor)
+
+    expect(described).toBe('the storage of Calix at page 0 sorted by Menge up')
   })
 
   it('decodes an avatar name that had to be escaped in the path', () => {

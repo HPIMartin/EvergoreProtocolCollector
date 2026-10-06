@@ -1,3 +1,5 @@
+import type { LedgerSort } from '../api'
+
 const SEPARATOR = '/'
 const AVATARS = 'avatars'
 const OVERVIEW = 'overview'
@@ -6,14 +8,18 @@ const BANK = 'bank'
 const STORAGE = 'storage'
 const LEDGER_SEGMENT_COUNT = 3
 const DEFAULT_PAGE = 0
+const DEFAULT_SORT_COLUMN = 'timestamp'
+const DEFAULT_SORT_DIRECTION = 'descending'
 
 export const PAGE = 'page'
+export const SORT = 'sort'
+export const DIRECTION = 'direction'
 
 export interface RouteVisitor<R> {
   overview: () => R
   admin: () => R
-  bank: (avatar: string, page: number) => R
-  storage: (avatar: string, page: number) => R
+  bank: (avatar: string, page: number, sort: LedgerSort | null) => R
+  storage: (avatar: string, page: number, sort: LedgerSort | null) => R
   unknownPath: (path: string) => R
 }
 
@@ -46,18 +52,29 @@ export function routeOf(path: string, search: string): Route {
     return ADMIN_ROUTE
   }
 
-  return ledgerRouteOf(segments, pageIn(search)) ?? unknownPathRoute(path)
+  return (
+    ledgerRouteOf(segments, pageIn(search), sortIn(search)) ??
+    unknownPathRoute(path)
+  )
 }
 
 const OVERVIEW_ROUTE: Route = { accept: (visitor) => visitor.overview() }
 const ADMIN_ROUTE: Route = { accept: (visitor) => visitor.admin() }
 
-function bankRoute(avatar: string, page: number): Route {
-  return { accept: (visitor) => visitor.bank(avatar, page) }
+function bankRoute(
+  avatar: string,
+  page: number,
+  sort: LedgerSort | null,
+): Route {
+  return { accept: (visitor) => visitor.bank(avatar, page, sort) }
 }
 
-function storageRoute(avatar: string, page: number): Route {
-  return { accept: (visitor) => visitor.storage(avatar, page) }
+function storageRoute(
+  avatar: string,
+  page: number,
+  sort: LedgerSort | null,
+): Route {
+  return { accept: (visitor) => visitor.storage(avatar, page, sort) }
 }
 
 function pageIn(search: string): number {
@@ -67,6 +84,20 @@ function pageIn(search: string): number {
   }
 
   return raw.trim() === '' ? Number.NaN : Number(raw)
+}
+
+function sortIn(search: string): LedgerSort | null {
+  const parameters = new URLSearchParams(search)
+  const column = parameters.get(SORT)
+  const direction = parameters.get(DIRECTION)
+  if (column === null && direction === null) {
+    return null
+  }
+
+  return {
+    column: column ?? DEFAULT_SORT_COLUMN,
+    direction: direction ?? DEFAULT_SORT_DIRECTION,
+  }
 }
 
 function unknownPathRoute(path: string): Route {
@@ -88,6 +119,7 @@ function onlyTheAdminStatusPage(segments: readonly string[]): boolean {
 function ledgerRouteOf(
   segments: readonly string[],
   page: number,
+  sort: LedgerSort | null,
 ): Route | null {
   if (segments.length !== LEDGER_SEGMENT_COUNT || segments[0] !== AVATARS) {
     return null
@@ -98,10 +130,10 @@ function ledgerRouteOf(
     return null
   }
   if (segments[2] === BANK) {
-    return bankRoute(avatar, page)
+    return bankRoute(avatar, page, sort)
   }
   if (segments[2] === STORAGE) {
-    return storageRoute(avatar, page)
+    return storageRoute(avatar, page, sort)
   }
 
   return null

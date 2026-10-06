@@ -51,6 +51,32 @@ describe('requestKey', () => {
     expect(first).not.toBe(second)
   })
 
+  it('tells two sorts of the same page apart', () => {
+    const byQuantity = requestKeyOf('storage', 'Calix', 'a-test-token', 0, {
+      column: 'quantity',
+      direction: 'descending',
+    })
+    const byName = requestKeyOf('storage', 'Calix', 'a-test-token', 0, {
+      column: 'name',
+      direction: 'descending',
+    })
+
+    expect(byQuantity).not.toBe(byName)
+  })
+
+  it('tells the two directions of one column apart', () => {
+    const ascending = requestKeyOf('storage', 'Calix', 'a-test-token', 0, {
+      column: 'quantity',
+      direction: 'ascending',
+    })
+    const descending = requestKeyOf('storage', 'Calix', 'a-test-token', 0, {
+      column: 'quantity',
+      direction: 'descending',
+    })
+
+    expect(ascending).not.toBe(descending)
+  })
+
   it('treats an omitted page as the first page', () => {
     const omitted = requestKeyOf('bank', 'Calix', 'a-test-token')
     const explicit = requestKeyOf('bank', 'Calix', 'a-test-token', 0)

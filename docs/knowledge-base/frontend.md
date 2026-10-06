@@ -154,9 +154,14 @@ Four top-level folders under `frontend/src/`:
   `items: []`, rendered as the existing empty state. An invalid page (negative or non-numeric) is
   passed through **unclamped**, so the API's `@Min(0)` violation answers 400 and the ledger says
   "Diese Seite gibt es nicht.", because clamping it client-side would hide a bad link instead of
-  showing it. Only a ledger read maps a 400 that way, because the page number is the only
-  request value the client does not fix (the size is constant, a bad token answers 401); on the
-  overview or the admin page a 400 is a plain failure.
+  showing it. Only a ledger read maps a 400 that way, because the page number and the sort are
+  the only request values the client does not fix (the size is constant, a bad token answers
+  401); on the overview or the admin page a 400 is a plain failure.
+- **A ledger's sort is address state too** (decision 2026-10-05): `route.ts` reads `sort` and
+  `direction` (`SORT`, `DIRECTION`), completes an address that names only one of them with the
+  API's defaults (`timestamp`, `descending`), and the view asks the API for that order. A value
+  the API does not know is passed through unchanged, like an invalid page, so its 400 reads "Diese
+  Seite gibt es nicht."; an address without either asks for no sort and gets the newest first.
 - **The views own their columns, the primitives own the rendering.** A view declares its
   `Column` list and hands `SortableTable` the domain rows; timestamps go in as ISO strings, which is
   what the column kind reads, and `format.ts` is the one place that turns them into Berlin

@@ -27,21 +27,23 @@ export function App({ get }: AppProps) {
   const view: RouteVisitor<ReactNode> = {
     overview: () => <OverviewView api={api} token={token} onFollow={follow} />,
     admin: () => <AdminView api={api} />,
-    bank: (avatar, page) => (
+    bank: (avatar, page, sort) => (
       <BankLedgerView
         api={api}
         avatar={avatar}
         token={token}
         page={page}
+        sort={sort}
         onFollow={follow}
       />
     ),
-    storage: (avatar, page) => (
+    storage: (avatar, page, sort) => (
       <StorageLedgerView
         api={api}
         avatar={avatar}
         token={token}
         page={page}
+        sort={sort}
         onFollow={follow}
       />
     ),

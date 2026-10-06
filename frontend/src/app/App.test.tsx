@@ -1862,6 +1862,57 @@ describe('App', () => {
     ])
   })
 
+  it('asks the storage route for the sort the address names', async () => {
+    const server = alwaysServing(200, STORAGE_BODY)
+
+    await shellAt(
+      `/avatars/Calix/storage?token=${TOKEN}&page=1&sort=quantity&direction=descending`,
+      server,
+    )
+
+    expect(server.askedFor).toStrictEqual([
+      '/api/v1/avatars/Calix/storage?token=a-test-token&page=1&size=100&sort=quantity&direction=descending',
+    ])
+  })
+
+  it('says in German that a ledger cannot be sorted the way its address names', async () => {
+    const server = alwaysServing(400, '{"message":"Bad Request"}')
+
+    await shellAt(
+      `/avatars/Calix/storage?token=${TOKEN}&sort=Menge&direction=descending`,
+      server,
+    )
+
+    expect({
+      shown: shownStatus(),
+      askedFor: server.askedFor,
+    }).toStrictEqual({
+      shown: 'Diese Seite gibt es nicht.',
+      askedFor: [
+        '/api/v1/avatars/Calix/storage?token=a-test-token&page=0&size=100&sort=Menge&direction=descending',
+      ],
+    })
+  })
+
+  it('says in German that a bank ledger cannot be sorted the way its address names', async () => {
+    const server = alwaysServing(400, '{"message":"Bad Request"}')
+
+    await shellAt(
+      `/avatars/Calix/bank?token=${TOKEN}&sort=Betrag&direction=descending`,
+      server,
+    )
+
+    expect({
+      shown: shownStatus(),
+      askedFor: server.askedFor,
+    }).toStrictEqual({
+      shown: 'Diese Seite gibt es nicht.',
+      askedFor: [
+        '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100&sort=Betrag&direction=descending',
+      ],
+    })
+  })
+
   it('renders the empty state for a page past the end, not an error', async () => {
     await shellAt(
       `/avatars/Calix/bank?token=${TOKEN}&page=50`,

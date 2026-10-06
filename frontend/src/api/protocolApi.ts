@@ -6,6 +6,7 @@ import type {
   StorageEntry,
 } from '../domain'
 
+import type { LedgerSort } from './ledgerSort.ts'
 import type { PageWindow } from './pageWindow.ts'
 
 export interface ProtocolApi {
@@ -14,9 +15,11 @@ export interface ProtocolApi {
   bankEntries: (
     avatar: string,
     window: PageWindow,
+    sort?: LedgerSort | null,
   ) => Promise<Ledger<BankEntry>>
   storageEntries: (
     avatar: string,
     window: PageWindow,
+    sort?: LedgerSort | null,
   ) => Promise<Ledger<StorageEntry>>
 }

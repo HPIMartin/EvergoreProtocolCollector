@@ -7,6 +7,7 @@ import {
   RequestFailed,
   Unauthorized,
 } from './apiErrors.ts'
+import type { LedgerSort } from './ledgerSort.ts'
 import type { PageWindow } from './pageWindow.ts'
 import type { ProtocolApi } from './protocolApi.ts'
 import {
@@ -28,13 +29,21 @@ export function httpProtocolApi(
   get: HttpGet,
   token: string | null,
 ): ProtocolApi {
-  function urlOf(path: string, window: PageWindow): string {
+  function urlOf(
+    path: string,
+    window: PageWindow,
+    sort: LedgerSort | null = null,
+  ): string {
     const parameters = new URLSearchParams()
     if (token !== null) {
       parameters.set('token', token)
     }
     parameters.set('page', String(window.page))
     parameters.set('size', String(window.size))
+    if (sort !== null) {
+      parameters.set('sort', sort.column)
+      parameters.set('direction', sort.direction)
+    }
 
     return `${AVATARS}${path}?${parameters.toString()}`
   }
@@ -58,10 +67,11 @@ export function httpProtocolApi(
     view: string,
     avatar: string,
     window: PageWindow,
+    sort: LedgerSort | null,
     pageFrom: (body: unknown) => Page<E>,
   ): Promise<Ledger<E>> {
     const path = `/${encodeURIComponent(avatar)}/${view}`
-    const response = await get(urlOf(path, window))
+    const response = await get(urlOf(path, window, sort))
     if (response.status === NOT_FOUND) {
       return unknownAvatar<E>(avatar)
     }
@@ -77,9 +87,9 @@ export function httpProtocolApi(
       overviewFrom(await bodyOf(await get(urlOf('', window)))),
     adminStatus: async () =>
       adminStatusFrom(await bodyOf(await get(ADMIN_STATUS))),
-    bankEntries: (avatar, window) =>
-      ledgerOf('bank', avatar, window, bankPageFrom),
-    storageEntries: (avatar, window) =>
-      ledgerOf('storage', avatar, window, storagePageFrom),
+    bankEntries: (avatar, window, sort = null) =>
+      ledgerOf('bank', avatar, window, sort, bankPageFrom),
+    storageEntries: (avatar, window, sort = null) =>
+      ledgerOf('storage', avatar, window, sort, storagePageFrom),
   }
 }

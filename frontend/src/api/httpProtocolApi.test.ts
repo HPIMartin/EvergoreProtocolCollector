@@ -155,6 +155,48 @@ describe('the HTTP protocol API', () => {
     ])
   })
 
+  it('asks the storage route for the sort it is given', async () => {
+    const fetched = answering(200, STORAGE_BODY)
+    const tested = httpProtocolApi(fetched.get, TOKEN)
+
+    await tested.storageEntries('Calix', FIRST_PAGE, {
+      column: 'quantity',
+      direction: 'descending',
+    })
+
+    expect(fetched.urls).toStrictEqual([
+      '/api/v1/avatars/Calix/storage?token=a-test-token&page=0&size=100&sort=quantity&direction=descending',
+    ])
+  })
+
+  it('asks the bank route for the sort it is given', async () => {
+    const fetched = answering(200, BANK_BODY)
+    const tested = httpProtocolApi(fetched.get, TOKEN)
+
+    await tested.bankEntries('Calix', FIRST_PAGE, {
+      column: 'amount',
+      direction: 'ascending',
+    })
+
+    expect(fetched.urls).toStrictEqual([
+      '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100&sort=amount&direction=ascending',
+    ])
+  })
+
+  it('escapes a sort that would otherwise change the query', async () => {
+    const fetched = answering(200, STORAGE_BODY)
+    const tested = httpProtocolApi(fetched.get, TOKEN)
+
+    await tested.storageEntries('Calix', FIRST_PAGE, {
+      column: 'quantity&size=1',
+      direction: 'descending',
+    })
+
+    expect(fetched.urls).toStrictEqual([
+      '/api/v1/avatars/Calix/storage?token=a-test-token&page=0&size=100&sort=quantity%26size%3D1&direction=descending',
+    ])
+  })
+
   it('asks for the window it is given, not always the first one', async () => {
     const fetched = answering(200, BANK_BODY)
     const tested = httpProtocolApi(fetched.get, TOKEN)

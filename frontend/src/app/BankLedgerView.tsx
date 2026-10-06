@@ -1,4 +1,4 @@
-import type { ProtocolApi } from '../api'
+import type { LedgerSort, ProtocolApi } from '../api'
 import { windowOf } from '../api'
 import type { BankEntry } from '../domain'
 import { germanTransferOfBankEntry } from '../domain'
@@ -14,6 +14,7 @@ export interface BankLedgerViewProps {
   readonly avatar: string
   readonly token: string | null
   readonly page: number
+  readonly sort: LedgerSort | null
   readonly onFollow: (href: string) => void
 }
 
@@ -50,11 +51,12 @@ export function BankLedgerView({
   avatar,
   token,
   page,
+  sort,
   onFollow,
 }: BankLedgerViewProps) {
   const load = useLoad(
-    () => api.bankEntries(avatar, windowOf(page)),
-    requestKeyOf('bank', avatar, token, page),
+    () => api.bankEntries(avatar, windowOf(page), sort),
+    requestKeyOf('bank', avatar, token, page, sort),
   )
 
   return (
