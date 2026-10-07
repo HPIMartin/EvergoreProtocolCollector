@@ -319,6 +319,9 @@ lives.
   Gradle run is **green**, so an exit code proves nothing: count the test-result XMLs in the
   worktree's own `build/` and check the strand's new test classes are among them, or the suite ran
   without the change. Mechanical enforcement is backlog **G7**.
+- **Run a worktree's build by its absolute path:** `<abs worktree>/verify focus <abs path>`, never
+  `W=<wt>; cd $W && ./verify …`, which the `cd` guard denies (working-with-ai-agents.md,
+  "Permissions & autonomy"); every brief in `.claude/agents/` says so.
 
 ## Worked example (the storage-value evaluator feature)
 

@@ -94,7 +94,10 @@ silently land in the primary checkout instead of the strand you were told to wor
 path then reads or writes the wrong tree with no error. Address the worktree explicitly in **every**
 call: `git -C <abs path> …` and absolute paths for reads, writes and Gradle. Verify with `pwd`
 before you trust a relative result, and require `git rev-parse --is-inside-work-tree` to answer
-`true` before your first edit.
+`true` before your first edit. Run the build as `<abs worktree>/verify <command> <abs path>`, never
+after a `cd`: the script finds its own root, and a `cd` whose argument holds `$`, `..`, `~` or a
+backtick is denied outright, so `W=<wt>; cd $W && ./verify …` fails; write the absolute path out
+each time.
 
 **Code that is not meant to stay goes under `src/probe/java`** (probing a library's real behaviour
 before you write the helper, reproducing something by hand), never into `src/test/java`. Run it with

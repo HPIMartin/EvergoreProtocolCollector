@@ -93,6 +93,10 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
   absolute path; subagent worktree isolation is untouched). What guards a push, and which `git -C`
   rules fire: working-with-ai-agents.md, "Permissions & autonomy". Reset-free history-rewrite
   recipe → the playbook's FAIL-loop section.
+- **Worktrees under `.claude/worktrees/` are this session's own local scratch:** a gate or lens
+  worktree is a detached checkout no other session uses, so probes, mutations, builds and reverts
+  inside it change nothing shared; a build there runs as `<abs worktree>/verify …`, never after a
+  `cd` into a variable.
 - **Git hooks are the mechanical half of the rules** ([`hooks/`](hooks/README.md), active via
   `git config core.hooksPath hooks`). git asks `pre-commit` only for `git commit`, so a
   rebase/cherry-pick/revert commit is recorded after the fact and blocks the next commit; never read

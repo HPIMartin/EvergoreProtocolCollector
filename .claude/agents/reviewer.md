@@ -96,7 +96,9 @@ and Read it. Do not modify code, commit, or push.
 silently land in the primary checkout instead of the strand you were told to review, and a relative
 path then reads the wrong tree with no error. Address the worktree explicitly in **every** call:
 `git -C <abs path> …` and absolute paths for reads and builds. Verify with `pwd` before you trust a
-relative result.
+relative result. Run the build as `<abs worktree>/verify <command> <abs path>`, never after a `cd`:
+the script finds its own root, and a `cd` whose argument holds `$`, `..`, `~` or a backtick is
+denied outright, so `W=<wt>; cd $W && ./verify …` fails; write the absolute path out each time.
 
 Check `git merge-base <branch> main == main` before you start: a tip that is behind `main` is not the
 final state, and reviewing it is worthless. Refuse and say so.

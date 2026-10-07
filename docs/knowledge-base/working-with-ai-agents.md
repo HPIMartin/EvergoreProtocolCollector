@@ -132,8 +132,9 @@ command) inside guardrails. Two files:
   (`cd /workspaces/EvergoreProtocolCollector` or below; decided 2026-07-06); deny rules block `cd`
   arguments containing `..`, `$`, `` ` `` or `~` (the working directory can't silently leave the
   project); bare, relative and quoted `cd` still prompt. Prefer `git -C <path>` / absolute paths (a
-  `git -C` command matches no allow rule, so it meets the auto-mode classifier, below); `cd` is the
-  fallback when a tool must run from a subdirectory (e.g. a worktree's `./verify all`).
+  `git -C` command matches no allow rule, so it meets the auto-mode classifier, below); a worktree's
+  build runs as `<abs worktree>/verify …`, since `verify` finds its own root, so no `cd` is needed,
+  and `W=<wt>; cd $W` is denied by the `$` guard.
   Worktree-path specifics: handbook §7.
 - **Autonomy within guardrails.** Maximum useful autonomy, minimum ceremony, a deny floor
   underneath. A deny is matched against each command of a chain, not against the whole line
@@ -180,6 +181,13 @@ command) inside guardrails. Two files:
     unset;** with it set, every project `deny`, `ask` and `allow` is ignored, so after any policy
     change a harmless command the floor must stop (`rm` of a path that does not exist) proves it is
     live.
+- **Where auto-mode rules live:** Claude Code's auto-mode configuration page states that the
+  classifier reads `autoMode` (`environment`, `allow`, `soft_deny`, `hard_deny`) only from the user's
+  `~/.claude/settings.json`, from managed settings and from `--settings`, never from
+  `.claude/settings.json` or `.claude/settings.local.json`, and that it reads `CLAUDE.md`. So the
+  project states in `CLAUDE.md` that the agent's own worktrees under `.claude/worktrees/` are local
+  scratch, and a seat that wants it as a rule adds an `autoMode.allow` entry, with `"$defaults"`,
+  to its user settings (the agent seat's by the author).
 - **A rule that pairs an inner `*` with the `:*` suffix does not fire** in the Claude Code build in
   use (measured 2026-10-04: `git -C /nonexistent-dir reset` ran under the deny
   `Bash(git -C * reset:*)`), while rules with only a `:*` suffix or only inner `*`s do. The

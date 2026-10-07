@@ -46,7 +46,10 @@ modify production code, do not commit, do not push.
 silently land in the primary checkout instead of the strand you were told to attack, and a relative
 path then reads or writes the wrong tree with no error. Address the worktree explicitly in **every**
 call: `git -C <abs path> …` and absolute paths for reads, writes and Gradle. Verify with `pwd`
-before you trust a relative result.
+before you trust a relative result. Run the build as `<abs worktree>/verify <command> <abs path>`,
+never after a `cd`: the script finds its own root, and a `cd` whose argument holds `$`, `..`, `~` or
+a backtick is denied outright, so `W=<wt>; cd $W && ./verify …` fails; write the absolute path out
+each time.
 
 **Throwaway code goes under `src/probe/java`, never under `src/test/java`.** Run it with
 `./gradlew probe` and clear it with `./gradlew clearProbes` before you return; `rm` stays the
