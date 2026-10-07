@@ -88,7 +88,7 @@ author keeps on purpose.
 - Replace `.template/baseline/` with the incoming payload (it is the next baseline), set
   `TEMPLATE-VERSION` to M, and hand the author the removal command for `.template/incoming/`.
 - Commit per handbook §7 in reviewable slices (the baseline bootstrap, the merged process docs, the
-  merged hooks and settings, the interview decisions), messages confirmed, pushed only on the
+  merged hooks and settings, the interview decisions), messages worded per §7, pushed only on the
   strand's `claude/<topic>` branch; the last one sets the version (`Upgrade the process template to
   version M`).
 - Land through the gateway: rebase, `./verify all`, the compare range for the author, the author's

@@ -14,8 +14,8 @@
 - Fine-grained, focused commits, one logical change each.
 - Commit messages: **single line, present-tense verb first, no body, no footers** (see
   [engineering-handbook.md](engineering-handbook.md) §7); **the commit log *is* the changelog.**
-- The author confirms each commit message and **alone moves `origin/main`**; agents push only their
-  own `claude/<topic>` branches ([engineering-handbook.md](engineering-handbook.md) §7).
+- Agents word their commit messages themselves; the author **alone moves `origin/main`**; agents
+  push only their own `claude/<topic>` branches, each with its pull request ([engineering-handbook.md](engineering-handbook.md) §7).
 - **LF line endings** enforced via `.gitattributes` (`* text=auto eol=lf`; binaries marked
   `binary`). Why: the repo originally had no `.gitattributes` and mixed CRLF/LF, making
   working-tree diffs look enormous (~95% line-ending churn). If a diff ever looks huge again,

@@ -106,8 +106,8 @@ means, the TDD cycles drive them green, step definitions included.
    to that implementation's shape, which is what produces assertions fitted to the data.
 2. **Green**: simplest code that passes.
 3. **Refactor**: improve design with tests green.
-4. **Commit**: one full cycle = one commit, via the §7 protocol (propose message → confirm →
-   commit; the cycle never pushes). Red and green stay uncommitted, local steps inside the cycle;
+4. **Commit**: one full cycle = one commit, via the §7 protocol (the agent words the message and
+   commits; the cycle never pushes). Red and green stay uncommitted, local steps inside the cycle;
    only the refactored, green result is committed, so every commit is atomic and independently
    revertable.
 
@@ -322,8 +322,10 @@ plus the corrected scenario tagged `@wip`.
 
 ## 7. Git & commits (author's rules, strict)
 
-- **Propose exactly one commit message, get the author's confirmation, THEN commit.** Pushing
-  follows the push rules below: an agent pushes only its own `claude/<topic>` branch, never `main`.
+- **The agent words exactly one commit message itself and commits** (standing approval, author
+  decision 2026-10-07): no confirmation round, the rules below are the check, and the gate reads
+  the branch log. Pushing follows the push rules below: an agent pushes only its own
+  `claude/<topic>` branch, never `main`. Domain decisions stay questions to the author.
 - Message = **single line**, **present-tense verb first** (after an optional `[doc]` tag), states
   what the commit actively changes. No body, no `Co-Authored-By` or tool footer. English. The
   `commit-msg` hook's ticket-key leg stays off: the project has no ticket system
@@ -414,7 +416,7 @@ plus the corrected scenario tagged `@wip`.
   local commit `[wip] <one-line state>` via `git commit --no-verify` (WIP legitimately fails the
   hooks; the one sanctioned non-emergency bypass; no-secrets rule unchanged, eyeball the diff
   first). A checkpoint, not history: `/continue` resolves it first (finish or rework, replace via
-  the normal confirmed-message protocol; reset-free rewrite recipe → multi-agent playbook). Never
+  the normal commit protocol; reset-free rewrite recipe → multi-agent playbook). Never
   survives to the review gateway or a push; parked on the strand's branch, never on `main` (work in
   the primary checkout moves to a new `claude/<topic>` branch first, and the checkout returns to
   `main`), and resolved before any new work.
@@ -477,7 +479,8 @@ worktrees (own directory + HEAD + index) make parallel work safe.
     hook enforces it.
 - **Pushing** (author decision 2026-10-02; what guards a push: working-with-ai-agents.md):
   - **Every branch an agent pushes is named `claude/<topic>`**, the strand's branch from its first
-    commit; an agent pushes only its own, the one exception being the deletion of a landed
+    commit, and is opened as a pull request against `main` at its first push (standing approval,
+    author decision 2026-10-07); an agent pushes only its own, the one exception being the deletion of a landed
     `claude/` branch, whoever pushed it, once `origin/main` holds its current tip (the classifier
     may hold back on another session's branch; then report it). Subagents never push: the session
     that owns the strand pushes it at the gateway.
@@ -596,8 +599,8 @@ worktrees (own directory + HEAD + index) make parallel work safe.
 - [ ] Every identifier, path or backlog ID the diff **deletes or renames** grepped across `docs/`, and
       every hit fixed in the same commit; every **figure** the change moves grepped repo-wide, and
       every hit outside a dated decision or learnings row rewritten in the same commit
-- [ ] Commit message proposed (one line, present-tense verb) **and confirmed** before committing;
-      pushed only on the strand's own `claude/<topic>` branch, never as a `[wip]` commit, never to
+- [ ] Commit message one line, present-tense verb (§7); pushed only on the strand's own
+      `claude/<topic>` branch with its pull request open, never as a `[wip]` commit, never to
       `main` (§7)
 - [ ] Whitespace/format separate from logic; LF endings
 - [ ] Decisions/assumptions logged in `open-questions.md` if any were made

@@ -35,13 +35,14 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
 
 **The rules live in the KB; point, never duplicate** (duplication drifts):
 
-- **Commit protocol, branching, merge & the review gateway** → handbook §7. Propose **one** one-line,
-  present-tense-verb message (optional `[doc]` tag), get the author's confirmation, then commit.
+- **Commit protocol, branching, merge & the review gateway** → handbook §7. Word **one** one-line,
+  present-tense-verb message (optional `[doc]` tag) yourself and commit; no confirmation round.
   Every change on a `claude/<topic>` branch in its own worktree, cut from a freshly synced
   `main` → rebase → review the rebased tip → the author lands it on `origin/main`.
-- **Pushing** → handbook §7. Every branch an agent pushes is named `claude/<topic>`; an agent
-  pushes only its own, forces only with `--force-with-lease`, never pushes a `[wip]` commit, and
-  deletes a landed `claude/` branch on the remote, whoever pushed it.
+- **Pushing** → handbook §7. Every strand is pushed as `claude/<topic>` and opened as a pull
+  request; an agent pushes only its own, forces only with `--force-with-lease`, never pushes a
+  `[wip]` commit, and after a landing removes its worktree and the local and remote `claude/`
+  branch itself. Domain decisions stay questions to the author.
 - **Protected branch: `main`; tags are protected too** → handbook §7. No agent moves either in any
   form (a push, a merged pull request, an API call, a `/land` comment), and no commit is made on
   `main`; only the author lands a reviewed tip on `origin/main`, as a fast-forward: a `/land <sha>`

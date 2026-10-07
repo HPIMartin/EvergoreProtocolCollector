@@ -140,7 +140,7 @@ way, with figures where you measured them.
 - Apply the consequences: the backlog's rows and status, the roadmap's milestones, and every inbound
   pointer to a heading you renumber (DOC-10). Completed work leaves the docs; git is the history.
 - Commit per handbook §7 on a `claude/<topic>` branch in its own worktree, never on `main`: one
-  confirmed single-line message per cohesive change, no body, no footer, no push but that branch.
+  single-line message per cohesive change, worded by the agent, no body, no footer, no push but that branch.
 
 Optional scope from the author: $ARGUMENTS
 

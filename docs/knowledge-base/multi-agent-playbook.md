@@ -36,10 +36,10 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    - the runner's dry run lists the undefined steps: that is the glue work; then a small ordered
      test list → ordered one-line commit messages, step definitions and production code alike
    - slice the commits BEFORE the first edit (handbook §7): each green and reviewable alone
-   - ► YOU APPROVE THE PLAN (the ordered commit messages)
+   - ► YOU APPROVE THE PLAN (the slicing and the test list; the agent words the messages)
 2. IMPLEMENT (spawn `implementer`) with the approved plan
    - per step: red (failing test) → ./verify focus → green (minimal code) → refactor
-     → commit locally with the EXACT pre-approved message; the scenarios run via ./verify bdd
+     → commit locally with the message the plan names; the scenarios run via ./verify bdd
    - ARM: when every scenario of the feature passes, one commit removes @wip, the last TDD step;
      from here ./verify all runs the scenarios on every commit and at every gate
    - REFACTOR the feature under the armed net: no behavior change, each step its own green commit
@@ -142,8 +142,8 @@ and lands through the gateway; no commit is made on `main`
 - **Size signal**: a planned strand of more than about 15 commits is a candidate to split into
   strands that land one after another, since each gate round re-checks every commit; a judgement
   per strand, not a rule (author, 2026-09-29).
-- The implementer commits the messages the plan approved and writes protocol-conform ones only where
-  the plan names none (no per-commit pre-approval; avoids N round-trips). Panel + reviewers review
+- The implementer commits the messages the plan names and writes protocol-conform ones only where
+  the plan names none (no per-commit approval; avoids N round-trips). Panel + reviewers review
   the **branch diff**; at the gateway author + planner review the branch `git log`, reword if needed
   (scripted rebase), and the author lands it by **rebase + fast-forward only** (no merge commit, no
   squash). **Every commit on `main` builds green**; broken branch commits are repaired by rebase

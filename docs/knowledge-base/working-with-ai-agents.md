@@ -37,8 +37,8 @@ cross-session memory.
    exemption is claimed out loud).
 5. **TDD:** red → green → refactor until the scenarios pass (handbook §4).
 6. **Update the KB** in the same change as the code.
-7. **Commit (gated):** propose one one-line, present-tense-verb message, confirm with the author,
-   commit. **Push only the strand's own `claude/<topic>` branch**, leased after a rebase, never a
+7. **Commit (gated):** word one one-line, present-tense-verb message and commit (no confirmation
+   round, handbook §7). **Push only the strand's own `claude/<topic>` branch**, leased after a rebase, never a
    `[wip]` commit; `main` is the author's (handbook §7). LF endings; whitespace separate from
    logic.
 8. **Log decisions/assumptions** for the next session; process slips go to
