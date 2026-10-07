@@ -283,7 +283,8 @@ service's only read surface.
   same union, so the total row still states that it contains a stale row when the served page does
   not show that row.
 - **`staleSumsFrom` is `null` unless the row's sums are older than the last collection**, and then it
-  is the instant they were last recomputed. One nullable field rather than a flag beside a
+  is the instant they were last recomputed, or, for a failed avatar whose stored sums carried no
+  instant, the seeded bound his sums predate (domain-model.md). One nullable field rather than a flag beside a
   timestamp: present means both "stale" and "this old". The comparison happens **server-side**,
   against the newest per-avatar recompute instant in the meta store, so no guild-wide collection
   timestamp returns to this envelope; the one that used to sit here moved to
