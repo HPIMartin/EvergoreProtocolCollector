@@ -138,6 +138,9 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
 - **An agent on the PC holds the author's rights in practice**, through the credential and the
   Docker socket in the table; accepted on purpose. What GitHub binds: [git-state.md](git-state.md),
   "What GitHub enforces".
+- **The agent seat is marked by `EPC_SEAT=agent-machine`**, set in the agent container's
+  environment only, never in the repository; it lifts the review round cap (handbook §9). Where it
+  is unset or reads anything else, the session counts as supervised.
 - **The agent container is built by hand;** a reproducible build from `.devcontainer/` is a strand
   of its own. A commit it has not pushed lives only in that container.
 

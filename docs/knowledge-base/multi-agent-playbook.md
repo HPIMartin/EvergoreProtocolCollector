@@ -81,8 +81,9 @@ scenarios claims one of the §5 exemptions explicitly and then starts at step 1.
 ### FAIL-loop rules (when a falsifier or reviewer rejects)
 
 A FAIL sends work back to step 2, then re-runs a **fresh** panel and **fresh** reviewers.
-Loop-bounding governance (cap 2 re-implement rounds → escalate + re-plan; early-escalate on a
-repeated finding; process-only FAILs don't consume a round) is canonical in
+Loop-bounding governance (cap 2 re-implement rounds → escalate + re-plan, no cap on the agent seat
+but a status comment every three rounds; early-escalate on a repeated finding; process-only FAILs
+don't consume a round) is canonical in
 [engineering-handbook.md](engineering-handbook.md) §9. Harness-specific history hygiene:
 
 - **Fold fixes into the commit they belong to; never append "fix review" commits.** The branch is

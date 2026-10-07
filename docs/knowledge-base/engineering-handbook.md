@@ -620,6 +620,12 @@ fresh falsifier and reviewer re-check. Bounds:
 - **Cap: two re-implement rounds (three attempts total), then re-plan**: stop, escalate to the
   author with findings (repeated FAILs usually mean the plan/spec is wrong, not the code).
   **Early-escalate** when two consecutive rounds raise the *same* finding.
+- **No cap on the agent seat** (author decision 2026-10-07): where `EPC_SEAT` reads
+  `agent-machine` ([dev-environment.md](dev-environment.md), "Where agents run"), the loop runs
+  until PASS, an unattended seat having nobody to wait for. Two brakes replace the cap there: a
+  status comment on the strand's pull request every three rounds (rounds run, findings open, time
+  spent), and a question to the author as soon as a finding recurs or one round's fix reverses an
+  earlier round's. Every other seat keeps the cap.
 - **Process-only FAILs** (whitespace not separated, KB not updated, commit-message format) are
   cheap mechanical fixes; they don't consume a round.
 - **Past the cap, on the author's go to finish**, only a finding that can let a scenario pass
