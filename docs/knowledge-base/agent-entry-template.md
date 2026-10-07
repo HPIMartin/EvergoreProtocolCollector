@@ -92,7 +92,8 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
 - **Ask, don't guess:** author decisions get multiple-choice options (recommended first), recorded in
   [`docs/open-questions.md`](docs/open-questions.md).
 - **Handing the author a review:** every review request carries the compare range, `<tip>..<base>`
-  and nothing else in that statement → working-with-ai-agents.md.
+  and nothing else in that statement, and on its own line the link to the strand's pull request
+  → working-with-ai-agents.md.
 - **Context & token hygiene** (section-scoped reads, no re-reads, batched tool calls, short focused
   sessions) → working-with-ai-agents.md.
 

@@ -277,8 +277,11 @@ command) inside guardrails. Two files:
 - Nothing else belongs in the statement: no `git` prefix, no branch names, no arrows. The two SHAs
   and the two dots. The worktree identity (branch and absolute path) stands beside it as its own
   line (handbook §7).
-- **The branch is pushed before the hand-off**, under the name the identity line gives
-  (`claude/<topic>`), so the author can `git fetch` and review it in GitLens or in GitHub's compare
-  view on any machine.
+- **The pull request's link stands on a line of its own** (author decision 2026-10-07), never inside
+  the range statement: the pull request is where the author reads the diff on any device and posts
+  `/land <tip>`.
+- **The branch is pushed and its pull request open before the hand-off**, under the name the
+  identity line gives (`claude/<topic>`), so the author can `git fetch` and review it in GitLens, or
+  open the link, on any machine.
 - At author gate 1 the artifact under review is the `.feature` itself; the range then covers only
   the commit that adds it.

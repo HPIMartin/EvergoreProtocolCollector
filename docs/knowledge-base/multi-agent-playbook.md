@@ -155,10 +155,11 @@ and lands through the gateway; no commit is made on `main`
 
 - **State the full worktree identity at every review-gateway hand-off:** the branch name **and** the
   absolute worktree path, plus the compare range `<tip>..<base>` on its own line, newest first and
-  nothing else in it ([working-with-ai-agents.md](working-with-ai-agents.md)), with the branch
-  pushed under that name first. The author opens that path in the editor, or fetches the branch on
-  another machine, and pastes the range into GitLens; a hand-off missing any of the three stalls
-  the gateway.
+  nothing else in it, and the pull request's link on another
+  ([working-with-ai-agents.md](working-with-ai-agents.md)), with the branch pushed under that name
+  and its pull request open first. The author opens that path in the editor, fetches the branch on
+  another machine or opens the link, and pastes the range into GitLens; a hand-off missing any of
+  the four stalls the gateway.
 - **Rebase autonomously, land conditionally:** fetch and rebase a feature strand onto the current
   `main` without asking first, and run the full `./verify all` on the rebased tip every time
   (handbook §7): a clean rebase is not a green one until the build says so, and only a green tip is

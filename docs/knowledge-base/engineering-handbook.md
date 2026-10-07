@@ -525,8 +525,8 @@ worktrees (own directory + HEAD + index) make parallel work safe.
      branch before that review, and deleting it does not unpublish it: a secret or host detail
      found then is purged by rewrite, a secret rotated ("No secrets" above). Always state the full
      worktree name (branch and absolute path) so the author can open it in the editor and review
-     all changes before the landing; the hand-off also carries the compare range, `<tip>..<base>`
-     (below).
+     all changes before the landing; the hand-off also carries the compare range, `<tip>..<base>`,
+     and the pull request's link (below).
   4. On PASS and the author's review, the author lands the tip: a `/land <tip>` comment on the
      strand's pull request, which the landing workflow turns into a fast-forward push of exactly
      that commit ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"), or
@@ -568,8 +568,9 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   implementing what it claims; none may land. Red states are never committed (TDD red is transient;
   `@wip`-tagged Gherkin keeps the build green). A gateway defect is repaired by rebase into the
   commit it belongs to, before the landing: never left on `main`, never a follow-up "fix" commit.
-- **Asking the author to review** means handing him the GitLens compare statement for the range
-  (`<tip>..<base>`) and the pushed branch, never a description of where to look →
+- **Asking the author to review** means handing over the GitLens compare statement for the range
+  (`<tip>..<base>`), the pushed branch and its pull request's link, never a description of where to
+  look →
   working-with-ai-agents.md.
 - **Reword at the gateway** non-interactively via scripted `GIT_SEQUENCE_EDITOR` / `GIT_EDITOR`
   (no interactive TTY).
