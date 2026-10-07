@@ -6,7 +6,7 @@ equivalent). It exists so every tool bootstraps from the **same** rules without 
 knowledge base: a wrapper *points* into the KB and adds only that tool's own mechanics. The KB
 (`docs/knowledge-base/` + `backlog.md` + `open-questions.md`) is the single source of truth.
 
-**Template version: 7.** Bump this on any change to the SHARED section below. Every wrapper records the
+**Template version: 8.** Bump this on any change to the SHARED section below. Every wrapper records the
 version it was built from and, at session start, quick-checks that its SHARED section still matches,
 re-syncing on a bump. See the [KB README](README.md). This counter belongs to the SHARED section
 alone; the payload's `TEMPLATE-VERSION` at the repo root is a different counter, and the two need
@@ -61,8 +61,9 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
   pushes only its own, forces only with `--force-with-lease`, never pushes a `[wip]` commit, and
   deletes a landed `claude/` branch on the remote, whoever pushed it.
 - **Protected branch: `main`; tags are protected too** → handbook §7. No agent moves either in any
-  form (a push, a merged pull request, an API call), and no commit is made on `main`; only the
-  author lands a reviewed tip on `origin/main`, as a fast-forward.
+  form (a push, a merged pull request, an API call, a `/land` comment), and no commit is made on
+  `main`; only the author lands a reviewed tip on `origin/main`, as a fast-forward: a `/land <sha>`
+  comment on the strand's pull request, or a push of the tip.
 - **`main` follows `origin/main`** → handbook §7. `git fetch origin` at session start, before a
   strand, before the gateway rebase and before every landing; local `main` only fast-forwards; a
   `main` ahead of or diverged from `origin/main` is reported with both SHAs, never resolved.

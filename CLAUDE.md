@@ -3,7 +3,7 @@
 > Auto-loaded by Claude Code at the start of every session. This is a **thin wrapper**: the rules live
 > in the knowledge base (the [single source of truth](docs/knowledge-base/README.md)) and this file
 > only points to them and adds Claude-Code mechanics. **Based on
-> [`agent-entry-template`](docs/knowledge-base/agent-entry-template.md) version: 7.**
+> [`agent-entry-template`](docs/knowledge-base/agent-entry-template.md) version: 8.**
 > At session start, quick-check that the SHARED section below still matches the template (re-sync on a
 > version bump).
 
@@ -43,8 +43,9 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
   pushes only its own, forces only with `--force-with-lease`, never pushes a `[wip]` commit, and
   deletes a landed `claude/` branch on the remote, whoever pushed it.
 - **Protected branch: `main`; tags are protected too** → handbook §7. No agent moves either in any
-  form (a push, a merged pull request, an API call), and no commit is made on `main`; only the
-  author lands a reviewed tip on `origin/main`, as a fast-forward.
+  form (a push, a merged pull request, an API call, a `/land` comment), and no commit is made on
+  `main`; only the author lands a reviewed tip on `origin/main`, as a fast-forward: a `/land <sha>`
+  comment on the strand's pull request, or a push of the tip.
 - **`main` follows `origin/main`** → handbook §7. `git fetch origin` at session start, before a
   strand, before the gateway rebase and before every landing; local `main` only fast-forwards; a
   `main` ahead of or diverged from `origin/main` is reported with both SHAs, never resolved.

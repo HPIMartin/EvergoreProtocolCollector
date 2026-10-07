@@ -1,0 +1,65 @@
+name: land
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+concurrency:
+  group: land
+  cancel-in-progress: false
+
+jobs:
+  land:
+    if: >-
+      github.event.issue.pull_request
+      && startsWith(github.event.comment.body, '/land')
+      && github.event.comment.user.login == github.repository_owner
+      && github.event.comment.performed_via_github_app == null
+    runs-on: ubuntu-24.04
+    environment: landing
+    timeout-minutes: 10
+    steps:
+      - name: Mint the landing app's token
+        id: token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          client-id: ${{ vars.LAND_APP_CLIENT_ID }}
+          private-key: ${{ secrets.LAND_APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-checks: read
+          permission-statuses: read
+
+      - name: Authenticate git with the token
+        env:
+          TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+          echo "::add-mask::$header"
+          {
+            echo "GIT_CONFIG_COUNT=1"
+            echo "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader"
+            echo "GIT_CONFIG_VALUE_0=$header"
+          } >> "$GITHUB_ENV"
+
+      - name: Fetch land/ from the default branch
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          git init -q source
+          git -C source fetch -q --depth=1 --no-tags "https://github.com/$REPOSITORY.git" "$SOURCE_SHA"
+          git -C source checkout -q FETCH_HEAD -- land
+
+      - name: Land
+        env:
+          LAND_EVENT: ${{ github.event_path }}
+          LAND_REPO: ${{ github.repository }}
+          LAND_REMOTE: https://github.com/${{ github.repository }}.git
+          LAND_TARGET: ${{ vars.LAND_TARGET }}
+          LAND_TOKEN: ${{ steps.token.outputs.token }}
+        run: sh source/land/land

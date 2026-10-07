@@ -1,0 +1,104 @@
+#!/bin/sh
+set -eu
+
+land_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+api=${LAND_API:-"$land_dir/github-api"}
+
+for required in LAND_EVENT LAND_REPO LAND_TARGET LAND_REMOTE; do
+	eval "value=\${$required:-}"
+	[ -n "$value" ] || { printf 'land: %s is not set\n' "$required" >&2; exit 2; }
+done
+command -v jq >/dev/null 2>&1 || { printf 'land: jq is missing\n' >&2; exit 2; }
+
+event() { jq -r "$1" "$LAND_EVENT"; }
+
+ignore() {
+	printf 'land: ignored: %s\n' "$1"
+	exit 0
+}
+
+number=$(event '.issue.number')
+
+answer() {
+	jq -n --arg body "$1" '{body: $body}' > "$work/answer.json"
+	"$api" POST "repos/$LAND_REPO/issues/$number/comments" "$work/answer.json" >/dev/null
+}
+
+refuse() {
+	printf 'land: refused: %s\n' "$1" >&2
+	answer "Not landed: $1" || printf 'land: the refusal could not be posted\n' >&2
+	exit 1
+}
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+[ "$(event '.action')" = created ] || ignore 'not a new comment'
+[ "$(event '.issue.pull_request != null')" = true ] || ignore 'not a pull request'
+body=$(event '.comment.body' | tr -d '\r')
+command_sha=$(printf '%s\n' "$body" | sed -n '1s/^\/land \([0-9a-f]\{40\}\)[[:space:]]*$/\1/p')
+[ "$(printf '%s\n' "$body" | wc -l)" -eq 1 ] || command_sha=
+case "$body" in /land|"/land "*) ;; *) ignore 'not a /land command' ;; esac
+
+owner=${LAND_REPO%%/*}
+[ "$(event '.comment.user.login')" = "$owner" ] || ignore 'the comment is not the owner'"'"'s'
+[ "$(event '.comment.user.type')" = User ] || ignore 'the comment is not a user'"'"'s'
+[ "$(event '.comment.performed_via_github_app == null')" = true ] || ignore 'the comment was posted through an app'
+
+[ -n "$command_sha" ] || refuse 'the command reads `/land <sha>`, with all 40 lowercase hex digits of the head commit.'
+
+case "$LAND_TARGET" in
+	main|claude/land-probe) ;;
+	*) refuse "the landing target \`$LAND_TARGET\` is neither \`main\` nor \`claude/land-probe\`." ;;
+esac
+
+"$api" GET "repos/$LAND_REPO/pulls/$number" > "$work/pull.json" || refuse 'the pull request could not be read.'
+pull() { jq -r "$1" "$work/pull.json"; }
+[ "$(pull '.state')" = open ] || refuse 'the pull request is not open.'
+[ "$(pull '.head.repo.full_name')" = "$LAND_REPO" ] || refuse 'the head branch lives in another repository.'
+[ "$(pull '.base.ref')" = "$LAND_TARGET" ] || refuse "the pull request's base is not \`$LAND_TARGET\`."
+head_ref=$(pull '.head.ref')
+head_sha=$(pull '.head.sha')
+printf '%s\n' "$head_ref" | grep -Eq '^claude/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$' \
+	|| refuse 'the head branch is not a `claude/<topic>` branch.'
+git check-ref-format "refs/heads/$head_ref" || refuse 'the head branch name is not a plain branch name.'
+[ "$head_ref" != "$LAND_TARGET" ] || refuse 'the head branch is the landing target.'
+printf '%s\n' "$head_sha" | grep -Eq '^[0-9a-f]{40}$' || refuse 'the head commit could not be read.'
+case "$head_sha" in
+	"$command_sha") ;;
+	*) refuse "the head is \`$head_sha\`, not the commit \`$command_sha\` the command names." ;;
+esac
+
+"$api" GET "repos/$LAND_REPO/commits/$head_sha/check-runs?per_page=100" > "$work/runs.json" \
+	|| refuse 'the check runs could not be read.'
+runs_total=$(jq -r '.total_count' "$work/runs.json")
+[ "$runs_total" = "$(jq -r '.check_runs | length' "$work/runs.json")" ] \
+	|| refuse 'the head carries more check runs than one page reads.'
+unfinished=$(jq -r '[.check_runs[] | select(.status != "completed" or ((.conclusion // "") | IN("success", "neutral", "skipped") | not)) | .name] | join(", ")' "$work/runs.json")
+[ -z "$unfinished" ] || refuse "check runs not green on the head: $unfinished."
+"$api" GET "repos/$LAND_REPO/commits/$head_sha/status" > "$work/status.json" \
+	|| refuse 'the commit statuses could not be read.'
+if [ "$(jq -r '.total_count' "$work/status.json")" != 0 ]; then
+	[ "$(jq -r '.state' "$work/status.json")" = success ] || refuse 'the combined commit status of the head is not success.'
+fi
+
+git init -q "$work/repo"
+git -C "$work/repo" remote add origin "$LAND_REMOTE"
+git -C "$work/repo" fetch -q --no-tags origin \
+	"refs/heads/$head_ref:refs/land/head" "refs/heads/$LAND_TARGET:refs/land/target" \
+	|| refuse 'the branches could not be fetched.'
+[ "$(git -C "$work/repo" rev-parse refs/land/head)" = "$head_sha" ] \
+	|| refuse 'the head branch moved while the landing was checked.'
+git -C "$work/repo" merge-base --is-ancestor refs/land/target "$head_sha" \
+	|| refuse "\`$LAND_TARGET\` is not an ancestor of the head; rebase the branch and command again."
+git -C "$work/repo" push -q origin "$head_sha:refs/heads/$LAND_TARGET" \
+	|| refuse "the fast-forward push to \`$LAND_TARGET\` was refused."
+
+landed="Landed \`$head_sha\` on \`$LAND_TARGET\` as a fast-forward."
+if git -C "$work/repo" push -q "--force-with-lease=refs/heads/$head_ref:$head_sha" origin ":refs/heads/$head_ref"; then
+	landed="$landed Deleted \`$head_ref\`."
+else
+	landed="$landed \`$head_ref\` was not deleted: it moved after the landing."
+fi
+printf 'land: %s\n' "$landed"
+answer "$landed" || printf 'land: the result could not be posted\n' >&2

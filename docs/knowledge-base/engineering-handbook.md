@@ -403,8 +403,9 @@ plus the corrected scenario tagged `@wip`.
   - **Never read a hook's output as the verdict on the commit that follows it;** ask the history.
     `hooks/self-test` asserts exactly that (resulting history, never printed text). `pre-commit`
     runs it on every commit that touches `hooks/`, `deploy/self-test` on every commit that touches
-    `deploy/` and `gate/self-test` on every commit that touches `gate/`, so no weakened gate, deploy
-    check or dossier check can land; it refuses a commit that lets the SHARED sections of
+    `deploy/`, `gate/self-test` on every commit that touches `gate/` and `land/self-test` on every
+    commit that touches `land/` or the landing workflow, so no weakened gate, deploy check, dossier
+    check or landing can land; it refuses a commit that lets the SHARED sections of
     `CLAUDE.md` and the agent entry template drift apart.
   - Safety net, not substitute; `--no-verify` only for genuine emergencies. Mechanics:
     [`hooks/README.md`](../../hooks/README.md); this project's gate configuration:
@@ -505,8 +506,9 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   - **A `[wip]` commit is never pushed:** no push from a tip whose `main..` range holds a `[wip]`
     subject.
   - **`main` is the author's, tags too:** no agent moves either in any form (a push, a merged pull
-    request, an API call); a strand reaches `main` only by the author's landing of the reviewed tip
-    (the gateway below; [git-state.md](git-state.md) names the ruleset on it and its bypass).
+    request, an API call, a `/land` comment); a strand reaches `main` only by the author's landing
+    of the reviewed tip (the gateway below; [git-state.md](git-state.md) names the ruleset on it
+    and its bypass).
 - **On the branch**: the implementer runs the full TDD loop and commits each red→green→refactor
   step itself, protocol-conform messages, no per-commit pre-approval.
 - **The review gateway (per feature, serialized):**
@@ -522,9 +524,11 @@ worktrees (own directory + HEAD + index) make parallel work safe.
      worktree name (branch and absolute path) so the author can open it in the editor and review
      all changes before the landing; the hand-off also carries the compare range, `<tip>..<base>`
      (below).
-  4. On PASS and the author's review, the author lands the tip: `git fetch origin`, then
-     `git push origin <tip>:main`, a fast-forward without force, which `git push` refuses once
-     `origin/main` has moved (then back to step 2).
+  4. On PASS and the author's review, the author lands the tip: a `/land <tip>` comment on the
+     strand's pull request, which the landing workflow turns into a fast-forward push of exactly
+     that commit ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"), or
+     `git fetch origin`, then `git push origin <tip>:main`, a fast-forward without force. Either
+     is refused once `origin/main` has moved (then back to step 2).
   5. Once `origin/main` holds the tip (`git fetch origin` and the sync's checks above, then
      `git merge-base --is-ancestor <tip> refs/remotes/origin/main`), fast-forward the primary
      checkout's `main` (precondition: clean, else stop and surface it), remove the worktree and

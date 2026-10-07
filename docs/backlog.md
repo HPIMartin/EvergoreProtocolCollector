@@ -81,7 +81,7 @@ SOLID / hexagonal §1–§3, TDD §4, BDD §5, Definition of Done §8); not rest
 
 | ID | Item | Why | Acceptance | Effort |
 |----|------|-----|------------|--------|
-| **A4** | ~~CI (GitHub Actions)~~ **Deprioritized 2026-06-15** (local-only deploy, no CI). *Optional later, low prio:* a **local** gate, git `pre-commit` running `mvn -B verify` | Solo + local Docker→home-server deploy; no shared PRs to guard | revisit if the repo ever goes shared/CI | S |
+| **A4** | **CI (GitHub Actions) that builds every pull request head** (deprioritized 2026-06-15; reopened as a candidate by the landing workflow decision of 2026-10-07): `./verify all` on a runner per push to a `claude/` branch, reported as a check run on the head | The landing workflow lands only when every check run on the head is green, but with no check at all it passes, so "green" rests on the gate and the author's review alone | A pull request whose head fails `./verify all` carries a failed check run, and the landing workflow refuses it | M |
 
 ## Epic B: Lock the core with tests `P0→P1`
 

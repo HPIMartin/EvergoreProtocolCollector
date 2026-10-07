@@ -233,6 +233,10 @@ This project's configuration and legs on top of the shipped suite:
   exist and pass, the same shape, so neither a weakened gate dossier check nor its deletion can
   land ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier"); `hooks/self-test`
   carries four cases for it.
+- **The land leg in `pre-commit`:** whenever a commit touches `land/` or
+  `.github/workflows/land.yml`, `sh land/self-test` must exist and pass, the same shape, so neither
+  a weakened landing nor its deletion can land ("The landing workflow" below); `hooks/self-test`
+  carries five cases for it.
 - **The SHARED-section leg** compares `CLAUDE.md` with `agent-entry-template.md` whenever a commit
   touches either, and the wrapper has to record the template's version ([README.md](README.md),
   step 0).
@@ -243,6 +247,53 @@ This project's configuration and legs on top of the shipped suite:
 `--no-verify` bypasses the hooks; reserve it for genuine emergencies. The hooks are a git-level
 safety net complementing the harness-level checks (`.claude/`); the full `./verify all` (with
 tests) remains the gate for landing on `main`.
+
+## The landing workflow (`/land`)
+
+The author lands a reviewed strand by commenting `/land <sha>` on its pull request; the workflow
+pushes exactly that commit onto the target as a fast-forward (handbook §7, the review gateway). It
+lands nothing until the author has set it up: the App with its key in the environment `landing`,
+the App as a bypass of the `main` ruleset, and `LAND_TARGET` ([git-state.md](git-state.md), "What
+GitHub enforces"); a missing piece fails the run before any push.
+
+- **Pieces:** `.github/workflows/land.yml` (trigger, token, fetch), `land/land` (every decision),
+  `land/github-api` (the REST calls), `land/self-test` (one case per rule, run against a local bare
+  remote and a stubbed API; `sh land/self-test`, no network, needs `jq`).
+- **Trigger:** `issue_comment`, created. GitHub runs that event with the workflow file and `land/`
+  of the default branch, so a `claude/` branch cannot rewrite the landing it is landed by; the job
+  fetches `land/` from `github.sha`, the default branch's head, never from the pull request.
+- **It lands only when all of these hold**, and answers every refusal of the owner's command on the
+  pull request:
+  - the comment is new, on a pull request, by the repository owner, a `User`, with
+    `performed_via_github_app` empty (an agent's comment through the Claude GitHub App in the
+    owner's name is ignored), and reads exactly `/land <sha>` with all 40 lowercase hex digits (a
+    prefix is refused: an agent can craft a second commit sharing a short one);
+  - the pull request is open, its head branch matches `claude/<topic>`, passes
+    `git check-ref-format`, lives in this repository and is not the target, and its base is the
+    target;
+  - the head commit is the commented SHA, and the fetched branch still holds it;
+  - every check run on the head is completed as success, neutral or skipped (more than one page of
+    them is refused), and the combined status is success where any status exists; a head with no
+    check at all passes, until a CI workflow reports one (**A4**);
+  - the target is an ancestor of the head.
+- **It then** runs `git push origin <sha>:refs/heads/<target>` without force, deletes the head
+  branch leased on `<sha>` (a branch that moved after the landing is kept and named), and answers
+  with the result. Tags are never pushed.
+- **Target:** the repository variable `LAND_TARGET`, `claude/land-probe` or `main`; any other value,
+  or none, refuses. `claude/land-probe` is the probe: a pull request based on it proves the
+  workflow end to end without touching `main`.
+- **Credential:** a token minted by `actions/create-github-app-token` (pinned by commit) from an
+  author-owned GitHub App, repository variable `LAND_APP_CLIENT_ID` and secret
+  `LAND_APP_PRIVATE_KEY`, both in the environment `landing`, whose deployment branch rule admits
+  `main` alone: a workflow running from a `claude/` branch never reads the key. The App passes the
+  `main` ruleset only as its bypass, which is the author's to grant ([git-state.md](git-state.md),
+  "What GitHub enforces"). The workflow's own `GITHUB_TOKEN` gets no permission. git
+  authenticates through an `http.extraheader` passed in `GIT_CONFIG_*` variables and masked in the
+  log, so no credential sits in a remote URL.
+- **Serialized:** one landing at a time (`concurrency: land`). GitHub keeps one run waiting behind
+  the running one and cancels an older waiting run for a newer one, so a cancelled `/land` is
+  commented again; a waiting landing whose base the first one moved is refused as not a
+  fast-forward.
 
 ## Run via Docker (primary path)
 
@@ -835,7 +886,8 @@ requests in a row not earning a 429. That gap needs a Netty-level seam and is tr
 
 ## CI / dev environment
 
-- **No real CI.** No `.github/workflows/`. `.github/` has `dependabot.yml` (`devcontainers`
+- **No real CI.** The one workflow, `.github/workflows/land.yml`, lands pull requests ("The landing
+  workflow" above) and builds nothing. `.github/` also has `dependabot.yml` (`devcontainers`
   ecosystem for the root, `docker` for `/.devcontainer` — the features lock does not cover the
   base image — and `npm` for `/frontend`, all weekly) and
   `.github/rulesets/`, a reconstruction of the live `main` ruleset and two rulesets prepared for

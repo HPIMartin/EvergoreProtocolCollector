@@ -1,0 +1,273 @@
+#!/bin/sh
+set -eu
+
+land_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+land="$land_dir/land"
+
+for leaked in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do
+	unset "$leaked"
+done
+command -v jq >/dev/null 2>&1 || { printf 'land self-test: jq is missing\n' >&2; exit 1; }
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+failures=0
+
+check() {
+	if [ "$2" -eq 0 ]; then
+		printf '  ok   %s\n' "$1"
+	else
+		printf '  FAIL %s\n' "$1"
+		failures=$((failures + 1))
+	fi
+}
+
+cat > "$work/api" <<'STUB'
+#!/bin/sh
+set -eu
+key=$(printf '%s' "$2" | tr '/?=&' '____')
+case "$1" in
+	GET) cat "$LAND_STUB/$key" ;;
+	POST) jq -r '.body' "$3" >> "$LAND_STUB/posted" ;;
+esac
+STUB
+chmod +x "$work/api"
+
+new_case() {
+	case_dir="$work/$1"
+	remote="$case_dir/remote.git"
+	stub="$case_dir/stub"
+	mkdir -p "$case_dir/seed" "$stub"
+	git init -q --bare "$remote"
+	git -C "$case_dir/seed" init -q -b main
+	git -C "$case_dir/seed" config user.email land@example.com
+	git -C "$case_dir/seed" config user.name Land
+	git -C "$case_dir/seed" commit -q --allow-empty -m 'Seed main'
+	git -C "$case_dir/seed" tag v1
+	git -C "$case_dir/seed" branch claude/land-probe
+	git -C "$case_dir/seed" switch -q -c claude/topic
+	git -C "$case_dir/seed" commit -q --allow-empty -m 'Add the topic'
+	git -C "$case_dir/seed" push -q "$remote" main claude/land-probe claude/topic v1
+	main_before=$(git -C "$remote" rev-parse refs/heads/main)
+	head=$(git -C "$remote" rev-parse refs/heads/claude/topic)
+	target=main
+	write_event created "/land $head" octo User null true
+	write_pull open octo/repo main claude/topic "$head"
+	write_runs 1 '[{"name":"build","status":"completed","conclusion":"success"}]'
+	write_status 0 pending
+}
+
+write_event() {
+	jq -n --arg action "$1" --arg body "$2" --arg login "$3" --arg type "$4" --argjson app "$5" --argjson pr "$6" \
+		'{action: $action, issue: ({number: 7} + (if $pr then {pull_request: {url: "x"}} else {} end)),
+		  comment: {body: $body, user: {login: $login, type: $type}, performed_via_github_app: $app}}' \
+		> "$case_dir/event.json"
+}
+
+write_pull() {
+	jq -n --arg state "$1" --arg repo "$2" --arg base "$3" --arg ref "$4" --arg sha "$5" \
+		'{state: $state, base: {ref: $base}, head: {ref: $ref, sha: $sha, repo: {full_name: $repo}}}' \
+		> "$stub/repos_octo_repo_pulls_7"
+}
+
+write_runs() {
+	printf '{"total_count":%s,"check_runs":%s}\n' "$1" "$2" > "$stub/repos_octo_repo_commits_${head}_check-runs_per_page_100"
+}
+
+write_status() {
+	printf '{"total_count":%s,"state":"%s"}\n' "$1" "$2" > "$stub/repos_octo_repo_commits_${head}_status"
+}
+
+run_land() {
+	set +e
+	LAND_EVENT="$case_dir/event.json" LAND_REPO=octo/repo LAND_TARGET=$target LAND_REMOTE="$remote" \
+		LAND_API="$work/api" LAND_STUB="$stub" sh "$land" > "$case_dir/out" 2>&1
+	status=$?
+	set -e
+}
+
+ref_of() { git -C "$remote" rev-parse --verify -q "refs/heads/$1" || printf 'absent'; }
+posted() { cat "$stub/posted" 2>/dev/null || true; }
+
+expect_refused() {
+	run_land
+	r=0
+	[ "$status" -ne 0 ] && [ "$(ref_of main)" = "$main_before" ] && [ "$(ref_of claude/topic)" = "$head" ] \
+		&& posted | grep '^Not landed: ' | grep -qF "$2" || r=1
+	check "$1" "$r"
+}
+
+expect_ignored() {
+	run_land
+	r=0
+	[ "$status" -eq 0 ] && [ "$(ref_of main)" = "$main_before" ] && [ "$(ref_of claude/topic)" = "$head" ] \
+		&& [ -z "$(posted)" ] || r=1
+	check "$1" "$r"
+}
+
+printf 'land self-test\n'
+
+new_case lands
+run_land
+r=0
+[ "$status" -eq 0 ] && [ "$(ref_of main)" = "$head" ] && [ "$(ref_of claude/topic)" = absent ] \
+	&& [ "$(git -C "$remote" for-each-ref --format='%(refname)' refs/tags)" = refs/tags/v1 ] \
+	&& posted | grep -q "^Landed \`$head\` on \`main\` as a fast-forward. Deleted \`claude/topic\`.$" || r=1
+check 'an owner command fast-forwards main to the head, deletes the branch and leaves tags alone' "$r"
+
+new_case probe
+target=claude/land-probe
+write_pull open octo/repo claude/land-probe claude/topic "$head"
+run_land
+r=0
+[ "$status" -eq 0 ] && [ "$(ref_of claude/land-probe)" = "$head" ] && [ "$(ref_of main)" = "$main_before" ] || r=1
+check 'the probe target is landed on and main is left alone' "$r"
+
+
+new_case moved-after-landing
+cat > "$remote/hooks/post-receive" <<HOOK
+#!/bin/sh
+while read -r old new ref; do
+	[ "\$ref" = refs/heads/main ] && git update-ref refs/heads/claude/topic $main_before
+done
+exit 0
+HOOK
+chmod +x "$remote/hooks/post-receive"
+run_land
+r=0
+[ "$status" -eq 0 ] && [ "$(ref_of main)" = "$head" ] && [ "$(ref_of claude/topic)" = "$main_before" ] \
+	&& posted | grep -q 'was not deleted' || r=1
+check 'a branch that moved after the landing is kept' "$r"
+
+new_case stranger
+write_event created "/land $head" someone User null true
+expect_ignored 'a comment by anyone but the owner is ignored'
+
+new_case through-app
+write_event created "/land $head" octo User '{"slug":"claude"}' true
+expect_ignored 'an owner comment posted through an app is ignored'
+
+new_case bot
+write_event created "/land $head" octo Bot null true
+expect_ignored 'a comment by a bot account is ignored'
+
+new_case issue
+write_event created "/land $head" octo User null false
+expect_ignored 'a comment on an issue is ignored'
+
+new_case edited
+write_event edited "/land $head" octo User null true
+expect_ignored 'an edited comment is ignored'
+
+new_case chatter
+write_event created 'please land this' octo User null true
+expect_ignored 'a comment that is no command is ignored'
+
+new_case longer-word
+write_event created "/landing $head" octo User null true
+expect_ignored 'a word that only begins with /land is ignored'
+
+new_case bare
+write_event created '/land' octo User null true
+expect_refused 'a command without a SHA is refused' 'the command reads'
+
+new_case prefix-sha
+write_event created "/land $(printf '%s' "$head" | cut -c1-12)" octo User null true
+expect_refused 'a SHA prefix of the head is refused' 'the command reads'
+
+new_case short-sha
+write_event created "/land $(printf '%s' "$head" | cut -c1-39)" octo User null true
+expect_refused 'a SHA one digit short is refused' 'the command reads'
+
+new_case two-lines
+write_event created "/land $head
+and something else" octo User null true
+expect_refused 'a command with a second line is refused' 'the command reads'
+
+new_case pushed-after-command
+write_event created "/land $main_before" octo User null true
+expect_refused 'a head other than the commanded commit is refused' 'the command names'
+
+new_case target-unknown
+target=release
+write_pull open octo/repo release claude/topic "$head"
+expect_refused 'a landing target other than main or the probe branch is refused' 'is neither `main` nor'
+
+new_case base-differs
+write_pull open octo/repo claude/land-probe claude/topic "$head"
+expect_refused 'a pull request whose base is not the target is refused' 'base is not'
+
+new_case head-is-target
+target=claude/land-probe
+git -C "$remote" update-ref refs/heads/claude/land-probe "$head"
+write_pull open octo/repo claude/land-probe claude/land-probe "$head"
+run_land
+r=0
+[ "$status" -ne 0 ] && [ "$(ref_of claude/land-probe)" = "$head" ] && posted | grep -qF 'is the landing target' || r=1
+check 'a head branch that is the landing target is refused and kept' "$r"
+
+new_case closed
+write_pull closed octo/repo main claude/topic "$head"
+expect_refused 'a closed pull request is refused' 'the pull request is not open'
+
+new_case fork
+write_pull open other/repo main claude/topic "$head"
+expect_refused 'a head branch from another repository is refused' 'lives in another repository'
+
+new_case not-claude
+git -C "$remote" update-ref refs/heads/feature/topic "$head"
+write_pull open octo/repo main feature/topic "$head"
+run_land
+r=0
+[ "$status" -ne 0 ] && [ "$(ref_of main)" = "$main_before" ] && [ "$(ref_of feature/topic)" = "$head" ] \
+	&& posted | grep -qF 'is not a `claude/<topic>` branch' || r=1
+check 'a head branch outside claude/ is refused' "$r"
+
+new_case dotted
+write_pull open octo/repo main claude/../main "$head"
+run_land
+r=0
+[ "$status" -ne 0 ] && [ "$(ref_of main)" = "$main_before" ] && posted | grep -q 'not a plain branch name' || r=1
+check 'a head branch name git refuses is refused before any git command reads it' "$r"
+
+new_case red-check
+write_runs 2 '[{"name":"build","status":"completed","conclusion":"success"},{"name":"lint","status":"completed","conclusion":"failure"}]'
+expect_refused 'a failed check run is refused' 'check runs not green on the head: lint.'
+
+new_case pending-check
+write_runs 1 '[{"name":"build","status":"in_progress","conclusion":null}]'
+expect_refused 'an unfinished check run is refused' 'check runs not green on the head: build.'
+
+new_case second-page
+write_runs 101 '[{"name":"build","status":"completed","conclusion":"success"}]'
+expect_refused 'check runs beyond the first page are refused' 'more check runs than one page reads'
+
+new_case red-status
+write_status 1 failure
+expect_refused 'a failed commit status is refused' 'the combined commit status'
+
+new_case no-checks
+write_runs 0 '[]'
+run_land
+r=0
+[ "$status" -eq 0 ] && [ "$(ref_of main)" = "$head" ] || r=1
+check 'a head without any check lands' "$r"
+
+new_case not-fast-forward
+git -C "$case_dir/seed" switch -q main
+git -C "$case_dir/seed" commit -q --allow-empty -m 'Move main'
+git -C "$case_dir/seed" push -q "$remote" main
+main_before=$(git -C "$remote" rev-parse refs/heads/main)
+expect_refused 'a head that main is not an ancestor of is refused' 'is not an ancestor of the head'
+
+new_case moved-during-check
+git -C "$case_dir/seed" commit -q --allow-empty -m 'Push after the check'
+git -C "$case_dir/seed" push -q "$remote" claude/topic
+head=$(git -C "$remote" rev-parse refs/heads/claude/topic)
+expect_refused 'a branch that moved while the landing was checked is refused' 'moved while the landing was checked'
+
+if [ "$failures" -ne 0 ]; then
+	printf 'land self-test: %s case(s) failed\n' "$failures"
+	exit 1
+fi
+printf 'land self-test: all cases passed\n'

@@ -69,7 +69,8 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    worktree identity, compare range), YOU review the rebased tip
    - a re-rebase after your review: clean and green → landed without a second review; a
      conflict resolution → panel and your review again
-6. LANDING (YOU): `git push origin <tip>:main`, a fast-forward
+6. LANDING (YOU): `/land <tip>` on the pull request, or `git push origin <tip>:main`; a
+   fast-forward either way
    - once origin/main holds the tip, the agent fast-forwards main and cleans up the worktree,
      the branch and its remote copy
 ```
@@ -331,7 +332,7 @@ lives.
 4. **Falsify:** domain lens recomputes ① ② by hand; robustness lens: does ③ assert the log? quality=0 edge? is green real if the production line is reverted? → counter-tests.
 5. **Review gate:** doc-reviewer: `domain-model.md`/`testing.md` updated, backlog row removed? reviewer: boundaries clean, messages one-line verb-first? → PASS.
 6. **You, author gate 2:** the rebased tip with its compare range on your review; you land it
-   with `git push origin <tip>:main`.
+   with `/land <tip>` on its pull request.
 
 ## Evolution
 

@@ -45,6 +45,14 @@ if git diff --cached --name-only --diff-filter=ACMD -- 'gate/*' | grep -q .; the
 	sh gate/self-test >/dev/null 2>&1 || reject "gate/self-test fails, so the dossier check no longer refuses what it claims to refuse. Run 'sh gate/self-test' and read its output."
 fi
 
+# The landing script ships its own self-test (land/self-test); the same guard shape keeps a
+# weakened landing, or its deletion, from landing. The workflow that runs it rides along.
+if git diff --cached --name-only --diff-filter=ACMD -- 'land/*' '.github/workflows/land.yml' | grep -q .; then
+	printf '[pre-commit] land self-test...\n'
+	[ -f land/self-test ] || reject "land/self-test is missing, so nothing proves the landing refuses what it claims to refuse. Restore it."
+	sh land/self-test >/dev/null 2>&1 || reject "land/self-test fails, so the landing no longer refuses what it claims to refuse. Run 'sh land/self-test' and read its output."
+fi
+
 # The agent entry files carry one section verbatim. It is compared from the staged blobs, falling
 # back to HEAD for the file the commit does not touch, so editing one of the two alone is caught.
 entry_wrapper=CLAUDE.md

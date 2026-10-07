@@ -41,14 +41,22 @@ its bypass.
   branch outside `claude/` and `dependabot/`, at any depth) and `tags` (no tag creation, update or
   deletion), each with the author as its only bypass, wait for the author's import and are not
   live.
+- **The landing App:** the landing workflow pushes `main` with the token of an author-owned GitHub
+  App ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"), so the workflow lands
+  only once the author has added that App to the `main` ruleset's bypass list, mode "always";
+  `main.json` records the entry once the author reports it live. Its key sits in the environment
+  `landing`, which admits `main` alone, so no workflow on a `claude/` branch can push with it.
 - **Whom it binds:** only a credential that is not the bypass. The agent machine's is one, so the
   `main` ruleset binds it and the prepared two will once imported; a push from the author's PC
   carries the bypass, so nothing binds it (each machine's credential:
   [dev-environment.md](dev-environment.md), "Where agents run").
 - **An agent can rely on:** a push to `main` made with the agent machine's deploy key is refused, as
   long as the bypass list is as the author states it; a push with that key seen refused would prove
-  it.
-- **An agent cannot rely on:** a push from the PC being refused anywhere on GitHub; a branch or tag
+  it. A landing through the workflow needs the owner's own `/land <sha>` comment, which an agent on
+  the agent machine cannot post: its comments go through the Claude GitHub App and carry
+  `performed_via_github_app`.
+- **An agent cannot rely on:** a push from the PC being refused anywhere on GitHub, nor a `/land`
+  comment posted with the PC's credential, which is the author's own, being ignored; a branch or tag
   other than `main` staying as it was left, another session's `claude/` branch included; nor on a
   `dependabot/` branch holding only Dependabot's commits, since the prepared `agent-namespace`
   leaves it writable for the agent machine's key.

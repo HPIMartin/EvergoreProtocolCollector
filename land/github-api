@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+[ -n "${LAND_TOKEN:-}" ] || { printf 'github-api: LAND_TOKEN is not set\n' >&2; exit 2; }
+method=$1
+path=$2
+payload=${3:-}
+set -- --silent --show-error --fail --header 'Accept: application/vnd.github+json' \
+	--header 'X-GitHub-Api-Version: 2022-11-28' --header "Authorization: Bearer $LAND_TOKEN"
+case "$method" in
+	GET) curl "$@" "https://api.github.com/$path" ;;
+	POST) curl "$@" --request POST --data "@$payload" "https://api.github.com/$path" ;;
+	*) printf 'github-api: unknown method %s\n' "$method" >&2; exit 2 ;;
+esac
