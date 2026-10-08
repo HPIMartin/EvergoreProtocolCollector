@@ -254,8 +254,7 @@ The author lands a reviewed strand by commenting `/land <sha>` on its pull reque
 pushes exactly that commit onto the target as a fast-forward (handbook §7, the review gateway). The
 author has set it up, as the author states it: the App with its key in the environment `landing`,
 the App as a bypass of the `main` ruleset ([git-state.md](git-state.md), "What GitHub enforces")
-and `LAND_TARGET`, which reads `claude/land-probe` until the probe below has passed; a missing
-piece fails the run before any push.
+and `LAND_TARGET`, which reads `main`; a missing piece fails the run before any push.
 
 - **Pieces:** `.github/workflows/land.yml` (trigger, token, fetch), `land/land` (every decision),
   `land/github-api` (the REST calls), `land/self-test` (one case per rule, run against a local bare
@@ -281,8 +280,11 @@ piece fails the run before any push.
   branch leased on `<sha>` (a branch that moved after the landing is kept and named), and answers
   with the result. Tags are never pushed.
 - **Target:** the repository variable `LAND_TARGET`, `claude/land-probe` or `main`; any other value,
-  or none, refuses. `claude/land-probe` is the probe: a pull request based on it proves the
-  workflow end to end without touching `main`.
+  or none, refuses. `claude/land-probe` is the probe: with `LAND_TARGET` set to it, a pull request
+  based on it proves the workflow end to end without touching `main`.
+- **The owner's comments pass the app check** from the browser and from GitHub Mobile: both carry
+  an empty `performed_via_github_app` (measured 2026-10-08 on the probe target). GitHub marks a pull
+  request landed this way as merged.
 - **Credential:** a token minted by `actions/create-github-app-token` (pinned by commit) from an
   author-owned GitHub App, repository variable `LAND_APP_CLIENT_ID` and secret
   `LAND_APP_PRIVATE_KEY`, both in the environment `landing`, whose deployment branch rule admits
