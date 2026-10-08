@@ -3,10 +3,13 @@ package dev.schoenberg.evergore.protocolParser.dataExtraction.parser;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
@@ -18,6 +21,7 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.EINLAGERUNG;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.ENTNAHME;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 class EntityParserContractTest {
 
@@ -126,6 +130,43 @@ class EntityParserContractTest {
 		assertEntry(entries.get(1), "Bert", ENTNAHME, new Item(2, "Other", 100));
 	}
 
+	@ParameterizedTest
+	@MethodSource("headlinesWithSingleDigitDateFields")
+	void doesNotFoldTheItemsOfAHeadlineWithSingleDigitDateFieldsIntoThePrecedingEntry(String headline) {
+		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", headline, "5 Ghost"), logger);
+
+		assertThat(entries).hasSize(1);
+		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
+	}
+
+	@ParameterizedTest
+	@MethodSource("headlinesWithSingleDigitDateFields")
+	void warnsAboutADroppedHeadlineWithSingleDigitDateFields(String headline) {
+		EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", headline, "5 Ghost"), logger);
+
+		assertThat(logger.warnMessages()).containsExactly("Dropping protocol entry: malformed headline: " + headline);
+	}
+
+	@ParameterizedTest
+	@MethodSource("itemLinesThatReadLikeADateAndTime")
+	void keepsAnItemLineThatReadsLikeADateAndTimeInItsEntry(String itemLine, Item item) {
+		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", itemLine, "1 Later"), logger);
+
+		assertThat(entries).hasSize(1);
+		assertEntry(entries.get(0), "Anna", EINLAGERUNG, item, new Item(1, "Later", 100));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"1.1.2000x1:30", "1.1.2000 1x30", "100.1.2000 1:30", "1.100.2000 1:30", ".1.2000 1:30", "1..2000 1:30", "1.1.20000 1:30", "1.1.200 1:30",
+			"1.1.20001:30", "1.1.2000\t1:30", "1.1.2000 100:30", "1.1.2000 :30", "1.1.2000 1:", "1.1.2000 1:x", "123.2026 1:30"})
+	void keepsTheLinesAfterALineShapedAlmostLikeAHeadlineInTheirEntry(String line) {
+		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", line, "2 Later"), logger);
+
+		assertThat(entries).hasSize(1);
+		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100), new Item(2, "Later", 100));
+		assertThat(logger.warnMessages()).isEmpty();
+	}
+
 	@Test
 	void doesNotAbortTheIngestOnAnOutOfRangeDate() {
 		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "31.13.2001 25:99 Bad Einlagerung", "5 Ghost"), logger);
@@ -213,6 +254,19 @@ class EntityParserContractTest {
 		EntryFactory.parseContent(List.of("31.13.2001 25:99 Bad Einlagerung", "5 Ghost"), logger);
 
 		assertThat(logger.warnMessages()).containsExactly("Dropping protocol entry: out-of-range date in headline: 31.13.2001 25:99 Bad Einlagerung");
+	}
+
+	private static Stream<String> headlinesWithSingleDigitDateFields() {
+		return Stream
+				.of("2.12.2001 13:37 Carl Einlagerung", "11.2.2001 13:37 Carl Einlagerung", "11.12.2001 3:37 Carl Einlagerung", "11.12.2001 13:7 Carl Einlagerung",
+						"1.1.2000 0:00 Carl Einlagerung", "2/12/2001 13:37 Carl Einlagerung", "2.12X2001 13:37 Carl Einlagerung", "2X12.2001 13:37 Carl Einlagerung",
+						"2-12-2001 13:37 Carl Einlagerung", "2\t12.2001 13:37 Carl Einlagerung", "1.1.2000 1:3");
+	}
+
+	private static Stream<Arguments> itemLinesThatReadLikeADateAndTime() {
+		return Stream
+				.of(arguments("2000 2026 10:10", new Item(2000, "2026 10:10", 100)), arguments("100 2026 1:12 Pfeil", new Item(100, "2026 1:12 Pfeil", 100)),
+						arguments("5 5 2000 1:30 Pfeil", new Item(5, "5 2000 1:30 Pfeil", 100)), arguments("5 5.2026 1:30 Pfeil", new Item(5, "5.2026 1:30 Pfeil", 100)));
 	}
 
 	private Entry parse(String... lines) {

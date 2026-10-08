@@ -31,6 +31,22 @@ All domain types live framework-free under `…/domain` and `…/businessLogic`.
   is the only trace it leaves.
 - Every dropped block head is logged, whichever way it failed (unknown transfer type vs. malformed
   headline): a block head loud enough to open an entry must never vanish silently.
+- A block opens at the game's timestamp shape with two digits per field, or with one or two digits
+  per field (`Constants.LAGER_EINTRAG_BOUNDARY`), while an entry is read only from the game's
+  two-digit form (`LAGER_EINTRAG_START`): a headline with single-digit fields, a garbled separator
+  included (`2/01/2026 12:00 Carl …`, `2.01X2026 12:00 Carl …`), is dropped as malformed and logged,
+  never read as an item line of the entry above, which would book its items on another member. The
+  game zero-pads, so the wider boundary guards against a format change rather than accepting one;
+  `LAGER_EINTRAG_START` also ends the scrape's paging and stays two-digit.
+- The one-or-two-digit shape allows any separator after the day except a digit or a blank, because
+  an item line puts a blank after its leading digits: with any character there, `5 5.2026 1:30 …` or
+  `2000 2026 10:10` would open a block and cut its entry short. The price: a single-digit headline
+  with a blank after its day reads as an item line (`2 12.2001 13:37 Carl …` books 2 of an item
+  named `12.2001 13:37 Carl …` on the entry above), and one whose separators otherwise break the
+  shape (`2//12.2001 13:37 Carl …`, or two blanks before the time) opens no block, so its items land
+  on the entry above without a warning. The two-digit shape keeps any separator, so a
+  two-digit-quantity item line that reads like a date and time, `10 12 2026 10:10 …`, still opens a
+  block of its own.
 - The transfer type is recognized only as a whitespace-delimited token, so the greedy avatar group
   cannot backtrack into a type word inside an avatar name: `… Entnahmefreund Auszahlung`,
   `… Anna Entnahmeübersicht` and `… XX-Entnahme-XX` are unknown types and get dropped instead of
