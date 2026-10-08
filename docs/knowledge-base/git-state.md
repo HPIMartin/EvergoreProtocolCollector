@@ -7,7 +7,7 @@
 
 ## Conventions
 
-- Active branch: **`main`**, the single mainline (old `master`/`Rebuild` consolidated into it).
+- Active branch: **`main`**, the single mainline.
 - GitHub (`origin`) is the hub: every landing reaches `main` there first; what GitHub itself refuses
   is below ("What GitHub enforces"). Strand branches are `claude/<topic>`
   ([engineering-handbook.md](engineering-handbook.md) §7).
