@@ -253,8 +253,9 @@ tests) remains the gate for landing on `main`.
 The author lands a reviewed strand by commenting `/land <sha>` on its pull request; the workflow
 pushes exactly that commit onto the target as a fast-forward (handbook §7, the review gateway). The
 author has set it up, as the author states it: the App with its key in the environment `landing`,
-the App as a bypass of the `main` ruleset ([git-state.md](git-state.md), "What GitHub enforces")
-and `LAND_TARGET`, which reads `main`; a missing piece fails the run before any push.
+the App as a bypass of the `main` and `agent-namespace` rulesets ([git-state.md](git-state.md),
+"What GitHub enforces") and `LAND_TARGET`, which reads `main`; a missing piece fails the run before
+any push.
 
 - **Pieces:** `.github/workflows/land.yml` (trigger, token, fetch), `land/land` (every decision),
   `land/github-api` (the REST calls), `land/self-test` (one case per rule, run against a local bare
@@ -893,8 +894,8 @@ requests in a row not earning a 429. That gap needs a Netty-level seam and is tr
   workflow" above) and builds nothing. `.github/` also has `dependabot.yml` (`devcontainers`
   ecosystem for the root, `docker` for `/.devcontainer` — the features lock does not cover the
   base image — and `npm` for `/frontend`, all weekly) and
-  `.github/rulesets/`, a reconstruction of the live `main` ruleset and two rulesets prepared for
-  import ([git-state.md](git-state.md), "What GitHub enforces").
+  `.github/rulesets/`, a reconstruction of the three live rulesets ([git-state.md](git-state.md),
+  "What GitHub enforces").
 - `.devcontainer/`: Java dev container (digest-pinned bookworm base + apt tools, `java` feature with
   **JDK 25**, Maven off, Gradle via the wrapper); see [dev-environment.md](dev-environment.md).
   Dev only.

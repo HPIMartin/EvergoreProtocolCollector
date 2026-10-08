@@ -31,23 +31,26 @@ What the public API shows of `origin`. Claude Code's rules read command text, so
 push guard that holds whatever command runs, and it holds only against a credential that is not
 its bypass.
 
-- **One live ruleset, `main`:** no update, deletion or force push on the default branch, `main`.
-  Its bypass list, readable only by an admin, holds two actors, the repository admin role (the
-  author) and the landing App (below), each in mode "always", as the author states it. The author's push of a
-  tip passes only while the role's bypass runs in that mode (an admin-only read too).
-- **In [`.github/rulesets/`](../../.github/rulesets/):** `main.json` reproduces the target and
-  rules the API shows for the live `main` ruleset (its bypass entries are the author's statement)
-  and is not imported again; `agent-namespace` (no creation, update, deletion or force push on any
-  branch outside `claude/` and `dependabot/`, at any depth) and `tags` (no tag creation, update or
-  deletion), each with the author as its only bypass, wait for the author's import and are not
-  live.
+- **Three live rulesets:**
+  - `main`: no update, deletion or force push on the default branch, `main`.
+  - `agent-namespace`: no creation, update, deletion or force push on any branch outside `claude/`
+    and `dependabot/`, at any depth, `main` included, so a push to `main` must pass both.
+  - `tags`: no tag creation, update or deletion.
+- **Their bypass lists**, readable only by an admin, as the author states them: `main` and
+  `agent-namespace` each hold two actors, the repository admin role (the author) and the landing
+  App (below), each in mode "always"; `tags` holds the admin role alone. The landing pushes no
+  tag, so `tags` needs no second bypass. The author's push of a tip passes only while the role's bypass runs in that mode.
+- **In [`.github/rulesets/`](../../.github/rulesets/):** `main.json`, `agent-namespace.json` and
+  `tags.json` reproduce the target and rules the API shows for each live ruleset, their bypass
+  entries being the author's statement; they are not imported again.
 - **The landing App:** the landing workflow pushes `main` with the token of an author-owned GitHub
   App ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"), which the `main`
-  ruleset lists as its second bypass, `main.json` recording the entry, as the author states it.
+  and `agent-namespace` rulesets list as their second bypass, the files recording the entry, as the
+  author states it.
   Its key sits in the environment `landing`, which admits `main` alone as the author has set it,
   so no workflow on a `claude/` branch can push with it.
-- **Whom it binds:** only a credential that is not a bypass. The agent machine's is one, so the
-  `main` ruleset binds it and the prepared two will once imported; a push from the author's PC
+- **Whom it binds:** only a credential that is not a bypass. The agent machine's deploy key is no
+  bypass, so all three rulesets bind it; a push from the author's PC
   carries the bypass, so nothing binds it (each machine's credential:
   [dev-environment.md](dev-environment.md), "Where agents run"). The landing App's token is a
   bypass too: no ruleset rule binds its push, and `land/land` alone keeps it to a fast-forward of
@@ -58,10 +61,10 @@ its bypass.
   the agent machine cannot post: its comments go through the Claude GitHub App and carry
   `performed_via_github_app`.
 - **An agent cannot rely on:** a push from the PC being refused anywhere on GitHub, nor a `/land`
-  comment posted with the PC's credential, which is the author's own, being ignored; a branch or tag
-  other than `main` staying as it was left, another session's `claude/` branch included; nor on a
-  `dependabot/` branch holding only Dependabot's commits, since the prepared `agent-namespace`
-  leaves it writable for the agent machine's key.
+  comment posted with the PC's credential, which is the author's own, being ignored; a `claude/`
+  branch staying as it was left, another session's included; nor on a `dependabot/` branch holding
+  only Dependabot's commits, since `agent-namespace` leaves both writable for the agent machine's
+  key.
 - **No rule reads a commit message:** GitHub offers commit-metadata rules only to organizations on
   Enterprise plans, and this repository is personal, so nothing on GitHub stops a `[wip]` commit
   on a `claude/` branch (the `pre-push` hook for it is deferred: open-questions.md, D-19).
@@ -70,7 +73,9 @@ its bypass.
   `https://api.github.com/repos/<owner>/<repo>/rulesets` lists the rulesets and
   `…/rules/branches/<branch>` the rules in force on one branch (owner and repository from `git
   remote get-url origin`, a slash in the branch name written `%2F`). `main` lists `update`,
-  `deletion` and `non_fast_forward`, every other branch nothing; any other answer means the live
+  `deletion` and `non_fast_forward` from the `main` ruleset and `creation`, `update`, `deletion` and
+  `non_fast_forward` from `agent-namespace`, a `claude/` or `dependabot/` branch at any depth
+  nothing, and any other branch the four of `agent-namespace`; any other answer means the live
   state moved: stop and ask the author.
 - **Changing it** is the author's act, in the repository's Settings, Rules, Rulesets; the file in
   `.github/rulesets/` and this section change with it.
