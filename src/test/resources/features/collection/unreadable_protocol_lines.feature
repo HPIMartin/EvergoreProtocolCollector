@@ -1,21 +1,20 @@
 Feature: Protocol lines the collection cannot read
-  No unreadable line stops the collection. A headline that starts with a date and a time in the
-  game's two-digit form but cannot be read is skipped together with its items and named in the
-  service's log; its items are not booked on the member of the entry above, since that would move
-  value from one member to another. An item line whose number cannot be read is skipped and named
-  in the log, and the rest of its entry is kept. A line that is not shaped like an item line at all
-  is skipped without a word; an entry left with no readable item line is named in the log. What was
-  stored shows in the members' ledgers on the dashboard: a ledger that "shows exactly" some
-  movements holds these and no others, newest first; movements of the same minute may stand in
-  either order. The log is the operator's view of what was skipped.
+  No unreadable line stops the collection. A headline that starts with a date and a time but cannot
+  be read is skipped together with its items and named in the service's log; its items are not
+  booked on the member of the entry above, since that would move value from one member to another.
+  Some lines with garbled separators are not taken for a headline, such as one with a blank after a
+  single-digit day, two characters after the day, or two blanks before the time: such a line reads
+  as an item line or is skipped, and the items below it stay with the entry above. An item line
+  whose number cannot be read is skipped and named in the log, and the rest of its entry is kept. A
+  line that is not shaped like an item line at all is skipped without a word; an entry left with no
+  readable item line is named in the log. What was stored shows in the members' ledgers on the
+  dashboard: a ledger that "shows exactly" some movements holds these and no others, newest first;
+  movements of the same minute may stand in either order. The log is the operator's view of what was
+  skipped.
 
   Rule: A headline that cannot be read is skipped together with its items
 
     Scenario Outline: A headline <what is wrong> is skipped without touching its neighbours
-      Today a headline whose date is written with single digits opens no entry of its own: it is
-      taken as a line of the entry above, and the items below it are booked on that entry's member.
-      The tagged example states the corrected behavior.
-
       Given the game's storage protocol shows:
         """
         03.01.2026 12:00 Bert Entnahme
@@ -43,16 +42,9 @@ Feature: Protocol lines the collection cannot read
         | whose kind of movement is set in dashes              | 02.01.2026 12:00 XX-Entnahme-XX            |
         | whose kind of movement is glued to a name            | 02.01.2026 12:00 BobEntnahme               |
         | whose only kind of movement is the start of its name | 02.01.2026 12:00 Entnahmefreund Auszahlung |
-
-      @wip
-      Examples: corrected behavior; today its items are booked on the member of the entry above
-        | what is wrong                            | headline                         |
-        | whose date is written with single digits | 2.01.2026 12:00 Carl Einlagerung |
+        | whose date is written with single digits             | 2.01.2026 12:00 Carl Einlagerung           |
 
     Scenario Outline: A skipped headline <what is wrong> is named in the service's log
-      Today a headline whose date is written with single digits is named nowhere: it is taken as a
-      line of the entry above. The tagged example states the corrected behavior.
-
       Given the game's storage protocol shows:
         """
         03.01.2026 12:00 Bert Entnahme
@@ -72,11 +64,7 @@ Feature: Protocol lines the collection cannot read
         | whose kind of movement is set in dashes              | 02.01.2026 12:00 XX-Entnahme-XX            |
         | whose kind of movement is glued to a name            | 02.01.2026 12:00 BobEntnahme               |
         | whose only kind of movement is the start of its name | 02.01.2026 12:00 Entnahmefreund Auszahlung |
-
-      @wip
-      Examples: corrected behavior; today the log names nothing
-        | what is wrong                            | headline                         |
-        | whose date is written with single digits | 2.01.2026 12:00 Carl Einlagerung |
+        | whose date is written with single digits             | 2.01.2026 12:00 Carl Einlagerung           |
 
   Rule: A line the collection cannot read is skipped, and the rest of its entry is kept
 

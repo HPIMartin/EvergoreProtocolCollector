@@ -22,7 +22,7 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M13 | The specification runs | the corrected behaviors B21, C12 | Task 0 of the adopted process: every later strand builds on executable scenarios, and condensing before the step definitions keeps their steps from being written twice |
+| M13 | The specification runs | the corrected behaviors C12 | Task 0 of the adopted process: every later strand builds on executable scenarios, and condensing before the step definitions keeps their steps from being written twice |
 | M5 | Overview truth | author steps only | Closing out; the code landed, two restated author checks remain |
 | M7 | The overview states the guild's actual position | the catalog closed against the game, the release run (the stone renames, the deploy script) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the catalog work joins because the release publishes `Gildenspende` for the first time |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, opening balance, explanation page with the trader's figure (E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
@@ -43,7 +43,7 @@ scenario gate that reads as the stakeholder guards every new one.
 - [x] The catch-up scenarios are condensed and carry the author's review notes.
 - [x] Every confirmed scenario runs green, the member and the admin through the browser, the
       operator over HTTP and JSON, and the unclear ones are settled.
-- [ ] Each corrected behavior is green and armed (backlog B21, C12).
+- [ ] Each corrected behavior is green and armed (backlog C12).
 
 ## M5: Overview truth
 
@@ -193,7 +193,7 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   build-performance analysis (G11); and the SessionStart hook that injects the lessons
   deterministically (G10). The learnings repeatedly show a session forgetting a written rule.
 - **Test-suite hygiene:** the scripted 1:1 value comparison (B19), repository tests (B4), style
-  alignment (B8), the shared boot fixture (B18), the two parser residuals (B21, B22), deterministic
+  alignment (B8), the shared boot fixture (B18), the parser residual (B22), deterministic
   fixture ids (B23), the unexplained load-sensitive failure (B20), AssertJ in `SmokeTest` (B7).
 - **Docs & code hygiene:** KB in lockstep with code (G3), KB accuracy sweep (G18), the parser
   entrypoints made injectable (D15), exception/logging hygiene and dead code (D11).
