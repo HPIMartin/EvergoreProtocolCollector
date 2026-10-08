@@ -32,24 +32,26 @@ push guard that holds whatever command runs, and it holds only against a credent
 its bypass.
 
 - **One live ruleset, `main`:** no update, deletion or force push on the default branch, `main`.
-  Its bypass list, readable only by an admin, holds the repository admin role alone, the author,
-  as the author states it. The landing is a direct push, which passes only while that bypass runs
-  in mode "always" (an admin-only read too).
+  Its bypass list, readable only by an admin, holds two actors, the repository admin role (the
+  author) and the landing App (below), each in mode "always", as the author states it. The author's push of a
+  tip passes only while the role's bypass runs in that mode (an admin-only read too).
 - **In [`.github/rulesets/`](../../.github/rulesets/):** `main.json` reproduces the target and
-  rules the API shows for the live `main` ruleset (its bypass entry is the author's statement) and
-  is not imported again; `agent-namespace` (no creation, update, deletion or force push on any
+  rules the API shows for the live `main` ruleset (its bypass entries are the author's statement)
+  and is not imported again; `agent-namespace` (no creation, update, deletion or force push on any
   branch outside `claude/` and `dependabot/`, at any depth) and `tags` (no tag creation, update or
   deletion), each with the author as its only bypass, wait for the author's import and are not
   live.
 - **The landing App:** the landing workflow pushes `main` with the token of an author-owned GitHub
-  App ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"), so the workflow lands
-  only once the author has added that App to the `main` ruleset's bypass list, mode "always";
-  `main.json` records the entry once the author reports it live. Its key sits in the environment
-  `landing`, which admits `main` alone, so no workflow on a `claude/` branch can push with it.
-- **Whom it binds:** only a credential that is not the bypass. The agent machine's is one, so the
+  App ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"), which the `main`
+  ruleset lists as its second bypass, `main.json` recording the entry, as the author states it.
+  Its key sits in the environment `landing`, which admits `main` alone as the author has set it,
+  so no workflow on a `claude/` branch can push with it.
+- **Whom it binds:** only a credential that is not a bypass. The agent machine's is one, so the
   `main` ruleset binds it and the prepared two will once imported; a push from the author's PC
   carries the bypass, so nothing binds it (each machine's credential:
-  [dev-environment.md](dev-environment.md), "Where agents run").
+  [dev-environment.md](dev-environment.md), "Where agents run"). The landing App's token is a
+  bypass too: no ruleset rule binds its push, and `land/land` alone keeps it to a fast-forward of
+  the commanded commit, without force and without a deletion of `main`.
 - **An agent can rely on:** a push to `main` made with the agent machine's deploy key is refused, as
   long as the bypass list is as the author states it; a push with that key seen refused would prove
   it. A landing through the workflow needs the owner's own `/land <sha>` comment, which an agent on
