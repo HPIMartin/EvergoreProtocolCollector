@@ -1,0 +1,413 @@
+#!/bin/sh
+set -eu
+
+agent_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+mint="$agent_dir/github-token"
+
+for leaked in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do
+	unset "$leaked"
+done
+for tool in jq openssl; do
+	command -v "$tool" >/dev/null 2>&1 || { printf 'agent self-test: %s is missing\n' "$tool" >&2; exit 1; }
+done
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+failures=0
+
+check() {
+	if [ "$2" -eq 0 ]; then
+		printf '  ok   %s\n' "$1"
+	else
+		printf '  FAIL %s\n' "$1"
+		failures=$((failures + 1))
+	fi
+}
+
+openssl genrsa -out "$work/key.pem" 2048 2>/dev/null
+openssl rsa -in "$work/key.pem" -pubout -out "$work/public.pem" 2>/dev/null
+
+mkdir -p "$work/bin"
+cat > "$work/bin/curl" <<'STUB'
+#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$STUB_DIR/argv"
+url=
+output=
+expect=
+for argument in "$@"; do
+	case "$expect" in
+		output) output=$argument; expect=; continue ;;
+	esac
+	case "$argument" in
+		--output) expect=output ;;
+		https://*) url=$argument ;;
+		@*) file=${argument#@}
+			if grep -q '^Authorization: Bearer ' "$file"; then
+				sed -n 's/^Authorization: Bearer //p' "$file" >> "$STUB_DIR/jwts"
+				dirname "$file" >> "$STUB_DIR/workdirs"
+				stat -c %a "$file" >> "$STUB_DIR/modes"
+			else
+				cat "$file" >> "$STUB_DIR/bodies"
+				printf '\n' >> "$STUB_DIR/bodies"
+			fi ;;
+	esac
+done
+printf '%s\n' "$url" >> "$STUB_DIR/urls"
+case "$url" in
+	*/installation) answer=installation ;;
+	*/access_tokens) answer=token ;;
+	*) exit 22 ;;
+esac
+if [ -f "$STUB_DIR/interrupt" ]; then
+	kill -TERM "$PPID"
+	sleep 1
+fi
+[ -f "$STUB_DIR/$answer.fail" ] && { printf 'curl: (22) The requested URL returned error: 401\n' >&2; exit 22; }
+if [ -n "$output" ]; then cat "$STUB_DIR/$answer.json" > "$output"; else cat "$STUB_DIR/$answer.json"; fi
+STUB
+chmod +x "$work/bin/curl"
+
+new_case() {
+	stub="$work/$1"
+	mkdir -p "$stub"
+	printf '{"id":4711}\n' > "$stub/installation.json"
+	printf '{"token":"ghs_example"}\n' > "$stub/token.json"
+	app_id=987
+	key="$work/key.pem"
+	repository=octo/repo
+}
+
+run_mint() {
+	set +e
+	PATH="$work/bin:$PATH" STUB_DIR="$stub" EPC_AGENT_APP_ID=$app_id EPC_AGENT_KEY=$key \
+		sh "$mint" $repository > "$stub/out" 2> "$stub/err"
+	status=$?
+	set -e
+}
+
+calls() { cat "$stub/urls" 2>/dev/null | wc -l | tr -d ' '; }
+
+base64url_decode() {
+	padded=$(printf '%s' "$1" | tr -- '-_' '+/')
+	case $((${#padded} % 4)) in
+		2) padded="$padded==" ;;
+		3) padded="$padded=" ;;
+	esac
+	printf '%s\n' "$padded" | openssl base64 -d -A
+}
+
+jwt_verifies() {
+	jwt=$(head -n 1 "$stub/jwts")
+	signed=${jwt%.*}
+	base64url_decode "${jwt##*.}" > "$stub/signature"
+	printf '%s' "$signed" | openssl dgst -sha256 -verify "$work/public.pem" -signature "$stub/signature" >/dev/null 2>&1
+}
+
+jwt_claims() { base64url_decode "$(head -n 1 "$stub/jwts" | cut -d. -f2)"; }
+
+expect_refused_before_any_call() {
+	run_mint
+	r=0
+	[ "$status" -eq 2 ] && [ ! -s "$stub/out" ] && [ "$(calls)" = 0 ] || r=1
+	check "$1" "$r"
+}
+
+workdir_gone() {
+	[ -s "$stub/workdirs" ] || return 1
+	while read -r dir; do
+		[ ! -e "$dir" ] || return 1
+	done < "$stub/workdirs"
+}
+
+farm_without() {
+	farm="$work/without-$1"
+	mkdir -p "$farm"
+	for dir in /usr/local/bin /usr/bin /bin; do
+		for tool in "$dir"/*; do
+			name=${tool##*/}
+			[ "$name" = "$1" ] || [ -e "$farm/$name" ] || ln -s "$tool" "$farm/$name"
+		done
+	done
+	[ "$1" = curl ] || ln -sf "$work/bin/curl" "$farm/curl"
+}
+
+expect_missing_tool_named() {
+	farm_without "$1"
+	set +e
+	PATH="$farm" STUB_DIR="$stub" EPC_AGENT_APP_ID=$app_id EPC_AGENT_KEY=$key \
+		sh "$mint" $repository > "$stub/out" 2> "$stub/err"
+	status=$?
+	set -e
+	r=0
+	[ "$status" -eq 2 ] && [ ! -s "$stub/out" ] && [ "$(calls)" = 0 ] && grep -q "$1 is missing" "$stub/err" || r=1
+	check "a missing $1 is named before any call" "$r"
+}
+
+printf 'agent self-test\n'
+
+new_case mints
+run_mint
+r=0
+[ "$status" -eq 0 ] && [ "$(cat "$stub/out")" = ghs_example ] \
+	&& [ "$(cat "$stub/urls")" = "https://api.github.com/repos/octo/repo/installation
+https://api.github.com/app/installations/4711/access_tokens" ] || r=1
+check 'a token is minted for the installation on the named repository and printed alone' "$r"
+
+r=0
+[ "$(jq -c . "$stub/bodies")" = '{"repositories":["repo"]}' ] || r=1
+check 'the token is restricted to the named repository' "$r"
+
+r=0
+jwt_verifies || r=1
+check 'the app token request is signed with the app key' "$r"
+
+r=0
+[ "$(base64url_decode "$(head -n 1 "$stub/jwts" | cut -d. -f1)")" = '{"alg":"RS256","typ":"JWT"}' ] || r=1
+check 'the app token declares itself an RS256 JSON web token' "$r"
+
+r=0
+jwt_claims > "$stub/claims"
+[ "$(jq -c 'keys' "$stub/claims")" = '["exp","iat","iss"]' ] || r=1
+check 'the app token carries exactly the issued, expiry and issuer claims' "$r"
+
+r=0
+[ "$(jq -r .exp "$stub/claims")" -gt "$(date +%s)" ] || r=1
+check 'the app token has not expired when it is sent' "$r"
+
+r=0
+[ "$(sort -u "$stub/modes")" = 600 ] || r=1
+check 'the signed request is written readable by its owner alone' "$r"
+
+r=0
+workdir_gone || r=1
+check 'the files holding the app token are gone after a run' "$r"
+
+r=0
+[ "$(tail -c 1 "$stub/out" | od -An -tx1 | tr -d ' ')" = 0a ] || r=1
+check 'the token is printed as one line' "$r"
+
+r=0
+for flag in '--fail' '--silent' '--show-error' '--connect-timeout 10' '--max-time 30'; do
+	[ "$(grep -cF -- "$flag " "$stub/argv")" = 2 ] || r=1
+done
+check 'every call fails on an HTTP error, keeps quiet otherwise and gives up after half a minute' "$r"
+
+r=0
+[ "$(jq -r .iss "$stub/claims")" = 987 ] \
+	&& [ "$(jq -r '.exp - .iat' "$stub/claims")" -le 600 ] || r=1
+check 'the app token names the app and lives at most ten minutes' "$r"
+
+r=0
+[ "$(jq -r '.iat' "$stub/claims")" -le "$(($(date +%s) - 30))" ] || r=1
+check 'the app token is issued at least half a minute in the past against clock skew' "$r"
+
+r=0
+for part in $(head -n 1 "$stub/jwts" | tr . ' '); do
+	case "$part" in *=*|*+*|*/*) r=1 ;; esac
+done
+[ "$(head -n 1 "$stub/jwts" | tr . '\n' | wc -l | tr -d ' ')" = 3 ] || r=1
+check 'the app token is three base64url segments without padding' "$r"
+
+r=0
+! grep -q 'Bearer' "$stub/argv" || r=1
+check 'the app token never appears on a command line' "$r"
+
+r=0
+[ "$(grep -cF -- 'Accept: application/vnd.github+json' "$stub/argv")" = 2 ] \
+	&& [ "$(grep -cF -- 'X-GitHub-Api-Version: 2022-11-28' "$stub/argv")" = 2 ] || r=1
+check 'every call asks for GitHub JSON in API version 2022-11-28' "$r"
+
+r=0
+[ "$(sed -n 1p "$stub/argv" | grep -c -- '--request')" = 0 ] \
+	&& [ "$(sed -n 2p "$stub/argv" | grep -c -- '--request POST')" = 1 ] || r=1
+check 'the installation is looked up with a GET and the token requested with a POST' "$r"
+
+
+new_case no-curl
+expect_missing_tool_named curl
+
+new_case no-jq
+expect_missing_tool_named jq
+
+new_case no-openssl
+expect_missing_tool_named openssl
+
+new_case two-repositories
+repository='octo/repo octo/other'
+expect_refused_before_any_call 'a second argument is refused before any call'
+
+new_case prefixed-repository
+repository='x/../octo/repo'
+expect_refused_before_any_call 'a repository with a leading path is refused before any call'
+
+new_case dot-owner
+repository='.octo/repo'
+expect_refused_before_any_call 'an owner starting with a dot is refused before any call'
+
+new_case dot-name
+repository='octo/.repo'
+expect_refused_before_any_call 'a repository name starting with a dot is refused before any call'
+
+new_case newline-repository
+set +e
+PATH="$work/bin:$PATH" STUB_DIR="$stub" EPC_AGENT_APP_ID=$app_id EPC_AGENT_KEY=$key \
+	sh "$mint" "$(printf 'octo/repo\n?evil')" > "$stub/out" 2> "$stub/err"
+status=$?
+set -e
+r=0
+[ "$status" -eq 2 ] && [ ! -s "$stub/out" ] && [ "$(calls)" = 0 ] || r=1
+check 'a repository argument with a second line is refused before any call' "$r"
+
+new_case newline-app-id
+app_id=$(printf '12\nx')
+expect_refused_before_any_call 'an app id spanning two lines is refused before any call'
+
+new_case punctuated-repository
+repository='Octo-Org/my_repo.name-2'
+run_mint
+r=0
+[ "$status" -eq 0 ] && [ "$(cat "$stub/out")" = ghs_example ] \
+	&& grep -q 'repos/Octo-Org/my_repo.name-2/installation$' "$stub/urls" \
+	&& [ "$(jq -c . "$stub/bodies")" = '{"repositories":["my_repo.name-2"]}' ] || r=1
+check 'a repository whose names carry a hyphen, an underscore and a dot is minted for' "$r"
+
+new_case mixed-app-id
+app_id=12a
+expect_refused_before_any_call 'an app id with a trailing letter is refused before any call'
+
+new_case no-app-id
+app_id=
+expect_refused_before_any_call 'a missing app id is refused before any call'
+
+new_case word-app-id
+app_id=agent
+expect_refused_before_any_call 'an app id that is not a number is refused before any call'
+
+new_case no-key
+key="$work/absent.pem"
+run_mint
+r=0
+[ "$status" -eq 2 ] && [ ! -s "$stub/out" ] && [ "$(calls)" = 0 ] && grep -q 'EPC_AGENT_KEY' "$stub/err" || r=1
+check 'a key that cannot be read is refused by name before any call' "$r"
+
+new_case unreadable-key
+cp "$work/key.pem" "$work/locked.pem"
+chmod 000 "$work/locked.pem"
+key="$work/locked.pem"
+run_mint
+r=0
+if [ "$(id -u)" = 0 ]; then
+	printf '  skip a key without read permission: running as root, which reads it anyway\n'
+else
+	[ "$status" -eq 2 ] && [ "$(calls)" = 0 ] && grep -q 'EPC_AGENT_KEY' "$stub/err" || r=1
+	check 'a key without read permission is refused by name before any call' "$r"
+fi
+
+new_case bad-key
+printf 'not a key\n' > "$work/bad.pem"
+key="$work/bad.pem"
+run_mint
+r=0
+[ "$status" -eq 1 ] && [ ! -s "$stub/out" ] && [ "$(calls)" = 0 ] && grep -q 'could not sign' "$stub/err" || r=1
+check 'a key that cannot sign is refused before any call' "$r"
+
+new_case bare-repository
+repository=repo
+expect_refused_before_any_call 'a repository without its owner is refused before any call'
+
+new_case dot-repository
+repository='../..'
+expect_refused_before_any_call 'a repository segment of dots is refused before any call'
+
+new_case odd-repository
+repository='octo/repo?x=1'
+expect_refused_before_any_call 'a repository name with other characters is refused before any call'
+
+new_case not-installed
+printf '{"message":"Not Found"}\n' > "$stub/installation.json"
+run_mint
+r=0
+[ "$status" -eq 1 ] && [ ! -s "$stub/out" ] && [ "$(calls)" = 1 ] && grep -q 'not installed' "$stub/err" || r=1
+check 'an app not installed on the repository mints nothing and says so' "$r"
+
+new_case lookup-refused
+touch "$stub/installation.fail"
+run_mint
+r=0
+[ "$status" -eq 1 ] && [ ! -s "$stub/out" ] && [ "$(calls)" = 1 ] && grep -q 'refused the installation lookup' "$stub/err" \
+	&& ! grep -q 'not installed' "$stub/err" && workdir_gone || r=1
+check 'a refused installation lookup mints nothing, is not reported as a missing installation and leaves no files' "$r"
+
+new_case odd-installation
+printf '{"id":"12x"}\n' > "$stub/installation.json"
+run_mint
+r=0
+[ "$status" -eq 1 ] && [ ! -s "$stub/out" ] && [ "$(calls)" = 1 ] && grep -q 'not installed' "$stub/err" || r=1
+check 'an installation id that is not a number mints nothing' "$r"
+
+new_case newline-installation
+printf '{"id":"12\\n34"}\n' > "$stub/installation.json"
+run_mint
+r=0
+[ "$status" -eq 1 ] && [ ! -s "$stub/out" ] && [ "$(calls)" = 1 ] && grep -q 'not installed' "$stub/err" || r=1
+check 'an installation id spanning two lines mints nothing' "$r"
+
+new_case interrupted
+touch "$stub/interrupt"
+run_mint
+r=0
+[ "$status" -ne 0 ] && [ ! -s "$stub/out" ] && workdir_gone || r=1
+check 'an interrupted run leaves no files holding the app token' "$r"
+
+expect_encoding_refused() {
+	mkdir -p "$work/badbase64"
+	real_openssl=$(command -v openssl)
+	cat > "$work/badbase64/openssl" <<WRAP
+#!/bin/sh
+if [ "\$1" = base64 ]; then
+	count=\$((\$(cat "$stub/base64-calls" 2>/dev/null || echo 0) + 1))
+	echo "\$count" > "$stub/base64-calls"
+	[ "\$count" = "$1" ] && exit 1
+fi
+exec "$real_openssl" "\$@"
+WRAP
+	chmod +x "$work/badbase64/openssl"
+	set +e
+	PATH="$work/badbase64:$work/bin:$PATH" STUB_DIR="$stub" EPC_AGENT_APP_ID=$app_id EPC_AGENT_KEY=$key \
+		sh "$mint" $repository > "$stub/out" 2> "$stub/err"
+	status=$?
+	set -e
+	r=0
+	[ "$status" -eq 1 ] && [ ! -s "$stub/out" ] && [ "$(calls)" = 0 ] && grep -q 'could not be encoded' "$stub/err" || r=1
+	check "$2" "$r"
+}
+
+new_case unencodable-header
+expect_encoding_refused 1 'an app token whose header cannot be encoded is refused before any call'
+
+new_case unencodable-claims
+expect_encoding_refused 2 'an app token whose claims cannot be encoded are refused before any call'
+
+new_case unencodable-signature
+expect_encoding_refused 3 'an app token whose signature cannot be encoded is refused before any call'
+
+new_case no-token
+printf '{"message":"Bad credentials"}\n' > "$stub/token.json"
+run_mint
+r=0
+[ "$status" -eq 1 ] && [ ! -s "$stub/out" ] && grep -q 'returned no token' "$stub/err" || r=1
+check 'an answer without a token prints nothing and says so' "$r"
+
+new_case token-refused
+touch "$stub/token.fail"
+run_mint
+r=0
+[ "$status" -eq 1 ] && [ ! -s "$stub/out" ] && grep -q 'refused the token request' "$stub/err" || r=1
+check 'a refused token request prints nothing and says so' "$r"
+
+if [ "$failures" -ne 0 ]; then
+	printf 'agent self-test: %s case(s) failed\n' "$failures"
+	exit 1
+fi
+printf 'agent self-test: all cases passed\n'

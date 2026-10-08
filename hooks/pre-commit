@@ -53,6 +53,13 @@ if git diff --cached --name-only --diff-filter=ACMD -- 'land/*' '.github/workflo
 	sh land/self-test >/dev/null 2>&1 || reject "land/self-test fails, so the landing no longer refuses what it claims to refuse. Run 'sh land/self-test' and read its output."
 fi
 
+# The agent seat's token minting ships its own self-test (agent/self-test), the same guard shape.
+if git diff --cached --name-only --diff-filter=ACMD -- 'agent/*' | grep -q .; then
+	printf '[pre-commit] agent self-test...\n'
+	[ -f agent/self-test ] || reject "agent/self-test is missing, so nothing proves the token minting refuses what it claims to refuse. Restore it."
+	sh agent/self-test >/dev/null 2>&1 || reject "agent/self-test fails, so the token minting no longer refuses what it claims to refuse. Run 'sh agent/self-test' and read its output."
+fi
+
 # The agent entry files carry one section verbatim. It is compared from the staged blobs, falling
 # back to HEAD for the file the commit does not touch, so editing one of the two alone is caught.
 entry_wrapper=CLAUDE.md

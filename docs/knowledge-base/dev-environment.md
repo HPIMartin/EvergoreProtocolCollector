@@ -131,7 +131,7 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
 |---|---|---|---|---|
 | The author's PC | this devcontainer | the author's own, forwarded by VS Code's Dev Containers credential helper | the host's Docker socket (`docker-outside-of-docker`) | the author starts and steers every session |
 | The author's PC, a session started on the host | the Windows host, no container | the author's own, from the host's credential store | the whole host | the author's own session |
-| The agent machine | an agent container, driven through a Claude Code Remote Control server | a deploy key with write access, `origin` over SSH; none of the author's credentials | none, as the author states it: no Docker socket, no access to the local network | unattended |
+| The agent machine | an agent container, driven through a Claude Code Remote Control server | a deploy key with write access, `origin` over SSH, and for the API the `epc-agent` App's key once the author has mounted it (below); none of the author's credentials | none, as the author states it: no Docker socket, no access to the local network | unattended |
 
 - **Unattended agents run only on the agent machine; the PC stays simple** (decision 2026-10-04,
   [open-questions.md](../open-questions.md)).
@@ -141,6 +141,20 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
 - **The agent seat is marked by `EPC_SEAT=agent-machine`**, set in the agent container's
   environment only, never in the repository; it lifts the review round cap (handbook §9). Where it
   is unset or reads anything else, the session counts as supervised.
+- **The agent seat talks to the GitHub API as the App `epc-agent`**, author-owned and installed on
+  this repository only, with pull requests and issues writable and contents, checks and statuses
+  read-only, on no bypass list (author decision 2026-10-08), once the author has created it and
+  mounted its key; until then the minting refuses and the author opens the agent's pull requests.
+  The container's environment names its App ID in `EPC_AGENT_APP_ID` and the path of its private
+  key, mounted read-only from outside every repository, in `EPC_AGENT_KEY`. `agent/github-token
+  <owner>/<repository>` mints an installation token, valid for an hour and restricted to that
+  repository, which `gh` reads from `GH_TOKEN`: `GH_TOKEN=$(<repo>/agent/github-token
+  <owner>/<repository>) gh pr create …`. Its comments come from `epc-agent[bot]`, a `Bot`, which the
+  landing workflow ignores. Without contents write it cannot push or merge through the API, and as
+  no bypass of the `main` ruleset it is expected to be refused there by any route, an auto-merge it
+  enables included; a merge attempt by the App, seen refused, is the first check after its setup.
+  `agent/self-test` proves the minting against a throwaway key and a stubbed `curl`: the request,
+  the app token's signature, claims and encoding, and every refusal.
 - **The agent container is built by hand;** a reproducible build from `.devcontainer/` is a strand
   of its own. A commit it has not pushed lives only in that container.
 

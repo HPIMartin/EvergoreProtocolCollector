@@ -58,8 +58,8 @@ its bypass.
 - **An agent can rely on:** a push to `main` made with the agent machine's deploy key is refused, as
   long as the bypass list is as the author states it; a push with that key seen refused would prove
   it. A landing through the workflow needs the owner's own `/land <sha>` comment, which an agent on
-  the agent machine cannot post: its comments go through the Claude GitHub App and carry
-  `performed_via_github_app`.
+  the agent machine cannot post: its comments come from `epc-agent[bot]`, or go through the Claude
+  GitHub App and carry `performed_via_github_app`.
 - **An agent cannot rely on:** a push from the PC being refused anywhere on GitHub, nor a `/land`
   comment posted with the PC's credential, which is the author's own, being ignored; a `claude/`
   branch staying as it was left, another session's included; nor on a `dependabot/` branch holding

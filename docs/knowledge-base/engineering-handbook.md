@@ -405,9 +405,10 @@ plus the corrected scenario tagged `@wip`.
   - **Never read a hook's output as the verdict on the commit that follows it;** ask the history.
     `hooks/self-test` asserts exactly that (resulting history, never printed text). `pre-commit`
     runs it on every commit that touches `hooks/`, `deploy/self-test` on every commit that touches
-    `deploy/`, `gate/self-test` on every commit that touches `gate/` and `land/self-test` on every
-    commit that touches `land/` or the landing workflow, so no weakened gate, deploy check, dossier
-    check or landing can land; it refuses a commit that lets the SHARED sections of
+    `deploy/`, `gate/self-test` on every commit that touches `gate/`, `land/self-test` on every
+    commit that touches `land/` or the landing workflow and `agent/self-test` on every commit that
+    touches `agent/`, so no weakened gate, deploy check, dossier check, landing or token minting can
+    land; it refuses a commit that lets the SHARED sections of
     `CLAUDE.md` and the agent entry template drift apart.
   - Safety net, not substitute; `--no-verify` only for genuine emergencies. Mechanics:
     [`hooks/README.md`](../../hooks/README.md); this project's gate configuration:
