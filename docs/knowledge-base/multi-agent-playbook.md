@@ -319,7 +319,7 @@ lives.
   edit of a session, require `git rev-parse --is-inside-work-tree` to answer `true`. A drifted
   Gradle run is **green**, so an exit code proves nothing: count the test-result XMLs in the
   worktree's own `build/` and check the strand's new test classes are among them, or the suite ran
-  without the change. Mechanical enforcement is backlog **G7**.
+  without the change. Mechanical enforcement is still open (backlog **G7**).
 - **Run a worktree's build by its absolute path:** `<abs worktree>/verify focus <abs path>`, never
   `W=<wt>; cd $W && ./verify …`, which the `cd` guard denies (working-with-ai-agents.md,
   "Permissions & autonomy"); every brief in `.claude/agents/` says so.
