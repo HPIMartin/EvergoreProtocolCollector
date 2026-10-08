@@ -9,7 +9,7 @@
 
 Two files: `Dockerfile` (base image + apt tools) and `devcontainer.json` (features, mounts,
 postCreate). The base image is pinned by digest, every feature by digest in
-`devcontainer-lock.json` — regenerate it with `devcontainer upgrade --workspace-folder .`
+`devcontainer-lock.json`. Regenerate it with `devcontainer upgrade --workspace-folder .`
 (`@devcontainers/cli` resolves straight from the registry, no Docker needed).
 
 ### `Dockerfile`
@@ -53,8 +53,8 @@ postCreate). The base image is pinned by digest, every feature by digest in
   caches (below). `sonarlint`: the third-party feature is a **no-op** (its `install.sh` only
   `echo`s; the only effect is two VS Code extensions plus a `dependsOn` on `node`), so the
   `SonarSource.sonarlint-vscode` extension is declared directly instead. Its old GPG failure came
-  from the `node` feature's yarn apt repo, which node 2.x no longer uses by default — see backlog
-  **G6**.
+  from the `node` feature's yarn apt repo, which node 2.x no longer uses by default (backlog
+  **G6**).
 
 ### Caches persisted across rebuilds
 
