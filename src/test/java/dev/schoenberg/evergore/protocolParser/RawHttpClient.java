@@ -19,17 +19,21 @@ public class RawHttpClient {
 	}
 
 	public int statusOf(String requestTarget) {
+		return statusOfRequest("GET " + requestTarget + " HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+	}
+
+	public int statusOfRequest(String request) {
 		return silentThrow(() -> {
 			try (Socket socket = new Socket("localhost", port)) {
 				socket.setSoTimeout(HANG_GUARD_MILLIS);
-				send(socket.getOutputStream(), requestTarget);
+				send(socket.getOutputStream(), request);
 				return statusCodeOf(readStatusLine(socket));
 			}
 		});
 	}
 
-	private void send(OutputStream out, String requestTarget) throws Exception {
-		out.write(("GET " + requestTarget + " HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n").getBytes(US_ASCII));
+	private void send(OutputStream out, String request) throws Exception {
+		out.write(request.getBytes(US_ASCII));
 		out.flush();
 	}
 
