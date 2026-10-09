@@ -3,6 +3,7 @@ package dev.schoenberg.evergore.protocolParser.rest.filter;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -41,7 +42,7 @@ class FilterChainOrderTest {
 	}
 
 	private TokenValidationFilter tokenValidationFilter() {
-		SecurityConfiguration configuration = new SecurityConfiguration("token", List.of());
+		SecurityConfiguration configuration = new SecurityConfiguration(Optional.of("token"), List.of());
 
 		return new TokenValidationFilter(configuration, canonicalizer, new PublicPaths(configuration), logger);
 	}

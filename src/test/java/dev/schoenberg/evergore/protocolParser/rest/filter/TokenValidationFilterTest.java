@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser.rest.filter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpRequest;
@@ -74,7 +75,7 @@ class TokenValidationFilterTest {
 
 	@Test
 	void rejectsEveryTokenWhenNoApiTokenIsConfigured() {
-		TokenValidationFilter tested = filterExpecting(null);
+		TokenValidationFilter tested = filterConfiguredWith(Optional.empty());
 		HttpRequest<?> request = requestWithToken(API_TOKEN);
 
 		assertThatThrownBy(() -> tested.doFilter(request, chain)).as("a missing configuration must deny, not crash").isInstanceOf(AccessNotAllowed.class);
@@ -91,7 +92,7 @@ class TokenValidationFilterTest {
 	}
 
 	private void assertUnusableConfiguration(String configuredApiToken) {
-		TokenValidationFilter tested = filterExpecting(configuredApiToken);
+		TokenValidationFilter tested = filterConfiguredWith(Optional.of(configuredApiToken));
 		HttpRequest<?> request = requestWithToken(configuredApiToken);
 
 		assertThatThrownBy(() -> tested.doFilter(request, chain)).as("an unusable configuration must deny even the value it holds").isInstanceOf(AccessNotAllowed.class);
@@ -105,6 +106,10 @@ class TokenValidationFilterTest {
 	}
 
 	private TokenValidationFilter filterExpecting(String apiToken) {
+		return filterConfiguredWith(Optional.of(apiToken));
+	}
+
+	private TokenValidationFilter filterConfiguredWith(Optional<String> apiToken) {
 		SecurityConfiguration configuration = new SecurityConfiguration(apiToken, List.of());
 		return new TokenValidationFilter(configuration, new PathCanonicalizer(), new PublicPaths(configuration), new LoggerSpy());
 	}

@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
+import java.util.Optional;
+
 import jakarta.inject.Singleton;
 
 import io.micronaut.context.event.ApplicationEventListener;
@@ -25,8 +27,8 @@ public class ApiTokenStartupValidator implements ApplicationEventListener<Startu
 	}
 
 	void validateApiToken() {
-		String token = securityConfiguration.apiToken();
-		if (token == null || token.isBlank()) {
+		Optional<String> token = securityConfiguration.apiToken().filter(value -> !value.isBlank());
+		if (token.isEmpty()) {
 			logger.error("Required configuration property 'evergore.security.api-token' is not set or blank. Set the environment variable EVERGORE_SECURITY_API_TOKEN.");
 			throw new IllegalStateException("Required configuration property 'evergore.security.api-token' is not set or blank.");
 		}

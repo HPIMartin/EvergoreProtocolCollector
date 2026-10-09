@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +54,7 @@ class PublicPathsTest {
 
 	@Test
 	void doesNotContainAnythingWhenNoPathIsConfigured() {
-		PublicPaths publicPaths = new PublicPaths(new SecurityConfiguration("token", List.of()));
+		PublicPaths publicPaths = new PublicPaths(new SecurityConfiguration(Optional.of("token"), List.of()));
 
 		boolean isPublic = publicPaths.contains("/");
 
@@ -62,7 +63,7 @@ class PublicPathsTest {
 
 	@Test
 	void doesNotContainAnythingWhenTheConfigurationIsMissing() {
-		PublicPaths publicPaths = new PublicPaths(new SecurityConfiguration("token", null));
+		PublicPaths publicPaths = new PublicPaths(new SecurityConfiguration(Optional.of("token"), null));
 
 		boolean isPublic = publicPaths.contains("/");
 
@@ -82,6 +83,6 @@ class PublicPathsTest {
 	}
 
 	private static PublicPaths configuredPaths() {
-		return new PublicPaths(new SecurityConfiguration("token", CONFIGURED));
+		return new PublicPaths(new SecurityConfiguration(Optional.of("token"), CONFIGURED));
 	}
 }

@@ -54,11 +54,11 @@ public class TokenValidationFilter implements HttpServerFilter {
 	}
 
 	private boolean matchesApiToken(String presented) {
-		String expected = securityConfiguration.apiToken();
-		if (expected == null || expected.isBlank()) {
-			return false;
-		}
-		return MessageDigest.isEqual(presented.getBytes(UTF_8), expected.getBytes(UTF_8));
+		return securityConfiguration
+				.apiToken()
+				.filter(expected -> !expected.isBlank())
+				.map(expected -> MessageDigest.isEqual(presented.getBytes(UTF_8), expected.getBytes(UTF_8)))
+				.orElse(false);
 	}
 
 	private AccessNotAllowed reject() {
