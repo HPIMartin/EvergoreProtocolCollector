@@ -871,19 +871,48 @@ upgrade that answers such a target ahead of the filter chain turns that test red
 
 A request whose **head the server cannot read** (a request line or header block over Netty's limit, a
 malformed request line or header line, an unreadable `Content-Length`) is rejected by Netty's decoder
-before any filter runs. `UnreadableHeadReplacer`, a handler registered right behind the HTTP codec
-(`UnreadableHeadRegistration`, `UnreadableHeadCustomizer`), replaces such a head with an
-`UnreadableRequest`: a bodyless `GET /bad-request` that closes the connection, carries the headers the
-decoder had read and the status the server would have answered (**413** for a head over the limit,
-**400** otherwise), and never the rejected target or query. The stand-in passes the whole chain: the
-audit log and the rate limit see it first, a blocked client gets **429**, and `UnreadableRequestFilter`
-(order 3, ahead of the token check) answers it with its status. The filter recognizes the stand-in by its
-native Netty type, so no client can send one. A head the client cut off by closing the connection is no
-unreadable head: it passes on as the decoder made it and is not counted. The audit line names the client
-address and the browser when the decoder had read the `User-Agent`. `RateLimitFilterTest` pins five
-shapes sent raw (an oversized request line, an oversized header block, a malformed request line, a
-malformed header line, an unreadable `Content-Length`): the first two requests answer 413 or 400, the
-third 429.
+before any filter runs. `HeadLineSlicer` (ahead of the HTTP codec) and `UnreadableHeadReplacer`
+(behind it) turn such a head into a stand-in request (`UnreadableRequest`) that passes the filter chain.
+`UnreadableHeadCustomizer` installs both on every connection that carries the HTTP codec.
+`UnreadableHeadRegistration` registers the customizer.
+
+- the audit log writes its line for it;
+- the rate limit counts it;
+- `UnreadableRequestFilter` (order 3, ahead of the token check) answers it after both;
+- a blocked client gets 429;
+- a head over the limit is answered 413;
+- any other unreadable head is answered 400;
+- the answer's status line says HTTP/1.1;
+- the answer closes the connection;
+- a request pipelined behind a rejected head is not answered;
+- a request pipelined behind a rejected head is not counted;
+- the stand-in never carries the rejected target or its query;
+- no `?token=` reaches the log;
+- no client can send a stand-in, because the filter recognizes the native Netty type;
+- the audit line names the client's address;
+- the audit line names the browser for heads as browsers send them;
+- for some unusual heads the audit line lacks the browser;
+- an incomplete head is not answered until the rescue has exceeded the header budget
+  (`micronaut.server.netty.max-header-size`);
+- an incomplete head is not counted until the rescue has exceeded the header budget;
+- a head the client cuts off by closing or half-closing its side, before the rescue has exceeded the
+  header budget, is not answered;
+- a head the client cuts off by closing or half-closing its side, before the rescue has exceeded the
+  header budget, is not counted;
+- once the rescue has exceeded the header budget, the head is answered without its blank line;
+- once the rescue has exceeded the header budget, the head is counted without its blank line;
+- what the rescue charges to the header budget is pinned by `RecentLinesTest`,
+  `HeaderRescueTest` and `UnreadableHeadRescueTest` ([testing.md](testing.md));
+- a client that never sends the blank line, before the rescue has exceeded the header budget, keeps
+  its connection until `micronaut.server.idle-timeout` closes it;
+- the idle timeout defaults to 5 minutes in Micronaut;
+- the stand-in's headers stay within `micronaut.server.netty.max-header-size`;
+- the handlers split every inbound byte of the connection into one pipeline message per line;
+- known limit: a long rejected request line arriving over several reads can leave the browser out of
+  the audit line;
+- whether it does depends on where the reads split and on the header bytes before the `User-Agent`.
+
+`RateLimitFilterTest` pins the throttling of five such raw shapes ([testing.md](testing.md)).
 
 | Method · Path | Purpose |
 |---|---|

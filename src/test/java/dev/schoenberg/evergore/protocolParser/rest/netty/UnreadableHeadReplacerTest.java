@@ -3,6 +3,7 @@ package dev.schoenberg.evergore.protocolParser.rest.netty;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpServerCodec;
@@ -18,23 +19,25 @@ class UnreadableHeadReplacerTest {
 	private static final int LONGER_THAN_A_REQUEST_LINE_MAY_BE = 5000;
 	private static final int LONGER_THAN_A_HEADER_BLOCK_MAY_BE = 9000;
 
-	private final EmbeddedChannel channel = new EmbeddedChannel(new HttpServerCodec(), new UnreadableHeadReplacer());
+	private final EmbeddedChannel channel = HeadChannel.withMaxHeaderSize(HeadChannel.DEFAULT_MAX_HEADER_SIZE);
+	private final EmbeddedChannel readable = new EmbeddedChannel(new UnreadableHeadReplacer(HeadChannel.DEFAULT_MAX_HEADER_SIZE));
+	private final EmbeddedChannel bare = new EmbeddedChannel(new HttpServerCodec());
 
 	@AfterEach
-	void closeChannel() {
+	void closeChannels() {
 		channel.finishAndReleaseAll();
+		readable.finishAndReleaseAll();
+		bare.finishAndReleaseAll();
 	}
 
 	@Test
 	void passesARequestTheServerCanReadOnAsTheSameObject() {
 		HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/overview?token=secret", Unpooled.EMPTY_BUFFER);
-		EmbeddedChannel readable = new EmbeddedChannel(new UnreadableHeadReplacer());
 
 		readable.writeInbound(request);
 		Object passedOn = readable.readInbound();
 
 		assertThat(passedOn).isSameAs(request);
-		readable.finishAndReleaseAll();
 	}
 
 	@Test
@@ -94,6 +97,39 @@ class UnreadableHeadReplacerTest {
 		Object passedOn = channel.readInbound();
 
 		assertThat(passedOn).isInstanceOf(HttpRequest.class).isNotInstanceOf(UnreadableRequest.class);
+	}
+
+	@Test
+	void theCodecHandsOverARequestOfItsOwnForARequestLineItCannotRead() {
+		bare.writeInbound(Unpooled.copiedBuffer("GET /overview?token=secret" + "a".repeat(LONGER_THAN_A_REQUEST_LINE_MAY_BE) + " HTTP/1.1\r\n\r\n", US_ASCII));
+		Object handedOver = bare.readInbound();
+
+		assertThat(handedOver).isInstanceOfSatisfying(FullHttpRequest.class, request -> assertThat(request.uri()).isEqualTo("/bad-request"));
+	}
+
+	@Test
+	void theCodecHandsOverTheRequestItWasReadingWhenAHeaderLineFails() {
+		String head = "GET /overview HTTP/1.1\r\nHost: x\r\nUser-Agent: F\r\nX-Padding: " + "a".repeat(LONGER_THAN_A_HEADER_BLOCK_MAY_BE) + "\r\n\r\n";
+
+		bare.writeInbound(Unpooled.copiedBuffer(head, US_ASCII));
+		Object handedOver = bare.readInbound();
+
+		assertThat(handedOver).isInstanceOfSatisfying(HttpRequest.class, request -> {
+			assertThat(request.uri()).isEqualTo("/overview");
+			assertThat(request.headers().names()).containsExactly("Host");
+		});
+		assertThat(handedOver).isNotInstanceOf(FullHttpRequest.class);
+	}
+
+	@Test
+	void theCodecHandsOverTheHeaderBeforeALineWithoutAColonAlreadyRead() {
+		bare.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.1\r\nUser-Agent: " + USER_AGENT + "\r\nNot a header line\r\n", US_ASCII));
+		Object handedOver = bare.readInbound();
+
+		assertThat(handedOver).isInstanceOfSatisfying(HttpRequest.class, request -> {
+			assertThat(request.decoderResult().isFailure()).isTrue();
+			assertThat(request.headers().get("User-Agent")).isEqualTo(USER_AGENT);
+		});
 	}
 
 	private UnreadableRequest unreadableAfterReceiving(String received) {
