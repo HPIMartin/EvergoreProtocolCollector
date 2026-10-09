@@ -15,37 +15,22 @@
 > as any valuation rule it explains, so everything that changes what the numbers are lands before
 > it. A parked set stays explicitly out of this stage.
 > **Re-cut 2026-09-27** (author go on the plan after the scenario review, see open-questions.md):
-> the specification catch-up (M13) comes first and runs beside the other lanes; the row rounding
-> joins M8, ahead of the explanation page.
+> the row rounding joins M8, ahead of the explanation page.
 > **Re-cut 2026-10-10** (author go on the plan of 2026-10-09, see open-questions.md): 0.3.0 is
-> released first, beside M13 (M15); M7 is done and removed; M5 is struck, as no sheet covers the
+> released first (M15); M7 is done and removed; M5 is struck, as no sheet covers the
 > time after July 2022 and the guild hears nothing before 1.0.
 
 ## Order
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M13 | The specification runs | the corrected behaviors (C10) | Task 0 of the adopted process: every later strand builds on executable scenarios, and condensing before the step definitions keeps their steps from being written twice |
-| M15 | 0.3.0 reaches the guild | the release (F14), with the scripted comparison (B19), the deep ledger page (E25) and the event-loop question (F11) | **First, beside M13** (author decision 2026-10-10): production runs `0.2.0` while everything since landed on `main`, and the last item of M13 changes nothing in the release build |
+| M15 | 0.3.0 reaches the guild | the release (F14), with the scripted comparison (B19), the deep ledger page (E25) and the event-loop question (F11) | **First** (author decision 2026-10-10): production runs `0.2.0` while everything since landed on `main` |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, opening balance, explanation page with the trader's figure (E18, E19, E20); the note of a row not yet computed (E36) and the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
 | M9 | Clear the last bottleneck | D24 with F12, F10 | The transactional ingest rests on the unified repositories, which every later read method needed first |
 | M10 | What the bottlenecks release | B36→D25 with D9→D18, D22→D14 | Measured request-path cost and the timezone fix at its root |
 | M11 | Product build-out | E12→E13, E9, E3, E6, E27, E30, E37, F13 | E12 inherits D18's query shape, so it follows it |
 | M12 | Ops, security & environment | F1, H11, C1, C8, A4, C11→E28, E17, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
 | M14 | The guild's skills | E31→E32→E33, E34 | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open, D-16). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
-
-## M13: The specification runs
-
-Slice: the scenarios the catch-up derived and the author reviewed run under `./verify all`, and a
-scenario gate that reads as the stakeholder guards every new one.
-
-- [x] A falsifier reads each draft as its stakeholder and against the whole suite (`falsifier-stakeholder`).
-- [x] Every point in time in a scenario can be placed without working it out: the time rules of
-  handbook §5 applied by the condensation.
-- [x] The catch-up scenarios are condensed and carry the author's review notes.
-- [x] Every confirmed scenario runs green, the member and the admin through the browser, the
-      operator over HTTP and JSON, and the unclear ones are settled.
-- [ ] Each corrected behavior is green and armed (backlog C10).
 
 ## M15: 0.3.0 reaches the guild
 

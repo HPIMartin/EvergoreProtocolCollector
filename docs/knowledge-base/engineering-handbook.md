@@ -138,10 +138,11 @@ scenarios, the author confirms them, and only then does implementation begin. Th
 the plan text, are what "done" means, and they stay in the repository as the executable
 specification.
 
-**Status in this project (author decision 2026-09-27): in force for every strand.** The
-catch-up (`/bdd-catch-up`, picked up 2026-09-23) holds the reviewed scenarios `@wip` until their
-step definitions exist. Work with observable behavior starts with its scenarios; pure
-refactoring, `[doc]` and build/infra claim the exemption below explicitly, as before.
+**Status in this project (author decision 2026-09-27): in force for every strand.** Every
+scenario of the catch-up (`/bdd-catch-up`) is armed and run by
+`./verify all`; a scenario carries `@wip` only while its feature is being built. Work with
+observable behavior starts with its scenarios; pure refactoring, `[doc]` and build/infra claim the
+exemption below explicitly.
 
 **Scope.** Every feature with behavior a user, an operator or a caller can observe: new
 capabilities, API and UI changes. A bug fix gets a scenario when the bug is visible at the
