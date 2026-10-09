@@ -459,8 +459,13 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   moves only by the author's landings and the pull requests the author merges on GitHub
   (Dependabot's), so a machine that does not fetch works on a stale `main`.
   - **Fetch at fixed points:** `git fetch origin` at the start of every session (`/continue`,
-    `/plan-next`), before a strand is cut, before the gateway's rebase and before every landing;
-    fetching is allowed at any other time too.
+    `/plan-next`), before a strand is cut, before every review panel, before the gateway's rebase
+    and before every landing; fetching is allowed at any other time too.
+  - **A moved `main` is taken in before the next panel** (author decision 2026-10-09): when the
+    fetch before a panel shows `origin/main` ahead, the agent syncs `main`, rebases the strand and
+    rebuilds the gate's evidence before spawning any gate agent, without asking while it works on
+    its own; a panel that read a superseded base is re-run anyway, so this costs one rebase instead
+    of a round.
   - **Local `main` only fast-forwards:** in the clean primary checkout, on `main`,
     `git merge --ff-only refs/remotes/origin/main` or `git pull --ff-only`; never a merge, a rebase
     or a plain `git pull` on `main`. The refs are spelled out because git resolves a tag or a local

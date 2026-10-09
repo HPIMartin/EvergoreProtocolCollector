@@ -3,7 +3,7 @@
 > Auto-loaded by Claude Code at the start of every session. This is a **thin wrapper**: the rules live
 > in the knowledge base (the [single source of truth](docs/knowledge-base/README.md)) and this file
 > only points to them and adds Claude-Code mechanics. **Based on
-> [`agent-entry-template`](docs/knowledge-base/agent-entry-template.md) version: 8.**
+> [`agent-entry-template`](docs/knowledge-base/agent-entry-template.md) version: 9.**
 > At session start, quick-check that the SHARED section below still matches the template (re-sync on a
 > version bump).
 
@@ -48,8 +48,9 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
   `main`; only the author lands a reviewed tip on `origin/main`, as a fast-forward: a `/land <sha>`
   comment on the strand's pull request, or a push of the tip.
 - **`main` follows `origin/main`** → handbook §7. `git fetch origin` at session start, before a
-  strand, before the gateway rebase and before every landing; local `main` only fast-forwards; a
-  `main` ahead of or diverged from `origin/main` is reported with both SHAs, never resolved.
+  strand, before every review panel, before the gateway rebase and before every landing; local
+  `main` only fast-forwards; a `main` ahead of or diverged from `origin/main` is reported with both
+  SHAs, never resolved; a strand whose base moved is rebased before its next review panel.
 - **BDD first, then TDD** → handbook §5/§4. A feature with observable behavior starts with executable
   Gherkin scenarios in product language, gated by the scenario falsifier and **confirmed by the
   author as complete** before any production code; committed `@wip`, driven green by TDD cycles,

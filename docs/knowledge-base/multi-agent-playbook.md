@@ -47,6 +47,8 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    - never pushes; domain/businessLogic/application stay framework-free
 3. FALSIFY (spawn the lenses the change can break, each fresh, each in its own detached
    worktree at the tip under review; see cadence)
+   - first, every round: `git fetch origin`, a moved `main` synced and the strand rebased
+     (handbook §7), then `./verify format` green at the tip (author decision 2026-10-09)
    - domain lens: value math, watermark/aggregation, parser fidelity
    - robustness lens: fake-green tests, edges, time/concurrency/resources, boundaries, secrets
    - frontend lens: fake-green component tests, user paths, async determinism, layer boundaries,
