@@ -91,7 +91,7 @@ public class SeleniumPageSource implements PageSource {
 
 	private void loadEvergore(WebDriver driver) {
 		try {
-			session.signIn(driver, credentials.username(), credentials.password(), config.server);
+			session.signIn(driver, credentials.username().orElseThrow(), credentials.password().orElseThrow(), config.server);
 		} catch (RuntimeException e) {
 			logger.warn("Evergore login failed, so the scrape reaches no protocol entries: " + e.getMessage());
 			throw e;

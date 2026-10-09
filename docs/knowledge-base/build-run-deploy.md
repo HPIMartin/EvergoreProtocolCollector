@@ -624,8 +624,9 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
      A token that appears in a served page is public, and the bookmarks are the cheaper loss.
    - The **Evergore login is mandatory too**, and for the same reason: either variable unset or
      blank and the app refuses to boot (`CredentialsStartupValidator`), instead of starting healthy
-     and scraping logged-out 30 seconds later. Neither value has a default; both must be set
-     explicitly, and they are the credentials of the game account the scraper signs in with.
+     and scraping logged-out 30 seconds later. An unset variable binds as an empty `Optional` and
+     so reaches the validator, which names the variable. Neither value has a default; both must be
+     set explicitly, and they are the credentials of the game account the scraper signs in with.
    - The three secrets are the **only** thing separating an image from a running stand. They are
      visible in `docker inspect` and in the shell history of this command, which is accepted here
      (single-admin home server); nothing writes them to the log. The script keeps them out of the
@@ -809,7 +810,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 |---------|---------------|-------|
 | `browser` | `"docker"` | Selenium driver selection (`Browser` enum: FIREFOX/CHROME/EDGE/DOCKER). |
 | `server` | `"zyrthania"` | **Target game world.** Scrape URL = `https://evergore.de/<server>?page=…` (`Constants.SERVER`). Switching worlds = change this. |
-| Evergore login | `evergore.credentials.username` / `.password`, **both required**, env-injected as `EVERGORE_CREDENTIALS_USERNAME` / `EVERGORE_CREDENTIALS_PASSWORD` (bound by the `CredentialsConfiguration` `@ConfigurationProperties` record) | The game account `SeleniumPageSource.tryToLogin` signs in with. **Mandatory at startup**: either value unset or blank and the app refuses to boot (`CredentialsStartupValidator` logs an error naming the variable and throws), so a missing login cannot degrade into a silent logged-out scrape. No value lives in the repo or in the image. |
+| Evergore login | `evergore.credentials.username` / `.password`, **both required**, env-injected as `EVERGORE_CREDENTIALS_USERNAME` / `EVERGORE_CREDENTIALS_PASSWORD` (bound by the `CredentialsConfiguration` `@ConfigurationProperties` record) | The game account `SeleniumPageSource.tryToLogin` signs in with. **Mandatory at startup**: either value unset or blank and the app refuses to boot (`CredentialsStartupValidator` logs an error naming the variable and throws; an unset variable binds as an empty `Optional` and reaches it), so a missing login cannot degrade into a silent logged-out scrape. No value lives in the repo or in the image. |
 | `evergoreFolder` | `c:\evergore` | Windows path; unused on the Linux container scrape path. |
 | DB path | `database/temp.sqlite` | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
 | Auth token | `evergore.security.api-token`, **required**, env-injected as `EVERGORE_SECURITY_API_TOKEN` (bound by the `SecurityConfiguration` `@ConfigurationProperties` bean) | **Every** request needs `?token=<configured token>` except the configured public paths below. **Mandatory at startup**: a blank/unset token makes the app refuse to boot (`ApiTokenStartupValidator` logs an error naming the variable and throws; an unset variable binds as an empty `Optional` and reaches it). No token value lives in the repo. |

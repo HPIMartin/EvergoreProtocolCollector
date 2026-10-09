@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction.website;
 
+import java.util.Optional;
+
 import jakarta.inject.Singleton;
 
 import io.micronaut.context.event.ApplicationEventListener;
@@ -33,8 +35,8 @@ public class CredentialsStartupValidator implements ApplicationEventListener<Sta
 		requireSet(credentials.password(), PASSWORD_PROPERTY, PASSWORD_VARIABLE);
 	}
 
-	private void requireSet(String configured, String property, String variable) {
-		if (configured == null || configured.isBlank()) {
+	private void requireSet(Optional<String> configured, String property, String variable) {
+		if (configured.filter(value -> !value.isBlank()).isEmpty()) {
 			String reason = "Required configuration property '" + property + "' is not set or blank.";
 			logger.error(reason + " Set the environment variable " + variable + ".");
 			throw new IllegalStateException(reason);

@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.dataExtraction.website;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.TimeoutException;
@@ -23,7 +25,7 @@ class SeleniumPageSourceTest {
 	private static final String PASSWORD = "the-password";
 
 	private final Configuration config = new Configuration();
-	private final CredentialsConfiguration credentials = new CredentialsConfiguration(USERNAME, PASSWORD);
+	private final CredentialsConfiguration credentials = new CredentialsConfiguration(Optional.of(USERNAME), Optional.of(PASSWORD));
 	private final LoggerSpy logger = new LoggerSpy();
 	private final RecordingWebDriver webDriver = new RecordingWebDriver();
 	private final MutableClock clock = new MutableClock();
@@ -49,6 +51,26 @@ class SeleniumPageSourceTest {
 		tested.load();
 
 		assertThat(webDriver.keysSentTo(id("pwInput"))).containsExactly(PASSWORD);
+	}
+
+	@Test
+	void anAbsentUsernameNeverReachesTheLoginForm() {
+		tested = new SeleniumPageSource(config, new CredentialsConfiguration(Optional.empty(), Optional.of(PASSWORD)), new FakeDriver(webDriver),
+				new EvergoreSession(clock, sleeper), logger);
+
+		catchThrowable(tested::load);
+
+		assertThat(webDriver.keysSentTo(id("nameInput"))).isEmpty();
+	}
+
+	@Test
+	void anAbsentPasswordNeverReachesTheLoginForm() {
+		tested = new SeleniumPageSource(config, new CredentialsConfiguration(Optional.of(USERNAME), Optional.empty()), new FakeDriver(webDriver),
+				new EvergoreSession(clock, sleeper), logger);
+
+		catchThrowable(tested::load);
+
+		assertThat(webDriver.keysSentTo(id("pwInput"))).isEmpty();
 	}
 
 	@Test
