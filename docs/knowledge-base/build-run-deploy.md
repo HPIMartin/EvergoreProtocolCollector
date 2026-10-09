@@ -869,10 +869,21 @@ audit filter sits at order 1, ahead of the counter that demonstrably runs) plus 
 built from client IP and user-agent only, pinned literally by `RequestAuditLogFilterTest`. A framework
 upgrade that answers such a target ahead of the filter chain turns that test red.
 
-What the filters really cannot see is a request the **server** answers on its own: an oversized request
-target (5000 characters) is answered **413** and never reaches them, measured 2026-08-14 by three such
-requests in a row not earning a 429. That gap needs a Netty-level seam and is tracked as backlog
-**C10**; `RateLimitFilterTest` pins the current behaviour so an upgrade that changes it shows up.
+A request whose **head the server cannot read** (a request line or header block over Netty's limit, a
+malformed request line or header line, an unreadable `Content-Length`) is rejected by Netty's decoder
+before any filter runs. `UnreadableHeadReplacer`, a handler registered right behind the HTTP codec
+(`UnreadableHeadRegistration`, `UnreadableHeadCustomizer`), replaces such a head with an
+`UnreadableRequest`: a bodyless `GET /bad-request` that closes the connection, carries the headers the
+decoder had read and the status the server would have answered (**413** for a head over the limit,
+**400** otherwise), and never the rejected target or query. The stand-in passes the whole chain: the
+audit log and the rate limit see it first, a blocked client gets **429**, and `UnreadableRequestFilter`
+(order 3, ahead of the token check) answers it with its status. The filter recognizes the stand-in by its
+native Netty type, so no client can send one. A head the client cut off by closing the connection is no
+unreadable head: it passes on as the decoder made it and is not counted. The audit line names the client
+address and the browser when the decoder had read the `User-Agent`. `RateLimitFilterTest` pins five
+shapes sent raw (an oversized request line, an oversized header block, a malformed request line, a
+malformed header line, an unreadable `Content-Length`): the first two requests answer 413 or 400, the
+third 429.
 
 | Method · Path | Purpose |
 |---|---|
