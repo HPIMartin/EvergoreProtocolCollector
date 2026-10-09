@@ -8,11 +8,6 @@ Feature: The service refuses to start on a setting that would break it silently
   Rule: The secrets the service needs must be set
 
     Scenario Outline: With <what> <state> the service does not start
-      Today a variable that is unset stops the start before the check runs, and the log names the
-      missing value the way the framework does, for the link token "Failed to inject value for
-      parameter [apiToken] of class: dev.schoenberg.evergore.protocolParser.helper.config.SecurityConfiguration",
-      in place of the setting. The tagged examples state the corrected behavior.
-
       Given <setting> is <state>
       When the operator starts the service
       Then the service does not start
@@ -23,10 +18,6 @@ Feature: The service refuses to start on a setting that would break it silently
         | the dashboard's link token  | EVERGORE_SECURITY_API_TOKEN   | blank | evergore.security.api-token   |
         | the game account's name     | EVERGORE_CREDENTIALS_USERNAME | blank | evergore.credentials.username |
         | the game account's password | EVERGORE_CREDENTIALS_PASSWORD | blank | evergore.credentials.password |
-
-      @wip
-      Examples: corrected behavior; today an unset variable stops the start before the check names it
-        | what                        | setting                       | state | property                      |
         | the dashboard's link token  | EVERGORE_SECURITY_API_TOKEN   | unset | evergore.security.api-token   |
         | the game account's name     | EVERGORE_CREDENTIALS_USERNAME | unset | evergore.credentials.username |
         | the game account's password | EVERGORE_CREDENTIALS_PASSWORD | unset | evergore.credentials.password |
