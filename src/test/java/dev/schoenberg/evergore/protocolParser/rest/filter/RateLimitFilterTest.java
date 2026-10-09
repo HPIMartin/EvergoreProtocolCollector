@@ -126,6 +126,18 @@ class RateLimitFilterTest {
 						arguments("an unreadable content length", rawRequest("GET / HTTP/1.1", "Host: localhost", "Content-Length: abc"), 400));
 	}
 
+	@Test
+	void neitherAnswersNorCountsAnIncompleteHeadTheClientHalfClosed() {
+		RawHttpClient rawClient = new RawHttpClient(server.getPort());
+		String incompleteHead = "GET /" + "a".repeat(LONGER_THAN_A_REQUEST_LINE_MAY_BE) + " HTTP/1.1\r\nHost: localhost\r\n";
+
+		List<String> answers = IntStream.range(0, 2).mapToObj(_ -> rawClient.answerToHalfClosedRequest(incompleteHead)).toList();
+		List<Integer> statuses = IntStream.range(0, 2).mapToObj(_ -> rawClient.statusOf("/favicon.ico")).toList();
+
+		assertThat(answers).containsExactly("", "");
+		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode());
+	}
+
 	private static String rawRequest(String requestLine, String... headerLines) {
 		return requestLine + "\r\n" + String.join("\r\n", headerLines) + "\r\nConnection: close\r\n\r\n";
 	}
