@@ -78,6 +78,16 @@ class LastBitDrift(unittest.TestCase):
 
         self.assertEqual([], tested.findings)
 
+    def test_a_sum_stored_on_one_side_only_is_never_within_bound(self):
+        without_share = {key: value for key, value in RUNNING.items() if key not in ("storage_donation", "storage_craft_subsidy")}
+        running = running_side_of({"Alice": without_share})
+        candidate = candidate_side_of({"Alice": {**without_share, "storage_donation": 0.0, "storage_craft_subsidy": 0.0}})
+
+        tested = compare(running, candidate)
+
+        self.assertIn("Alice: exact storage_donation differs, running None, candidate 0.0", tested.findings)
+        self.assertNotIn(LAST_BIT, {a.rule.name for a in tested.accepted})
+
     def test_a_bank_sum_never_drifts(self):
         running, candidate = sides(bank_withdrawl=101)
 
