@@ -11,6 +11,7 @@
 |------|---|---|----------------|
 | The game serves only ~30 days of logs; DB loss or a >30-day scrape outage is irreversible | M | H | Monthly manual backup by the author (decision 2026-07-17: no automation); a prompt restore re-scrapes the 30-day window, bounding the gap. Migrations must prove 1:1, which the Flyway setup pins with a row-for-row test and, for `V2`, a measured run over a copy of the production snapshot (2026-09-07: 237,538 rows, identical SHA-256 per table before and after) |
 | The production DB file is named `temp.sqlite`, inviting careless deletion | L | H | Rename once config is really bindable (backlog C1); until then a known trap |
+| A process outside the service keeps a read transaction open on the live database file past the 10 s `busy_timeout`: SQLite refuses the service's next commit of a ledger batch or of the meta sums, and that pooled connection stays inside its open transaction, so later writes fail too and the day's sums stay stale until the pool retires it (at most about an hour) | L | M | Known risk of `0.3.0`, accepted for the release: nothing but the service opens the live file while the container runs; backups and copies are taken with the container stopped, as `deploy/epc-deploy` does after proving the stop, and a look into the data goes to such a copy. The fix: an explicit commit and rollback on the connection (refused commit, backlog F12) |
 
 ## External dependency: the game
 
