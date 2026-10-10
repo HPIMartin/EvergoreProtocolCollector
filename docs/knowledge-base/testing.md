@@ -510,10 +510,8 @@ the same lines) on the devcontainer's `/workspaces` bind mount.
   latest 1.66 → 0.72 ms.
 - At `V2`, every one of the six plans is a `SCAN` of the whole table, with a temp B-tree for the page
   and the grouped query.
-- The table measures the ledger page before it took a sort. The page now orders by the chosen
-  column, then `timeStamp` descending, then `id` ([architecture.md](architecture.md)); its plan
-  adds `USE TEMP B-TREE FOR RIGHT PART OF ORDER BY` in the default order and `USE TEMP B-TREE FOR
-  ORDER BY` for any other column, and its cost on the snapshot is not yet measured (**E25**).
+- The table measures the ledger page before it took a sort; the sorted page is measured in the
+  next section.
 - The index sets the order of a read that names none: `getAllFor(avatar)` returns an avatar's rows in time order, so
   the recompute adds its `double` sums in that order: on the snapshot one recomputed sum,
   `storageWithdrawl` of one avatar, moves in its last bit (`…002E7` → `…001E7`), and the other 167
@@ -521,6 +519,38 @@ the same lines) on the devcontainer's `/workspaces` bind mount.
   repository and catalog). The overview's whole gold is unchanged, and so is the snapshot recompute
   check's count of changed keys (its 60 come from the catalog having moved since the snapshot);
   only that one key's recomputed figure differs.
+
+### The sorted ledger page on real data (2026-10-10)
+
+Measured on copies of the snapshot `epc-20261010-214455.sqlite` (7,849 bank, 249,357 storage
+rows): the copy as production holds it, at `V2`, read with `0.2.0`'s page query (time newest
+first, no tie-break); and a copy taken through `V3` by `ProductionSnapshotMigrationCheck`, read
+through the real `StorageDatabaseRepository` (pool, `GERMAN_ORDER` collation, row mapping). The
+busiest avatar holds 14,121 storage rows, 142 pages at the SPA's page size of 100; median of 31
+warm runs, sqlite-jdbc 3.41.2, the devcontainer's `/workspaces` bind mount; a throwaway probe test,
+not committed.
+
+| storage page, busiest avatar | page 1 | page 71 | page 142 (last) |
+| --- | --- | --- | --- |
+| `0.2.0` at `V2`, time newest first | 38.2 ms | | 46.6 ms |
+| time newest first (the default) | 2.4 ms | 7.9 ms | 13.3 ms |
+| quantity descending | 7.5 ms | 21.7 ms | 24.2 ms |
+| item name ascending | 26.3 ms | 158.8 ms | 186.9 ms (max 214.6 ms) |
+| item name descending | 23.6 ms | 159.1 ms | 185.9 ms (max 269.7 ms) |
+
+- Every order reads by the index (`SEARCH … USING INDEX storageEntries_avatar_timeStamp_idx`);
+  the default adds `USE TEMP B-TREE FOR RIGHT PART OF ORDER BY` for the `id`, every other column
+  `USE TEMP B-TREE FOR ORDER BY`. `0.2.0`'s page at `V2` is a `SCAN` of the whole table plus a
+  temp B-tree, which is why its first page costs more than any page of the default order.
+- A deep page costs more because the sorter keeps every row up to the page's end. The name sort's
+  extra is the Java collation: the same last page sorted in SQLite's byte order reads in 24.9 ms,
+  with `GERMAN_ORDER` in 191.8 ms (both on one plain JDBC connection).
+- The busiest bank ledger (885 rows, 9 pages) reads every page in 1.4 ms or less, by the time
+  and by the amount; `0.2.0` at `V2` took 1.2 to 1.5 ms. `countFor` on the busiest storage
+  ledger takes 0.56 ms.
+- The home server took 42 s where this machine took 16 s for one collection
+  ([build-run-deploy.md](build-run-deploy.md)); by that ratio its last name page takes about half
+  a second, an estimate rather than a measurement.
 
 ### The production-snapshot harness
 

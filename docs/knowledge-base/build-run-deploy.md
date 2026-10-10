@@ -788,6 +788,9 @@ ledger and touches no row. What this means for a deploy:
   and digests unchanged, `V3` recorded successful in 1.3 s on the bind mount, and a second run a
   no-op. The two indexes take 2,656 pages (10.9 MB), which fill free pages `V2` left behind, so the
   file stays at 77.8 MB; on a compact file they add the same 10.9 MB (39.4 MB → 50.3 MB).
+  Over a copy of `epc-20261010-214455.sqlite`, at `V2` as production holds it (7,849 bank +
+  249,357 storage + 295 meta rows, 2026-10-10), the check passed again: counts and digests
+  unchanged, `V3` recorded successful in 0.2 s, the file still 78.5 MB.
 - A row that carries a `NULL` in any column **aborts the boot** instead of being dropped. That is
   the intended strict behaviour (engineering-handbook §3), and the production snapshot holds no such
   row in any of the three tables (ledgers measured 2026-09-06, `metaInformation` 2026-09-07). The
