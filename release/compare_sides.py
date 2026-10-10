@@ -1,5 +1,6 @@
 import argparse
 import json
+import math
 import os
 import sys
 from collections import Counter
@@ -21,6 +22,9 @@ ADMIN_NAME_LISTS = ("unknownItemNames", "failedAvatarNames")
 
 
 def compare(running, candidate, started=None):
+    non_finite = list(_non_finite_sums("running", running)) + list(_non_finite_sums("candidate", candidate))
+    if non_finite:
+        return Report(non_finite, [], [], Counter())
     findings = []
     accepted = []
     field_findings, added_fields = _field_set_differences(running, candidate)
@@ -55,6 +59,13 @@ def compare(running, candidate, started=None):
     for keys in (explained or {}).values():
         uses.update(keys.values())
     return Report(findings, accepted, _uncompared_guild_figures(accepted, candidate), uses)
+
+
+def _non_finite_sums(label, side):
+    for member, stored in sorted(side.get("exact", {}).items()):
+        for key, value in sorted(stored.items()):
+            if isinstance(value, float) and not math.isfinite(value):
+                yield f"{member}: exact {key} is {value} on the {label} side"
 
 
 def _uncompared_guild_figures(accepted, candidate):
