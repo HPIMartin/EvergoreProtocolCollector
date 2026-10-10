@@ -8,6 +8,8 @@ AMMUNITION = Rule("full ammunition credit", ("2026-09-27", "2026-10-01"))
 
 LAST_BIT = Rule("last-bit drift of an exact storage sum", ("2026-09-27",))
 
+NOT_REACHED = Rule("member no recompute has reached", ("2026-09-23", "2026-10-06"))
+
 LISTED_ADDITIONS = {
     "row": ("balance",),
     "totals": ("balance", "storageValue"),
