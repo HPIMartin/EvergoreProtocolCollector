@@ -488,8 +488,12 @@ printf 'an older snapshot worth restoring\n' > "$backup_path"
 run_rollback --backup "$(basename "$backup_path")"
 if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
 check "a rollback without --yes changes nothing" "$r"
-if printf '%s' "$output" | grep -qF 'V2 rebuild'; then r=0; else r=1; fi
+if printf '%s' "$output" | grep -qF 'puts the schema back to V2, without the two ledger indexes'; then r=0; else r=1; fi
 check "and it says what restoring the backup does to the migrated schema" "$r"
+if printf '%s' "$output" | grep -qF 'starts on a database this release has already migrated to V3'; then r=0; else r=1; fi
+check "and it says the older image starts on the database this release migrated" "$r"
+if printf '%s' "$output" | grep -qF 'flyway_schema_history'; then r=1; else r=0; fi
+check "and it no longer claims the older code ignores the schema history" "$r"
 
 new_case
 printf 'an older snapshot worth restoring\n' > "$backup_path"
