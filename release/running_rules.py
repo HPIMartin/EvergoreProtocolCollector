@@ -23,9 +23,10 @@ def member_figures(stored):
         "storageDeposited": storage_deposited,
         "net": stored["bank_placement"] - stored["bank_withdrawl"] + storage_deposited - storage_withdrawn,
     }
-    if "storage_donation" in stored:
+    figures["donation"] = None
+    figures["craftSubsidy"] = None
+    if "storage_donation" in stored and "storage_craft_subsidy" in stored:
         figures["donation"] = round_half_up(stored["storage_donation"])
-    if "storage_craft_subsidy" in stored:
         figures["craftSubsidy"] = round_half_up(stored["storage_craft_subsidy"])
     return figures
 
