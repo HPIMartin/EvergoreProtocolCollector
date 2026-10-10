@@ -11,6 +11,10 @@ ROW_FIGURES = (
 )
 
 
+def without(figures, *names):
+    return {key: value for key, value in figures.items() if key not in names}
+
+
 def row(avatar, **figures):
     base = {
         "avatar": avatar,

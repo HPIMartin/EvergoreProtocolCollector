@@ -22,7 +22,9 @@ def compare(running, candidate):
     findings.extend(_admin_differences(running["admin"], candidate["admin"]))
     findings.extend(_total_count_differences("overview", running["overview"], candidate["overview"]))
     findings.extend(_member_differences(running["overview"], candidate["overview"]))
-    findings.extend(_overview_differences(running["overview"], candidate["overview"]))
+    findings.extend(
+        _overview_differences(_with_derived_figures(running["overview"]), _with_derived_figures(candidate["overview"]))
+    )
     findings.extend(_ledger_differences(running["ledgers"], candidate["ledgers"]))
     return Report(findings)
 
@@ -119,3 +121,36 @@ def _admin_differences(running, candidate):
                 yield f"admin: {field} lists {name} in the running side only"
             for name in sorted(only_candidate.elements()):
                 yield f"admin: {field} lists {name} in the candidate side only"
+
+
+def _with_derived_figures(overview):
+    return {
+        **overview,
+        "items": [_with_balance(row) for row in overview["items"]],
+        "totals": _with_guild_figures(overview["totals"]),
+    }
+
+
+def _with_balance(figures):
+    if "balance" in figures:
+        return figures
+    return {**figures, "balance": _balance_of(figures)}
+
+
+def _with_guild_figures(totals):
+    derived = _with_balance(totals)
+    if "storageValue" in derived:
+        return derived
+    return {**derived, "storageValue": _storage_value_of(totals)}
+
+
+def _balance_of(figures):
+    if figures["donation"] is None or figures["craftSubsidy"] is None:
+        return None
+    return figures["net"] + figures["donation"] - figures["craftSubsidy"]
+
+
+def _storage_value_of(figures):
+    if figures["donation"] is None or figures["craftSubsidy"] is None:
+        return None
+    return figures["storageDeposited"] + figures["donation"] - figures["craftSubsidy"] - figures["storageWithdrawn"]
