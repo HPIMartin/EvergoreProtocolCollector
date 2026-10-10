@@ -5,16 +5,18 @@ from candidate_rules import GUILD_FIGURES, guild_figures, member_figures
 from derived_figures import with_derived_figures
 from exact_explanations import explain
 from expected_deviations import LISTED_ADDITIONS
-from shown_figures import Accepted, differences, exact_differences, explanation, running_rule_differences, text_of
+from expected_deviations import NOT_REACHED
+from shown_figures import Accepted, Context, differences, exact_differences, explanation, running_rule_differences, text_of
 
 LEDGERS = ("bank", "storage")
 ADMIN_NAME_LISTS = ("unknownItemNames", "failedAvatarNames")
 
 
 class Report:
-    def __init__(self, findings, accepted):
+    def __init__(self, findings, accepted, uncompared):
         self.findings = findings
         self.accepted = accepted
+        self.uncompared = uncompared
 
     @property
     def exit_code(self):
@@ -39,12 +41,19 @@ def compare(running, candidate):
         differing = None
         explained = None
     for difference in shown:
-        rules = [] if differing is None else explanation(difference, differing, explained)
+        rules = [] if differing is None else explanation(difference, Context(differing, explained, running, candidate))
         if not rules:
             findings.append(text_of(difference))
         accepted.extend(Accepted(rule, *difference) for rule in rules)
     findings.extend(_ledger_differences(running["ledgers"], candidate["ledgers"]))
-    return Report(findings, accepted)
+    return Report(findings, accepted, _uncompared_guild_figures(accepted, candidate))
+
+
+def _uncompared_guild_figures(accepted, candidate):
+    if not any(a.scope == "totals" and a.rule == NOT_REACHED for a in accepted):
+        return []
+    totals = candidate["overview"]["totals"]
+    return [figure for figure in GUILD_FIGURES if totals.get(figure) is None]
 
 
 def _exact_differences(differing, explained):

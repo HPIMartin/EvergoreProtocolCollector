@@ -1,10 +1,16 @@
 from collections import namedtuple
 
 import running_rules
-from expected_deviations import ROUNDING
+from candidate_rules import GUILD_FIGURES, is_computed
+from expected_deviations import NOT_REACHED, ROUNDING
 
 Difference = namedtuple("Difference", "scope figure running candidate")
 Accepted = namedtuple("Accepted", "rule scope figure running candidate")
+Context = namedtuple("Context", "differing explained running candidate")
+
+ROW_SUMS = ("bankWithdrawn", "bankDeposited", "storageWithdrawn", "storageDeposited", "net")
+ROW_FLOWS = ("donation", "craftSubsidy")
+NOT_REACHED_ROW_FIGURES = ROW_SUMS + ROW_FLOWS + ("balance", "staleSumsFrom")
 
 SUM_KEYS = ("bank_placement", "bank_withdrawl", "storage_placement", "storage_withdrawl")
 SHARE_KEYS = ("storage_donation", "storage_craft_subsidy")
@@ -57,19 +63,55 @@ def exact_differences(running, candidate):
     return found
 
 
-def explanation(difference, exact_difference_by_member, explained_by_member):
+def explanation(difference, context):
+    if _is_not_reached(difference, context):
+        return [NOT_REACHED]
+    if difference.running is None or difference.candidate is None:
+        return []
     inputs = ROUNDED_FIGURE_INPUTS.get(difference.figure)
     if inputs is None:
         return []
-    members = list(exact_difference_by_member) if difference.scope == "totals" else [difference.scope]
+    members = list(context.differing) if difference.scope == "totals" else [difference.scope]
     rules = set()
     for member in members:
-        for key in set(exact_difference_by_member.get(member, {})) & set(inputs):
-            rule = explained_by_member[member].get(key)
+        for key in set(context.differing.get(member, {})) & set(inputs):
+            rule = context.explained[member].get(key)
             if rule is None:
                 return []
             rules.add(rule)
     return sorted(rules or {ROUNDING})
+
+
+def _is_not_reached(difference, context):
+    if difference.candidate is not None:
+        return False
+    if difference.scope == "totals":
+        unreached = _unreached_members(context)
+        return difference.figure in GUILD_FIGURES and bool(unreached) and all(
+            _is_zero_running_row(member, context) for member in unreached
+        )
+    return difference.figure in NOT_REACHED_ROW_FIGURES and _is_zero_running_row(difference.scope, context)
+
+
+def _unreached_members(context):
+    return [
+        row["avatar"]
+        for row in context.candidate["overview"]["items"]
+        if not is_computed(context.candidate["exact"].get(row["avatar"], {}))
+    ]
+
+
+def _is_zero_running_row(member, context):
+    if is_computed(context.running["exact"].get(member, {})):
+        return False
+    if is_computed(context.candidate["exact"].get(member, {})):
+        return False
+    row = next((r for r in context.running["overview"]["items"] if r["avatar"] == member), None)
+    return (
+        row is not None
+        and all(row[figure] == 0 for figure in ROW_SUMS)
+        and all(row[figure] in (None, 0) for figure in ROW_FLOWS)
+    )
 
 
 def running_rule_differences(running):
