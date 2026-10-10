@@ -2,6 +2,7 @@ from collections import namedtuple
 
 import running_rules
 from candidate_rules import GUILD_FIGURES, is_computed
+from derived_figures import with_derived_figures
 from expected_deviations import NOT_REACHED, ROUNDING
 
 Difference = namedtuple("Difference", "scope figure running candidate")
@@ -71,15 +72,42 @@ def explanation(difference, context):
     inputs = ROUNDED_FIGURE_INPUTS.get(difference.figure)
     if inputs is None:
         return []
+    running_rule_on_candidate = _running_rule_on_candidate(context).get(difference.scope, {}).get(difference.figure)
+    if running_rule_on_candidate is None:
+        return []
+    rules = set()
+    if running_rule_on_candidate != difference.running:
+        exact_rules = _exact_rules(difference, inputs, context)
+        if not exact_rules:
+            return []
+        rules.update(exact_rules)
+    if running_rule_on_candidate != difference.candidate:
+        rules.add(ROUNDING)
+    return sorted(rules)
+
+
+def _exact_rules(difference, inputs, context):
     members = list(context.differing) if difference.scope == "totals" else [difference.scope]
     rules = set()
     for member in members:
         for key in set(context.differing.get(member, {})) & set(inputs):
             rule = context.explained[member].get(key)
             if rule is None:
-                return []
+                return set()
             rules.add(rule)
-    return sorted(rules or {ROUNDING})
+    return rules
+
+
+def _running_rule_on_candidate(context):
+    rows = []
+    for row in context.candidate["overview"]["items"]:
+        figures = running_rules.member_figures(context.candidate["exact"].get(row["avatar"], {})) or {}
+        rows.append({"avatar": row["avatar"], **{figure: figures.get(figure) for figure in ROW_SUMS + ROW_FLOWS}})
+    totals = {figure: None for figure in ROW_SUMS + ROW_FLOWS}
+    if all(row["net"] is not None for row in rows):
+        totals.update(running_rules.totals_of_rows(rows))
+    derived = with_derived_figures({"items": [row for row in rows if row["net"] is not None], "totals": totals})
+    return {**{row["avatar"]: row for row in derived["items"]}, "totals": derived["totals"]}
 
 
 def _is_not_reached(difference, context):
