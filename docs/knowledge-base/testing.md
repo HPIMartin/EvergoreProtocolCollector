@@ -345,7 +345,8 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
     the script waits 65 s and retries, at most 3 times.
 - **What it reads:** every page of `/api/v1/avatars` with its totals, every member's bank and
   storage ledger, `/api/v1/admin/status`, and each copy's exact sums from `metaInformation`
-  (read-only, after both sides are stopped).
+  (read-only, after both sides are stopped); a sum there that is not finite is a finding that ends
+  the comparison there.
   - The exact sums couple the script to the internal meta key names (decision 2026-10-10); in
     return rounding, the ammunition credit and last-bit drift are rules over the exact values: the
     ammunition delta is recomputed from the member's deposits and may differ from the stored one
