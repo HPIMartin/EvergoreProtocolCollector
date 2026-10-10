@@ -407,6 +407,20 @@ both ledgers (`Zwölf`), a name with spaces whose storage meta is exactly `0.0` 
   newest timestamp.
 - Not covered: the other 37 avatars, and the interior pages of the two sampled ledgers.
 
+**Scripted, the `0.3.0` candidate against `0.2.0` (2026-10-10).** Both sides on copies of the
+08.10.2026 snapshot (7,838 bank and 248,842 storage rows, 42 members); running = `v0.2.0`,
+candidate = the application at `a8ddbf96`. **No finding.**
+
+- Every ledger entry of every member, `totalCount`, both last-activity dates, `staleSumsFrom`,
+  `Gildenspende` and `Gildenbank` are equal on both sides.
+- **Full ammunition credit:** 20 members move. The guild's `Einlagerung` rises from `285.045.741`
+  to `289.041.391`, `Handwerkssubventionen` from `40.433.502` to `44.429.153` and `Nach Abzügen`
+  from `81.540.574` to `85.536.225`, the same `3.995.651` within a gold of rounding.
+- **Rounded once:** `Entnahme`, `Vor Abzügen` and `Gildenlagerwert` show one gold less than
+  `0.2.0`'s sum of rounded rows; four members' rows differ by one gold.
+- **Last-bit drift:** one member's exact storage sum.
+- The not-yet-computed rule did not occur: the recompute reached every member on both sides.
+
 ### Recompute delta on real data
 
 The meta sums are recomputed from all stored entries instead of being accumulated behind a
