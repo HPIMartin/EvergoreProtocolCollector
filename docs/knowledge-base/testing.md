@@ -438,6 +438,13 @@ candidate = `main` as it stood on 2026-10-09. **No finding.**
 - **Last-bit drift:** one member's exact storage sum.
 - The not-yet-computed rule did not occur: the recompute reached every member on both sides.
 
+**Rounding alone, the 03.09.2026 snapshot (2026-10-10).** Running = `v0.2.0`, candidate = `main`
+as it stood on 2026-09-30, which rounds every figure once and predates the full ammunition credit.
+**No finding.**
+7 of 42 rows differ by one gold in `Nach Abzügen` and `Vor Abzügen`, and so do four guild figures:
+`Einlagerung`, `Nach Abzügen`, `Vor Abzügen` and `Gildenlagerwert`. One exact storage sum drifts in
+its last bit and moves no shown figure.
+
 ### Recompute delta on real data
 
 The meta sums are recomputed from all stored entries instead of being accumulated behind a
