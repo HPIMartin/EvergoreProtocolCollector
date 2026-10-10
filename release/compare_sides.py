@@ -1,3 +1,9 @@
+import json
+from collections import Counter
+
+LEDGERS = ("bank", "storage")
+
+
 class Report:
     def __init__(self, findings):
         self.findings = findings
@@ -12,7 +18,29 @@ def compare(running, candidate):
     findings.extend(_total_count_differences("overview", running["overview"], candidate["overview"]))
     findings.extend(_member_differences(running["overview"], candidate["overview"]))
     findings.extend(_overview_differences(running["overview"], candidate["overview"]))
+    findings.extend(_ledger_differences(running["ledgers"], candidate["ledgers"]))
     return Report(findings)
+
+
+def _ledger_differences(running, candidate):
+    for member in sorted(running.keys() & candidate.keys()):
+        for ledger in LEDGERS:
+            scope = f"{member} {ledger} ledger"
+            yield from _total_count_differences(scope, running[member][ledger], candidate[member][ledger])
+            yield from _entry_differences(scope, running[member][ledger], candidate[member][ledger])
+
+
+def _entry_differences(scope, running, candidate):
+    running_entries = _entry_multiset(running)
+    candidate_entries = _entry_multiset(candidate)
+    for entry, count in sorted((running_entries - candidate_entries).items()):
+        yield f"{scope}: {count} more of {entry} in the running side only"
+    for entry, count in sorted((candidate_entries - running_entries).items()):
+        yield f"{scope}: {count} more of {entry} in the candidate side only"
+
+
+def _entry_multiset(ledger):
+    return Counter(json.dumps(entry, sort_keys=True, ensure_ascii=False) for entry in ledger["items"])
 
 
 def _total_count_differences(scope, running, candidate):
