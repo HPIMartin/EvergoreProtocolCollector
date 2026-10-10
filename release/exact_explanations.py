@@ -1,7 +1,8 @@
 import math
 
-from expected_deviations import AMMUNITION
+from expected_deviations import AMMUNITION, LAST_BIT
 
+STORAGE_SUMS = ("storage_placement", "storage_withdrawl", "storage_donation", "storage_craft_subsidy")
 AMMUNITION_SORTS = ("Pfeile", "Bolzen", "Magieessenz")
 ULP_BOUND = 4
 
@@ -13,6 +14,9 @@ def explain(differing, running, candidate):
         if _is_full_ammunition_credit(member, keys, running, candidate):
             reasons["storage_placement"] = AMMUNITION
             reasons["storage_craft_subsidy"] = AMMUNITION
+        for key in STORAGE_SUMS:
+            if key in keys and key not in reasons and _within_bound(_delta(keys[key]), keys[key]):
+                reasons[key] = LAST_BIT
         explained[member] = {key: rule for key, rule in reasons.items() if key in keys}
     return explained
 
