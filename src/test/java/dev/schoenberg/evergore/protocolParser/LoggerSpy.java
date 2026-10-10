@@ -1,14 +1,14 @@
 package dev.schoenberg.evergore.protocolParser;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class LoggerSpy implements Logger {
-	private final List<String> infoMessages = new ArrayList<>();
-	private final List<String> warnMessages = new ArrayList<>();
-	private final List<String> errorMessages = new ArrayList<>();
-	private final List<Throwable> errorThrowables = new ArrayList<>();
+	private final List<String> infoMessages = new CopyOnWriteArrayList<>();
+	private final List<String> warnMessages = new CopyOnWriteArrayList<>();
+	private final List<String> errorMessages = new CopyOnWriteArrayList<>();
+	private final List<Throwable> errorThrowables = new CopyOnWriteArrayList<>();
 
 	@Override
 	public void info(String toLog) {

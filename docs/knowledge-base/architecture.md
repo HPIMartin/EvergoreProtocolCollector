@@ -33,7 +33,7 @@
         ▼
    PostCollectionHook   (no-op in prod; test seam, runs only after a successful recompute)
 
-Independent read path:  HTTP ▶ filters (audit log, rate limit, token) ▶ AvatarSummariesController /
+Independent read path:  HTTP ▶ filters (audit log, rate limit, unreadable-request answer, token) ▶ AvatarSummariesController /
                         AvatarEntriesController ▶ read MetaInformation / repositories
                         ▶ wire records ▶ JSON
 
@@ -156,6 +156,7 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   `SpaHistoryFallbackController` (serves the SPA shell for unknown navigation paths;
   `SpaNavigationPaths` decides which 404s it may answer) · filters `RequestAuditLogFilter` (one
   `info` line per request) + `RateLimitFilter` (per-IP counters, held by `RateLimitCounters`) +
+  `UnreadableRequestFilter` (answers the stand-in request of a head the server cannot read; see [build-run-deploy.md](build-run-deploy.md)) +
   `TokenValidationFilter` (`?token=`) · `ApplicationExceptionHandler` (dispatches via
   the `TransferType`/exception visitors, no `instanceof`; the mapped status picks the log severity,
   so an expected client error is one `info` line and only a server error logs its stack trace).

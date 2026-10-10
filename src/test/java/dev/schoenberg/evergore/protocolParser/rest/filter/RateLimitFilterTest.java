@@ -17,6 +17,9 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import kong.unirest.Unirest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import dev.schoenberg.evergore.protocolParser.RawHttpClient;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
@@ -27,17 +30,18 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static io.micronaut.http.HttpStatus.BAD_REQUEST;
 import static io.micronaut.http.HttpStatus.OK;
-import static io.micronaut.http.HttpStatus.REQUEST_ENTITY_TOO_LARGE;
 import static io.micronaut.http.HttpStatus.TOO_MANY_REQUESTS;
 import static io.micronaut.http.HttpStatus.UNAUTHORIZED;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 @MicronautTest(environments = "ratelimit", rebuildContext = true)
 class RateLimitFilterTest {
 
 	private static final Path WORKING_DB = Paths.get("build/tmp/rateLimit/rateLimit.sqlite");
 	private static final int REQUESTS_PER_BURST = 3;
-	private static final int TARGET_LONGER_THAN_THE_SERVER_ACCEPTS = 5000;
+	private static final int LONGER_THAN_A_REQUEST_LINE_MAY_BE = 5000;
+	private static final int LONGER_THAN_A_HEADER_BLOCK_MAY_BE = 9000;
 
 	static {
 		silentThrow(() -> {
@@ -103,14 +107,39 @@ class RateLimitFilterTest {
 		assertThat(statuses).containsExactly(BAD_REQUEST.getCode(), BAD_REQUEST.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
 
-	@Test
-	void answersAnOversizedRequestTargetWithoutCountingIt() {
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("headsTheServerCannotRead")
+	void countsARequestWhoseHeadTheServerCannotReadAndTurnsItAwayOnceTheLimitIsExceeded(String shape, String request, int answeredAtFirst) {
 		RawHttpClient rawClient = new RawHttpClient(server.getPort());
-		String oversizedTarget = "/" + "a".repeat(TARGET_LONGER_THAN_THE_SERVER_ACCEPTS);
 
-		List<Integer> statuses = IntStream.range(0, REQUESTS_PER_BURST).mapToObj(_ -> rawClient.statusOf(oversizedTarget)).toList();
+		List<Integer> statuses = IntStream.range(0, REQUESTS_PER_BURST).mapToObj(_ -> rawClient.statusOfRequest(request)).toList();
 
-		assertThat(statuses).as("a 429 on the third request would mean the counter saw them; 413 throughout means it did not").containsOnly(REQUEST_ENTITY_TOO_LARGE.getCode());
+		assertThat(statuses).containsExactly(answeredAtFirst, answeredAtFirst, TOO_MANY_REQUESTS.getCode());
+	}
+
+	static Stream<Arguments> headsTheServerCannotRead() {
+		return Stream
+				.of(arguments("an oversized request line", rawRequest("GET /" + "a".repeat(LONGER_THAN_A_REQUEST_LINE_MAY_BE) + " HTTP/1.1", "Host: localhost"), 413),
+						arguments("an oversized header block", rawRequest("GET / HTTP/1.1", "Host: localhost", "X-Padding: " + "a".repeat(LONGER_THAN_A_HEADER_BLOCK_MAY_BE)), 413),
+						arguments("a malformed request line", rawRequest("GET", "Host: localhost"), 400),
+						arguments("a malformed header line", rawRequest("GET / HTTP/1.1", "Host localhost"), 400),
+						arguments("an unreadable content length", rawRequest("GET / HTTP/1.1", "Host: localhost", "Content-Length: abc"), 400));
+	}
+
+	@Test
+	void neitherAnswersNorCountsAnIncompleteHeadTheClientHalfClosed() {
+		RawHttpClient rawClient = new RawHttpClient(server.getPort());
+		String incompleteHead = "GET /" + "a".repeat(LONGER_THAN_A_REQUEST_LINE_MAY_BE) + " HTTP/1.1\r\nHost: localhost\r\n";
+
+		List<String> answers = IntStream.range(0, 2).mapToObj(_ -> rawClient.answerToHalfClosedRequest(incompleteHead)).toList();
+		List<Integer> statuses = IntStream.range(0, 2).mapToObj(_ -> rawClient.statusOf("/favicon.ico")).toList();
+
+		assertThat(answers).containsExactly("", "");
+		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode());
+	}
+
+	private static String rawRequest(String requestLine, String... headerLines) {
+		return requestLine + "\r\n" + String.join("\r\n", headerLines) + "\r\nConnection: close\r\n\r\n";
 	}
 
 	private List<Integer> statusesOfThreeRequestsTo(String path) {

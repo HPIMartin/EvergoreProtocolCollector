@@ -3,7 +3,8 @@ package dev.schoenberg.evergore.protocolParser.rest.filter;
 enum FilterOrder {
 	REQUEST_AUDIT_LOG(1),
 	RATE_LIMIT(2),
-	TOKEN_VALIDATION(3);
+	UNREADABLE_REQUEST(3),
+	TOKEN_VALIDATION(4);
 
 	private final int position;
 

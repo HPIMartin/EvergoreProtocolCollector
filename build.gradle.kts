@@ -34,6 +34,7 @@ dependencies {
 	runtimeOnly("ch.qos.logback:logback-classic")
 	runtimeOnly("org.yaml:snakeyaml")
 
+	testCompileOnly("org.jetbrains:annotations:13.0")
 	testImplementation("io.micronaut.test:micronaut-test-junit5")
 	testImplementation("org.junit.jupiter:junit-jupiter-api")
 	testImplementation("org.junit.jupiter:junit-jupiter-params")

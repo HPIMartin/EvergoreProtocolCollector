@@ -869,10 +869,50 @@ audit filter sits at order 1, ahead of the counter that demonstrably runs) plus 
 built from client IP and user-agent only, pinned literally by `RequestAuditLogFilterTest`. A framework
 upgrade that answers such a target ahead of the filter chain turns that test red.
 
-What the filters really cannot see is a request the **server** answers on its own: an oversized request
-target (5000 characters) is answered **413** and never reaches them, measured 2026-08-14 by three such
-requests in a row not earning a 429. That gap needs a Netty-level seam and is tracked as backlog
-**C10**; `RateLimitFilterTest` pins the current behaviour so an upgrade that changes it shows up.
+A request whose **head the server cannot read** (a request line or header block over Netty's limit, a
+malformed request line or header line, an unreadable `Content-Length`) is rejected by Netty's decoder
+before any filter runs. `HeadLineSlicer` (ahead of the HTTP codec) and `UnreadableHeadReplacer`
+(behind it) turn such a head into a stand-in request (`UnreadableRequest`) that passes the filter chain.
+`UnreadableHeadCustomizer` installs both on every connection that carries the HTTP codec.
+`UnreadableHeadRegistration` registers the customizer.
+
+- the audit log writes its line for it;
+- the rate limit counts it;
+- `UnreadableRequestFilter` (order 3, ahead of the token check) answers it after both;
+- a blocked client gets 429;
+- a head over the limit is answered 413;
+- any other unreadable head is answered 400;
+- the answer's status line says HTTP/1.1;
+- the answer closes the connection;
+- a request pipelined behind a rejected head is not answered;
+- a request pipelined behind a rejected head is not counted;
+- the stand-in never carries the rejected target or its query;
+- no `?token=` reaches the log;
+- no client can send a stand-in, because the filter recognizes the native Netty type;
+- the audit line names the client's address;
+- the audit line names the browser for heads as browsers send them;
+- for some unusual heads the audit line lacks the browser;
+- an incomplete head is not answered until the rescue has exceeded the header budget
+  (`micronaut.server.netty.max-header-size`);
+- an incomplete head is not counted until the rescue has exceeded the header budget;
+- a head the client cuts off by closing or half-closing its side, before the rescue has exceeded the
+  header budget, is not answered;
+- a head the client cuts off by closing or half-closing its side, before the rescue has exceeded the
+  header budget, is not counted;
+- once the rescue has exceeded the header budget, the head is answered without its blank line;
+- once the rescue has exceeded the header budget, the head is counted without its blank line;
+- what the rescue charges to the header budget is pinned by `RecentLinesTest`,
+  `HeaderRescueTest` and `UnreadableHeadRescueTest` ([testing.md](testing.md));
+- a client that never sends the blank line, before the rescue has exceeded the header budget, keeps
+  its connection until `micronaut.server.idle-timeout` closes it;
+- the idle timeout defaults to 5 minutes in Micronaut;
+- the stand-in's headers stay within `micronaut.server.netty.max-header-size`;
+- the handlers split every inbound byte of the connection into one pipeline message per line;
+- known limit: a long rejected request line arriving over several reads can leave the browser out of
+  the audit line;
+- whether it does depends on where the reads split and on the header bytes before the `User-Agent`.
+
+`RateLimitFilterTest` pins the throttling of five such raw shapes ([testing.md](testing.md)).
 
 | Method · Path | Purpose |
 |---|---|
