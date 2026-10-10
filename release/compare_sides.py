@@ -1,6 +1,7 @@
 import json
 from collections import Counter
 
+from candidate_rules import GUILD_FIGURES, guild_figures, member_figures
 from expected_deviations import LISTED_ADDITIONS
 
 LEDGERS = ("bank", "storage")
@@ -25,6 +26,8 @@ def compare(running, candidate):
     findings.extend(
         _overview_differences(_with_derived_figures(running["overview"]), _with_derived_figures(candidate["overview"]))
     )
+    if "exact" in running and "exact" in candidate:
+        findings.extend(_candidate_rounding_differences(candidate))
     findings.extend(_ledger_differences(running["ledgers"], candidate["ledgers"]))
     return Report(findings)
 
@@ -154,3 +157,19 @@ def _storage_value_of(figures):
     if figures["donation"] is None or figures["craftSubsidy"] is None:
         return None
     return figures["storageDeposited"] + figures["donation"] - figures["craftSubsidy"] - figures["storageWithdrawn"]
+
+
+def _candidate_rounding_differences(candidate):
+    overview = candidate["overview"]
+    exact = candidate["exact"]
+    stored_in_served_order = [exact.get(row["avatar"], {}) for row in overview["items"]]
+    for row, stored in zip(overview["items"], stored_in_served_order):
+        expected = member_figures(stored) or {figure: None for figure in GUILD_FIGURES}
+        yield from _rounding_differences(row["avatar"], row, expected)
+    yield from _rounding_differences("totals", overview["totals"], guild_figures(stored_in_served_order))
+
+
+def _rounding_differences(scope, shown, expected):
+    for figure, value in expected.items():
+        if figure in shown and shown[figure] != value:
+            yield f"{scope}: candidate serves {figure} {shown[figure]!r}, its exact sums yield {value!r}"
