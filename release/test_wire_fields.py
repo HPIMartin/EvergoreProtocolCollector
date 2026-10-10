@@ -1,11 +1,7 @@
 import unittest
 
 from compare_sides import compare
-from sample_sides import admin, row, side, totals
-
-
-def without(figures, *names):
-    return {key: value for key, value in figures.items() if key not in names}
+from sample_sides import admin, row, side, totals, without
 
 
 def entry(**extra):
