@@ -48,6 +48,19 @@ class LastBitDrift(unittest.TestCase):
         self.assertIn(LAST_BIT, {a.rule.name for a in tested.accepted})
         self.assertEqual({"storageDeposited", "balance"}, {a.figure for a in tested.accepted if a.scope == "Alice"})
 
+    def test_a_drift_that_moves_no_shown_figure_leaves_a_guild_rounding_difference_to_the_rounding_rule(self):
+        tenths = {**RUNNING, "storage_placement": 0.4}
+        running = running_side_of({"Alice": tenths, "Bob": tenths})
+        candidate = candidate_side_of({"Alice": {**tenths, "storage_placement": drifted(0.4, 1)}, "Bob": tenths})
+
+        tested = compare(running, candidate)
+
+        self.assertEqual([], tested.findings)
+        self.assertEqual(
+            ["rounded once, halves away from zero"],
+            [a.rule.name for a in tested.accepted if a.scope == "totals" and a.figure == "storageDeposited"],
+        )
+
     def test_a_drift_beyond_four_ulp_is_a_finding(self):
         running, candidate = sides(storage_placement=drifted(RUNNING["storage_placement"], 5))
 
