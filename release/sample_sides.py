@@ -85,13 +85,13 @@ def admin(**fields):
     return base
 
 
-def storage_entry(name, transfer_type="DEPOSIT"):
+def storage_entry(name, transfer_type="DEPOSIT", quantity=1, quality=0):
     return {
         "timestamp": "2026-01-01T12:00:00Z",
         "avatar": "Alice",
-        "quantity": 1,
+        "quantity": quantity,
         "name": name,
-        "quality": 0,
+        "quality": quality,
         "transferType": transfer_type,
     }
 

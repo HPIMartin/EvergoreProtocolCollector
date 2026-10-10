@@ -332,7 +332,10 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
   storage ledger, `/api/v1/admin/status`, and each copy's exact sums from `metaInformation`
   (read-only, after both sides are stopped).
   - The exact sums couple the script to the internal meta key names (decision 2026-10-10); in
-    return rounding, ammunition and last-bit drift are exact rules, not tolerances.
+    return rounding, the ammunition credit and last-bit drift are rules over the exact values: the
+    ammunition delta is recomputed from the member's deposits and may differ from the stored one
+    only by float accumulation over that member's entries (`n + 4` ulp), any other drift by at most
+    4 ulp.
 - **What it compares:**
   - that both sides recomputed in this run: a side without `lastSuccessfulRecompute`, or a member
     whose `sums_recomputed_at_` in that side's copy predates the run's start, is a finding; a member
