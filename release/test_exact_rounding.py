@@ -48,7 +48,7 @@ class CandidateRounding(unittest.TestCase):
 
         tested = compare(running, candidate)
 
-        found = [f for f in tested.findings if "storageDeposited" in f]
+        found = [f for f in tested.findings if "candidate serves storageDeposited" in f]
         self.assertEqual(1, len(found))
         for expected in ("Alice", "candidate", "10", "11"):
             self.assertIn(expected, found[0])
@@ -58,7 +58,7 @@ class CandidateRounding(unittest.TestCase):
 
         tested = compare(running, candidate)
 
-        found = [f for f in tested.findings if "totals" in f and "net" in f]
+        found = [f for f in tested.findings if "totals: candidate serves net" in f]
         self.assertEqual(1, len(found))
         for expected in ("candidate", "79", "78"):
             self.assertIn(expected, found[0])

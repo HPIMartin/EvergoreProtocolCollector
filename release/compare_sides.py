@@ -2,15 +2,18 @@ import json
 from collections import Counter
 
 from candidate_rules import GUILD_FIGURES, guild_figures, member_figures
+from derived_figures import with_derived_figures
 from expected_deviations import LISTED_ADDITIONS
+from shown_figures import Accepted, differences, exact_differences, explanation, running_rule_differences, text_of
 
 LEDGERS = ("bank", "storage")
 ADMIN_NAME_LISTS = ("unknownItemNames", "failedAvatarNames")
 
 
 class Report:
-    def __init__(self, findings):
+    def __init__(self, findings, accepted):
         self.findings = findings
+        self.accepted = accepted
 
     @property
     def exit_code(self):
@@ -19,17 +22,33 @@ class Report:
 
 def compare(running, candidate):
     findings = []
+    accepted = []
     findings.extend(_field_set_differences(running, candidate))
     findings.extend(_admin_differences(running["admin"], candidate["admin"]))
     findings.extend(_total_count_differences("overview", running["overview"], candidate["overview"]))
     findings.extend(_member_differences(running["overview"], candidate["overview"]))
-    findings.extend(
-        _overview_differences(_with_derived_figures(running["overview"]), _with_derived_figures(candidate["overview"]))
-    )
+    shown = differences(with_derived_figures(running["overview"]), with_derived_figures(candidate["overview"]))
     if "exact" in running and "exact" in candidate:
+        differing = exact_differences(running, candidate)
+        findings.extend(_exact_differences(differing))
+        findings.extend(running_rule_differences(running))
         findings.extend(_candidate_rounding_differences(candidate))
+    else:
+        differing = None
+    for difference in shown:
+        rule = None if differing is None else explanation(difference, differing)
+        if rule is None:
+            findings.append(text_of(difference))
+        else:
+            accepted.append(Accepted(rule, *difference))
     findings.extend(_ledger_differences(running["ledgers"], candidate["ledgers"]))
-    return Report(findings)
+    return Report(findings, accepted)
+
+
+def _exact_differences(differing):
+    for member, keys in differing.items():
+        for key, (running, candidate) in keys.items():
+            yield f"{member}: exact {key} differs, running {running!r}, candidate {candidate!r}"
 
 
 def _ledger_differences(running, candidate):
@@ -68,21 +87,6 @@ def _member_differences(running, candidate):
         yield f"{name}: listed by the running side only"
     for name in sorted(candidate_names - running_names):
         yield f"{name}: listed by the candidate side only"
-
-
-def _overview_differences(running, candidate):
-    candidate_rows = {row["avatar"]: row for row in candidate["items"]}
-    for running_row in running["items"]:
-        candidate_row = candidate_rows.get(running_row["avatar"])
-        if candidate_row is not None:
-            yield from _figure_differences(running_row["avatar"], running_row, candidate_row)
-    yield from _figure_differences("totals", running["totals"], candidate["totals"])
-
-
-def _figure_differences(scope, running, candidate):
-    for figure in running:
-        if figure in candidate and figure != "avatar" and running[figure] != candidate[figure]:
-            yield f"{scope}: {figure} differs, running {running[figure]!r}, candidate {candidate[figure]!r}"
 
 
 def _field_set_differences(running, candidate):
@@ -124,39 +128,6 @@ def _admin_differences(running, candidate):
                 yield f"admin: {field} lists {name} in the running side only"
             for name in sorted(only_candidate.elements()):
                 yield f"admin: {field} lists {name} in the candidate side only"
-
-
-def _with_derived_figures(overview):
-    return {
-        **overview,
-        "items": [_with_balance(row) for row in overview["items"]],
-        "totals": _with_guild_figures(overview["totals"]),
-    }
-
-
-def _with_balance(figures):
-    if "balance" in figures:
-        return figures
-    return {**figures, "balance": _balance_of(figures)}
-
-
-def _with_guild_figures(totals):
-    derived = _with_balance(totals)
-    if "storageValue" in derived:
-        return derived
-    return {**derived, "storageValue": _storage_value_of(totals)}
-
-
-def _balance_of(figures):
-    if figures["donation"] is None or figures["craftSubsidy"] is None:
-        return None
-    return figures["net"] + figures["donation"] - figures["craftSubsidy"]
-
-
-def _storage_value_of(figures):
-    if figures["donation"] is None or figures["craftSubsidy"] is None:
-        return None
-    return figures["storageDeposited"] + figures["donation"] - figures["craftSubsidy"] - figures["storageWithdrawn"]
 
 
 def _candidate_rounding_differences(candidate):
