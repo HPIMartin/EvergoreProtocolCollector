@@ -157,6 +157,15 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
   the app token's signature, claims and encoding, and every refusal.
 - **The agent container is built by hand;** a reproducible build from `.devcontainer/` is a strand
   of its own. A commit it has not pushed lives only in that container.
+- **The agent seat may offer read-only snapshots of the production database** (author decision
+  2026-10-10, [open-questions.md](../open-questions.md)): where `EPC_SNAPSHOT_DIR` is set, it holds
+  them as `epc-<UTC yyyymmdd-hhmmss>.sqlite`, the newest three, with `latest.sqlite` pointing at the
+  newest, on a read-only mount; elsewhere the variable is unset and there are none. Open one
+  read-only as `jdbc:sqlite:file:<dir>/latest.sqlite?mode=ro&immutable=1`, or copy it into the
+  worktree's `build/` before anything writes to it (a migration check, the app, a test on real
+  data). Every result names the snapshot it used. A snapshot, or data drawn from one, is never
+  committed or uploaded; a pull request quotes only the small excerpts a finding needs. An agent
+  cannot take a snapshot: when the newest is too old for the task, it says so and asks the author.
 
 ## Rule for all contributors
 
