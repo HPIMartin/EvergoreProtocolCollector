@@ -57,7 +57,9 @@ contribution metrics, automating a hand-maintained Google Sheet.
 Applies to every `*.md` in the repo (root, `docs/`, `.claude/`). Findings cite rule IDs.
 
 - **DOC-1 Terse:** bullets and tables over paragraphs; one fact per bullet; no filler, no restating
-  context the reader already has. Prose only where a causal chain genuinely needs it.
+  context the reader already has. Prose only where a causal chain genuinely needs it. Read strictly:
+  every bullet and every sub-bullet holds one fact, and a fact's own short reason stays in its bullet
+  only when it is no second fact.
 - **DOC-2 Keep the why:** a rule carries at most a one-line rationale; never strip it entirely
   (rules without a why get misapplied), and the rationale has to be true: a worked example cited in
   a doc is checked against the code before it is written down.
