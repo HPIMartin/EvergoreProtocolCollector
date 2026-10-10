@@ -725,9 +725,10 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
 
    - **A rollback moves two things back, and they are separate decisions.** The *image* going back
      is safe against a database this release has migrated (see "Schema migrations" below). The
-     *database* going back puts the schema to what it was before the `V2` rebuild and discards every
-     row written since the copy was taken, and a later deploy of this release runs `V2` over the
-     restored file again. The script prints both halves and will not act without `--yes`.
+     *database* going back puts the schema to what the backup holds, for `0.3.0` back to `V2`
+     without the two ledger indexes, and discards every row written since the copy was taken; a
+     later deploy of this release runs `V3` over the restored file again. The script prints both
+     halves for the step from `0.3.0` to `0.2.0` and will not act without `--yes`.
    - Restore the backup **before** starting the old image: the new version may have written entries
      or meta sums the old one does not expect, and that write is not reversible.
    - The script copies the database it is about to overwrite to
@@ -798,6 +799,12 @@ ledger and touches no row. What this means for a deploy:
   in between.
 - Rolling back to a pre-Flyway image is safe: the old code ignores the `flyway_schema_history` table
   and the `NOT NULL` constraints only reject writes it never makes.
+- Rolling back to `0.2.0` over a database at `V3` is safe: its Flyway, the same version and
+  configuration, ignores an applied migration it has no file for, logs `Schema "main" has a version
+  (3) that is newer than the latest available migration (2) !` and starts. Proven 2026-10-10:
+  `v0.2.0`'s `ProductionSnapshotRecomputeCheck` booted the real context over a `V3` copy of
+  `epc-20261010-214455.sqlite`, passed, and recomputed and wrote the meta sums, while
+  `flyway_schema_history` kept its four rows and both indexes stayed.
 - The first boot migrates from whichever thread gets there first, the scheduled collector or an
   early request; `migrate()` serializes them, so the rebuild runs once and the other threads wait.
 - If `V2` does refuse, the log names the column. Find the rows on the backup with
