@@ -24,7 +24,7 @@ ADMIN_NAME_LISTS = ("unknownItemNames", "failedAvatarNames")
 def compare(running, candidate, started=None):
     non_finite = list(_non_finite_sums("running", running)) + list(_non_finite_sums("candidate", candidate))
     if non_finite:
-        return Report(non_finite, [], [], Counter())
+        return Report(non_finite, [], [])
     findings = []
     accepted = []
     field_findings, added_fields = _field_set_differences(running, candidate)
@@ -54,11 +54,14 @@ def compare(running, candidate, started=None):
             findings.append(text_of(difference))
         accepted.extend(Accepted(rule, *difference) for rule in rules)
     findings.extend(_ledger_differences(running["ledgers"], candidate["ledgers"]))
-    uses = Counter(a.rule for a in accepted)
-    uses[ADDITIONS] += len(added_fields)
-    for keys in (explained or {}).values():
-        uses.update(keys.values())
-    return Report(findings, accepted, _uncompared_guild_figures(accepted, candidate), uses)
+    unshown = [
+        Accepted(ADDITIONS, scope, f"field {field} served by the candidate side only", None, None)
+        for scope, field in added_fields
+    ]
+    for member, keys in (explained or {}).items():
+        for key, rule in keys.items():
+            unshown.append(Accepted(rule, member, f"exact {key}", *differing[member][key]))
+    return Report(findings, accepted, _uncompared_guild_figures(accepted, candidate), unshown)
 
 
 def _non_finite_sums(label, side):
