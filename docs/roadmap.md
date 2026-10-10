@@ -24,7 +24,7 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M15 | 0.3.0 reaches the guild | the release (F14), with the scripted comparison (B19) | **First** (author decision 2026-10-10): production runs `0.2.0` while everything since landed on `main` |
+| M15 | 0.3.0 reaches the guild | the release (F14), with the scripted comparison | **First** (author decision 2026-10-10): production runs `0.2.0` while everything since landed on `main` |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, opening balance, explanation page with the trader's figure (E18, E19, E20); the note of a row not yet computed (E36) and the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
 | M9 | Clear the last bottleneck | D24 with F12, F10; the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
 | M10 | What the bottlenecks release | B36→D25 with D9→D18, D22→D14 | Measured request-path cost and the timezone fix at its root |
@@ -37,9 +37,9 @@
 Slice: what landed since 0.2.0 runs on the home server, through a release gate that compares the
 figures the valuation changes move.
 
-- [ ] A script compares every figure the overview and the ledgers show, per member, between the
+- [x] A script compares every figure the overview and the ledgers show, per member, between the
       running version and the candidate on the same data, and reports any difference no list
-      names (backlog B19).
+      names.
 - [x] The whole-ledger sort is measured on the 2026-10-10 snapshot, the author has set the bound
       for the deepest page, and the reads on Netty's event loop are decided for or against this
       release (backlog F11).

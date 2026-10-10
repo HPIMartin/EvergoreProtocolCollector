@@ -74,7 +74,7 @@ def admin(**fields):
         "lastUpdated": None,
         "lastSuccessfulScrape": None,
         "lastScrapeFailure": None,
-        "lastSuccessfulRecompute": None,
+        "lastSuccessfulRecompute": "2026-10-10T08:01:00Z",
         "lastRecomputeFailure": None,
         "unknownItemNames": [],
         "failedAvatarNames": [],
