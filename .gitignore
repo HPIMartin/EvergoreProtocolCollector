@@ -26,6 +26,7 @@ CLAUDE.local.md
 /.devcontainer/.claude-home/*
 /logs.txt
 /database/
+__pycache__/
 
 # Secrets, keystores, and machine-specific helper scripts (never commit — CLAUDE.md hard rule)
 *.local.*
