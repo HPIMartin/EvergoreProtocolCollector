@@ -364,8 +364,9 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
 - **The script's own proof:** `sh release/self-test` runs the unit tests and the driver tests on a
   stub distribution (under a minute, synthetic data only); `pre-commit` runs it for every commit that
   touches `release/`.
-- **The report** lists every finding, then per expected-deviation rule how often it applied and
-  each shown figure it accepted with both values, then the rules that did not occur.
+- **The report** lists every finding, then per expected-deviation rule each acceptance and their
+  count (a shown figure or an exact sum with both values, a wire field only the candidate serves by
+  name), then the rules that did not occur.
 
 ### Parity evidence on record
 

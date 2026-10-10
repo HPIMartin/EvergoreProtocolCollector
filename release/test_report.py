@@ -1,4 +1,5 @@
 import math
+import re
 import unittest
 
 from compare_sides import compare
@@ -70,6 +71,31 @@ class Rendering(unittest.TestCase):
 
         unused = tested.split("Listed rules that did not occur:")[1]
         self.assertNotIn("last-bit drift of an exact storage sum", unused)
+
+    def test_an_exact_sum_a_rule_explained_without_a_shown_difference_is_listed_with_both_values(self):
+        drifted = {**STORED, "storage_withdrawl": math.nextafter(2.5, 3.0)}
+        running, candidate = running_side_of({"Alice": STORED}), candidate_side_of({"Alice": drifted})
+
+        tested = compare(running, candidate).render()
+
+        under_rule = tested.split("last-bit drift of an exact storage sum (decision 2026-09-27)")[1].split("Listed rules")[0]
+        self.assertIn(f"    - Alice: exact storage_withdrawl, running 2.5, candidate {drifted['storage_withdrawl']!r}", under_rule)
+
+    def test_the_count_of_every_rule_equals_the_number_of_lines_listed_under_it(self):
+        for name, sides in (("drifted", drifted_sides()), ("identical", identical_sides())):
+            with self.subTest(sides=name):
+                tested = compare(*sides).render()
+
+                accepted = tested.split("Accepted deviations:")[1].split("Listed rules that did not occur:")[0]
+                counted = 0
+                lines = 0
+                for line in accepted.splitlines():
+                    if re.match(r"  - .*: \d+ accepted$", line):
+                        counted += int(line.rsplit(": ", 1)[1].split()[0])
+                    elif line.startswith("    - "):
+                        lines += 1
+                self.assertGreater(counted, 0)
+                self.assertEqual(counted, lines)
 
     def test_a_rule_that_explained_an_exact_sum_without_a_shown_difference_counts_as_used(self):
         drifted = {**STORED, "storage_donation": math.nextafter(0.5, 1.0)}
