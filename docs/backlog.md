@@ -48,14 +48,24 @@ blank line between two rows splits the table mid-body (DOC-11).
   rows carry rather than against the reader's clock ([frontend.md](knowledge-base/frontend.md)).
 - Everything else about the built state: the [knowledge base](knowledge-base/README.md).
 
-**Next, in order** (decided 2026-09-27 after the scenario review: three lanes, landings stay
-serialized)
+**Next, in order** (decided 2026-10-10 on the plan of 2026-10-09: each wave starts on an event the
+author can observe, at most four strands at once, landings stay serialized)
 
-1. Specification: the corrected behaviors by cluster (**C10**).
-2. Numbers: the opening balance (**E18**), the explanation page (**E19**, carrying **E20**), the
-   baseline of the scripted 1:1 value comparison (**B19**) and the SQL pre-grouping (**D18**).
-3. Persistence, released by the repository unification: **D14** (retiring **D22**) and **D9**;
-   **D18**; then **E12** with **E13** on top.
+1. Now: the oversized request target (**C10**), which closes the specification milestone, and the
+   scripted value comparison (**B19**).
+2. The 0.3.0 release preparation (**F14**): the deep ledger page measured (**E25**), the event-loop
+   question decided (**F11**), the V3 migration checked, the rollback text fixed, 0.3.0 declared.
+3. Once both release strands landed: 0.3.0 cut and deployed by the author (**F14**), beside the
+   permission facts (**G52**).
+4. Once 0.3.0 runs: the gate mechanics (**G51** with **G30**, **G32**, **G40**, **G48**) and the
+   opening balance (**E18**), which starts with where each member's opening figure comes from.
+5. Once the gate mechanics landed: CI with a named required check (**A4**).
+
+Later: the explanation page (**E19**, carrying **E20**); the atomic ingest (**D24** with **F12**,
+**F10**); **B36** before the fixed-point sums (**D25**, with **D9**) before the SQL pre-grouping
+(**D18**); the timestamps as instants (**D14**, retiring **D22**); the cell note (**E36**) and the
+reader's place (**E37**); splitting `MemberBrowser` (**G23**) before the opening balance writes its
+steps.
 
 The scripted 1:1 value comparison still comes before the Micronaut 5 jump (**B19**, **H9**), which
 also waits on 1:1 being re-proven; the remote browser service and the integration-test split

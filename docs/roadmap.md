@@ -17,19 +17,21 @@
 > **Re-cut 2026-09-27** (author go on the plan after the scenario review, see open-questions.md):
 > the specification catch-up (M13) comes first and runs beside the other lanes; the row rounding
 > joins M8, ahead of the explanation page.
+> **Re-cut 2026-10-10** (author go on the plan of 2026-10-09, see open-questions.md): 0.3.0 is
+> released first, beside M13 (M15); M7 is done and removed; M5 is struck, as no sheet covers the
+> time after July 2022 and the guild hears nothing before 1.0.
 
 ## Order
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
 | M13 | The specification runs | the corrected behaviors (C10) | Task 0 of the adopted process: every later strand builds on executable scenarios, and condensing before the step definitions keeps their steps from being written twice |
-| M5 | Overview truth | author steps only | Closing out; the code landed, two restated author checks remain |
-| M7 | The overview states the guild's actual position | the catalog closed against the game, the release run (the stone renames, the deploy script) | **The `0.2.0` cut.** The most visible defect was the total row saying the opposite of the truth; the catalog work joins because the release publishes `Gildenspende` for the first time |
-| M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, opening balance, explanation page with the trader's figure (E18, E19, E20) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
-| M9 | Clear the last bottleneck | D24 | The transactional ingest rests on the unified repositories, which every later read method needed first |
-| M10 | What the bottlenecks release | D18, D22→D14, D9 | Measured request-path cost and the timezone fix at its root |
-| M11 | Product build-out | E12→E13, E9, E3, E6, E27 | E12 inherits D18's query shape, so it follows it |
-| M12 | Ops, security & environment | F1, H11, C1, C8, C10, C11→E28, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
+| M15 | 0.3.0 reaches the guild | the release (F14), with the scripted comparison (B19), the deep ledger page (E25) and the event-loop question (F11) | **First, beside M13** (author decision 2026-10-10): production runs `0.2.0` while everything since landed on `main`, and the last item of M13 changes nothing in the release build |
+| M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, opening balance, explanation page with the trader's figure (E18, E19, E20); the note of a row not yet computed (E36) and the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
+| M9 | Clear the last bottleneck | D24 with F12, F10 | The transactional ingest rests on the unified repositories, which every later read method needed first |
+| M10 | What the bottlenecks release | B36→D25 with D9→D18, D22→D14 | Measured request-path cost and the timezone fix at its root |
+| M11 | Product build-out | E12→E13, E9, E3, E6, E27, E30, E37, F13 | E12 inherits D18's query shape, so it follows it |
+| M12 | Ops, security & environment | F1, H11, C1, C8, A4, C11→E28, E17, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
 | M14 | The guild's skills | E31→E32→E33, E34 | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open, D-16). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
 
 ## M13: The specification runs
@@ -45,42 +47,20 @@ scenario gate that reads as the stakeholder guards every new one.
       operator over HTTP and JSON, and the unclear ones are settled.
 - [ ] Each corrected behavior is green and armed (backlog C10).
 
-## M5: Overview truth
+## M15: 0.3.0 reaches the guild
 
-Slice: the overview answers "what did this member contribute" completely, instead of showing gold
-only. **Code complete; only author steps remain.**
+Slice: what landed since 0.2.0 runs on the home server, through a release gate that compares the
+figures the valuation changes move.
 
-- [ ] The guild is told the valuation rule and what the four header figures mean (author step,
-      restated 2026-09-11: it supersedes the narrower announcement of the corrected storage sums
-      decided 2026-09-02, because the rule itself changed afterwards).
-- [ ] On a real sample, the columns that **must** match the sheet do (bank in and out, storage
-      withdrawal), and the two deliberate divergences on the deposit column do **not** (author
-      check, restated 2026-09-11: the software diverges from the sheet by decision, so the old
-      "values match the sheet" wording could never be ticked).
-
-## M7: The overview states the guild's actual position
-
-Slice: the overview stops adding measured gold to modelled material, the roster puts the members who
-matter above the fold, and the release goes out driven rather than typed. **This is `0.2.0`.**
-
-- [x] What the guild keeps of a member's deposits is named rather than hidden inside a number shaped
-      like a balance: a stat header of four figures (`Gildenbank`, `Gildenlagerwert`,
-      `Gildenspende`, `Handwerkssubventionen`) plus a `Nach Abzügen` / `Vor Abzügen` switch on the
-      table's sixth column, leaving its column count and density untouched. It carried the valuation
-      rule with it, from the recipe-based stand-in to the guild's announced category rule
-      (decided 2026-09-10).
-- [x] The roster splits into an active and a dormant table over one column definition, cut against
-      the newest activity the loaded rows themselves carry and never against the reader's clock, so a
-      stalled collection cannot drop the whole guild into "dormant" (decided 2026-09-11).
-- [x] `Marmor`, `Granit` and `Schiefer` carry a value under the names the game uses, three catalog
-      entries renamed (decided 2026-09-11): the release publishes
-      `Gildenspende` for the first time and it is measurably too low without them
-      ([testing.md](knowledge-base/testing.md)).
-- [x] A committed deploy script drives a full deploy and rollback over ssh, carrying every check that
-      caught the `0.1.0` defects, with a self-test that fails each of them against a faked bad state.
-      It drove the `0.2.0` release, its rollback and the re-deploy on the home server (2026-09-21),
-      so `0.2.0` is the first deploy nobody typed by hand
-      ([build-run-deploy.md](knowledge-base/build-run-deploy.md)).
+- [ ] A script compares every figure the overview and the ledgers show, per member, between the
+      running version and the candidate on the same data, and reports any difference no list
+      names (backlog B19).
+- [ ] The whole-ledger sort is measured on the 2026-10-08 snapshot, the author has set the bound
+      for the deepest page, and the reads on Netty's event loop are decided for or against this
+      release (backlog E25, F11).
+- [ ] 0.3.0 is deployed and tagged: the V3 migration checked on a snapshot copy, the rollback text
+      fitting the step back to 0.2.0, the release recorded as running (backlog F14). The guild is
+      not told before 1.0.
 
 ## M8: The numbers hold up
 
@@ -103,6 +83,10 @@ cannot decide it, and a member can follow how his own row comes about.
 - [x] A member cycling trader goods through the storage is named with the item and the overlapping
       quantity, and a test proves the warning stays silent for a crafter who withdraws material and
       deposits the product.
+- [ ] The note under "Vor Abzügen" of a row not yet computed names that state, its scenario
+      reconfirmed by the author (backlog E36).
+- [ ] The consent-banner text is purged from the ledger and the path that let it in is closed
+      (backlog F8).
 - [ ] One opening entry per avatar books the counted stock at a chosen instant, marked as such on the
       wire and in the view, and the recomputed sums equal that stock (backlog E18).
 - [ ] A page reachable from the overview explains every header figure and every credit tier with one
@@ -121,6 +105,8 @@ Slice: a scrape that aborts midway leaves both ledgers where they were.
       cross-entity constant use.
 - [ ] A scrape that aborts after the bank step leaves neither ledger table changed (backlog D24).
       It needs a transaction spanning both repositories, which is why it follows the unification.
+- [ ] A commit SQLite refuses leaves no pooled connection inside an open transaction, and a
+      scheduled job run does not outlive the closed context (backlog F12, F10).
 
 ## M10: What the bottlenecks release
 
@@ -129,11 +115,16 @@ Slice: the measured costs come down and the timezone hazard is fixed at its root
 - [x] Both ledgers carry an index on `(avatar, timeStamp)`, reaching an existing database through a
       migration; the query plans show `SEARCH … USING INDEX`. Two of the three affected queries sit
       in the request path.
+- [ ] A stored meta value that cannot be read costs only its own avatar, on the overview and in the
+      recompute, before any migration of the meta store meets one (backlog B36).
+- [ ] The value sums are exact fixed-point gold, converted by one migration (backlog D25).
 - [ ] The recompute reads pre-grouped sums instead of loading whole ledgers into the JVM; per-avatar
-      values stay identical on the production snapshot (backlog D18).
+      values stay identical on the production snapshot, and the round-trip detection keeps the
+      per-entry rows it needs (backlog D18).
 - [ ] Timestamps and `last_updated` round-trip timezone-independently as instants (backlog D14),
       retiring the interim startup guard (backlog D22).
-- [ ] The `withdrawl` → `withdrawal` rename runs as a migration, values preserved 1:1 (backlog D9).
+- [ ] The `withdrawl` → `withdrawal` rename runs as a migration, values preserved 1:1, in the same
+      migration as the fixed-point sums (backlog D9).
 
 ## M11: Product build-out
 
@@ -152,6 +143,10 @@ its due.
 - [ ] History / time-series per avatar (backlog E6).
 - [ ] A load failure and a dead link each show a picture of their own, the "link dead" among
       them, before 1.0 (backlog E27).
+- [ ] A member whose suspected round trips recur is flagged (backlog E30).
+- [ ] A ledger keeps the reader's place when it reloads (backlog E37).
+- [ ] Names sort with one punctuation order in Java and in the SPA, or the difference is accepted
+      by decision (backlog F13).
 
 ## M12: Ops, security & environment
 
@@ -159,12 +154,16 @@ Slice: the stand deploys, scans and authenticates the way a showcase should, and
 reaches its current major.
 
 - [ ] The bundled webdriver binaries and the local-browser machinery are gone (backlog F1); the
-      author's history rewrite follows, once **no** worktree is open.
+      author's history rewrite follows, once **no** worktree is open, no pushed `claude/` branch or
+      open pull request remains, both machines clone afresh, and the author moves the protected tags
+      `v0.1.0` and `v0.2.0`.
 - [ ] Dependabot covers all three ecosystems and one refresh pass has run (backlog H11).
-- [ ] `Configuration` is real and immutable (C1); `vulnScan` is at zero and gated (C8); every
-      request is counted and logged whatever its target looks like (C10).
+- [ ] `Configuration` is real and immutable (C1); `vulnScan` is at zero and gated (C8).
+- [ ] Every pull request head is built by CI, and the landing refuses a head without its green named
+      check (backlog A4), after the gate mechanics.
 - [ ] Auth, session and rate limiting move to JWT, so no credential travels in a URL (backlog C11).
 - [ ] The admin page leads to the members it names, on the roles above (backlog E28).
+- [ ] The admin page offers a manual scrape and recompute, beside the JWT move (backlog E17).
 - [ ] A `selenium/standalone-firefox` service backs an integration test (H2), and the
       server-booting tests split into their own Gradle set (H6).
 - [ ] Micronaut 5, endpoints 1:1 against the prod snapshot (H9). Precondition: the nets above.
@@ -191,8 +190,12 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   which nothing enforces today (B24); agent-environment polish, including the shared probe result directory that makes
   concurrent falsifier runs flaky and the two worktree costs folded in from the dissolved
   build-performance analysis (G11); and the SessionStart hook that injects the lessons
-  deterministically (G10). The learnings repeatedly show a session forgetting a written rule.
-- **Test-suite hygiene:** the scripted 1:1 value comparison (B19), repository tests (B4), style
+  deterministically (G10). The learnings repeatedly show a session forgetting a written rule. Also
+  the build I/O off the workspace disk (H13), and the gate and agent tool rows (G21 to G50), pulled
+  when a gate meets one; first the gate mechanics (G51 with G30, G32, G40, G48) and the permission
+  facts (G52).
+- **Test-suite hygiene:** the browser's first-launch race (B35), the test debt two feature gates
+  left (B33, B34, B38), the headline shapes the parser still misreads (B39, B40, B41), repository tests (B4), style
   alignment (B8), the shared boot fixture (B18), the parser residual (B22), deterministic
   fixture ids (B23), the unexplained load-sensitive failure (B20), AssertJ in `SmokeTest` (B7).
 - **Docs & code hygiene:** KB in lockstep with code (G3), KB accuracy sweep (G18), the parser
@@ -205,8 +208,6 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
 
 Kept in the backlog with their rationale, not deleted; revisit only on a new reason.
 
-- **A4** CI (GitHub Actions) — local-only deploy, no shared PRs to guard (already deprioritized
-  2026-06-15).
 - **G6** static-analysis / Sonar gate — waits on a condition that is not arriving.
 - **F4** multi-guild / multi-world and **F5** public read-only API — speculative: there is one
   guild and no second consumer.
