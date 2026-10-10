@@ -255,8 +255,9 @@ command) inside guardrails. Two files:
   either way.
 - **A landing is never an instruction to the agent.** It runs only through the owner's
   `/land <sha>` comment ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"); a go
-  given in chat is answered with the line `/land <tip>` and the pull request's link, for the
-  author to post.
+  given in chat is answered, on the agent seat, with the line `/land <tip>` and the pull request's
+  link for the author to post, and on a local machine with `git push origin <tip>:main` for the
+  author to run.
 - **No mechanism enforces this**, which is the point of the deny floor above: the plain forms of
   `git reset`, `git clean` and `git branch -D`, `rm`, secret reads and the common spellings of a
   push to `main` stay denied, so a judgment that fails meets a wall there and the auto-mode
@@ -280,11 +281,13 @@ command) inside guardrails. Two files:
 - Nothing else belongs in the statement: no `git` prefix, no branch names, no arrows. The two SHAs
   and the two dots. The worktree identity (branch and absolute path) stands beside it as its own
   line (handbook §7).
-- **The pull request's link stands on a line of its own** (author decision 2026-10-07), never inside
-  the range statement: the pull request is where the author reads the diff on any device and posts
-  `/land <tip>`.
-- **The branch is pushed and its pull request open before the hand-off**, under the name the
-  identity line gives (`claude/<topic>`), so the author can `git fetch` and review it in GitLens, or
-  open the link, on any machine.
+- **On the agent seat, the pull request's link stands on a line of its own** (author decision
+  2026-10-07), never inside the range statement: the pull request is where the author reads the
+  diff on any device and posts `/land <tip>`.
+- **On the agent seat the branch is pushed and its pull request open before the hand-off**, under
+  the name the identity line gives (`claude/<topic>`), so the author can `git fetch` and review it
+  in GitLens, or open the link, on any machine. On a local machine the branch stays local and
+  unpushed (handbook §7): the hand-off is the range statement and the identity line, which the
+  author opens in GitLens on the same checkout.
 - At author gate 1 the artifact under review is the `.feature` itself; the range then covers only
   the commit that adds it.

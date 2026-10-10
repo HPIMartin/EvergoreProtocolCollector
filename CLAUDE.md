@@ -3,7 +3,7 @@
 > Auto-loaded by Claude Code at the start of every session. This is a **thin wrapper**: the rules live
 > in the knowledge base (the [single source of truth](docs/knowledge-base/README.md)) and this file
 > only points to them and adds Claude-Code mechanics. **Based on
-> [`agent-entry-template`](docs/knowledge-base/agent-entry-template.md) version: 9.**
+> [`agent-entry-template`](docs/knowledge-base/agent-entry-template.md) version: 10.**
 > At session start, quick-check that the SHARED section below still matches the template (re-sync on a
 > version bump).
 
@@ -39,10 +39,11 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
   present-tense-verb message (optional `[doc]` tag) yourself and commit; no confirmation round.
   Every change on a `claude/<topic>` branch in its own worktree, cut from a freshly synced
   `main` → rebase → review the rebased tip → the author lands it on `origin/main`.
-- **Pushing** → handbook §7. Every strand is pushed as `claude/<topic>` and opened as a pull
-  request; an agent pushes only its own, forces only with `--force-with-lease`, never pushes a
-  `[wip]` commit, and after a landing removes its worktree and the local and remote `claude/`
-  branch itself. Domain decisions stay questions to the author.
+- **Pushing** → handbook §7. On the agent seat every strand is pushed as `claude/<topic>` and
+  opened as a pull request; on a local machine it stays a local branch in its worktree and is never
+  pushed. An agent pushes only its own, forces only with `--force-with-lease`, never pushes a
+  `[wip]` commit, and after a landing removes its worktree and its `claude/` branch itself.
+  Domain decisions stay questions to the author.
 - **Protected branch: `main`; tags are protected too** → handbook §7. No agent moves either in any
   form (a push, a merged pull request, an API call, a `/land` comment), and no commit is made on
   `main`; only the author lands a reviewed tip on `origin/main`, as a fast-forward: a `/land <sha>`
@@ -75,8 +76,8 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
 - **Ask, don't guess:** author decisions get multiple-choice options (recommended first), recorded in
   [`docs/open-questions.md`](docs/open-questions.md).
 - **Handing the author a review:** every review request carries the compare range, `<tip>..<base>`
-  and nothing else in that statement, and on its own line the link to the strand's pull request
-  → working-with-ai-agents.md.
+  and nothing else in that statement, the branch and the worktree's absolute path, and on the
+  agent seat on its own line the link to the strand's pull request → working-with-ai-agents.md.
 - **Context & token hygiene** (section-scoped reads, no re-reads, batched tool calls, short focused
   sessions) → working-with-ai-agents.md.
 

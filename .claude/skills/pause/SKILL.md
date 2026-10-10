@@ -23,8 +23,8 @@ running subagent tasks to complete, but never abort them either.
    - `git worktree list` — note every in-flight strand (worktree path + branch) a subagent works in.
    - `git fetch --prune origin` (a failed fetch is noted, never waited on), then
      `git branch -r --list 'origin/claude/*'`: note per strand
-     whether its pushed copy matches the local tip; a `[wip]` tip stays on this machine, so that
-     strand resumes only here.
+     whether its pushed copy, if it was pushed, matches the local tip; a `[wip]` tip stays on this
+     machine, so that strand resumes only here.
    - Note what is committed vs uncommitted-on-disk, and where a TDD cycle stands (e.g. "test X is
      red, mid red→green") and whether the tree currently compiles.
 

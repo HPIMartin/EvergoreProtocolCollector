@@ -484,6 +484,11 @@ worktrees (own directory + HEAD + index) make parallel work safe.
     on a `claude/<topic>` branch and reaches `main` only through the gateway below; it is a rule, no
     hook enforces it.
 - **Pushing** (author decision 2026-10-02; what guards a push: working-with-ai-agents.md):
+  - **Only the agent seat pushes** (author decision 2026-10-10): where `EPC_SEAT` reads
+    `agent-machine` ([dev-environment.md](dev-environment.md), "Where agents run") the rules below
+    apply. On a local machine, where it is unset, a strand stays a local `claude/<topic>` branch in
+    its worktree: it is never pushed and opens no pull request, the author reviews it in GitLens on
+    the same checkout and lands it with `git push origin <tip>:main`.
   - **Every branch an agent pushes is named `claude/<topic>`**, the strand's branch from its first
     commit, and is opened as a pull request against `main` at its first push (standing approval,
     author decision 2026-10-07); an agent pushes only its own, the one exception being the deletion of a landed
@@ -526,26 +531,27 @@ worktrees (own directory + HEAD + index) make parallel work safe.
      onto it, resolving conflicts there.
   3. Review the rebased tip: with rebase + fast-forward it is byte-identical to what `main`
      becomes, so reviewing it *is* reviewing the final state, one feature, no merge artifacts
-     (falsifier + reviewer gate here). Then push it (above), so the author can review it after a
-     `git fetch`, in GitLens or in GitHub's compare view, from any machine. The push publishes the
-     branch before that review, and deleting it does not unpublish it: a secret or host detail
-     found then is purged by rewrite, a secret rotated ("No secrets" above). Always state the full
-     worktree name (branch and absolute path) so the author can open it in the editor and review
-     all changes before the landing; the hand-off also carries the compare range, `<tip>..<base>`,
-     and the pull request's link (below).
-  4. On PASS and the author's review, the author lands the tip: a `/land <tip>` comment on the
-     strand's pull request, which the landing workflow turns into a fast-forward push of exactly
-     that commit ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"), or
-     `git fetch origin`, then `git push origin <tip>:main`, a fast-forward without force. Either
-     is refused once `origin/main` has moved (then back to step 2).
-  5. Once `origin/main` holds the tip (`git fetch origin` and the sync's checks above, then
-     `git merge-base --is-ancestor <tip> refs/remotes/origin/main`), fast-forward the primary
-     checkout's `main` (precondition: clean, else stop and surface it), remove the worktree and
-     delete the landed branch (`git worktree remove` + `git branch -d`), and delete its remote copy
-     once that copy's current tip is in `origin/main` too (`git merge-base --is-ancestor
-     refs/remotes/origin/claude/<topic> refs/remotes/origin/main`, then, leased on that tip,
-     `git push --force-with-lease=claude/<topic>:<tip> origin --delete claude/<topic>`); a copy
-     that moved past the tip is unlanded work: report it. Autonomously, as part of the landing.
+     (falsifier + reviewer gate here). On the agent seat, then push it (above), so the author can
+     review it after a `git fetch`, in GitLens or in GitHub's compare view, from any machine. The
+     push publishes the branch before that review, and deleting it does not unpublish it: a secret
+     or host detail found then is purged by rewrite, a secret rotated ("No secrets" above). On a
+     local machine nothing is pushed: the author reviews the local branch in GitLens. Always state
+     the full worktree name (branch and absolute path) so the author can open it in the editor and
+     review all changes before the landing; the hand-off also carries the compare range,
+     `<tip>..<base>`, and on the agent seat the pull request's link (below).
+  4. On PASS and the author's review, the author lands the tip: on the agent seat a `/land <tip>`
+     comment on the strand's pull request, which the landing workflow turns into a fast-forward push
+     of exactly that commit ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"), or
+     `git fetch origin`, then `git push origin <tip>:main`, a fast-forward without force. Either is
+     refused once `origin/main` has moved (then back to step 2).
+  5. Once `origin/main` holds the tip (`git fetch origin` and the sync's checks above, then `git
+     merge-base --is-ancestor <tip> refs/remotes/origin/main`), fast-forward the primary checkout's
+     `main` (precondition: clean, else stop and surface it), remove the worktree and delete the
+     landed branch (`git worktree remove` + `git branch -d`), and, where the strand was pushed,
+     delete its remote copy once that copy's current tip is in `origin/main` too (`git merge-base
+     --is-ancestor refs/remotes/origin/claude/<topic> refs/remotes/origin/main`, then, leased on
+     that tip, `git push --force-with-lease=claude/<topic>:<tip> origin --delete claude/<topic>`); a
+     copy that moved past the tip is unlanded work: report it. Autonomously, as part of the landing.
      Every other machine fast-forwards at its next fetch.
 - **The gateway is two steps and is never collapsed into one.** (1) Present the full reviewable
   statement (the rebased branch log **and** the full diff) and *wait* for the author's explicit
@@ -575,8 +581,8 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   `@wip`-tagged Gherkin keeps the build green). A gateway defect is repaired by rebase into the
   commit it belongs to, before the landing: never left on `main`, never a follow-up "fix" commit.
 - **Asking the author to review** means handing over the GitLens compare statement for the range
-  (`<tip>..<base>`), the pushed branch and its pull request's link, never a description of where to
-  look →
+  (`<tip>..<base>`), the branch with its worktree's absolute path and, on the agent seat, its pull
+  request's link, never a description of where to look →
   working-with-ai-agents.md.
 - **Reword at the gateway** non-interactively via scripted `GIT_SEQUENCE_EDITOR` / `GIT_EDITOR`
   (no interactive TTY).
@@ -606,9 +612,9 @@ worktrees (own directory + HEAD + index) make parallel work safe.
 - [ ] Every identifier, path or backlog ID the diff **deletes or renames** grepped across `docs/`, and
       every hit fixed in the same commit; every **figure** the change moves grepped repo-wide, and
       every hit outside a dated decision or learnings row rewritten in the same commit
-- [ ] Commit message one line, present-tense verb (§7); pushed only on the strand's own
-      `claude/<topic>` branch with its pull request open, never as a `[wip]` commit, never to
-      `main` (§7)
+- [ ] Commit message one line, present-tense verb (§7); never pushed on a local machine, on the
+      agent seat pushed only on the strand's own `claude/<topic>` branch with its pull request open,
+      never as a `[wip]` commit, never to `main` (§7)
 - [ ] Whitespace/format separate from logic; LF endings
 - [ ] Decisions/assumptions logged in `open-questions.md` if any were made
 

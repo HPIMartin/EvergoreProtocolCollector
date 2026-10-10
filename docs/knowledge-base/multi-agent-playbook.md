@@ -67,8 +67,9 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    - PASS → proceed; FAIL → fix and re-gate under the loop rules below; log a
      process-learning if a rule slipped
 5. ► AUTHOR GATE 2 (handbook §7 gateway): fetch, rebase onto current main, run ./verify all on
-   the rebased tip, push it with a lease, present the reviewable statement (pushed branch,
-   worktree identity, compare range), YOU review the rebased tip
+   the rebased tip, on the agent seat push it with a lease, present the reviewable statement
+   (branch, worktree identity, compare range, on the agent seat the pull request), YOU review the
+   rebased tip
    - a re-rebase after your review: clean and green → landed without a second review; a
      conflict resolution → panel and your review again
 6. LANDING (YOU): `/land <tip>` on the pull request, or `git push origin <tip>:main`; a
@@ -157,21 +158,21 @@ and lands through the gateway; no commit is made on `main`
 
 - **State the full worktree identity at every review-gateway hand-off:** the branch name **and** the
   absolute worktree path, plus the compare range `<tip>..<base>` on its own line, newest first and
-  nothing else in it, and the pull request's link on another
+  nothing else in it, and on the agent seat the pull request's link on another
   ([working-with-ai-agents.md](working-with-ai-agents.md)), with the branch pushed under that name
-  and its pull request open first. The author opens that path in the editor, fetches the branch on
-  another machine or opens the link, and pastes the range into GitLens; a hand-off missing any of
-  the four stalls the gateway.
+  and its pull request open first; on a local machine the branch stays unpushed (handbook §7). The
+  author opens that path in the editor, fetches the branch on another machine or opens the link,
+  and pastes the range into GitLens; a hand-off missing any of these stalls the gateway.
 - **Rebase autonomously, land conditionally:** fetch and rebase a feature strand onto the current
   `main` without asking first, and run the full `./verify all` on the rebased tip every time
-  (handbook §7): a clean rebase is not a green one until the build says so, and only a green tip is
-  pushed again with a lease. If the strand was already author-reviewed **and** the rebase ran clean
-  (no conflicts, no judgment-call resolutions) **and** that build is green, it goes to the author's
-  landing without a further review round-trip. When the rebase hit a conflict: resolve it, run the
-  full build, **re-run the falsifier panel and the reviewer on the resolved tip**, then present
-  exactly what was resolved plus the compare range and wait for the author's go. Conflict
-  resolutions are the one place new, unreviewed content can appear, so both reviews stay exactly
-  there. Moving `origin/main` always stays with the author.
+  (handbook §7): a clean rebase is not a green one until the build says so, and on the agent seat
+  only a green tip is pushed again with a lease. If the strand was already author-reviewed **and**
+  the rebase ran clean (no conflicts, no judgment-call resolutions) **and** that build is green, it
+  goes to the author's landing without a further review round-trip. When the rebase hit a conflict:
+  resolve it, run the full build, **re-run the falsifier panel and the reviewer on the resolved
+  tip**, then present exactly what was resolved plus the compare range and wait for the author's
+  go. Conflict resolutions are the one place new, unreviewed content can appear, so both reviews
+  stay exactly there. Moving `origin/main` always stays with the author.
 - **Clean up landed strands immediately, without asking:** once `origin/main` holds a strand's tip
   and the primary checkout's `main` has fast-forwarded to it, `./verify stop` in its worktree, then
   `git worktree remove <path>` and `git branch -d <branch>`, then `git worktree prune`, `rmdir` a
@@ -339,7 +340,7 @@ lives.
 4. **Falsify:** domain lens recomputes ① ② by hand; robustness lens: does ③ assert the log? quality=0 edge? is green real if the production line is reverted? → counter-tests.
 5. **Review gate:** doc-reviewer: `domain-model.md`/`testing.md` updated, backlog row removed? reviewer: boundaries clean, messages one-line verb-first? → PASS.
 6. **You, author gate 2:** the rebased tip with its compare range on your review; you land it
-   with `/land <tip>` on its pull request.
+   with `/land <tip>` on its pull request (agent seat) or `git push origin <tip>:main`.
 
 ## Evolution
 
