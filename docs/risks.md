@@ -45,4 +45,4 @@
 | Risk | L | I | Countermeasure |
 |------|---|---|----------------|
 | Micronaut 5 jump regressions | M | M | Deferred until 1:1 is re-proven; the acceptance net gates it (backlog H9, the ops and environment milestone, roadmap M12) |
-| Pending Dependabot major PRs (TypeScript, Vite, ESLint) rot unmerged | M | L | One refresh pass through the acceptance and frontend nets (backlog H11); merging stays the author's call |
+| The pending Dependabot major, TypeScript 6 to 7, rots unmerged (Vite and ESLint are current) | M | L | One refresh pass through the acceptance and frontend nets (backlog H11); merging stays the author's call |
