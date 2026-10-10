@@ -1,23 +1,37 @@
+import argparse
 import json
+import os
+import sys
 from collections import Counter
 
 from candidate_rules import GUILD_FIGURES, guild_figures, member_figures
 from derived_figures import with_derived_figures
 from exact_explanations import explain
 from expected_deviations import ADDITIONS, LISTED_ADDITIONS, NOT_REACHED
+from exact_sums import read_exact_sums, read_recompute_instants
+from process_group import is_alive, members_of, stop_group
 from report import Report
+from side_fetch import PAGE_SIZE, Pacer, fetch_side, http_get_json, wait_for_recompute
 from shown_figures import Accepted, Context, differences, exact_differences, explanation, running_rule_differences, text_of
 
+TOKEN_VARIABLE = "EVERGORE_SECURITY_API_TOKEN"
 LEDGERS = ("bank", "storage")
+CRASH_EXIT_CODE = 4
 ADMIN_NAME_LISTS = ("unknownItemNames", "failedAvatarNames")
 
 
-def compare(running, candidate):
+def compare(running, candidate, started=None):
     findings = []
     accepted = []
     field_findings, added_fields = _field_set_differences(running, candidate)
     findings.extend(field_findings)
     findings.extend(_admin_differences(running["admin"], candidate["admin"]))
+    findings.extend(_recompute_status_findings("running", running["admin"]))
+    findings.extend(_recompute_status_findings("candidate", candidate["admin"]))
+    if started is not None:
+        unstored = _members_without_stored_sums(running, candidate)
+        findings.extend(_stale_sums_findings("running", running, started, unstored))
+        findings.extend(_stale_sums_findings("candidate", candidate, started, unstored))
     findings.extend(_total_count_differences("overview", running["overview"], candidate["overview"]))
     findings.extend(_member_differences(running["overview"], candidate["overview"]))
     shown = differences(with_derived_figures(running["overview"]), with_derived_figures(candidate["overview"]))
@@ -141,6 +155,31 @@ def _admin_differences(running, candidate):
                 yield f"admin: {field} lists {name} in the candidate side only"
 
 
+def _recompute_status_findings(side, admin):
+    if not admin.get("lastSuccessfulRecompute"):
+        yield f"admin: the {side} side shows no successful recompute"
+    if admin.get("lastRecomputeFailure"):
+        yield f"admin: the {side} side shows a recompute failure"
+
+
+def _members_without_stored_sums(running, candidate):
+    return {
+        row["avatar"]
+        for row in running["overview"]["items"]
+        if not running.get("exact", {}).get(row["avatar"]) and not candidate.get("exact", {}).get(row["avatar"])
+    }
+
+
+def _stale_sums_findings(label, side, started, unstored):
+    instants = side.get("recomputed", {})
+    for row in side["overview"]["items"]:
+        if row["avatar"] in unstored:
+            continue
+        instant = instants.get(row["avatar"])
+        if instant is None or instant < started:
+            yield f"{row['avatar']}: the {label} side did not recompute the sums in this run"
+
+
 def _candidate_rounding_differences(candidate):
     overview = candidate["overview"]
     exact = candidate["exact"]
@@ -155,3 +194,120 @@ def _rounding_differences(scope, shown, expected):
     for figure, value in expected.items():
         if figure in shown and shown[figure] != value:
             yield f"{scope}: candidate serves {figure} {shown[figure]!r}, its exact sums yield {value!r}"
+
+
+def main(argv, environ, out, err=sys.stderr):
+    try:
+        arguments = _parser().parse_args(argv)
+    except SystemExit:
+        return 2
+    try:
+        return arguments.command(arguments, environ, out)
+    except Exception as crash:
+        err.write(f"compare_sides.py: {type(crash).__name__}: {crash}\n")
+        return CRASH_EXIT_CODE
+
+
+def _parser():
+    parser = argparse.ArgumentParser(prog="compare_sides.py")
+    commands = parser.add_subparsers(dest="name", required=True)
+
+    wait = commands.add_parser("wait")
+    wait.add_argument("--base-url", required=True)
+    wait.add_argument("--timeout", type=float, required=True)
+    wait.add_argument("--poll", type=float, required=True)
+    wait.add_argument("--pid", type=int, required=True)
+    wait.set_defaults(command=_wait)
+
+    alive = commands.add_parser("alive")
+    alive.add_argument("--pid", type=int, required=True)
+    alive.set_defaults(command=_alive)
+
+    fetch = commands.add_parser("fetch")
+    fetch.add_argument("--base-url", required=True)
+    fetch.add_argument("--out", required=True)
+    fetch.set_defaults(command=_fetch)
+
+    occupied = commands.add_parser("occupied")
+    occupied.add_argument("--group", type=int, required=True)
+    occupied.set_defaults(command=_occupied)
+
+    stop = commands.add_parser("stop")
+    stop.add_argument("--group", type=int, required=True)
+    stop.add_argument("--grace", type=float, required=True)
+    stop.add_argument("--poll", type=float, required=True)
+    stop.set_defaults(command=_stop)
+
+    compare_command = commands.add_parser("compare")
+    for name in ("running-wire", "running-db", "candidate-wire", "candidate-db"):
+        compare_command.add_argument(f"--{name}", required=True)
+    compare_command.add_argument("--started-at-millis", type=int)
+    compare_command.set_defaults(command=_compare)
+    return parser
+
+
+def _wait(arguments, environ, out):
+    get_json = http_get_json(arguments.base_url, environ.get(TOKEN_VARIABLE, ""), Pacer())
+    recomputed = wait_for_recompute(
+        lambda: get_json("/api/v1/admin/status", {}),
+        arguments.timeout,
+        arguments.poll,
+        alive=lambda: is_alive(arguments.pid),
+    )
+    if not recomputed and not is_alive(arguments.pid):
+        out.write(f"The side at {arguments.base_url} is not running.\n")
+    elif not recomputed:
+        out.write(
+            f"No successful recompute showed at {arguments.base_url}, "
+            f"within {arguments.timeout} seconds or before a failure.\n"
+        )
+    return 0 if recomputed else 1
+
+
+def _alive(arguments, environ, out):
+    return 0 if is_alive(arguments.pid) else 1
+
+
+def _occupied(arguments, environ, out):
+    return 0 if arguments.group >= 2 and members_of(arguments.group) else 1
+
+
+def _fetch(arguments, environ, out):
+    token = environ.get(TOKEN_VARIABLE)
+    if not token:
+        out.write(f"{TOKEN_VARIABLE} is not set in the environment.\n")
+        return 2
+    fetched = fetch_side(http_get_json(arguments.base_url, token, Pacer()), PAGE_SIZE)
+    with open(arguments.out, "w", encoding="utf-8") as target:
+        json.dump(fetched, target, ensure_ascii=False)
+    return 0
+
+
+def _stop(arguments, environ, out):
+    if arguments.group < 2:
+        out.write("Refusing to signal a process group below 2.\n")
+        return 2
+    if not stop_group(arguments.group, arguments.grace, arguments.poll):
+        out.write(f"The process group {arguments.group} is still alive after the kill.\n")
+        return 3
+    return 0
+
+
+def _compare(arguments, environ, out):
+    running = _side_from(arguments.running_wire, arguments.running_db)
+    candidate = _side_from(arguments.candidate_wire, arguments.candidate_db)
+    report = compare(running, candidate, arguments.started_at_millis)
+    out.write(report.render())
+    return report.exit_code
+
+
+def _side_from(wire_path, database_path):
+    with open(wire_path, encoding="utf-8") as wire:
+        side = json.load(wire)
+    side["exact"] = read_exact_sums(database_path)
+    side["recomputed"] = read_recompute_instants(database_path)
+    return side
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:], os.environ, sys.stdout, sys.stderr))

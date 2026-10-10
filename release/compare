@@ -1,0 +1,186 @@
+#!/bin/sh
+set -eu
+
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+root=$(dirname -- "$here")
+work=$root/build/release-comparison
+
+refuse() {
+	printf 'release/compare: %s\n' "$1" >&2
+	exit 2
+}
+
+[ -f "$root/release/compare" ] || refuse "$root holds no release/compare, the script was reached through a link"
+[ -e "$root/.git" ] || refuse "$root is no git worktree"
+
+running_port=${RELEASE_COMPARE_RUNNING_PORT-18091}
+candidate_port=${RELEASE_COMPARE_CANDIDATE_PORT-18092}
+timeout=${RELEASE_COMPARE_TIMEOUT-900}
+poll=${RELEASE_COMPARE_POLL-5}
+grace=${RELEASE_COMPARE_GRACE-10}
+
+is_number() {
+	case $2 in
+		"" | *[!0-9.]* | *.*.* | .) refuse "$1 must be a number, it is '$2'" ;;
+	esac
+}
+
+is_port() {
+	case $2 in
+		"" | *[!0-9]*) refuse "$1 must be an integer from 1 to 65535, it is '$2'" ;;
+	esac
+	[ "${#2}" -le 5 ] && [ "$2" -ge 1 ] && [ "$2" -le 65535 ] || refuse "$1 must be an integer from 1 to 65535, it is '$2'"
+}
+
+is_number RELEASE_COMPARE_TIMEOUT "$timeout"
+is_number RELEASE_COMPARE_POLL "$poll"
+is_number RELEASE_COMPARE_GRACE "$grace"
+is_port RELEASE_COMPARE_RUNNING_PORT "$running_port"
+is_port RELEASE_COMPARE_CANDIDATE_PORT "$candidate_port"
+
+[ "$#" -eq 3 ] || refuse "usage: release/compare RUNNING_DIST CANDIDATE_DIST SNAPSHOT"
+
+physical_directory() {
+	(CDPATH= cd -- "$1" 2>/dev/null && pwd -P)
+}
+
+running_dist=$(physical_directory "$1") || refuse "$1 is no directory"
+candidate_dist=$(physical_directory "$2") || refuse "$2 is no directory"
+snapshot_directory=$(physical_directory "$(dirname -- "$3")") || refuse "the snapshot $3 does not exist"
+snapshot=$snapshot_directory/$(basename -- "$3")
+
+[ "$running_port" != "$candidate_port" ] || refuse "the two sides need different ports, both are $running_port"
+[ -f "$snapshot" ] || refuse "the snapshot $snapshot does not exist"
+for sidecar in "$snapshot-wal" "$snapshot-journal"; do
+	[ ! -e "$sidecar" ] || refuse "the snapshot has the unmerged sidecar $sidecar, copy a consistent snapshot"
+done
+[ -x "$running_dist/bin/protocolParser" ] || refuse "$running_dist has no executable bin/protocolParser"
+[ -x "$candidate_dist/bin/protocolParser" ] || refuse "$candidate_dist has no executable bin/protocolParser"
+
+running_pid=
+candidate_pid=
+helper_pid=
+stop_failed=0
+
+helper() {
+	"$@" &
+	helper_pid=$!
+	helper_status=0
+	wait "$helper_pid" || helper_status=$?
+	helper_pid=
+	return "$helper_status"
+}
+
+stop_sides() {
+	for pid in $running_pid $candidate_pid; do
+		python3 -B "$here/compare_sides.py" stop --group "$pid" --grace "$grace" --poll 0.1 || {
+			printf 'release/compare: could not stop the process group %s\n' "$pid" >&2
+			stop_failed=1
+		}
+	done
+	[ -z "$running_pid$candidate_pid" ] || [ "$stop_failed" -ne 0 ] || rm -f -- "$work/groups"
+	running_pid=
+	candidate_pid=
+}
+
+cleanup() {
+	status=$?
+	trap '' INT TERM HUP QUIT
+	trap - EXIT
+	set +e
+	[ -z "$helper_pid" ] || kill "$helper_pid" 2>/dev/null
+	stop_sides
+	[ "$stop_failed" -eq 0 ] || status=3
+	exit "$status"
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+trap 'exit 131' QUIT
+
+random_text() {
+	LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32
+}
+
+start_side() {
+	side=$1
+	dist=$2
+	port=$3
+	mkdir -p "$work/$side/database"
+	cp -- "$snapshot" "$work/$side/database/temp.sqlite"
+	(
+		cd "$work/$side"
+		TZ=UTC
+		MICRONAUT_SERVER_PORT=$port
+		EVERGORE_SECURITY_API_TOKEN=$token
+		EVERGORE_CREDENTIALS_USERNAME=$username
+		EVERGORE_CREDENTIALS_PASSWORD=$password
+		export TZ MICRONAUT_SERVER_PORT EVERGORE_SECURITY_API_TOKEN EVERGORE_CREDENTIALS_USERNAME EVERGORE_CREDENTIALS_PASSWORD
+		exec setsid "$dist/bin/protocolParser" >"$work/$side/app.log" 2>&1
+	) &
+	started_pid=$!
+}
+
+fetch_side() {
+	helper python3 -B "$here/compare_sides.py" fetch --base-url "http://127.0.0.1:$2" --out "$work/$1.json"
+}
+
+wait_for_side() {
+	helper python3 -B "$here/compare_sides.py" wait --base-url "http://127.0.0.1:$1" --timeout "$timeout" --poll "$poll" --pid "$2"
+}
+
+require_alive() {
+	helper python3 -B "$here/compare_sides.py" alive --pid "$2" || {
+		printf 'release/compare: the %s side is not running\n' "$1" >&2
+		exit 3
+	}
+}
+
+if [ -f "$work/groups" ]; then
+	alive_groups=
+	while read -r group; do
+		python3 -B "$here/compare_sides.py" occupied --group "$group" && alive_groups="$alive_groups $group"
+	done <"$work/groups"
+	[ -z "$alive_groups" ] || refuse "a previous run left the process groups$alive_groups alive, stop them and remove $work"
+fi
+
+rm -rf -- "$work"
+mkdir -p "$work"
+
+token=$(random_text)
+EVERGORE_SECURITY_API_TOKEN=$token
+export EVERGORE_SECURITY_API_TOKEN
+username=$(random_text)
+password=$(random_text)
+
+started=$(python3 -B -c 'import time; print(int(time.time() * 1000))')
+
+start_side running "$running_dist" "$running_port"
+running_pid=$started_pid
+printf '%s\n' "$running_pid" >>"$work/groups"
+start_side candidate "$candidate_dist" "$candidate_port"
+candidate_pid=$started_pid
+printf '%s\n' "$candidate_pid" >>"$work/groups"
+
+require_alive running "$running_pid"
+require_alive candidate "$candidate_pid"
+
+wait_for_side "$running_port" "$running_pid" || exit 3
+wait_for_side "$candidate_port" "$candidate_pid" || exit 3
+
+require_alive running "$running_pid"
+require_alive candidate "$candidate_pid"
+fetch_side running "$running_port" || exit 3
+fetch_side candidate "$candidate_port" || exit 3
+
+stop_sides
+[ "$stop_failed" -eq 0 ] || exit 3
+
+status=0
+python3 -B "$here/compare_sides.py" compare \
+	--running-wire "$work/running.json" --running-db "$work/running/database/temp.sqlite" \
+	--candidate-wire "$work/candidate.json" --candidate-db "$work/candidate/database/temp.sqlite" \
+	--started-at-millis "$started" || status=$?
+exit "$status"

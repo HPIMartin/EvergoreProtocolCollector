@@ -16,6 +16,8 @@ ROW_FIGURES = (
     "balance",
 )
 
+STARTED = 1760000000000
+
 COMPUTED = {
     "bank_placement": 500,
     "bank_withdrawl": 100,
@@ -87,6 +89,16 @@ class NotYetComputed(unittest.TestCase):
 
         tested = compare(running, candidate)
 
+        self.assertEqual(set(GUILD_FIGURES), set(tested.uncompared))
+
+    def test_the_rule_applies_in_a_run_where_no_recompute_instant_exists_for_the_member(self):
+        running = running_zero_side()
+        candidate = candidate_null_side()
+
+        tested = compare(running, candidate, STARTED)
+
+        self.assertEqual([], tested.findings)
+        self.assertIn(RULE, {a.rule.name for a in tested.accepted})
         self.assertEqual(set(GUILD_FIGURES), set(tested.uncompared))
 
     def test_a_null_candidate_row_against_real_running_values_is_a_finding(self):

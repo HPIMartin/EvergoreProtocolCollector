@@ -276,7 +276,7 @@ observable behaviour**:
 - **Unit/integration suite** reproduces the pre-migration baseline exactly: **22 tests, 7 classes, 0
   failures** on the new stack.
 - **1:1 against production data:** the migrated distribution rendered the production snapshot
-  identically to the live instance. Procedure and current result: [1:1 against the production
+  identically to the live instance. Method and current result: [1:1 against the production
   instance](#11-against-the-production-instance).
 - **JDK 25 behaviour change found & fixed:** `java.sql.Timestamp.from(Instant)` now uses
   `Math.multiplyExact` and **throws** on extreme instants where JDK 17 silently wrapped. The
@@ -295,39 +295,74 @@ but **opt-in**, because the snapshot it needs carries guild members' data (PII) 
 
 ## 1:1 against the production instance
 
-The release gate before deploying: read the **same database** through the candidate build and
-through the live instance, then compare the numbers per avatar. It catches drift that the synthetic
+The release gate before deploying: run the previous release and the candidate on **copies of the
+same production snapshot**, then compare what both serve. It catches drift that the synthetic
 fixture cannot, because it uses the real data volume, the real item mix and the real avatar set.
 
-The two sides no longer speak the same format: the candidate answers JSON, the live instance still
-renders HTML. So the comparison is **value-wise, not byte-wise** (decision 2026-08-08); a byte diff
-was possible only while both sides rendered the same pages.
+The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-wise** (decision
+2026-08-08): both sides serve `/api/v1`, the script reads each side's wire output and its exact sums.
 
-### Procedure
+### Scripted comparison
 
-1. `./gradlew installDist`.
-2. Run the distribution from an **isolated working directory** holding a *copy* of the production
-   snapshot at `database/temp.sqlite`, with `EVERGORE_SECURITY_API_TOKEN` set. Never point a run at
-   the original snapshot file: a first run recomputes the meta sums in place and is not reversible.
-3. Fetch `/api/v1/avatars?size=1000` plus `/api/v1/avatars/{avatar}/bank|storage` for every avatar
-   from the candidate, and the matching `/overview` and `/avatars/{avatar}/bank|storage` pages from
-   the live instance.
-4. Compare **per avatar**: the bank totals (`bankWithdrawn`/`bankDeposited` against the overview table's
-   "Entnommen"/"Eingelagert" cells) and each ledger's entries (timestamp, amount or
-   quantity/name/quality, transfer direction). Explain every difference; a recompute delta is
-   expected and is validated against the independent SQL recomputation below, never waved through.
-5. The status contract differs by design and is **not** compared: an empty page is 200 with
-   `totalCount: 0` on the candidate and 404 on the live instance (the 404-vs-empty decision in
-   [frontend.md](frontend.md)), and `/health` is anonymous only on the candidate.
-
-- **Pace the sweep.** The live instance enforces 5 requests per 10 s and then blocks the client IP for
-  1 minute; the candidate allows 30 (`evergore.rate-limit.*`), so pace by the stricter live side. The
-  counter runs on blocked requests too, so a renewed **burst** inside a block extends it (a single retry
-  per window does not, the interval reset zeroes the count first): leave at least 4 s between requests
-  and back off well past a minute after a 429.
-- The scrape branch cannot run in the devcontainer (no Firefox binary). Micronaut's task exception
-  handler catches it, the app keeps serving, and the database stays untouched, so the check is
-  unaffected.
+- **Run it:** `release/compare RUNNING_DIST CANDIDATE_DIST SNAPSHOT`; a distribution is a directory
+  holding `bin/protocolParser`.
+  - The running release (`0.2.0`) is built in its own worktree, detached on the tag; the candidate
+    is built from the strand. A distribution is the unpacked `build/distributions/*.tar` that
+    `./verify all` leaves behind.
+  - The tag's own `./verify` predates the build lock and the per-worktree daemon registry: run it
+    as `GRADLE_OPTS=-Dorg.gradle.daemon.registry.base=<that worktree>/registry.local.d flock
+    /tmp/epc-build.lock <that worktree>/verify all`, and stop its daemon through the same registry,
+    never with a bare `--stop`.
+  - Snapshot copies live only under `<worktree>/build/release-comparison/` (replaced at the start of
+    a run, left after it for inspection); the original is copied once per side and never opened.
+  - **Never build while a side runs from that `build/`**, and `./verify all` clears `build/`.
+- **How the sides run:** each on its own port (`18091` and `18092`, overridable with
+  `RELEASE_COMPARE_RUNNING_PORT` and `RELEASE_COMPARE_CANDIDATE_PORT`), in its own process group,
+  with a throwaway token and credentials per run and `TZ=UTC`; equal ports are refused. The token
+  and the credentials travel in the environment, never in a command's arguments.
+  - The scheduled job fails to scrape with the throwaway credentials and recomputes anyway; the
+    script waits for `lastSuccessfulRecompute` on the admin status (`RELEASE_COMPARE_TIMEOUT`,
+    default 900 s), fetches both sides, stops both (TERM, then KILL after `RELEASE_COMPARE_GRACE`,
+    default 10 s) and only then compares.
+  - A side that reports only `lastRecomputeFailure`, or that stops running, ends the run at once;
+    every request has a socket timeout, so a side that accepts and never answers cannot hold it.
+  - Each side is paced to 25 requests per 10 s (the limit is 30); after a 429 the script waits
+    65 s and retries, at most 3 times.
+- **What it reads:** every page of `/api/v1/avatars` with its totals, every member's bank and
+  storage ledger, `/api/v1/admin/status`, and each copy's exact sums from `metaInformation`
+  (read-only, after both sides are stopped).
+  - The exact sums couple the script to the internal meta key names (decision 2026-10-10); in
+    return rounding, ammunition and last-bit drift are exact rules, not tolerances.
+- **What it compares:**
+  - that both sides recomputed in this run: a side without `lastSuccessfulRecompute`, or a member
+    whose `sums_recomputed_at_` in that side's copy predates the run's start, is a finding; a member
+    with no stored sums on either side is exempt (decision 2026-10-10), so the not-yet-computed rule
+    can apply;
+  - every row and totals figure, the members each side lists and `totalCount`;
+  - each ledger as a multiset of whole entries over every page, so a different order is no finding;
+  - the field sets of rows, totals, admin status and ledger entries;
+  - the admin status name lists as multisets; the five run instants differ by construction and are
+    not compared (the report says so).
+  - `0.2.0` serves no `balance` or storage value; both are derived from its rounded figures as its
+    overview did.
+- **Expected deviations:** `release/expected_deviations.py` lists each rule with its name and the
+  decisions behind it; every difference outside the list is a finding. The report names each rule
+  that applied with its decision dates and lists the rules that did not occur, which does not fail
+  the run.
+- **Exit status:** `0` no finding (only listed deviations), `1` at least one finding, `2` the call
+  was refused (missing snapshot or distribution, a snapshot with a `-wal` or `-journal` file
+  beside it, a non-numeric or equal port, a non-numeric timeout, poll or grace, a script outside a
+  git worktree, a side of a previous run still alive, named by its process group), `3`
+  a side showed no successful recompute in time, stopped running, could not be fetched or could
+  not be stopped (its process group is named), `4` the
+  comparison itself crashed (a malformed capture, a copy without `metaInformation`). Both sides are
+  gone after every exit path, a hangup and a second interrupt included; a signal ends the run with
+  128 plus its number once both sides are stopped.
+- **The script's own proof:** `sh release/self-test` runs the unit tests and the driver tests on a
+  stub distribution (under a minute, synthetic data only); `pre-commit` runs it for every commit that
+  touches `release/`.
+- **The report** lists every finding, then per expected-deviation rule how often it applied and
+  each shown figure it accepted with both values, then the rules that did not occur.
 
 ### Parity evidence on record
 
@@ -427,8 +462,8 @@ recomputed value per key.
 - **Re-measured 2026-09-23**, under the current catalog: of the 252 value keys the recompute
   writes (six per avatar, without `last_updated` and `sums_recomputed_at_*`), every bank key of the
   03.09.2026 snapshot reproduces, the 84 craft-subsidy and donation keys are absent from the
-  snapshot, and 60 of its 84 storage placement and withdrawal keys differ. Re-proving 1:1 is the job
-  of the scripted 1:1 value comparison (**B19**).
+  snapshot, and 60 of its 84 storage placement and withdrawal keys differ. A release re-proves 1:1
+  through the scripted comparison above.
 - The pre-deploy divergence is a **frozen absolute amount, not a growing one**: `Fugger`'s
   `storage_withdrawl` sits `+27 922 355.4` below the recompute in *both* pre-deploy snapshots, two
   months and 10 000 storage rows apart. It is `0` in the post-deploy one.
@@ -446,7 +481,8 @@ recomputed value per key.
   sides.
 - **Not measured, and not claimable from this:** whether the recompute computes the *right* number.
   Code and store carrying the same error would leave this diff empty by construction. That is
-  the purpose of the scripted 1:1 value comparison (**B19**), which stays a separate item. The catalog gap above is a known instance: both sides
+  not closed by the scripted comparison either: it holds a candidate against the previous release,
+  so an error both carry passes it. The catalog gap above is a known instance: both sides
   value an unknown item at zero, so it reproduces perfectly and this check stays silent on it.
 - **Not reproducible:** the per-avatar ratio band of `0.12`-`1.33` first reported from the 31.07.2026 file. No quantity tried (per key, per
   family, gross, deposits, withdrawals, net) yields a `0.12` lower bound on any surviving snapshot;

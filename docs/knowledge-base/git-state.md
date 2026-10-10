@@ -22,8 +22,8 @@
   check line endings first (`git diff --ignore-all-space`).
 - The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes them to LF on commit,
   so the warning is expected (`git diff --check` if unsure). A working tree holding CRLF templates
-  makes the running build **serve** CRLF; a clean LF checkout serves LF, and the 1:1 parity check
-  normalizes line endings before it compares.
+  makes the running build **serve** CRLF; a clean LF checkout serves LF. The scripted 1:1 comparison
+  compares values, so line endings never reach it.
 
 ## What GitHub enforces
 

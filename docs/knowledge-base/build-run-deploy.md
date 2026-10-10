@@ -371,7 +371,8 @@ any push.
 - **The tagged commit is the released state, not the version commit:** the tag goes on the commit
   the deployed image's `revision` label names (read it off the container, "Which stand is
   running?"). That is the tip of `main` at release time — the stand that passed the release gate
-  (green `clean build --no-build-cache`, buildable image, 1:1 check) — unless the release's own
+  (green `clean build --no-build-cache`, buildable image, the scripted 1:1 comparison in
+  [testing.md](testing.md)), unless the release's own
   documentation landed after it, as at `0.2.0`, where the deployed revision sits a few `[doc]`
   commits behind the tip. The version commit may sit far behind and carry none of it. Tagging it
   instead would name a stand nobody built or ran (the `0.1.0` case: the version commit's image

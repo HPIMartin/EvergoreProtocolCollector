@@ -192,7 +192,7 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   concurrent falsifier runs flaky and the two worktree costs folded in from the dissolved
   build-performance analysis (G11); and the SessionStart hook that injects the lessons
   deterministically (G10). The learnings repeatedly show a session forgetting a written rule.
-- **Test-suite hygiene:** the scripted 1:1 value comparison (B19), repository tests (B4), style
+- **Test-suite hygiene:** repository tests (B4), style
   alignment (B8), the shared boot fixture (B18), the parser residual (B22), deterministic
   fixture ids (B23), the unexplained load-sensitive failure (B20), AssertJ in `SmokeTest` (B7).
 - **Docs & code hygiene:** KB in lockstep with code (G3), KB accuracy sweep (G18), the parser
