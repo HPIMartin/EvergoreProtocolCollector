@@ -18,7 +18,7 @@ def explain(differing, running, candidate):
             reasons["storage_placement"] = AMMUNITION
             reasons["storage_craft_subsidy"] = AMMUNITION
         for key in STORAGE_SUMS:
-            if key in keys and key not in reasons and _within_bound(_delta(keys[key]), keys[key]):
+            if key in keys and key not in reasons and _stored_on_both_sides(keys[key]) and _within_bound(_delta(keys[key]), keys[key]):
                 reasons[key] = LAST_BIT
         explained[member] = {key: rule for key, rule in reasons.items() if key in keys}
     return explained
@@ -34,9 +34,13 @@ def _is_full_ammunition_credit(member, keys, running):
     if "storage_placement" not in keys or "storage_craft_subsidy" not in keys:
         return False
     for key in ("storage_placement", "storage_craft_subsidy"):
-        if not _equals_within_accumulation(_delta(keys[key]), expected, keys[key], len(entries)):
+        if not _stored_on_both_sides(keys[key]) or not _equals_within_accumulation(_delta(keys[key]), expected, keys[key], len(entries)):
             return False
-    return all(_within_bound(_delta(keys[key]), keys[key]) for key in ("storage_withdrawl", "storage_donation") if key in keys)
+    return all(
+        _stored_on_both_sides(keys[key]) and _within_bound(_delta(keys[key]), keys[key])
+        for key in ("storage_withdrawl", "storage_donation")
+        if key in keys
+    )
 
 
 def _expected_ammunition_credit(entries):
@@ -53,6 +57,10 @@ def _expected_ammunition_credit(entries):
 def _equals_within_accumulation(difference, expected, pair, entry_count):
     magnitude = max(abs(value or 0.0) for value in (*pair, expected))
     return abs(difference - expected) <= (entry_count + ACCUMULATION_SLACK_ULPS) * math.ulp(magnitude)
+
+
+def _stored_on_both_sides(pair):
+    return None not in pair
 
 
 def _delta(pair):

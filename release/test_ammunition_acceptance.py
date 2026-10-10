@@ -160,6 +160,19 @@ class AmmunitionCredit(unittest.TestCase):
         found = [f for f in tested.findings if "Alice" in f and "exact bank_placement" in f]
         self.assertEqual(1, len(found))
 
+    def test_a_craft_subsidy_stored_on_the_candidate_side_only_is_no_ammunition_credit(self):
+        delta = true_delta(arrows())
+        unshared = {key: value for key, value in RUNNING.items() if key != "storage_craft_subsidy"}
+        ledgers = ledgers_holding(arrows())
+        running = running_side_of({"Alice": unshared}, ledgers=ledgers)
+        candidate = candidate_side_of({"Alice": credited(delta, delta - RUNNING["storage_craft_subsidy"])}, ledgers=ledgers)
+
+        tested = compare(running, candidate)
+
+        found = [f for f in tested.findings if "Alice" in f and "exact storage_craft_subsidy" in f]
+        self.assertEqual(1, len(found))
+        self.assertEqual([], [a for a in tested.accepted if a.rule.name == AMMUNITION])
+
     def test_a_credit_that_lowers_the_candidate_is_a_finding(self):
         running, candidate = sides(credited(-60.0, -60.0), arrows())
 
