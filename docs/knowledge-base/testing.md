@@ -334,8 +334,8 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
   - The exact sums couple the script to the internal meta key names (decision 2026-10-10); in
     return rounding, the ammunition credit and last-bit drift are rules over the exact values: the
     ammunition delta is recomputed from the member's deposits and may differ from the stored one
-    only by float accumulation over that member's entries (`n + 4` ulp), any other drift by at most
-    4 ulp.
+    only by float accumulation over that member's entries, and any other exact storage sum may drift
+    by as much, `n + 4` ulp with n the member's storage entries (decision 2026-10-10).
 - **What it compares:**
   - that both sides recomputed in this run: a side without `lastSuccessfulRecompute`, or a member
     whose `sums_recomputed_at_` in that side's copy predates the run's start, is a finding; a member
