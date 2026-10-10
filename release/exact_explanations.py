@@ -3,7 +3,6 @@ import math
 from expected_deviations import AMMUNITION, LAST_BIT
 
 STORAGE_SUMS = ("storage_placement", "storage_withdrawl", "storage_donation", "storage_craft_subsidy")
-ULP_BOUND = 4
 ACCUMULATION_SLACK_ULPS = 4
 AMMUNITION_MARKET_VALUES = {"Pfeile": 3, "Bolzen": 12, "Magieessenz": 4}
 CREDITED_PLACEMENT = 1.0
@@ -13,19 +12,23 @@ GOODS_PLACEMENT = 0.6
 def explain(differing, running, candidate):
     explained = {}
     for member, keys in differing.items():
+        entries = _storage_entries(member, running)
         reasons = {}
-        if _is_full_ammunition_credit(member, keys, running):
+        if _is_full_ammunition_credit(keys, entries):
             reasons["storage_placement"] = AMMUNITION
             reasons["storage_craft_subsidy"] = AMMUNITION
         for key in STORAGE_SUMS:
-            if key in keys and key not in reasons and _stored_on_both_sides(keys[key]) and _within_bound(_delta(keys[key]), keys[key]):
+            if key in keys and key not in reasons and _stored_on_both_sides(keys[key]) and _within_bound(_delta(keys[key]), keys[key], len(entries)):
                 reasons[key] = LAST_BIT
         explained[member] = {key: rule for key, rule in reasons.items() if key in keys}
     return explained
 
 
-def _is_full_ammunition_credit(member, keys, running):
-    entries = running["ledgers"].get(member, {}).get("storage", {"items": []})["items"]
+def _storage_entries(member, running):
+    return running["ledgers"].get(member, {}).get("storage", {"items": []})["items"]
+
+
+def _is_full_ammunition_credit(keys, entries):
     expected = _expected_ammunition_credit(entries)
     if expected <= 0:
         return False
@@ -37,7 +40,7 @@ def _is_full_ammunition_credit(member, keys, running):
         if not _stored_on_both_sides(keys[key]) or not _equals_within_accumulation(_delta(keys[key]), expected, keys[key], len(entries)):
             return False
     return all(
-        _stored_on_both_sides(keys[key]) and _within_bound(_delta(keys[key]), keys[key])
+        _stored_on_both_sides(keys[key]) and _within_bound(_delta(keys[key]), keys[key], len(entries))
         for key in ("storage_withdrawl", "storage_donation")
         if key in keys
     )
@@ -68,6 +71,5 @@ def _delta(pair):
     return (candidate or 0.0) - (running or 0.0)
 
 
-def _within_bound(difference, values):
-    magnitude = max(abs(value or 0.0) for value in values)
-    return abs(difference) <= ULP_BOUND * math.ulp(magnitude)
+def _within_bound(difference, values, entry_count):
+    return _equals_within_accumulation(difference, 0.0, values, entry_count)

@@ -1,8 +1,9 @@
 import math
+import random
 import unittest
 
 from compare_sides import compare
-from sample_sides import candidate_side_of, running_side_of
+from sample_sides import candidate_side_of, ledgers_holding, running_side_of, storage_entry
 
 RUNNING = {
     "bank_placement": 500,
@@ -22,10 +23,11 @@ def drifted(value, ulps):
     return value
 
 
-def sides(**candidate_changes):
+def sides(entry_count=0, **candidate_changes):
+    ledgers = ledgers_holding(*[storage_entry("Eisen")] * entry_count)
     return (
-        running_side_of({"Alice": RUNNING}),
-        candidate_side_of({"Alice": {**RUNNING, **candidate_changes}}),
+        running_side_of({"Alice": RUNNING}, ledgers=ledgers),
+        candidate_side_of({"Alice": {**RUNNING, **candidate_changes}}, ledgers=ledgers),
     )
 
 
@@ -68,6 +70,35 @@ class LastBitDrift(unittest.TestCase):
 
         found = [f for f in tested.findings if "Alice" in f and "exact storage_placement" in f]
         self.assertEqual(1, len(found))
+
+    def test_the_bound_grows_with_the_storage_entries_of_the_member_by_one_ulp_each(self):
+        for entries in (1, 10, 50):
+            for ulps, accepted in ((entries + 4, True), (entries + 5, False)):
+                with self.subTest(entries=entries, ulps=ulps):
+                    running, candidate = sides(entries, storage_placement=drifted(RUNNING["storage_placement"], ulps))
+
+                    tested = compare(running, candidate)
+
+                    found = [f for f in tested.findings if "Alice" in f and "exact storage_placement" in f]
+                    self.assertEqual(0 if accepted else 1, len(found))
+
+    def test_a_reordered_sum_over_many_entries_is_accepted(self):
+        generator = random.Random(5)
+        amounts = [generator.uniform(0.01, 50) * 0.6 for _ in range(200)]
+        in_order = 0.0
+        for amount in amounts:
+            in_order += amount
+        reordered = 0.0
+        for amount in sorted(amounts):
+            reordered += amount
+        ledgers = ledgers_holding(*[storage_entry("Eisen")] * 200)
+        running = running_side_of({"Alice": {**RUNNING, "storage_placement": in_order}}, ledgers=ledgers)
+        candidate = candidate_side_of({"Alice": {**RUNNING, "storage_placement": reordered}}, ledgers=ledgers)
+
+        tested = compare(running, candidate)
+
+        self.assertLess(4, abs(in_order - reordered) / math.ulp(in_order))
+        self.assertEqual([], tested.findings)
 
     def test_the_bound_is_measured_at_the_larger_magnitude(self):
         large = {**RUNNING, "storage_placement": 2733625.2}
