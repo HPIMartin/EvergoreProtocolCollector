@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+PYTHONDONTWRITEBYTECODE=1 python3 -I -B -m unittest discover -s "$here" -p 'test_*.py'
