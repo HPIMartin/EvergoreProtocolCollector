@@ -4,29 +4,19 @@ from collections import Counter
 from candidate_rules import GUILD_FIGURES, guild_figures, member_figures
 from derived_figures import with_derived_figures
 from exact_explanations import explain
-from expected_deviations import LISTED_ADDITIONS
-from expected_deviations import NOT_REACHED
+from expected_deviations import ADDITIONS, LISTED_ADDITIONS, NOT_REACHED
+from report import Report
 from shown_figures import Accepted, Context, differences, exact_differences, explanation, running_rule_differences, text_of
 
 LEDGERS = ("bank", "storage")
 ADMIN_NAME_LISTS = ("unknownItemNames", "failedAvatarNames")
 
 
-class Report:
-    def __init__(self, findings, accepted, uncompared):
-        self.findings = findings
-        self.accepted = accepted
-        self.uncompared = uncompared
-
-    @property
-    def exit_code(self):
-        return 1 if self.findings else 0
-
-
 def compare(running, candidate):
     findings = []
     accepted = []
-    findings.extend(_field_set_differences(running, candidate))
+    field_findings, added_fields = _field_set_differences(running, candidate)
+    findings.extend(field_findings)
     findings.extend(_admin_differences(running["admin"], candidate["admin"]))
     findings.extend(_total_count_differences("overview", running["overview"], candidate["overview"]))
     findings.extend(_member_differences(running["overview"], candidate["overview"]))
@@ -46,7 +36,11 @@ def compare(running, candidate):
             findings.append(text_of(difference))
         accepted.extend(Accepted(rule, *difference) for rule in rules)
     findings.extend(_ledger_differences(running["ledgers"], candidate["ledgers"]))
-    return Report(findings, accepted, _uncompared_guild_figures(accepted, candidate))
+    uses = Counter(a.rule for a in accepted)
+    uses[ADDITIONS] += len(added_fields)
+    for keys in (explained or {}).values():
+        uses.update(keys.values())
+    return Report(findings, accepted, _uncompared_guild_figures(accepted, candidate), uses)
 
 
 def _uncompared_guild_figures(accepted, candidate):
@@ -109,14 +103,18 @@ def _field_set_differences(running, candidate):
         ("admin", lambda side: set(side["admin"])),
         ("ledger entry", lambda side: _fields_of(_all_entries(side))),
     )
+    findings = []
+    added = []
     for scope, fields_of in shapes:
         running_fields = fields_of(running)
         candidate_fields = fields_of(candidate)
         for field in sorted(running_fields - candidate_fields):
-            yield f"{scope}: field {field} is served by the running side only"
-        listed = LISTED_ADDITIONS.get(scope, ())
-        for field in sorted(candidate_fields - running_fields - set(listed)):
-            yield f"{scope}: field {field} is served by the candidate side only"
+            findings.append(f"{scope}: field {field} is served by the running side only")
+        listed = set(LISTED_ADDITIONS.get(scope, ()))
+        added.extend((scope, field) for field in sorted(candidate_fields - running_fields & listed))
+        for field in sorted(candidate_fields - running_fields - listed):
+            findings.append(f"{scope}: field {field} is served by the candidate side only")
+    return findings, added
 
 
 def _fields_of(objects):
