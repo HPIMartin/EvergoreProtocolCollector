@@ -1,7 +1,10 @@
 import json
 from collections import Counter
 
+from expected_deviations import LISTED_ADDITIONS
+
 LEDGERS = ("bank", "storage")
+ADMIN_NAME_LISTS = ("unknownItemNames", "failedAvatarNames")
 
 
 class Report:
@@ -15,6 +18,8 @@ class Report:
 
 def compare(running, candidate):
     findings = []
+    findings.extend(_field_set_differences(running, candidate))
+    findings.extend(_admin_differences(running["admin"], candidate["admin"]))
     findings.extend(_total_count_differences("overview", running["overview"], candidate["overview"]))
     findings.extend(_member_differences(running["overview"], candidate["overview"]))
     findings.extend(_overview_differences(running["overview"], candidate["overview"]))
@@ -73,3 +78,44 @@ def _figure_differences(scope, running, candidate):
     for figure in running:
         if figure in candidate and figure != "avatar" and running[figure] != candidate[figure]:
             yield f"{scope}: {figure} differs, running {running[figure]!r}, candidate {candidate[figure]!r}"
+
+
+def _field_set_differences(running, candidate):
+    shapes = (
+        ("row", lambda side: _fields_of(side["overview"]["items"])),
+        ("totals", lambda side: set(side["overview"]["totals"])),
+        ("admin", lambda side: set(side["admin"])),
+        ("ledger entry", lambda side: _fields_of(_all_entries(side))),
+    )
+    for scope, fields_of in shapes:
+        running_fields = fields_of(running)
+        candidate_fields = fields_of(candidate)
+        for field in sorted(running_fields - candidate_fields):
+            yield f"{scope}: field {field} is served by the running side only"
+        listed = LISTED_ADDITIONS.get(scope, ())
+        for field in sorted(candidate_fields - running_fields - set(listed)):
+            yield f"{scope}: field {field} is served by the candidate side only"
+
+
+def _fields_of(objects):
+    return {field for obj in objects for field in obj}
+
+
+def _all_entries(side):
+    return [
+        entry
+        for ledgers in side["ledgers"].values()
+        for ledger in ledgers.values()
+        for entry in ledger["items"]
+    ]
+
+
+def _admin_differences(running, candidate):
+    for field in ADMIN_NAME_LISTS:
+        if field in running and field in candidate:
+            only_running = Counter(running[field]) - Counter(candidate[field])
+            only_candidate = Counter(candidate[field]) - Counter(running[field])
+            for name in sorted(only_running.elements()):
+                yield f"admin: {field} lists {name} in the running side only"
+            for name in sorted(only_candidate.elements()):
+                yield f"admin: {field} lists {name} in the candidate side only"
