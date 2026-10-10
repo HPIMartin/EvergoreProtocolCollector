@@ -57,17 +57,19 @@ def exact_differences(running, candidate):
     return found
 
 
-def explanation(difference, exact_difference_by_member):
+def explanation(difference, exact_difference_by_member, explained_by_member):
     inputs = ROUNDED_FIGURE_INPUTS.get(difference.figure)
     if inputs is None:
-        return None
-    if difference.scope == "totals":
-        differing = {key for keys in exact_difference_by_member.values() for key in keys}
-    else:
-        differing = set(exact_difference_by_member.get(difference.scope, {}))
-    if differing & set(inputs):
-        return None
-    return ROUNDING
+        return []
+    members = list(exact_difference_by_member) if difference.scope == "totals" else [difference.scope]
+    rules = set()
+    for member in members:
+        for key in set(exact_difference_by_member.get(member, {})) & set(inputs):
+            rule = explained_by_member[member].get(key)
+            if rule is None:
+                return []
+            rules.add(rule)
+    return sorted(rules or {ROUNDING})
 
 
 def running_rule_differences(running):

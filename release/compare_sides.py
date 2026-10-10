@@ -3,6 +3,7 @@ from collections import Counter
 
 from candidate_rules import GUILD_FIGURES, guild_figures, member_figures
 from derived_figures import with_derived_figures
+from exact_explanations import explain
 from expected_deviations import LISTED_ADDITIONS
 from shown_figures import Accepted, differences, exact_differences, explanation, running_rule_differences, text_of
 
@@ -30,24 +31,27 @@ def compare(running, candidate):
     shown = differences(with_derived_figures(running["overview"]), with_derived_figures(candidate["overview"]))
     if "exact" in running and "exact" in candidate:
         differing = exact_differences(running, candidate)
-        findings.extend(_exact_differences(differing))
+        explained = explain(differing, running, candidate)
+        findings.extend(_exact_differences(differing, explained))
         findings.extend(running_rule_differences(running))
         findings.extend(_candidate_rounding_differences(candidate))
     else:
         differing = None
+        explained = None
     for difference in shown:
-        rule = None if differing is None else explanation(difference, differing)
-        if rule is None:
+        rules = [] if differing is None else explanation(difference, differing, explained)
+        if not rules:
             findings.append(text_of(difference))
-        else:
-            accepted.append(Accepted(rule, *difference))
+        accepted.extend(Accepted(rule, *difference) for rule in rules)
     findings.extend(_ledger_differences(running["ledgers"], candidate["ledgers"]))
     return Report(findings, accepted)
 
 
-def _exact_differences(differing):
+def _exact_differences(differing, explained):
     for member, keys in differing.items():
         for key, (running, candidate) in keys.items():
+            if key in explained[member]:
+                continue
             yield f"{member}: exact {key} differs, running {running!r}, candidate {candidate!r}"
 
 
