@@ -406,10 +406,11 @@ plus the corrected scenario tagged `@wip`.
     `hooks/self-test` asserts exactly that (resulting history, never printed text). `pre-commit`
     runs it on every commit that touches `hooks/`, `deploy/self-test` on every commit that touches
     `deploy/`, `gate/self-test` on every commit that touches `gate/`, `land/self-test` on every
-    commit that touches `land/` or the landing workflow and `agent/self-test` on every commit that
-    touches `agent/`, so no weakened gate, deploy check, dossier check, landing or token minting can
-    land; it refuses a commit that lets the SHARED sections of
-    `CLAUDE.md` and the agent entry template drift apart.
+    commit that touches `land/` or the landing workflow, `agent/self-test` on every commit that
+    touches `agent/` and `release/self-test` on every commit that touches `release/`, so no weakened
+    gate, deploy check, dossier check, landing, token minting or release comparison can land; it
+    refuses a commit that lets the SHARED sections of `CLAUDE.md` and the agent entry template
+    drift apart.
   - Safety net, not substitute; `--no-verify` only for genuine emergencies. Mechanics:
     [`hooks/README.md`](../../hooks/README.md); this project's gate configuration:
     [build-run-deploy.md](build-run-deploy.md).

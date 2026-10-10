@@ -45,6 +45,14 @@ if git diff --cached --name-only --diff-filter=ACMD -- 'gate/*' | grep -q .; the
 	sh gate/self-test >/dev/null 2>&1 || reject "gate/self-test fails, so the dossier check no longer refuses what it claims to refuse. Run 'sh gate/self-test' and read its output."
 fi
 
+# The release comparison ships its own self-test (release/self-test); the same guard shape keeps a
+# weakened comparison, or its deletion, from landing.
+if git diff --cached --name-only --diff-filter=ACMD -- 'release/*' | grep -q .; then
+	printf '[pre-commit] release self-test...\n'
+	[ -f release/self-test ] || reject "release/self-test is missing, so nothing proves the release comparison reports what it claims to report. Restore it."
+	sh release/self-test >/dev/null 2>&1 || reject "release/self-test fails, so the release comparison no longer reports what it claims to report. Run 'sh release/self-test' and read its output."
+fi
+
 # The landing script ships its own self-test (land/self-test); the same guard shape keeps a
 # weakened landing, or its deletion, from landing. The workflow that runs it rides along.
 if git diff --cached --name-only --diff-filter=ACMD -- 'land/*' '.github/workflows/land.yml' | grep -q .; then

@@ -233,6 +233,10 @@ This project's configuration and legs on top of the shipped suite:
   exist and pass, the same shape, so neither a weakened gate dossier check nor its deletion can
   land ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier"); `hooks/self-test`
   carries four cases for it.
+- **The release leg in `pre-commit`:** whenever a commit touches `release/`, `sh release/self-test`
+  must exist and pass, the same shape, so neither a weakened release comparison nor its deletion can
+  land ([testing.md](testing.md), "1:1 against the production instance"); `hooks/self-test` carries
+  four cases for it.
 - **The land leg in `pre-commit`:** whenever a commit touches `land/` or
   `.github/workflows/land.yml`, `sh land/self-test` must exist and pass, the same shape, so neither
   a weakened landing nor its deletion can land ("The landing workflow" below); `hooks/self-test`

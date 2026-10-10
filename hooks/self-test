@@ -915,6 +915,40 @@ clean_file Elsewhere
 if accepts "Add elsewhere class"; then r=0; else r=1; fi
 check "a commit touching nothing under gate/ runs no gate self-test" "$r"
 
+# The release leg mirrors the gate leg: the release comparison ships its own self-test under release/.
+new_repo releaseleg_red
+write_file release/self-test '#!/bin/sh' 'exit 1'
+git add -A
+git commit -q --no-verify -m "Add the release self-test"
+write_file release/compare '#!/bin/sh' 'exit 1'
+if refuses "Add the release comparison"; then r=0; else r=1; fi
+check "a failing release self-test leaves no commit behind" "$r"
+
+new_repo releaseleg_green
+write_file release/self-test '#!/bin/sh' 'exit 0'
+git add -A
+git commit -q --no-verify -m "Add the release self-test"
+write_file release/compare '#!/bin/sh' 'exit 0'
+if accepts "Add the release comparison"; then r=0; else r=1; fi
+check "a passing release self-test lets the commit through" "$r"
+
+new_repo releaseleg_gone
+write_file release/self-test '#!/bin/sh' 'exit 0'
+write_file release/compare '#!/bin/sh' 'exit 0'
+git add -A
+git commit -q --no-verify -m "Add the release comparison"
+git rm -q release/self-test
+if refuses "Remove the release self-test"; then r=0; else r=1; fi
+check "removing the release self-test leaves no commit behind" "$r"
+
+new_repo releaseleg_scope
+write_file release/self-test '#!/bin/sh' 'exit 1'
+git add -A
+git commit -q --no-verify -m "Add the release self-test"
+clean_file Elsewhere
+if accepts "Add elsewhere class"; then r=0; else r=1; fi
+check "a commit touching nothing under release/ runs no release self-test" "$r"
+
 # The land leg mirrors the gate leg, and the landing workflow that runs the script rides along.
 new_repo landleg_red
 write_file land/self-test '#!/bin/sh' 'exit 1'
