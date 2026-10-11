@@ -27,6 +27,30 @@ class ListedAdditions(unittest.TestCase):
         self.assertEqual([], tested.findings)
 
 
+    def test_a_listed_addition_neither_side_serves_is_a_finding(self):
+        running = side(
+            [without(row("Alice"), "balance")],
+            without(totals(), "balance", "storageValue"),
+            admin=without(admin(), "roundTrips", "roundTripAbstentions"),
+        )
+        candidate = side(
+            [without(row("Alice"), "balance")],
+            without(totals(), "balance", "storageValue"),
+            admin=without(admin(), "roundTrips"),
+        )
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(
+            [
+                "row: field balance is a listed addition the candidate side does not serve",
+                "totals: field balance is a listed addition the candidate side does not serve",
+                "totals: field storageValue is a listed addition the candidate side does not serve",
+                "admin: field roundTrips is a listed addition the candidate side does not serve",
+            ],
+            tested.findings,
+        )
+
 class UnlistedFields(unittest.TestCase):
     def test_an_extra_row_field_on_the_candidate_is_a_finding_naming_field_and_side(self):
         running = side([row("Alice")])

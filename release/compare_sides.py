@@ -165,6 +165,9 @@ def _field_set_differences(running, candidate):
         added.extend((scope, field) for field in sorted(candidate_fields - running_fields & listed))
         for field in sorted(candidate_fields - running_fields - listed):
             findings.append(f"{scope}: field {field} is served by the candidate side only")
+        required = listed if candidate_fields or running_fields else set()
+        for field in sorted(required - candidate_fields - running_fields):
+            findings.append(f"{scope}: field {field} is a listed addition the candidate side does not serve")
     findings.extend(_row_field_differences(running["overview"]["items"], candidate["overview"]["items"]))
     return findings, added
 
