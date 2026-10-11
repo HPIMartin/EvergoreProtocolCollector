@@ -51,12 +51,10 @@ blank line between two rows splits the table mid-body (DOC-11).
 **Next, in order** (decided 2026-10-10 on the plan of 2026-10-09: each wave starts on an event the
 author can observe, at most four strands at once, landings stay serialized)
 
-1. The 0.3.0 release preparation (**F14**).
-2. Once both release strands landed: 0.3.0 cut and deployed by the author (**F14**), beside the
-   permission facts (**G52**).
-3. Once 0.3.0 runs: the gate mechanics (**G51** with **G30**, **G32**, **G40**, **G48**) and the
+1. 0.3.0 cut and deployed by the author (**F14**), beside the permission facts (**G52**).
+2. Once 0.3.0 runs: the gate mechanics (**G51** with **G30**, **G32**, **G40**, **G48**) and the
    opening balance (**E18**), which starts with where each member's opening figure comes from.
-4. Once the gate mechanics landed: CI with a named required check (**A4**).
+3. Once the gate mechanics landed: CI with a named required check (**A4**).
 
 Later: the explanation page (**E19**, carrying **E20**); the atomic ingest (**D24** with **F12**,
 **F10**); **B36** before the fixed-point sums (**D25**, with **D9**) before the SQL pre-grouping
