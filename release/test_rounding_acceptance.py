@@ -98,6 +98,19 @@ class RoundingDifferences(unittest.TestCase):
         for expected in ("Alice", "5", "1"):
             self.assertIn(expected, found[0])
 
+    def test_every_running_row_figure_its_exact_sums_do_not_yield_is_a_finding(self):
+        for figure in figures_of(0):
+            with self.subTest(figure=figure):
+                shown = figures_of(0)
+                shown[figure] += 1000
+                running = running_of(SAME_EXACT, **shown)
+                candidate = candidate_of(SAME_EXACT, net=1, balance=1, storage_value=1)
+
+                tested = compare(running, candidate)
+
+                found = [f for f in tested.findings if f.startswith(f"Alice: running serves {figure} ")]
+                self.assertEqual(1, len(found))
+
     def test_running_totals_that_are_not_the_sum_of_its_rows_are_a_finding(self):
         running = running_of(SAME_EXACT, net=0)
         running["overview"]["totals"]["storageDeposited"] = 7

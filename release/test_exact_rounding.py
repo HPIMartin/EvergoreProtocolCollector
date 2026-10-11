@@ -63,6 +63,26 @@ class CandidateRounding(unittest.TestCase):
         for expected in ("candidate", "79", "78"):
             self.assertIn(expected, found[0])
 
+    def test_every_row_figure_that_is_not_the_rounding_of_its_exact_value_is_a_finding(self):
+        for figure in ALICE:
+            with self.subTest(figure=figure):
+                running, candidate = both_sides(row("Alice", **dict(ALICE, **{figure: ALICE[figure] + 1000})))
+
+                tested = compare(running, candidate)
+
+                found = [f for f in tested.findings if f.startswith(f"Alice: candidate serves {figure} ")]
+                self.assertEqual(1, len(found))
+
+    def test_every_guild_figure_that_is_not_the_rounding_of_its_exact_sum_is_a_finding(self):
+        for figure in GUILD:
+            with self.subTest(figure=figure):
+                running, candidate = both_sides(row("Alice", **ALICE), totals(**dict(GUILD, **{figure: GUILD[figure] + 1000})))
+
+                tested = compare(running, candidate)
+
+                found = [f for f in tested.findings if f.startswith(f"totals: candidate serves {figure} ")]
+                self.assertEqual(1, len(found))
+
     def test_a_computed_row_shown_as_not_yet_computed_is_a_finding(self):
         nulls = {figure: None for figure in ALICE}
         running, candidate = both_sides(row("Alice", **nulls))
