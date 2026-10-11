@@ -180,7 +180,8 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   when a gate meets one; first the gate mechanics (G51 with G30, G32, G40, G48) and the permission
   facts (G52).
 - **Test-suite hygiene:** the browser's first-launch race (B35), the test debt two feature gates
-  left (B33, B34, B38), the headline shapes the parser still misreads (B39, B40, B41), repository tests (B4), style
+  left (B33, B34, B38), the headline shapes the parser still misreads (B39, B40, B41), the release
+  comparison's remaining edges (B42, B43, B44, B45), repository tests (B4), style
   alignment (B8), the shared boot fixture (B18), the parser residual (B22), deterministic
   fixture ids (B23), the unexplained load-sensitive failure (B20), AssertJ in `SmokeTest` (B7).
 - **Docs & code hygiene:** KB in lockstep with code (G3), KB accuracy sweep (G18), the parser
