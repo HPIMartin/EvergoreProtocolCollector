@@ -165,7 +165,16 @@ def _field_set_differences(running, candidate):
         added.extend((scope, field) for field in sorted(candidate_fields - running_fields & listed))
         for field in sorted(candidate_fields - running_fields - listed):
             findings.append(f"{scope}: field {field} is served by the candidate side only")
+    findings.extend(_row_field_differences(running["overview"]["items"], candidate["overview"]["items"]))
     return findings, added
+
+
+def _row_field_differences(running_rows, candidate_rows):
+    for label, rows in (("running", running_rows), ("candidate", candidate_rows)):
+        served = _fields_of(rows)
+        for row in rows:
+            for field in sorted(served - row.keys()):
+                yield f"{row['avatar']}: field {field} is left out of this row on the {label} side"
 
 
 def _fields_of(objects):

@@ -47,6 +47,36 @@ class UnlistedFields(unittest.TestCase):
         found = [f for f in tested.findings if "donation" in f and "running" in f]
         self.assertEqual(1, len(found))
 
+    def test_a_figure_one_candidate_row_leaves_out_is_a_finding_for_that_member(self):
+        running = side([row("Alice"), row("Bob")])
+        candidate = side([row("Alice"), without(row("Bob"), "net", "bankDeposited")])
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(
+            [
+                "Bob: field bankDeposited is left out of this row on the candidate side",
+                "Bob: field net is left out of this row on the candidate side",
+            ],
+            tested.findings,
+        )
+
+    def test_a_candidate_only_figure_one_row_leaves_out_is_a_finding_for_that_member(self):
+        running = side([without(row("Alice"), "balance"), without(row("Bob"), "balance")], without(totals(), "balance", "storageValue"))
+        candidate = side([without(row("Alice"), "balance"), row("Bob")])
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(["Alice: field balance is left out of this row on the candidate side"], tested.findings)
+
+    def test_a_field_no_candidate_row_serves_is_one_finding_not_one_per_member(self):
+        running = side([row("Alice"), row("Bob")])
+        candidate = side([without(row("Alice"), "donation"), without(row("Bob"), "donation")])
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(["row: field donation is served by the running side only"], tested.findings)
+
     def test_a_listed_addition_on_the_wrong_side_is_a_finding(self):
         running = side()
         candidate = side([without(row("Alice"), "balance")])
