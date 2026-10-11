@@ -1,7 +1,7 @@
 import unittest
 
 from compare_sides import compare
-from sample_sides import row, side, totals
+from sample_sides import row, side, totals, without
 
 
 class OverviewFigures(unittest.TestCase):
@@ -62,6 +62,20 @@ class OverviewFigures(unittest.TestCase):
             tested.findings,
         )
 
+
+    def test_a_listed_addition_served_as_a_fraction_is_a_finding(self):
+        running = side([without(row("Alice"), "balance")], without(totals(), "balance", "storageValue"))
+        candidate = side([row("Alice", balance=0.0)], totals(storageValue=0.0))
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(
+            [
+                "Alice: balance is served as float by the candidate side, a whole number is expected",
+                "totals: storageValue is served as float by the candidate side, a whole number is expected",
+            ],
+            tested.findings,
+        )
 
 if __name__ == "__main__":
     unittest.main()
