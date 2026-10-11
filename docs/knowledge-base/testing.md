@@ -394,8 +394,8 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
   - INT, TERM, HUP, QUIT, USR1, USR2 or ALRM ends the run with 128 plus its number once both sides
     are stopped.
 - **The script's own proof:** `sh release/self-test` runs the unit tests and the driver tests on a
-  stub distribution (under a minute, synthetic data only); `pre-commit` runs it too
-  ([build-run-deploy.md](build-run-deploy.md), "Git hooks").
+  stub distribution (under a minute, synthetic data only) and fails when it finds no test;
+  `pre-commit` runs it too ([build-run-deploy.md](build-run-deploy.md), "Git hooks").
 - **The report** lists every finding, then per expected-deviation rule each acceptance and their
   count (a shown figure or an exact sum with both values, a wire field only the candidate serves by
   name), then the rules that did not occur.

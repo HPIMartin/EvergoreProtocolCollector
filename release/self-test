@@ -3,4 +3,12 @@ set -eu
 
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-PYTHONDONTWRITEBYTECODE=1 python3 -I -B -m unittest discover -s "$here" -p 'test_*.py'
+PYTHONDONTWRITEBYTECODE=1 python3 -I -B - "$here" <<'PYTHON'
+import sys
+import unittest
+
+suite = unittest.defaultTestLoader.discover(sys.argv[1], pattern="test_*.py")
+if suite.countTestCases() == 0:
+    sys.exit("release/self-test: no test found, so nothing is proven")
+sys.exit(0 if unittest.TextTestRunner().run(suite).wasSuccessful() else 1)
+PYTHON
