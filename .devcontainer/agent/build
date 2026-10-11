@@ -1,0 +1,76 @@
+#!/bin/sh
+set -eu
+
+devcontainer_cli=@devcontainers/cli@0.89.0
+source_url=https://github.com/HPIMartin/EvergoreProtocolCollector
+
+fail() {
+	printf '[agent-build] %s\n' "$*" >&2
+	exit 1
+}
+
+usage() {
+	printf 'usage: .devcontainer/agent/build --tag <image:tag>\n' >&2
+	exit 2
+}
+
+image_reference() {
+	newline='
+'
+	case $1 in *"$newline"*) return 1 ;; esac
+	name=$1
+	case ${1##*/} in *:*) name=${1%:*} ;; esac
+	[ "${#name}" -le 255 ] || return 1
+	host_part='[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?'
+	path_part='[a-z0-9]+(([_.]|__|-+)[a-z0-9]+)*'
+	printf '%s\n' "$1" | LC_ALL=C grep -Eqx \
+		"($host_part(\\.$host_part)*(:[0-9]+)?/)?$path_part(/$path_part)*(:[A-Za-z0-9_][A-Za-z0-9_.-]{0,127})?"
+}
+
+[ $# -eq 2 ] && [ "$1" = --tag ] && image_reference "$2" || usage
+tag=$2
+
+[ -f .devcontainer/devcontainer.json ] && [ -f .devcontainer/agent/Dockerfile ] ||
+	fail "run from the repository root"
+[ "$(git rev-parse --show-toplevel)" = "$(pwd -P)" ] || fail "run from the repository root"
+require_clean_checkout() {
+	changes=$(git status --porcelain --untracked-files=all) || fail "git cannot read the checkout's status"
+	[ -z "$changes" ] || fail "the checkout has changes the revision labels would not name"
+	index=$(git ls-files -v) || fail "git cannot read the checkout's index"
+	! printf '%s\n' "$index" | grep -q '^[a-zS] ' ||
+		fail "the checkout hides changes from git status (assume-unchanged, skip-worktree or a sparse checkout)"
+}
+
+GIT_NO_REPLACE_OBJECTS=1
+export GIT_NO_REPLACE_OBJECTS
+require_clean_checkout
+[ "$(git rev-parse --is-shallow-repository)" = false ] || fail "the clone is shallow, where the last .devcontainer/ commit reads as its boundary commit"
+
+revision=$(git rev-parse HEAD)
+devcontainer_revision=$(git log -1 --no-show-signature --format=%H -- .devcontainer/)
+[ -n "$devcontainer_revision" ] || fail ".devcontainer/ was never committed, so no commit can name it"
+
+base=epc-agent-base:$revision-$(od -An -N8 -tx8 /dev/urandom | tr -d ' ')
+cleanup() {
+	present=$(docker image ls --quiet --filter "reference=$base") || return 1
+	[ -z "$present" ] || docker image rm "$base" >/dev/null
+}
+trap 'status=$?; trap - EXIT; cleanup || status=1; exit $status' EXIT
+trap 'exit 1' HUP INT TERM
+
+printf '[agent-build] devcontainer image %s\n' "$base"
+npx --yes "$devcontainer_cli" build --workspace-folder . --frozen-lockfile --image-name "$base"
+require_clean_checkout
+[ "$(git rev-parse HEAD)" = "$revision" ] || fail "HEAD moved during the devcontainer build"
+
+printf '[agent-build] agent layer %s\n' "$tag"
+docker build \
+	--build-arg BASE="$base" \
+	--label org.opencontainers.image.revision="$revision" \
+	--label epc.devcontainer.revision="$devcontainer_revision" \
+	--label org.opencontainers.image.source="$source_url" \
+	--file .devcontainer/agent/Dockerfile \
+	--tag "$tag" \
+	.devcontainer/agent
+
+printf '[agent-build] built %s at %s (.devcontainer/ at %s)\n' "$tag" "$revision" "$devcontainer_revision"

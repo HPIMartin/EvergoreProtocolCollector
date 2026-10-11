@@ -1,0 +1,74 @@
+#!/bin/sh
+set -eu
+
+docker_version=5:29.9.0-1~debian.12~bookworm
+containerd_version=2.4.1-2~debian.12~bookworm
+buildx_version=0.38.0-1~debian.12~bookworm
+compose_version=5.6.0-1~debian.12~bookworm
+docker_release_fingerprint=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+docker_key_url=https://download.docker.com/linux/debian/gpg
+docker_repository=https://download.docker.com/linux/debian
+keyring=/etc/apt/keyrings/docker.gpg
+apt_list=/etc/apt/sources.list.d/docker.list
+seat_user=vscode
+seat_home=/home/$seat_user
+
+fail() {
+	printf '[agent-provision] %s\n' "$*" >&2
+	exit 1
+}
+
+usage() {
+	printf 'usage: provision [--root <directory the file tree is written under>]\n' >&2
+	exit 2
+}
+
+root=
+case $# in
+	0) ;;
+	2) [ "$1" = --root ] && [ -d "$2" ] || usage
+		root=$2 ;;
+	*) usage ;;
+esac
+
+apt_install() {
+	DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@"
+}
+
+primary_fingerprints() {
+	printf '%s\n' "$1" |
+		awk -F: '$1 == "pub" || $1 == "sec" { primary = 1; next } $1 == "fpr" && primary { print $10; primary = 0 }'
+}
+
+apt-get update
+apt_install ca-certificates curl gnupg
+
+GNUPGHOME=$(mktemp -d)
+export GNUPGHOME
+trap 'rm -rf "$GNUPGHOME"' EXIT
+curl -fsSL --proto '=https' --proto-redir '=https' -o "$GNUPGHOME/docker.asc" "$docker_key_url"
+listing=$(gpg --show-keys --with-colons "$GNUPGHOME/docker.asc")
+keys=$(primary_fingerprints "$listing")
+[ "$keys" = "$docker_release_fingerprint" ] || fail "Docker's apt key is not $docker_release_fingerprint but: $keys"
+install -d -m 0755 "$root${keyring%/*}"
+gpg --dearmor -o "$root$keyring" "$GNUPGHOME/docker.asc"
+architecture=$(dpkg --print-architecture)
+printf 'deb [arch=%s signed-by=%s] %s bookworm stable\n' "$architecture" "$keyring" "$docker_repository" > "$root$apt_list"
+
+apt-get update
+apt_install --allow-downgrades \
+	tmux \
+	docker-ce="$docker_version" \
+	docker-ce-cli="$docker_version" \
+	containerd.io="$containerd_version" \
+	docker-buildx-plugin="$buildx_version" \
+	docker-compose-plugin="$compose_version"
+apt-get clean
+find "$root/var/lib/apt/lists" -mindepth 1 -delete
+
+git config --system core.hooksPath hooks
+git config --system push.default nothing
+usermod -aG docker "$seat_user"
+install -d -o "$seat_user" -g "$seat_user" "$root/workspaces" \
+	"$root$seat_home/.claude" "$root$seat_home/.gradle" "$root$seat_home/.npm" "$root$seat_home/.local"
+install -d -m 0700 -o "$seat_user" -g "$seat_user" "$root$seat_home/.ssh"

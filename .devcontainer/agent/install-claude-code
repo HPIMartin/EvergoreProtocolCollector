@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+
+version=2.1.296
+installer_url=https://claude.ai/install.sh
+
+fail() {
+	printf '[agent-claude-code] %s\n' "$*" >&2
+	exit 1
+}
+
+[ $# -eq 0 ] || fail "takes no arguments; the version is pinned here"
+
+installer=$(mktemp)
+trap 'rm -f "$installer"' EXIT
+curl -fsSL --proto '=https' --proto-redir '=https' -o "$installer" "$installer_url"
+bash "$installer" "$version"
+installed=$(claude --version)
+[ "$installed" = "$version (Claude Code)" ] || fail "Claude Code reports '$installed', not the pinned $version"

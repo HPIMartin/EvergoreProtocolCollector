@@ -68,6 +68,14 @@ if git diff --cached --name-only --diff-filter=ACMD -- 'agent/*' | grep -q .; th
 	sh agent/self-test >/dev/null 2>&1 || reject "agent/self-test fails, so the token minting no longer refuses what it claims to refuse. Run 'sh agent/self-test' and read its output."
 fi
 
+# The agent machine's image build ships its own self-test (.devcontainer/agent/self-test), the same
+# guard shape.
+if git diff --cached --name-only --diff-filter=ACMD -- '.devcontainer/agent/*' | grep -q .; then
+	printf '[pre-commit] agent image self-test...\n'
+	[ -f .devcontainer/agent/self-test ] || reject ".devcontainer/agent/self-test is missing, so nothing proves the agent image build refuses what it claims to refuse. Restore it."
+	sh .devcontainer/agent/self-test >/dev/null 2>&1 || reject ".devcontainer/agent/self-test fails, so the agent image build no longer refuses what it claims to refuse. Run 'sh .devcontainer/agent/self-test' and read its output."
+fi
+
 # The agent entry files carry one section verbatim. It is compared from the staged blobs, falling
 # back to HEAD for the file the commit does not touch, so editing one of the two alone is caught.
 entry_wrapper=CLAUDE.md

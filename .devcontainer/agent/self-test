@@ -1,0 +1,682 @@
+#!/bin/sh
+set -eu
+
+agent_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+build="$agent_dir/build"
+source_url=https://github.com/HPIMartin/EvergoreProtocolCollector
+
+for leaked in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do
+	unset "$leaked"
+done
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+export GIT_AUTHOR_NAME=self-test GIT_AUTHOR_EMAIL=self-test@example.invalid
+export GIT_COMMITTER_NAME=self-test GIT_COMMITTER_EMAIL=self-test@example.invalid
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+export GIT_CEILING_DIRECTORIES="$work"
+failures=0
+
+check() {
+	if [ "$2" -eq 0 ]; then
+		printf '  ok   %s\n' "$1"
+	else
+		printf '  FAIL %s\n' "$1"
+		failures=$((failures + 1))
+	fi
+}
+
+mkdir -p "$work/bin"
+cat > "$work/bin/npx" <<'STUB'
+#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$STUB_DIR/npx"
+[ ! -f "$STUB_DIR/npx.fail" ] || exit 1
+image=
+expect=
+for argument in "$@"; do
+	[ "$expect" != image ] || image=$argument
+	expect=
+	[ "$argument" != --image-name ] || expect=image
+done
+[ -z "$image" ] || touch "$STUB_DIR/images/$(printf '%s' "$image" | tr ':/' '__')"
+if [ -f "$STUB_DIR/npx.interrupt" ]; then
+	kill -"$(cat "$STUB_DIR/npx.interrupt")" "$PPID"
+	sleep 1
+fi
+[ ! -f "$STUB_DIR/npx.edit" ] || printf 'RUN true\n' >> .devcontainer/agent/Dockerfile
+[ ! -f "$STUB_DIR/npx.move" ] || git commit -q --allow-empty -m "Move HEAD"
+[ ! -f "$STUB_DIR/npx.untrack" ] || printf 'new\n' > .devcontainer/extra
+if [ -f "$STUB_DIR/npx.hide" ]; then
+	git update-index --assume-unchanged .devcontainer/agent/Dockerfile
+	printf 'RUN true\n' >> .devcontainer/agent/Dockerfile
+fi
+STUB
+cat > "$work/bin/docker" <<'STUB'
+#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$STUB_DIR/docker"
+marker() { printf '%s/images/%s' "$STUB_DIR" "$(printf '%s' "$1" | tr ':/' '__')"; }
+case "$1 $2" in
+	"image ls")
+		[ ! -f "$STUB_DIR/ls.fail" ] || exit 1
+		[ ! -f "$(marker "${5#reference=}")" ] || printf 'sha256:0123\n' ;;
+	"image rm")
+		[ $# -eq 3 ] || exit 64
+		[ ! -f "$STUB_DIR/rm.fail" ] || exit 1
+		printf '%s\n' "$3" >> "$STUB_DIR/removed"
+		mv "$(marker "$3")" "$(marker "$3").removed" ;;
+	"build "*) [ ! -f "$STUB_DIR/build.fail" ] ;;
+	*) exit 64 ;;
+esac
+STUB
+chmod +x "$work/bin/npx" "$work/bin/docker"
+
+new_case() {
+	stub="$work/$1"
+	repo="$stub/repo"
+	mkdir -p "$stub/images" "$repo/.devcontainer/agent"
+	git -C "$repo" init -q
+	printf '{}\n' > "$repo/.devcontainer/devcontainer.json"
+	printf 'FROM scratch\n' > "$repo/.devcontainer/agent/Dockerfile"
+	cp "$build" "$repo/.devcontainer/agent/build"
+	git -C "$repo" add -A
+	git -C "$repo" commit -q -m "Add the devcontainer"
+	printf 'FROM scratch\nUSER root\n' > "$repo/.devcontainer/agent/Dockerfile"
+	git -C "$repo" commit -q -am "Change the agent layer"
+	printf 'FROM scratch\n' > "$repo/.devcontainer/Dockerfile"
+	git -C "$repo" add -A
+	git -C "$repo" commit -q -m "Add the devcontainer's own Dockerfile"
+	printf 'elsewhere\n' > "$repo/README"
+	git -C "$repo" add -A
+	git -C "$repo" commit -q -m "Add a readme"
+	cwd=$repo
+}
+
+run_build() {
+	set +e
+	(cd "$cwd" && PATH="$work/bin:$PATH" STUB_DIR="$stub" env --default-signal=HUP,INT,TERM \
+		${run_locale:+"LC_ALL=$run_locale"} sh "$repo/.devcontainer/agent/build" "$@") \
+		> "$stub/out" 2> "$stub/err"
+	status=$?
+	set -e
+}
+
+no_calls() { [ ! -e "$stub/npx" ] && [ ! -e "$stub/docker" ]; }
+docker_build() { grep '^build ' "$stub/docker" 2>/dev/null; }
+base_name() { sed -n 's/.*--image-name \([^ ]*\).*/\1/p' "$stub/npx" 2>/dev/null || true; }
+leftover_images() { find "$stub/images" -type f ! -name '*.removed' | grep -q .; }
+
+expect_usage_refused() {
+	description=$1
+	shift
+	usage_cases=$((usage_cases + 1))
+	new_case "usage-$usage_cases"
+	run_build "$@"
+	r=0
+	[ "$status" -eq 2 ] && no_calls && grep -q 'usage:' "$stub/err" || r=1
+	check "$description" "$r"
+}
+
+usage_cases=0
+expect_usage_refused 'no argument is refused before any call'
+expect_usage_refused 'a missing tag value is refused before any call' --tag
+expect_usage_refused 'an empty tag is refused before any call' --tag ''
+expect_usage_refused 'another option is refused before any call' --name epc-agent:test
+expect_usage_refused 'an extra argument is refused before any call' --tag epc-agent:test --push
+expect_usage_refused 'a tag that reads as an option is refused before any call' --tag -x
+expect_usage_refused 'a tag with a space is refused before any call' --tag 'epc agent'
+expect_usage_refused 'a repository name in capitals is refused before any call' --tag Epc-Agent:test
+expect_usage_refused 'a tag over two lines is refused before any call' --tag "$(printf 'epc-agent:test\n--push')"
+expect_usage_refused 'a tag with two tag parts is refused before any call' --tag epc-agent:a:b
+run_locale=en_US.utf8
+expect_usage_refused 'a tag with a letter outside ASCII is refused before any call, whatever the locale' --tag "$(printf 'epc-agent:\303\251')"
+run_locale=
+
+longest_tag=$(printf 'a%.0s' $(seq 128))
+expect_usage_refused 'a repository name over 255 characters is refused before any call' --tag "$(printf 'a%.0s' $(seq 256)):x"
+expect_usage_refused 'a tag longer than 128 characters is refused before any call' --tag "epc-agent:a$longest_tag"
+
+for accepted in registry.example.org/epc/agent:0.3.0 localhost:5000/epc/agent:V1_x epc-agent "epc-agent:$longest_tag"; do
+	new_case "accept-$(printf '%s' "$accepted" | tr ':/.' '___')"
+	run_build --tag "$accepted"
+	r=0
+	[ "$status" -eq 0 ] && docker_build | grep -Fq -- "--tag $accepted .devcontainer/agent" || r=1
+	check "a tag like $accepted is built as named" "$r"
+done
+
+new_case happy
+run_build --tag epc-agent:test
+head=$(git -C "$repo" rev-parse HEAD)
+devcontainer_head=$(git -C "$repo" rev-parse HEAD~1)
+base=$(base_name)
+r=0
+[ "$status" -eq 0 ] || r=1
+check 'a clean checkout builds' "$r"
+
+r=0
+grep -Eq '^--yes @devcontainers/cli@[0-9]+\.[0-9]+\.[0-9]+ build --workspace-folder \. --frozen-lockfile --image-name ' "$stub/npx" || r=1
+check 'the devcontainer image comes from a pinned devcontainer CLI, held to the lockfile' "$r"
+
+r=0
+docker_build | grep -q -- "--build-arg BASE=$base " && [ -n "$base" ] || r=1
+check 'the agent layer builds on the devcontainer image just built' "$r"
+
+r=0
+docker_build | grep -q -- "--label org.opencontainers.image.revision=$head " || r=1
+check 'the image names the commit it was built from' "$r"
+
+r=0
+[ "$head" != "$devcontainer_head" ] &&
+	docker_build | grep -q -- "--label epc.devcontainer.revision=$devcontainer_head " || r=1
+check 'the image names the last commit that changed .devcontainer/' "$r"
+
+r=0
+docker_build | grep -q -- "--label org.opencontainers.image.source=$source_url " || r=1
+check 'the image names the repository it was built from' "$r"
+
+r=0
+docker_build | grep -q -- '--file \.devcontainer/agent/Dockerfile --tag epc-agent:test \.devcontainer/agent$' || r=1
+check 'the agent layer is tagged with the requested tag' "$r"
+
+r=0
+[ "$(docker_build)" = "build --build-arg BASE=$base --label org.opencontainers.image.revision=$head --label epc.devcontainer.revision=$devcontainer_head --label org.opencontainers.image.source=$source_url --file .devcontainer/agent/Dockerfile --tag epc-agent:test .devcontainer/agent" ] || r=1
+check 'the agent layer is built with exactly these arguments and no other' "$r"
+
+r=0
+grep -qx "$base" "$stub/removed" && ! leftover_images || r=1
+check 'the temporary tag is gone after a build' "$r"
+
+r=0
+! grep -Eq '^(push|login|tag) ' "$stub/docker" || r=1
+check 'nothing is pushed and nobody logs in' "$r"
+
+r=0
+! docker_build | grep -Eq -- ' --(push|output)' || r=1
+check 'the agent layer stays in the local image store' "$r"
+
+new_case subdirectory
+cwd="$repo/.devcontainer"
+run_build --tag epc-agent:test
+r=0
+[ "$status" -eq 1 ] && no_calls || r=1
+check 'a run outside the repository root is refused before any call' "$r"
+
+new_case nested
+mkdir -p "$repo/sub/.devcontainer/agent"
+cp "$repo/.devcontainer/devcontainer.json" "$repo/sub/.devcontainer/"
+cp "$repo/.devcontainer/agent/Dockerfile" "$repo/sub/.devcontainer/agent/"
+git -C "$repo" add -A
+git -C "$repo" commit -q -m "Nest a devcontainer"
+cwd="$repo/sub"
+run_build --tag epc-agent:test
+r=0
+[ "$status" -eq 1 ] && no_calls || r=1
+check 'a nested .devcontainer/ below the repository root is refused before any call' "$r"
+
+new_case signed
+ssh-keygen -q -t ed25519 -N '' -f "$stub/signing-key"
+git -C "$repo" config gpg.format ssh
+git -C "$repo" config user.signingkey "$stub/signing-key.pub"
+printf 'FROM scratch\nUSER vscode\n' > "$repo/.devcontainer/agent/Dockerfile"
+git -C "$repo" commit -q -S -am "Sign the agent layer"
+git -C "$repo" config log.showSignature true
+signed_head=$(git -C "$repo" rev-parse HEAD)
+run_build --tag epc-agent:test
+r=0
+[ "$status" -eq 0 ] && docker_build | grep -q -- "--label epc.devcontainer.revision=$signed_head --label" || r=1
+check 'a signed last .devcontainer/ commit still labels the image with its bare hash' "$r"
+
+for during in edit move untrack hide; do
+	new_case "during-$during"
+	touch "$stub/npx.$during"
+	run_build --tag epc-agent:test
+	r=0
+	[ "$status" -ne 0 ] && ! grep -q '^build ' "$stub/docker" 2>/dev/null && ! leftover_images || r=1
+	case $during in
+		edit) check 'a change made during the devcontainer build is refused before the agent layer' "$r" ;;
+		move) check 'a HEAD moved during the devcontainer build is refused before the agent layer' "$r" ;;
+		untrack) check 'a file created during the devcontainer build is refused before the agent layer' "$r" ;;
+		hide) check 'a change hidden during the devcontainer build is refused before the agent layer' "$r" ;;
+	esac
+done
+
+new_case replaced
+replaced_head=$(git -C "$repo" rev-parse HEAD~1)
+git -C "$repo" replace "$replaced_head" "$(git -C "$repo" rev-list --max-parents=0 HEAD)"
+run_build --tag epc-agent:test
+r=0
+[ "$status" -eq 0 ] && docker_build | grep -q -- "--label epc.devcontainer.revision=$replaced_head --label" || r=1
+check 'a replace ref cannot change which commit the image names' "$r"
+
+new_case replaced-head
+printf 'RUN true\n' >> "$repo/.devcontainer/agent/Dockerfile"
+git -C "$repo" add .devcontainer/agent/Dockerfile
+lookalike=$(git -C "$repo" commit-tree "$(git -C "$repo" write-tree)" -p HEAD -m "Look like the checkout")
+git -C "$repo" replace HEAD "$lookalike"
+run_build --tag epc-agent:test
+r=0
+[ "$status" -eq 1 ] && no_calls || r=1
+check 'a replace ref cannot make a changed checkout look clean' "$r"
+
+new_case never-committed
+repo="$stub/uncommitted"
+mkdir -p "$repo"
+git -C "$repo" init -q
+cp -R "$stub/repo/.devcontainer" "$stub/repo/README" "$repo/"
+printf '.devcontainer/\n' >> "$repo/.git/info/exclude"
+git -C "$repo" add -A
+git -C "$repo" commit -q -m "Add a readme"
+cwd=$repo
+run_build --tag epc-agent:test
+r=0
+[ "$status" -eq 1 ] && no_calls && grep -q 'never committed' "$stub/err" || r=1
+check 'a .devcontainer/ git never committed is refused before any call' "$r"
+
+new_case dirty
+printf 'changed\n' >> "$repo/.devcontainer/agent/Dockerfile"
+run_build --tag epc-agent:test
+r=0
+[ "$status" -eq 1 ] && no_calls && grep -q 'changes' "$stub/err" || r=1
+check 'a changed checkout is refused before any call' "$r"
+
+new_case untracked
+printf 'new\n' > "$repo/.devcontainer/extra"
+run_build --tag epc-agent:test
+r=0
+[ "$status" -eq 1 ] && no_calls || r=1
+check 'an untracked file is refused before any call' "$r"
+
+new_case untracked-hidden
+git -C "$repo" config status.showUntrackedFiles no
+printf 'new\n' > "$repo/.devcontainer/extra"
+run_build --tag epc-agent:test
+r=0
+[ "$status" -eq 1 ] && no_calls || r=1
+check 'an untracked file the repository hides from git status is refused before any call' "$r"
+
+for hiding in assume-unchanged skip-worktree; do
+	new_case "$hiding"
+	git -C "$repo" update-index "--$hiding" .devcontainer/agent/Dockerfile
+	printf 'changed\n' >> "$repo/.devcontainer/agent/Dockerfile"
+	run_build --tag epc-agent:test
+	r=0
+	[ "$status" -eq 1 ] && no_calls || r=1
+	check "a change hidden by --$hiding is refused before any call" "$r"
+done
+
+new_case corrupt-index
+printf 'garbage' > "$repo/.git/index"
+run_build --tag epc-agent:test
+r=0
+[ "$status" -ne 0 ] && no_calls || r=1
+check 'a checkout git cannot read the status of is refused before any call' "$r"
+
+new_case shallow
+git clone -q --depth 1 "file://$repo" "$stub/shallow"
+repo="$stub/shallow"
+cwd=$repo
+run_build --tag epc-agent:test
+r=0
+[ "$status" -eq 1 ] && no_calls && grep -q 'shallow' "$stub/err" || r=1
+check 'a shallow clone is refused before any call, since it cannot name the last .devcontainer/ commit' "$r"
+
+new_case no-repository
+mkdir -p "$stub/plain"
+cp -R "$repo/.devcontainer" "$stub/plain/"
+repo="$stub/plain"
+cwd=$repo
+run_build --tag epc-agent:test
+r=0
+[ "$status" -eq 1 ] && no_calls || r=1
+check 'a directory that is no git repository is refused before any call' "$r"
+
+for signal in TERM INT HUP; do
+	new_case "interrupted-$signal"
+	printf '%s\n' "$signal" > "$stub/npx.interrupt"
+	run_build --tag epc-agent:test
+	r=0
+	[ "$status" -ne 0 ] && ! grep -q '^build ' "$stub/docker" 2>/dev/null && [ -s "$stub/removed" ] && ! leftover_images || r=1
+	check "a run stopped by SIG$signal fails and still removes the temporary tag" "$r"
+done
+
+new_case devcontainer-fails
+touch "$stub/npx.fail"
+run_build --tag epc-agent:test
+r=0
+[ "$status" -ne 0 ] && ! grep -q '^build ' "$stub/docker" 2>/dev/null && ! leftover_images || r=1
+check 'a failed devcontainer build fails the run before the agent layer' "$r"
+
+new_case layer-fails
+touch "$stub/build.fail"
+run_build --tag epc-agent:test
+r=0
+[ "$status" -ne 0 ] && ! leftover_images || r=1
+check 'a failed agent layer fails the run and still removes the temporary tag' "$r"
+
+new_case two-runs
+run_build --tag epc-agent:test
+run_build --tag epc-agent:test
+two_head=$(git -C "$repo" rev-parse HEAD)
+r=0
+[ "$(base_name | grep -Ecx "epc-agent-base:$two_head-[0-9a-f]{16}")" -eq 2 ] && [ "$(base_name | sort -u | grep -c .)" -eq 2 ] &&
+	! base_name | grep -Eq -- '-0{14}[0-9a-f]{2}$' || r=1
+check 'every run builds under a temporary tag of its own' "$r"
+
+new_case cleanup-fails
+touch "$stub/rm.fail"
+run_build --tag epc-agent:test
+r=0
+[ "$status" -ne 0 ] || r=1
+check 'a temporary tag that cannot be removed fails the run' "$r"
+
+new_case cleanup-unknown
+touch "$stub/ls.fail"
+run_build --tag epc-agent:test
+r=0
+[ "$status" -ne 0 ] || r=1
+check 'a temporary tag whose removal cannot be checked fails the run' "$r"
+
+r=0
+[ "$(grep -v '^[[:space:]]*$' "$agent_dir/Dockerfile")" = "$(printf '%s\n' \
+	'ARG BASE' \
+	'FROM ${BASE}' \
+	'LABEL devcontainer.metadata="[]"' \
+	'USER root' \
+	'RUN --mount=type=bind,source=provision,target=/tmp/provision sh /tmp/provision' \
+	'USER vscode' \
+	'ENV PATH=/home/vscode/.local/bin:${PATH}' \
+	'RUN --mount=type=bind,source=install-claude-code,target=/tmp/install-claude-code sh /tmp/install-claude-code' \
+	'WORKDIR /workspaces' \
+	'CMD ["sleep", "infinity"]')" ] || r=1
+check 'the agent layer is the devcontainer image without its devcontainer metadata, plus provision as root and install-claude-code as vscode, nothing else' "$r"
+
+docker_fingerprint=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+docker_list='deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable'
+
+mkdir -p "$work/tools"
+cat > "$work/tools/curl" <<'STUB'
+#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$STUB_DIR/curl"
+[ ! -f "$STUB_DIR/curl.fail" ] || exit 22
+output=
+expect=
+for argument in "$@"; do
+	[ "$expect" != output ] || output=$argument
+	expect=
+	[ "$argument" != -o ] || expect=output
+done
+cp "$STUB_DIR/download" "$output"
+STUB
+cat > "$work/tools/gpg" <<'STUB'
+#!/bin/sh
+set -eu
+printf '%s\n' "${GNUPGHOME-unset}" >> "$STUB_DIR/gnupghome"
+case "$1" in
+	--show-keys)
+		[ $# -eq 3 ] && [ "$2" = --with-colons ] && cmp -s "$3" "$STUB_DIR/download" || exit 64
+		printf '%s\n' "$3" >> "$STUB_DIR/shown"
+		cat "$STUB_DIR/colons"
+		[ ! -f "$STUB_DIR/gpg.show.fail" ] || exit 2 ;;
+	--dearmor)
+		[ "$2" = -o ] && [ ! -f "$STUB_DIR/dearmor.fail" ] || exit 2
+		printf '%s\n' "$4" >> "$STUB_DIR/dearmored"
+		cp "$4" "$3" ;;
+	*) exit 64 ;;
+esac
+STUB
+cat > "$work/tools/apt-get" <<'STUB'
+#!/bin/sh
+set -eu
+if [ -f "$STUB_DIR/curl" ]; then fetched=fetched; else fetched=unfetched; fi
+if [ -f "$STUB_DIR/root/etc/apt/sources.list.d/docker.list" ]; then listed=listed; else listed=unlisted; fi
+printf '%s %s %s %s\n' "$fetched" "$listed" "${DEBIAN_FRONTEND:-interactive}" "$*" >> "$STUB_DIR/apt-get"
+[ "$(cat "$STUB_DIR/apt-get.fail" 2>/dev/null)" != "$(wc -l < "$STUB_DIR/apt-get")" ] || exit 100
+STUB
+cat > "$work/tools/dpkg" <<'STUB'
+#!/bin/sh
+[ ! -f "$STUB_DIR/dpkg.fail" ] || exit 2
+[ "$*" = --print-architecture ] && printf 'amd64\n'
+STUB
+cat > "$work/tools/usermod" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" >> "$STUB_DIR/usermod"
+grep -q ' docker-ce=' "$STUB_DIR/apt-get" 2>/dev/null || exit 6
+[ ! -f "$STUB_DIR/usermod.fail" ] || exit 6
+STUB
+cat > "$work/tools/install" <<'STUB'
+#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$STUB_DIR/install"
+[ "$(cat "$STUB_DIR/install.fail" 2>/dev/null)" != "$(wc -l < "$STUB_DIR/install")" ] || exit 1
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-d) shift ;;
+		-m|-o|-g) shift 2 ;;
+		*) mkdir -p "$1"; shift ;;
+	esac
+done
+STUB
+cat > "$work/tools/bash" <<'STUB'
+#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$STUB_DIR/bash"
+cmp -s "$1" "$STUB_DIR/download"
+if [ -f "$STUB_DIR/other-version" ]; then
+	printf '0.0.1\n' > "$STUB_DIR/claude-version"
+else
+	printf '%s\n' "$2" > "$STUB_DIR/claude-version"
+fi
+STUB
+real_git=$(command -v git)
+cat > "$work/tools/git" <<STUB
+#!/bin/sh
+case " \$* " in
+	*" \$(cat "\$STUB_DIR/git.fail" 2>/dev/null) "*) [ ! -f "\$STUB_DIR/git.fail" ] || exit 255 ;;
+esac
+exec "$real_git" "\$@"
+STUB
+cat > "$work/tools/claude" <<'STUB'
+#!/bin/sh
+[ "$*" = --version ] && printf '%s (Claude Code)\n' "$(cat "$STUB_DIR/claude-version")"
+STUB
+chmod +x "$work/tools/"*
+
+genuine_key() {
+	printf 'pub:-:4096:1:8D81803C0EBFCD88:1487788586:::-:::scESA:::::23::0:\n'
+	printf 'fpr:::::::::%s:\n' "$docker_fingerprint"
+	printf 'uid:-::::1487792064::Docker Release (CE deb)::::::::::0:\n'
+	printf 'sub:-:4096:1:7EA0A9C3F273FCD8:1487788586::::::s:::::23:\n'
+	printf 'fpr:::::::::D3306A018370199E527AE7997EA0A9C3F273FCD8:\n'
+}
+
+foreign_key() {
+	printf 'pub:-:4096:1:0123456789ABCDEF:1487788586:::-:::scESA:::::23::0:\n'
+	printf 'fpr:::::::::0000000000000000000000000123456789ABCDEF:\n'
+}
+
+secret_key() {
+	printf 'sec:u:3072:1:82F01A38ABE3FF04:1791802511:::u:::scESC::::::23\n'
+	printf 'fpr:::::::::73C96165E84EFC3014D6DE0282F01A38ABE3FF04:\n'
+}
+
+new_tool_case() {
+	stub="$work/$1"
+	mkdir -p "$stub/root/etc/apt/sources.list.d" "$stub/root/var/lib/apt/lists/partial"
+	printf 'cached\n' > "$stub/root/var/lib/apt/lists/download.docker.com_Packages"
+	mkdir -p "$stub/root/var/lib/apt/lists/auxfiles"
+	printf 'cached\n' > "$stub/root/var/lib/apt/lists/auxfiles/index"
+	printf 'downloaded by %s\n' "$1" > "$stub/download"
+	genuine_key > "$stub/colons"
+}
+
+run_tool() {
+	tool=$1
+	shift
+	set +e
+	(
+		unset GIT_CONFIG_NOSYSTEM
+		export GIT_CONFIG_SYSTEM="$stub/gitconfig" PATH="$work/tools:$PATH" STUB_DIR="$stub"
+		sh "$agent_dir/$tool" "$@"
+	) > "$stub/out" 2> "$stub/err"
+	status=$?
+	set -e
+}
+
+downloaded_file() { sed -n 's/.* -o \([^ ]*\) .*/\1/p' "$stub/curl" | head -n 1; }
+system_config() { git config --file "$stub/gitconfig" --get "$1" 2>/dev/null || true; }
+nothing_installed_from_docker() { ! grep -q 'docker-ce' "$stub/apt-get" 2>/dev/null; }
+
+new_tool_case provision
+run_tool provision --root "$stub/root"
+r=0
+[ "$status" -eq 0 ] || r=1
+check 'provision runs through with the genuine Docker release key' "$r"
+
+r=0
+grep -qx -- "-fsSL --proto =https --proto-redir =https -o $(downloaded_file) https://download.docker.com/linux/debian/gpg" "$stub/curl" || r=1
+check 'provision fetches the Docker key over HTTPS only, from Docker' "$r"
+
+r=0
+cmp -s "$stub/download" "$stub/root/etc/apt/keyrings/docker.gpg" && grep -qx "$(downloaded_file)" "$stub/dearmored" &&
+	grep -qx "$(downloaded_file)" "$stub/shown" || r=1
+check 'the keyring apt trusts holds the key whose fingerprint was checked' "$r"
+
+r=0
+[ "$(sort -u "$stub/gnupghome" 2>/dev/null)" = "$(dirname "$(downloaded_file)")" ] || r=1
+check 'gpg keeps its state in the temporary directory beside the key' "$r"
+
+r=0
+[ "$(cat "$stub/root/etc/apt/sources.list.d/docker.list")" = "$docker_list" ] || r=1
+check 'apt takes the Docker packages only when signed by that keyring' "$r"
+
+r=0
+[ "$(sed -E 's/=[0-9][0-9A-Za-z.:~+-]*( |$)/=PIN\1/g' "$stub/apt-get")" = "$(printf '%s\n' \
+	'unfetched unlisted interactive update' \
+	'unfetched unlisted noninteractive install -y --no-install-recommends ca-certificates curl gnupg' \
+	'fetched listed interactive update' \
+	'fetched listed noninteractive install -y --no-install-recommends --allow-downgrades tmux docker-ce=PIN docker-ce-cli=PIN containerd.io=PIN docker-buildx-plugin=PIN docker-compose-plugin=PIN' \
+	'fetched listed interactive clean')" ] || r=1
+check 'apt fetches the tools first, then tmux and every Docker package pinned from the signed repository, then cleans up' "$r"
+
+r=0
+[ -d "$stub/root/var/lib/apt/lists" ] && [ -z "$(find "$stub/root/var/lib/apt/lists" -mindepth 1)" ] || r=1
+check 'the apt lists leave the image, their directory stays' "$r"
+
+r=0
+[ "$(system_config core.hooksPath)" = hooks ] && [ "$(system_config push.default)" = nothing ] || r=1
+check 'every clone in the image runs its tracked hooks and pushes only what it names' "$r"
+
+r=0
+grep -qx -- '-aG docker vscode' "$stub/usermod" || r=1
+check 'vscode reaches the inner Docker daemon' "$r"
+
+r=0
+home="$stub/root/home/vscode"
+grep -qx -- "-d -o vscode -g vscode $stub/root/workspaces $home/.claude $home/.gradle $home/.npm $home/.local" "$stub/install" &&
+	grep -qx -- "-d -m 0700 -o vscode -g vscode $home/.ssh" "$stub/install" || r=1
+check 'the mount points belong to vscode, ~/.ssh readable by vscode alone' "$r"
+
+r=0
+[ -n "$(downloaded_file)" ] && [ ! -e "$(dirname "$(downloaded_file)")" ] || r=1
+check 'the downloaded key leaves no temporary directory behind' "$r"
+
+for refusal in foreign-key second-key secret-key foreign-key-first secret-key-first key-listing-fails key-download-fails; do
+	new_tool_case "provision-$refusal"
+	case $refusal in
+		foreign-key) foreign_key > "$stub/colons" ;;
+		second-key) foreign_key >> "$stub/colons" ;;
+		secret-key) secret_key >> "$stub/colons" ;;
+		foreign-key-first) { foreign_key; genuine_key; } > "$stub/colons" ;;
+		secret-key-first) { secret_key; genuine_key; } > "$stub/colons" ;;
+		key-listing-fails) touch "$stub/gpg.show.fail" ;;
+		key-download-fails) touch "$stub/curl.fail" ;;
+	esac
+	run_tool provision --root "$stub/root"
+	r=0
+	[ "$status" -ne 0 ] && nothing_installed_from_docker && [ ! -e "$stub/root/etc/apt/keyrings/docker.gpg" ] &&
+		[ ! -e "$stub/root/etc/apt/sources.list.d/docker.list" ] && [ ! -e "$stub/gitconfig" ] &&
+		[ -n "$(downloaded_file)" ] && [ ! -e "$(dirname "$(downloaded_file)")" ] || r=1
+	case $refusal in
+		foreign-key) description='a key with another fingerprint is refused before apt trusts it' ;;
+		second-key) description='a second key beside the genuine one is refused before apt trusts either' ;;
+		secret-key) description='a secret key beside the genuine one is refused before apt trusts either' ;;
+		foreign-key-first) description='a key listed before the genuine one is refused before apt trusts either' ;;
+		secret-key-first) description='a secret key listed before the genuine one is refused before apt trusts either' ;;
+		key-listing-fails) description='gpg failing after it listed the genuine key stops provision before apt trusts anything' ;;
+		key-download-fails) description='a failed key download stops provision before apt trusts anything' ;;
+	esac
+	check "$description" "$r"
+done
+
+for usage in missing-root no-root-value other-option extra-argument; do
+	new_tool_case "provision-$usage"
+	case $usage in
+		missing-root) run_tool provision --root "$stub/missing"; description='a root that does not exist' ;;
+		no-root-value) run_tool provision --root; description='--root without a directory' ;;
+		other-option) run_tool provision --prefix "$stub/root"; description='another option' ;;
+		extra-argument) run_tool provision --root "$stub/root" extra; description='an extra argument' ;;
+	esac
+	r=0
+	[ "$status" -eq 2 ] && [ ! -e "$stub/apt-get" ] || r=1
+	check "provision refuses $description before any call" "$r"
+done
+
+for failing in apt-get:1 apt-get:2 apt-get:3 apt-get:4 apt-get:5 dearmor dpkg usermod install:1 install:2 install:3 git:core.hooksPath git:push.default apt-lists; do
+	new_tool_case "provision-fails-$(printf '%s' "$failing" | tr ':' '-')"
+	case $failing in
+		apt-get:*|install:*|git:*) printf '%s\n' "${failing#*:}" > "$stub/${failing%%:*}.fail" ;;
+		apt-lists) mv "$stub/root/var/lib/apt/lists" "$stub/root/var/lib/apt/lists.gone" ;;
+		*) touch "$stub/$failing.fail" ;;
+	esac
+	run_tool provision --root "$stub/root"
+	r=0
+	[ "$status" -ne 0 ] || r=1
+	check "a failing step ($failing) fails provision" "$r"
+done
+
+new_tool_case claude-code
+run_tool install-claude-code
+version=$(sed -n 's/^[^ ]* //p' "$stub/bash" 2>/dev/null || true)
+r=0
+[ "$status" -eq 0 ] || r=1
+check 'Claude Code installs' "$r"
+
+r=0
+grep -qx -- "-fsSL --proto =https --proto-redir =https -o $(downloaded_file) https://claude.ai/install.sh" "$stub/curl" || r=1
+check 'the native installer comes over HTTPS only, from claude.ai' "$r"
+
+r=0
+printf '%s\n' "$version" | grep -Eqx '[0-9]+\.[0-9]+\.[0-9]+' || r=1
+check 'the installer is asked for an exact version' "$r"
+
+r=0
+[ -n "$(downloaded_file)" ] && [ ! -e "$(downloaded_file)" ] || r=1
+check 'the installer leaves no temporary file behind' "$r"
+
+new_tool_case claude-code-other-version
+touch "$stub/other-version"
+run_tool install-claude-code
+r=0
+[ "$status" -ne 0 ] && grep -q 'pinned' "$stub/err" || r=1
+check 'a Claude Code reporting another version than the pin fails the install' "$r"
+
+new_tool_case claude-code-download-fails
+touch "$stub/curl.fail"
+run_tool install-claude-code
+r=0
+[ "$status" -ne 0 ] && [ ! -e "$stub/bash" ] || r=1
+check 'a failed installer download runs no installer' "$r"
+
+new_tool_case claude-code-argument
+run_tool install-claude-code 9.9.9
+r=0
+[ "$status" -ne 0 ] && [ ! -e "$stub/curl" ] && [ ! -e "$stub/bash" ] || r=1
+check 'install-claude-code takes no version from outside before any call' "$r"
+
+if [ "$failures" -ne 0 ]; then
+	printf 'agent image self-test: %s case(s) failed\n' "$failures"
+	exit 1
+fi
+printf 'agent image self-test: all cases passed\n'

@@ -246,6 +246,10 @@ This project's configuration and legs on top of the shipped suite:
   short of a rename inside `agent/` or a partly staged change, which every leg lets through (the
   legs' staged-blob gap, **G27**) ([dev-environment.md](dev-environment.md), "Where agents run");
   `hooks/self-test` carries four cases for it.
+- **The agent image leg in `pre-commit`:** whenever a commit touches `.devcontainer/agent/`,
+  `sh .devcontainer/agent/self-test` must exist and pass, as for `agent/` above, so neither a
+  weakened agent image nor its deletion can land ([dev-environment.md](dev-environment.md), "The agent
+  image"); `hooks/self-test` carries five cases for it, a changed file among them.
 - **The SHARED-section leg** compares `CLAUDE.md` with `agent-entry-template.md` whenever a commit
   touches either, and the wrapper has to record the template's version ([README.md](README.md),
   step 0).
@@ -545,9 +549,14 @@ touched):
   judge that stand by its API answers instead.
 - Image tag `evergore-protocol-collector:<version>-<short sha>`; the bare release tag stays reserved
   for the tagged commit.
+- **On the agent seat** the agent container's own daemon stands in for the host
+  ([dev-environment.md](dev-environment.md), "Docker on the agent seat"); it resolves a bind mount
+  under the agent container's own path and publishes on its `localhost`.
+  - So neither the `/run/desktop/mnt/host` path nor the `host.docker.internal` rewrite applies
+    there, and the shim only drops the target.
 
 Runs against the Docker host daemon — from a host shell or from the devcontainer, whose `docker`
-CLI targets that same daemon. Steps 1–3 must be done **before** the running container is replaced.
+CLI targets that same daemon; on the agent seat against its own daemon (above). Steps 1–3 must be done **before** the running container is replaced.
 
 1. **Back up the live database first.** Evergore serves only the last 30 days of logs, so
    `database/temp.sqlite` is the only history. A first run recomputes the meta sums from all stored
@@ -978,7 +987,8 @@ before any filter runs. `HeadLineSlicer` (ahead of the HTTP codec) and `Unreadab
   "What GitHub enforces").
 - `.devcontainer/`: Java dev container (digest-pinned bookworm base + apt tools, `java` feature with
   **JDK 25**, Maven off, Gradle via the wrapper); see [dev-environment.md](dev-environment.md).
-  Dev only.
+  Dev only. `.devcontainer/agent/` builds the agent machine's image on top of it (same doc, "The
+  agent image").
 
 ## The browser grid (acceptance scenarios in other browsers)
 
@@ -997,6 +1007,8 @@ runner"). Test-only; the production scrape keeps its own browser.
   ./verify bdd` (or `focus`/`all`); `EPC_ACCEPTANCE_BROWSER` is `firefox` (the default), `chrome`
   or `edge`. The `test` task forwards the variables as system properties; without a grid only the
   local `firefox` runs. One browser per run: never two Gradle runs per worktree.
+- Not on the agent seat: `grid/grid` connects its own container to `epc-grid`, and the agent
+  container is no container of its inner daemon (backlog **H14**).
 - Not in the grid: Opera, whose node image stopped at Selenium 3 (2021), and Safari, which runs
   only on macOS (`safaridriver`).
 - The test JVM sets `otel.logs.exporter=none`: Selenium 4.7.2 switches off OpenTelemetry's trace

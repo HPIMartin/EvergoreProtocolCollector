@@ -37,7 +37,7 @@ postCreate). The base image is pinned by digest, every feature by digest in
 | `node` | `version: 24.18.0` | IDE tooling only; **must match `gradle.properties` → `nodeVersion`**. |
 | `python` | defaults | Utility scripting. |
 | `github-cli:1.1.3` | defaults | `gh` for PR/issue metadata (Dependabot triage needs more than the git refs). |
-| `docker-outside-of-docker:1.10.1` | `moby: false` | Docker CE CLI against the **host** daemon: image build, deploy and H2's Selenium service from inside the container. |
+| `docker-outside-of-docker:1.10.1` | `moby: false` | Docker CE CLI against the **host** daemon: image build, deploy and H2's Selenium service from inside the container. The agent image adds a pinned Engine of its own on top of it (below). |
 | `trivy` | defaults | `./gradlew vulnScan` ([build-run-deploy.md](build-run-deploy.md)). |
 
 - `github-cli` and `docker-outside-of-docker` are referenced by their exact version, so a rebuild
@@ -131,7 +131,7 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
 |---|---|---|---|---|
 | The author's PC | this devcontainer | the author's own, forwarded by VS Code's Dev Containers credential helper | the host's Docker socket (`docker-outside-of-docker`) | the author starts and steers every session |
 | The author's PC, a session started on the host | the Windows host, no container | the author's own, from the host's credential store | the whole host | the author's own session |
-| The agent machine | an agent container, driven through a Claude Code Remote Control server | a deploy key with write access, `origin` over SSH, and for the API the `epc-agent` App's key once the author has mounted it (below); none of the author's credentials | none, as the author states it: no Docker socket, no access to the local network | unattended |
+| The agent machine | an agent container from the agent image (below), driven through a Claude Code Remote Control server | a deploy key with write access, `origin` over SSH, and for the API the `epc-agent` App's key once the author has mounted it (below); none of the author's credentials | the internet; a Docker daemon of its own inside the container, no host socket; no access to the local network, for the container and every container it starts, as the author states it | unattended |
 
 - **Unattended agents run only on the agent machine; the PC stays simple** (decision 2026-10-04,
   [open-questions.md](../open-questions.md)).
@@ -155,8 +155,7 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
   enables included; a merge attempt by the App, seen refused, is the first check after its setup.
   `agent/self-test` proves the minting against a throwaway key and a stubbed `curl`: the request,
   the app token's signature, claims and encoding, and every refusal.
-- **The agent container is built by hand;** a reproducible build from `.devcontainer/` is a strand
-  of its own. A commit it has not pushed lives only in that container.
+- **A commit the agent container has not pushed lives only in that container.**
 - **The agent seat may offer read-only snapshots of the production database** (author decision
   2026-10-10, [open-questions.md](../open-questions.md)): where `EPC_SNAPSHOT_DIR` is set, it holds
   them as `epc-<UTC yyyymmdd-hhmmss>.sqlite`, the newest three, with `latest.sqlite` pointing at the
@@ -166,6 +165,105 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
   data). Every result names the snapshot it used. A snapshot, or data drawn from one, is never
   committed or uploaded; a pull request quotes only the small excerpts a finding needs. An agent
   cannot take a snapshot: when the newest is too old for the task, it says so and asks the author.
+
+### Docker on the agent seat
+
+- **The agent container runs its own Docker daemon** under Sysbox: a user namespace, so root in the
+  container is unprivileged on the host, and no socket of the host's daemon. The agent machine
+  starts `dockerd` and configures it (storage driver, log rotation, subnets, DNS, build-cache
+  limit); that configuration is the machine's, never the repository's. `vscode` reaches the daemon
+  through the `docker` group.
+- **The inner daemon shares the agent container's filesystem and network:** a bind-mount source is a
+  path inside the agent container, and a published port answers on its `localhost` (measured by the
+  author: `selenium/standalone-firefox` with `-p 4444:4444` ready on `localhost:4444`).
+- **What runs there:** the release gate's image build, the deploy rehearsal with throwaway
+  credentials ([build-run-deploy.md](build-run-deploy.md), "Deploy to the home server") and a
+  Selenium service, `docker run -d -p 4444:4444 --shm-size 2g
+  selenium/standalone-firefox:<pinned tag>`, reached on `localhost:4444`.
+- **What does not run there:**
+  - the browser grid ([build-run-deploy.md](build-run-deploy.md), "The browser grid");
+  - the deploy itself, since the home server sits on the local network;
+  - tagging, which stays the author's ([build-run-deploy.md](build-run-deploy.md), "Versioning &
+    release tags").
+- **The agent machine prunes every image unused for 7 days**, so a rehearsal's predecessor image or
+  an older build is rebuilt, not assumed present.
+- **Why Docker there, and who owns what:** author decision 2026-10-11
+  ([open-questions.md](../open-questions.md)).
+
+### The agent image (`.devcontainer/agent/`)
+
+- **`Dockerfile`** is a layer on the devcontainer image, passed as `ARG BASE`, so the agent seat
+  runs the toolchain the PC runs.
+  - `ARG BASE` has no default, so a build without it fails at `FROM`; Docker's
+    InvalidDefaultArgInFrom warning on it is expected.
+  - It blanks the inherited `devcontainer.metadata` label, which names the host socket mount of
+    `docker-outside-of-docker`, so no devcontainer tooling mounts the host's socket into the agent
+    container (author decision 2026-10-12).
+  - It runs exactly two scripts, each bind-mounted for its step only: `provision` as root, then
+    `install-claude-code` as `vscode`, with `~/.local/bin` on the `PATH`.
+- **`provision`** adds, with every version and the key's fingerprint as constants in the script:
+  - `tmux`, which keeps a session alive when its connection drops;
+  - Docker Engine from Docker's Debian `bookworm` repository: `docker-ce`, `docker-ce-cli`,
+    `containerd.io`, `docker-buildx-plugin`, `docker-compose-plugin`:
+    - each at a pinned version, so a rebuild installs the versions the agent machine was verified
+      against; the pins are bumped together;
+    - Docker's key, fetched over HTTPS only, is refused unless the file holds one primary key,
+      public or secret, with the fingerprint `9DC858229FC7DD38854AE2D88D81803C0EBFCD88`;
+    - its `docker.list` names that keyring as `signed-by` and replaces the one the
+      `docker-outside-of-docker` feature wrote;
+  - `vscode` in the `docker` group, which reaches the inner daemon through the group's socket;
+  - `git config --system` with `core.hooksPath hooks` and `push.default nothing`, so every clone on
+    the agent seat, another repository's included, runs its tracked `hooks/` and pushes only what
+    a command names ([build-run-deploy.md](build-run-deploy.md), "Git hooks (local enforcement)");
+    - a global or repository setting overrides it, and a checkout without `hooks/` runs none;
+  - the mount points, owned by `vscode` so a volume or file the agent machine mounts there belongs
+    to `vscode`: `/workspaces`, `~/.claude`, `~/.gradle`, `~/.npm`, `~/.local`, and `~/.ssh` with
+    mode `0700`.
+- **`install-claude-code`** installs the Claude Code version pinned in it through the native
+  installer, fetched over HTTPS only, and fails unless `claude --version` then reports that
+  version (author decision 2026-10-12, [open-questions.md](../open-questions.md)).
+  - A bump is a one-line commit; Claude Code may still update itself at run time.
+  - A volume the agent machine mounts on `~/.local` hides the image's Claude Code: the seat then
+    runs the volume's version, not the pin.
+- **It ends as `vscode` in `/workspaces` with `CMD ["sleep", "infinity"]` and no entrypoint;** the
+  agent machine starts it as root with a command of its own (`dockerd`, then the Remote Control
+  server as `vscode`), and a plain `docker run` stays alive for a look inside.
+- **Nothing machine-specific:** no daemon configuration, no address, no path of the agent machine,
+  no credential. How the image runs (compose, start-up, firewall, daemon configuration) is the agent
+  machine's own administration, outside this repository.
+- **`build --tag <image:tag>`**, from the repository root of a clean, full (not shallow) clone,
+  builds the image of that commit:
+  - a tag outside Docker's reference grammar is refused before any call;
+  - the devcontainer image first, through `npx --yes @devcontainers/cli@<pinned>` with
+    `--frozen-lockfile`, under a temporary tag;
+  - then the agent layer on top of it, tagged as asked; the temporary tag is removed, and a run
+    that cannot check whether it is gone fails;
+  - labels, each a full 40-character hash where it names a commit:
+    `org.opencontainers.image.revision` (`HEAD`), `epc.devcontainer.revision` (the last commit
+    that changed `.devcontainer/`) and `org.opencontainers.image.source` (the repository's URL);
+  - it exits non-zero on any failure, a changed or untracked file and a `.devcontainer/` git never
+    committed included;
+  - a change hidden from `git status` by an assume-unchanged or skip-worktree entry is refused too;
+  - the checkout is checked again after the devcontainer image, and a change or a moved `HEAD`
+    since the start is refused before the agent layer;
+  - a shallow clone is refused because it reads the last `.devcontainer/` commit as its boundary
+    commit;
+  - it pushes nothing and logs in nowhere.
+- **The agent machine's update runs it** from a fresh clone of `main` at a detached commit, as root
+  in a throwaway container from the current agent image, against the machine's own Docker daemon.
+- **On the PC it runs from the devcontainer** through `docker-outside-of-docker`:
+  `.devcontainer/agent/build --tag epc-agent:test`, then `docker image inspect epc-agent:test`
+  for the labels. So an agent can prove that a `.devcontainer/` change builds.
+- **`self-test`** proves all three scripts with their outside commands stubbed
+  ([build-run-deploy.md](build-run-deploy.md), "Git hooks (local enforcement)"):
+  - `build` against a throwaway repository: the interface, the three labels, the temporary tag's
+    removal and every refusal;
+  - `provision` in a scratch root: the key's refusals, a failure at each step, the keyring and
+    `docker.list` apt trusts, the pinned installs, the system git configuration, the group and the
+    mount points;
+  - `install-claude-code`: the exact version asked for and the refusal of another;
+  - that the `Dockerfile` is the devcontainer image, its metadata label blanked, plus the two
+    scripts and nothing else.
 
 ## Rule for all contributors
 
@@ -211,8 +309,9 @@ Java version pinned in places that must stay in sync (**currently `25`**):
 - Buildable **from inside the devcontainer** since the `docker-outside-of-docker` feature returned:
   the `docker` CLI targets the host daemon, so `docker build` / `docker run` need no host shell.
   (The devcontainer image itself is still built by the host's Dev Containers extension, so changes
-  under `.devcontainer/` only take effect on the author's next rebuild.) An agent therefore
-  cannot validate a `.devcontainer/` change at all; only that rebuild proves it.
+  under `.devcontainer/` only take effect on the author's next rebuild.) An agent can prove such a
+  change builds, through the agent image's build ("The agent image" above); whether it works in
+  use, only that rebuild shows.
 
 ## Selenium in-container
 
