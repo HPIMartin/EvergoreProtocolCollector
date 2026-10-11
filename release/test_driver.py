@@ -575,6 +575,32 @@ class DeadSides(unittest.TestCase):
         self.assertIn("not running", tested.stdout + tested.stderr)
         self.layout.assert_no_process_left(self)
 
+    def distribution_with(self, name, setting):
+        binary = self.layout.root / name / "bin" / "protocolParser"
+        binary.parent.mkdir(parents=True)
+        binary.write_text(f'#!/bin/sh\n{setting} exec python3 -B "{self.layout.root}/release/stub_app.py" "$@"\n', encoding="utf-8")
+        binary.chmod(0o755)
+        return binary.parent.parent
+
+    def test_a_candidate_that_dies_while_the_running_side_is_awaited_ends_the_run_at_once(self):
+        running = self.distribution_with("slow-running", "STUB_RECOMPUTE_AFTER=20")
+        candidate = self.distribution_with("waiting-candidate", "STUB_RECOMPUTE_AFTER=never")
+        driver = self.layout.start(running_dist=running, candidate_dist=candidate, RELEASE_COMPARE_TIMEOUT="60")
+        record = self.layout.work / "candidate" / "stub-record.json"
+        deadline = time.monotonic() + 20
+        while not (record.exists() and "wait" in helper_commands(driver.pid)) and time.monotonic() < deadline:
+            time.sleep(0.05)
+        self.assertIn("wait", helper_commands(driver.pid))
+        os.killpg(self.layout.record("candidate")["pid"], signal.SIGKILL)
+        killed = time.monotonic()
+
+        stdout, stderr = driver.communicate(timeout=30)
+
+        self.assertEqual(3, driver.returncode, stdout + stderr)
+        self.assertLess(time.monotonic() - killed, 10)
+        self.assertIn("the other side was not running any more", stdout + stderr)
+        self.layout.assert_no_process_left(self)
+
     def test_a_side_that_exits_while_the_driver_waits_is_exit_three_with_the_side_named_not_running(self):
         tested = self.layout.run(STUB_EXIT_AFTER="1.5", STUB_RECOMPUTE_AFTER="never", RELEASE_COMPARE_TIMEOUT="60")
 

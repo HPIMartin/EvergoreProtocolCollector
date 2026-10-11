@@ -311,6 +311,7 @@ def _parser():
     wait.add_argument("--timeout", type=float, required=True)
     wait.add_argument("--poll", type=float, required=True)
     wait.add_argument("--pid", type=int, required=True)
+    wait.add_argument("--other-pid", type=int)
     wait.set_defaults(command=_wait)
 
     alive = commands.add_parser("alive")
@@ -346,16 +347,22 @@ def _wait(arguments, environ, out):
         lambda: get_json("/api/v1/admin/status", {}),
         arguments.timeout,
         arguments.poll,
-        alive=lambda: is_alive(arguments.pid),
+        alive=lambda: is_alive(arguments.pid) and _other_alive(arguments),
     )
     if not recomputed and not is_alive(arguments.pid):
         out.write(f"The side at {arguments.base_url} is not running.\n")
+    elif not recomputed and not _other_alive(arguments):
+        out.write(f"While the side at {arguments.base_url} was awaited, the other side was not running any more.\n")
     elif not recomputed:
         out.write(
             f"No successful recompute showed at {arguments.base_url}, "
             f"within {arguments.timeout} seconds or before a failure.\n"
         )
     return 0 if recomputed else 1
+
+
+def _other_alive(arguments):
+    return arguments.other_pid is None or is_alive(arguments.other_pid)
 
 
 def _alive(arguments, environ, out):

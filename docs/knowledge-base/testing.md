@@ -343,6 +343,7 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
     `RELEASE_COMPARE_TIMEOUT` per side (default 900 s), asking every `RELEASE_COMPARE_POLL`
     (default 5 s).
   - A side that reports only `lastRecomputeFailure`, or that stops running, ends the run at once.
+  - So does the other side stopping while the driver awaits the first.
   - Every request has a socket timeout, so a side that accepts and never answers cannot hold it.
   - The wait and the fetch each pace a side to 25 requests per 10 s (the limit is 30).
   - After a 429 the script waits 65 s and retries, at most 3 times.
