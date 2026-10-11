@@ -460,6 +460,36 @@ if printf '%s' "$output" | grep -qF -e "$EVERGORE_SECURITY_API_TOKEN" -e "$EVERG
 check "the dry run prints no secret" "$r"
 
 new_case
+EPC_STUB_CONTAINER="abc123def456|evergore-protocol-collector:0.2.0|sha256:old|unless-stopped|0|8080/tcp=80,|$database_dir"
+run_deploy
+if [ "$status" -eq 0 ] && journal_has "docker tag 'sha256:old' 'evergore-protocol-collector:pre-0.2.0'"; then r=0; else r=1; fi
+check "a container started from a tagged image gets its rollback tag in place of that tag" "$r"
+
+new_case
+EPC_STUB_CONTAINER="abc123def456|registry.example:5000/evergore-protocol-collector:0.2.0|sha256:old|unless-stopped|0|8080/tcp=80,|$database_dir"
+run_deploy
+if [ "$status" -eq 0 ] && journal_has "docker tag 'sha256:old' 'registry.example:5000/evergore-protocol-collector:pre-0.2.0'"; then r=0; else r=1; fi
+check "a tagged image behind a registry port loses its tag and keeps its port" "$r"
+
+new_case
+EPC_STUB_CONTAINER="abc123def456|sha256:old|sha256:old|unless-stopped|0|8080/tcp=80,|$database_dir"
+run_deploy
+if [ "$status" -eq 0 ] && journal_has "docker tag 'sha256:old' 'evergore-protocol-collector:pre-0.2.0'"; then r=0; else r=1; fi
+check "a container started from an image id gets its rollback tag in the release repository" "$r"
+
+new_case
+EPC_STUB_CONTAINER="abc123def456|evergore-protocol-collector@sha256:old|sha256:old|unless-stopped|0|8080/tcp=80,|$database_dir"
+run_deploy
+if [ "$status" -eq 0 ] && journal_has "docker tag 'sha256:old' 'evergore-protocol-collector:pre-0.2.0'"; then r=0; else r=1; fi
+check "a container started from a digest gets its rollback tag in the release repository" "$r"
+
+new_case
+EPC_STUB_CONTAINER="abc123def456|registry.example:5000/evergore-protocol-collector|sha256:old|unless-stopped|0|8080/tcp=80,|$database_dir"
+run_deploy
+if [ "$status" -eq 0 ] && journal_has "docker tag 'sha256:old' 'registry.example:5000/evergore-protocol-collector:pre-0.2.0'"; then r=0; else r=1; fi
+check "an untagged image behind a registry port keeps its whole repository in the rollback tag" "$r"
+
+new_case
 run_epc deploy --host "$host_name" --ssh-user "$ssh_account" --container "$container_name" --database-dir "$database_dir"
 if [ "$status" -ne 0 ] && [ ! -s "$journal" ]; then r=0; else r=1; fi
 check "a missing parameter stops the run before it reaches any machine" "$r"

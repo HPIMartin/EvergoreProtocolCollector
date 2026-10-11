@@ -229,7 +229,16 @@ transfer_image() {
 
 secure_rollback_tag() {
 	step "Secure the rollback target before anything can overwrite it"
-	rollback_repository=${current_config_image%:*}
+	case $current_config_image in
+		sha256:*|*@*)
+			rollback_repository=${image%:*}
+			note "the container was started from an image id or digest, so the rollback tag goes into $rollback_repository" ;;
+		*)
+			rollback_repository=$current_config_image
+			case ${current_config_image##*/} in
+				*:*) rollback_repository=${current_config_image%:*} ;;
+			esac ;;
+	esac
 	rollback_reference="$rollback_repository:pre-$version"
 	if existing_id=$(remote "$docker_remote inspect --type image -f '{{.Id}}' '$rollback_reference' 2>/dev/null"); then
 		[ "$existing_id" = "$current_image_id" ] || fail "$rollback_reference already names a different image ($existing_id), and retagging it would lose an older rollback target"

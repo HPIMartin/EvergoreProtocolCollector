@@ -577,6 +577,13 @@ CLI targets that same daemon. Steps 1–3 must be done **before** the running co
    `evergore_protocol_collector:pre-0.1.0` while the release image is
    `evergore-protocol-collector:0.1.0`. The two names sit in different repositories, which is what
    keeps the new build from overwriting the rollback target.
+
+   - A container started by hand from an image id or a digest (`.Config.Image` reads `sha256:…` or
+     `<repository>@sha256:…`) gets its rollback tag in the release image's repository.
+   - The release image's repository is the one `--image` names.
+   - That tag, `<repository>:pre-<version>`, is one the build never writes.
+   - A running image behind a registry port (`host:5000/<repository>:<tag>`) keeps the port in its
+     rollback tag.
 3. **Check the mount before starting anything** — both failures below are silent, and both leave a
    *running, healthy-looking* container serving wrong data:
 
