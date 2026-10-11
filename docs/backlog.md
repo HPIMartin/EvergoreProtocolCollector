@@ -51,8 +51,7 @@ blank line between two rows splits the table mid-body (DOC-11).
 author can observe, at most four strands at once, landings stay serialized)
 
 1. Now: the scripted value comparison (**B19**).
-2. The 0.3.0 release preparation (**F14**): the event-loop question decided (**F11**), 0.3.0
-   declared.
+2. The 0.3.0 release preparation (**F14**): 0.3.0 declared.
 3. Once both release strands landed: 0.3.0 cut and deployed by the author (**F14**), beside the
    permission facts (**G52**).
 4. Once 0.3.0 runs: the gate mechanics (**G51** with **G30**, **G32**, **G40**, **G48**) and the
@@ -62,8 +61,8 @@ author can observe, at most four strands at once, landings stay serialized)
 Later: the explanation page (**E19**, carrying **E20**); the atomic ingest (**D24** with **F12**,
 **F10**); **B36** before the fixed-point sums (**D25**, with **D9**) before the SQL pre-grouping
 (**D18**); the timestamps as instants (**D14**, retiring **D22**); the cell note (**E36**) and the
-reader's place (**E37**); the slow-read warning (**F19**); splitting `MemberBrowser`
-(**G23**) before the opening balance writes its steps.
+reader's place (**E37**); the reads off the event loop (**F11**) and the slow-read warning
+(**F19**); splitting `MemberBrowser` (**G23**) before the opening balance writes its steps.
 
 The scripted 1:1 value comparison still comes before the Micronaut 5 jump (**B19**, **H9**), which
 also waits on 1:1 being re-proven; the remote browser service and the integration-test split
