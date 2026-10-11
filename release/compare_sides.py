@@ -29,6 +29,9 @@ def compare(running, candidate, started=None):
     accepted = []
     field_findings, added_fields = _field_set_differences(running, candidate)
     findings.extend(field_findings)
+    row_gaps = list(_row_field_differences(running["overview"]["items"], candidate["overview"]["items"]))
+    if row_gaps:
+        return Report(findings + row_gaps, [], [])
     findings.extend(_admin_differences(running["admin"], candidate["admin"]))
     findings.extend(_recompute_status_findings("running", running["admin"]))
     findings.extend(_recompute_status_findings("candidate", candidate["admin"]))
@@ -194,7 +197,6 @@ def _field_set_differences(running, candidate):
         required = listed if candidate_fields or running_fields else set()
         for field in sorted(required - candidate_fields - running_fields):
             findings.append(f"{scope}: field {field} is a listed addition the candidate side does not serve")
-    findings.extend(_row_field_differences(running["overview"]["items"], candidate["overview"]["items"]))
     return findings, added
 
 

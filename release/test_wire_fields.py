@@ -93,6 +93,18 @@ class UnlistedFields(unittest.TestCase):
 
         self.assertEqual(["Alice: field balance is left out of this row on the candidate side"], tested.findings)
 
+    def test_a_figure_one_running_row_leaves_out_is_a_finding_and_no_crash(self):
+        running = side(
+            [without(row("Alice"), "balance"), without(row("Bob"), "balance", "net")],
+            without(totals(), "balance", "storageValue"),
+            admin=without(admin(), "roundTrips", "roundTripAbstentions"),
+        )
+        candidate = side([row("Alice"), row("Bob")])
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(["Bob: field net is left out of this row on the running side"], tested.findings)
+
     def test_a_field_no_candidate_row_serves_is_one_finding_not_one_per_member(self):
         running = side([row("Alice"), row("Bob")])
         candidate = side([without(row("Alice"), "donation"), without(row("Bob"), "donation")])
