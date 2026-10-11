@@ -30,6 +30,11 @@ def plain_sides():
 
 
 class Rendering(unittest.TestCase):
+    def test_the_report_says_the_content_of_the_round_trips_is_not_compared(self):
+        tested = compare(side(), side()).render()
+
+        self.assertIn("The round trips only the candidate serves are checked for their shape, not their content.", tested)
+
     def test_every_rule_used_is_named_with_its_decision_dates_and_how_often(self):
         running, candidate = drifted_sides()
 

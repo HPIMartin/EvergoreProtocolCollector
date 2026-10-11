@@ -1,6 +1,7 @@
 from expected_deviations import ALL_RULES, label_of
 
 NOT_COMPARED = "The five run instants of the admin status are not compared: they differ by construction."
+SHAPE_ONLY = "The round trips only the candidate serves are checked for their shape, not their content."
 
 
 class Report:
@@ -33,6 +34,7 @@ class Report:
         if self.uncompared:
             lines.append(f"Guild figures not compared: {', '.join(self.uncompared)}")
         lines.append(NOT_COMPARED)
+        lines.append(SHAPE_ONLY)
         lines.append("FAIL: the findings above need a decision" if self.findings else "PASS: no findings")
         return "\n".join(lines) + "\n"
 
