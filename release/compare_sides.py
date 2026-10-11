@@ -18,7 +18,7 @@ from shown_figures import Accepted, Context, differences, exact_differences, exp
 TOKEN_VARIABLE = "EVERGORE_SECURITY_API_TOKEN"
 LEDGERS = ("bank", "storage")
 CRASH_EXIT_CODE = 4
-ADMIN_NAME_LISTS = ("unknownItemNames", "failedAvatarNames")
+ADMIN_NAME_LISTS = ("unknownItemNames",)
 
 
 def compare(running, candidate, started=None):
@@ -175,6 +175,8 @@ def _recompute_status_findings(side, admin):
         yield f"admin: the {side} side shows no successful recompute"
     if admin.get("lastRecomputeFailure"):
         yield f"admin: the {side} side shows a recompute failure"
+    for name in admin.get("failedAvatarNames", []):
+        yield f"admin: failedAvatarNames on the {side} side names {name}, whose recompute failed"
 
 
 def _members_without_stored_sums(running, candidate):

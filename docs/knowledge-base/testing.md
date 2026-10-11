@@ -362,8 +362,9 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
   - every row and totals figure, the members each side lists and `totalCount`;
   - each ledger as a multiset of whole entries over every page, so a different order is no finding;
   - the field sets of rows, totals, admin status and ledger entries;
-  - the admin status name lists as multisets; the five run instants differ by construction and are
-    not compared (the report says so).
+  - `unknownItemNames` as a multiset, and every member `failedAvatarNames` names on either side is
+    a finding, also where both name it; the five run instants of the admin status differ by
+    construction and are not compared (the report says so).
   - `0.2.0` serves no `balance` or storage value; both are derived from its rounded figures as its
     overview did.
 - **Expected deviations:** `release/expected_deviations.py` lists each rule with its name and the

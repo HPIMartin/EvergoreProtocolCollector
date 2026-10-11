@@ -35,6 +35,22 @@ class RecomputeStatus(unittest.TestCase):
         self.assertEqual([], tested.findings)
 
 
+    def test_a_member_whose_recompute_failed_on_both_sides_is_a_finding_for_each_side(self):
+        failed = admin(lastSuccessfulRecompute=INSTANT, failedAvatarNames=["Zed"])
+        running = side(admin=failed)
+        candidate = side(admin=dict(failed))
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(
+            [
+                "admin: failedAvatarNames on the running side names Zed, whose recompute failed",
+                "admin: failedAvatarNames on the candidate side names Zed, whose recompute failed",
+            ],
+            tested.findings,
+        )
+
+
 STARTED = 1760000000000
 
 STORED = {

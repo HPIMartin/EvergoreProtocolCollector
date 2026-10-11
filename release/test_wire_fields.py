@@ -105,13 +105,13 @@ class AdminValues(unittest.TestCase):
         self.assertEqual([], tested.findings)
 
     def test_a_name_only_one_side_lists_is_a_finding(self):
-        running = side(admin=admin(failedAvatarNames=["Bob"]))
-        candidate = side(admin=admin(failedAvatarNames=[]))
+        running = side(admin=admin(unknownItemNames=["Zwerg"]))
+        candidate = side(admin=admin(unknownItemNames=[]))
 
         tested = compare(running, candidate)
 
         self.assertEqual(1, len(tested.findings))
-        for expected in ("failedAvatarNames", "Bob", "running"):
+        for expected in ("unknownItemNames", "Zwerg", "running"):
             self.assertIn(expected, tested.findings[0])
 
 
