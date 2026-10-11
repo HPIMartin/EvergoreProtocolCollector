@@ -40,8 +40,8 @@ class DerivedFigures(unittest.TestCase):
 
     def test_the_running_guild_storage_value_and_balance_come_from_the_totals(self):
         figures = dict(storageDeposited=900, storageWithdrawn=200, donation=50, craftSubsidy=20, net=300)
-        running = running_side([], totals(**figures))
-        candidate = side([], totals(**figures, storageValue=730, balance=330))
+        running = running_side([row("Alice")], totals(**figures))
+        candidate = side([row("Alice")], totals(**figures, storageValue=730, balance=330))
 
         tested = compare(running, candidate)
 
@@ -49,8 +49,8 @@ class DerivedFigures(unittest.TestCase):
 
     def test_a_candidate_guild_storage_value_other_than_the_derived_one_is_a_finding(self):
         figures = dict(storageDeposited=900, storageWithdrawn=200, donation=50, craftSubsidy=20, net=300)
-        running = running_side([], totals(**figures))
-        candidate = side([], totals(**figures, storageValue=731, balance=330))
+        running = running_side([row("Alice")], totals(**figures))
+        candidate = side([row("Alice")], totals(**figures, storageValue=731, balance=330))
 
         tested = compare(running, candidate)
 
@@ -60,8 +60,8 @@ class DerivedFigures(unittest.TestCase):
 
     def test_a_null_craft_subsidy_in_the_totals_leaves_both_guild_figures_null(self):
         figures = dict(storageDeposited=900, storageWithdrawn=200, donation=50, craftSubsidy=None, net=300)
-        running = running_side([], totals(**figures))
-        candidate = side([], totals(**figures, storageValue=None, balance=None))
+        running = running_side([row("Alice")], totals(**figures))
+        candidate = side([row("Alice")], totals(**figures, storageValue=None, balance=None))
 
         tested = compare(running, candidate)
 

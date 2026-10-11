@@ -38,6 +38,7 @@ def compare(running, candidate, started=None):
         findings.extend(_stale_sums_findings("candidate", candidate, started, unstored))
     findings.extend(_total_count_differences("overview", running["overview"], candidate["overview"]))
     findings.extend(_member_differences(running["overview"], candidate["overview"]))
+    findings.extend(_no_member_findings(running["overview"], candidate["overview"]))
     findings.extend(_type_differences(running["overview"], candidate["overview"]))
     shown = differences(with_derived_figures(running["overview"]), with_derived_figures(candidate["overview"]))
     if "exact" in running and "exact" in candidate:
@@ -124,6 +125,11 @@ def _member_differences(running, candidate):
         yield f"{name}: listed by the running side only"
     for name in sorted(candidate_names - running_names):
         yield f"{name}: listed by the candidate side only"
+
+
+def _no_member_findings(running, candidate):
+    if not running["items"] and not candidate["items"]:
+        yield "overview: neither side lists a member, so no member was compared"
 
 
 def _type_differences(running, candidate):

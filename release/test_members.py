@@ -41,5 +41,10 @@ class Members(unittest.TestCase):
         self.assertIn("7", counted[0])
 
 
+    def test_two_sides_that_list_no_member_are_a_finding(self):
+        tested = compare(side([]), side([]))
+
+        self.assertEqual(["overview: neither side lists a member, so no member was compared"], tested.findings)
+
 if __name__ == "__main__":
     unittest.main()
