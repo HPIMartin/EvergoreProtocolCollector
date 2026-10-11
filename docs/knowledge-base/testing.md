@@ -359,7 +359,8 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
     whose `sums_recomputed_at_` in that side's copy predates the run's start, is a finding; a member
     with no stored sums on either side is exempt (decision 2026-10-10), so the not-yet-computed rule
     can apply;
-  - every row and totals figure, the members each side lists and `totalCount`;
+  - every row and totals figure with its JSON type (a whole number served as a fraction is a
+    finding), the members each side lists and `totalCount`;
   - each ledger as a multiset of whole entries over every page, so a different order is no finding;
   - the field sets of rows, totals, admin status and ledger entries;
   - `unknownItemNames` as a multiset, and every member `failedAvatarNames` names on either side is

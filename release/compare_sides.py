@@ -38,6 +38,7 @@ def compare(running, candidate, started=None):
         findings.extend(_stale_sums_findings("candidate", candidate, started, unstored))
     findings.extend(_total_count_differences("overview", running["overview"], candidate["overview"]))
     findings.extend(_member_differences(running["overview"], candidate["overview"]))
+    findings.extend(_type_differences(running["overview"], candidate["overview"]))
     shown = differences(with_derived_figures(running["overview"]), with_derived_figures(candidate["overview"]))
     if "exact" in running and "exact" in candidate:
         differing = exact_differences(running, candidate)
@@ -123,6 +124,21 @@ def _member_differences(running, candidate):
         yield f"{name}: listed by the running side only"
     for name in sorted(candidate_names - running_names):
         yield f"{name}: listed by the candidate side only"
+
+
+def _type_differences(running, candidate):
+    candidate_rows = {row["avatar"]: row for row in candidate["items"]}
+    pairs = [(row["avatar"], row, candidate_rows[row["avatar"]]) for row in running["items"] if row["avatar"] in candidate_rows]
+    pairs.append(("totals", running["totals"], candidate["totals"]))
+    for scope, running_figures, candidate_figures in pairs:
+        for figure in sorted(running_figures.keys() & candidate_figures.keys()):
+            running_value = running_figures[figure]
+            candidate_value = candidate_figures[figure]
+            if None not in (running_value, candidate_value) and type(running_value) is not type(candidate_value):
+                yield (
+                    f"{scope}: {figure} is served as {type(running_value).__name__} by the running side "
+                    f"and as {type(candidate_value).__name__} by the candidate side"
+                )
 
 
 def _field_set_differences(running, candidate):

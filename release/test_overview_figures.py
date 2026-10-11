@@ -48,5 +48,20 @@ class OverviewFigures(unittest.TestCase):
         self.assertIn("lastBankActivity", tested.findings[0])
 
 
+    def test_a_whole_gold_figure_served_as_a_fraction_is_a_finding_naming_both_types(self):
+        running = side([row("Alice", net=860)], overview_totals=totals(storageValue=860))
+        candidate = side([row("Alice", net=860.0)], overview_totals=totals(storageValue=860.0))
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(
+            [
+                "Alice: net is served as int by the running side and as float by the candidate side",
+                "totals: storageValue is served as int by the running side and as float by the candidate side",
+            ],
+            tested.findings,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
