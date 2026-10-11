@@ -19,6 +19,7 @@ TOKEN_VARIABLE = "EVERGORE_SECURITY_API_TOKEN"
 LEDGERS = ("bank", "storage")
 CRASH_EXIT_CODE = 4
 ADMIN_NAME_LISTS = ("unknownItemNames",)
+FIGURE_SCOPES = ("row", "totals")
 
 
 def compare(running, candidate, started=None):
@@ -27,10 +28,10 @@ def compare(running, candidate, started=None):
         return Report(non_finite, [], [])
     findings = []
     accepted = []
-    field_findings, added_fields = _field_set_differences(running, candidate)
+    field_findings, added_fields, figures_missing = _field_set_differences(running, candidate)
     findings.extend(field_findings)
     row_gaps = list(_row_field_differences(running["overview"]["items"], candidate["overview"]["items"]))
-    if row_gaps:
+    if row_gaps or figures_missing:
         return Report(findings + row_gaps, [], [])
     findings.extend(_admin_differences(running["admin"], candidate["admin"]))
     findings.extend(_recompute_status_findings("running", running["admin"]))
@@ -196,19 +197,22 @@ def _field_set_differences(running, candidate):
     )
     findings = []
     added = []
+    figures_missing = False
     for scope, fields_of in shapes:
         running_fields = fields_of(running)
         candidate_fields = fields_of(candidate)
+        listed = set(LISTED_ADDITIONS.get(scope, ()))
+        unmatched = (running_fields - candidate_fields) | (candidate_fields - running_fields - listed)
+        figures_missing = figures_missing or (scope in FIGURE_SCOPES and bool(unmatched))
         for field in sorted(running_fields - candidate_fields):
             findings.append(f"{scope}: field {field} is served by the running side only")
-        listed = set(LISTED_ADDITIONS.get(scope, ()))
         added.extend((scope, field) for field in sorted(candidate_fields - running_fields & listed))
         for field in sorted(candidate_fields - running_fields - listed):
             findings.append(f"{scope}: field {field} is served by the candidate side only")
         required = listed if candidate_fields or running_fields else set()
         for field in sorted(required - candidate_fields - running_fields):
             findings.append(f"{scope}: field {field} is a listed addition the candidate side does not serve")
-    return findings, added
+    return findings, added, figures_missing
 
 
 def _row_field_differences(running_rows, candidate_rows):
