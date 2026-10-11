@@ -43,6 +43,13 @@ def free_port():
         return probe.getsockname()[1]
 
 
+def free_ports():
+    with socket.socket() as first, socket.socket() as second:
+        first.bind(("127.0.0.1", 0))
+        second.bind(("127.0.0.1", 0))
+        return first.getsockname()[1], second.getsockname()[1]
+
+
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -109,10 +116,11 @@ class Layout:
         return binary.parent.parent
 
     def start(self, snapshot=None, running_dist=None, candidate_dist=None, driver=None, cwd=None, **environment):
+        running_port, candidate_port = free_ports()
         variables = dict(os.environ)
         variables.update(
-            RELEASE_COMPARE_RUNNING_PORT=str(free_port()),
-            RELEASE_COMPARE_CANDIDATE_PORT=str(free_port()),
+            RELEASE_COMPARE_RUNNING_PORT=str(running_port),
+            RELEASE_COMPARE_CANDIDATE_PORT=str(candidate_port),
             RELEASE_COMPARE_TIMEOUT="20",
             RELEASE_COMPARE_POLL="0.1",
             RELEASE_COMPARE_GRACE="2",
@@ -176,6 +184,12 @@ class Layout:
                     test.assertFalse(is_alive(record["child"]), f"{side} stub child is still alive")
 
 
+class Ports(unittest.TestCase):
+    def test_the_two_ports_drawn_for_one_run_never_coincide(self):
+        coinciding = sum(1 for _ in range(200000) if len(set(free_ports())) < 2)
+
+        self.assertEqual(0, coinciding)
+
 class FullRun(unittest.TestCase):
     def setUp(self):
         self.layout = Layout(self)
@@ -221,7 +235,7 @@ class FullRun(unittest.TestCase):
         self.assertEqual(snapshot_directory, files_under(self.layout.snapshot.parent, ""))
 
     def test_the_two_sides_run_on_the_two_ports_from_the_environment(self):
-        running_port, candidate_port = free_port(), free_port()
+        running_port, candidate_port = free_ports()
 
         self.layout.run(
             RELEASE_COMPARE_RUNNING_PORT=str(running_port), RELEASE_COMPARE_CANDIDATE_PORT=str(candidate_port)
