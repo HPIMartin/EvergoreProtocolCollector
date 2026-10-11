@@ -482,6 +482,11 @@ candidate = `main` as it stood on 2026-10-09. **No finding.**
   `0.2.0`'s sum of rounded rows; four members' rows differ by one gold.
 - **Last-bit drift:** one member's exact storage sum.
 - The not-yet-computed rule did not occur: the recompute reached every member on both sides.
+- Rerun on 2026-10-11 and again on 2026-10-12 at the final code: no finding. Its report accepts 11
+  lines under "rounded once", 107 under the full ammunition credit, 5 under last-bit drift and 5
+  listed wire fields, one line per accepted figure, exact sum or field.
+- All 1,936 ammunition entries of the snapshot have quality 100, so only the synthetic cases
+  exercise the credit's quality scaling.
 
 **Rounding alone, the 03.09.2026 snapshot (2026-10-10).** Running = `v0.2.0`, candidate = `main`
 as it stood on 2026-09-30, which rounds every figure once and predates the full ammunition credit.
