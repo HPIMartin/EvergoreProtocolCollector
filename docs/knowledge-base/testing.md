@@ -361,7 +361,7 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
     can apply;
   - every row and totals figure with its JSON type (a whole number served as a fraction is a
     finding, a listed addition included), the members each side lists and their order (a run in
-    which neither lists one is a finding) and `totalCount`;
+    which neither lists one is a finding, and so is a member one side lists twice) and `totalCount`;
   - each ledger as a multiset of whole entries over every page, so a different order is no finding;
   - the field sets of rows, totals, admin status and ledger entries, and each row against the other
     rows of its side, so a figure one row leaves out is a finding that ends the comparison there;

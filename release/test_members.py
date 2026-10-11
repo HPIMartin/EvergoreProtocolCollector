@@ -65,5 +65,14 @@ class Members(unittest.TestCase):
 
         self.assertEqual([], [f for f in tested.findings if "where the running side lists" in f])
 
+    def test_a_member_one_side_lists_twice_is_a_finding(self):
+        running = side([row("Alice"), row("Zorn")])
+        candidate = side([row("Alice"), row("Zorn"), row("Zorn")])
+        candidate["overview"]["totalCount"] = 2
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(["Zorn: listed 2 times by the candidate side"], tested.findings)
+
 if __name__ == "__main__":
     unittest.main()

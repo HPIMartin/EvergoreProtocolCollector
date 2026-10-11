@@ -131,6 +131,10 @@ def _member_differences(running, candidate):
         yield f"{name}: listed by the running side only"
     for name in sorted(candidate_names - running_names):
         yield f"{name}: listed by the candidate side only"
+    for label, rows in (("running", running["items"]), ("candidate", candidate["items"])):
+        for name, count in sorted(Counter(row["avatar"] for row in rows).items()):
+            if count > 1:
+                yield f"{name}: listed {count} times by the {label} side"
 
 
 def _order_differences(running, candidate):
