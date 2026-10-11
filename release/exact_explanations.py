@@ -24,6 +24,13 @@ def explain(differing, running, candidate):
     return explained
 
 
+def missing_ammunition_credits(explained, running, candidate):
+    for member in sorted(running["ledgers"]):
+        expected = _expected_ammunition_credit(_storage_entries(member, running))
+        if expected > 0 and candidate["exact"].get(member) and explained.get(member, {}).get("storage_placement") != AMMUNITION:
+            yield f"{member}: the deposited ammunition earns a full credit of {expected!r}, the candidate's exact sums do not carry it"
+
+
 def _storage_entries(member, running):
     return running["ledgers"].get(member, {}).get("storage", {"items": []})["items"]
 

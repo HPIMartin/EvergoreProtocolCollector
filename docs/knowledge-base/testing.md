@@ -351,7 +351,9 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
     return rounding, the ammunition credit and last-bit drift are rules over the exact values: the
     ammunition delta is recomputed from the member's deposits and may differ from the stored one
     only by float accumulation over that member's entries, and any other exact storage sum may drift
-    by as much, `n + 4` ulp with n the member's storage entries (decision 2026-10-10).
+    by as much, `n + 4` ulp with n the member's storage entries (decision 2026-10-10). A member
+    whose deposited ammunition earns the credit while the candidate's exact sums lack it is a
+    finding.
 - **What it compares:**
   - that both sides recomputed in this run: a side without `lastSuccessfulRecompute`, or a member
     whose `sums_recomputed_at_` in that side's copy predates the run's start, is a finding; a member

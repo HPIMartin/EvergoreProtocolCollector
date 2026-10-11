@@ -7,7 +7,7 @@ from collections import Counter
 
 from candidate_rules import GUILD_FIGURES, guild_figures, member_figures
 from derived_figures import with_derived_figures
-from exact_explanations import explain
+from exact_explanations import explain, missing_ammunition_credits
 from expected_deviations import ADDITIONS, LISTED_ADDITIONS, NOT_REACHED
 from exact_sums import read_exact_sums, read_recompute_instants
 from process_group import is_alive, members_of, stop_group
@@ -43,6 +43,7 @@ def compare(running, candidate, started=None):
         differing = exact_differences(running, candidate)
         explained = explain(differing, running, candidate)
         findings.extend(_exact_differences(differing, explained))
+        findings.extend(missing_ammunition_credits(explained, running, candidate))
         findings.extend(running_rule_differences(running))
         findings.extend(_candidate_rounding_differences(candidate))
     else:

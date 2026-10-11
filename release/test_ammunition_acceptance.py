@@ -204,5 +204,32 @@ class AmmunitionCredit(unittest.TestCase):
         self.assertEqual(1, len(found))
 
 
+
+class RequiredAmmunitionCredit(unittest.TestCase):
+    def test_a_member_whose_deposited_ammunition_earned_no_credit_is_a_finding(self):
+        running, candidate = sides(RUNNING, arrows())
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(
+            [f"Alice: the deposited ammunition earns a full credit of {true_delta(arrows())!r}, the candidate's exact sums do not carry it"],
+            tested.findings,
+        )
+
+    def test_a_member_left_without_the_credit_beside_one_who_earned_it_is_a_finding(self):
+        delta = true_delta(arrows())
+        ledgers = ledgers_holding(arrows())
+        ledgers.update(ledgers_holding({**arrows(), "avatar": "Bob"}, member="Bob"))
+        running = running_side_of({"Alice": RUNNING, "Bob": RUNNING}, ledgers=ledgers)
+        candidate = candidate_side_of({"Alice": credited(delta, delta), "Bob": RUNNING}, ledgers=ledgers)
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(
+            [f"Bob: the deposited ammunition earns a full credit of {delta!r}, the candidate's exact sums do not carry it"],
+            tested.findings,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
