@@ -136,6 +136,7 @@ start_side() {
 	port=$3
 	mkdir -p "$work/$side/database"
 	cp -- "$snapshot" "$work/$side/database/temp.sqlite"
+	chmod u+w -- "$work/$side/database/temp.sqlite"
 	(
 		cd "$work/$side"
 		TZ=UTC

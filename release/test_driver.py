@@ -192,6 +192,14 @@ class FullRun(unittest.TestCase):
 
         self.assertEqual("", tested.stderr)
 
+    def test_a_read_only_snapshot_gives_copies_both_sides_can_write(self):
+        os.chmod(self.layout.snapshot, 0o444)
+
+        tested = self.layout.run()
+
+        self.assertEqual(0, tested.returncode, tested.stdout + tested.stderr)
+        self.assertTrue(os.access(self.layout.work / "running" / "database" / "temp.sqlite", os.W_OK))
+
     def test_the_snapshot_is_copied_once_per_side_and_the_original_stays_as_it_was(self):
         before = digest(self.layout.snapshot)
 

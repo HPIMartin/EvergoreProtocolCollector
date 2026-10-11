@@ -327,6 +327,7 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
   - Snapshot copies live only under `<worktree>/build/release-comparison/`.
   - That directory is replaced at the start of a run and left after it for inspection.
   - The original snapshot is copied once per side and never opened.
+  - The copies are writable whatever the original's mode.
   - **Never build while a side runs from that `build/`.**
   - `./verify all` clears `build/`.
 - **How the sides run:**
