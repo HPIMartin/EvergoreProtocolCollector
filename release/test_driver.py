@@ -1,3 +1,4 @@
+import atexit
 import hashlib
 import json
 import os
@@ -84,10 +85,42 @@ def files_under(root, skipping):
     )
 
 
+STARTED_DRIVERS = []
+LAYOUTS = []
+
+
+def interrupt(signum, frame):
+    raise KeyboardInterrupt
+
+
+def stop_what_tests_left_running():
+    for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        signal.signal(signum, signal.SIG_IGN)
+    for driver in STARTED_DRIVERS:
+        if driver.poll() is None:
+            try:
+                os.killpg(driver.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+    for driver in STARTED_DRIVERS:
+        try:
+            driver.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            pass
+    for layout in LAYOUTS:
+        layout._stop_recorded_sides()
+
+
 class Layout:
     def __init__(self, test):
         self._test = test
         self.root = temp_directory(test)
+        if not LAYOUTS:
+            atexit.register(stop_what_tests_left_running)
+            for signum in (signal.SIGTERM, signal.SIGHUP):
+                if signal.getsignal(signum) == signal.SIG_DFL:
+                    signal.signal(signum, interrupt)
+        LAYOUTS.append(self)
         shutil.copytree(RELEASE_DIR, self.root / "release", ignore=shutil.ignore_patterns("__pycache__"))
         (self.root / ".git").mkdir()
         self.work = self.root / "build" / "release-comparison"
@@ -126,7 +159,7 @@ class Layout:
             RELEASE_COMPARE_GRACE="2",
         )
         variables.update(environment)
-        return subprocess.Popen(
+        driver = subprocess.Popen(
             [
                 str(driver or self.root / "release" / "compare"),
                 str(running_dist or self.running_dist),
@@ -140,6 +173,8 @@ class Layout:
             text=True,
             start_new_session=True,
         )
+        STARTED_DRIVERS.append(driver)
+        return driver
 
     def run(self, timeout=120, **arguments):
         driver = self.start(**arguments)
@@ -389,6 +424,80 @@ class TimingOut(unittest.TestCase):
             self.layout.run(timeout=3, STUB_RECOMPUTE_AFTER="never", RELEASE_COMPARE_TIMEOUT="60")
 
         self.layout.assert_no_process_left(self)
+
+
+
+def stub_processes_marked(mark):
+    marked = []
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            environment = Path(f"/proc/{entry}/environ").read_bytes()
+            command = Path(f"/proc/{entry}/cmdline").read_bytes()
+        except OSError:
+            continue
+        if f"RELEASE_TEST_MARK={mark}".encode() in environment.split(b"\0") and b"stub_app.py" in command and is_alive(int(entry)):
+            marked.append(int(entry))
+    return marked
+
+
+def helpers_marked(mark, command):
+    found = []
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            environment = Path(f"/proc/{entry}/environ").read_bytes()
+            arguments = Path(f"/proc/{entry}/cmdline").read_bytes().split(b"\0")
+        except OSError:
+            continue
+        if f"RELEASE_TEST_MARK={mark}".encode() in environment.split(b"\0") and command.encode() in arguments:
+            found.append(int(entry))
+    return found
+
+
+class InterruptedTestRun(unittest.TestCase):
+    @unittest.skipUnless(os.environ.get("RELEASE_TEST_MARK"), "runs only inside an interrupted test run")
+    def test_waits_until_it_is_interrupted(self):
+        Layout(self).run(timeout=None, STUB_RECOMPUTE_AFTER="never", RELEASE_COMPARE_TIMEOUT="600")
+
+    def test_a_test_run_interrupted_while_its_sides_run_leaves_no_side_behind(self):
+        for name, signals in (("INT", [signal.SIGINT]), ("TERM", [signal.SIGTERM]), ("HUP", [signal.SIGHUP]), ("INT twice", [signal.SIGINT, signal.SIGINT])):
+            with self.subTest(interrupt=name):
+                mark = os.urandom(8).hex()
+                runner = subprocess.Popen(
+                    [sys.executable, "-I", "-B", "-m", "unittest", "discover", "-s", str(RELEASE_DIR), "-p", "test_driver.py",
+                     "-k", "test_waits_until_it_is_interrupted"],
+                    env={**os.environ, "RELEASE_TEST_MARK": mark},
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                self.addCleanup(runner.kill)
+                deadline = time.monotonic() + 20
+                while len(stub_processes_marked(mark)) < 2 and time.monotonic() < deadline:
+                    time.sleep(0.05)
+                self.assertEqual(2, len(stub_processes_marked(mark)))
+
+                runner.send_signal(signals[0])
+                if len(signals) > 1:
+                    deadline = time.monotonic() + 20
+                    stops = helpers_marked(mark, "stop")
+                    while not stops and time.monotonic() < deadline:
+                        time.sleep(0.02)
+                        stops = helpers_marked(mark, "stop")
+                    runner.send_signal(signals[1])
+                runner.wait(timeout=60)
+                deadline = time.monotonic() + 30
+                while stub_processes_marked(mark) and time.monotonic() < deadline:
+                    time.sleep(0.1)
+
+                left = stub_processes_marked(mark)
+                for pid in left:
+                    os.kill(pid, signal.SIGKILL)
+                self.assertEqual([], left)
+                if len(signals) > 1:
+                    self.assertTrue(stops, "the second signal came before the first one started a stop")
 
 
 class Stopping(unittest.TestCase):

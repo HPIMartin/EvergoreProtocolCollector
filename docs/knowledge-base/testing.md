@@ -420,7 +420,8 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
 - **The script's own proof:**
   - `sh release/self-test` runs the unit tests and the driver tests on a stub distribution, with
     synthetic data only.
-  - It takes under a minute.
+  - It takes about a minute.
+  - Interrupting it with INT, TERM or HUP, also twice, still stops every side its tests started.
   - It fails when it finds no test.
   - `pre-commit` runs it too ([build-run-deploy.md](build-run-deploy.md), "Git hooks").
 - **The report:**
