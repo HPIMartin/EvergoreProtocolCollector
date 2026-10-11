@@ -374,16 +374,24 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
   decisions behind it; every difference outside the list is a finding. The report names each rule
   that applied with its decision dates and lists the rules that did not occur, which does not fail
   the run.
-- **Exit status:** `0` no finding (only listed deviations), `1` at least one finding, `2` the call
-  was refused (missing snapshot or distribution, a snapshot with a `-wal` or `-journal` file
-  beside it or, reached through a link, beside its target, a non-numeric or equal port, the
-  same distribution for both sides, a non-numeric timeout, poll or grace, a script outside a
-  git worktree, a side of a previous run still alive, named by its process group), `3`
-  a side showed no successful recompute in time, stopped running, could not be fetched or could
-  not be stopped (its process group is named), `4` the
-  comparison itself crashed (a malformed capture, a copy without `metaInformation`). Both sides are
-  gone after every exit path, a hangup and a second interrupt included; INT, TERM, HUP, QUIT, USR1,
-  USR2 or ALRM ends the run with 128 plus its number once both sides are stopped.
+- **Exit status:**
+  - `0`: no finding, only listed deviations.
+  - `1`: at least one finding.
+  - `2`: the call was refused before anything started:
+    - a missing snapshot or distribution, or the same distribution for both sides;
+    - a snapshot or distribution inside the work directory, which every run replaces;
+    - a snapshot with a `-wal` or `-journal` file beside it (beside its target, when it is a link);
+    - a call without exactly three arguments;
+    - a port that is non-numeric, outside 1 to 65535 or equal to the other, or a non-numeric
+      timeout, poll or grace;
+    - a script outside a git worktree, reached through a link, or whose helper does not run;
+    - a side of a previous run still alive, named by its process group.
+  - `3`: a side showed no successful recompute in time, stopped running, could not be fetched or
+    could not be stopped (its process group is named).
+  - `4`: the comparison itself crashed (a malformed capture, a copy without `metaInformation`).
+  - Both sides are gone after every exit path, a hangup and a second interrupt included.
+  - INT, TERM, HUP, QUIT, USR1, USR2 or ALRM ends the run with 128 plus its number once both sides
+    are stopped.
 - **The script's own proof:** `sh release/self-test` runs the unit tests and the driver tests on a
   stub distribution (under a minute, synthetic data only); `pre-commit` runs it for every commit that
   touches `release/`.
