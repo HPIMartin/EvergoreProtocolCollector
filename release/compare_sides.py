@@ -38,6 +38,7 @@ def compare(running, candidate, started=None):
         findings.extend(_stale_sums_findings("candidate", candidate, started, unstored))
     findings.extend(_total_count_differences("overview", running["overview"], candidate["overview"]))
     findings.extend(_member_differences(running["overview"], candidate["overview"]))
+    findings.extend(_order_differences(running["overview"], candidate["overview"]))
     findings.extend(_no_member_findings(running["overview"], candidate["overview"]))
     findings.extend(_type_differences(running["overview"], candidate["overview"]))
     findings.extend(_addition_type_findings(running["overview"], candidate["overview"]))
@@ -126,6 +127,19 @@ def _member_differences(running, candidate):
         yield f"{name}: listed by the running side only"
     for name in sorted(candidate_names - running_names):
         yield f"{name}: listed by the candidate side only"
+
+
+def _order_differences(running, candidate):
+    both = {row["avatar"] for row in running["items"]} & {row["avatar"] for row in candidate["items"]}
+    running_order = [row["avatar"] for row in running["items"] if row["avatar"] in both]
+    candidate_order = [row["avatar"] for row in candidate["items"] if row["avatar"] in both]
+    for place, (running_name, candidate_name) in enumerate(zip(running_order, candidate_order), start=1):
+        if running_name != candidate_name:
+            yield (
+                f"overview: the candidate side lists {candidate_name} where the running side lists {running_name}, "
+                f"at place {place} of the members both list"
+            )
+            return
 
 
 def _no_member_findings(running, candidate):

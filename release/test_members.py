@@ -46,5 +46,24 @@ class Members(unittest.TestCase):
 
         self.assertEqual(["overview: neither side lists a member, so no member was compared"], tested.findings)
 
+    def test_members_listed_in_another_order_are_a_finding_at_the_first_place_that_differs(self):
+        running = side([row("Ärger"), row("Bambor"), row("Zorn")])
+        candidate = side([row("Zorn"), row("Bambor"), row("Ärger")])
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(
+            ["overview: the candidate side lists Zorn where the running side lists Ärger, at place 1 of the members both list"],
+            tested.findings,
+        )
+
+    def test_a_member_one_side_lists_only_does_not_shift_the_order_of_the_others(self):
+        running = side([row("Ärger"), row("Bambor"), row("Zorn")])
+        candidate = side([row("Ärger"), row("Zorn")])
+
+        tested = compare(running, candidate)
+
+        self.assertEqual([], [f for f in tested.findings if "where the running side lists" in f])
+
 if __name__ == "__main__":
     unittest.main()
