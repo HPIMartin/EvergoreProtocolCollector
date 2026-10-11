@@ -314,69 +314,85 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
 
 ### Scripted comparison
 
-- **Run it:** `release/compare RUNNING_DIST CANDIDATE_DIST SNAPSHOT`; a distribution is a directory
-  holding `bin/protocolParser`.
-  - The running release (`0.2.0`) is built in its own worktree, detached on the tag; the candidate
-    is built from the strand. A distribution is the unpacked `build/distributions/*.tar` that
-    `./verify all` leaves behind.
-  - The tag's own `./verify` predates the build lock and the per-worktree daemon registry: run it
-    as `GRADLE_OPTS=-Dorg.gradle.daemon.registry.base=<that worktree>/registry.local.d flock
-    /tmp/epc-build.lock <that worktree>/verify all`, and stop its daemon through the same registry,
-    never with a bare `--stop`.
-  - Snapshot copies live only under `<worktree>/build/release-comparison/` (replaced at the start of
-    a run, left after it for inspection); the original is copied once per side and never opened. A
-    snapshot or distribution inside that directory is refused.
-  - **Never build while a side runs from that `build/`**, and `./verify all` clears `build/`.
-- **How the sides run:** each on its own port (`18091` and `18092`, overridable with
-  `RELEASE_COMPARE_RUNNING_PORT` and `RELEASE_COMPARE_CANDIDATE_PORT`), in its own process group,
-  with a throwaway token and credentials per run and `TZ=UTC`, listening on `127.0.0.1` only; equal
-  ports are refused. The token
-  and the credentials travel in the environment, never in a command's arguments; the script's own
-  requests bypass any proxy the environment names.
-  - The scheduled job fails to scrape with the throwaway credentials and recomputes anyway; the
-    script waits for `lastSuccessfulRecompute` on each side's admin status in turn
-    (`RELEASE_COMPARE_TIMEOUT` per side, default 900 s, asking every `RELEASE_COMPARE_POLL`,
-    default 5 s), fetches both sides, stops both (TERM, then KILL after `RELEASE_COMPARE_GRACE`,
-    default 10 s) and only then compares. A side still starting gets as long again to lead its own
-    process group before the TERM; one that never does is killed by its pid.
-  - A side that reports only `lastRecomputeFailure`, or that stops running, ends the run at once;
-    every request has a socket timeout, so a side that accepts and never answers cannot hold it.
-  - The wait and the fetch each pace a side to 25 requests per 10 s (the limit is 30); after a 429
-    the script waits 65 s and retries, at most 3 times.
-- **What it reads:** every page of `/api/v1/avatars` with its totals, every member's bank and
-  storage ledger, `/api/v1/admin/status`, and each copy's exact sums from `metaInformation`
-  (read-only, after both sides are stopped); a sum there that is not finite is a finding that ends
-  the comparison there.
-  - The exact sums couple the script to the internal meta key names (decision 2026-10-10); in
-    return rounding, the ammunition credit and last-bit drift are rules over the exact values: the
-    ammunition delta is recomputed from the member's deposits and may differ from the stored one
-    only by float accumulation over that member's entries, and any other exact storage sum may drift
-    by as much, `n + 4` ulp with n the member's storage entries (decision 2026-10-10). A member
-    whose deposited ammunition earns the credit while the candidate's exact sums lack it is a
-    finding.
+- **Run it:**
+  - `release/compare RUNNING_DIST CANDIDATE_DIST SNAPSHOT`, where a distribution is a directory
+    holding `bin/protocolParser`.
+  - The running release (`0.2.0`) is built in its own worktree, detached on the tag.
+  - The candidate is built from the strand.
+  - A distribution is the unpacked `build/distributions/*.tar` that `./verify all` leaves behind.
+  - The tag's own `./verify` predates the build lock and the per-worktree daemon registry.
+  - Run it as `GRADLE_OPTS=-Dorg.gradle.daemon.registry.base=<that worktree>/registry.local.d flock
+    /tmp/epc-build.lock <that worktree>/verify all`.
+  - Stop its daemon through the same registry, never with a bare `--stop`.
+  - Snapshot copies live only under `<worktree>/build/release-comparison/`.
+  - That directory is replaced at the start of a run and left after it for inspection.
+  - The original snapshot is copied once per side and never opened.
+  - **Never build while a side runs from that `build/`.**
+  - `./verify all` clears `build/`.
+- **How the sides run:**
+  - each on its own port, `18091` and `18092`, overridable with `RELEASE_COMPARE_RUNNING_PORT` and
+    `RELEASE_COMPARE_CANDIDATE_PORT`;
+  - each in its own process group, with `TZ=UTC`;
+  - each listening on `127.0.0.1` only;
+  - with a throwaway token and credentials per run, which travel in the environment, never in a
+    command's arguments;
+  - the script's own requests bypass any proxy the environment names.
+- **The run:**
+  - The scheduled job fails to scrape with the throwaway credentials and recomputes anyway.
+  - The script waits for `lastSuccessfulRecompute` on each side's admin status in turn, at most
+    `RELEASE_COMPARE_TIMEOUT` per side (default 900 s), asking every `RELEASE_COMPARE_POLL`
+    (default 5 s).
+  - A side that reports only `lastRecomputeFailure`, or that stops running, ends the run at once.
+  - Every request has a socket timeout, so a side that accepts and never answers cannot hold it.
+  - The wait and the fetch each pace a side to 25 requests per 10 s (the limit is 30).
+  - After a 429 the script waits 65 s and retries, at most 3 times.
+  - Both sides are fetched, then stopped, and only then compared.
+  - The stop sends TERM, then KILL after `RELEASE_COMPARE_GRACE` (default 10 s).
+  - A side still starting gets as long again to lead its own process group before the TERM.
+  - One that never does is killed by its pid.
+- **What it reads:**
+  - every page of `/api/v1/avatars` with its totals, every member's bank and storage ledger, and
+    `/api/v1/admin/status`;
+  - each copy's exact sums from `metaInformation`, read-only, after both sides are stopped; this
+    couples the script to the internal meta key names (decision 2026-10-10).
+- **Rules over the exact sums** (decision 2026-10-10):
+  - Rounding, the ammunition credit and last-bit drift are rules over the exact values, not
+    tolerances.
+  - The ammunition delta is recomputed from the member's deposits and may differ from the stored
+    one only by float accumulation over that member's storage entries, `n + 4` ulp.
+  - Any other exact storage sum may drift by as much.
+  - A member whose deposited ammunition earns the credit while the candidate's exact sums lack it
+    is a finding.
 - **What it compares:**
-  - that both sides recomputed in this run: a side without `lastSuccessfulRecompute`, or a member
-    whose `sums_recomputed_at_` in that side's copy predates the run's start, is a finding; a member
-    with no stored sums on either side is exempt (decision 2026-10-10), so the not-yet-computed rule
-    can apply;
-  - every row and totals figure with its JSON type (a whole number served as a fraction is a
-    finding, a listed addition included), the members each side lists and their order (a run in
-    which neither lists one is a finding, and so is a member one side lists twice) and `totalCount`;
+  - a stored sum that is not finite is a finding that ends the comparison there;
+  - that both sides recomputed in this run: a side without `lastSuccessfulRecompute` is a finding;
+  - so is a member whose `sums_recomputed_at_` in that side's copy predates the run's start;
+  - a member with no stored sums on either side is exempt from that (decision 2026-10-10), so the
+    not-yet-computed rule can apply;
+  - every row and totals figure, with its JSON type: a whole number served as a fraction is a
+    finding, a listed addition included;
+  - the members each side lists, and their order;
+  - a run in which neither side lists a member is a finding;
+  - a member one side lists twice is a finding;
+  - `totalCount` of the overview and of every ledger;
   - each ledger as a multiset of whole entries over every page, so a different order is no finding;
-  - the field sets of rows, totals, admin status and ledger entries, and each row against the other
-    rows of its side, so a figure one row leaves out is a finding that ends the comparison there,
-    as does a row or totals field only one side serves;
-    a listed addition the candidate does not serve is a finding too, and so are round trips it serves
-    as anything but a list, while their content is not compared (the report says so);
-  - `unknownItemNames` as a multiset, and every member `failedAvatarNames` names on either side is
-    a finding, also where both name it; the five run instants of the admin status differ by
-    construction and are not compared (the report says so).
+  - the field sets of rows, totals, admin status and ledger entries;
+  - each row against the other rows of its side: a figure one row leaves out is a finding that
+    ends the comparison there;
+  - a row or totals field only one side serves ends the comparison there too;
+  - a listed addition the candidate does not serve is a finding;
+  - so are round trips it serves as anything but a list; their content is not compared (the
+    report says so);
+  - `unknownItemNames` as a multiset;
+  - every member `failedAvatarNames` names on either side is a finding, also where both name it;
+  - the five run instants of the admin status differ by construction and are not compared (the
+    report says so);
   - `0.2.0` serves no `balance` or storage value; both are derived from its rounded figures as its
     overview did.
-- **Expected deviations:** `release/expected_deviations.py` lists each rule with its name and the
-  decisions behind it; every difference outside the list is a finding. The report names each rule
-  that applied with its decision dates and lists the rules that did not occur, which does not fail
-  the run.
+- **Expected deviations:**
+  - `release/expected_deviations.py` lists each rule with its name and the decisions behind it.
+  - Every difference outside the list is a finding.
+  - A listed rule that did not occur does not fail the run.
 - **Exit status:**
   - `0`: no finding, only listed deviations.
   - `1`: at least one finding.
@@ -395,12 +411,17 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
   - Both sides are gone after every exit path, a hangup and a second interrupt included.
   - INT, TERM, HUP, QUIT, USR1, USR2 or ALRM ends the run with 128 plus its number once both sides
     are stopped.
-- **The script's own proof:** `sh release/self-test` runs the unit tests and the driver tests on a
-  stub distribution (under a minute, synthetic data only) and fails when it finds no test;
-  `pre-commit` runs it too ([build-run-deploy.md](build-run-deploy.md), "Git hooks").
-- **The report** lists every finding, then per expected-deviation rule each acceptance and their
-  count (a shown figure or an exact sum with both values, a wire field only the candidate serves by
-  name), then the rules that did not occur.
+- **The script's own proof:**
+  - `sh release/self-test` runs the unit tests and the driver tests on a stub distribution, with
+    synthetic data only.
+  - It takes under a minute.
+  - It fails when it finds no test.
+  - `pre-commit` runs it too ([build-run-deploy.md](build-run-deploy.md), "Git hooks").
+- **The report:**
+  - It lists every finding first.
+  - Then, per expected-deviation rule with its decision dates, each acceptance and their count: a
+    shown figure or an exact sum with both values, a wire field only the candidate serves by name.
+  - Then the rules that did not occur.
 
 ### Parity evidence on record
 
