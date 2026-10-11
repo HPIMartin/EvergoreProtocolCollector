@@ -19,6 +19,7 @@ TOKEN_VARIABLE = "EVERGORE_SECURITY_API_TOKEN"
 LEDGERS = ("bank", "storage")
 CRASH_EXIT_CODE = 4
 ADMIN_NAME_LISTS = ("unknownItemNames",)
+ADMIN_LISTS = ("unknownItemNames", "failedAvatarNames")
 FIGURE_SCOPES = ("row", "totals")
 
 
@@ -33,6 +34,7 @@ def compare(running, candidate, started=None):
     row_gaps = list(_row_field_differences(running["overview"]["items"], candidate["overview"]["items"]))
     if row_gaps or figures_missing:
         return Report(findings + row_gaps, [], [])
+    findings.extend(_admin_list_findings(running["admin"], candidate["admin"]))
     findings.extend(_admin_differences(running["admin"], candidate["admin"]))
     findings.extend(_recompute_status_findings("running", running["admin"]))
     findings.extend(_recompute_status_findings("candidate", candidate["admin"]))
@@ -236,9 +238,16 @@ def _all_entries(side):
     ]
 
 
+def _admin_list_findings(running, candidate):
+    for label, admin in (("running", running), ("candidate", candidate)):
+        for field in ADMIN_LISTS:
+            if field in admin and not isinstance(admin[field], list):
+                yield f"admin: {field} is served as {type(admin[field]).__name__} by the {label} side, a list is expected"
+
+
 def _admin_differences(running, candidate):
     for field in ADMIN_NAME_LISTS:
-        if field in running and field in candidate:
+        if isinstance(running.get(field), list) and isinstance(candidate.get(field), list):
             only_running = Counter(running[field]) - Counter(candidate[field])
             only_candidate = Counter(candidate[field]) - Counter(running[field])
             for name in sorted(only_running.elements()):
@@ -252,7 +261,8 @@ def _recompute_status_findings(side, admin):
         yield f"admin: the {side} side shows no successful recompute"
     if admin.get("lastRecomputeFailure"):
         yield f"admin: the {side} side shows a recompute failure"
-    for name in admin.get("failedAvatarNames", []):
+    failed = admin.get("failedAvatarNames", [])
+    for name in failed if isinstance(failed, list) else []:
         yield f"admin: failedAvatarNames on the {side} side names {name}, whose recompute failed"
 
 

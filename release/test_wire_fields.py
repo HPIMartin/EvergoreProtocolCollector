@@ -195,6 +195,16 @@ class AdminValues(unittest.TestCase):
 
         self.assertEqual([], tested.findings)
 
+    def test_an_admin_name_list_served_as_anything_but_a_list_is_a_finding_and_no_crash(self):
+        for field in ("unknownItemNames", "failedAvatarNames"):
+            with self.subTest(field=field):
+                running = side(admin=admin())
+                candidate = side(admin=admin(**{field: None}))
+
+                tested = compare(running, candidate)
+
+                self.assertEqual([f"admin: {field} is served as NoneType by the candidate side, a list is expected"], tested.findings)
+
     def test_a_name_only_one_side_lists_is_a_finding(self):
         running = side(admin=admin(unknownItemNames=["Zwerg"]))
         candidate = side(admin=admin(unknownItemNames=[]))
