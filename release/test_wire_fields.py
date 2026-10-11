@@ -27,6 +27,16 @@ class ListedAdditions(unittest.TestCase):
         self.assertEqual([], tested.findings)
 
 
+    def test_a_listed_admin_addition_served_as_anything_but_a_list_is_a_finding(self):
+        for served, kind in ((None, "NoneType"), ("x", "str"), (3.5, "float"), (0, "int")):
+            with self.subTest(served=served):
+                running = side(admin=without(admin(), "roundTrips", "roundTripAbstentions"))
+                candidate = side(admin=admin(roundTrips=served))
+
+                tested = compare(running, candidate)
+
+                self.assertEqual([f"admin: roundTrips is served as {kind} by the candidate side, a list is expected"], tested.findings)
+
     def test_a_listed_addition_neither_side_serves_is_a_finding(self):
         running = side(
             [without(row("Alice"), "balance")],

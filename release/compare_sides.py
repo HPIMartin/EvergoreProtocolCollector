@@ -45,6 +45,7 @@ def compare(running, candidate, started=None):
     findings.extend(_no_member_findings(running["overview"], candidate["overview"]))
     findings.extend(_type_differences(running["overview"], candidate["overview"]))
     findings.extend(_addition_type_findings(running["overview"], candidate["overview"]))
+    findings.extend(_admin_addition_findings(running["admin"], candidate["admin"]))
     shown = differences(with_derived_figures(running["overview"]), with_derived_figures(candidate["overview"]))
     if "exact" in running and "exact" in candidate:
         differing = exact_differences(running, candidate)
@@ -174,6 +175,12 @@ def _addition_type_findings(running, candidate):
             value = candidate_figures.get(figure)
             if figure not in running_figures and value is not None and type(value) is not int:
                 yield f"{scope}: {figure} is served as {type(value).__name__} by the candidate side, a whole number is expected"
+
+
+def _admin_addition_findings(running, candidate):
+    for field in LISTED_ADDITIONS["admin"]:
+        if field in candidate and field not in running and not isinstance(candidate[field], list):
+            yield f"admin: {field} is served as {type(candidate[field]).__name__} by the candidate side, a list is expected"
 
 
 def _field_set_differences(running, candidate):

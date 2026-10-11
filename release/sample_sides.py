@@ -78,8 +78,8 @@ def admin(**fields):
         "lastRecomputeFailure": None,
         "unknownItemNames": [],
         "failedAvatarNames": [],
-        "roundTrips": 0,
-        "roundTripAbstentions": 0,
+        "roundTrips": [],
+        "roundTripAbstentions": [],
     }
     base.update(fields)
     return base
