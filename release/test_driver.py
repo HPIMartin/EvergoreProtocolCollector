@@ -251,6 +251,67 @@ class FullRun(unittest.TestCase):
         self.assertEqual("127.0.0.1", self.layout.record("running")["env"]["MICRONAUT_SERVER_HOST"])
         self.assertEqual("127.0.0.1", self.layout.record("candidate")["env"]["MICRONAUT_SERVER_HOST"])
 
+    def side_environment_names(self, **inherited):
+        for name in ("running-dist", "candidate-dist"):
+            seen = self.layout.root / name / "side-environment.txt"
+            binary = self.layout.root / name / "bin" / "protocolParser"
+            binary.write_text(f'#!/bin/sh\nenv > "{seen}"\nexec python3 -B "{self.layout.root}/release/stub_app.py" "$@"\n', encoding="utf-8")
+
+        tested = self.layout.run(**inherited)
+
+        self.assertEqual(0, tested.returncode, tested.stdout + tested.stderr)
+        names = {}
+        for name in ("running-dist", "candidate-dist"):
+            seen = (self.layout.root / name / "side-environment.txt").read_text(encoding="utf-8")
+            names[name] = {line.split("=", 1)[0] for line in seen.splitlines() if "=" in line}
+        return names
+
+    def test_no_side_inherits_the_callers_java_or_application_settings(self):
+        inherited = {
+            "JAVA_OPTS": "-Devergore.credentials.password=real",
+            "JAVA_TOOL_OPTIONS": "-Dmicronaut.server.host=0.0.0.0",
+            "JDK_JAVA_OPTIONS": "-Dmicronaut.server.host=0.0.0.0",
+            "_JAVA_OPTIONS": "-Dmicronaut.server.host=0.0.0.0",
+            "PROTOCOL_PARSER_OPTS": "-Devergore.security.api-token=real",
+            "MICRONAUT_APPLICATION_JSON": '{"micronaut":{"server":{"host":"0.0.0.0"}}}',
+            "micronaut_server_host": "0.0.0.0",
+            "EVERGORE_CREDENTIALS_FILE": "/somewhere/real",
+            "evergore_credentials_password": "real",
+            "Evergore_Security_Api_Token": "real",
+            "DATASOURCES_DEFAULT_URL": "jdbc:sqlite:/somewhere/real.sqlite",
+            "datasources_default_url": "jdbc:sqlite:/somewhere/real.sqlite",
+        }
+
+        for name, names in self.side_environment_names(**inherited).items():
+            with self.subTest(side=name):
+                self.assertEqual(set(), names & set(inherited))
+                self.assertTrue({"MICRONAUT_SERVER_HOST", "MICRONAUT_SERVER_PORT", "EVERGORE_SECURITY_API_TOKEN"} <= names)
+
+    def test_a_caller_value_holding_a_line_that_looks_like_a_setting_stops_neither_side(self):
+        names = self.side_environment_names(CALLER_NOTE="first line\nEVERGORE_NOT.A.NAME=second line")
+
+        for name in names:
+            self.assertIn("MICRONAUT_SERVER_PORT", names[name], name)
+
+    @unittest.skipUnless(
+        shutil.which("localedef") and Path("/usr/share/i18n/locales/tr_TR").is_file(), "needs localedef and the tr_TR locale source"
+    )
+    def test_no_side_inherits_a_lower_case_setting_under_a_locale_that_upper_cases_i_differently(self):
+        locales = temp_directory(self)
+        subprocess.run(
+            ["localedef", "-i", "tr_TR", "-f", "UTF-8", str(locales / "tr_TR.UTF-8")],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        names = self.side_environment_names(
+            LOCPATH=str(locales), LC_ALL="tr_TR.UTF-8", micronaut_server_host="0.0.0.0", evergore_credentials_file="/somewhere/real"
+        )
+
+        for name in names:
+            self.assertEqual(set(), names[name] & {"micronaut_server_host", "evergore_credentials_file"}, name)
+
     def test_the_throwaway_credentials_are_present_and_differ_from_run_to_run(self):
         self.layout.run()
         first = self.layout.record("running")["env"]

@@ -335,6 +335,9 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
     `RELEASE_COMPARE_CANDIDATE_PORT`;
   - each in its own process group, with `TZ=UTC`;
   - each listening on `127.0.0.1` only;
+  - without the caller's Java options (`JAVA_OPTS`, `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`,
+    `_JAVA_OPTIONS`, `PROTOCOL_PARSER_OPTS`) and without any inherited `MICRONAUT_*`, `EVERGORE_*`
+    or `DATASOURCES_*` variable, in any letter case and under any locale;
   - with a throwaway token and credentials per run, which travel in the environment, never in a
     command's arguments;
   - the script's own requests bypass any proxy the environment names.

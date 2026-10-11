@@ -139,6 +139,10 @@ start_side() {
 	chmod u+w -- "$work/$side/database/temp.sqlite"
 	(
 		cd "$work/$side"
+		for inherited in $(env | LC_ALL=C awk -F= '$1 ~ /^[A-Za-z_][A-Za-z0-9_]*$/ && toupper($1) ~ /^(MICRONAUT|EVERGORE|DATASOURCES)_/ { print $1 }'); do
+			unset "$inherited"
+		done
+		unset JAVA_OPTS JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS _JAVA_OPTIONS PROTOCOL_PARSER_OPTS
 		TZ=UTC
 		MICRONAUT_SERVER_HOST=127.0.0.1
 		MICRONAUT_SERVER_PORT=$port
