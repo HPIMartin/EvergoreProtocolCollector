@@ -132,14 +132,16 @@ command) inside guardrails. Two files:
   watching.
 - **Token-efficient commands that still match.** Combined one-liners
   (`echo … && git status && grep …`) save round-trips and auto-allow when every segment matches an
-  allow rule; prefer them over atomic calls. Inline `VAR=…` makes a chain un-matchable: use literal
-  values. A leading `cd` auto-allows only project-anchored absolute
-  (`cd /workspaces/EvergoreProtocolCollector` or below; decided 2026-07-06); deny rules block `cd`
-  arguments containing `..`, `$`, `` ` `` or `~` (the working directory can't silently leave the
-  project); bare, relative and quoted `cd` still prompt. Prefer `git -C <path>` / absolute paths (a
-  `git -C` command matches no allow rule, so it meets the auto-mode classifier, below); a worktree's
-  build runs as `<abs worktree>/verify …`, since `verify` finds its own root, so no `cd` is needed,
-  and `W=<wt>; cd $W` is denied by the `$` guard.
+  allow rule and no `ask` or `deny` rule matches (a project allow counts only once workspace trust
+  is accepted: "Which rule applies", below); prefer them over atomic calls. Inline `VAR=…` makes a
+  chain un-matchable: use literal values. A leading `cd` auto-allows (once trusted) only
+  project-anchored absolute (`cd /workspaces/EvergoreProtocolCollector` or below; decided
+  2026-07-06); deny rules block `cd` arguments containing `..`, `$`, `` ` `` or `~` (the working
+  directory can't silently leave the project); bare, relative and quoted `cd` still prompt. Prefer
+  `git -C <path>` / absolute paths (a `git -C` command matches no allow rule, so it meets the
+  auto-mode classifier, below); a worktree's build runs as `<abs worktree>/verify …`, since
+  `verify` finds its own root, so no `cd` is needed, and `W=<wt>; cd $W` is denied by the `$`
+  guard.
   Worktree-path specifics: handbook §7.
 - **Autonomy within guardrails.** Maximum useful autonomy, minimum ceremony, a deny floor
   underneath. A deny is matched against each command of a chain, not against the whole line
@@ -152,9 +154,10 @@ command) inside guardrails. Two files:
     written `git -C` variants of the git denies are inert (below).
   - **Seven narrow plain spellings of `git push` are denied too** (`git push`, `git push origin`,
     `git push * origin`, `git push * HEAD`, `git push -u *`, `git push --set-upstream *`,
-    `git push --tags*`), each only in that word order (rule shapes of the kinds measured to fire; a
-    probe per rule once the file is live proves each). Other spellings meet the classifier, like
-    every other push (the managed policy, below): a flag after the refspec
+    `git push --tags*`), each only in that word order. Each fires without a prompt (measured
+    2026-10-05 and again 2026-10-12, one harmless probe per rule, such as
+    `git push --dry-run no-such-remote-probe HEAD` for `git push * HEAD`). Other spellings meet the
+    classifier, like every other push (the managed policy, below): a flag after the refspec
     (`git push origin --tags`), `--branches`, `--follow-tags`, an abbreviated option (`--al` for
     `--all`), a quoted word, a tag pushed by its name and a refspec such as `@`, `:` or
     `refs/heads/*`.
@@ -165,10 +168,20 @@ command) inside guardrails. Two files:
     `find`, `sed -i`, shell redirects) could reach the same effects and are trusted by design
     (single trusted author, accident threat model). Never weaken the deny floor; route anything
     genuinely destructive or outward-facing through the human.
+- **Which rule applies** (measured 2026-10-05; Claude Code's permissions documentation):
+  - **Rules are checked deny, then ask, then allow, and the first that matches wins.** An allow
+    never carves anything out of an `ask` or a `deny`: the committed `xargs stat`, `xargs echo` and
+    four localhost `curl` allows never fire under the blanket `xargs` and `curl` asks.
+  - **The project's `allow` rules and its `additionalDirectories` apply only once the folder's
+    workspace trust is accepted; its `deny` and `ask` rules always apply** (the documentation's
+    "Project allow rules and workspace trust").
+    - **In the VS Code extension's manual mode every project allow rule prompted,** while an
+      allow in `settings.local.json` applied.
 - **Managed settings sit above the project.** The managed policy, Claude Code's managed settings, is
   the top settings layer; its `deny` rules and its auto-mode rules hold in every session that
-  receives the policy (whether the agent machine's sessions do is not recorded), and no project rule
-  loosens them.
+  receives the policy, and no project rule loosens them. The agent machine's sessions receive it
+  (measured 2026-10-05: a session there refused `git push --dry-run no-such-remote-probe HEAD:main`,
+  a spelling only the policy's push denies match).
   - **Its push denies** match the common literal spellings of a push naming `main` or `master`, a
     force without a lease (`--force`, a standalone `-f`), a `+` refspec, `--all`, `--mirror` and
     `--prune`, and only in commands that begin with `git push` and spell those words unquoted.
@@ -208,15 +221,16 @@ command) inside guardrails. Two files:
   (`permissions.defaultMode: "auto"` in `~/.claude/settings.json`) or per session
   (`--permission-mode auto`), never from a project's own `settings.json`. Re-read that page when the
   harness changes; these statements are only as current as it. Under that assumption most
-  convenience allows are dead weight, and a long list is a long list to audit. The keep-or-cut rule:
-  **an allow rule stays when it carves something out of the `ask` tier or out of a deny pattern**
-  (the project-anchored `cd`, `xargs stat` under a blanket `xargs` ask, the localhost `curl` under a
-  blanket `curl` ask) **or when it names the project's own loop** (`./verify`, `sh hooks/*`, `sh
-  deploy/*`, `./gradlew`, the npm and Vitest commands, `sqlite3`, and the git subcommands the TDD
-  and landing loops run); it goes when all it does is pre-empt a plain prompt for a read-only
-  utility. A session not running auto mode widens the allow list deliberately, in
-  `settings.local.json` or as one reviewed diff of the committed file, rather than mining
-  transcripts for approvals.
+  convenience allows are dead weight, and a long list is a long list to audit. A project's own
+  allows stay in force only once trusted ("Which rule applies", above). The keep-or-cut rule: **an
+  allow rule stays when it admits the narrow form of a command a deny pattern guards** (the
+  project-anchored `cd` beside the `cd` escape denies; an allow that an `ask` or `deny` also matches
+  in full never fires, "Which rule applies" above) **or when it names the project's own loop**
+  (`./verify`, `sh hooks/*`, `sh deploy/*`, `./gradlew`, the npm and Vitest commands, `sqlite3`, and
+  the git subcommands the TDD and landing loops run); it goes when all it does is pre-empt a plain
+  prompt for a read-only utility. A session not running auto mode widens the allow list
+  deliberately, in `settings.local.json` or as one reviewed diff of the committed file, rather than
+  mining transcripts for approvals.
 - **Autonomous cleanup, inside the same floor.** The agent removes the scaffolding it created
   itself: `git worktree remove` / `prune` for its own worktrees, `git branch -d` for landed branches
   and the remote copy of a landed `claude/<topic>` branch, leased on its tip, once `origin/main`

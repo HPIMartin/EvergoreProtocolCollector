@@ -177,8 +177,7 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   build-performance analysis (G11); and the SessionStart hook that injects the lessons
   deterministically (G10). The learnings repeatedly show a session forgetting a written rule. Also
   the build I/O off the workspace disk (H13), and the gate and agent tool rows (G21 to G50), pulled
-  when a gate meets one; first the gate mechanics (G51 with G30, G32, G40, G48) and the permission
-  facts (G52).
+  when a gate meets one; first the gate mechanics (G51 with G30, G32, G40, G48).
 - **Test-suite hygiene:** the browser's first-launch race (B35), the test debt two feature gates
   left (B33, B34, B38), the headline shapes the parser still misreads (B39, B40, B41), the release
   comparison's remaining edges (B42, B43, B44, B45), repository tests (B4), style
