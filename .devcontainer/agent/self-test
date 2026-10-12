@@ -379,7 +379,7 @@ check 'a temporary tag whose removal cannot be checked fails the run' "$r"
 
 r=0
 [ "$(grep -v '^[[:space:]]*$' "$agent_dir/Dockerfile")" = "$(printf '%s\n' \
-	'ARG BASE' \
+	'ARG BASE=base-image-required-pass-build-arg-base' \
 	'FROM ${BASE}' \
 	'LABEL devcontainer.metadata="[]"' \
 	'USER root' \

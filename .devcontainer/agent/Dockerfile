@@ -1,4 +1,4 @@
-ARG BASE
+ARG BASE=base-image-required-pass-build-arg-base
 FROM ${BASE}
 LABEL devcontainer.metadata="[]"
 
