@@ -170,8 +170,8 @@ command) inside guardrails. Two files:
     genuinely destructive or outward-facing through the human.
 - **Which rule applies** (measured 2026-10-05; Claude Code's permissions documentation):
   - **Rules are checked deny, then ask, then allow, and the first that matches wins.** An allow
-    never carves anything out of an `ask` or a `deny`: the committed `xargs stat`, `xargs echo` and
-    four localhost `curl` allows never fire under the blanket `xargs` and `curl` asks.
+    never carves anything out of an `ask` or a `deny`: an `xargs stat` allow never fires under the
+    blanket `xargs` ask, so the committed file keeps no allow of that kind.
   - **The project's `allow` rules and its `additionalDirectories` apply only once the folder's
     workspace trust is accepted; its `deny` and `ask` rules always apply** (the documentation's
     "Project allow rules and workspace trust").

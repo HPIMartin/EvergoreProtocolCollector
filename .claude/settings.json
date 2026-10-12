@@ -75,13 +75,7 @@
 			"Bash(npx tsc:*)",
 			"Bash(sqlite3:*)",
 			"Bash(cd /workspaces/EvergoreProtocolCollector)",
-			"Bash(cd /workspaces/EvergoreProtocolCollector/*)",
-			"Bash(xargs stat:*)",
-			"Bash(xargs echo:*)",
-			"Bash(curl http://localhost:*)",
-			"Bash(curl -s http://localhost:*)",
-			"Bash(curl http://127.0.0.1:*)",
-			"Bash(curl -s http://127.0.0.1:*)"
+			"Bash(cd /workspaces/EvergoreProtocolCollector/*)"
 		],
 		"ask": [
 			"Bash(gh api:*)",
