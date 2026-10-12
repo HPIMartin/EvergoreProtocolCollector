@@ -517,6 +517,22 @@ table existed stand as dated decision rows above (2026-09-09, 2026-09-12, 2026-0
   which every git that opens the checkout, the host's included, must then read; keep the
   file-based refs and the case check alone; make the checkout's directory case-sensitive on the
   Windows host.
+- **D-22 (The PC devcontainer's Docker socket, backlog H15):** what keeps an agent on the PC from
+  the host's file system? Options, recommended first:
+  - drop `docker-outside-of-docker` from the PC devcontainer and add a second devcontainer
+    configuration that carries the socket, opened only for a deploy and with no agent session in
+    it; the grid's Chrome and Edge runs move to the agent seat (H14), the PC-side
+    `.devcontainer/agent/build` proof with them;
+  - keep the socket and run every auto-mode or unsupervised agent on the agent seat only, which
+    leaves a supervised agent's reach as it is.
+  - Ruled out, docker-in-docker: its feature runs `--privileged`
+    ([feature](https://github.com/devcontainers/features/blob/main/src/docker-in-docker/devcontainer-feature.json)).
+  - A privileged container can take over its host
+    ([Docker reference](https://docs.docker.com/reference/cli/docker/container/run/)).
+  - Ruled out, Enhanced Container Isolation: needs a Docker Business subscription
+    ([Docker docs](https://docs.docker.com/enterprise/security/hardened-desktop/enhanced-container-isolation/enable-eci/)).
+  - Ruled out, Claude Code's Bash sandbox: `docker` runs only outside it, and inside a container
+    it runs only in a weakened mode ([docs](https://code.claude.com/docs/en/sandboxing)).
 
 ## Assumptions currently baked into the plan (challenge if wrong)
 
