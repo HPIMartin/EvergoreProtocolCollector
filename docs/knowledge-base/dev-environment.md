@@ -141,6 +141,8 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
 - **The agent seat is marked by `EPC_SEAT=agent-machine`**, set in the agent container's
   environment only, never in the repository; it lifts the review round cap (handbook §9). Where it
   is unset or reads anything else, the session counts as supervised.
+- **Auto mode in the agent container is the agent machine's user settings**, as every `autoMode`
+  rule is ("Where auto-mode rules live" in [working-with-ai-agents.md](working-with-ai-agents.md)).
 - **The agent seat talks to the GitHub API as the App `epc-agent`**, author-owned and installed on
   this repository only, with pull requests and issues writable and contents, checks and statuses
   read-only, on no bypass list (author decision 2026-10-08), once the author has created it and
