@@ -9,32 +9,45 @@
 > ([multi-agent-playbook.md](knowledge-base/multi-agent-playbook.md), handbook §7); landings stay
 > author-serialized.
 >
-> **Order re-cut 2026-09-11** (author decision, see open-questions.md): settle what the numbers
-> *are*, then explain them, then the bottlenecks. The previous cut predates the valuation change and
-> knew none of the five items it produced. The explanation page must be revised in the same change
-> as any valuation rule it explains, so everything that changes what the numbers are lands before
-> it. A parked set stays explicitly out of this stage.
-> **Re-cut 2026-09-27** (author go on the plan after the scenario review, see open-questions.md):
-> the row rounding joins M8, ahead of the explanation page.
-> **Re-cut 2026-10-10** (author go on the plan of 2026-10-09, see open-questions.md): 0.3.0 is
-> released first; M7 is done and removed; M5 is struck, as no sheet covers the
-> time after July 2022 and the guild hears nothing before 1.0.
+> **Ordering rule** (each decision and its why in [open-questions.md](open-questions.md)): the next
+> release and the work it carries go first; then what changes what the numbers are, then the
+> bottlenecks, then product build-out and operations; the skills milestone follows 1.0. The
+> explanation page changes in the same commit as any rule it explains, so a rule that lands after
+> it extends the page instead of waiting for it. A parked set stays explicitly out of this stage.
 
 ## Order
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, opening balance, explanation page with the trader's figure (E18, E19, E20); the note of a row not yet computed (E36) and the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the explanation page closes the milestone because it must follow every rule it explains |
+| M16 | 0.4.0 reaches the guild | the explanation page with the corrected note and the invented trader (E19, E36, E20), the backlog harvest (G83), the release comparison against 0.3.0 (F22), the gate guards (G82, with G30, G48), the release (F23) | **First** (author decision 2026-10-13): the page goes live with 0.4.0, and nothing in it moves a figure |
+| M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | D24 with F12, F10; the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
 | M10 | What the bottlenecks release | B36→D25 with D9→D18, D22→D14 | Measured request-path cost and the timezone fix at its root |
 | M11 | Product build-out | E12→E13, E9, E3, E6, E27, E30, E37, F13 | E12 inherits D18's query shape, so it follows it |
 | M12 | Ops, security & environment | F1, H11, C1, C8, A4, C11→E28, E17, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
 | M14 | The guild's skills | E31→E32→E33, E34 | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open, D-16). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
 
+## M16: 0.4.0 reaches the guild
+
+Slice: a member can follow how his own row comes about, on a page the release carries, through a
+release gate that expects no figure to move.
+
+- [ ] A page reachable from the overview explains every header figure, every credit tier and every
+      option a member can switch, with worked examples kept current as the author chose; it
+      carries the corrected note of a row not yet computed and an invented trader (backlog E19,
+      E36, E20).
+- [ ] The backlog harvest closes, folds or narrows every row it names and adds no row unless the
+      author agrees (backlog G83).
+- [ ] The release comparison runs against 0.3.0 as the running side (backlog F22), and the gate
+      guards refuse a mutation-only red, a commit during a rebase stop and added conflict markers
+      (backlog G82, with G30, G48).
+- [ ] 0.4.0 is deployed and tagged, its comparison against `v0.3.0` reporting no finding (backlog
+      F23).
+
 ## M8: The numbers hold up
 
-Slice: the figures the header named are complete, the rule behind them is decided where the ledger
-cannot decide it, and a member can follow how his own row comes about.
+Slice: the figures the header named are complete, and the rule behind them is decided where the
+ledger cannot decide it.
 
 - [x] Every storage name carries the value the game gives it, is recorded as a parser miss, or is
       recorded as unpriced by the game with the date of the read that found no price (2026-09-22):
@@ -46,25 +59,15 @@ cannot decide it, and a member can follow how his own row comes about.
       to crafters; on the 03.09.2026 snapshot the guild trader moves from `-2.189.599` to
       `+1.456.343` ([testing.md](knowledge-base/testing.md)). It belongs here because it changes what a deposit credits.
 - [x] A member's row, the guild row and the header figures are each rounded once from the exact
-      values, as decided 2026-09-27, halves away from zero (2026-09-30). It changes what a row shows,
-      so it precedes the explanation page like every rule above it. On the 03.09.2026 snapshot 7 of
+      values, as decided 2026-09-27, halves away from zero (2026-09-30). On the 03.09.2026 snapshot 7 of
       42 rows and four guild figures differ by one gold ([testing.md](knowledge-base/testing.md)).
 - [x] A member cycling trader goods through the storage is named with the item and the overlapping
       quantity, and a test proves the warning stays silent for a crafter who withdraws material and
       deposits the product.
-- [ ] The note under "Vor Abzügen" of a row not yet computed names that state, its scenario
-      reconfirmed by the author (backlog E36).
 - [ ] The consent-banner text is purged from the ledger and the path that let it in is closed
       (backlog F8).
 - [ ] One opening entry per avatar books the counted stock at a chosen instant, marked as such on the
       wire and in the view, and the recomputed sums equal that stock (backlog E18).
-- [ ] A page reachable from the overview explains every header figure and every credit tier with one
-      worked example each, in the style of the guild's own announcements, and a KB rule makes a
-      valuation change update it in the same commit (backlog E19). **Last in this milestone:** it
-      must follow every rule above it or be written twice.
-- [ ] The trader's figure is explained down to the transactions that make it, and each of the three
-      facts the ledger cannot see is either represented or recorded as out of the model's reach
-      (backlog E20), carried by the explanation page rather than standing alone.
 
 ## M9: Clear the last bottleneck
 
@@ -160,8 +163,13 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   concurrent falsifier runs flaky and the two worktree costs folded in from the dissolved
   build-performance analysis (G11); and the SessionStart hook that injects the lessons
   deterministically (G10). The learnings repeatedly show a session forgetting a written rule. Also
-  the Gradle daemons' memory under parallel strands (H13), and the gate and agent tool rows (G21 to
-  G50), pulled when a gate meets one; first the gate mechanics (G51 with G30, G32, G40, G48).
+  the Gradle daemons' memory under parallel strands (H13), and the gate, agent-tool and doc rows
+  (G21 to G79), pulled when a gate meets one, most doc-debt rows in the 0.4.0 harvest; after 0.4.0
+  the gate mechanics (G51 with G32, G40, G65).
+- **Request handling at the edge:** the line slicer's per-line cost (F15) and the browser lost for
+  a target with a broken escape (F18).
+- **Deploy and environment:** a failed ssh connection named as such (F20), the database directory
+  given to the runtime user (F21), the browser grid on the agent seat (H14).
 - **Test-suite hygiene:** the browser's first-launch race (B35), the test debt two feature gates
   left (B33, B34, B38), the headline shapes the parser still misreads (B39, B40, B41), the release
   comparison's remaining edges (B42, B43, B44, B45), repository tests (B4), style
