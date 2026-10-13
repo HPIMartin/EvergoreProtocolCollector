@@ -98,7 +98,7 @@ postCreate). The base image is pinned by digest, every feature by digest in
   - From Git Bash, `MSYS_NO_PATHCONV=1` keeps it from rewriting `/worktrees/…` into a Windows
     path.
   - A strand is best driven from a session in the container ("How to work in it", below).
-- **Prune worktrees only in a container that has the volume mounted.**
+- **Why a container without the volume misreads the worktrees** (rule: handbook §7):
   - Git lists a worktree whose directory it cannot see as `prunable`, and `git worktree prune`
     drops its registration.
   - `git gc` prunes such a registration on its own once it is older than

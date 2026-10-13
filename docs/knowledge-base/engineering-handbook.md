@@ -462,6 +462,11 @@ worktrees (own directory + HEAD + index) make parallel work safe.
 - **Every strand, gate and lens worktree is created under the worktree root.**
   - The root is `$EPC_WORKTREES` where that is set, else `.claude/worktrees/` in the primary
     checkout.
+  - **On the PC, the root and pruning stay inside the container** (why:
+    [dev-environment.md](dev-environment.md), "Worktrees on a volume"):
+    - `EPC_WORKTREES` is read there; a session on the Windows host asks
+      `docker exec -u vscode <container> printenv EPC_WORKTREES`;
+    - `git worktree prune` runs only in a container that has the volume mounted.
   - Which seat sets it, and why: [dev-environment.md](dev-environment.md), "Worktrees on a volume".
 - **`main` follows `origin/main` on every machine** (author decision 2026-10-04): `origin/main`
   moves only by the author's landings and the pull requests the author merges on GitHub
