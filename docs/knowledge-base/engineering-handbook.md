@@ -102,8 +102,9 @@ means, the TDD cycles drive them green, step definitions included.
 1. **Red**: smallest failing test expressing the next behavior. Run it and **watch it fail for the
    right reason**; a slow full build is no licence to skip red, run the *focused* test. **The red
    run is evidence**: the failing test's name and its failure line go into the step's report (or
-   the plan) before the implementation exists. A test written beside its implementation is anchored
-   to that implementation's shape, which is what produces assertions fitted to the data.
+   the plan) before the implementation exists; a mutation of the finished code is no red run. A
+   test written beside its implementation is anchored to that implementation's shape, which is what
+   produces assertions fitted to the data.
 2. **Green**: simplest code that passes.
 3. **Refactor**: improve design with tests green.
 4. **Commit**: one full cycle = one commit, via the §7 protocol (the agent words the message and
@@ -122,7 +123,11 @@ means, the TDD cycles drive them green, step definitions included.
   with a **recorded mutation**: mutate the production code so the adapted assertion must fail, run
   only that test class (`./verify focus <path>`), keep the output, revert. The record (what was
   mutated, the failing line) goes into the step's report like red evidence. Where a harness exists
-  this is the only substitution; a *new* test is always seen red.
+  this is the only substitution; a *new* test that drives new code is always seen red.
+- **A new test that pins behavior the code already has** (one a panel asks for) cannot start red
+  either and pays the same way.
+  - Its mutation stays in the gate dossier (playbook, `mutation/`).
+  - No row records it: the test itself is the durable artifact (author decision 2026-10-13).
 - Where a deliverable genuinely has no test harness the stack supports (the deploy shell script),
   the substitution is **mutation testing** and it is *declared*: name it and every mutation in
   [`open-questions.md`](../open-questions.md), "Recorded mutations", in the same change, so a later

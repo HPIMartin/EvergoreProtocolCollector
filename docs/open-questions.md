@@ -335,13 +335,16 @@ second copy.
 | 2026-10-13 | **Three rows fold into the rows that carry them on: the exact avatar name match into the opening balance, the integration-test phase into the Selenium service, and the browser's first-launch race into the dependency refresh** (author decision, harvest plan of 2026-10-13) → backlog, roadmap | The opening entries are the second writer that makes the name mismatch real; the integration-test phase was gated on the Selenium service; the race sits in Selenium 4.7.2's Selenium Manager, a dependency the refresh brings current |
 | 2026-10-13 | **The strand that guards the two most frequent slips mechanically carries no `.feature`: handbook §5's build/infra exemption applies** (author decision) | It changes the gate dossier check, the git hooks and the build's test inputs, process tooling with no product behaviour a stakeholder sees |
 | 2026-10-13 | **`pre-commit` refuses a commit only at a rebase's conflict stop, not whenever `REBASE_HEAD` exists** (author decision on the strand's plan) | git writes `REBASE_HEAD` at an `edit` stop too, where an amend is the playbook's fold, and leaves it behind after a finished rebase; on git 2.55 an `edit` stop alone has both a `rebase-merge/amend` and a last `rebase-merge/done` line opening with `edit` (a `fixup` or `squash` conflict stop writes the amend file too) |
+| 2026-10-13 | **A recorded mutation stays durable only for a deliverable without a test harness; a test that cannot start red is proven by its mutation in the gate dossier** (author decision, against a durable row per test in `docs/recorded-mutations/<topic>.md` or the table) | A test stays in the suite and fails on its own when its behavior breaks, while a harness-less deliverable (the build's configuration, `./verify`) has no other proof; no gate re-ran a test's row across strands, and every slip on record was a missing row, never harm a missing row caused |
 
 ## Recorded mutations (red evidence where a new case could not start red)
 
-A test adapted to a changed behavior, or a deliverable without a test harness, cannot be seen red on
-its own. The substitute is a temporary mutation of the code under test, recorded here so a later gate
-re-runs it instead of taking the claim on trust (handbook §4). The mutations recorded before this
-table existed stand as dated decision rows above (2026-09-09, 2026-09-12, 2026-09-18).
+A deliverable without a test harness cannot be seen red on its own; its substitute is a temporary
+mutation of the code under test, recorded here so a later gate re-runs it instead of taking the
+claim on trust (handbook §4). A test that cannot start red, adapted or new, proves itself by its
+mutation in the gate dossier (decision 2026-10-13); the rows that name test cases predate that
+decision. The mutations recorded before this table existed stand as dated decision rows above (2026-09-09,
+2026-09-12, 2026-09-18).
 
 | What the cases pin | Mutation | Cases that flip to FAIL |
 |---|---|---|
