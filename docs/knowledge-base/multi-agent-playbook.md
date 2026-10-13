@@ -255,8 +255,9 @@ says where each piece of evidence lives.
   (a verdict on unchanged code still holds, and a re-run costs a full lens):
   - both the strand (`<its tip>..<tip>`) and `main` (its merge-base with `main`..`main`) count;
   - a lens reads the paths its required report follows below;
-  - the frontend lens also reads those under `src/`, where the API and the browser-driven
-    scenarios live;
+  - the frontend lens also reads those under `src/`, `grid/` and `gradle/`, `build.gradle.kts`,
+    `settings.gradle.kts`, `gradle.properties`, `gradlew`, `Dockerfile` and `verify`, where the
+    API, the browser-driven scenarios and the build that runs them live;
   - the doc-reviewer's report and every run name the tip under review, unless the next bullet
     lets them stand.
 - **The doc-reviewer's report and the runs of an earlier tip stand beside filed lows**

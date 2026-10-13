@@ -285,6 +285,27 @@ walk_logs
 if refuses_for tip && grep -q '^refused \[tip\]: lens-frontend.md ' "$work/out"; then r=0; else r=1; fi
 check "a frontend report from an earlier tip is refused after a fold of the code under src/ it reads" "$r"
 
+for build_file in build.gradle.kts settings.gradle.kts grid/compose.yaml verify gradle.properties gradle/wrapper/gradle-wrapper.properties gradlew Dockerfile; do
+	new_strand "frontend_report_after_build_fold_$(printf '%s' "$build_file" | tr -c 'A-Za-z0-9' _)"
+	complete_dossier
+	write_file frontend/src/view.ts 'export const view = 1'
+	commit_all 'Add the view'
+	tip_runs
+	lens_report robustness
+	lens_report domain
+	lens_report frontend
+	walk_logs
+	write_file "$build_file" 'folded'
+	git add -A
+	git commit -q --no-verify --amend --no-edit
+	tip_runs
+	lens_report robustness
+	lens_report domain
+	walk_logs
+	if refuses_for tip && grep -q '^refused \[tip\]: lens-frontend.md ' "$work/out"; then r=0; else r=1; fi
+	check "a frontend report from an earlier tip is refused after a fold of $build_file, which it reads" "$r"
+done
+
 if holds_quoted_names; then
 	new_strand quoted_src_fold
 	complete_dossier

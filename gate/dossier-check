@@ -91,7 +91,8 @@ paths_requiring() {
 
 paths_read_by() {
 	case "$1" in
-		lens-frontend.md) grep -v '\.md$' | grep -E '^(frontend|src)/' ;;
+		lens-frontend.md) grep -v '\.md$' \
+			| grep -E '^((frontend|src|grid|gradle)/|(build|settings)\.gradle\.kts$|gradle\.properties$|gradlew$|Dockerfile$|verify$)' ;;
 		*) paths_requiring "$1" ;;
 	esac
 }
