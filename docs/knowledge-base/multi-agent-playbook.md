@@ -27,7 +27,8 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
 0. SPECIFY (you + me, chat), mandatory for any observable behavior (handbook §5)
    - draft the feature's `.feature` in product language, checked against the completeness list
    - scenario gate: spawn `falsifier-scenario` and `falsifier-stakeholder` in parallel, then
-     `reviewer` in scenario mode with both reports; fix, re-gate
+     `reviewer` in scenario mode with both reports; fix, re-gate (all three in full each time,
+     handbook §9)
    - ► AUTHOR GATE 1: YOU CONFIRM THE SCENARIOS AND THEIR COMPLETENESS (a gate, not a notification)
    - commit the confirmed scenarios tagged @wip (the default run excludes them: the build stays green)
    - the only way past this step is an explicitly claimed exemption: a pure refactoring,
@@ -133,8 +134,8 @@ the feature commit**, not per micro-commit.
 - **Every prior verdict is an input to the next gate agent**, not a message to the author alone: the
   falsifiers' and the doc-reviewer's reports go into the gate dossier verbatim, where the reviewer
   of a later round reads them (→ The gate dossier).
-- **Every lens brief carries an "Already decided, out of scope" list** (author decision
-  2026-10-12): the findings earlier rounds rejected or filed, the author's decisions bearing on the
+- **Every lens brief at the feature gate carries an "Already decided, out of scope" list** (author
+  decision 2026-10-12): the findings earlier rounds rejected or filed, the author's decisions bearing on the
   strand and what the plan leaves out, so a lens does not raise them again each round.
 - **Pure documentation/process changes (`[doc]` scope) skip the falsifier panel:** the
   `doc-reviewer` is the gate; add the `reviewer` only when process adherence is genuinely in doubt.

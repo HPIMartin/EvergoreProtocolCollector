@@ -641,6 +641,13 @@ process, not away from it).
 **Bounded review loop (governance).** A rejection sends work back to re-implement; from the
 second panel round on, only the gate agents the fold concerns re-check it. Bounds:
 
+- **The panel bounds below govern the feature gate** (author decision 2026-10-13): delta rounds,
+  docs-only folds, the end on passing lows, the PC's cap, the reviewer beside the lenses and the
+  "already decided" list.
+  - At the scenario gate, `falsifier-scenario`, `falsifier-stakeholder` and the reviewer re-run in
+    full on every re-gate, with no delta and no "already decided" list, since a draft `.feature`
+    is small and reread whole anyway.
+
 - **A delta round re-runs only what the fold concerns** (author decision 2026-10-12), since a full
   panel after every tip change was the largest cost of a strand:
   - from round 2 on, every lens whose read paths the fold touches runs again, fresh (author
