@@ -249,14 +249,23 @@ says where each piece of evidence lives.
   place, is refused.
 - **Reports and logs at the top level** (each lens report and the doc-reviewer's, verbatim; the
   runs made at the tip) open with `tip: <sha>`, the full SHA they were produced at; one naming any
-  other tip is refused. Evidence that predates the tip lives in subdirectories.
+  other tip is refused, except a report or run the next two bullets let stand. Evidence that
+  predates the tip lives in subdirectories.
 - **A lens report of an earlier tip stands** while no path its lens reads has changed since its tip
   (a verdict on unchanged code still holds, and a re-run costs a full lens):
   - both the strand (`<its tip>..<tip>`) and `main` (its merge-base with `main`..`main`) count;
   - a lens reads the paths its required report follows below;
   - the frontend lens also reads those under `src/`, where the API and the browser-driven
     scenarios live;
-  - the doc-reviewer's report and every run name the tip under review.
+  - the doc-reviewer's report and every run name the tip under review, unless the next bullet
+    lets them stand.
+- **The doc-reviewer's report and the runs of an earlier tip stand beside filed lows**
+  (`doc-reviewer.md`, `bdd.log`, `wip.expected`, `kb-guard.log`; author decision 2026-10-13),
+  since a row that only records the passing round's own lows needs no second review:
+  - the earlier tip is a commit that differs from the tip in `docs/backlog.md` alone;
+  - every line changed there, read as text, is a row (`| **<ID>** |`) `findings.txt` traces as
+    `backlog <ID>`;
+  - for `doc-reviewer.md`, the earlier report's own verdict is a pass.
 - **Base and freeze** are read live, not from the dossier: the strand's merge-base must equal
   `git rev-parse main` at the moment of the check, the tip's tree must differ from main's, and the
   strand worktree must be clean and checked out at the tip.

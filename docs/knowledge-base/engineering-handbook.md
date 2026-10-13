@@ -651,6 +651,8 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - every report passes;
   - each finding is a lens's `low`, or one a passing doc-reviewer or reviewer raised;
   - the lows become one backlog row, which `findings.txt` names for each of them;
+  - the doc-reviewer's report and the runs of the passing tip stand beside that row
+    ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier");
   - no fold follows, since a fold would only seed the next round's findings.
 - **Cap on the PC: two panel rounds, then the hand-off** (author decision 2026-10-12), since the PC
   draws on the agent seat's quota:

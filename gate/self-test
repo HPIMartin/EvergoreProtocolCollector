@@ -322,6 +322,179 @@ printf '%s\n' "$stale_review" > gate.local.d/doc-reviewer.md
 if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
 check "a doc-reviewer report from an earlier tip of the same tree is refused" "$r"
 
+low_review() {
+	kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
+	write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings:' \
+		'  - {rule: DOC-1, where: docs/guide.md:3, what: two facts in one bullet, fix: split it}'
+}
+
+file_lows() {
+	low_review
+	write_file docs/backlog.md '| ID | Item |' '|---|---|' '| **G99** | A finding traced as live work |' "$@"
+	commit_all '[doc] File the passing round'"'"'s lows'
+	findings 'doc-reviewer-1 backlog G100'
+}
+
+new_strand filed_lows_keep_runs
+complete_dossier
+file_lows '| **G100** | The lows of the passing round |'
+if accepts; then r=0; else r=1; fi
+check "a doc-reviewer report and the runs of an earlier tip stand when only the filed lows' backlog row changed" "$r"
+
+new_strand filed_lows_with_other_doc
+complete_dossier
+write_file docs/guide.md '# Guide, folded'
+file_lows '| **G100** | The lows of the passing round |'
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out" \
+	&& grep -q '^refused \[tip\]: bdd.log ' "$work/out" && grep -q '^refused \[tip\]: kb-guard.log ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report and the runs of an earlier tip are refused when another doc changed beside the filed lows" "$r"
+
+new_strand filed_lows_untraced_row
+complete_dossier
+file_lows '| **G100** | The lows of the passing round |' '| **G101** | A row no finding names |'
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report of an earlier tip is refused when a backlog row no finding names changed" "$r"
+
+new_strand filed_lows_with_mode_change
+complete_dossier
+chmod +x src/main/Feature.java
+file_lows '| **G100** | The lows of the passing round |'
+if refuses_for tip && grep -q '^refused \[tip\]: bdd.log ' "$work/out"; then r=0; else r=1; fi
+check "a run of an earlier tip is refused when a file's mode changed beside the filed lows" "$r"
+
+new_strand lows_rejected_not_filed
+complete_dossier
+file_lows '| **G100** | The lows of the passing round |'
+findings 'doc-reviewer-1 rejected G100 already holds this bullet split'
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report of an earlier tip is refused when findings.txt files no low in the backlog" "$r"
+
+new_strand filed_lows_inline_mention
+complete_dossier
+file_lows '| **G100** | The lows of the passing round |' '| **G555** | Another row, see **G100** |'
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report of an earlier tip is refused when a changed backlog line only mentions a filed row" "$r"
+
+new_strand filed_lows_binary_backlog
+complete_dossier
+low_review
+write_file docs/backlog.md '| ID | Item |' '|---|---|' '| **G99** | A finding traced as live work |' \
+	'| **G100** | The lows of the passing round |'
+printf 'an unfiled note \000 beside the rows\n' >> docs/backlog.md
+commit_all '[doc] File the passing round'"'"'s lows'
+findings 'doc-reviewer-1 backlog G100'
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report of an earlier tip is refused when the backlog change is binary to git" "$r"
+
+new_strand filed_lows_coloured_diff
+complete_dossier
+low_review
+write_file docs/backlog.md '| ID | Item |' '|---|---|' '| **G100** | The lows of the passing round |'
+commit_all '[doc] File the passing round'"'"'s lows'
+findings 'doc-reviewer-1 backlog G100'
+if GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=color.ui GIT_CONFIG_VALUE_0=always "$dossier_check" "$repo" strand > "$work/out" 2>&1; then r=1
+elif grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report of an earlier tip is refused under a coloured diff when an unfiled row was deleted" "$r"
+
+new_strand filed_lows_removed_dash_line
+complete_dossier
+write_file docs/backlog.md '| ID | Item |' '|---|---|' '| **G99** | A finding traced as live work |' '-- an old note about the rules'
+commit_all '[doc] Note the rules'
+tip_runs
+file_lows '| **G100** | The lows of the passing round |'
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report of an earlier tip is refused when a removed backlog line starts with two dashes" "$r"
+
+new_strand filed_lows_tree_as_tip
+complete_dossier
+file_lows '| **G100** | The lows of the passing round |'
+earlier_tree=$(git rev-parse 'HEAD~1^{tree}')
+sed "1s/.*/tip: $earlier_tree/" gate.local.d/doc-reviewer.md > "$work/tree-tip" && mv "$work/tree-tip" gate.local.d/doc-reviewer.md
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report naming a tree instead of an earlier tip is refused beside filed lows" "$r"
+
+new_strand filed_lows_failing_review
+complete_dossier
+file_lows '| **G100** | The lows of the passing round |'
+sed 's/verdict: PASS/verdict: FAIL/' gate.local.d/doc-reviewer.md > "$work/failing" && mv "$work/failing" gate.local.d/doc-reviewer.md
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report of an earlier tip is refused beside filed lows when its verdict is FAIL" "$r"
+
+new_strand filed_lows_quoted_pass
+complete_dossier
+file_lows '| **G100** | The lows of the passing round |'
+write_file gate.local.d/doc-reviewer.md "tip: $(git rev-parse HEAD~1)" '- `verdict: FAIL`' '- findings:' \
+	'  - {rule: DOC-1, where: docs/guide.md:3, what: two facts in one bullet, fix: split it}' \
+	'- the earlier round read verdict: PASS'
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a failing doc-reviewer report of an earlier tip that quotes a passing verdict is refused beside filed lows" "$r"
+
+new_strand filed_lows_quoted_pass_before
+complete_dossier
+file_lows '| **G100** | The lows of the passing round |'
+write_file gate.local.d/doc-reviewer.md "tip: $(git rev-parse HEAD~1)" '- the earlier round read verdict: PASS' '- `verdict: FAIL`' \
+	'- findings:' '  - {rule: DOC-1, where: docs/guide.md:3, what: two facts in one bullet, fix: split it}'
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a failing doc-reviewer report that quotes a pass before its verdict is refused beside filed lows" "$r"
+
+new_strand filed_lows_quoted_pass_same_line
+complete_dossier
+file_lows '| **G100** | The lows of the passing round |'
+write_file gate.local.d/doc-reviewer.md "tip: $(git rev-parse HEAD~1)" '- `verdict: FAIL` (the round before read verdict: PASS)' \
+	'- findings:' '  - {rule: DOC-1, where: docs/guide.md:3, what: two facts in one bullet, fix: split it}'
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a failing doc-reviewer report that quotes a pass on its verdict line is refused beside filed lows" "$r"
+
+new_strand filed_lows_verdict_word
+complete_dossier
+file_lows '| **G100** | The lows of the passing round |'
+sed 's/verdict: PASS/verdict: PASSED-NOT/' gate.local.d/doc-reviewer.md > "$work/word" && mv "$work/word" gate.local.d/doc-reviewer.md
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report whose verdict only begins with PASS is refused beside filed lows" "$r"
+
+new_strand filed_lows_two_verdicts
+complete_dossier
+file_lows '| **G100** | The lows of the passing round |'
+printf '%s\n' '- `verdict: FAIL`' >> gate.local.d/doc-reviewer.md
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report with two verdict lines is refused beside filed lows" "$r"
+
+new_strand filed_row_deleted
+write_file docs/backlog.md '| ID | Item |' '|---|---|' '| **G99** | A finding traced as live work |' \
+	'| **G98** | Another row, see **G99** |'
+commit_all '[doc] Add a row that names another'
+complete_dossier
+low_review
+write_file docs/backlog.md '| ID | Item |' '|---|---|' '| **G98** | Another row, see **G99** |'
+commit_all '[doc] Drop the filed row'
+findings 'doc-reviewer-1 backlog G99'
+if refuses_for finding; then r=0; else r=1; fi
+check "a finding traced to a backlog row is refused when the backlog only mentions that row" "$r"
+
+new_strand filed_lows_other_evidence
+complete_dossier
+write_file gate.local.d/notes.txt "tip: $(tip)" 'a note kept beside the reports'
+file_lows '| **G100** | The lows of the passing round |'
+if refuses_for tip && grep -q '^refused \[tip\]: notes.txt ' "$work/out"; then r=0; else r=1; fi
+check "an evidence file other than the doc review and the runs is refused beside filed lows" "$r"
+
+new_strand filed_lows_main_moved
+complete_dossier
+low_review
+reviewed_tip=$(tip)
+git checkout -q main
+write_file docs/guide.md '# Guide, landed'
+commit_all '[doc] Land another strand'"'"'s guide'
+git checkout -q -B strand main
+git checkout -q "$reviewed_tip" -- src docs/backlog.md
+commit_all 'Add the feature'
+walk_logs
+write_file docs/backlog.md '| ID | Item |' '|---|---|' '| **G99** | A finding traced as live work |' '| **G100** | The lows of the passing round |'
+commit_all '[doc] File the passing round'"'"'s lows'
+findings 'doc-reviewer-1 backlog G100'
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report of an earlier tip is refused when main changed another doc under it" "$r"
+
 new_strand report_tip_no_commit
 complete_dossier
 write_file gate.local.d/lens-robustness.md "tip: 0123456789abcdef0123456789abcdef01234567" '- `robust: yes`' \

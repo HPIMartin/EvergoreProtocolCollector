@@ -104,12 +104,38 @@ lens_report_stands() {
 	[ -z "$(printf '%s\n%s\n' "$on_strand" "$on_main" | paths_read_by "$1" || true)" ]
 }
 
+own_verdict() {
+	opening=$(grep -E "^[[:space:]]*([-*+][[:space:]]*)?\`?$2:" "$1" || true)
+	[ -n "$opening" ] && [ "$(printf '%s\n' "$opening" | wc -l)" -eq 1 ] || return 0
+	printf '%s\n' "$opening" | sed -n "s/^[^:]*$2:[[:space:]]*\([A-Za-z]*\).*/\1/p"
+}
+
+filed_ids=$(sed 1d "$dossier/findings.txt" 2>/dev/null | tr -d '\r' \
+	| awk '$2 == "backlog" && $3 ~ /^[A-Za-z0-9]+$/ { print $3 }' | paste -sd '|' -)
+
+changed_lines() {
+	patch=$(in_worktree diff --text --no-color --no-ext-diff --no-renames -U0 \
+		--output-indicator-old='<' --output-indicator-new='>' "$1" "$2") || return 1
+	printf '%s\n' "$patch" | grep -E '^[<>]' || true
+}
+
+stands_beside_filed_lows() {
+	case "$1" in doc-reviewer.md|bdd.log|wip.expected|kb-guard.log) ;; *) return 1 ;; esac
+	printf '%s\n' "$2" | grep -Eqx '[0-9a-f]{40}' || return 1
+	in_worktree rev-parse --verify --quiet "$2^{commit}" > /dev/null || return 1
+	[ "$1" != doc-reviewer.md ] || [ "$(own_verdict "$dossier/$1" verdict)" = PASS ] || return 1
+	[ -n "$filed_ids" ] && [ "$(changed_paths "$2" "$tip" 2>/dev/null)" = docs/backlog.md ] || return 1
+	lines=$(changed_lines "$2" "$tip") || return 1
+	! printf '%s\n' "$lines" | grep -Ev "^[<>]\\| \\*\\*($filed_ids)\\*\\* \\|" | grep -q .
+}
+
 byte_order_mark=$(printf '\357\273\277')
 for evidence in "$dossier"/*; do
 	[ -f "$evidence" ] || continue
 	named=$(sed -n "1s/^$byte_order_mark//; 1s/^tip: //p" "$evidence" | tr -d '\r' | sed 's/[[:space:]]*$//')
 	[ "$named" = "$tip" ] || lens_report_stands "${evidence#"$dossier"/}" "$named" \
-		|| refuse tip "${evidence#"$dossier"/} names tip '${named:-none}', not the tip under review $tip, and is no lens report whose paths stayed unchanged since (handbook §9)"
+		|| stands_beside_filed_lows "${evidence#"$dossier"/}" "$named" \
+		|| refuse tip "${evidence#"$dossier"/} names tip '${named:-none}', not the tip under review $tip, and is neither a lens report whose paths stayed unchanged since nor a report or run beside which only the filed lows' backlog rows changed (handbook §9)"
 done
 
 changed=$(changed_paths "$base" "$tip")
@@ -482,7 +508,7 @@ if [ -f "$findings_file" ]; then
 					|| refuse finding "$id is marked fixed at '$rest', which is no commit of the strand; a rebase rewrites a fix's SHA, so name its current one (handbook §9)"
 				;;
 			backlog)
-				printf '%s\n' "$backlog" | grep -qF "**$rest**" \
+				printf '%s\n' "$backlog" | awk -v row="| **$rest** |" 'index($0, row) == 1 { found = 1 } END { exit !found }' \
 					|| refuse finding "$id is traced to backlog row '$rest', which docs/backlog.md at the tip does not hold (handbook §9)"
 				;;
 			rejected)
