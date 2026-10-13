@@ -642,6 +642,11 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
 - **A docs-only fold** (code tree unchanged) re-runs only the doc-reviewer, since it checks a docs
   fix of the reviewer's finding too:
   - the lens verdicts stand, since a lens judges the code and such a fold changes none.
+- **A passing round whose findings are all low ends the panel** (author decision 2026-10-12):
+  - every report passes;
+  - each finding is a lens's `low`, or one a passing doc-reviewer or reviewer raised;
+  - the lows become one backlog row, which `findings.txt` names for each of them;
+  - no fold follows, since a fold would only seed the next round's findings.
 - **Cap: two re-implement rounds (three attempts total), then re-plan**: stop, escalate to the
   author with findings (repeated FAILs usually mean the plan/spec is wrong, not the code).
   **Early-escalate** when two consecutive rounds raise the *same* finding.
