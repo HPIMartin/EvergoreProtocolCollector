@@ -138,8 +138,12 @@ the feature commit**, not per micro-commit.
   `doc-reviewer` is the gate; add the `reviewer` only when process adherence is genuinely in doubt.
 - **Escalation:** features touching valuation math, time/timezones, concurrency, data migration or
   the auth/security surface (filters, token handling, what is publicly exposed) → spawn gate agents
-  with a one-off `model` override on the strongest available tier (`fable`, else `opus`);
-  frontmatter defaults stay unchanged.
+  with a one-off `model` override on `opus`; frontmatter defaults stay unchanged.
+- **Tiers for the quota** (author decision 2026-10-12), since the PC draws on the agent seat's
+  quota ([working-with-ai-agents.md](working-with-ai-agents.md), "Choosing the session model"):
+  - no lens runs on `fable`;
+  - a delta round spawns its lenses and its reviewer on `sonnet`, escalated or not, a delta being
+    small.
 
 ## One track: every change on a branch (decided 2026-10-04)
 

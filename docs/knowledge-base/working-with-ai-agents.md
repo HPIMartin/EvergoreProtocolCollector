@@ -95,6 +95,11 @@ to the prompt cache; minimize context size × session length:
   available, otherwise Opus). Routine TDD/implementation: smaller tier (Opus or Sonnet); the
   pipeline's gates still check the work.
 - Strongest tier unavailable: fall back one tier rather than postponing.
+- **A fresh or compacted orchestrator per phase** (author decision 2026-10-12): specifying,
+  planning, implementing and each panel round start from a new main session or a compacted one,
+  since the PC and the agent seat share one 5-hour quota.
+- **Parallel contexts stay free:** the saving comes from the orchestrator and the tiers, never from
+  running fewer gate agents side by side.
 - Subagent tiers are pinned per role in the `.claude/agents/` frontmatter; one-off gate escalation
   per the playbook's escalation rule.
 
