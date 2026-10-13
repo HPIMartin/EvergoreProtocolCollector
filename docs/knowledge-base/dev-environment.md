@@ -196,8 +196,8 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
 
 - **`Dockerfile`** is a layer on the devcontainer image, passed as `ARG BASE`, so the agent seat
   runs the toolchain the PC runs.
-  - `ARG BASE` has no default, so a build without it fails at `FROM`; Docker's
-    InvalidDefaultArgInFrom warning on it is expected.
+  - `ARG BASE` defaults to the image name `base-image-required-pass-build-arg-base`, which names
+    no image, so a build without the argument fails at `FROM`; `build` always passes it.
   - It blanks the inherited `devcontainer.metadata` label, which names the host socket mount of
     `docker-outside-of-docker`, so no devcontainer tooling mounts the host's socket into the agent
     container (author decision 2026-10-12).
