@@ -77,6 +77,12 @@ earlier findings:
 - raise only what the delta introduces or a fix left open; the rest of the strand stands as
   reviewed.
 
+**Already decided, out of scope:**
+
+- your brief carries a list under that heading;
+- raise nothing it holds again;
+- unless the delta changed the code an entry names: then name the entry and the change.
+
 ## Return (your final message = data for the orchestrator)
 - first line `tip: <full SHA of HEAD in your worktree>`; the gate dossier refuses a report that
   names no tip, or another one under which a path your lens reads has changed since

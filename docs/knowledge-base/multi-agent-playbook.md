@@ -133,6 +133,9 @@ the feature commit**, not per micro-commit.
 - **Every prior verdict is an input to the next gate agent**, not a message to the author alone: the
   falsifiers' and the doc-reviewer's reports go into the gate dossier verbatim, where the reviewer
   reads them (→ The gate dossier).
+- **Every lens brief carries an "Already decided, out of scope" list** (author decision
+  2026-10-12): the findings earlier rounds rejected or filed, the author's decisions bearing on the
+  strand and what the plan leaves out, so a lens does not raise them again each round.
 - **Pure documentation/process changes (`[doc]` scope) skip the falsifier panel:** the
   `doc-reviewer` is the gate; add the `reviewer` only when process adherence is genuinely in doubt.
 - **Escalation:** features touching valuation math, time/timezones, concurrency, data migration or
