@@ -248,6 +248,7 @@ lives.
   path outside `*.md` adds `lens-robustness.md`, one under `src/` adds `lens-domain.md`, one under
   `frontend/` adds `lens-frontend.md` (→ Cadence). A docs-only strand needs the doc-reviewer alone.
   - A renamed path counts at both its ends, so code renamed into the docs still needs its lenses.
+  - A name git quotes counts without its quotes.
 - **`red/`:** one record per commit that changes a test path (`src/test/`, `*.test.[jt]s(x)`, a
   `self-test`), whatever its tag, opening with `commit: <its subject>` (stable across rebases)
   and holding the failing run, or an `exempt: <reason>` line for a test refactoring. As for a new

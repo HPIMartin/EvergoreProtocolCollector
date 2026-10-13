@@ -145,6 +145,8 @@ refuses_for() {
 
 accepts() { "$dossier_check" "$repo" strand > "$work/out" 2>&1; }
 
+holds_quoted_names() { : > "$work/quote\"probe" 2> /dev/null; }
+
 new_strand complete
 complete_dossier
 if accepts; then r=0; else r=1; fi
@@ -1192,6 +1194,34 @@ write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- fin
 kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
 if refuses_for lens && grep -q 'needs lens-domain.md' "$work/out"; then r=0; else r=1; fi
 check "a strand that renames code into the docs still needs the lenses of that code" "$r"
+
+if holds_quoted_names; then
+	new_strand strand_adds_quoted_path
+	git checkout -q main
+	git checkout -q -B strand
+	write_file 'src/main/Quote"d.java' 'class Quoted {' '}'
+	commit_all 'Add a class whose file name git quotes'
+	mkdir -p gate.local.d
+	write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+	lens_report robustness
+	walk_logs
+	if refuses_for lens && grep -q 'needs lens-domain.md' "$work/out"; then r=0; else r=1; fi
+	check "a strand that changes a src path git quotes still needs the domain lens" "$r"
+
+	new_strand strand_adds_quoted_doc
+	git checkout -q main
+	git checkout -q -B strand
+	write_file 'docs/Quote"d.md' '# Quoted'
+	commit_all '[doc] Add a page whose file name git quotes'
+	mkdir -p gate.local.d
+	write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+	kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
+	walk_logs
+	if accepts; then r=0; else r=1; fi
+	check "a strand that changes only a doc whose name git quotes needs no lens" "$r"
+else
+	printf '  skip %s\n' 'the cases of names git quotes: this file system cannot hold one'
+fi
 
 new_strand kb_guard_other_test
 complete_dossier
