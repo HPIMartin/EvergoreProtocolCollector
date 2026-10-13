@@ -23,8 +23,8 @@
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | D24 with F12, F10; the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
 | M10 | What the bottlenecks release | B36→D25 with D9→D18, D14 | Measured request-path cost and the timezone fix at its root |
-| M11 | Product build-out | E12→E13, E9, E3, E27, E30, E37, F13 | E12 inherits D18's query shape, so it follows it |
-| M12 | Ops, security & environment | F1, H11, C1, C8, A4, C11→E28, E17, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
+| M11 | Product build-out | E12→E13, E3, E27, E30, E37, F13 | E12 inherits D18's query shape, so it follows it |
+| M12 | Ops, security & environment | F1, H11, C1, C8, A4, C11→E28, E17, H2, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
 | M14 | The guild's skills | E31→E32→E33, E34 | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open, D-16). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
 
 ## M16: 0.4.0 reaches the guild
@@ -68,6 +68,8 @@ ledger cannot decide it.
       (backlog F8).
 - [ ] One opening entry per avatar books the counted stock at a chosen instant, marked as such on the
       wire and in the view, and the recomputed sums equal that stock (backlog E18).
+- [ ] Avatar name matching folds case in the ledger lookups and the meta keys, not only in the union,
+      beside the opening entries (backlog E18).
 
 ## M9: Clear the last bottleneck
 
@@ -108,8 +110,6 @@ its due.
       reporting). It shares its query shape with D18, which is why it follows it.
 - [ ] "Gildenmitglied des Monats": four awards per calendar month, last completed month and running
       standing (backlog E13).
-- [ ] Avatar name matching folds case in the ledger lookups and the meta keys, not only in the union
-      (backlog E9).
 - [ ] Hunt-loot estimate (backlog E3). Its valuation half is decided; only the display estimate of
       open question D-4 still gates it.
 - [ ] A load failure and a dead link each show a picture of their own, the "link dead" among
@@ -129,14 +129,16 @@ reaches its current major.
       open pull request remains, both machines clone afresh, and the author moves the protected tags
       `v0.1.0`, `v0.2.0` and `v0.3.0`.
 - [ ] Dependabot covers all three ecosystems and one refresh pass has run (backlog H11).
+- [ ] The browser's first-launch race is removed or recorded as outside the project's reach, with the
+      refresh (backlog H11).
 - [ ] `Configuration` is real and immutable (C1); `vulnScan` is at zero and gated (C8).
 - [ ] Every pull request head is built by CI, and the landing refuses a head without its green named
       check (backlog A4), after the gate mechanics.
 - [ ] Auth, session and rate limiting move to JWT, so no credential travels in a URL (backlog C11).
 - [ ] The admin page leads to the members it names, on the roles above (backlog E28).
 - [ ] The admin page offers a manual scrape and recompute, beside the JWT move (backlog E17).
-- [ ] A `selenium/standalone-firefox` service backs an integration test (H2), and the
-      server-booting tests split into their own Gradle set (H6).
+- [ ] A `selenium/standalone-firefox` service backs an integration test, and the server-booting
+      tests split into their own Gradle set (H2).
 - [ ] Micronaut 5, endpoints 1:1 against the prod snapshot (H9). Precondition: the nets above.
 
 ## M14: The guild's skills
@@ -169,7 +171,7 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   a target with a broken escape (F18).
 - **Deploy and environment:** a failed ssh connection named as such (F20), the database directory
   given to the runtime user (F21), the browser grid on the agent seat (H14).
-- **Test-suite hygiene:** the browser's first-launch race (B35), the test debt two feature gates
+- **Test-suite hygiene:** the test debt two feature gates
   left (B33, B34, B38), the release comparison's remaining edges (B42, B43, B44, B45), style
   alignment (B8), the shared boot fixture (B18), the parser's residual shapes (B22), deterministic
   fixture ids (B23), the unexplained load-sensitive failure (B20), AssertJ in `SmokeTest` (B7).
