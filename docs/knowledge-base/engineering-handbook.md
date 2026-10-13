@@ -393,9 +393,10 @@ plus the corrected scenario tagged `@wip`.
 - **Git enforcement hooks (must be active)**: POSIX-sh hooks in `hooks/`, wired via
   `git config core.hooksPath hooks` (devcontainer `postCreate` sets it); ensure active in any
   checkout. `commit-msg` enforces the message rules above; `content-gate` scans the staged content
-  for secrets, personal/host data, per-language smells and **every comment line a diff adds** (§3,
-  no opt-out); `format-gate` runs `./verify format`. Tests and full build are deliberately excluded
-  (keeps the TDD micro-commit loop fast; commits are already green).
+  for secrets, personal/host data, per-language smells, **every comment line a diff adds** (§3,
+  no opt-out) and conflict markers a diff adds in any file; `format-gate` runs `./verify format`.
+  Tests and full build are deliberately excluded (keeps the TDD micro-commit loop fast; commits are
+  already green).
   - **A hook that only prints is not a gate.** **git asks `pre-commit` only for `git commit`**, so
     every commit the sequencer creates (rebase, `cherry-pick`, `revert`) is ungated at the moment it
     is made; `post-rewrite` and `post-commit` record it afterwards, and a recorded commit blocks

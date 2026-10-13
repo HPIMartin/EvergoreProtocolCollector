@@ -202,6 +202,21 @@ for f in $staged; do
 '
 done
 IFS=$oldifs
+plain_diff='-M --no-ext-diff --no-color --no-textconv --text --diff-filter=AMRT --src-prefix=a/ --dst-prefix=b/'
+plain_git() { git -c core.quotepath=off "$@"; }
+all_added_lines() {
+	case "$mode" in
+		--staged) plain_git diff --cached $plain_diff ;;
+		--commit) plain_git show --diff-merges=first-parent $plain_diff "$sha" ;;
+	esac
+}
+markers=$(all_added_lines | awk '
+	/^\+\+\+ / { path = substr($0, 7); sub(/\t/, "", path); next }
+	/^\+(<<<<<<<|>>>>>>>|\|\|\|\|\|\|\|)/ { print path ": " substr($0, 2) }
+')
+[ -z "$markers" ] || note "conflict marker(s) added:
+$markers
+A conflict is resolved before it is committed: remove every marker line, then stage the file again."
 [ -z "$(printf '%s' "$findings" | tr -d '[:space:]')" ] || note "possible secret or personal/host data:
 $findings
 If this is real, remove it (use a gitignored *.local.* file or a secret store, injected at runtime)."

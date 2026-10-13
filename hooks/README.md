@@ -73,8 +73,17 @@ offending sha, whereupon `pre-commit` refuses every further commit until that sh
   - `comment_xml_ext` (MSBuild project, props and targets files): every line a `<!-- … -->` block
     covers, however many it spans.
 
-  `hooks/` and `.template/` are outside every scan: the first holds the detection patterns
-  themselves, the second the adopted template's baseline, and neither is the project's own source.
+  `hooks/` and `.template/` are outside every scan but the next one: the first holds the detection
+  patterns themselves, the second the adopted template's baseline, and neither is the project's own
+  source.
+
+  **Conflict markers** are refused in every path, `.md`, `hooks/` and `.template/` included:
+  - a line the diff adds that opens with `<<<<<<<`, `|||||||` or `>>>>>>>`, read from a diff with no
+    external driver, colour or textconv and with binary files as text, since each of those hides
+    the added lines;
+  - `post-rewrite` runs the same check, so it records a rebase commit that carries one;
+  - a lone `=======` (a Markdown heading underline) and a marker quoted after the start of a line
+    do not count.
 
   A file counts as **production source** when it starts with one of `production_trees`, starts with
   none of `test_trees` and matches none of `test_name_re`; the rules that bind production code only

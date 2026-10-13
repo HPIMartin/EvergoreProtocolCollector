@@ -1159,6 +1159,185 @@ clean_file After
 if git rev-parse -q --verify REBASE_HEAD >/dev/null && accepts "Add after class"; then r=0; else r=1; fi
 check "a commit after a finished rebase that left REBASE_HEAD behind is let through" "$r"
 
+conflicted_file() {
+	write_file "$1" 'before' '<<<<<<< HEAD' 'ours' '=======' 'theirs' '>>>>>>> 1a2b3c4 (Change the line)' 'after'
+}
+
+new_repo markermd
+conflicted_file notes.md
+if refuses "Add the notes"; then r=0; else r=1; fi
+check "a staged conflict block in a Markdown file leaves no commit behind" "$r"
+
+new_repo markertxt
+conflicted_file notes.txt
+if refuses "Add the notes"; then r=0; else r=1; fi
+check "a staged conflict block in a file of no scanned extension leaves no commit behind" "$r"
+
+new_repo markerhooks
+conflicted_file hooks/notes
+git add -A
+if "$hooks_dir/content-gate" --staged >/dev/null 2>&1; then r=1; else r=0; fi
+check "the content gate refuses a staged conflict block under hooks/" "$r"
+
+new_repo markerclose
+write_file notes.md 'kept' '>>>>>>> 1a2b3c4 (Change the line)'
+if refuses "Add the notes"; then r=0; else r=1; fi
+check "a closing conflict marker left on its own leaves no commit behind" "$r"
+
+new_repo markeropen
+write_file notes.md 'kept' '<<<<<<< HEAD'
+if refuses "Add the notes"; then r=0; else r=1; fi
+check "an opening conflict marker left on its own leaves no commit behind" "$r"
+
+new_repo markerrename
+write_file notes.md 'one' 'two' 'three' 'four' 'five' 'six' 'seven' 'eight' 'nine' 'ten'
+git add -A
+git commit -q --no-verify -m "Add the notes"
+git mv notes.md moved.md
+write_file moved.md 'one' 'two' 'three' 'four' 'five' 'six' 'seven' 'eight' 'nine' 'ten' '>>>>>>> 1a2b3c4 (Change the line)'
+if git add -A && git diff --cached --name-status -M | grep -q '^R' && refuses "Move the notes"; then r=0; else r=1; fi
+check "a conflict marker in a renamed file leaves no commit behind" "$r"
+
+new_repo markerextdiff
+git config diff.external true
+conflicted_file notes.md
+if refuses "Add the notes"; then r=0; else r=1; fi
+check "a conflict block staged under an external diff driver leaves no commit behind" "$r"
+
+new_repo markercolour
+git config color.diff always
+conflicted_file notes.md
+if refuses "Add the notes"; then r=0; else r=1; fi
+check "a conflict block staged under an always-coloured diff leaves no commit behind" "$r"
+
+new_repo markertextconv
+git config diff.hidden.textconv true
+write_file .gitattributes 'notes.md diff=hidden'
+conflicted_file notes.md
+if refuses "Add the notes"; then r=0; else r=1; fi
+check "a conflict block in a file with a textconv driver leaves no commit behind" "$r"
+
+new_repo markerbinary
+write_file .gitattributes 'notes.md -diff'
+conflicted_file notes.md
+if refuses "Add the notes"; then r=0; else r=1; fi
+check "a conflict block in a file git diffs as binary leaves no commit behind" "$r"
+
+new_repo markertypechange
+ln -s Seed1.java notes.md
+git add -A
+git commit -q --no-verify -m "Link the notes"
+conflicted_file replacement.md
+mv -f replacement.md notes.md
+if refuses "Replace the notes link"; then r=0; else r=1; fi
+check "a conflict block in a file that replaces a link leaves no commit behind" "$r"
+
+new_repo markerbase
+write_file notes.md 'kept' '||||||| 1a2b3c4'
+if refuses "Add the notes"; then r=0; else r=1; fi
+check "a base conflict marker left on its own leaves no commit behind" "$r"
+
+new_repo markertracked
+write_file notes.md 'before' 'after'
+git add -A
+git commit -q --no-verify -m "Add the notes"
+conflicted_file notes.md
+if refuses "Change the notes"; then r=0; else r=1; fi
+check "a conflict block added to a tracked file leaves no commit behind" "$r"
+
+new_repo markerrebasetextconv
+git config diff.hidden.textconv true
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~1 >/dev/null 2>&1
+write_file .gitattributes 'notes.md diff=hidden'
+conflicted_file notes.md
+git add notes.md .gitattributes
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+if git log --oneline -- notes.md | grep -q . && [ -f "$(git rev-parse --git-common-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a rebase that commits a conflict block under a textconv driver is recorded" "$r"
+
+new_repo markermerge
+merge_base=$(git rev-parse HEAD)
+git checkout -q -b other HEAD~1
+clean_file Other
+git add -A
+git commit -q --no-verify -m "Add other class"
+git checkout -q "$merge_base"
+git merge -q --no-ff --no-commit other >/dev/null 2>&1 || true
+conflicted_file notes.md
+git add -A
+git commit -q --no-verify -m "Merge other"
+if "$hooks_dir/content-gate" --commit HEAD >/dev/null 2>&1; then r=1; else r=0; fi
+check "the content gate refuses a merge commit that adds a conflict block" "$r"
+
+new_repo markerreport
+git config diff.noprefix true
+conflicted_file notes.md
+git add -A
+report=$("$hooks_dir/content-gate" --staged 2>&1 || true)
+if printf '%s\n' "$report" | grep -qx 'notes.md: <<<<<<< HEAD'; then r=0; else r=1; fi
+check "the content gate names the file and the marker line it refuses, under diff.noprefix too" "$r"
+
+new_repo markerremoved
+conflicted_file notes.md
+git add -A
+git commit -q --no-verify -m "Add the notes"
+write_file notes.md 'before' 'ours' 'after'
+if accepts "Resolve the notes"; then r=0; else r=1; fi
+check "a commit that removes a conflict block commits" "$r"
+
+new_repo markercopy
+write_file Orig.md 'one' 'two' 'three' 'four' 'five' 'six' 'seven'
+git add -A
+git commit -q --no-verify -m "Add the original notes"
+git config diff.renames copies
+write_file Orig.md 'one' 'two' 'three' 'four' 'five' 'six' 'seven' 'eight'
+write_file Copy.md 'one' 'two' 'three' 'four' 'five' 'six' 'seven' '<<<<<<< HEAD'
+if refuses "Copy the notes"; then r=0; else r=1; fi
+check "a conflict block in a near-copy of a changed file leaves no commit behind under diff.renames=copies" "$r"
+
+new_repo markerreportspace
+conflicted_file 'sp ace.md'
+git add -A
+report=$("$hooks_dir/content-gate" --staged 2>&1 || true)
+if printf '%s\n' "$report" | grep -qx 'sp ace.md: <<<<<<< HEAD'; then r=0; else r=1; fi
+check "the content gate names a file whose path holds a space" "$r"
+
+new_repo markerreportumlaut
+conflicted_file 'Ä.md'
+git add -A
+report=$("$hooks_dir/content-gate" --staged 2>&1 || true)
+if printf '%s\n' "$report" | grep -qx 'Ä.md: <<<<<<< HEAD'; then r=0; else r=1; fi
+check "the content gate names a file whose path is not ASCII" "$r"
+
+new_repo markerreportcommit
+conflicted_file 'Ä.md'
+git add -A
+git commit -q --no-verify -m "Add the notes"
+report=$("$hooks_dir/content-gate" --commit HEAD 2>&1 || true)
+if printf '%s\n' "$report" | grep -qx 'Ä.md: <<<<<<< HEAD'; then r=0; else r=1; fi
+check "the content gate names a committed file whose path is not ASCII" "$r"
+
+new_repo markerquote
+write_file notes.md '| 2026-10-07 | grep the staged files for `^(<<<<<<<\|=======$\|>>>>>>>)` before every continue |'
+if accepts "Add the notes"; then r=0; else r=1; fi
+check "a table row that quotes conflict markers commits" "$r"
+
+new_repo markerstock
+conflicted_file notes.md
+git add -A
+git commit -q --no-verify -m "Add the notes"
+write_file notes.md 'changed' '<<<<<<< HEAD' 'ours' '=======' 'theirs' '>>>>>>> 1a2b3c4 (Change the line)' 'after'
+if accepts "Change the first note"; then r=0; else r=1; fi
+check "a conflict block the commit leaves untouched does not refuse it" "$r"
+
+new_repo markerrebase
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~1 >/dev/null 2>&1
+conflicted_file notes.md
+git add notes.md
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+if git log --oneline -- notes.md | grep -q . && [ -f "$(git rev-parse --git-common-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a rebase that commits a conflict block is recorded" "$r"
+
 # A hook staged non-executable is skipped outright by git on POSIX, so the gate would not narrate,
 # it would not run at all; core.fileMode=false on a Windows host hides that from every local check.
 # Fix a finding here with: git update-index --chmod=+x hooks/<name>
