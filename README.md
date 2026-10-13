@@ -22,18 +22,23 @@ Per-session bootstrap for AI agents: [CLAUDE.md](CLAUDE.md).
 
 ## Develop & run (fully virtualized, nothing installed on the host)
 
-Open the repo in **VS Code → Dev Containers: Reopen in Container** (provisions the JDK), then:
+- Opening the repo in its devcontainer:
+  [dev-environment.md](docs/knowledge-base/dev-environment.md), "How to work in it (recommended)".
+- Build and test, inside the container, through the one entry point:
 
-```bash
-./gradlew build    # build & test, inside the container
-```
+  ```bash
+  ./verify all
+  ```
 
-Dev-environment details and the JDK-upgrade procedure: [dev-environment.md](docs/knowledge-base/dev-environment.md).
-Production image & runtime config: [build-run-deploy.md](docs/knowledge-base/build-run-deploy.md).
+- The `./verify` modes: [build-run-deploy.md](docs/knowledge-base/build-run-deploy.md), "The verify
+  script (the one entry point)".
+- The JDK-upgrade procedure: [dev-environment.md](docs/knowledge-base/dev-environment.md), "JDK
+  version is single-sourced (upgrade procedure)".
+- Production image and runtime config:
+  [build-run-deploy.md](docs/knowledge-base/build-run-deploy.md).
 
 ## Conventions
 
-- Clean code · TDD · BDD (for docs/showcase) · SOLID · hexagonal architecture.
-- **Git is the source of truth for history**: fine-grained commits and their messages are the
-  changelog; docs don't duplicate them.
-- See the [engineering handbook](docs/knowledge-base/engineering-handbook.md).
+- Engineering rules: the [engineering handbook](docs/knowledge-base/engineering-handbook.md).
+- Documentation rules: the DOC checklist, [knowledge base README](docs/knowledge-base/README.md),
+  "Doc conventions".
