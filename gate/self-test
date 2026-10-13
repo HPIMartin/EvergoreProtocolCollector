@@ -1182,6 +1182,17 @@ write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- fin
 if refuses_for kb-guard; then r=0; else r=1; fi
 check "a docs-only strand without a KbCitationGuardTest run at the tip is refused" "$r"
 
+new_strand strand_renames_code_to_docs
+git checkout -q main
+git checkout -q -B strand
+git mv src/main/Seed.java docs/Seed.md
+commit_all '[doc] Keep the seed as a page'
+mkdir -p gate.local.d
+write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
+if refuses_for lens && grep -q 'needs lens-domain.md' "$work/out"; then r=0; else r=1; fi
+check "a strand that renames code into the docs still needs the lenses of that code" "$r"
+
 new_strand kb_guard_other_test
 complete_dossier
 write_file docs/guide.md '# Guide, folded'

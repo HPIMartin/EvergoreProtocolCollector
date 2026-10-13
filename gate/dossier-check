@@ -85,7 +85,7 @@ for evidence in "$dossier"/*; do
 		|| refuse tip "${evidence#"$dossier"/} names tip '${named:-none}', not the tip under review $tip (handbook §9)"
 done
 
-changed=$(in_worktree diff --name-only "$base" "$tip")
+changed=$(in_worktree diff --no-renames --name-only "$base" "$tip")
 code_changed=$(printf '%s\n' "$changed" | grep -v '\.md$' || true)
 needs() {
 	printf '%s\n' "$2" | grep -Eq "$3" || return 0
