@@ -106,9 +106,10 @@ lens_report_stands() {
 }
 
 own_verdict() {
-	opening=$(grep -E "^[[:space:]]*([-*+][[:space:]]*)?\`?$2:" "$1" || true)
+	opening=$(grep -E "^[[:space:]]*([-*+]|[0-9]+[.)])?[[:space:]]*(\*\*|\`)?$2:" "$1" || true)
 	[ -n "$opening" ] && [ "$(printf '%s\n' "$opening" | wc -l)" -eq 1 ] || return 0
-	printf '%s\n' "$opening" | sed -n "s/^[^:]*$2:[[:space:]]*\([A-Za-z]*\).*/\1/p"
+	! printf '%s\n' "$opening" | grep -Eq "$2:[[:space:]*]*[A-Za-z]+[[:space:]*]*[|/]" || return 0
+	printf '%s\n' "$opening" | sed -n "s/^[^:]*$2:[[:space:]*]*\([A-Za-z]*\).*/\1/p"
 }
 
 filed_ids=$(sed 1d "$dossier/findings.txt" 2>/dev/null | tr -d '\r' \
@@ -474,16 +475,16 @@ for report in "$dossier"/lens-*.md "$dossier/doc-reviewer.md"; do
 	name=${name%.md}
 	name=${name#lens-}
 	case "$name" in
-		doc-reviewer) raised_pattern='rule: *DOC-' alarm='verdict:[[:space:]]*FAIL' ;;
-		*) raised_pattern='severity:' alarm='robust:[[:space:]]*no' ;;
+		doc-reviewer) raised_pattern='rule: *DOC-' field=verdict passing=PASS ;;
+		*) raised_pattern='severity:' field=robust passing=yes ;;
 	esac
 	entry="^[[:space:]]*([-*+]|[0-9]+[.)])?[[:space:]]*\`?\{$raised_pattern"
 	raised=$(grep -Ec -- "$entry" "$report" || true)
 	if grep -E -- "$entry" "$report" | grep -Eq -- "\{$raised_pattern.*\{$raised_pattern"; then
 		refuse finding "${report##*/} lists two findings on one line, so they cannot be counted (playbook, The gate dossier)"
 	fi
-	if [ "${raised:-0}" -eq 0 ] && grep -Eq -- "$alarm" "$report"; then
-		refuse report "${report##*/} reports '$(grep -Eo -- "$alarm" "$report" | head -1)' but lists no finding as a counted entry (playbook, The gate dossier)"
+	if [ "${raised:-0}" -eq 0 ] && [ "$(own_verdict "$report" "$field")" != "$passing" ]; then
+		refuse report "${report##*/} lists no finding as a counted entry, but no line of its own that opens with $field: reads '$passing' (playbook, The gate dossier)"
 	fi
 	traced=$(grep -c "^$name-[0-9][0-9]* " "$findings_file" 2>/dev/null || true)
 	[ "${raised:-0}" -eq "${traced:-0}" ] \

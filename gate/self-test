@@ -495,6 +495,63 @@ printf '%s\n' '- `verdict: FAIL`' >> gate.local.d/doc-reviewer.md
 if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
 check "a doc-reviewer report with two verdict lines is refused beside filed lows" "$r"
 
+new_strand passing_review_quotes_failure
+complete_dossier
+write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none' '- the round before read verdict: FAIL'
+if accepts; then r=0; else r=1; fi
+check "a passing doc-reviewer report that quotes an earlier failing verdict passes" "$r"
+
+new_strand passing_lens_quotes_failure
+complete_dossier
+write_file gate.local.d/lens-robustness.md "tip: $(tip)" '- `robust: yes`' '- weaknesses: none; the round before read robust: no' \
+	'- `counterTests:` none' '- `treeDiff:` (empty)'
+if accepts; then r=0; else r=1; fi
+check "a passing lens report that quotes an earlier failing verdict passes" "$r"
+
+for variant in bold doubled numbered bold-review; do
+	new_strand "uncounted_failure_$(printf '%s' "$variant" | tr -c 'A-Za-z0-9' _)"
+	complete_dossier
+	case "$variant" in
+		bold) write_file gate.local.d/lens-robustness.md "tip: $(tip)" '- **robust: no**' '- weaknesses: see prose' \
+			'- `counterTests:` none' '- `treeDiff:` (empty)' ;;
+		doubled) write_file gate.local.d/lens-robustness.md "tip: $(tip)" '- `robust: yes | no` per the contract' '- `robust: no`' \
+			'- weaknesses: see prose' '- `counterTests:` none' '- `treeDiff:` (empty)' ;;
+		numbered) write_file gate.local.d/lens-robustness.md "tip: $(tip)" '1. `robust: no`' '- weaknesses: see prose' \
+			'- `counterTests:` none' '- `treeDiff:` (empty)' ;;
+		bold-review) write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '**verdict: FAIL**' '- findings: stale counts' ;;
+	esac
+	if refuses_for report; then r=0; else r=1; fi
+	check "an uncounted failing verdict written $variant is refused" "$r"
+done
+
+for variant in bold numbered bold-value; do
+	new_strand "readable_pass_$(printf '%s' "$variant" | tr -c 'A-Za-z0-9' _)"
+	complete_dossier
+	case "$variant" in
+		bold) verdict_line='**robust: yes**' ;;
+		numbered) verdict_line='1. robust: yes' ;;
+		bold-value) verdict_line='- robust: **yes**' ;;
+	esac
+	write_file gate.local.d/lens-robustness.md "tip: $(tip)" "$verdict_line" '- weaknesses: none' '- `counterTests:` none' \
+		'- `treeDiff:` (empty)'
+	if accepts; then r=0; else r=1; fi
+	check "a passing lens verdict written $variant is read as a pass" "$r"
+done
+
+new_strand blockquoted_earlier_failure
+complete_dossier
+write_file gate.local.d/lens-robustness.md "tip: $(tip)" '> robust: no (round 4)' '- `robust: yes`' '- weaknesses: none' \
+	'- `counterTests:` none' '- `treeDiff:` (empty)'
+if accepts; then r=0; else r=1; fi
+check "a passing lens report that blockquotes an earlier failing verdict passes" "$r"
+
+new_strand contract_echo_verdict
+complete_dossier
+write_file gate.local.d/lens-robustness.md "tip: $(tip)" '- `robust: yes | no`' '- weaknesses: see prose' \
+	'- `counterTests:` none' '- `treeDiff:` (empty)'
+if refuses_for report; then r=0; else r=1; fi
+check "a lens report that only echoes the contract's verdict choice is refused" "$r"
+
 new_strand filed_row_deleted
 write_file docs/backlog.md '| ID | Item |' '|---|---|' '| **G99** | A finding traced as live work |' \
 	'| **G98** | Another row, see **G99** |'

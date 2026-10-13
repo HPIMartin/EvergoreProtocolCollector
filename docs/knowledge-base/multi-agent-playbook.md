@@ -278,6 +278,10 @@ says where each piece of evidence lives.
 - **Gate reports:** `lens-<lens>.md` per falsifier lens and `doc-reviewer.md`, each the agent's
   final message verbatim; a file without its contract's fields (`robust:` and `treeDiff:`, or `verdict:`;
   → Handoff contracts) is a summary and is refused.
+  - A report's own verdict is the one line that opens with its `robust:` or `verdict:`, after a
+    `-`, `*`, `+` or numbered marker, bold or a backtick; a choice such as `yes | no` reads as none.
+  - A verdict quoted further into a line or in a blockquote counts for nothing, since a delta-round
+    report quotes the round before it.
 - **Required reports** follow the strand's diff against its base: `doc-reviewer.md` always; any
   path outside `*.md` adds `lens-robustness.md`, one under `src/` adds `lens-domain.md`, one under
   `frontend/` adds `lens-frontend.md` (→ Cadence). A docs-only strand needs the doc-reviewer alone.
@@ -308,8 +312,8 @@ says where each piece of evidence lives.
   test reads the KB prose; it shows the command, a bare `> Task :test` and `BUILD SUCCESSFUL`.
 - **`findings.txt`:** one line per finding the reports raise (a lens's list items that open with
   `{severity:`, the doc-reviewer's that open with `{rule: DOC-`, one finding per line, numbered
-  1..n per report in their order, each traced once; a `robust: no` or `verdict: FAIL` report lists
-  at least one): `<lens>-<n> fixed <strand commit>`,
+  1..n per report in their order, each traced once; a report whose own verdict is no readable
+  `robust: yes` or `verdict: PASS` lists at least one): `<lens>-<n> fixed <strand commit>`,
   `<lens>-<n> backlog <ID>` (a row `docs/backlog.md` holds at the tip) or `<lens>-<n> rejected
   <reason>`; the doc-reviewer's findings count as `doc-reviewer-<n>`. Anything else is refused.
 - **`bdd.log` and `wip.expected`:** for a strand that touches `src/` or `frontend/`, the
