@@ -53,10 +53,9 @@ session; its rules and KB pointers apply without re-reading it here.
    §5/§4 (a feature with observable behavior needs its author-confirmed `.feature`, committed `@wip`,
    before any production code; check whether the parked work already has one and whether its
    scenarios are still `@wip` or already armed, `./verify bdd` tells); clean code, hexagonal,
-   in-container-only → handbook §1–§3 + dev-environment.md; commit protocol (one confirmed one-line
-   message; push only the strand's own `claude/<topic>` branch, never a `[wip]` commit) → handbook
-   §7; planned features run through the agent pipeline →
-   multi-agent-playbook.md.
+   in-container-only → handbook §1–§3 + dev-environment.md; commit protocol and pushing (only the
+   strand's own `claude/<topic>` branch, never a `[wip]` commit) → handbook §7; planned features run
+   through the agent pipeline → multi-agent-playbook.md.
 
 Optional focus from the author: $ARGUMENTS
 

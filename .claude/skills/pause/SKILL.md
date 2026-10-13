@@ -40,10 +40,10 @@ running subagent tasks to complete, but never abort them either.
    committed as ONE parking commit `[wip] <one-line state>` on the strand's branch, never on
    `main` (work sitting in the primary checkout moves to a new `claude/<topic>` branch first,
    `git switch -c`, and the checkout returns to `main` after the parking commit, handbook §7), via
-   `git commit --no-verify` (WIP legitimately fails the hooks; the only sanctioned bypass →
-   handbook §7). The bypass skips the secret scan too, so glance over the diff for secrets or
-   personal/host data before parking. A `[wip]` commit is a checkpoint, not history: /continue
-   replaces it through the normal commit gateway; it never reaches the review gateway or a push.
+   `git commit --no-verify`, the only sanctioned non-emergency bypass. Glance over the diff for secrets or personal/host data before parking.
+   The why of both steps: handbook §7, the "`[wip]` parking commits" bullet. A `[wip]` commit is a
+   checkpoint, not history: /continue replaces it through the normal commit gateway; it never
+   reaches the review gateway or a push.
 
 5. Never push: a `[wip]` commit never leaves the machine (handbook §7). Never discard the working
    tree (`git reset --hard`, `rm -rf`).
