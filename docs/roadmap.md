@@ -23,7 +23,7 @@
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | D24 with F12, F10; the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
 | M10 | What the bottlenecks release | B36→D25 with D9→D18, D14 | Measured request-path cost and the timezone fix at its root |
-| M11 | Product build-out | E12→E13, E9, E3, E6, E27, E30, E37, F13 | E12 inherits D18's query shape, so it follows it |
+| M11 | Product build-out | E12→E13, E9, E3, E27, E30, E37, F13 | E12 inherits D18's query shape, so it follows it |
 | M12 | Ops, security & environment | F1, H11, C1, C8, A4, C11→E28, E17, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
 | M14 | The guild's skills | E31→E32→E33, E34 | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open, D-16). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
 
@@ -112,7 +112,6 @@ its due.
       (backlog E9).
 - [ ] Hunt-loot estimate (backlog E3). Its valuation half is decided; only the display estimate of
       open question D-4 still gates it.
-- [ ] History / time-series per avatar (backlog E6).
 - [ ] A load failure and a dead link each show a picture of their own, the "link dead" among
       them, before 1.0 (backlog E27).
 - [ ] A member whose suspected round trips recur is flagged (backlog E30).
@@ -185,8 +184,4 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
 Kept in the backlog with their rationale, not deleted; revisit only on a new reason.
 
 - **G6** static-analysis / Sonar gate — waits on a condition that is not arriving.
-- **F4** multi-guild / multi-world and **F5** public read-only API — speculative: there is one
-  guild and no second consumer.
-- **G5** case study — worth writing once there is something finished to tell.
-- **G8** `/commit` slash command and **G9** the WebFetch doc convention — neither prevents an error
-  mechanically, which is the bar this stage applies to the G epic.
+- **F4** multi-guild / multi-world: speculative, since there is one guild and no second consumer.
