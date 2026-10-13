@@ -37,9 +37,9 @@ session; its rules and KB pointers apply without re-reading it here.
      (`git worktree add --no-track -b claude/<topic> <root>/<topic> origin/claude/<topic>`).
      Where a local branch of that name exists, compare the two tips before touching either.
      - `<root>` is the worktree root of handbook §7.
-   - A tip commit starting with `[wip]` is parked pause work: resolve it FIRST — finish or rework it,
-     then replace it with a properly gated commit (one protocol-conform message; rewrite via the reset-free
-     recipe in the playbook). A `[wip]` commit never reaches the review gateway or a push (handbook §7).
+   - A tip commit starting with `[wip]` is parked pause work: resolve it FIRST: finish or rework it,
+     then replace it with a properly gated commit: one protocol-conform message (handbook §7),
+     rewritten via the reset-free recipe in the playbook's FAIL-loop section.
    - Reconcile with the backlog's "Current status". If they disagree, trust the working tree + git
      and say so (then offer to update the doc).
 
