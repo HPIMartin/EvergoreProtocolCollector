@@ -86,7 +86,8 @@ earlier findings:
 
 ## Return (your final message = data for the orchestrator)
 - first line `tip: <full SHA of HEAD in your worktree>`; the gate dossier refuses a report that
-  names no tip, or another one under which a path your lens reads has changed since
+  names no tip, or another one under which a code path (outside `*.md`) your lens reads has changed
+  since
 - `robust: yes | no`
 - weaknesses: a list of `{severity: high|med|low, where: file:line, why}`
 - `counterTests:` concrete test snippets that would currently fail or that should be added

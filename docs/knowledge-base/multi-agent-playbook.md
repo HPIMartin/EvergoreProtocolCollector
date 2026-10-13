@@ -49,7 +49,8 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    - spawn the lenses the change can break, the `doc-reviewer` and the `reviewer` together, each
      fresh (see cadence)
    - each in its own detached worktree at the tip under review
-   - from round 2 on, handbook §9 (delta rounds) says which gate agents re-run
+   - from round 2 on, every lens whose read paths the fold touches re-runs, the robustness lens on
+     every fold of code outside `*.md` (handbook §9, delta rounds)
    - first, every round: `git fetch origin`, a moved `main` synced and the strand rebased
      (handbook §7), then `./verify format` green at the tip (author decision 2026-10-09)
    - domain lens: value math, watermark/aggregation, parser fidelity

@@ -640,7 +640,8 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
 
 - **A delta round re-runs only what the fold concerns** (author decision 2026-10-12), since a full
   panel after every tip change was the largest cost of a strand:
-  - from round 2 on, the lens whose finding was fixed runs again, fresh;
+  - from round 2 on, every lens whose read paths the fold touches runs again, fresh (author
+    decision 2026-10-13), so the robustness lens runs again on every fold of code outside `*.md`;
   - its brief carries the delta (`<previous tip>..<tip>`) and the dispositions so far;
   - every other lens report stands while the dossier accepts it
     ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier").
