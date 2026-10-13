@@ -461,8 +461,8 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
   mount, and the write probe, which appends nothing. Every mutation is printed with its resolved
   arguments and skipped. The probe uses the image already on the host, since the release image has
   not been transferred.
-- **Order:** build with the labels → read the running container → transfer and compare ids → secure
-  the rollback tag → mount pre-flight → prove the stop → back up → replace → verify.
+- **Order:** build with the labels → read the running container → transfer and compare layers and labels →
+  secure the rollback tag → mount pre-flight → prove the stop → back up → replace → verify.
 - **Rollback** is `deploy/epc-deploy rollback … --image <the pre- tag> --backup <name> --yes`. The
   deploy prints that exact line both when it finishes and when it fails; the rollback prints what
   each of its two halves means (step 7) and refuses without `--yes`.
@@ -620,8 +620,11 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      a populated database. `: >>` opens for append and writes nothing: size and mtime stay put.
 4. **Build the image and get it onto the host.** The script builds on the work machine with the tag
    and labels from "Versioning & release tags", ships it with `docker save | ssh … docker load`, and
-   then compares the id the host reports for that tag against the id the build produced; a mismatch
-   stops the deploy while the old container is still running. Building on the Docker host by hand
+   then compares the layer digests and the version and revision labels the host reports for that tag
+   against those of the build; a mismatch stops the deploy while the old container is still running.
+   The image id is no basis, since it is the manifest-list digest in the containerd image store and
+   the config digest in the classic store, so one image has two ids across the two machines. Both
+   ids are printed as information. Building on the Docker host by hand
    (`buildAndRun.bat`, gitignored and machine-specific) is the alternative, and then there is no
    transfer to verify. The build context carries **no credentials**; the image is secret-free and
    the same image runs with any account.

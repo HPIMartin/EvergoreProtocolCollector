@@ -190,8 +190,10 @@ read_running_container() {
 	note "database mount   $bind_source"
 }
 
+fingerprint_format='{{json .RootFS.Layers}}|{{index .Config.Labels "org.opencontainers.image.version"}}|{{index .Config.Labels "org.opencontainers.image.revision"}}'
+
 build_image() {
-	step "Build $image and read the id that must survive the transfer"
+	step "Build $image and read the layers and labels that must survive the transfer"
 	repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 	revision=$(git -C "$repo_root" rev-parse HEAD 2>/dev/null) || fail "$repo_root is not a git checkout, so the revision label would name no source state"
 	build_command="docker build -t $image --label org.opencontainers.image.version=$version --label org.opencontainers.image.revision=$revision $repo_root"
@@ -204,6 +206,7 @@ build_image() {
 	fi
 	if built_image_id=$(docker inspect --type image -f '{{.Id}}' "$image" 2>/dev/null); then
 		note "built image id   $built_image_id"
+		built_fingerprint=$(docker inspect --type image -f "$fingerprint_format" "$image" 2>/dev/null) || fail "the layers and labels of the local $image cannot be read"
 	elif [ "$dry_run" -eq 1 ]; then
 		built_image_id=
 		note "no local $image yet, which a rehearsal run before the first build is allowed to be"
@@ -223,8 +226,9 @@ transfer_image() {
 	if ! loaded_image_id=$(remote "$docker_remote inspect --type image -f '{{.Id}}' '$image' 2>/dev/null"); then
 		fail "$image is not on $host after the transfer"
 	fi
-	[ "$loaded_image_id" = "$built_image_id" ] || fail "the transferred image is not the built one: $host holds $loaded_image_id, the build produced $built_image_id"
-	note "loaded image id  $loaded_image_id, identical"
+	loaded_fingerprint=$(remote "$docker_remote inspect --type image -f '$fingerprint_format' '$image' 2>/dev/null") || fail "the layers and labels of $image cannot be read on $host after the transfer"
+	[ "$loaded_fingerprint" = "$built_fingerprint" ] || fail "the transferred image is not the built one: $host holds $loaded_image_id with $loaded_fingerprint, the build produced $built_image_id with $built_fingerprint"
+	note "loaded image id  $loaded_image_id, the same layers and labels as the build"
 }
 
 secure_rollback_tag() {

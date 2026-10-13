@@ -29,6 +29,7 @@ printf '%s\n' "$line" >> "$EPC_STUB_JOURNAL"
 target=
 for argument in "$@"; do target=$argument; done
 sanitise() { printf '%s' "$1" | tr '/:' '__'; }
+fingerprint_format='{{json .RootFS.Layers}}|{{index .Config.Labels "org.opencontainers.image.version"}}|{{index .Config.Labels "org.opencontainers.image.revision"}}'
 
 case ${1:-} in
 	build) exit 0 ;;
@@ -78,7 +79,12 @@ case ${1:-} in
 			image)
 				if [ "$side" = local ]; then
 					[ -z "${EPC_STUB_LOCAL_IMAGE_MISSING:-}" ] || exit 1
-					printf '%s\n' "$EPC_STUB_LOCAL_IMAGE_ID"
+					case $format in
+						"$fingerprint_format")
+							[ -z "${EPC_STUB_LOCAL_LAYERS_MISSING:-}" ] || exit 1
+							printf '%s|%s\n' "$EPC_STUB_LOCAL_LAYERS" "$EPC_STUB_LOCAL_LABELS" ;;
+						*) printf '%s\n' "$EPC_STUB_LOCAL_IMAGE_ID" ;;
+					esac
 					exit 0
 				fi
 				case $target in
@@ -94,7 +100,12 @@ case ${1:-} in
 						exit 0 ;;
 				esac
 				[ -z "${EPC_STUB_REMOTE_IMAGE_MISSING:-}" ] || exit 1
-				printf '%s\n' "$EPC_STUB_REMOTE_IMAGE_ID"
+				case $format in
+					"$fingerprint_format")
+						[ -z "${EPC_STUB_REMOTE_LAYERS_MISSING:-}" ] || exit 1
+						printf '%s|%s\n' "$EPC_STUB_REMOTE_LAYERS" "$EPC_STUB_REMOTE_LABELS" ;;
+					*) printf '%s\n' "$EPC_STUB_REMOTE_IMAGE_ID" ;;
+				esac
 				exit 0 ;;
 		esac ;;
 	run)
@@ -237,7 +248,14 @@ new_case() {
 	EPC_STUB_UNAUTH_CODE=401
 	EPC_STUB_ROOT_CODE=200
 	EPC_STUB_REVISION=1234567890abcdef1234567890abcdef12345678
-	export EPC_STUB_REVISION
+	EPC_STUB_LOCAL_LAYERS='["sha256:layerone","sha256:layertwo"]'
+	EPC_STUB_REMOTE_LAYERS=$EPC_STUB_LOCAL_LAYERS
+	EPC_STUB_LOCAL_LABELS="0.2.0|$EPC_STUB_REVISION"
+	EPC_STUB_REMOTE_LABELS=$EPC_STUB_LOCAL_LABELS
+	EPC_STUB_REMOTE_LAYERS_MISSING=
+	EPC_STUB_LOCAL_LAYERS_MISSING=
+	export EPC_STUB_REVISION EPC_STUB_LOCAL_LAYERS EPC_STUB_REMOTE_LAYERS EPC_STUB_LOCAL_LABELS \
+		EPC_STUB_REMOTE_LABELS EPC_STUB_REMOTE_LAYERS_MISSING EPC_STUB_LOCAL_LAYERS_MISSING
 	export EPC_STUB_JOURNAL EPC_STUB_STATE EPC_STUB_EXPECT_TARGET EPC_STUB_CONTAINER \
 		EPC_STUB_LOCAL_IMAGE_ID EPC_STUB_REMOTE_IMAGE_ID EPC_STUB_STARTED_IMAGE EPC_STUB_HEALTH \
 		EPC_STUB_CONTAINER_MISSING EPC_STUB_LOCAL_IMAGE_MISSING EPC_STUB_REMOTE_IMAGE_MISSING \
@@ -344,10 +362,35 @@ if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
 check "a mount the running container does not use is refused" "$r"
 
 new_case
-EPC_STUB_REMOTE_IMAGE_ID=sha256:somethingelse
+EPC_STUB_LOCAL_IMAGE_ID=sha256:indexdigest
+EPC_STUB_REMOTE_IMAGE_ID=sha256:configdigest
 run_deploy
-if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
-check "an image that arrives as a different id stops the deploy before the stop" "$r"
+if [ "$status" -eq 0 ]; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "an image the two stores report under different ids but with equal layers and labels passes the transfer" "$r"
+
+new_case
+EPC_STUB_REMOTE_LAYERS='["sha256:layerone","sha256:layerthree"]'
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive && printf '%s' "$output" | grep -qF 'not the built one'; then r=0; else r=1; fi
+check "an image that arrives with different layers stops the deploy before the stop" "$r"
+
+new_case
+EPC_STUB_REMOTE_LABELS='0.2.0|fedcba0987654321fedcba0987654321fedcba09'
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive && printf '%s' "$output" | grep -qF 'not the built one'; then r=0; else r=1; fi
+check "an image that arrives with equal layers but another revision label stops the deploy before the stop" "$r"
+
+new_case
+EPC_STUB_REMOTE_LAYERS_MISSING=1
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive && printf '%s' "$output" | grep -qF 'cannot be read on'; then r=0; else r=1; fi
+check "an image whose layers the home server cannot read stops the deploy before the stop" "$r"
+
+new_case
+EPC_STUB_LOCAL_LAYERS_MISSING=1
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive && printf '%s' "$output" | grep -qF 'of the local'; then r=0; else r=1; fi
+check "an image whose layers the work machine cannot read stops the deploy before the stop" "$r"
 
 new_case
 EPC_STUB_ROLLBACK_TAG_ID=sha256:anolderrollbacktarget
