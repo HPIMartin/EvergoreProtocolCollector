@@ -2112,6 +2112,95 @@ mv gate.local.d/bdd.log gate.local.d/notes-bdd.txt
 if refuses_for wip; then r=0; else r=1; fi
 check "a code change without the @wip run at the tip is refused" "$r"
 
+red_record_with_diff() {
+	write_file gate.local.d/red/feature.txt 'commit: Add the feature' "$@" '@@ -1 +1 @@' '-class Feature {' '+class Broken {' \
+		'FeatureTest > featureWorks() FAILED' '    org.opentest4j.AssertionFailedError at FeatureTest.java:4'
+}
+
+new_strand red_shows_own_mutation
+complete_dossier
+red_record_with_diff 'diff --git a/src/main/Feature.java b/src/main/Feature.java' '--- a/src/main/Feature.java' \
+	'+++ b/src/main/Feature.java'
+if refuses_for red; then r=0; else r=1; fi
+check "a red record that shows a diff of production code its commit changes is refused" "$r"
+
+new_strand red_shows_own_mutation_unprefixed
+complete_dossier
+red_record_with_diff '--- src/main/Feature.java.orig' '+++ src/main/Feature.java'
+if refuses_for red; then r=0; else r=1; fi
+check "a red record whose diff names the commit's own code without a/ and b/ is refused" "$r"
+
+new_strand red_shows_own_mutation_without_header
+complete_dossier
+red_record_with_diff '--- a/src/main/Feature.java' '+++ b/src/main/Feature.java'
+if refuses_for red; then r=0; else r=1; fi
+check "a red record whose a/ and b/ diff of the commit's own code has no diff --git line is refused" "$r"
+
+new_strand red_shows_own_mutation_timestamped
+complete_dossier
+tab=$(printf '\t')
+red_record_with_diff "--- src/main/Feature.java.orig${tab}2026-10-13 10:00:00" "+++ src/main/Feature.java${tab}2026-10-13 10:01:00"
+if refuses_for red; then r=0; else r=1; fi
+check "a red record whose timestamped diff names the commit's own code is refused" "$r"
+
+new_strand red_shows_own_mutation_crlf
+complete_dossier
+red_record_with_diff '+++ b/src/main/Feature.java'
+sed 's/$/\r/' gate.local.d/red/feature.txt > "$work/crlf" && mv "$work/crlf" gate.local.d/red/feature.txt
+if refuses_for red; then r=0; else r=1; fi
+check "a red record with Windows line endings whose diff names the commit's own code is refused" "$r"
+
+new_strand red_shows_own_doc
+write_file src/test/FeatureTest.java 'class FeatureTest {' '	@Test' '	void featureWorks() {' '		int tightened = 1;' '	}' '}'
+write_file docs/notes.md 'A note on the feature'
+commit_all 'Tighten the feature test'
+complete_dossier
+write_file gate.local.d/red/tighten.txt 'commit: Tighten the feature test' '--- a/docs/notes.md' '+++ b/docs/notes.md' \
+	'FeatureTest > featureWorks() FAILED' '    org.opentest4j.AssertionFailedError at FeatureTest.java:5'
+if accepts; then r=0; else r=1; fi
+check "a red record that shows a diff of a doc its commit changes passes" "$r"
+
+new_strand red_shows_own_deletion
+complete_dossier
+red_record_with_diff 'deleted file mode 100644' '--- a/src/main/Feature.java' '+++ /dev/null'
+if refuses_for red; then r=0; else r=1; fi
+check "a red record that shows the deletion of production code its commit changes is refused" "$r"
+
+new_strand red_shows_shorter_path
+complete_dossier
+red_record_with_diff '--- a/src/main/Feat' '+++ b/src/main/Feat'
+if accepts; then r=0; else r=1; fi
+check "a red record that shows a diff of a path that only starts the commit's own code passes" "$r"
+
+new_strand red_shows_pattern_path
+complete_dossier
+red_record_with_diff '--- a/src/main/Feature.jav.' '+++ b/src/main/Feature.jav.'
+if accepts; then r=0; else r=1; fi
+check "a red record whose diff path matches the commit's own code only as a pattern passes" "$r"
+
+new_strand red_shows_own_mdx
+write_file src/test/FeatureTest.java 'class FeatureTest {' '	@Test' '	void featureWorks() {' '		int tightened = 1;' '	}' '}'
+write_file docs/notes.mdx 'A note on the feature'
+commit_all 'Tighten the feature test'
+complete_dossier
+write_file gate.local.d/red/tighten.txt 'commit: Tighten the feature test' '--- a/docs/notes.mdx' '+++ b/docs/notes.mdx' \
+	'FeatureTest > featureWorks() FAILED' '    org.opentest4j.AssertionFailedError at FeatureTest.java:5'
+if refuses_for red; then r=0; else r=1; fi
+check "a red record that shows a diff of a file only named like a doc is refused" "$r"
+
+new_strand red_shows_own_test
+complete_dossier
+red_record_with_diff 'diff --git a/src/test/FeatureTest.java b/src/test/FeatureTest.java' '--- a/src/test/FeatureTest.java' \
+	'+++ b/src/test/FeatureTest.java'
+if accepts; then r=0; else r=1; fi
+check "a red record that shows a diff of its commit's own test passes" "$r"
+
+new_strand red_shows_other_code
+complete_dossier
+red_record_with_diff 'diff --git a/src/main/Seed.java b/src/main/Seed.java' '--- a/src/main/Seed.java' '+++ b/src/main/Seed.java'
+if accepts; then r=0; else r=1; fi
+check "a red record that shows a diff of code its commit does not change passes" "$r"
+
 python_test() {
 	module=$1 test_class=$2 method=$3
 	shift 3

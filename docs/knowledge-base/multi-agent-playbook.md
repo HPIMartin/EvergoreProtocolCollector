@@ -295,6 +295,9 @@ says where each piece of evidence lives.
   `self-test`, `release/test_*.py`), whatever its tag, opening with `commit: <its subject>` (stable
   across rebases) and holding the failing run, or an `exempt: <reason>` line for a test refactoring.
   As for a new test, the check proves a failing run exists, not that it fails for the right reason.
+  A record showing a diff's `--- <path>` or `+++ <path>` line (with or without `a/` or `b/`, a
+  timestamp after a tab allowed) for a path its commit changes outside the test paths and `*.md` is
+  refused: a red record holds the failing run, and a mutation of that code belongs under `mutation/`.
 - **`mutation/`:** one record per test that cannot start red: the mutation's diff, the failing run,
   the revert. Every test the strand adds (a JUnit `@Test`-family method, a vitest `it`/`test` title,
   a self-test `check` name, a `def test…` or `async def test…` method of a `release/test_*.py`; one

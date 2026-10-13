@@ -171,6 +171,17 @@ red_record_of() {
 	return 1
 }
 
+own_code_in_diff() {
+	own=$(in_worktree diff-tree --no-commit-id --name-only -r "$1" | grep -Ev "$test_path_re" | grep -v '\.md$' || true)
+	tr -d '\r' < "$2" \
+		| awk '
+			/^(---|\+\+\+) / { path = substr($0, 5); sub(/^[ab]\//, "", path); sub(/\t.*/, "", path); print path }
+		' \
+		| while IFS= read -r path; do
+			printf '%s\n' "$own" | grep -qxF "$path" && printf '%s\n' "$path"
+		done | grep .
+}
+
 for commit in $(in_worktree rev-list --reverse "$base..$tip"); do
 	subject=$(in_worktree log -1 --format=%s "$commit")
 	in_worktree diff-tree --no-commit-id --name-only -r "$commit" | grep -Eq "$test_path_re" || continue
@@ -178,6 +189,8 @@ for commit in $(in_worktree rev-list --reverse "$base..$tip"); do
 		refuse red "'$subject' changes tests, but no file in red/ opens with 'commit: $subject' (handbook §4)"
 	elif ! sed 1d "$record" | grep -Eq "$failure_marker" && ! grep -Eq '^exempt:[[:space:]]*[^[:space:]]' "$record"; then
 		refuse red "red/${record##*/} shows no failing run and claims no exemption (handbook §4)"
+	elif mutated=$(own_code_in_diff "$commit" "$record"); then
+		refuse red "red/${record##*/} shows a diff of $mutated, production code '$subject' itself changes: a red record holds the failing run, and a mutation of that code belongs under mutation/ (handbook §4)"
 	fi
 done
 
