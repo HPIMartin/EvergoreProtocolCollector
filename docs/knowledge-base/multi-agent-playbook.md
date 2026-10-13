@@ -74,7 +74,8 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    (branch, worktree identity, compare range, on the agent seat the pull request), YOU review the
    rebased tip
    - a re-rebase after your review: clean and green → landed without a second review; a
-     conflict resolution → panel and your review again
+     conflict resolution → the reviewer, the doc-reviewer and the lenses whose read paths it
+     touches, the resolution as their delta, then your review again
 6. LANDING (YOU): `/land <tip>` on the pull request, or `git push origin <tip>:main`; a
    fast-forward either way
    - once origin/main holds the tip, the agent fast-forwards main and cleans up the worktree,
@@ -178,10 +179,11 @@ and lands through the gateway; no commit is made on `main`
   only a green tip is pushed again with a lease. If the strand was already author-reviewed **and**
   the rebase ran clean (no conflicts, no judgment-call resolutions) **and** that build is green, it
   goes to the author's landing without a further review round-trip. When the rebase hit a conflict:
-  resolve it, run the full build, **re-run the falsifier panel and the reviewer on the resolved
-  tip**, then present exactly what was resolved plus the compare range and wait for the author's
-  go. Conflict resolutions are the one place new, unreviewed content can appear, so both reviews
-  stay exactly there. Moving `origin/main` always stays with the author.
+  resolve it, run the full build, **re-run the reviewer, the doc-reviewer and every lens whose
+  read paths the resolution touches on the resolved tip**, the resolution as their delta (handbook
+  §7), then present exactly what was resolved plus the compare range and wait for the author's go.
+  Conflict resolutions are the one place new, unreviewed content can appear, so both reviews stay
+  exactly there. Moving `origin/main` always stays with the author.
 - **Clean up landed strands immediately, without asking:** once `origin/main` holds a strand's tip
   and the primary checkout's `main` has fast-forwarded to it, `./verify stop` in its worktree, then
   `git worktree remove <path>` and `git branch -d <branch>`, then `git worktree prune` (inside the

@@ -581,9 +581,11 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   tip, cache disabled, executed-proof read ([testing.md](testing.md)), before anything else happens:
   a rebase that applied cleanly can still break semantically. When `main` moved after the author's
   review, a re-rebase that ran clean and builds green goes to the landing without a second review; a
-  re-rebase that needed a conflict resolution re-opens the **panel** (falsifiers and reviewer on the
-  resolved tip) and then the **author's review**, because resolutions are the one place unreviewed
-  content enters.
+  re-rebase that needed a conflict resolution re-opens the **panel** for what it touched and then
+  the **author's review**, because resolutions are the one place unreviewed content enters:
+  - the reviewer, the doc-reviewer and every lens whose read paths the resolution touches run on
+    the resolved tip, the resolution as their delta;
+  - on the PC this run counts as no panel round (author decision 2026-10-13).
 - **Every commit landing on `main` is verified-good, not merely green.** Defective = builds red,
   OR falsifier-exposed fake-green (tests pass, assert nothing real), OR reviewer-rejected as not
   implementing what it claims; none may land. Red states are never committed (TDD red is transient;
