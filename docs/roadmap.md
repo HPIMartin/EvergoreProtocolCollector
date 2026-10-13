@@ -171,9 +171,8 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
 - **Deploy and environment:** a failed ssh connection named as such (F20), the database directory
   given to the runtime user (F21), the browser grid on the agent seat (H14).
 - **Test-suite hygiene:** the browser's first-launch race (B35), the test debt two feature gates
-  left (B33, B34, B38), the headline shapes the parser still misreads (B39, B40, B41), the release
-  comparison's remaining edges (B42, B43, B44, B45), style
-  alignment (B8), the shared boot fixture (B18), the parser residual (B22), deterministic
+  left (B33, B34, B38), the release comparison's remaining edges (B42, B43, B44, B45), style
+  alignment (B8), the shared boot fixture (B18), the parser's residual shapes (B22), deterministic
   fixture ids (B23), the unexplained load-sensitive failure (B20), AssertJ in `SmokeTest` (B7).
 - **Docs & code hygiene:** KB accuracy sweep (G18), the parser
   entrypoints made injectable (D15), exception/logging hygiene and dead code (D11).
