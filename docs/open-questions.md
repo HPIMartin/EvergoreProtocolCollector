@@ -295,6 +295,7 @@ second copy.
 | 2026-10-13 | **No docker-in-docker in the PC devcontainer** (ruled out with the socket decision) | Its feature runs `--privileged` ([feature](https://github.com/devcontainers/features/blob/main/src/docker-in-docker/devcontainer-feature.json)), and a privileged container can take over its host ([Docker reference](https://docs.docker.com/reference/cli/docker/container/run/)) |
 | 2026-10-13 | **No Enhanced Container Isolation on the PC** (ruled out with the socket decision) | It needs a Docker Business subscription ([Docker docs](https://docs.docker.com/enterprise/security/hardened-desktop/enhanced-container-isolation/enable-eci/)) |
 | 2026-10-13 | **No Claude Code Bash sandbox as the PC's socket guard** (ruled out with the socket decision) | The sandbox runs `docker` only outside itself ([docs](https://code.claude.com/docs/en/sandboxing)) |
+| 2026-10-13 | **The deploy transfer-check strand carries no `.feature`: handbook §5's build/infra exemption applies** (author decision) | It changes the deploy tooling, no product behaviour a stakeholder sees |
 
 ## Recorded mutations (red evidence where a new case could not start red)
 
