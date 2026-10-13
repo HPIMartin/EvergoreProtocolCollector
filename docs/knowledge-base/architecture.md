@@ -142,10 +142,11 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   `MetaInformationKey.DateTimeKey`'s ambiguity and no key family joins the pending schema migration.
   The ledger's **storage** format is a separate matter: it persists wall-clock text, so these
   columns inherit **D14**'s DST fall-back defect until the epoch/UTC format lands, and today only
-  the container's UTC default keeps them right. `TimezoneStartupValidator` is the interim safeguard
-  (**D22**): it aborts boot if the effective `ZoneId` (`ApplicationFactory#effectiveZone`, the JVM's
+  the container's UTC default keeps them right. `TimezoneStartupValidator` is the interim safeguard:
+  it aborts boot if the effective `ZoneId` (`ApplicationFactory#effectiveZone`, the JVM's
   `ZoneId.systemDefault()`) is not a fixed offset, so a misconfigured deploy fails fast instead of
-  silently reintroducing the DST defect.
+  silently reintroducing the DST defect. It does not reach `last_updated`, which is pinned to the
+  hard-coded `Constants.APP_ZONE` and not to the effective zone the validator checks.
 - **Domain (framework-free):** `Entry`, `Item`, `EvergoreItem` (catalog + value math).
 - **REST:** `controller/api/*` (the JSON API under `/api/v1`: `AvatarSummariesController`,
   `AvatarEntriesController`, `AdminStatusController` (anonymous, `/api/v1/admin/status`: the

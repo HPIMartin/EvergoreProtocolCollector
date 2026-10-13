@@ -670,7 +670,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      deletes that file once the container is up; `docker inspect` still shows the values.
    - `TZ=UTC` keeps the runtime off a DST zone while timestamps persist as default-timezone
      wall-clock text (backlog D14). The container default is already UTC; setting it explicitly
-     pins it. `TimezoneStartupValidator` (backlog D22) backs this up: it aborts boot if the
+     pins it. `TimezoneStartupValidator` backs this up: it aborts boot if the
      effective zone is not a fixed offset, so a dropped or wrong `TZ` fails fast instead of
      silently reintroducing the DST defect.
    - The fixed `--name` is what makes every command in "Which stand is running?" and in the

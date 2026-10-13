@@ -22,7 +22,7 @@
 | M16 | 0.4.0 reaches the guild | the explanation page with the corrected note and the invented trader (E19, E36, E20), the backlog harvest (G83), the release comparison against 0.3.0 (F22), the gate guards (G82, with G30, G48), the release (F23) | **First** (author decision 2026-10-13): the page goes live with 0.4.0, and nothing in it moves a figure |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | D24 with F12, F10; the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
-| M10 | What the bottlenecks release | B36→D25 with D9→D18, D22→D14 | Measured request-path cost and the timezone fix at its root |
+| M10 | What the bottlenecks release | B36→D25 with D9→D18, D14 | Measured request-path cost and the timezone fix at its root |
 | M11 | Product build-out | E12→E13, E9, E3, E6, E27, E30, E37, F13 | E12 inherits D18's query shape, so it follows it |
 | M12 | Ops, security & environment | F1, H11, C1, C8, A4, C11→E28, E17, H2→H6, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
 | M14 | The guild's skills | E31→E32→E33, E34 | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open, D-16). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
@@ -94,7 +94,7 @@ Slice: the measured costs come down and the timezone hazard is fixed at its root
       values stay identical on the production snapshot, and the round-trip detection keeps the
       per-entry rows it needs (backlog D18).
 - [ ] Timestamps and `last_updated` round-trip timezone-independently as instants (backlog D14),
-      retiring the interim startup guard (backlog D22).
+      retiring the interim startup guard, `TimezoneStartupValidator`.
 - [ ] The `withdrawl` → `withdrawal` rename runs as a migration, values preserved 1:1, in the same
       migration as the fixed-point sums (backlog D9).
 
@@ -172,10 +172,10 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   given to the runtime user (F21), the browser grid on the agent seat (H14).
 - **Test-suite hygiene:** the browser's first-launch race (B35), the test debt two feature gates
   left (B33, B34, B38), the headline shapes the parser still misreads (B39, B40, B41), the release
-  comparison's remaining edges (B42, B43, B44, B45), repository tests (B4), style
+  comparison's remaining edges (B42, B43, B44, B45), style
   alignment (B8), the shared boot fixture (B18), the parser residual (B22), deterministic
   fixture ids (B23), the unexplained load-sensitive failure (B20), AssertJ in `SmokeTest` (B7).
-- **Docs & code hygiene:** KB in lockstep with code (G3), KB accuracy sweep (G18), the parser
+- **Docs & code hygiene:** KB accuracy sweep (G18), the parser
   entrypoints made injectable (D15), exception/logging hygiene and dead code (D11).
 - **Craftsmanship, when a gap allows:** catalog refactor (D6), full repackaging (D3) last, on top
   of a tested core.
