@@ -77,30 +77,54 @@ changes=$(in_worktree status --porcelain)
 [ -z "$changes" ] \
 	|| refuse freeze "the strand worktree has uncommitted changes, so no verdict reads the tip as committed (handbook §7): $(printf '%s' "$changes" | tr '\n' ' ')"
 
-byte_order_mark=$(printf '\357\273\277')
-for evidence in "$dossier"/*; do
-	[ -f "$evidence" ] || continue
-	named=$(sed -n "1s/^$byte_order_mark//; 1s/^tip: //p" "$evidence" | tr -d '\r' | sed 's/[[:space:]]*$//')
-	[ "$named" = "$tip" ] \
-		|| refuse tip "${evidence#"$dossier"/} names tip '${named:-none}', not the tip under review $tip (handbook §9)"
-done
-
 changed_paths() {
 	listing=$(in_worktree diff --no-renames --name-only "$1" "$2") || return 1
 	printf '%s\n' "$listing" | sed 's/^"\(.*\)"$/\1/'
 }
 
+paths_requiring() {
+	case "$1" in
+		doc-reviewer.md) cat ;;
+		lens-robustness.md) grep -v '\.md$' ;;
+		lens-domain.md) grep -v '\.md$' | grep '^src/' ;;
+		lens-frontend.md) grep -v '\.md$' | grep '^frontend/' ;;
+	esac
+}
+
+paths_read_by() {
+	case "$1" in
+		lens-frontend.md) grep -v '\.md$' | grep -E '^(frontend|src)/' ;;
+		*) paths_requiring "$1" ;;
+	esac
+}
+
+lens_report_stands() {
+	case "$1" in lens-robustness.md|lens-domain.md|lens-frontend.md) ;; *) return 1 ;; esac
+	printf '%s\n' "$2" | grep -Eqx '[0-9a-f]{40}' || return 1
+	then_base=$(in_worktree merge-base "$2" "$main" 2>/dev/null) || return 1
+	on_strand=$(changed_paths "$2" "$tip") && on_main=$(changed_paths "$then_base" "$main") || return 1
+	[ -z "$(printf '%s\n%s\n' "$on_strand" "$on_main" | paths_read_by "$1" || true)" ]
+}
+
+byte_order_mark=$(printf '\357\273\277')
+for evidence in "$dossier"/*; do
+	[ -f "$evidence" ] || continue
+	named=$(sed -n "1s/^$byte_order_mark//; 1s/^tip: //p" "$evidence" | tr -d '\r' | sed 's/[[:space:]]*$//')
+	[ "$named" = "$tip" ] || lens_report_stands "${evidence#"$dossier"/}" "$named" \
+		|| refuse tip "${evidence#"$dossier"/} names tip '${named:-none}', not the tip under review $tip, and is no lens report whose paths stayed unchanged since (handbook §9)"
+done
+
 changed=$(changed_paths "$base" "$tip")
 code_changed=$(printf '%s\n' "$changed" | grep -v '\.md$' || true)
 needs() {
-	printf '%s\n' "$2" | grep -Eq "$3" || return 0
+	[ -n "$(printf '%s\n' "$changed" | paths_requiring "$1" || true)" ] || return 0
 	[ -f "$dossier/$1" ] \
-		|| refuse lens "the diff touches $4, so the gate needs $1 (playbook, Cadence)"
+		|| refuse lens "the diff touches $2, so the gate needs $1 (playbook, Cadence)"
 }
-needs doc-reviewer.md "$changed" . 'the strand'
-needs lens-robustness.md "$code_changed" . 'code'
-needs lens-domain.md "$code_changed" '^src/' 'src/'
-needs lens-frontend.md "$code_changed" '^frontend/' 'frontend/'
+needs doc-reviewer.md 'the strand'
+needs lens-robustness.md 'code'
+needs lens-domain.md 'src/'
+needs lens-frontend.md 'frontend/'
 
 failure_marker='FAILED|FAIL |×|✗|AssertionError|AssertionFailedError'
 test_path_re='(^|/)src/test/|\.test\.[jt]sx?$|(^|/)self-test$'

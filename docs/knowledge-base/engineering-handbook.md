@@ -630,9 +630,17 @@ criteria** (clean code, SOLID, hexagonal boundaries). If off: send back with con
 record the lesson in `docs/process-learnings.md` (so future work and agents drift toward the
 process, not away from it).
 
-**Bounded review loop → re-plan (governance).** A rejection sends work back to re-implement; a
-fresh falsifier and reviewer re-check. Bounds:
+**Bounded review loop → re-plan (governance).** A rejection sends work back to re-implement; from the
+second panel round on, only the gate agents the fold concerns re-check it. Bounds:
 
+- **A delta round re-runs only what the fold concerns** (author decision 2026-10-12), since a full
+  panel after every tip change was the largest cost of a strand:
+  - from round 2 on, the lens whose finding was fixed runs again, fresh;
+  - its brief carries the delta (`<previous tip>..<tip>`) and the dispositions so far;
+  - every other lens report stands while the dossier accepts it
+    ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier").
+- **A docs-only fold** (code tree unchanged) re-runs only the doc-reviewer:
+  - the lens verdicts stand, since a lens judges the code and such a fold changes none.
 - **Cap: two re-implement rounds (three attempts total), then re-plan**: stop, escalate to the
   author with findings (repeated FAILs usually mean the plan/spec is wrong, not the code).
   **Early-escalate** when two consecutive rounds raise the *same* finding.
@@ -655,9 +663,8 @@ fresh falsifier and reviewer re-check. Bounds:
   the diff: a commit that names a repair of an earlier commit is itself a FAIL, and an "and" joining
   two clauses in a proposed message is the signal to split.
 - **A gate agent's report is an input to the next gate agent**, not a message to the author alone:
-  every prior lens and doc-reviewer verdict reaches the reviewer verbatim in the gate dossier, and
-  a lens whose tip is no longer the one under review is re-run. The gate dossier check refuses an
-  incomplete dossier before the reviewer starts ([multi-agent-playbook.md](multi-agent-playbook.md),
+  every prior lens and doc-reviewer verdict reaches the reviewer verbatim in the gate dossier. The
+  gate dossier check refuses an incomplete dossier before the reviewer starts ([multi-agent-playbook.md](multi-agent-playbook.md),
   "The gate dossier").
 - **The gate verifies the claim, not the intent.** Every claimed fix is stated with the evidence
   that it landed on the branch (`git show <sha> -- <file>`, produced from the strand's worktree with

@@ -97,9 +97,13 @@ headline_fails() {
 
 # The reports produced at the tip; a case that moves the tip writes them again.
 tip_reports() {
-	wip_run "$(sorting_fails 76)" "$(headline_fails)"
+	tip_runs
 	lens_report robustness
 	lens_report domain
+}
+
+tip_runs() {
+	wip_run "$(sorting_fails 76)" "$(headline_fails)"
 	write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
 }
 
@@ -180,6 +184,150 @@ write_file src/main/Fold.java 'class Fold {' '}'
 commit_all 'Fold a gate fix'
 if refuses_for tip; then r=0; else r=1; fi
 check "a report produced at an older tip is refused" "$r"
+
+new_strand docs_fold_keeps_lens_reports
+complete_dossier
+write_file docs/guide.md '# Guide, folded'
+git add -A
+git commit -q --no-verify --amend --no-edit
+tip_runs
+kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
+if accepts; then r=0; else r=1; fi
+check "a lens report from an earlier tip stands after a fold that changes only docs" "$r"
+
+new_strand docs_fold_stale_doc_review
+complete_dossier
+stale_review=$(cat gate.local.d/doc-reviewer.md)
+write_file docs/guide.md '# Guide, folded'
+git add -A
+git commit -q --no-verify --amend --no-edit
+tip_runs
+printf '%s\n' "$stale_review" > gate.local.d/doc-reviewer.md
+kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report from an earlier tip is refused after a fold that changes only docs" "$r"
+
+new_strand frontend_fold_keeps_domain_report
+complete_dossier
+write_file frontend/src/view.ts 'export const view = 1'
+git add -A
+git commit -q --no-verify --amend --no-edit
+tip_runs
+lens_report robustness
+lens_report frontend
+walk_logs
+if accepts; then r=0; else r=1; fi
+check "a domain report from an earlier tip stands after a fold that changes only the frontend" "$r"
+
+new_strand frontend_fold_stale_robustness
+complete_dossier
+write_file frontend/src/view.ts 'export const view = 1'
+git add -A
+git commit -q --no-verify --amend --no-edit
+tip_runs
+lens_report frontend
+walk_logs
+if refuses_for tip && grep -q '^refused \[tip\]: lens-robustness.md ' "$work/out" \
+	&& ! grep -q '^refused \[tip\]: lens-domain.md ' "$work/out"; then r=0; else r=1; fi
+check "only the lens report whose paths a fold changed is refused" "$r"
+
+new_strand main_moved_under_lens
+complete_dossier
+reviewed_tip=$(tip)
+git checkout -q main
+write_file src/main/Seed.java 'class Seed {' '	int landed;' '}'
+commit_all 'Land another strand'
+git checkout -q -B strand main
+git checkout -q "$reviewed_tip" -- .
+commit_all 'Add the feature'
+tip_runs
+walk_logs
+if refuses_for tip && grep -q '^refused \[tip\]: lens-domain.md ' "$work/out"; then r=0; else r=1; fi
+check "a lens report is refused when main changed its paths under a tip of the same tree" "$r"
+
+new_strand code_renamed_to_docs
+complete_dossier
+git mv src/main/Feature.java docs/Feature.md
+git commit -q --no-verify --amend --no-edit
+tip_runs
+kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
+walk_logs
+if refuses_for tip && grep -q '^refused \[tip\]: lens-domain.md ' "$work/out"; then r=0; else r=1; fi
+check "a lens report is refused when a fold renames a path it reads into the docs" "$r"
+
+new_strand strand_renames_code_to_docs
+git checkout -q main
+git checkout -q -B strand
+git mv src/main/Seed.java docs/Seed.md
+commit_all '[doc] Keep the seed as a page'
+mkdir -p gate.local.d
+write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
+if refuses_for lens && grep -q 'needs lens-domain.md' "$work/out"; then r=0; else r=1; fi
+check "a strand that renames code into the docs still needs the lenses of that code" "$r"
+
+new_strand frontend_report_after_src_fold
+complete_dossier
+write_file frontend/src/view.ts 'export const view = 1'
+commit_all 'Add the view'
+tip_runs
+lens_report robustness
+lens_report domain
+lens_report frontend
+walk_logs
+write_file src/main/Feature.java 'class Feature {' '	int folded;' '}'
+git add -A
+git commit -q --no-verify --amend --no-edit
+tip_runs
+lens_report robustness
+lens_report domain
+walk_logs
+if refuses_for tip && grep -q '^refused \[tip\]: lens-frontend.md ' "$work/out"; then r=0; else r=1; fi
+check "a frontend report from an earlier tip is refused after a fold of the code under src/ it reads" "$r"
+
+if holds_quoted_names; then
+	new_strand quoted_src_fold
+	complete_dossier
+	write_file 'src/main/Quote"d.java' 'class Quoted {' '}'
+	git add -A
+	git commit -q --no-verify --amend --no-edit
+	tip_runs
+	lens_report robustness
+	walk_logs
+	if refuses_for tip && grep -q '^refused \[tip\]: lens-domain.md ' "$work/out"; then r=0; else r=1; fi
+	check "a lens report is refused when a fold changes a src path git quotes" "$r"
+else
+	printf '  skip %s\n' 'a lens report is refused when a fold changes a src path git quotes'
+fi
+
+new_strand report_names_moving_ref
+complete_dossier
+write_file src/main/Fold.java 'class Fold {' '}'
+commit_all 'Fold a gate fix'
+tip_runs
+walk_logs
+for report in robustness domain; do
+	sed '1s/.*/tip: HEAD/' "gate.local.d/lens-$report.md" > "$work/moved-ref"
+	mv "$work/moved-ref" "gate.local.d/lens-$report.md"
+done
+if refuses_for tip && grep -q "^refused \[tip\]: lens-domain.md names tip 'HEAD'" "$work/out"; then r=0; else r=1; fi
+check "a lens report naming a moving ref instead of a commit is refused" "$r"
+
+new_strand redated_tip_stale_doc_review
+complete_dossier
+stale_review=$(cat gate.local.d/doc-reviewer.md)
+git commit -q --no-verify --amend --no-edit --date='2001-01-01T00:00:00'
+tip_runs
+printf '%s\n' "$stale_review" > gate.local.d/doc-reviewer.md
+if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a doc-reviewer report from an earlier tip of the same tree is refused" "$r"
+
+new_strand report_tip_no_commit
+complete_dossier
+write_file gate.local.d/lens-robustness.md "tip: 0123456789abcdef0123456789abcdef01234567" '- `robust: yes`' \
+	'- weaknesses: none found after a genuine attempt' '- `counterTests:` none' '- `treeDiff:` (empty)'
+if refuses_for tip && grep -q '^refused \[tip\]: lens-robustness.md ' "$work/out"; then r=0; else r=1; fi
+check "a lens report naming a tip that is no commit is refused" "$r"
 
 new_strand crlf_report
 complete_dossier
@@ -1183,17 +1331,6 @@ mkdir -p gate.local.d
 write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
 if refuses_for kb-guard; then r=0; else r=1; fi
 check "a docs-only strand without a KbCitationGuardTest run at the tip is refused" "$r"
-
-new_strand strand_renames_code_to_docs
-git checkout -q main
-git checkout -q -B strand
-git mv src/main/Seed.java docs/Seed.md
-commit_all '[doc] Keep the seed as a page'
-mkdir -p gate.local.d
-write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
-kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
-if refuses_for lens && grep -q 'needs lens-domain.md' "$work/out"; then r=0; else r=1; fi
-check "a strand that renames code into the docs still needs the lenses of that code" "$r"
 
 if holds_quoted_names; then
 	new_strand strand_adds_quoted_path

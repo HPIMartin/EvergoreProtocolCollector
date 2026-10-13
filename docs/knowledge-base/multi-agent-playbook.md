@@ -45,8 +45,10 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    - REFACTOR the feature under the armed net: no behavior change, each step its own green commit
    - the feature is done when the armed scenarios pass, not when the steps are ticked off
    - never pushes; domain/businessLogic/application stay framework-free
-3. FALSIFY (spawn the lenses the change can break, each fresh, each in its own detached
-   worktree at the tip under review; see cadence)
+3. FALSIFY
+   - spawn the lenses the change can break, each fresh (see cadence)
+   - each in its own detached worktree at the tip under review
+   - from round 2 on, handbook §9 (delta rounds) says which gate agents re-run
    - first, every round: `git fetch origin`, a moved `main` synced and the strand rebased
      (handbook §7), then `./verify format` green at the tip (author decision 2026-10-09)
    - domain lens: value math, watermark/aggregation, parser fidelity
@@ -83,7 +85,8 @@ scenarios claims one of the §5 exemptions explicitly and then starts at step 1.
 
 ### FAIL-loop rules (when a falsifier or reviewer rejects)
 
-A FAIL sends work back to step 2, then re-runs a **fresh** panel and **fresh** reviewers.
+A FAIL sends work back to step 2; which gate agents the next round re-runs is handbook §9's
+(delta rounds).
 Loop-bounding governance (cap 2 re-implement rounds → escalate + re-plan, no cap on the agent seat
 but a status update in the chat every three rounds; early-escalate on a repeated finding; process-only FAILs
 don't consume a round) is canonical in
@@ -129,7 +132,7 @@ the feature commit**, not per micro-commit.
   the next build.
 - **Every prior verdict is an input to the next gate agent**, not a message to the author alone: the
   falsifiers' and the doc-reviewer's reports go into the gate dossier verbatim, where the reviewer
-  reads them, and a lens whose tip is no longer the one under review is re-run, never quoted.
+  reads them (→ The gate dossier).
 - **Pure documentation/process changes (`[doc]` scope) skip the falsifier panel:** the
   `doc-reviewer` is the gate; add the `reviewer` only when process adherence is genuinely in doubt.
 - **Escalation:** features touching valuation math, time/timezones, concurrency, data migration or
@@ -238,6 +241,13 @@ lives.
 - **Reports and logs at the top level** (each lens report and the doc-reviewer's, verbatim; the
   runs made at the tip) open with `tip: <sha>`, the full SHA they were produced at; one naming any
   other tip is refused. Evidence that predates the tip lives in subdirectories.
+- **A lens report of an earlier tip stands** while no path its lens reads has changed since its tip
+  (a verdict on unchanged code still holds, and a re-run costs a full lens):
+  - both the strand (`<its tip>..<tip>`) and `main` (its merge-base with `main`..`main`) count;
+  - a lens reads the paths its required report follows below;
+  - the frontend lens also reads those under `src/`, where the API and the browser-driven
+    scenarios live;
+  - the doc-reviewer's report and every run name the tip under review.
 - **Base and freeze** are read live, not from the dossier: the strand's merge-base must equal
   `git rev-parse main` at the moment of the check, the tip's tree must differ from main's, and the
   strand worktree must be clean and checked out at the tip.
