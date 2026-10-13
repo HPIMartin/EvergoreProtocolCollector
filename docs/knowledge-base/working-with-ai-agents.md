@@ -161,6 +161,9 @@ command) inside guardrails. Two files:
     `git "reset"`, steps around them), `rm` (all forms), the `cd` escape guards, `EnterWorktree`
     and reads of secret files (live credentials, `zugang.txt`, `secrets.local.properties`); the
     written `git -C` variants of the git denies are inert (below).
+  - **No deny rule sees into `docker exec … bash -lc '<command>'`:** a rule matches the
+    `docker exec` command, not the shell line it carries, so inside it the floor holds only as a
+    written rule and no mechanical check reaches it.
   - **Seven narrow plain spellings of `git push` are denied too** (`git push`, `git push origin`,
     `git push * origin`, `git push * HEAD`, `git push -u *`, `git push --set-upstream *`,
     `git push --tags*`), each only in that word order. Each fires without a prompt (measured

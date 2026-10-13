@@ -90,9 +90,8 @@ postCreate). The base image is pinned by digest, every feature by digest in
   `/worktrees`.
   - Such a session, and every subagent it starts, works in a worktree only through
     `docker exec -u vscode <container> …`.
-  - No deny rule sees the command inside `docker exec`; the deny floor binds there by rule
-    ([working-with-ai-agents.md](working-with-ai-agents.md), "Permissions & autonomy"), since the
-    volume holds the only copy of uncommitted files.
+  - What the deny floor covers inside `docker exec`:
+    [working-with-ai-agents.md](working-with-ai-agents.md), "Permissions & autonomy".
   - `docker exec` carries the container's `EPC_WORKTREES`, so a worktree created that way lands on
     the volume.
   - From Git Bash, `MSYS_NO_PATHCONV=1` keeps it from rewriting `/worktrees/…` into a Windows
