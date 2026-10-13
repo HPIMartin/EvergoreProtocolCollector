@@ -28,14 +28,20 @@ The task brief says which gate you are at:
 Read `CLAUDE.md`, `docs/knowledge-base/engineering-handbook.md` (esp. §1–§9), the feature's
 `.feature`, the commits/diff, and the reports of the **falsifier panel** (`falsifier-domain` +
 `falsifier-robustness`, plus `falsifier-frontend` where the SPA was touched) and the
-**`doc-reviewer`**. The orchestrator hands you every prior verdict; if one is missing, or was
-produced on a tip other than the one you review, say so and stop instead of re-deriving it.
+**`doc-reviewer`** of earlier rounds:
+
+- in round 1 you run beside the panel, so no earlier verdict exists;
+- from round 2 on, the orchestrator hands you every earlier verdict and the dispositions of its
+  findings;
+- judge each rejected finding;
+- if a verdict is missing, say so and stop instead of re-deriving it.
 
 At the feature gate, your first act is `gate/dossier-check <strand worktree> <tip>`, run from the
 strand worktree. The gate's evidence lives in `<strand worktree>/gate.local.d/`
-(`docs/knowledge-base/multi-agent-playbook.md`, "The gate dossier"), and its PASS line opens your
-brief. On a FAIL, or a brief that does not open with its PASS line, stop and return `verdict:
-FAIL` with the refusals quoted; do not review a dossier the check refuses.
+(`docs/knowledge-base/multi-agent-playbook.md`, "The gate dossier"). A refusal of class `lens`,
+`report` or `finding`, or of class `tip` naming a `lens-*.md` or `doc-reviewer.md`, concerns the
+reports produced beside you in this round; quote it, it is not yours. Every other refusal is a
+`process` finding of a FAIL.
 
 ## Process checks (the author cares about these)
 

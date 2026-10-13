@@ -1,6 +1,4 @@
 #!/bin/sh
-# Refuses a feature gate's dossier before the reviewer is spawned. The rules it checks live in the
-# engineering handbook (§4, §7, §9); every refusal names its section instead of restating it.
 set -eu
 
 usage() {
@@ -38,7 +36,7 @@ verdict() {
 		printf 'dossier-check: PASS %s on main %s\n' "$tip" "$main"
 		exit 0
 	fi
-	printf 'dossier-check: FAIL, %s refusal(s); do not spawn the reviewer\n' "$refusals"
+	printf 'dossier-check: FAIL, %s refusal(s); do not close the panel round\n' "$refusals"
 	exit 1
 }
 

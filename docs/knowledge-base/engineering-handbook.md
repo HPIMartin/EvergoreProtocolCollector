@@ -639,7 +639,8 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - its brief carries the delta (`<previous tip>..<tip>`) and the dispositions so far;
   - every other lens report stands while the dossier accepts it
     ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier").
-- **A docs-only fold** (code tree unchanged) re-runs only the doc-reviewer:
+- **A docs-only fold** (code tree unchanged) re-runs only the doc-reviewer, since it checks a docs
+  fix of the reviewer's finding too:
   - the lens verdicts stand, since a lens judges the code and such a fold changes none.
 - **Cap: two re-implement rounds (three attempts total), then re-plan**: stop, escalate to the
   author with findings (repeated FAILs usually mean the plan/spec is wrong, not the code).
@@ -663,9 +664,15 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   the diff: a commit that names a repair of an earlier commit is itself a FAIL, and an "and" joining
   two clauses in a proposed message is the signal to split.
 - **A gate agent's report is an input to the next gate agent**, not a message to the author alone:
-  every prior lens and doc-reviewer verdict reaches the reviewer verbatim in the gate dossier. The
-  gate dossier check refuses an incomplete dossier before the reviewer starts ([multi-agent-playbook.md](multi-agent-playbook.md),
-  "The gate dossier").
+  every lens and doc-reviewer verdict of an earlier round reaches the next reviewer run verbatim in
+  the gate dossier. The gate dossier check refuses an incomplete dossier before a round closes
+  ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier").
+- **The reviewer runs in round 1 beside the lenses** (author decision 2026-10-12), so its findings
+  ride in the same round instead of restarting the panel at its end.
+  - From round 2 on, it runs again on the delta when a fold changed the code tree.
+  - It also runs when a panel finding was rejected rather than fixed or filed, to judge the
+    rejection.
+  - The dossier check traces the lens and doc-reviewer findings, not the reviewer's.
 - **The gate verifies the claim, not the intent.** Every claimed fix is stated with the evidence
   that it landed on the branch (`git show <sha> -- <file>`, produced from the strand's worktree with
   `git -C`, never from an inherited working directory), and the reviewer ticks off each of its own
@@ -678,7 +685,7 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   commit (`git worktree add <base> --detach`), do not narrate it.
 - **A finding the panel raises but does not fix is live work.** Every "pre-existing, not this
   strand" gets its backlog row or `open-questions.md` entry **in the same strand**, written *before*
-  the reviewer is spawned, so the gate sees the trace instead of having to create it.
+  the round closes, so the gate sees the trace instead of having to create it.
 - **A negative claim owes the search that would have found the thing.** "It is not in the repo" is
   stated together with the command that came up empty, looked where the docs say the thing lives
   and where its siblings live, so the search itself can be judged.

@@ -14,7 +14,7 @@ independent agents try to break it and gate the commit.** Part of the project's 
 | **Implementer** | `implementer` (frontmatter `model: sonnet`) | Yes | Approved plan → red→green→refactor per step, commits each locally, arms the scenarios → summary |
 | **Falsifier panel** | `falsifier-domain` · `falsifier-robustness` · `falsifier-frontend` (each `model: sonnet`); spawned per touched surface (see cadence) | Yes (fresh) | Feature diff/commits → adversarial verdicts (domain math · test honesty/robustness · SPA behavior) + counter-tests |
 | **Doc reviewer** | `doc-reviewer` (`model: haiku`) | Yes (fresh) | Feature diff/commits → PASS/FAIL against the KB README's DOC checklist + findings with rule IDs |
-| **Reviewer / Gate** | `reviewer` (`model: opus`) | Yes (fresh, per gate) | Scenario gate: the draft `.feature` + both scenario-gate falsifiers' reports → PASS/FAIL. Feature gate: feature commits + panel + doc-reviewer reports → PASS/FAIL + findings + proposed `process-learnings.md` entry |
+| **Reviewer / Gate** | `reviewer` (`model: opus`) | Yes (fresh, per gate) | Scenario gate: the draft `.feature` + both scenario-gate falsifiers' reports → PASS/FAIL. Feature gate: feature commits, from round 2 on also the earlier rounds' panel and doc-reviewer reports → PASS/FAIL + findings + proposed `process-learnings.md` entry |
 
 **Non-negotiable:** falsifiers, doc-reviewer and Reviewer are **fresh, independent** agents, never
 the Implementer checking itself (independence is the point). Subagents **never push**; the
@@ -45,8 +45,9 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    - REFACTOR the feature under the armed net: no behavior change, each step its own green commit
    - the feature is done when the armed scenarios pass, not when the steps are ticked off
    - never pushes; domain/businessLogic/application stay framework-free
-3. FALSIFY
-   - spawn the lenses the change can break, each fresh (see cadence)
+3. FALSIFY AND REVIEW, one panel round
+   - spawn the lenses the change can break, the `doc-reviewer` and the `reviewer` together, each
+     fresh (see cadence)
    - each in its own detached worktree at the tip under review
    - from round 2 on, handbook §9 (delta rounds) says which gate agents re-run
    - first, every round: `git fetch origin`, a moved `main` synced and the strand rebased
@@ -57,15 +58,14 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
      API contract, the browser-driven scenarios
    - each returns verdict + counter-tests, and ends with the diff of the production tree against
      HEAD in its worktree (a left-behind probe is its own finding)
-4. REVIEW GATE (spawn `doc-reviewer` + `reviewer`, both fresh), once per FEATURE commit
-   - the reviewer starts only on a green `gate/dossier-check <worktree> <tip>`, whose PASS line is
-     the first line of its brief (see "The gate dossier")
    - doc-reviewer: docs hygiene per the DOC checklist, task-scoped, plus a stateless
      rotating one-doc sweep (pick = commit count mod doc count; see the agent definition)
    - reviewer: process adherence (scenario gate and author gate 1 honored? real
      red→green→refactor with red evidence? arming commit the last TDD step, refactor commits
-     behavior-free? whitespace separate? commit-msg rules?) + code criteria; integrates the
-     panel's + doc-reviewer's findings, all of which are in its brief
+     behavior-free? whitespace separate? commit-msg rules?) + code criteria; from round 2 on it
+     integrates the earlier rounds' reports, all of which are in its brief
+4. REVIEW GATE, once per FEATURE commit: the round closes on a green
+   `gate/dossier-check <worktree> <tip>` once its reports are in (see "The gate dossier")
    - PASS → proceed; FAIL → fix and re-gate under the loop rules below; log a
      process-learning if a rule slipped
 5. ► AUTHOR GATE 2 (handbook §7 gateway): fetch, rebase onto current main, run ./verify all on
@@ -227,14 +227,17 @@ and commit-plan approvals happen with **you** in chat; moving `origin/main` is y
 
 ## The gate dossier
 
-A feature gate's evidence, gathered before the reviewer is spawned. `gate/dossier-check <strand
-worktree> <tip>` refuses a dossier that breaks a rule below; its proof is `gate/self-test`, run
-by `pre-commit` whenever a commit touches `gate/`. This section says where each piece of evidence
-lives.
+A feature gate's evidence, gathered before a panel round is spawned and completed by its
+reports. `gate/dossier-check <strand worktree> <tip>` refuses a dossier that breaks a rule below;
+its proof is `gate/self-test`, run by `pre-commit` whenever a commit touches `gate/`. This section
+says where each piece of evidence lives.
 
-- **When:** after the panel and the doc-reviewer have reported, before the reviewer is spawned. Its
-  PASS line opens the reviewer's brief, and the reviewer runs it again as its first act; a FAIL
-  means the dossier is fixed, never that the reviewer starts anyway.
+- **When:** every piece of evidence but the reports is in place before a round's gate agents are
+  spawned. The round closes only on a PASS once every report is in, and that PASS line opens the
+  hand-off to the author.
+- **The reviewer runs the check as its first act**, beside the lenses: a refusal of class `lens`,
+  `report` or `finding`, or of class `tip` naming a `lens-*.md` or `doc-reviewer.md`, concerns the
+  reports produced beside it; any other refusal is its finding.
 - **Location:** `<strand worktree>/gate.local.d/`, ignored by git (`*.local.*`), so no build
   cleans it and the worktree's removal takes it along. A dossier anywhere else, or a symlink in its
   place, is refused.
