@@ -14,6 +14,21 @@ reject() {
 
 "$hooks_dir/breach-guard"
 
+stopped_at_edit() {
+	[ -f "$(git rev-parse --git-path rebase-merge/amend)" ] \
+		&& tail -n 1 "$(git rev-parse --git-path rebase-merge/done)" 2>/dev/null | grep -q '^edit'
+}
+
+stopped_at_conflict() {
+	{ [ -d "$(git rev-parse --git-path rebase-merge)" ] || [ -d "$(git rev-parse --git-path rebase-apply)" ]; } \
+		&& git rev-parse -q --verify REBASE_HEAD >/dev/null \
+		&& ! stopped_at_edit
+}
+
+if stopped_at_conflict; then
+	reject "a rebase stopped at a conflict here. Finish it with 'git rebase --continue' once the conflict is resolved, never with a commit or an amend, which would fold the conflicted state into the wrong commit."
+fi
+
 "$hooks_dir/content-gate" --staged
 
 if git diff --cached --name-only --diff-filter=ACMD -- 'hooks/*' | grep -q .; then

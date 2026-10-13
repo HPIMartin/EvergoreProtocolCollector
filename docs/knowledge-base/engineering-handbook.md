@@ -403,6 +403,11 @@ plus the corrected scenario tagged `@wip`.
     refused outright, by `pre-applypatch` and `pre-merge-commit`, which run before their commit
     exists. A `--no-verify`
     commit is left alone, so the emergency valve stays one.
+  - **A conflict stop is finished by `git rebase --continue`, never by a commit or an amend**, which
+    would fold the conflicted state into the wrong commit; `pre-commit` refuses both there.
+    - An amend at an `edit` stop is the playbook's fold and passes.
+    - A commit at a `break` stop passes.
+    - A commit after a finished rebase that left its `REBASE_HEAD` behind passes.
   - **Never read a hook's output as the verdict on the commit that follows it;** ask the history.
     `hooks/self-test` asserts exactly that (resulting history, never printed text). `pre-commit`
     runs it on every commit that touches `hooks/`, `deploy/self-test` on every commit that touches

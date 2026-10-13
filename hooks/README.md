@@ -101,8 +101,8 @@ offending sha, whereupon `pre-commit` refuses every further commit until that sh
   one. `COMMIT_MSG_TICKET_KEY_RE`, `COMMIT_MSG_TICKET_POSITION` and `COMMIT_MSG_TICKET_REQUIRED`
   override the three settings for a run, which is how `hooks/self-test` exercises every mode without
   editing the hook.
-- **`pre-commit`**: refuses while a breach is recorded (`breach-guard`), runs `content-gate
-  --staged`, runs `hooks/self-test` whenever the commit touches `hooks/` (so a weakened gate cannot
+- **`pre-commit`**: refuses while a breach is recorded (`breach-guard`), refuses while a rebase
+  stands at a conflict stop (below), runs `content-gate --staged`, runs `hooks/self-test` whenever the commit touches `hooks/` (so a weakened gate cannot
   land), runs `stacks/self-test` whenever the commit touches `stacks/` and refuses when that script
   is missing (so a weakened preset cannot land either, and deleting the proof is not a way out),
   runs `format-gate`, and stamps the approved tree in `.git/gate-stamp`. Whenever a commit touches
@@ -111,6 +111,11 @@ offending sha, whereupon `pre-commit` refuses every further commit until that sh
   alone, and refuses while they differ, so a wrapper cannot drift from the template it records. The
   same leg reads `**Template version: N.**` from the template and refuses a wrapper that does not
   record `version: N`, so a bump lands in the template and in every wrapper together.
+  - A conflict stop is a `rebase-merge` or `rebase-apply` directory together with a `REBASE_HEAD`.
+  - An `edit` stop is none: it has a `rebase-merge/amend` and a last `rebase-merge/done` line that
+    opens with `edit`.
+  - The amend file alone does not tell them apart, since git writes it at a `fixup` or `squash`
+    conflict stop too.
 - **`pre-applypatch`** / **`pre-merge-commit`**: the gates for `git am` and for a merge commit, both
   of which git builds without asking any commit hook. They run on the applied or resolved index
   *before* their commit exists, so they refuse outright. `pre-merge-commit` gates the content of a
