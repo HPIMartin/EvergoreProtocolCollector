@@ -244,7 +244,7 @@ This project's configuration and legs on top of the shipped suite:
 - **The agent leg in `pre-commit`:** whenever a commit touches `agent/`, `sh agent/self-test` must
   exist and pass, the same shape, so neither a weakened token minting nor its deletion can land,
   short of a rename inside `agent/` or a partly staged change, which every leg lets through (the
-  legs' staged-blob gap, **G27**) ([dev-environment.md](dev-environment.md), "Where agents run");
+  legs' staged-blob gap, an accepted limit) ([dev-environment.md](dev-environment.md), "Where agents run");
   `hooks/self-test` carries four cases for it.
 - **The agent image leg in `pre-commit`:** whenever a commit touches `.devcontainer/agent/`,
   `sh .devcontainer/agent/self-test` must exist and pass, as for `agent/` above, so neither a
