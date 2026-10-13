@@ -659,6 +659,9 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
 - **Cap on the PC: two panel rounds, then the hand-off** (author decision 2026-10-12), since the PC
   draws on the agent seat's quota:
   - every seat but the agent seat gives a strand at most two panel rounds and never lifts the cap;
+  - the release comparison keeps the lift granted on 2026-10-11, before this cap (author decision
+    2026-10-13), since its remaining edges were cut into rows under that lift (backlog **B42** to
+    **B45**);
   - after round 2, only a finding that can let a scenario or a test pass falsely, leak a resource
     or a secret, lose data or break security is folded;
   - a delta run of the gate agent that raised it re-proves that fold;
