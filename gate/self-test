@@ -2112,6 +2112,209 @@ mv gate.local.d/bdd.log gate.local.d/notes-bdd.txt
 if refuses_for wip; then r=0; else r=1; fi
 check "a code change without the @wip run at the tip is refused" "$r"
 
+python_test() {
+	module=$1 test_class=$2 method=$3
+	shift 3
+	write_file "release/test_$module.py" 'import unittest' '' '' "class $test_class(unittest.TestCase):" "    def $method(self):" '        pass' "$@"
+}
+
+new_strand python_no_red
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+if refuses_for red; then r=0; else r=1; fi
+check "a commit that changes a release Python test without a red record is refused" "$r"
+
+new_strand python_never_red
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' 'FAIL: test_other (test_sides.SidesTest.test_other)' \
+	'FAILED (failures=1)'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a new release Python test never seen red is refused" "$r"
+
+new_strand python_red_by_fail
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'FAIL: test_a_side_is_compared (test_sides.SidesTest.test_a_side_is_compared)'
+if accepts; then r=0; else r=1; fi
+check "a new release Python test seen red under its unittest FAIL line passes" "$r"
+
+new_strand python_red_by_error
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'ERROR: test_a_side_is_compared (test_sides.SidesTest.test_a_side_is_compared)'
+if accepts; then r=0; else r=1; fi
+check "a new release Python test seen red under its unittest ERROR line passes" "$r"
+
+new_strand python_red_by_subtest
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'FAIL: test_a_side_is_compared (test_sides.SidesTest.test_a_side_is_compared) [the bank sum]'
+if accepts; then r=0; else r=1; fi
+check "a release Python subtest failure is the red of its test" "$r"
+
+new_strand python_red_in_other_module
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'FAIL: test_a_side_is_compared (test_members.MembersTest.test_a_side_is_compared)' 'FAILED (failures=1)'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a release Python test is not seen red through another module's failing line" "$r"
+
+new_strand python_red_longer_name
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'FAIL: test_a_side_is_compared_twice (test_sides.SidesTest.test_a_side_is_compared_twice)' 'FAILED (failures=1)'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a release Python test is not seen red through a longer test name" "$r"
+
+new_strand python_logged_error
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' 'ERROR: connection refused' 'OK'
+if refuses_for red; then r=0; else r=1; fi
+check "a logged ERROR line that is no unittest failure shows no failing run" "$r"
+
+new_strand python_nested_class
+write_file release/test_sides.py 'import unittest' '' '' 'class Outer:' '    class SidesTest(unittest.TestCase):' \
+	'        def test_a_side_is_compared(self):' '            pass'
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'FAIL: test_a_side_is_compared (test_sides.Outer.SidesTest.test_a_side_is_compared)'
+if accepts; then r=0; else r=1; fi
+check "a release Python test of a nested class is seen red under its printed chain" "$r"
+
+new_strand python_async_never_red
+write_file release/test_sides.py 'import unittest' '' '' 'class SidesTest(unittest.IsolatedAsyncioTestCase):' \
+	'    async def test_a_side_is_compared(self):' '        pass'
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' 'FAIL: test_other (test_sides.SidesTest.test_other)' \
+	'FAILED (failures=1)'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a new async release Python test never seen red is refused" "$r"
+
+new_strand python_quoted_failure_run
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'note: ERROR: test_a_side_is_compared (test_sides.SidesTest.test_a_side_is_compared)'
+if refuses_for red; then r=0; else r=1; fi
+check "a unittest failure quoted after the start of a line shows no failing run" "$r"
+
+new_strand python_quoted_failure_name
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'AssertionError: FAIL: test_a_side_is_compared (test_sides.SidesTest.test_a_side_is_compared)'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a release Python test is not seen red through a unittest line quoted after its start" "$r"
+
+new_strand python_def_in_comment
+write_file release/test_sides.py 'import unittest' '' '' 'class SidesTest(unittest.TestCase):' \
+	'    def test_a_side_is_compared(self):  # a def undone (x)' '        pass'
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'FAIL: test_a_side_is_compared (test_sides.SidesTest.test_a_side_is_compared)'
+if accepts; then r=0; else r=1; fi
+check "a def inside a trailing comment names no release Python test" "$r"
+
+new_strand python_outside_release
+write_file docs/release/test_sides.py 'import unittest' '' '' 'class SidesTest(unittest.TestCase):' '    def test_a_side_is_compared(self):' '        pass'
+commit_all 'Keep the sides'
+complete_dossier
+if accepts; then r=0; else r=1; fi
+check "a test_*.py outside release/ is no test path" "$r"
+
+new_strand python_below_release
+write_file release/test_fixtures/sides.py 'import unittest' '' '' 'class SidesTest(unittest.TestCase):' '    def test_a_side_is_compared(self):' '        pass'
+commit_all 'Keep the sides'
+complete_dossier
+if accepts; then r=0; else r=1; fi
+check "a Python file below a release/test_ directory is no test path" "$r"
+
+new_strand python_test_backup
+write_file release/test_sides.py.orig 'import unittest' '' '' 'class SidesTest(unittest.TestCase):' '    def test_a_side_is_compared(self):' '        pass'
+commit_all 'Keep the sides'
+complete_dossier
+if accepts; then r=0; else r=1; fi
+check "a release test_*.py backup is no test path" "$r"
+
+new_strand python_dotless_name
+write_file release/test_sidespy 'SIDES = 2'
+commit_all 'Keep the sides'
+complete_dossier
+if accepts; then r=0; else r=1; fi
+check "a release test_ file whose name only ends in py is no test path" "$r"
+
+new_strand python_module_function
+python_test sides SidesTest test_a_side_is_compared '' '' 'def test_helper():' '    return 1'
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'FAIL: test_a_side_is_compared (test_sides.SidesTest.test_a_side_is_compared)'
+if accepts; then r=0; else r=1; fi
+check "a module-level def test function is no release Python test" "$r"
+
+new_strand python_bracket_line
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'FAIL: test_a_side_is_compared [test_sides.SidesTest.test_a_side_is_compared) FAILED' 'FAILED (failures=1)'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a unittest line without the paren after the name is not the red of the test" "$r"
+
+new_strand python_classless_line
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'FAIL: test_a_side_is_compared (test_sides.test_a_side_is_compared)' 'FAILED (failures=1)'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a unittest line without a class is not the red of a release Python test" "$r"
+
+new_strand python_longer_id_line
+python_test sides SidesTest test_a_side_is_compared
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'FAIL: test_a_side_is_compared (test_sides.SidesTest.test_a_side_is_compared_twice)' 'FAILED (failures=1)'
+if refuses_for new-test; then r=0; else r=1; fi
+check "a unittest line whose id names a longer test is not the red of the test" "$r"
+
+new_strand python_helper_module
+write_file release/sample_sides.py 'SIDES = 2'
+commit_all 'Sample the sides'
+complete_dossier
+if accepts; then r=0; else r=1; fi
+check "a release helper module is no test path" "$r"
+
+new_strand python_helper_method
+python_test sides SidesTest test_a_side_is_compared '' '    def side_of(self):' '        return 1'
+commit_all 'Compare the sides'
+complete_dossier
+write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
+	'FAIL: test_a_side_is_compared (test_sides.SidesTest.test_a_side_is_compared)' 'FAILED (failures=1)'
+if accepts; then r=0; else r=1; fi
+check "a method without the test prefix is no new release Python test" "$r"
+
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'
 else

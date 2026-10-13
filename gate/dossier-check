@@ -152,8 +152,8 @@ needs lens-robustness.md 'code'
 needs lens-domain.md 'src/'
 needs lens-frontend.md 'frontend/'
 
-failure_marker='FAILED|FAIL |×|✗|AssertionError|AssertionFailedError'
-test_path_re='(^|/)src/test/|\.test\.[jt]sx?$|(^|/)self-test$'
+failure_marker='FAILED|FAIL |×|✗|AssertionError|AssertionFailedError|^(FAIL|ERROR): [A-Za-z_][A-Za-z0-9_]* \('
+test_path_re='(^|/)src/test/|\.test\.[jt]sx?$|(^|/)self-test$|^release/test_[^/]*\.py$'
 
 command -v awk > /dev/null 2>&1 || {
 	printf 'dossier-check: no awk on PATH, so the tests of the strand cannot be read\n' >&2
@@ -306,6 +306,14 @@ declared_tests() {
 				}
 			'
 			;;
+		*.py)
+			in_worktree show "$1:$2" | awk '
+				/^[ \t]+(async[ \t]+)?def[ \t]+test[A-Za-z0-9_]*/ {
+					match($0, /def[ \t]+[A-Za-z0-9_]+/); name = substr($0, RSTART, RLENGTH); sub(/^def[ \t]+/, "", name)
+					print name "\t"
+				}
+			'
+			;;
 		*self-test)
 			in_worktree show "$1:$2" | awk '
 				{
@@ -362,6 +370,10 @@ failing_line_pattern() {
 				"$(printf '%s' "$2" | sed -e 's/[][\.*^$+?(){}|]/\\&/g')" "$shown"
 			;;
 		*self-test) printf '^[[:space:]]*FAIL %s$' "$(literal_pattern "$2")" ;;
+		*.py)
+			module=${1##*/}
+			printf '^(FAIL|ERROR): %s \\(%s\\.([A-Za-z0-9_]+\\.)+%s\\)' "$2" "${module%.py}" "$2"
+			;;
 		*)
 			printf '^[[:space:]]*FAIL[[:space:]]+%s > ([^>]* > )*%s[[:space:]]*$' \
 				"$(literal_pattern "${1#"$frontend_root"/}")" "$(literal_pattern "$3")"

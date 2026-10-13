@@ -292,20 +292,22 @@ says where each piece of evidence lives.
   - A renamed path counts at both its ends, so code renamed into the docs still needs its lenses.
   - A name git quotes counts without its quotes.
 - **`red/`:** one record per commit that changes a test path (`src/test/`, `*.test.[jt]s(x)`, a
-  `self-test`), whatever its tag, opening with `commit: <its subject>` (stable across rebases)
-  and holding the failing run, or an `exempt: <reason>` line for a test refactoring. As for a new
-  test, the check proves a failing run exists, not that it fails for the right reason.
+  `self-test`, `release/test_*.py`), whatever its tag, opening with `commit: <its subject>` (stable
+  across rebases) and holding the failing run, or an `exempt: <reason>` line for a test refactoring.
+  As for a new test, the check proves a failing run exists, not that it fails for the right reason.
 - **`mutation/`:** one record per test that cannot start red: the mutation's diff, the failing run,
-  the revert. Every test the strand adds (a JUnit `@Test`-family method, a vitest `it`/`test`
-  title, a self-test `check` name; one a file declares more often at the tip than at the base, a
-  moved file read under its old path) must appear on a failing line in `red/` or `mutation/` as its
-  runner prints it: Gradle's `Class > [Nested > ]method(…) FAILED`, or `Class > <display name>
-  FAILED` for a `@DisplayName` or `@ParameterizedTest(name = ...)`, `Class > rule FAILED` for an
-  `@ArchTest` rule (a test of an abstract class under any class), vitest's `FAIL  <file> > … >
-  title`, `FAIL name`; a record's `commit:` line counts for nothing, and a test file the check
-  cannot read to its end is refused. A test moved to another file or renamed reads as new and
-  needs its recorded mutation. The check proves that such a line exists, not that the test
-  fails for the right reason; that judgement stays the reviewer's (handbook §4).
+  the revert. Every test the strand adds (a JUnit `@Test`-family method, a vitest `it`/`test` title,
+  a self-test `check` name, a `def test…` or `async def test…` method of a `release/test_*.py`; one
+  a file declares more often at the tip than at the base, a moved file read under its old path) must
+  appear on a failing line in `red/` or `mutation/` as its runner prints it: Gradle's `Class >
+  [Nested > ]method(…) FAILED`, or `Class > <display name> FAILED` for a `@DisplayName` or
+  `@ParameterizedTest(name = ...)`, `Class > rule FAILED` for an `@ArchTest` rule (a test of an
+  abstract class under any class), vitest's `FAIL  <file> > … > title`, `FAIL name`, unittest's
+  `FAIL: name (module.Class.name)` or `ERROR: …` (a subtest's line too); a record's `commit:` line
+  counts for nothing, and a test file the check cannot read to its end is refused. A test moved to
+  another file or renamed reads as new and needs its recorded mutation. The check proves that such a
+  line exists, not that the test fails for the right reason; that judgement stays the reviewer's
+  (handbook §4).
 - **`walk/`:** one `./verify all` log per code tree (the commit's tree without `*.md`) at the path
   `gate/dossier-check --walk-log <worktree> <commit>` prints, opening with `tree: <the commit's
   tree SHA>`; it shows `BUILD SUCCESSFUL`, bare `> Task :test` and `> Task :frontend:npmTest` lines
