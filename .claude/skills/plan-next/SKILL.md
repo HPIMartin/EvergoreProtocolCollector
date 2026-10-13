@@ -36,7 +36,9 @@ items mean, or a release approaches.
 - `git fetch --prune origin`, then sync the primary checkout's `main` as `/continue` does, with
   every stop of handbook §7, so the checks below see what landed and what other machines pushed
 - `docs/knowledge-base/README.md` (the map; then only the KB docs your findings actually touch)
-- `docs/backlog.md`, the "▶ Current status / next action" section
+- `docs/backlog.md`, the "▶ Current status / next action" section; on the agent seat (`EPC_SEAT`
+  reads `agent-machine`) also every row marked `(seat: agent)`, which the page lists as strands
+  this seat can pick up from `main`
 - `docs/open-questions.md`, newest decisions first, plus the newest rows of `docs/process-learnings.md`
 - `docs/roadmap.md` and `docs/risks.md`
 - the `.feature` files under `src/test/resources/features/`: they are the executable specification

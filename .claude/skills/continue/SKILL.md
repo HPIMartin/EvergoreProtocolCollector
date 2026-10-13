@@ -45,6 +45,8 @@ session; its rules and KB pointers apply without re-reading it here.
 3. Decide the next step: the smallest valuable item by the backlog priorities. If scope is ambiguous
    or it's a decision the author should make, ASK with multiple-choice options (recommended first)
    before doing the work.
+   - On the agent seat (`EPC_SEAT` reads `agent-machine`), list every backlog row marked
+     `(seat: agent)` in the status summary as a strand this seat can pick up from `main`.
 
 4. Work to the project standards — they live in the KB, not here: **BDD first, then TDD** → handbook
    §5/§4 (a feature with observable behavior needs its author-confirmed `.feature`, committed `@wip`,
