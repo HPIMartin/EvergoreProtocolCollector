@@ -12,8 +12,8 @@
   is below ("What GitHub enforces"). Strand branches are `claude/<topic>`
   ([engineering-handbook.md](engineering-handbook.md) §7).
 - Fine-grained, focused commits, one logical change each.
-- Commit messages: **single line, present-tense verb first, no body, no footers** (see
-  [engineering-handbook.md](engineering-handbook.md) §7); **the commit log *is* the changelog.**
+- Commit-message rules: [engineering-handbook.md](engineering-handbook.md) §7.
+- **The commit log *is* the changelog.**
 - Agents word their commit messages themselves; the author **alone moves `origin/main`**; on the
   agent seat agents push only their own `claude/<topic>` branches, each with its pull request, and
   on a local machine a strand is never pushed ([engineering-handbook.md](engineering-handbook.md)
