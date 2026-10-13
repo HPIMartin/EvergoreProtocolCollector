@@ -131,7 +131,7 @@ the feature commit**, not per micro-commit.
   worktree, so a left-behind change shows up in its own report rather than in the next build.
 - **Every prior verdict is an input to the next gate agent**, not a message to the author alone: the
   falsifiers' and the doc-reviewer's reports go into the gate dossier verbatim, where the reviewer
-  reads them (→ The gate dossier).
+  of a later round reads them (→ The gate dossier).
 - **Every lens brief carries an "Already decided, out of scope" list** (author decision
   2026-10-12): the findings earlier rounds rejected or filed, the author's decisions bearing on the
   strand and what the plan leaves out, so a lens does not raise them again each round.
@@ -329,9 +329,9 @@ says where each piece of evidence lives.
 - Permission-blocked commands + reset-free rewrite: see the FAIL-loop section. Prefer Read/Grep/Glob.
 - **Never overlap a tree-mutating agent with another agent's build.** The falsifier writes probes and
   runs Gradle; a concurrent run on the same tree reports phantom failures and the two corrupt each
-  other's `build/` state. Run falsify → review sequentially, or isolate per worktree (`Agent`
-  `isolation: "worktree"`); same inside the panel. (The doc-reviewer only reads docs and runs no
-  build; it may run alongside the reviewer.)
+  other's `build/` state. Every gate agent of a round gets its own detached worktree under the
+  worktree root (`git worktree add`, → Cadence), so the round's agents run side by side. (The
+  doc-reviewer only reads docs and runs no build.)
 - **Start a run only once the tree is the state you intend to measure.** While edits are in flight,
   no run is evidence of anything, and a run started against a half-edited file measures a tree
   already known to be broken.
@@ -370,9 +370,8 @@ says where each piece of evidence lives.
 3. **Implement:** four red→green→refactor micro-commits with those messages; when the scenario
    passes, one commit arms it (removes `@wip`), and a refactor commit tidies the evaluator under
    that net.
-4. **Falsify:** domain lens recomputes ① ② by hand; robustness lens: does ③ assert the log? quality=0 edge? is green real if the production line is reverted? → counter-tests.
-5. **Review gate:** doc-reviewer: `domain-model.md`/`testing.md` updated, backlog row removed? reviewer: boundaries clean, messages one-line verb-first? → PASS.
-6. **You, author gate 2:** the rebased tip with its compare range on your review; you land it
+4. **Falsify and review, one round side by side:** domain lens recomputes ① ② by hand; robustness lens: does ③ assert the log? quality=0 edge? is green real if the production line is reverted? → counter-tests; doc-reviewer: `domain-model.md`/`testing.md` updated, backlog row removed?; reviewer: boundaries clean, messages one-line verb-first? → PASS once the dossier check passes.
+5. **You, author gate 2:** the rebased tip with its compare range on your review; you land it
    with `/land <tip>` on its pull request (agent seat) or `git push origin <tip>:main`.
 
 ## Evolution

@@ -51,7 +51,8 @@ cross-session memory.
 - Decisions stay with the human; agents gather and draft. The repeatable loop: gather → persist →
   ask → decide → build.
 - Implementation: Planner (you + main session) → Scenario and stakeholder falsifiers → Implementer
-  → Falsifier panel → Doc reviewer → Reviewer/Gate; defined in `.claude/agents/`, described in
+  → one panel round of the falsifier lenses, the doc reviewer and the reviewer/gate side by side;
+  defined in `.claude/agents/`, described in
   [multi-agent-playbook.md](multi-agent-playbook.md), per-role models in the frontmatter and the
   playbook's roles table.
 - The author approves the commit plan and is the only one who moves `origin/main` (handbook §7).
@@ -79,7 +80,8 @@ to the prompt cache; minimize context size × session length:
   context for the rest of the session.
 - **Workflow / fan-out tooling only for occasional large parallel audits** (explicit opt-in), never
   the interactive, human-gated commit loop (see [multi-agent-playbook.md](multi-agent-playbook.md)).
-  Routine TDD runs lean: plan → implementer → falsifier panel → reviewer.
+  Routine TDD runs lean: plan → implementer → one panel round (lenses, doc reviewer and reviewer
+  together).
 - **Eco mode by default:** no narration on the way; bullets, outcome first, expand on request.
 - **The closing message holds only what the author must act on:** gate verdicts, decisions, the
   review range, blockers.
