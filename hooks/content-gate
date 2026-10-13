@@ -127,10 +127,12 @@ verdict() {
 # emit '+++ <path>', and the header parser below reads the path at a fixed offset. R joins the filter
 # because a renamed file reports as R and would otherwise leave every scan; detection stays on, so a
 # rename that edits nothing adds no lines and the file's existing stock is not read as new.
+plain_diff='-U0 -M --no-ext-diff --no-color --no-textconv --text --diff-filter=AMRT --src-prefix=a/ --dst-prefix=b/'
+plain_git() { git -c core.quotepath=off "$@"; }
 added_lines() {
 	case "$mode" in
-		--staged) git diff --cached -U0 --diff-filter=ACMR --src-prefix=a/ --dst-prefix=b/ -- $source_ext $scan_exclude ;;
-		--commit) git show -U0 --format= --diff-merges=first-parent --diff-filter=ACMR --src-prefix=a/ --dst-prefix=b/ "$sha" -- $source_ext $scan_exclude ;;
+		--staged) plain_git diff --cached $plain_diff -- $source_ext $scan_exclude ;;
+		--commit) plain_git show --format= --diff-merges=first-parent $plain_diff "$sha" -- $source_ext $scan_exclude ;;
 	esac
 }
 
@@ -202,8 +204,6 @@ for f in $staged; do
 '
 done
 IFS=$oldifs
-plain_diff='-M --no-ext-diff --no-color --no-textconv --text --diff-filter=AMRT --src-prefix=a/ --dst-prefix=b/'
-plain_git() { git -c core.quotepath=off "$@"; }
 all_added_lines() {
 	case "$mode" in
 		--staged) plain_git diff --cached $plain_diff ;;

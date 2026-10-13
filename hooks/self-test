@@ -245,6 +245,54 @@ GIT_SEQUENCE_EDITOR=true git rebase -i --no-ff HEAD~2 >/dev/null 2>&1 || true
 if [ -f "$(git rev-parse --git-dir)/gate-breach" ]; then r=1; else r=0; fi
 check "replaying a pre-existing violation raises no breach" "$r"
 
+new_repo commentextdiff
+git config diff.external true
+write_file Noted.java 'class Noted {' '	// why this exists' '}'
+if refuses "Add noted class"; then r=0; else r=1; fi
+check "an added comment staged under an external diff driver leaves no commit behind" "$r"
+
+new_repo commentrebasetextconv
+git config diff.hidden.textconv true
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~1 >/dev/null 2>&1
+write_file .gitattributes 'Noted.java diff=hidden'
+write_file Noted.java 'class Noted {' '	// why this exists' '}'
+git add Noted.java .gitattributes
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+if git log --oneline -- Noted.java | grep -q . && [ -f "$(git rev-parse --git-common-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a rebase that commits a comment under a textconv driver is recorded" "$r"
+
+new_repo commentumlaut
+write_file 'Ä.java' 'class Noted {' '	// why this exists' '}'
+if refuses "Add noted class"; then r=0; else r=1; fi
+check "an added comment in a file whose path is not ASCII leaves no commit behind" "$r"
+
+new_repo commentrebaseumlaut
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~1 >/dev/null 2>&1
+write_file 'Ä.java' 'class Noted {' '	// why this exists' '}'
+git add 'Ä.java'
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+if git log --oneline -- 'Ä.java' | grep -q . && [ -f "$(git rev-parse --git-common-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a rebase that commits a comment in a file whose path is not ASCII is recorded" "$r"
+
+new_repo commentcopy
+write_file Orig.java 'class Orig {' '	int a;' '	int b;' '	int c;' '	int d;' '	int e;' '	int f;' '}'
+git add -A
+git commit -q --no-verify -m "Add orig class"
+git config diff.renames copies
+write_file Orig.java 'class Orig {' '	int a;' '	int b;' '	int c;' '	int d;' '	int e;' '	int f;' '	int g;' '}'
+write_file Copy.java 'class Orig {' '	int a;' '	int b;' '	int c;' '	int d;' '	int e;' '	int f;' '	// why' '}'
+if refuses "Copy orig class"; then r=0; else r=1; fi
+check "an added comment in a near-copy of a changed file leaves no commit behind under diff.renames=copies" "$r"
+
+new_repo commentrenamesoff
+write_file Noted.java 'class Noted {' '	// old stock' '}'
+git add -A
+git commit -q --no-verify -m "Add noted class"
+git config diff.renames false
+git mv Noted.java Moved.java
+if accepts "Move noted class"; then r=0; else r=1; fi
+check "a pure rename of a file with comments commits under diff.renames=false" "$r"
+
 new_repo comment
 write_file Noted.java 'class Noted {' '	// why this exists' '}'
 if refuses "Add noted class"; then r=0; else r=1; fi

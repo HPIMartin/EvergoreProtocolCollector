@@ -78,12 +78,15 @@ offending sha, whereupon `pre-commit` refuses every further commit until that sh
   source.
 
   **Conflict markers** are refused in every path, `.md`, `hooks/` and `.template/` included:
-  - a line the diff adds that opens with `<<<<<<<`, `|||||||` or `>>>>>>>`, read from a diff with no
-    external driver, colour or textconv and with binary files as text, since each of those hides
-    the added lines;
+  - a line the diff adds that opens with `<<<<<<<`, `|||||||` or `>>>>>>>`;
   - `post-rewrite` runs the same check, so it records a rebase commit that carries one;
   - a lone `=======` (a Markdown heading underline) and a marker quoted after the start of a line
     do not count.
+
+  **Both diff scans** (comments and conflict markers) read a plain diff: no external driver, colour
+  or textconv, binary files as text and type changes included, renames detected but no copies, and
+  non-ASCII paths unquoted, since each of those would hide the lines a commit adds or misname their
+  file.
 
   A file counts as **production source** when it starts with one of `production_trees`, starts with
   none of `test_trees` and matches none of `test_name_re`; the rules that bind production code only
