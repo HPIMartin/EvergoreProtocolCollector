@@ -163,7 +163,11 @@ and lands through the gateway; no commit is made on `main`
   (scripted rebase), and the author lands it by **rebase + fast-forward only** (no merge commit, no
   squash). **Every commit on `main` builds green**; broken branch commits are repaired by rebase
   before the landing.
-- Parallel/benchmark runs use git worktrees (`Agent` tool `isolation: "worktree"`).
+- Parallel/benchmark runs use git worktrees made with `git worktree add` under the worktree root
+  (handbook §7), not the `Agent` tool's `isolation: "worktree"`, so the root stays certain:
+  - isolation put its worktree under `.claude/worktrees/` of the primary checkout (measured
+    2026-10-13 on the agent seat, whose root that is);
+  - whether it honours `EPC_WORKTREES` on the PC is unmeasured.
 
 ### Gateway hand-off and cleanup (the agent's side)
 
@@ -336,9 +340,8 @@ says where each piece of evidence lives.
 - Permission-blocked commands + reset-free rewrite: see the FAIL-loop section. Prefer Read/Grep/Glob.
 - **Never overlap a tree-mutating agent with another agent's build.** The falsifier writes probes and
   runs Gradle; a concurrent run on the same tree reports phantom failures and the two corrupt each
-  other's `build/` state. Every gate agent of a round gets its own detached worktree under the
-  worktree root (`git worktree add`, → Cadence), so the round's agents run side by side. (The
-  doc-reviewer only reads docs and runs no build.)
+  other's `build/` state. Every gate agent of a round gets its own detached worktree (→ Cadence),
+  so the round's agents run side by side. (The doc-reviewer only reads docs and runs no build.)
 - **Start a run only once the tree is the state you intend to measure.** While edits are in flight,
   no run is evidence of anything, and a run started against a half-edited file measures a tree
   already known to be broken.

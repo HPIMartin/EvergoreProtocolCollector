@@ -34,8 +34,9 @@ session; its rules and KB pointers apply without re-reading it here.
      classifier may hold back on another session's branch, then report it). One without a local
      branch is unlanded work from another machine or session, maybe parked further there: report
      it, and resume it only on the author's word, in a worktree of its own with no upstream
-     (`git worktree add --no-track -b claude/<topic> <path> origin/claude/<topic>`, handbook §7).
+     (`git worktree add --no-track -b claude/<topic> <root>/<topic> origin/claude/<topic>`).
      Where a local branch of that name exists, compare the two tips before touching either.
+     - `<root>` is the worktree root of handbook §7.
    - A tip commit starting with `[wip]` is parked pause work: resolve it FIRST — finish or rework it,
      then replace it with a properly gated commit (one protocol-conform message; rewrite via the reset-free
      recipe in the playbook). A `[wip]` commit never reaches the review gateway or a push (handbook §7).

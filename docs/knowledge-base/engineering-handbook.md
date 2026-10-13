@@ -716,7 +716,8 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   suspected window and demonstrates the failure. Absent that, say "cause not established", keep the
   hardening as hardening, and file the unexplained failure as live work instead of closing it. The
   same holds for a claim about how the code behaved *before* a change: probe a worktree at that
-  commit (`git worktree add <base> --detach`), do not narrate it.
+  commit (`git worktree add <root>/<name> <base> --detach`, under the worktree root of §7), do not
+  narrate it.
 - **A finding the panel raises but does not fix is live work.** Every "pre-existing, not this
   strand" gets its backlog row or `open-questions.md` entry **in the same strand**, written *before*
   the round closes, so the gate sees the trace instead of having to create it.

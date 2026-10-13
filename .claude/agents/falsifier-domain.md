@@ -32,7 +32,8 @@ Inspect the changed files and commits.
   every character predicate for ASCII-vs-Unicode behavior before trusting it.
 - **A claim about behavior counts only once it has been produced**, exactly like a number. Anything
   asserted about how the code behaved *before* the change gets probed against a worktree at that
-  commit (`git worktree add <base> --detach`), never estimated.
+  commit (`git worktree add <root>/<name> <base> --detach`), never estimated.
+  - `<root>` is the worktree root of handbook §7.
 - Try to **construct a failing case**: write it as a probe under `src/probe/java`, run
   `./gradlew probe`, and run focused tests (`./verify focus <path>`) to demonstrate.
 
