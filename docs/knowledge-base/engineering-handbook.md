@@ -690,6 +690,9 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
     round's.
 - **Process-only FAILs** (whitespace not separated, KB not updated, commit-message format) are
   cheap mechanical fixes; they don't consume a round.
+  - On the PC, such a fix after round 2 forces no further panel round (author decision
+    2026-10-13): the doc-reviewer and the runs are repeated at the fixed tip, no lens runs again,
+    and the dossier check closes it.
 - Fixes are folded into the commit they belong to (§7), never a "fix review" commit, and folded at
   the moment of fixing rather than at the end of the round. The gate reads the branch log before
   the diff: a commit that names a repair of an earlier commit is itself a FAIL, and an "and" joining
