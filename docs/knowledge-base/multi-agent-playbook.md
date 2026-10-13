@@ -87,10 +87,8 @@ scenarios claims one of the §5 exemptions explicitly and then starts at step 1.
 
 A FAIL sends work back to step 2; which gate agents the next round re-runs is handbook §9's
 (delta rounds).
-Loop-bounding governance (cap 2 re-implement rounds → escalate + re-plan, no cap on the agent seat
-but a status update in the chat every three rounds; early-escalate on a repeated finding; process-only FAILs
-don't consume a round) is canonical in
-[engineering-handbook.md](engineering-handbook.md) §9. Harness-specific history hygiene:
+Loop-bounding governance is canonical in [engineering-handbook.md](engineering-handbook.md) §9.
+Harness-specific history hygiene:
 
 - **Fold fixes into the commit they belong to; never append "fix review" commits.** The branch is
   the strand's own; rewriting its history is expected (history reads as if done right the first

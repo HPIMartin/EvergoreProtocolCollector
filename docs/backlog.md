@@ -16,7 +16,9 @@ rationale. No prose, no durable knowledge: what a later reader needs belongs in 
 [knowledge base](knowledge-base/README.md), what a decision needs in
 [open-questions.md](open-questions.md). Derive a new ID from the **whole file** (the highest per
 group), never from the last row you happened to read, and re-read the table after inserting: a
-blank line between two rows splits the table mid-body (DOC-11).
+blank line between two rows splits the table mid-body (DOC-11). A row a panel on the PC files
+carries a seat marker after its title: `(seat: agent)` when the agent seat can take it as a strand
+of its own from `main`, `(seat: PC)` when it needs the PC (handbook §9).
 
 **Where we are**
 

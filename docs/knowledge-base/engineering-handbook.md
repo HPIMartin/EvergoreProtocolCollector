@@ -630,7 +630,7 @@ criteria** (clean code, SOLID, hexagonal boundaries). If off: send back with con
 record the lesson in `docs/process-learnings.md` (so future work and agents drift toward the
 process, not away from it).
 
-**Bounded review loop → re-plan (governance).** A rejection sends work back to re-implement; from the
+**Bounded review loop (governance).** A rejection sends work back to re-implement; from the
 second panel round on, only the gate agents the fold concerns re-check it. Bounds:
 
 - **A delta round re-runs only what the fold concerns** (author decision 2026-10-12), since a full
@@ -647,9 +647,17 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - each finding is a lens's `low`, or one a passing doc-reviewer or reviewer raised;
   - the lows become one backlog row, which `findings.txt` names for each of them;
   - no fold follows, since a fold would only seed the next round's findings.
-- **Cap: two re-implement rounds (three attempts total), then re-plan**: stop, escalate to the
-  author with findings (repeated FAILs usually mean the plan/spec is wrong, not the code).
-  **Early-escalate** when two consecutive rounds raise the *same* finding.
+- **Cap on the PC: two panel rounds, then the hand-off** (author decision 2026-10-12), since the PC
+  draws on the agent seat's quota:
+  - every seat but the agent seat gives a strand at most two panel rounds and never lifts the cap;
+  - after round 2, only a finding that can let a scenario or a test pass falsely, leak a resource
+    or a secret, lose data or break security is folded;
+  - a delta run of the gate agent that raised it re-proves that fold;
+  - a finding of that class the re-proof run raises goes to the author, not into another fold;
+  - every other finding becomes a backlog row carrying its seat marker
+    ([backlog.md](../backlog.md), "Conventions");
+  - then the strand goes to the author for landing.
+- **Early-escalate** when two consecutive rounds raise the *same* finding.
 - **No cap on the agent seat** (author decision 2026-10-07): where `EPC_SEAT` reads
   `agent-machine` ([dev-environment.md](dev-environment.md), "Where agents run"), the loop runs
   until PASS, an unattended seat having nobody to wait for. Two brakes replace the cap there:
@@ -657,13 +665,8 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
     open);
   - a question to the author as soon as a finding recurs or one round's fix reverses an earlier
     round's.
-- **Every other seat keeps the cap.**
 - **Process-only FAILs** (whitespace not separated, KB not updated, commit-message format) are
   cheap mechanical fixes; they don't consume a round.
-- **Past the cap, on the author's go to finish**, only a finding that can let a scenario pass
-  falsely or leak a resource is folded and re-proved; every lower one becomes a backlog row, with
-  no further round for it (author decision 2026-09-29). Each status to the author carries a time
-  estimate: a full round here costs about an hour.
 - Fixes are folded into the commit they belong to (§7), never a "fix review" commit, and folded at
   the moment of fixing rather than at the end of the round. The gate reads the branch log before
   the diff: a commit that names a repair of an earlier commit is itself a FAIL, and an "and" joining
