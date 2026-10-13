@@ -46,14 +46,17 @@ session runs on the Windows host, Bash stdout may not surface: then redirect to 
 (`./verify focus <path> > f.txt 2>&1`) and Read it; in-container, Bash output is fine. Do not
 modify production code, do not commit, do not push.
 
-**The working directory is not reliable.** With several worktrees checked out, a Bash call can
-silently land in the primary checkout instead of the strand you were told to attack, and a relative
-path then reads or writes the wrong tree with no error. Address the worktree explicitly in **every**
-call: `git -C <abs path> …` and absolute paths for reads, writes and Gradle. Verify with `pwd`
-before you trust a relative result. Run the build as `<abs worktree>/verify <command> <abs path>`,
-never after a `cd`: the script finds its own root, and a `cd` whose argument holds `$`, `..`, `~` or
-a backtick is denied outright, so `W=<wt>; cd $W && ./verify …` fails; write the absolute path out
-each time.
+**The working directory is not reliable.** Why: `docs/knowledge-base/multi-agent-playbook.md`,
+"Environment gotchas", the bullet "The shell's working directory drifts between worktrees".
+
+- Address the worktree explicitly in **every** call: `git -C <abs path> …` and absolute paths for
+  reads, writes and Gradle.
+- Verify with `pwd` before you trust a relative result.
+- Run the build as `<abs worktree>/verify <command> <abs path>`, never after a `cd`.
+  - The script finds its own root.
+  - A `cd` whose argument holds `$`, `..`, `~` or a backtick is denied outright, so
+    `W=<wt>; cd $W && ./verify …` fails.
+  - Write the absolute path out each time.
 
 **Your worktree may lie outside the primary checkout** (on the author's PC under `/worktrees`):
 take its absolute path from your brief. From a session on the Windows host, reach it only through
