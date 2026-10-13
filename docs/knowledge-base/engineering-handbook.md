@@ -677,13 +677,15 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - a finding of that class the re-proof run raises goes to the author, not into another fold;
   - every other finding becomes a backlog row carrying its seat marker
     ([backlog.md](../backlog.md), "Conventions");
-  - then the strand goes to the author for landing.
+  - then the strand goes to the author for landing, the hand-off carrying a time estimate.
+- **Every status to the author carries a time estimate** (author decision 2026-10-13): a full
+  panel round costs about an hour, so the author can plan around the rounds left.
 - **Early-escalate** when two consecutive rounds raise the *same* finding.
 - **No cap on the agent seat** (author decision 2026-10-07): where `EPC_SEAT` reads
   `agent-machine` ([dev-environment.md](dev-environment.md), "Where agents run"), the loop runs
   until PASS, an unattended seat having nobody to wait for. Two brakes replace the cap there:
   - a status update in the session's chat every three rounds (the phase, rounds run, findings
-    open);
+    open, a time estimate);
   - a question to the author as soon as a finding recurs or one round's fix reverses an earlier
     round's.
 - **Process-only FAILs** (whitespace not separated, KB not updated, commit-message format) are
