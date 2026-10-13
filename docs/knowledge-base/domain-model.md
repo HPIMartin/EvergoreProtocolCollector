@@ -377,7 +377,7 @@ collection timestamp advances on every completed run while that avatar's sums do
 did and did not refresh is answered per avatar by the recompute instants, and by name for the
 operator in `/health`'s `failedAvatarNames`, never by the timestamp.
 
-This maps directly to the Google Sheet's columns 1–4 (see [02-google-sheet.md](google-sheet.md)).
+This maps directly to the Google Sheet's columns 1–4 (see [google-sheet.md](google-sheet.md)).
 Column 5, the net **erzeugter Gildenmehrwert**, is **derived on the read side and never stored**
 (decision 2026-09-02): a fifth meta key would persist what its four summands already say and drift
 from them on any partial recompute.
@@ -478,5 +478,5 @@ listed rather than dropped: it is the measure of what a read gem recipe would bu
   load-bearing for the ingest window dedup (`surplusOverStored` matches scraped vs. stored rows
   by equality).
 
-See [04-architecture.md](architecture.md) for how these types flow through the system, and
-[08-glossary.md](glossary.md) for the German terms.
+See [architecture.md](architecture.md) for how these types flow through the system, and
+[glossary.md](glossary.md) for the German terms.

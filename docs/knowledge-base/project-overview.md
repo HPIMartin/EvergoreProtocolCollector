@@ -16,7 +16,7 @@
 - A guild officer wants to know **who is pulling their weight**: each member's net contribution
   to the guild's shared wealth over time. The game shows raw transaction logs but no aggregation,
   and items have no obvious gold value in the log.
-- Historically tracked **by hand in a Google Sheet** (see [02-google-sheet.md](google-sheet.md)):
+- Historically tracked **by hand in a Google Sheet** (see [google-sheet.md](google-sheet.md)):
   someone read the protocol, valued each deposited/withdrawn item, summed it per member. Tedious,
   error-prone, always out of date.
 - **This software automates that sheet:**
