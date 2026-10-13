@@ -243,8 +243,9 @@ says where each piece of evidence lives.
   spawned. The round closes only on a PASS once every report is in, and that PASS line opens the
   hand-off to the author.
 - **The reviewer runs the check as its first act**, beside the lenses: a refusal of class `lens`,
-  `report` or `finding`, or of class `tip` naming a `lens-*.md` or `doc-reviewer.md`, concerns the
-  reports produced beside it; any other refusal is its finding.
+  `report`, `finding` or `tip` that names a report the round spawned beside it concerns that
+  report; any other refusal is its finding, one naming an earlier round's report or the
+  disposition of an earlier round's finding included.
 - **Location:** `<strand worktree>/gate.local.d/`, ignored by git (`*.local.*`), so no build
   cleans it and the worktree's removal takes it along. A dossier anywhere else, or a symlink in its
   place, is refused.
