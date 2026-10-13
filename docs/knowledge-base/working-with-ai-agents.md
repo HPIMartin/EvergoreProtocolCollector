@@ -134,15 +134,22 @@ command) inside guardrails. Two files:
   (`echo … && git status && grep …`) save round-trips and auto-allow when every segment matches an
   allow rule and no `ask` or `deny` rule matches (a project allow counts only once workspace trust
   is accepted: "Which rule applies", below); prefer them over atomic calls. Inline `VAR=…` makes a
-  chain un-matchable: use literal values. A leading `cd` auto-allows (once trusted) only
-  project-anchored absolute (`cd /workspaces/EvergoreProtocolCollector` or below; decided
-  2026-07-06); deny rules block `cd` arguments containing `..`, `$`, `` ` `` or `~` (the working
-  directory can't silently leave the project); bare, relative and quoted `cd` still prompt. Prefer
-  `git -C <path>` / absolute paths (a `git -C` command matches no allow rule, so it meets the
-  auto-mode classifier, below); a worktree's build runs as `<abs worktree>/verify …`, since
-  `verify` finds its own root, so no `cd` is needed, and `W=<wt>; cd $W` is denied by the `$`
+  chain un-matchable: use literal values. A leading `cd` auto-allows (once trusted) only an absolute
+  path into the project (`cd /workspaces/EvergoreProtocolCollector` or below; decided 2026-07-06) or
+  into the PC's worktree root (below); deny rules block `cd` arguments containing `..`, `$`, `` ` ``
+  or `~` (the working directory can't silently leave those trees); bare, relative and quoted `cd`
+  still prompt. Prefer `git -C <path>` / absolute paths (a `git -C` command matches no allow rule, so
+  it meets the auto-mode classifier, below); a worktree's build runs as `<abs worktree>/verify …`,
+  since `verify` finds its own root, so no `cd` is needed, and `W=<wt>; cd $W` is denied by the `$`
   guard.
   Worktree-path specifics: handbook §7.
+- **The PC's worktree root lies outside the project directory**
+  ([dev-environment.md](dev-environment.md), "Worktrees on a volume"), so the committed file
+  carries rules for it.
+  - `Read`, `Write` and `Edit` are allowed on `//worktrees/**`.
+  - A leading `//` anchors a rule at the filesystem root.
+  - A leading `cd /worktrees` or below auto-allows.
+  - A seat whose `EPC_WORKTREES` names another path adds the same rules for it in its local file.
 - **Autonomy within guardrails.** Maximum useful autonomy, minimum ceremony, a deny floor
   underneath. A deny is matched against each command of a chain, not against the whole line
   (measured 2026-10-05: `Bash(cd *..*)` refused `echo probe && cd <dir>/..` but let
@@ -203,9 +210,9 @@ command) inside guardrails. Two files:
   classifier reads `autoMode` (`environment`, `allow`, `soft_deny`, `hard_deny`) only from the user's
   `~/.claude/settings.json`, from managed settings and from `--settings`, never from
   `.claude/settings.json` or `.claude/settings.local.json`, and that it reads `CLAUDE.md`. So the
-  project states in `CLAUDE.md` that the agent's own worktrees under `.claude/worktrees/` are local
-  scratch, and a seat that wants it as a rule adds an `autoMode.allow` entry, with `"$defaults"`,
-  to its user settings (the agent seat's by the author).
+  project states in `CLAUDE.md` that the agent's own worktrees under the worktree root (handbook
+  §7) are local scratch, and a seat that wants it as a rule adds an `autoMode.allow` entry, with
+  `"$defaults"`, to its user settings (the agent seat's by the author).
 - **A rule that pairs an inner `*` with the `:*` suffix does not fire** in the Claude Code build in
   use (measured 2026-10-04: `git -C /nonexistent-dir reset` ran under the deny
   `Bash(git -C * reset:*)`), while rules with only a `:*` suffix or only inner `*`s do. The

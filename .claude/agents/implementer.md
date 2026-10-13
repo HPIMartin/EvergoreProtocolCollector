@@ -99,6 +99,11 @@ after a `cd`: the script finds its own root, and a `cd` whose argument holds `$`
 backtick is denied outright, so `W=<wt>; cd $W && ./verify …` fails; write the absolute path out
 each time.
 
+**Your worktree may lie outside the primary checkout** (on the author's PC under `/worktrees`):
+take its absolute path from your brief. From a session on the Windows host, reach it only through
+`docker exec -u vscode <container> …`, never with Read, Grep or Edit. The deny floor binds inside
+it: no `git reset`, `git clean`, `git branch -D` or `rm` through `docker exec`.
+
 **Code that is not meant to stay goes under `src/probe/java`** (probing a library's real behaviour
 before you write the helper, reproducing something by hand), never into `src/test/java`. Run it with
 `./gradlew probe`, clear it with `./gradlew clearProbes` before you hand off; `rm` stays the author's

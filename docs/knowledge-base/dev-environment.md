@@ -27,7 +27,7 @@ postCreate). The base image is pinned by digest, every feature by digest in
   `DockerBrowserSmokeTest` pins it ([testing.md](testing.md)). This is the interim step; the planned
   end state stays the remote `selenium/standalone-firefox` service (backlog **H2**), which retires it.
 - `~/.cache` is **not** on a volume, so the geckodriver (a few MB) and the Trivy DB are re-fetched
-  after a rebuild. Cheap enough to leave alone; add a third volume if it ever annoys.
+  after a rebuild. Cheap enough to leave alone; add a volume for it if it ever annoys.
 
 ### `devcontainer.json` features (all digest-pinned in `devcontainer-lock.json`)
 
@@ -61,7 +61,55 @@ postCreate). The base image is pinned by digest, every feature by digest in
 - Named volumes `evergore-gradle` → `~/.gradle` and `evergore-npm` → `~/.npm`. Without them a
   rebuild discards ~1 GB of Gradle caches (deps, wrapper dists, build cache).
 - Docker creates a fresh volume **root-owned**, which is what broke the earlier `~/.m2` attempt, so
-  `postCreate` starts with `sudo chown -R vscode:vscode` on both paths.
+  `postCreate` starts with `sudo chown -R vscode:vscode` on both paths and on `/worktrees` (below).
+
+### Worktrees on a volume
+
+- **The named volume `evergore-worktrees` is mounted on `/worktrees`.**
+- **`containerEnv` names that path in `EPC_WORKTREES`**, which makes it the worktree root of
+  handbook §7 on the PC.
+- **Why:** the Windows bind mount (9p/drvfs) is much slower for file-heavy steps (decision
+  2026-10-12, [open-questions.md](../open-questions.md)).
+- **`.git` stays in the primary checkout on the bind mount;** only the checked-out files move.
+- **The volume survives a rebuild** like the caches.
+- **Its worktrees keep resolving after a rebuild:** each one's `.git` file points at
+  `/workspaces/EvergoreProtocolCollector/.git`, a path the rebuild does not change.
+- **The volume holds the only copy of a worktree's uncommitted files:** unstaged changes, untracked
+  files and ignored ones such as the gate dossier under `gate.local.d/`.
+  - Staged changes and commits survive in `.git`, which holds every worktree's index and objects.
+- **Deleting the volume deletes those files:** `docker volume rm`, `docker volume prune --all`, or a
+  reset of Docker Desktop or of its WSL disk.
+- **Run every command in the container as `vscode`** (`docker exec -u vscode` from the host).
+  - A session started in the container's VS Code terminal runs as `vscode`; a bare `docker exec`
+    runs as `root`.
+  - `vscode` cannot edit the files of a worktree a `root` shell created.
+  - A `root` shell that writes to `.git` leaves directories `vscode` cannot write, so a later commit
+    as `vscode` fails with `insufficient permission`.
+  - `sudo chown -R vscode:vscode .git` in the container repairs it.
+- **A session on the Windows host cannot see them:** Read, Grep, Edit and host git do not reach
+  `/worktrees`.
+  - Such a session, and every subagent it starts, works in a worktree only through
+    `docker exec -u vscode <container> …`.
+  - No deny rule sees the command inside `docker exec`; the deny floor binds there by rule
+    ([working-with-ai-agents.md](working-with-ai-agents.md), "Permissions & autonomy"), since the
+    volume holds the only copy of uncommitted files.
+  - `docker exec` carries the container's `EPC_WORKTREES`, so a worktree created that way lands on
+    the volume.
+  - From Git Bash, `MSYS_NO_PATHCONV=1` keeps it from rewriting `/worktrees/…` into a Windows
+    path.
+  - A strand is best driven from a session in the container ("How to work in it", below).
+- **Prune worktrees only in a container that has the volume mounted.**
+  - Git lists a worktree whose directory it cannot see as `prunable`, and `git worktree prune`
+    drops its registration.
+  - `git gc` prunes such a registration on its own once it is older than
+    `gc.worktreePruneExpire` (three months by default).
+  - Host git lists every worktree under `/worktrees` as `prunable`.
+  - A container without the volume does too.
+- **The agent seat leaves `EPC_WORKTREES` unset,** so its root is the default of handbook §7.
+  - The agent image blanks the `devcontainer.metadata` label, which carries `containerEnv` and the
+    mounts ("The agent image", below), so it inherits neither.
+  - A volume for the seat would change its mounts and environment, which the agent machine's
+    administration owns.
 
 ### `postCreateCommand`
 

@@ -432,11 +432,12 @@ plus the corrected scenario tagged `@wip`.
     probes under the gitignored `src/probe/java` go through `./gradlew clearProbes`
     ([build-run-deploy.md](build-run-deploy.md)).
   - **The development scaffolding is the agent's own, and it cleans it up itself, without asking:**
-    the worktrees it created under `.claude/worktrees/` (`git worktree remove [--force]`,
-    `git worktree prune`) and the branches that have landed (`git branch -d`, and its `-C` form).
+    the worktrees it created under the worktree root, defined below (`git worktree remove
+    [--force]`, `git worktree prune`) and the branches that have landed (`git branch -d`, and its
+    `-C` form).
     Deliberately *git-native*, never `rm`: `git branch -d` refuses a branch that is not fully merged,
     so the safety lives in the command instead of in the agent's judgment. A directory a removal
-    leaves behind empty under `.claude/worktrees/` goes with `rmdir`, which refuses anything that is
+    leaves behind empty under the worktree root goes with `rmdir`, which refuses anything that is
     not empty, so the same safety holds (author decision 2026-09-27). After a landing,
     removing the worktree and deleting the branch is part of the landing, not a separate
     request; the commits live on in `main`, and the reflog still holds deleted tips for a while.
@@ -452,12 +453,16 @@ directory; two writers on one checkout race (index/HEAD flicker, clobbered stage
 worktrees (own directory + HEAD + index) make parallel work safe.
 
 - **A worktree per context.** Each problem/feature/context gets its own branch in its own
-  worktree under `.claude/worktrees/`; parallel contexts (incl. other-model agents) = parallel
+  worktree under the worktree root; parallel contexts (incl. other-model agents) = parallel
   worktrees; the primary checkout stays on `main`. Worktrees branch from a freshly synced `main`
-  (below): `git worktree add -b claude/<topic> <path> main`. `worktree.baseRef: "head"` makes the
-  harness's subagent worktrees branch from that same `main`; `"fresh"` would branch from
+  (below): `git worktree add -b claude/<topic> <root>/<topic> main`. `worktree.baseRef: "head"`
+  makes the harness's subagent worktrees branch from that same `main`; `"fresh"` would branch from
   `origin`'s default branch as Claude Code last fetched it, up to a day old, and miss that day's
   landings.
+- **Every strand, gate and lens worktree is created under the worktree root.**
+  - The root is `$EPC_WORKTREES` where that is set, else `.claude/worktrees/` in the primary
+    checkout.
+  - Which seat sets it, and why: [dev-environment.md](dev-environment.md), "Worktrees on a volume".
 - **`main` follows `origin/main` on every machine** (author decision 2026-10-04): `origin/main`
   moves only by the author's landings and the pull requests the author merges on GitHub
   (Dependabot's), so a machine that does not fetch works on a stale `main`.

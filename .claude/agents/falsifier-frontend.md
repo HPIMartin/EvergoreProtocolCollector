@@ -56,6 +56,11 @@ never after a `cd`: the script finds its own root, and a `cd` whose argument hol
 a backtick is denied outright, so `W=<wt>; cd $W && ./verify …` fails; write the absolute path out
 each time.
 
+**Your worktree may lie outside the primary checkout** (on the author's PC under `/worktrees`):
+take its absolute path from your brief. From a session on the Windows host, reach it only through
+`docker exec -u vscode <container> …`, never with Read, Grep or Edit. The deny floor binds inside
+it: no `git reset`, `git clean`, `git branch -D` or `rm` through `docker exec`.
+
 **JVM-side throwaway code goes under `src/probe/java`, never under `src/test/java`.** Run it with
 `./gradlew probe` and clear it with `./gradlew clearProbes` before you return; `rm` stays the
 author's command, for your own probes too (handbook §7). What a probe may use, and why that location

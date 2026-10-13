@@ -68,7 +68,9 @@ Applies to every `*.md` in the repo (root, `docs/`, `.claude/`). Findings cite r
 - **DOC-4 Single home:** each rule/fact lives in exactly one doc; everything else cross-links.
   Duplication drifts. Exception: `.claude/agents/*.md` are prompts, not docs, and an agent only ever
   reads its own brief, so an operative instruction may repeat verbatim across briefs; its rationale
-  still lives only in the KB.
+  still lives only in the KB. Second exception: `CLAUDE.md` may name the literal paths the auto-mode
+  classifier has to recognise as the agent's local scratch, since the classifier reads `CLAUDE.md`
+  and not the KB (decision 2026-10-13, [open-questions.md](../open-questions.md)).
 - **DOC-5 Backlog holds only live work:** open and in-progress items only; completing an item
   removes its row **and** every shortcode reference repo-wide; rejected/deferred items stay, with
   rationale.

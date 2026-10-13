@@ -123,11 +123,11 @@ the feature commit**, not per micro-commit.
 - **Spawn only the lenses the change can break:** backend-only → `falsifier-domain` +
   `falsifier-robustness`; frontend-only → `falsifier-frontend` + `falsifier-robustness`; full-stack
   → all three. Spawning a lens that cannot see the change buys a confident PASS that means nothing.
-- **One detached worktree per lens** (`git worktree add <path> <sha> --detach`) at the tip under
-  review, named in the brief, so two lenses cannot collide with each other or with the planner.
-  Every lens that writes a probe or a mutation ends its report with the diff of the production tree
-  against `HEAD` in its worktree, so a left-behind change shows up in its own report rather than in
-  the next build.
+- **One detached worktree per lens** (`git worktree add <root>/<name> <sha> --detach`, under the
+  worktree root of handbook §7) at the tip under review, named in the brief by its absolute path,
+  so two lenses cannot collide with each other or with the planner. Every lens that writes a probe
+  or a mutation ends its report with the diff of the production tree against `HEAD` in its
+  worktree, so a left-behind change shows up in its own report rather than in the next build.
 - **Every prior verdict is an input to the next gate agent**, not a message to the author alone: the
   falsifiers' and the doc-reviewer's reports go into the gate dossier verbatim, where the reviewer
   reads them (→ The gate dossier).
@@ -183,7 +183,8 @@ and lands through the gateway; no commit is made on `main`
   stay exactly there. Moving `origin/main` always stays with the author.
 - **Clean up landed strands immediately, without asking:** once `origin/main` holds a strand's tip
   and the primary checkout's `main` has fast-forwarded to it, `./verify stop` in its worktree, then
-  `git worktree remove <path>` and `git branch -d <branch>`, then `git worktree prune`, `rmdir` a
+  `git worktree remove <path>` and `git branch -d <branch>`, then `git worktree prune` (inside the
+  container on the PC: [dev-environment.md](dev-environment.md), "Worktrees on a volume"), `rmdir` a
   directory the removal left behind empty, and the remote copy, leased, once its current tip is in
   `origin/main` too (handbook §7). This is the agent's own scaffolding and the agent owns it
   (handbook §7); the commits live on in `main`, the branch label and worktree are pure redundancy,

@@ -9,6 +9,9 @@
 			"Edit(.claude/agents/**)",
 			"Write(.claude/worktrees/**)",
 			"Edit(.claude/worktrees/**)",
+			"Read(//worktrees/**)",
+			"Write(//worktrees/**)",
+			"Edit(//worktrees/**)",
 			"Write(src/**)",
 			"Edit(src/**)",
 			"Write(build.gradle.kts)",
@@ -75,7 +78,9 @@
 			"Bash(npx tsc:*)",
 			"Bash(sqlite3:*)",
 			"Bash(cd /workspaces/EvergoreProtocolCollector)",
-			"Bash(cd /workspaces/EvergoreProtocolCollector/*)"
+			"Bash(cd /workspaces/EvergoreProtocolCollector/*)",
+			"Bash(cd /worktrees)",
+			"Bash(cd /worktrees/*)"
 		],
 		"ask": [
 			"Bash(gh api:*)",

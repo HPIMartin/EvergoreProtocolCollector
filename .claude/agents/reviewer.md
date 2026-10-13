@@ -106,6 +106,11 @@ relative result. Run the build as `<abs worktree>/verify <command> <abs path>`, 
 the script finds its own root, and a `cd` whose argument holds `$`, `..`, `~` or a backtick is
 denied outright, so `W=<wt>; cd $W && ./verify …` fails; write the absolute path out each time.
 
+**Your worktree may lie outside the primary checkout** (on the author's PC under `/worktrees`):
+take its absolute path from your brief. From a session on the Windows host, reach it only through
+`docker exec -u vscode <container> …`, never with Read, Grep or Edit. The deny floor binds inside
+it: no `git reset`, `git clean`, `git branch -D` or `rm` through `docker exec`.
+
 Check `git merge-base <branch> main == main` before you start: a tip that is behind `main` is not the
 final state, and reviewing it is worthless. Refuse and say so.
 
