@@ -963,11 +963,25 @@ before any filter runs. `HeadLineSlicer` (ahead of the HTTP codec) and `Unreadab
   its connection until `micronaut.server.idle-timeout` closes it;
 - the stand-in's headers stay within `micronaut.server.netty.max-header-size`;
 - the handlers split every inbound byte of the connection into one pipeline message per line;
+- known limit: a header line over the limit, whose read the network splits within the last
+  header-budget bytes before it, leaves the browser out of the audit line;
+- known limit: a rejected second header line, over the limit or ended by a bare line feed, leaves
+  the browser out of the audit line;
+- known limit: a header folded over two lines next to the rejected line leaves the browser out of
+  the audit line;
+- known limit: a head in Safari's order, whose cookie line before the `User-Agent` is far over the
+  limit and arrives over several reads, leaves the browser out of the audit line;
+- known limit: two identical headers the decoder had read stay twice in the stand-in;
+- known limit: the status line says HTTP/1.1 even where the server without the rescue answers
+  HTTP/1.0;
 - known limit: a long rejected request line arriving over several reads can leave the browser out of
   the audit line;
 - whether it does depends on where the reads split and on the header bytes before the `User-Agent`.
 
 `RateLimitFilterTest` pins the throttling of five such raw shapes ([testing.md](testing.md)).
+
+Known limit of a readable head: a request pipelined behind `GET /health` is counted but not
+answered (measured on Micronaut 4.10.9).
 
 | Method · Path | Purpose |
 |---|---|
