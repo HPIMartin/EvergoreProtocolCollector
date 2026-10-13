@@ -245,6 +245,21 @@ walk_logs
 if refuses_for tip && grep -q '^refused \[tip\]: lens-domain.md ' "$work/out"; then r=0; else r=1; fi
 check "a lens report is refused when main changed its paths under a tip of the same tree" "$r"
 
+new_strand rebase_over_docs_only_main
+complete_dossier
+reviewed_tip=$(tip)
+git checkout -q main
+write_file docs/guide.md '# Guide, landed'
+commit_all '[doc] Land another strand'"'"'s guide'
+git checkout -q -B strand main
+git checkout -q "$reviewed_tip" -- src
+commit_all 'Add the feature'
+tip_runs
+walk_logs
+kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
+if accepts; then r=0; else r=1; fi
+check "a lens report from an earlier tip stands after a rebase onto a main that changed only docs" "$r"
+
 new_strand code_renamed_to_docs
 complete_dossier
 git mv src/main/Feature.java docs/Feature.md
