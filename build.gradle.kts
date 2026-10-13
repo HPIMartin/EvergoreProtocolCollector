@@ -145,6 +145,9 @@ spotless {
 
 tasks.test {
 	finalizedBy(tasks.jacocoTestReport)
+	inputs.dir("docs/knowledge-base")
+		.withPropertyName("knowledgeBase")
+		.withPathSensitivity(PathSensitivity.RELATIVE)
 
 	providers.systemProperty("cucumber.filter.tags").orNull?.let {
 		systemProperty("cucumber.filter.tags", it)

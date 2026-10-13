@@ -19,7 +19,7 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M16 | 0.4.0 reaches the guild | the explanation page with the corrected note and the invented trader (E19, E36, E20), the backlog harvest (G83), the release comparison against 0.3.0 (F22), the gate guards (G82, with G30, G48), the release (F23) | **First** (author decision 2026-10-13): the page goes live with 0.4.0, and nothing in it moves a figure |
+| M16 | 0.4.0 reaches the guild | the explanation page with the corrected note and the invented trader (E19, E36, E20), the backlog harvest (G83), the release comparison against 0.3.0 (F22), the gate guards, the release (F23) | **First** (author decision 2026-10-13): the page goes live with 0.4.0, and nothing in it moves a figure |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | D24 with F12, F10; the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
 | M10 | What the bottlenecks release | B36→D25 with D9→D18, D14 | Measured request-path cost and the timezone fix at its root |
@@ -38,9 +38,9 @@ release gate that expects no figure to move.
       E36, E20).
 - [ ] The backlog harvest closes, folds or narrows every row it names and adds no row unless the
       author agrees (backlog G83).
-- [ ] The release comparison runs against 0.3.0 as the running side (backlog F22), and the gate
-      guards refuse a mutation-only red, a commit during a rebase stop and added conflict markers
-      (backlog G82, with G30, G48).
+- [ ] The release comparison runs against 0.3.0 as the running side (backlog F22).
+- [x] The gate guards refuse a red record that is a mutation of its commit's code, a commit at a
+      rebase's conflict stop and added conflict markers.
 - [ ] 0.4.0 is deployed and tagged, its comparison against `v0.3.0` reporting no finding (backlog
       F23).
 
