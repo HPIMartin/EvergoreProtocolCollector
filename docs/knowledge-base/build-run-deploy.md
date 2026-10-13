@@ -377,11 +377,15 @@ any push.
   the deployed image's `revision` label names (read it off the container, "Which stand is
   running?"). That is the tip of `main` at release time, the stand that passed the release gate
   (green `clean build --no-build-cache`, buildable image, the scripted 1:1 comparison in
-  [testing.md](testing.md)), unless the release's own documentation landed after it, as at
-  `0.2.0`, where the deployed revision sits a few `[doc]`
-  commits behind the tip. The version commit may sit far behind and carry none of it. Tagging it
-  instead would name a stand nobody built or ran (the `0.1.0` case: the version commit's image
-  build was broken and its credential handling superseded).
+  [testing.md](testing.md)), with two exceptions:
+  - the release's own documentation landed after it, as at `0.2.0`, where the deployed revision
+    sits a few `[doc]` commits behind the tip;
+  - the author deploys the gated tip although `main` moved on during the gate, as at `0.3.0`
+    (decision 2026-10-13).
+
+  The version commit may sit far behind and carry none of it. Tagging it instead would name a stand
+  nobody built or ran (the `0.1.0` case: the version commit's image build was broken and its
+  credential handling superseded).
 - **Consequence — a build off an untagged `main` commit is not identified by its version alone**
   (between releases `version` still names the release being prepared). Such a build is tagged
   `evergore-protocol-collector:<version>-<short sha>`; a **bare**
@@ -418,6 +422,8 @@ docker inspect --type container -f '{{index .Config.Labels "org.opencontainers.i
 docker images evergore-protocol-collector    # which tags are available to roll back to
 ```
 
+- **The home server runs `0.3.0`** since 2026-10-13 10:15 UTC (image revision `b81fe78`).
+  - `pre-0.3.0`, the `0.2.0` image, is the rollback target.
 - The container runs under the fixed name **`epc`** on the home server (see the deploy steps), so
   every command here and in the rollback needs no container id. The image keeps the long name; only
   the container is short.

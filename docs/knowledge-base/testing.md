@@ -317,7 +317,8 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
 - **Run it:**
   - `release/compare RUNNING_DIST CANDIDATE_DIST SNAPSHOT`, where a distribution is a directory
     holding `bin/protocolParser`.
-  - The running release (`0.2.0`) is built in its own worktree, detached on the tag.
+  - The previous release, `0.2.0`, whose wire output the script's rules expect, is built in its
+    own worktree, detached on its tag.
   - The candidate is built from the strand.
   - A distribution is the unpacked `build/distributions/*.tar` that `./verify all` leaves behind.
   - The tag's own `./verify` predates the build lock and the per-worktree daemon registry.
