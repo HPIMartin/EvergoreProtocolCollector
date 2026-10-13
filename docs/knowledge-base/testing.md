@@ -324,6 +324,9 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
   - The tag's own `./verify` predates the build lock and the per-worktree daemon registry.
   - Run it as `GRADLE_OPTS=-Dorg.gradle.daemon.registry.base=<that worktree>/registry.local.d flock
     /tmp/epc-build.lock <that worktree>/verify all`.
+  - As another user than the lock file's owner, hold the lock through a descriptor opened for
+    reading, as `./verify` does ([build-run-deploy.md](build-run-deploy.md), "The verify script"):
+    `( flock 9 && GRADLE_OPTS=… <that worktree>/verify all ) 9</tmp/epc-build.lock`.
   - Stop its daemon through the same registry, never with a bare `--stop`.
   - Snapshot copies live only under `<worktree>/build/release-comparison/`.
   - That directory is replaced at the start of a run and left after it for inspection.

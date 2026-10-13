@@ -500,6 +500,9 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
   the host key first, because the transport
   runs with `StrictHostKeyChecking=yes`: `ssh-keyscan -p <port> <host> >> ~/.ssh/known_hosts`, then
   compare the fingerprint with `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server.
+  - The devcontainer's `~/.ssh` does not survive a rebuild, so the key is pinned again after one.
+  - Until then every run stops at its first remote command.
+  - The script reports that stop as a missing curl (backlog **F20**).
 - **The parameters live in `deploy.local.env`** (gitignored by `*.local.*`, mode 600 because it
   holds the password): every `EPC_DEPLOY_*` variable from the usage text plus the API token; the
   game login stays in `credentials.local.env`. Export both into the environment and the script
@@ -545,6 +548,8 @@ touched):
   From the devcontainer that is `/run/desktop/mnt/host/<drive>/<path>` (Docker Desktop's view of the
   Windows drive; symlink the same path inside the devcontainer onto `/workspaces/...`), `chmod 777`
   on the directory and `666` on the copy, and the modes stick.
+- Both sides run on one daemon, so the rehearsal cannot show what differs between the work
+  machine's Docker and the host's, such as the image store each one uses.
 - `EPC_DEPLOY_SSH` points at a shim that drops the target and runs the command locally with `sh -c`,
   rewriting `http://localhost:` to `http://host.docker.internal:` in the command **and** in the text
   a `mktemp` placement receives on stdin (the curl config carries the URL), never in the image
