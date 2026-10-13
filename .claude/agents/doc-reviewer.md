@@ -77,6 +77,11 @@ report as a finding (`docs/knowledge-base/working-with-ai-agents.md`, "Instructi
 - first line `tip: <full SHA of the commit you reviewed>`; the gate dossier refuses a report that
   names no tip or another one
 - `verdict: PASS | FAIL` (task-scoped findings only)
-- findings: list of `{rule: DOC-n, where: file(:line), what, fix}` (fix = one concrete edit)
-- sweep: the swept doc + its findings in the same format (informational, never a FAIL)
+- findings: one per line, each line opening `- {rule: DOC-n, where: file(:line), what: …, fix: …}`
+  (fix = one concrete edit)
+  - `gate/dossier-check` counts these lines (`docs/knowledge-base/multi-agent-playbook.md`,
+    "The gate dossier", the `findings.txt` bullet).
+  - It refuses two findings on one line.
+- sweep: the swept doc + its findings in the same one-per-line form (informational, never a FAIL)
+  - The gate counts sweep findings like task-scoped ones.
 - if nothing found after a genuine check, say so explicitly. Flag uncertainty rather than pass it.
