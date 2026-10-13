@@ -290,6 +290,10 @@ second copy.
 | 2026-10-12 | **The shared quota is saved by the orchestrator and the tiers, not by fewer parallel contexts** (author decision, on every seat): a fresh or compacted orchestrator per phase, delta rounds on `sonnet`, no lens on `fable`; an escalated gate runs on `opus` → working-with-ai-agents.md "Choosing the session model", playbook "Cadence" | The PC and the agent seat share one 5-hour quota, and a long orchestrator re-reads its whole context every turn |
 | 2026-10-12 | **The strand that bounds the panel per seat carries no `.feature`: handbook §5's build/infra and `[doc]` exemptions apply** (author decision) | It changes the gate's tooling and the process docs, no product behaviour a stakeholder sees |
 | 2026-10-13 | **The strand that bounds the panel per seat ends its panel after one last doc review; a further bullet split the doc-reviewer raises on the strand's own text becomes one backlog row** (author decision, recommendation taken, on the agent seat's recurrence brake of handbook §9) | From round 3 on the doc-reviewer raised one more split of the same §9 bullets per round, and one round's fix partly reversed the last; robustness and reviewer had passed. Alternatives offered: fold until the doc-reviewer passes, or file the finding and hand off at once |
+| 2026-10-13 | **The PC devcontainer keeps the host's Docker socket, and no credential on the host changes** (author decision; dropping the socket for a deploy-only configuration was the recommendation) → dev-environment.md "Where agents run" | The PC stays simple: the editor setup and the grid's Chrome and Edge runs stay as they are; auto-mode and unsupervised agents already run only on the agent seat (2026-10-04) |
+| 2026-10-13 | **No docker-in-docker in the PC devcontainer** (ruled out with the socket decision) | Its feature runs `--privileged` ([feature](https://github.com/devcontainers/features/blob/main/src/docker-in-docker/devcontainer-feature.json)), and a privileged container can take over its host ([Docker reference](https://docs.docker.com/reference/cli/docker/container/run/)) |
+| 2026-10-13 | **No Enhanced Container Isolation on the PC** (ruled out with the socket decision) | It needs a Docker Business subscription ([Docker docs](https://docs.docker.com/enterprise/security/hardened-desktop/enhanced-container-isolation/enable-eci/)) |
+| 2026-10-13 | **No Claude Code Bash sandbox as the PC's socket guard** (ruled out with the socket decision) | The sandbox runs `docker` only outside itself ([docs](https://code.claude.com/docs/en/sandboxing)) |
 
 ## Recorded mutations (red evidence where a new case could not start red)
 
@@ -525,22 +529,6 @@ table existed stand as dated decision rows above (2026-09-09, 2026-09-12, 2026-0
   which every git that opens the checkout, the host's included, must then read; keep the
   file-based refs and the case check alone; make the checkout's directory case-sensitive on the
   Windows host.
-- **D-22 (The PC devcontainer's Docker socket, backlog H15):** what keeps an agent on the PC from
-  the host's file system? Options, recommended first:
-  - drop `docker-outside-of-docker` from the PC devcontainer and add a second devcontainer
-    configuration that carries the socket, opened only for a deploy and with no agent session in
-    it; the grid's Chrome and Edge runs move to the agent seat (H14), the PC-side
-    `.devcontainer/agent/build` proof with them;
-  - keep the socket and run every auto-mode or unsupervised agent on the agent seat only, which
-    leaves a supervised agent's reach as it is.
-  - Ruled out, docker-in-docker: its feature runs `--privileged`
-    ([feature](https://github.com/devcontainers/features/blob/main/src/docker-in-docker/devcontainer-feature.json)).
-  - A privileged container can take over its host
-    ([Docker reference](https://docs.docker.com/reference/cli/docker/container/run/)).
-  - Ruled out, Enhanced Container Isolation: needs a Docker Business subscription
-    ([Docker docs](https://docs.docker.com/enterprise/security/hardened-desktop/enhanced-container-isolation/enable-eci/)).
-  - Ruled out, Claude Code's Bash sandbox: `docker` runs only outside it, and inside a container
-    it runs only in a weakened mode ([docs](https://code.claude.com/docs/en/sandboxing)).
 
 ## Assumptions currently baked into the plan (challenge if wrong)
 
