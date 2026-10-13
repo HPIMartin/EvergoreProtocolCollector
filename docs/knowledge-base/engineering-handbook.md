@@ -472,8 +472,9 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   - **A moved `main` is taken in before the next panel** (author decision 2026-10-09): when the
     fetch before a panel shows `origin/main` ahead, the agent syncs `main`, rebases the strand and
     rebuilds the gate's evidence before spawning any gate agent, without asking while it works on
-    its own; a panel that read a superseded base is re-run anyway, so this costs one rebase instead
-    of a round.
+    its own, since the dossier check refuses any base but `main`:
+    - a lens report whose read paths `main` left unchanged stands across the rebase;
+    - the doc-reviewer and the runs repeat at the rebased tip.
   - **Local `main` only fast-forwards:** in the clean primary checkout, on `main`,
     `git merge --ff-only refs/remotes/origin/main` or `git pull --ff-only`; never a merge, a rebase
     or a plain `git pull` on `main`. The refs are spelled out because git resolves a tag or a local
