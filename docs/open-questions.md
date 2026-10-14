@@ -343,12 +343,14 @@ second copy.
 
 ## Recorded mutations (red evidence where a new case could not start red)
 
-A deliverable without a test harness cannot be seen red on its own; its substitute is a temporary
-mutation of the code under test, recorded here so a later gate re-runs it instead of taking the
-claim on trust (handbook §4). A test that cannot start red, adapted or new, proves itself by its
-mutation in the gate dossier (decision 2026-10-13); the rows that name test cases predate that
-decision. The mutations recorded before this table existed stand as dated decision rows above (2026-09-09,
-2026-09-12, 2026-09-18).
+- A deliverable without a test harness cannot be seen red on its own.
+- Its substitute is a temporary mutation of the code under test, recorded here so a later gate
+  re-runs it instead of taking the claim on trust (handbook §4).
+- A test that cannot start red, adapted or new, proves itself by its mutation in the gate dossier
+  (decision 2026-10-13).
+- The rows that name test cases predate that decision.
+- Further recorded mutations stand as dated decision rows above (2026-09-09, 2026-09-12,
+  2026-09-18).
 
 | What the cases pin | Mutation | Cases that flip to FAIL |
 |---|---|---|
@@ -540,12 +542,13 @@ decision. The mutations recorded before this table existed stand as dated decisi
   is the scraping within the site's ToS, and is storing other members' activity acceptable for the
   guild's use? Low priority; logged so it isn't silently ignored.
 - **D-17 (The feature-gate reviewer's own build):** `.claude/agents/reviewer.md` tells the reviewer
-  to run the full `./verify all`, while the gate dossier already holds a checked `./verify all` log
-  per code tree (`walk/`), and the dossier-check gate of 2026-10-02 briefed its reviewer to run no
-  build. Options, recommended first: the reviewer reads the walk log of the tip's code tree and runs
-  no build, so nothing builds in the strand worktree while the gate reads it; the reviewer runs
-  `./verify all` at the tip as well (7 to 12 minutes in this strand's walk), as its brief says
-  today.
+  to run the full `./verify all`.
+  - The gate dossier already holds a checked `./verify all` log per code tree (`walk/`).
+  - Options, recommended first:
+    - the reviewer reads the walk log of the tip's code tree and runs no build, so nothing builds
+      in the strand worktree while the gate reads it;
+    - the reviewer runs `./verify all` at the tip as well (a run of 7 to 12 minutes), as its brief
+      says.
 - **D-18 (Comments in the `gate/` and `deploy/` scripts):** handbook §3 lets only `hooks/*` and the
   ignore files carry prose.
   - The extensionless scripts under `gate/` and `deploy/` carry whole-line comments that

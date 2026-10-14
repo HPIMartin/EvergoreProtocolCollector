@@ -172,7 +172,7 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
     analysis.
   - The SessionStart hook that injects the lessons deterministically (G10).
   - The Gradle daemons' memory under parallel strands (H13).
-  - The gate, agent-tool and doc rows (G21 to G79), pulled when a gate meets one.
+  - The gate, agent-tool and doc rows (from G21 on), pulled when a gate meets one.
   - Most doc-debt rows go into the 0.4.0 harvest.
   - After 0.4.0, the gate mechanics (G51 with G32, G40, G65).
 - **Request handling at the edge:** the line slicer's per-line cost (F15) and the browser lost for

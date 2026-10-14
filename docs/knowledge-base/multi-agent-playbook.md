@@ -284,7 +284,8 @@ says where each piece of evidence lives.
   final message verbatim; a file without its contract's fields (`robust:` and `treeDiff:`, or `verdict:`;
   → Handoff contracts) is a summary and is refused.
   - A report's own verdict is the one line that opens with its `robust:` or `verdict:`, after a
-    `-`, `*`, `+` or numbered marker, bold or a backtick; a choice such as `yes | no` reads as none.
+    `-`, `*`, `+` or numbered marker, bold or a backtick.
+  - A choice such as `yes | no` on that line reads as no verdict.
   - A verdict quoted further into a line or in a blockquote counts for nothing, since a delta-round
     report quotes the round before it.
 - **Required reports** follow the strand's diff against its base: `doc-reviewer.md` always; any
