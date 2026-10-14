@@ -1055,7 +1055,8 @@ answered (measured on Micronaut 4.10.9).
 - **No real CI.** The one workflow, `.github/workflows/land.yml`, lands pull requests ("The landing
   workflow" above) and builds nothing. `.github/` also has `dependabot.yml` (`devcontainers`
   ecosystem for the root, `docker` for `/.devcontainer` (the features lock does not cover the
-  base image) and `npm` for `/frontend`, all weekly) and
+  base image) and `npm` for `/frontend`, all weekly; each ecosystem's minor and patch updates come
+  as one grouped pull request, a major alone) and
   `.github/rulesets/`, a reconstruction of the three live rulesets ([git-state.md](git-state.md),
   "What GitHub enforces").
 - `.devcontainer/`: Java dev container (digest-pinned bookworm base + apt tools, `java` feature with
