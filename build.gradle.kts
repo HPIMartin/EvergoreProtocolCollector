@@ -148,6 +148,9 @@ tasks.test {
 	inputs.dir("docs/knowledge-base")
 		.withPropertyName("knowledgeBase")
 		.withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.file("frontend/src/app/explanation/explanation.json")
+		.withPropertyName("explanationExamples")
+		.withPathSensitivity(PathSensitivity.RELATIVE)
 
 	providers.systemProperty("cucumber.filter.tags").orNull?.let {
 		systemProperty("cucumber.filter.tags", it)

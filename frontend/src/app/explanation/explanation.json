@@ -1,0 +1,1521 @@
+{
+  "personas": [
+    {
+      "name": "Mira Mitglied",
+      "sentence": "Mira Mitglied ist ein Mitglied wie ihr: Sie zahlt ein, lagert ein, nimmt heraus und stellt die Übersicht um."
+    },
+    {
+      "name": "Hanna Handwerk",
+      "sentence": "Hanna Handwerk fertigt Waren für die Gilde aus Zutaten aus dem Gildenlager."
+    },
+    {
+      "name": "Gero Gildenhändler",
+      "sentence": "Gero Gildenhändler handelt für die Gilde: Er nimmt Waren zum Verkauf heraus und legt Gekauftes ein."
+    },
+    {
+      "name": "Marktstand",
+      "sentence": "Der Marktstand ist der Händler des Spiels, mit festen Preisen und endlosem Vorrat; dort kauft ihr Handwerksmaterial und Pfeile, Bolzen und Magieessenz, und dort könnt ihr feilschen."
+    }
+  ],
+  "groups": [
+    {
+      "title": "Was zählt",
+      "answers": [
+        {
+          "question": "Was zählt Gold in der Gildenbank?",
+          "rule": "Gold zählt, wie es ist: Jede Einzahlung in die Gildenbank steht voll unter „Bank-Einzahlung“, jede Auszahlung voll unter „Bank-Auszahlung“.",
+          "example": {
+            "intro": "Mira Mitglied zahlt 1.000 Gold ein und hebt später 200 Gold ab.",
+            "ledger": {
+              "bank": [
+                {
+                  "member": "Mira Mitglied",
+                  "amount": 1000,
+                  "movement": "Einzahlung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "amount": 200,
+                  "movement": "Entnahme"
+                }
+              ],
+              "storage": []
+            },
+            "lines": [
+              {
+                "kind": "figure",
+                "row": "Mira Mitglied",
+                "label": "Bank-Einzahlung",
+                "terms": [
+                  {
+                    "amount": 1000
+                  },
+                  {
+                    "share": 100
+                  }
+                ],
+                "operators": ["×"],
+                "result": 1000
+              },
+              {
+                "kind": "figure",
+                "row": "Mira Mitglied",
+                "label": "Bank-Auszahlung",
+                "terms": [
+                  {
+                    "amount": 200
+                  },
+                  {
+                    "share": 100
+                  }
+                ],
+                "operators": ["×"],
+                "result": 200
+              }
+            ]
+          },
+          "why": "Warum? Gold ist Gold: Die Gilde kann damit genau so viel kaufen wie ihr."
+        },
+        {
+          "question": "Was bringt mir eine Einlagerung?",
+          "rule": "Was ihr ins Gildenlager legt, schreiben wir euch gut, je nach Art der Ware: Rohstoffe, Jagdbeute und Edelsteine bringen nichts; Handwerksmaterial bringt den vollen Marktwert; Pfeile, Bolzen und Magieessenz bringen den vollen Marktwert, auch selbst gefertigte; alles andere bringt 60 % des Marktwerts, Ausrüstung im Verhältnis zu ihrer Qualität.",
+          "example": {
+            "intro": "Mira Mitglied legt sechs Waren ein.",
+            "ledger": {
+              "bank": [],
+              "storage": [
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Eisenerz",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 100,
+                  "item": "Pfeile",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Jagdpfeile",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Eisenbarren",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 1,
+                  "item": "Kurzbogen",
+                  "quality": 50,
+                  "movement": "Einlagerung"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Eisenerz",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 40,
+                "share": 0,
+                "result": 0.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": false,
+                "price": 100,
+                "share": 100,
+                "result": 1000.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 100,
+                "item": "Pfeile",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": false,
+                "price": 3,
+                "share": 100,
+                "result": 300.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Jagdpfeile",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 5,
+                "share": 60,
+                "result": 30.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Eisenbarren",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 120,
+                "share": 60,
+                "result": 720.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 1,
+                "item": "Kurzbogen",
+                "quality": 50,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 2000,
+                "share": 60,
+                "result": 600.0
+              },
+              {
+                "kind": "figure",
+                "row": "Mira Mitglied",
+                "label": "Einlagerung",
+                "terms": [
+                  {
+                    "line": 0
+                  },
+                  {
+                    "line": 1
+                  },
+                  {
+                    "line": 2
+                  },
+                  {
+                    "line": 3
+                  },
+                  {
+                    "line": 4
+                  },
+                  {
+                    "line": 5
+                  }
+                ],
+                "operators": ["+", "+", "+", "+", "+"],
+                "result": 2650
+              }
+            ]
+          },
+          "why": "Warum so? Rohstoffe, Jagdbeute und Edelsteine habt ihr gesammelt: Sie sind eure Abgabe an die Gilde. Handwerksmaterial und Pfeile, Bolzen und Magieessenz kauft ihr am Marktstand mit Gold, also zählen sie voll. Jagdpfeile verkauft der Marktstand nicht; sie zählen wie alles andere. Ein Kurzbogen der Qualität 50 ist nur halb so viel wert wie ein neuer."
+        },
+        {
+          "question": "Und wenn ich etwas herausnehme?",
+          "rule": "Jede Entnahme kostet 60 % des Marktwerts, egal welche Ware, und Ausrüstung im Verhältnis zur Qualität. Qualität gibt es nur bei Ausrüstung: Waffen, Stäbe, Rüstung und Schilde.",
+          "example": {
+            "intro": "Mira Mitglied nimmt zwei Kurzschwerter heraus, ein neues und eines der Qualität 50.",
+            "ledger": {
+              "bank": [],
+              "storage": [
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 1,
+                  "item": "Kurzschwert",
+                  "quality": 100,
+                  "movement": "Entnahme"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 1,
+                  "item": "Kurzschwert",
+                  "quality": 50,
+                  "movement": "Entnahme"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Entnahme",
+                "quantity": 1,
+                "item": "Kurzschwert",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 1200,
+                "share": 60,
+                "result": 720.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Entnahme",
+                "quantity": 1,
+                "item": "Kurzschwert",
+                "quality": 50,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 1200,
+                "share": 60,
+                "result": 360.0
+              },
+              {
+                "kind": "figure",
+                "row": "Mira Mitglied",
+                "label": "Entnahme",
+                "terms": [
+                  {
+                    "line": 0
+                  },
+                  {
+                    "line": 1
+                  }
+                ],
+                "operators": ["+"],
+                "result": 1080
+              }
+            ]
+          },
+          "why": "Warum? Wer herausnimmt, zahlt der Gilde ihren Preis. Legt Mira Mitglied das neue Kurzschwert unverändert zurück, bekommt sie genau die 720 Gold wieder."
+        },
+        {
+          "question": "Lohnt sich Handwerk für mich?",
+          "rule": "Ihr gewinnt, was das Fertige gutgeschrieben bekommt, abzüglich 60 % der Zutaten, die ihr aus dem Gildenlager nehmt.",
+          "example": {
+            "intro": "Hanna Handwerk fertigt aus 5 Eisenerz und 2 Steinkohle 5 Eisenbarren.",
+            "ledger": {
+              "bank": [],
+              "storage": [
+                {
+                  "member": "Hanna Handwerk",
+                  "quantity": 5,
+                  "item": "Eisenerz",
+                  "quality": 100,
+                  "movement": "Entnahme"
+                },
+                {
+                  "member": "Hanna Handwerk",
+                  "quantity": 2,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Entnahme"
+                },
+                {
+                  "member": "Hanna Handwerk",
+                  "quantity": 5,
+                  "item": "Eisenbarren",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Hanna Handwerk",
+                "movement": "Entnahme",
+                "quantity": 5,
+                "item": "Eisenerz",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 40,
+                "share": 60,
+                "result": 120.0
+              },
+              {
+                "kind": "movement",
+                "member": "Hanna Handwerk",
+                "movement": "Entnahme",
+                "quantity": 2,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 100,
+                "share": 60,
+                "result": 120.0
+              },
+              {
+                "kind": "movement",
+                "member": "Hanna Handwerk",
+                "movement": "Einlagerung",
+                "quantity": 5,
+                "item": "Eisenbarren",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 120,
+                "share": 60,
+                "result": 360.0
+              },
+              {
+                "kind": "figure",
+                "row": "Hanna Handwerk",
+                "label": "Nach Abzügen",
+                "terms": [
+                  {
+                    "line": 2
+                  },
+                  {
+                    "line": 0
+                  },
+                  {
+                    "line": 1
+                  }
+                ],
+                "operators": ["−", "−"],
+                "result": 120
+              }
+            ]
+          },
+          "why": "Warum? Wer für die Gilde fertigt, soll etwas davon haben: Der Gewinn ist der Unterschied zwischen der fertigen Ware und ihren Zutaten."
+        }
+      ]
+    },
+    {
+      "title": "Eure Zahl",
+      "answers": [
+        {
+          "question": "Was steht unter „Nach Abzügen“?",
+          "rule": "„Nach Abzügen“ ist Bank-Einzahlung und Einlagerung abzüglich Bank-Auszahlung und Entnahme.",
+          "example": {
+            "intro": "Mira Mitglied zahlt 500 Gold ein, hebt 200 Gold ab, legt 10 Steinkohle vom Marktstand ein und nimmt 10 Eisenbarren heraus.",
+            "ledger": {
+              "bank": [
+                {
+                  "member": "Mira Mitglied",
+                  "amount": 500,
+                  "movement": "Einzahlung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "amount": 200,
+                  "movement": "Entnahme"
+                }
+              ],
+              "storage": [
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Eisenbarren",
+                  "quality": 100,
+                  "movement": "Entnahme"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": false,
+                "price": 100,
+                "share": 100,
+                "result": 1000.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Entnahme",
+                "quantity": 10,
+                "item": "Eisenbarren",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 120,
+                "share": 60,
+                "result": 720.0
+              },
+              {
+                "kind": "figure",
+                "row": "Mira Mitglied",
+                "label": "Nach Abzügen",
+                "terms": [
+                  {
+                    "amount": 500
+                  },
+                  {
+                    "amount": 200
+                  },
+                  {
+                    "line": 0
+                  },
+                  {
+                    "line": 1
+                  }
+                ],
+                "operators": ["−", "+", "−"],
+                "result": 580
+              }
+            ]
+          },
+          "why": "Warum? Das ist alles, was ihr der Gilde gebracht habt, abzüglich dessen, was ihr von ihr bekommen habt."
+        },
+        {
+          "question": "Was zeigt „Vor Abzügen“?",
+          "rule": "„Vor Abzügen“ zählt jede Einlagerung zum Gildenpreis von 60 %, auch was ihr mit Gold gekauft habt, also vor Abzug der Gildenspende und ohne Handwerkssubventionen. „Nach Abzügen“ zählt Gekauftes voll.",
+          "example": {
+            "intro": "Mira Mitglied legt 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle ein.",
+            "ledger": {
+              "bank": [],
+              "storage": [
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Eisenerz",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Eisenerz",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": true,
+                "price": 40,
+                "share": 60,
+                "result": 240.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": true,
+                "price": 100,
+                "share": 60,
+                "result": 600.0
+              },
+              {
+                "kind": "figure",
+                "row": "Mira Mitglied",
+                "label": "Vor Abzügen",
+                "terms": [
+                  {
+                    "line": 0
+                  },
+                  {
+                    "line": 1
+                  }
+                ],
+                "operators": ["+"],
+                "result": 840
+              }
+            ]
+          },
+          "why": "Warum? So seht ihr, was eure Waren der Gilde zu ihrem eigenen Preis wert sind, bevor wir Gesammeltes als Abgabe und Gekauftes voll anrechnen."
+        }
+      ]
+    },
+    {
+      "title": "Die Gilde",
+      "answers": [
+        {
+          "question": "Was ist die „Gildenbank“?",
+          "rule": "Die Gildenbank ist die Summe aller Bank-Einzahlungen abzüglich aller Bank-Auszahlungen seit dem ersten Protokoll vom 22.01.2023, kein gezählter Kontostand.",
+          "example": {
+            "intro": "Mira Mitglied zahlt 1.000 Gold ein und legt 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle ein. Hanna Handwerk hebt 300 Gold ab und nimmt 5 Steinkohle heraus.",
+            "ledger": {
+              "bank": [
+                {
+                  "member": "Mira Mitglied",
+                  "amount": 1000,
+                  "movement": "Einzahlung"
+                },
+                {
+                  "member": "Hanna Handwerk",
+                  "amount": 300,
+                  "movement": "Entnahme"
+                }
+              ],
+              "storage": [
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Eisenerz",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Hanna Handwerk",
+                  "quantity": 5,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Entnahme"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "figure",
+                "row": null,
+                "label": "Gildenbank",
+                "terms": [
+                  {
+                    "amount": 1000
+                  },
+                  {
+                    "amount": 300
+                  }
+                ],
+                "operators": ["−"],
+                "result": 700
+              }
+            ]
+          },
+          "why": "Warum? Wir sehen nur, was das Protokoll seit seinem ersten Tag zeigt; was davor in der Bank lag, ist nicht dabei."
+        },
+        {
+          "question": "Was ist der „Gildenlagerwert“?",
+          "rule": "Der Gildenlagerwert ist die Summe aller Einlagerungen abzüglich aller Entnahmen seit dem ersten Protokoll vom 22.01.2023, zum Gildenpreis von 60 %; er ist kein gezählter Bestand.",
+          "example": {
+            "intro": "Mira Mitglied zahlt 1.000 Gold ein und legt 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle ein. Hanna Handwerk hebt 300 Gold ab und nimmt 5 Steinkohle heraus.",
+            "ledger": {
+              "bank": [
+                {
+                  "member": "Mira Mitglied",
+                  "amount": 1000,
+                  "movement": "Einzahlung"
+                },
+                {
+                  "member": "Hanna Handwerk",
+                  "amount": 300,
+                  "movement": "Entnahme"
+                }
+              ],
+              "storage": [
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Eisenerz",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Hanna Handwerk",
+                  "quantity": 5,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Entnahme"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Eisenerz",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": true,
+                "price": 40,
+                "share": 60,
+                "result": 240.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": true,
+                "price": 100,
+                "share": 60,
+                "result": 600.0
+              },
+              {
+                "kind": "movement",
+                "member": "Hanna Handwerk",
+                "movement": "Entnahme",
+                "quantity": 5,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 100,
+                "share": 60,
+                "result": 300.0
+              },
+              {
+                "kind": "figure",
+                "row": null,
+                "label": "Gildenlagerwert",
+                "terms": [
+                  {
+                    "line": 0
+                  },
+                  {
+                    "line": 1
+                  },
+                  {
+                    "line": 2
+                  }
+                ],
+                "operators": ["+", "−"],
+                "result": 540
+              }
+            ]
+          },
+          "why": "Warum? So viel sind die Waren der Gilde zu ihrem eigenen Preis wert, soweit das Protokoll sie zeigt."
+        },
+        {
+          "question": "Was ist die „Gildenspende“?",
+          "rule": "Die Gildenspende ist, was die Gilde zu ihrem Preis von 60 % gezahlt hätte, aber nicht gutschrieb, seit dem ersten Protokoll vom 22.01.2023.",
+          "example": {
+            "intro": "Mira Mitglied zahlt 1.000 Gold ein und legt 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle ein. Hanna Handwerk hebt 300 Gold ab und nimmt 5 Steinkohle heraus.",
+            "ledger": {
+              "bank": [
+                {
+                  "member": "Mira Mitglied",
+                  "amount": 1000,
+                  "movement": "Einzahlung"
+                },
+                {
+                  "member": "Hanna Handwerk",
+                  "amount": 300,
+                  "movement": "Entnahme"
+                }
+              ],
+              "storage": [
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Eisenerz",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Hanna Handwerk",
+                  "quantity": 5,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Entnahme"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Eisenerz",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": true,
+                "price": 40,
+                "share": 60,
+                "result": 240.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Eisenerz",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 40,
+                "share": 0,
+                "result": 0.0
+              },
+              {
+                "kind": "figure",
+                "row": null,
+                "label": "Gildenspende",
+                "terms": [
+                  {
+                    "line": 0
+                  },
+                  {
+                    "line": 1
+                  }
+                ],
+                "operators": ["−"],
+                "result": 240
+              }
+            ]
+          },
+          "why": "Warum? Gesammeltes ist eure Abgabe an die Gilde; hier seht ihr, wie viel sie wert ist."
+        },
+        {
+          "question": "Was sind „Handwerkssubventionen“?",
+          "rule": "Handwerkssubventionen sind, was die Gilde seit dem ersten Protokoll vom 22.01.2023 über ihren Preis hinaus gutschreibt, für Handwerksmaterial und für Pfeile, Bolzen und Magieessenz.",
+          "example": {
+            "intro": "Mira Mitglied zahlt 1.000 Gold ein und legt 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle ein. Hanna Handwerk hebt 300 Gold ab und nimmt 5 Steinkohle heraus.",
+            "ledger": {
+              "bank": [
+                {
+                  "member": "Mira Mitglied",
+                  "amount": 1000,
+                  "movement": "Einzahlung"
+                },
+                {
+                  "member": "Hanna Handwerk",
+                  "amount": 300,
+                  "movement": "Entnahme"
+                }
+              ],
+              "storage": [
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Eisenerz",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Hanna Handwerk",
+                  "quantity": 5,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Entnahme"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": false,
+                "price": 100,
+                "share": 100,
+                "result": 1000.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": true,
+                "price": 100,
+                "share": 60,
+                "result": 600.0
+              },
+              {
+                "kind": "figure",
+                "row": null,
+                "label": "Handwerkssubventionen",
+                "terms": [
+                  {
+                    "line": 0
+                  },
+                  {
+                    "line": 1
+                  }
+                ],
+                "operators": ["−"],
+                "result": 400
+              }
+            ]
+          },
+          "why": "Warum? Was ihr mit Gold gekauft habt, soll euch kein Gold kosten; die 40 % über ihrem Preis trägt die Gilde."
+        },
+        {
+          "question": "Was zeigt die Zeile „Gilde“?",
+          "rule": "Die Zeile „Gilde“ zählt alle Mitglieder zusammen, auch die ruhenden. „!“ bei der Gilde heißt: mindestens eine Zeile ist noch nicht berechnet oder veraltet.",
+          "example": {
+            "intro": "Mira Mitglied zahlt 1.000 Gold ein und legt 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle ein. Hanna Handwerk hebt 300 Gold ab und nimmt 5 Steinkohle heraus.",
+            "ledger": {
+              "bank": [
+                {
+                  "member": "Mira Mitglied",
+                  "amount": 1000,
+                  "movement": "Einzahlung"
+                },
+                {
+                  "member": "Hanna Handwerk",
+                  "amount": 300,
+                  "movement": "Entnahme"
+                }
+              ],
+              "storage": [
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Eisenerz",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Hanna Handwerk",
+                  "quantity": 5,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Entnahme"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Eisenerz",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 40,
+                "share": 0,
+                "result": 0.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": false,
+                "price": 100,
+                "share": 100,
+                "result": 1000.0
+              },
+              {
+                "kind": "movement",
+                "member": "Hanna Handwerk",
+                "movement": "Entnahme",
+                "quantity": 5,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 100,
+                "share": 60,
+                "result": 300.0
+              },
+              {
+                "kind": "figure",
+                "row": "Mira Mitglied",
+                "label": "Nach Abzügen",
+                "terms": [
+                  {
+                    "amount": 1000
+                  },
+                  {
+                    "line": 0
+                  },
+                  {
+                    "line": 1
+                  }
+                ],
+                "operators": ["+", "+"],
+                "result": 2000
+              },
+              {
+                "kind": "figure",
+                "row": "Hanna Handwerk",
+                "label": "Nach Abzügen",
+                "terms": [
+                  {
+                    "amount": 0
+                  },
+                  {
+                    "amount": 300
+                  },
+                  {
+                    "line": 2
+                  }
+                ],
+                "operators": ["−", "−"],
+                "result": -600
+              },
+              {
+                "kind": "figure",
+                "row": "Gilde",
+                "label": "Nach Abzügen",
+                "terms": [
+                  {
+                    "line": 3
+                  },
+                  {
+                    "line": 4
+                  }
+                ],
+                "operators": ["+"],
+                "result": 1400
+              }
+            ]
+          },
+          "why": "Warum? Unten steht, was die ganze Gilde bewegt hat. Oben steht dieselbe Summe, aufgeteilt: 700 Gold Gildenbank + 540 Gold Gildenlagerwert − 240 Gold Gildenspende + 400 Gold Handwerkssubventionen."
+        },
+        {
+          "question": "Warum steht beim Gildenhändler „Vor Abzügen“ im Minus?",
+          "rule": "„Vor Abzügen“ zählt die Einlagerung des Gildenhändlers ohne die Handwerkssubventionen, also nur zum Gildenpreis.",
+          "example": {
+            "intro": "Gero Gildenhändler handelt für die Gilde. Er nimmt 50 Hartpelz heraus, um sie zu verkaufen, kauft vom Erlös 25 Steinkohle am Marktstand und legt sie ein.",
+            "ledger": {
+              "bank": [],
+              "storage": [
+                {
+                  "member": "Gero Gildenhändler",
+                  "quantity": 50,
+                  "item": "Hartpelz",
+                  "quality": 100,
+                  "movement": "Entnahme"
+                },
+                {
+                  "member": "Gero Gildenhändler",
+                  "quantity": 25,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Gero Gildenhändler",
+                "movement": "Entnahme",
+                "quantity": 50,
+                "item": "Hartpelz",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 60,
+                "share": 60,
+                "result": 1800.0
+              },
+              {
+                "kind": "movement",
+                "member": "Gero Gildenhändler",
+                "movement": "Einlagerung",
+                "quantity": 25,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": false,
+                "price": 100,
+                "share": 100,
+                "result": 2500.0
+              },
+              {
+                "kind": "movement",
+                "member": "Gero Gildenhändler",
+                "movement": "Einlagerung",
+                "quantity": 25,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": true,
+                "price": 100,
+                "share": 60,
+                "result": 1500.0
+              },
+              {
+                "kind": "figure",
+                "row": "Gero Gildenhändler",
+                "label": "Nach Abzügen",
+                "terms": [
+                  {
+                    "line": 1
+                  },
+                  {
+                    "line": 0
+                  }
+                ],
+                "operators": ["−"],
+                "result": 700
+              },
+              {
+                "kind": "figure",
+                "row": "Gero Gildenhändler",
+                "label": "Vor Abzügen",
+                "terms": [
+                  {
+                    "line": 2
+                  },
+                  {
+                    "line": 0
+                  }
+                ],
+                "operators": ["−"],
+                "result": -300
+              }
+            ]
+          },
+          "why": "Warum? Gekauftes zählt voll, weil Gero Gildenhändler es mit Gold bezahlt hat. Vor den Abzügen fehlen ihm die 1.000 Gold Handwerkssubventionen, und er steht im Minus."
+        },
+        {
+          "question": "Was kann das Protokoll nicht zeigen?",
+          "rule": "Drei Dinge kann das Protokoll nicht zeigen:",
+          "points": [
+            "Gold, das ein Mitglied behält, statt es in die Gildenbank zu zahlen",
+            "ob Munition gekauft oder selbst gefertigt wurde",
+            "ob eine Entnahme ins Handwerk ging oder verkauft wurde"
+          ],
+          "example": {
+            "intro": "Gero Gildenhändler verkauft die 50 Hartpelz für 3.000 Gold und bezahlt die Steinkohle mit 2.500 Gold. Die übrigen 500 Gold behält er für die nächste Runde; im Protokoll steht davon nichts.",
+            "ledger": {
+              "bank": [],
+              "storage": [
+                {
+                  "member": "Gero Gildenhändler",
+                  "quantity": 50,
+                  "item": "Hartpelz",
+                  "quality": 100,
+                  "movement": "Entnahme"
+                },
+                {
+                  "member": "Gero Gildenhändler",
+                  "quantity": 25,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Gero Gildenhändler",
+                "movement": "Entnahme",
+                "quantity": 50,
+                "item": "Hartpelz",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 60,
+                "share": 60,
+                "result": 1800.0
+              },
+              {
+                "kind": "movement",
+                "member": "Gero Gildenhändler",
+                "movement": "Einlagerung",
+                "quantity": 25,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": false,
+                "price": 100,
+                "share": 100,
+                "result": 2500.0
+              },
+              {
+                "kind": "figure",
+                "row": "Gero Gildenhändler",
+                "label": "Nach Abzügen",
+                "terms": [
+                  {
+                    "line": 1
+                  },
+                  {
+                    "line": 0
+                  }
+                ],
+                "operators": ["−"],
+                "result": 700
+              }
+            ]
+          },
+          "why": "Warum? Im Protokoll sehen diese Fälle gleich aus; was es nicht zeigt, klären wir miteinander."
+        }
+      ]
+    },
+    {
+      "title": "Die Übersicht lesen",
+      "answers": [
+        {
+          "question": "Warum passt eine Summe manchmal um 1 Gold nicht?",
+          "rule": "Jede Zahl wird einmal gerundet, aus ihrem genauen Wert auf das nächste ganze Gold.",
+          "example": {
+            "intro": "Mira Mitglied legt 1 Magische Ätherbinde ein und nimmt 2 Pfeile heraus.",
+            "ledger": {
+              "bank": [],
+              "storage": [
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 1,
+                  "item": "Magische Ätherbinde",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 2,
+                  "item": "Pfeile",
+                  "quality": 100,
+                  "movement": "Entnahme"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 1,
+                "item": "Magische Ätherbinde",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 257,
+                "share": 60,
+                "result": 154.2
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Entnahme",
+                "quantity": 2,
+                "item": "Pfeile",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 3,
+                "share": 60,
+                "result": 3.6
+              },
+              {
+                "kind": "figure",
+                "row": "Mira Mitglied",
+                "label": "Nach Abzügen",
+                "terms": [
+                  {
+                    "line": 0
+                  },
+                  {
+                    "line": 1
+                  }
+                ],
+                "operators": ["−"],
+                "result": 150.6
+              }
+            ]
+          },
+          "why": "Warum? 154 − 4 wären 150. Weil jede Zahl für sich aus ihrem genauen Wert einmal gerundet wird, steht in der Zeile von Mira Mitglied 151."
+        },
+        {
+          "question": "Was bedeuten die Farben, „–“ und „!“?",
+          "rule": "Bank-Einzahlung und Einlagerung in der Farbe einer Gutschrift, Bank-Auszahlung und Entnahme in der Farbe einer Belastung. Die letzte Spalte färbt sich erst im Minus. Eine Null bleibt ohne Farbe. Gildenbank, Gildenlagerwert und Gildenspende färben sich nach ihrem Vorzeichen, Handwerkssubventionen nie in der Farbe einer Gutschrift. „–“ steht, wo es keine Zahl oder kein Datum gibt. „!“ steht bei einer Zeile, die noch nicht berechnet oder veraltet ist.",
+          "example": {
+            "intro": "Hanna Handwerk hat nur 300 Gold abgehoben. Ihre Bank-Auszahlung steht in der Farbe einer Belastung, ihre Einlagerung von 0 Gold ohne Farbe, „Nach Abzügen“ mit -300 Gold in der Farbe einer Belastung, und unter „Letzte Lageraktivität“ steht „–“.",
+            "ledger": {
+              "bank": [],
+              "storage": []
+            },
+            "lines": []
+          },
+          "why": "Warum? So seht ihr auf einen Blick, wer gibt, wer nimmt und wo noch etwas fehlt."
+        },
+        {
+          "question": "Was heißt „Noch nicht berechnet.“?",
+          "rule": "Diese Zeile wurde noch nie berechnet: Ein neues Mitglied steht schon im Protokoll, die nächste Berechnung kommt aber erst; solange ein Mitglied noch nicht berechnet ist, steht es auch bei den vier Zahlen der Gilde.",
+          "example": {
+            "intro": "Hanna Handwerk ist neu und zahlt zum ersten Mal Gold ein. Bis zur nächsten Berechnung steht in ihrer Zeile „–“ mit „Noch nicht berechnet.“, und oben bei Gildenbank, Gildenlagerwert, Gildenspende und Handwerkssubventionen ebenso.",
+            "ledger": {
+              "bank": [],
+              "storage": []
+            },
+            "lines": []
+          },
+          "why": "Warum? Lieber keine Zahl als eine, die ein Mitglied auslässt."
+        },
+        {
+          "question": "Was heißt „Veraltete Zahlen“?",
+          "rule": "Die Zahlen dieser Zeile zeigen den Stand der letzten Berechnung, die das Mitglied erreicht hat; das Datum steht dabei.",
+          "example": {
+            "intro": "Die Vorgänge von Mira Mitglied konnten bei der letzten Berechnung nicht gelesen werden. Ihre Zeile zeigt weiter die Zahlen vom Vortag, mit „Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom …“.",
+            "ledger": {
+              "bank": [],
+              "storage": []
+            },
+            "lines": []
+          },
+          "why": "Warum? Die anderen Mitglieder bleiben aktuell, auch wenn bei einem etwas klemmt."
+        },
+        {
+          "question": "Wer steht unter „Aktiv“, wer unter „Ruhend“?",
+          "rule": "Unter „Aktiv“ steht, wer in den 30 Tagen vor dem letzten Vorgang der Gilde etwas bewegt hat; alle anderen stehen unter „Ruhend“.",
+          "example": {
+            "intro": "Der letzte Vorgang der Gilde ist vom 31.01. Mira Mitglied hat am 10.01. eingelagert und steht unter „Aktiv“; Hanna Handwerk hat zuletzt am 20.12. etwas bewegt und steht unter „Ruhend“.",
+            "ledger": {
+              "bank": [],
+              "storage": []
+            },
+            "lines": []
+          },
+          "why": "Warum? Gemessen wird am Protokoll, nicht am heutigen Tag: Kommt das Protokoll einmal später, wird deshalb niemand ruhend."
+        }
+      ]
+    },
+    {
+      "title": "Umstellen",
+      "answers": [
+        {
+          "question": "Kann ich die letzte Spalte umstellen?",
+          "rule": "Ihr könnt die letzte Spalte zwischen „Nach Abzügen“ und „Vor Abzügen“ umschalten. Beim Neuladen steht wieder „Nach Abzügen“.",
+          "example": {
+            "intro": "Mira Mitglied hat 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle eingelagert und schaltet auf „Vor Abzügen“.",
+            "ledger": {
+              "bank": [],
+              "storage": [
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Eisenerz",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                },
+                {
+                  "member": "Mira Mitglied",
+                  "quantity": 10,
+                  "item": "Steinkohle",
+                  "quality": 100,
+                  "movement": "Einlagerung"
+                }
+              ]
+            },
+            "lines": [
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Eisenerz",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": false,
+                "price": 40,
+                "share": 0,
+                "result": 0.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": false,
+                "price": 100,
+                "share": 100,
+                "result": 1000.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Eisenerz",
+                "quality": 100,
+                "marketStall": false,
+                "atGuildPrice": true,
+                "price": 40,
+                "share": 60,
+                "result": 240.0
+              },
+              {
+                "kind": "movement",
+                "member": "Mira Mitglied",
+                "movement": "Einlagerung",
+                "quantity": 10,
+                "item": "Steinkohle",
+                "quality": 100,
+                "marketStall": true,
+                "atGuildPrice": true,
+                "price": 100,
+                "share": 60,
+                "result": 600.0
+              },
+              {
+                "kind": "figure",
+                "row": "Mira Mitglied",
+                "label": "Nach Abzügen",
+                "terms": [
+                  {
+                    "line": 0
+                  },
+                  {
+                    "line": 1
+                  }
+                ],
+                "operators": ["+"],
+                "result": 1000
+              },
+              {
+                "kind": "figure",
+                "row": "Mira Mitglied",
+                "label": "Vor Abzügen",
+                "terms": [
+                  {
+                    "line": 2
+                  },
+                  {
+                    "line": 3
+                  }
+                ],
+                "operators": ["+"],
+                "result": 840
+              }
+            ]
+          },
+          "why": "Warum? „Nach Abzügen“ ist die Zahl, die zählt; „Vor Abzügen“ ist zum Vergleichen da."
+        },
+        {
+          "question": "Wie sortiere ich die Übersicht?",
+          "rule": "Ihr könnt nach jeder Spalte sortieren: Ein Klick auf die Spaltenüberschrift sortiert, ein zweiter kehrt die Reihenfolge um. Jede Tabelle sortiert für sich. Die Zeile „Gilde“ bleibt unten.",
+          "example": {
+            "intro": "Mira Mitglied sortiert „Aktiv“ nach „Einlagerung“ und steht mit 1.000 Gold oben. „Ruhend“ bleibt, wie es war, und „Gilde“ steht weiter unten.",
+            "ledger": {
+              "bank": [],
+              "storage": []
+            },
+            "lines": []
+          },
+          "why": "Warum? So findet ihr schnell, wer am meisten gibt oder nimmt, ohne die Gilde aus dem Blick zu verlieren."
+        },
+        {
+          "question": "Wo finde ich meine eigenen Vorgänge?",
+          "rule": "Euer Name führt zu euren Vorgängen in der Bank. „Letzte Bankaktivität“ zeigt euren neuesten Vorgang in der Bank und führt dorthin. „Letzte Lageraktivität“ zeigt euren neuesten Vorgang im Lager und führt dorthin.",
+          "example": {
+            "intro": "Mira Mitglied tippt auf ihren Namen und sieht „Bank von Mira Mitglied“; über ihr Datum unter „Letzte Lageraktivität“ kommt sie zu „Lager von Mira Mitglied“.",
+            "ledger": {
+              "bank": [],
+              "storage": []
+            },
+            "lines": []
+          },
+          "why": "Warum? Jede Zahl der Übersicht lässt sich bis zum einzelnen Vorgang zurückverfolgen."
+        },
+        {
+          "question": "Wie sortiere und blättere ich in meinen Vorgängen?",
+          "rule": "Auch hier sortiert ein Klick auf die Spaltenüberschrift; eine Sortierung sortiert alle Vorgänge, nicht nur die Seite. Ihr seht 100 Vorgänge je Seite. Mit „Weiter“ und „Zurück“ blättert ihr. Die Sortierung steht in der Adresse.",
+          "example": {
+            "intro": "Gero Gildenhändler hat 150 Vorgänge im Lager. Er sortiert nach Menge und blättert mit „Weiter“ auf Seite 2: Dort stehen die übrigen 50, weiter nach Menge sortiert.",
+            "ledger": {
+              "bank": [],
+              "storage": []
+            },
+            "lines": []
+          },
+          "why": "Warum? So findet ihr auch einen alten Vorgang, ohne alle Seiten durchzusehen."
+        },
+        {
+          "question": "Kann ich mir eine Seite merken?",
+          "rule": "Jede Seite lässt sich als Lesezeichen merken. Sortierung und Seite eurer Vorgänge bleiben im Lesezeichen erhalten.",
+          "example": {
+            "intro": "Gero Gildenhändler merkt sich Seite 2 seines Lagers, nach Menge sortiert; das Lesezeichen öffnet genau diese Seite.",
+            "ledger": {
+              "bank": [],
+              "storage": []
+            },
+            "lines": []
+          },
+          "why": "Warum? Der Link mit dem Gildenschlüssel ist euer Zugang; behaltet ihn für euch."
+        }
+      ]
+    }
+  ]
+}
