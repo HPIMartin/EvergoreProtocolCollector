@@ -82,8 +82,8 @@
     braceless `if` and on a star import, neither of which needs the classpath to spot.
   - Checkstyle only *reports*, no auto-fix; add braces via the redhat.java "Add braces" quick-fix
     and expand a star import with organize-imports on save (the IDE has the type information).
-  - Stays scoped to these two gaps, not a general linter (that overlap with the reviewer agent / a
-    future Sonar-style static-analysis gate, backlog G6, was why it was earlier declined).
+  - Stays scoped to these two gaps; a general linter stays out because it would overlap with the
+    reviewer agent and a future Sonar-style static-analysis gate (backlog G6).
 - **Frontend build (`:frontend` Gradle subproject):** a React/TypeScript SPA built with Vite, wired
   into the root build via a `frontendDist` Gradle configuration (`:frontend`'s `build/dist`
   consumed into `processResources` under `static/ui`, so the SPA ships inside the main jar). Node
@@ -385,8 +385,8 @@ any push.
     (decision 2026-10-13).
 
   The version commit may sit far behind and carry none of it. Tagging it instead would name a stand
-  nobody built or ran (the `0.1.0` case: the version commit's image build was broken and its
-  credential handling superseded).
+  nobody built or ran (at `0.1.0`, the version commit carries a broken image build and credential
+  handling the release replaced).
 - **Consequence: a build off an untagged `main` commit is not identified by its version alone**
   (between releases `version` still names the release being prepared). Such a build is tagged
   `evergore-protocol-collector:<version>-<short sha>`; a **bare**
@@ -600,7 +600,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    An image the build orphans is still startable by id, but nothing left on the host says what it
    was. **This is the situation at the `0.1.0` release**, whose predecessor was built before the
    tagging scheme existed: it runs as the bare, untagged `evergore_protocol_collector`
-   (**underscores**, the pre-`0.1.0` name), so its rollback tag is
+   (**underscores**, the predecessor's repository name), so its rollback tag is
    `evergore_protocol_collector:pre-0.1.0` while the release image is
    `evergore-protocol-collector:0.1.0`. The two names sit in different repositories, which is what
    keeps the new build from overwriting the rollback target.
@@ -687,7 +687,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    - **Timeline** (measured 2026-08-16 on both machines): the server answers after ~1 s, the first
      collection starts 30 s after startup (`getCollectorInitialDelaySeconds`), and extraction plus
      evaluation together took **16 s** on the work machine and **42 s** on the home server. So
-     `/health` turned `UP` **46 s** and **71 s** after container start. The older "~2.5 minutes"
+     `/health` turned `UP` **46 s** and **71 s** after container start. A wait of ~2.5 minutes
      is a conservative upper bound, not the expected value. `UNKNOWN` before that is the documented
      state, not a failure; past ~3 minutes, read the log instead of waiting.
    - **Timeline with the `V2` rebuild** (measured 2026-09-21 on the work machine, Docker Desktop,
@@ -781,11 +781,10 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    - The restored state is only observable in the **first 30 seconds**: the collection then runs
      again and writes the restored database forward. Verify `/api/v1/admin/status`'s `lastUpdated`
      right after startup.
-   - **Rolled back on the home server 2026-09-21**: the superseded copy (78.5 MB) kept, the backup
-     (39.8 MB) restored, `pre-0.2.0` up and `UP` after 50 s with a live scrape. A re-deploy the same
-     day meets the backup guard; the author's call was to move the backup aside as
-     `temp.sqlite.bak-<yyyymmdd>-vor-rollback` and run again, which took a fresh backup of the
-     restored file and ran `V2` over it once more.
+   - **A re-deploy on the day of a rollback** meets the backup guard of step 1 (that day's
+     `temp.sqlite.bak-<yyyymmdd>` exists). Move that backup aside as
+     `temp.sqlite.bak-<yyyymmdd>-vor-rollback` (decision 2026-09-21) and run again: the run takes a
+     fresh backup of the restored file, and the release's pending migrations run over it again.
    - **A rollback onto `0.1.0` reports `UP` only after a successful scrape**: that code does not
      recompute after a failed one. If the game is unreachable on rollback day the health poll runs
      to its timeout and the script declares the rollback failed while the old container serves; the
@@ -866,13 +865,30 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 |---------|---------------|-------|
 | `browser` | `"docker"` | Selenium driver selection (`Browser` enum: FIREFOX/CHROME/EDGE/DOCKER). |
 | `server` | `"zyrthania"` | **Target game world.** Scrape URL = `https://evergore.de/<server>?page=…` (`Constants.SERVER`). Switching worlds = change this. |
-| Evergore login | `evergore.credentials.username` / `.password`, **both required**, env-injected as `EVERGORE_CREDENTIALS_USERNAME` / `EVERGORE_CREDENTIALS_PASSWORD` (bound by the `CredentialsConfiguration` `@ConfigurationProperties` record) | The game account `SeleniumPageSource.tryToLogin` signs in with. **Mandatory at startup**: either value unset or blank and the app refuses to boot (`CredentialsStartupValidator` logs an error naming the variable and throws; an unset variable binds as an empty `Optional` and reaches it), so a missing login cannot degrade into a silent logged-out scrape. No value lives in the repo or in the image. |
+| Evergore login | `evergore.credentials.username` / `.password`, **both required**, env-injected as `EVERGORE_CREDENTIALS_USERNAME` / `EVERGORE_CREDENTIALS_PASSWORD` (bound by the `CredentialsConfiguration` `@ConfigurationProperties` record) | The game account `SeleniumPageSource.tryToLogin` signs in with (startup rule: bullets below the table). |
 | `evergoreFolder` | `c:\evergore` | Windows path; unused on the Linux container scrape path. |
 | DB path | `database/temp.sqlite` | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
 | Auth token | `evergore.security.api-token`, **required**, env-injected as `EVERGORE_SECURITY_API_TOKEN` (bound by the `SecurityConfiguration` `@ConfigurationProperties` bean) | **Every** request needs `?token=<configured token>` except the configured public paths below. **Mandatory at startup**: a blank/unset token makes the app refuse to boot (`ApiTokenStartupValidator` logs an error naming the variable and throws; an unset variable binds as an empty `Optional` and reaches it). No token value lives in the repo. |
 | Public paths | `evergore.security.public-paths` in `application.yml`: `/`, `/index.html`, `/assets/**`, `/favicon.ico`, `/admin`, `/api/v1/admin/status`, `/health`, `/swagger/**`, `/swagger-ui/**`, `/redoc/**`, `/rapidoc/**` (same `SecurityConfiguration` bean) | The **only** token-free surface; Ant patterns, matched against the canonicalized path by `PublicPaths`. Everything not listed needs a token, so a new controller is protected by default. Empty or unset ⇒ everything is protected (fail closed), which makes a misconfiguration a visible 401 on `/` rather than a silent hole. |
-| Rate limit | `evergore.rate-limit.*`: `max-requests-per-interval` `30`, `interval` `10s`, `block-duration` `1m`, `max-tracked-clients` `10000` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `RateLimitFilter` (filter order 2, behind the audit log and ahead of the token filter); exceeding the limit within `interval` blocks that IP for `block-duration` → **429** (`TooManyRequests`). Applies to **every** path. The limit carries a full page load (shell + bundle + favicon + API call ≈ 5 requests) several times over; below ~10 the SPA would throttle itself. `max-tracked-clients` bounds the counter map (see `RateLimitCounters` below). `RateLimitStartupValidator` refuses to boot on any value that would silently disable the throttle: a request budget or client budget below `1`, or a non-positive `interval`/`block-duration`. Config-driven, no hard-coded constants; the test profile raises the limit so the suite isn't throttled. |
+| Rate limit | `evergore.rate-limit.*`: `max-requests-per-interval` `30`, `interval` `10s`, `block-duration` `1m`, `max-tracked-clients` `10000` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `RateLimitFilter` (details: bullets below the table). |
 
+- **The Evergore login is mandatory at startup:** either value unset or blank and the app refuses to
+  boot (`CredentialsStartupValidator` logs an error naming the variable and throws; an unset variable
+  binds as an empty `Optional` and reaches it), so a missing login cannot degrade into a silent
+  logged-out scrape. No value lives in the repo or in the image.
+- **The rate limit** (`RateLimitFilter`, filter order 2, behind the audit log and ahead of the token
+  filter):
+  - exceeding the limit within `interval` blocks that IP for `block-duration` → **429**
+    (`TooManyRequests`);
+  - it applies to **every** path;
+  - it carries a full page load (shell + bundle + favicon + API call ≈ 5 requests) several times
+    over; below ~10 the SPA would throttle itself;
+  - `max-tracked-clients` bounds the counter map (see `RateLimitCounters` below);
+  - `RateLimitStartupValidator` refuses to boot on any value that would silently disable the
+    throttle: a request budget or client budget below `1`, or a non-positive
+    `interval`/`block-duration`;
+  - it is config-driven, with no hard-coded constants; the test profile raises the limit so the
+    suite isn't throttled.
 - **Environment YAMLs hold overrides only** (author decision 2026-08-15). Micronaut merges the
   property sources, so `application-<env>.yml` is an overlay on `application.yml`, not a replacement:
   a key it repeats with the same value is duplication that silently rots when the base changes.
@@ -903,10 +919,9 @@ on the **canonicalized** path (`PathCanonicalizer`), so `/assets/../overview` is
 `/overview`. Consequence for the SPA: a deep link opened without a token answers **401**, the shell
 loads from `/` and the client carries `?token=` across its routes.
 
-**Public means token-free, nothing else** (author decision 2026-08-14, superseding the static-surface
-exemption of 2026-08-04): the rate limit and the audit log apply to every path, so
-`evergore.security.public-paths` is the *only* list of paths with a special status. There is no second,
-code-side list that could drift out of sync with it.
+**Public means token-free, nothing else** (author decision 2026-08-14): the rate limit and the
+audit log apply to every path, so `evergore.security.public-paths` is the *only* list of paths with
+a special status. There is no second, code-side list that could drift out of sync with it.
 
 The per-IP counter map is bounded by `RateLimitCounters`: a client whose `interval` elapsed and that is
 not blocked is forgotten (its counter would reset anyway, so nothing is lost), and once
@@ -991,9 +1006,41 @@ answered (measured on Micronaut 4.10.9).
 | `GET /overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`, `/admin` | SPA client routes. No controller owns them: `/overview`/`/avatars/**` fall through to the shell with a token, `/admin` is public and needs none, so a deep link or a bookmark works either way. |
 | `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle. **Public** (no token), but rate-limited and logged like any other request. An unknown navigation path **with a token** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
 | `GET /favicon.ico` | Favicon: public, but rate-limited and logged like any other request. |
-| `GET /health` | Micronaut management health endpoint: token-exempt, anonymous. Reports UNKNOWN (no recompute attempted yet), UP (the latest recompute succeeded) or DOWN (the latest recompute failed, even after an earlier success), + `lastSuccessfulRecompute` timestamp. A scrape and a recompute are tracked independently: a failed scrape no longer blocks the recompute that follows it, so the `lastRun` detail also carries `lastSuccessfulScrape`/`lastScrapeFailure`/`lastRecomputeFailure` when present, telling "could not scrape" apart from "could not recompute"; when the last run hit unknown catalog items, it also carries `unknownItemCount` and the distinct `unknownItemNames`; when an avatar's ledger could not be read, `failedAvatarCount` and `failedAvatarNames` name it; when the `RoundTripDetector` reported a trader good withdrawn and deposited again within 48 hours, `roundTripCount` and `roundTrips` name the avatar/item/quantity; when it abstained rather than judge a pair because a deposited product's recipe is unread, `roundTripAbstentionCount` and `roundTripAbstentions` name the avatar/item pair. `lastSuccessfulRecompute` still advances on such an avatar failure: it reports that a recompute ran, not that every avatar's sums refreshed, and the failed names beside it carry that second question. Use as a liveness/last-run monitor hook. |
-| `GET /api/v1/admin/status` | JSON admin status: token-exempt, anonymous, same trust level as `/health`. `{lastUpdated, lastSuccessfulScrape, lastScrapeFailure, lastSuccessfulRecompute, lastRecomputeFailure, unknownItemNames, failedAvatarNames, roundTrips, roundTripAbstentions}`. `lastUpdated` is persisted (the meta store's last-completed-evaluation stamp, the datum that used to sit on the members' overview); the four outcome instants, the two name lists and the two round-trip arrays are in-memory, the same `LastRunStatus` `/health` reads, so they are empty again after a restart until the next run. Unlike `/health` it states the facts without deriving a verdict from them, and unlike `/health` it renders every key, `null` included, so a missing outcome is visible rather than absent (the two round-trip arrays are the exception: they serve `[]` rather than `null` when empty, like every other array on this endpoint). `roundTrips` is `[{avatar, item, quantity}]` and `roundTripAbstentions` is `[{avatar, item}]`, both sorted by avatar then item, `item` being the catalog's `ingameName`. |
+| `GET /health` | Micronaut management health endpoint, token-exempt and anonymous: the liveness/last-run monitor hook (what it reports: bullets below the table). |
+| `GET /api/v1/admin/status` | JSON admin status, token-exempt and anonymous, same trust level as `/health` (keys and semantics: bullets below the table). |
 | `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: public, but rate-limited and logged. |
+
+- **`/health`** reports:
+  - UNKNOWN (no recompute attempted yet), UP (the latest recompute succeeded) or DOWN (the latest
+    recompute failed, even after an earlier success), plus the `lastSuccessfulRecompute` timestamp;
+  - a scrape and a recompute are tracked independently, and a failed scrape does not block the
+    recompute that follows it, so the `lastRun` detail also carries
+    `lastSuccessfulScrape`/`lastScrapeFailure`/`lastRecomputeFailure` when present, telling "could
+    not scrape" apart from "could not recompute";
+  - when the last run hit unknown catalog items, `unknownItemCount` and the distinct
+    `unknownItemNames`;
+  - when an avatar's ledger could not be read, `failedAvatarCount` and `failedAvatarNames` naming it;
+  - when the `RoundTripDetector` reported a trader good withdrawn and deposited again within 48
+    hours, `roundTripCount` and `roundTrips` naming the avatar/item/quantity;
+  - when it abstained rather than judge a pair because a deposited product's recipe is unread,
+    `roundTripAbstentionCount` and `roundTripAbstentions` naming the avatar/item pair.
+- **`/health`'s `lastSuccessfulRecompute` still advances on an avatar failure:** it reports that a
+  recompute ran, not that every avatar's sums refreshed, and the failed names beside it carry that
+  second question.
+- **`/api/v1/admin/status`** answers `{lastUpdated, lastSuccessfulScrape, lastScrapeFailure,
+  lastSuccessfulRecompute, lastRecomputeFailure, unknownItemNames, failedAvatarNames, roundTrips,
+  roundTripAbstentions}`:
+  - `lastUpdated` is persisted: the meta store's last-completed-evaluation stamp, shown on `/admin`,
+    not on the members' overview;
+  - the four outcome instants, the two name lists and the two round-trip arrays are in-memory, the
+    same `LastRunStatus` `/health` reads, so they are empty again after a restart until the next
+    run;
+  - unlike `/health` it states the facts without deriving a verdict from them;
+  - unlike `/health` it renders every key, `null` included, so a missing outcome is visible rather
+    than absent; the two round-trip arrays are the exception: they serve `[]` rather than `null`
+    when empty, like every other array on this endpoint;
+  - `roundTrips` is `[{avatar, item, quantity}]` and `roundTripAbstentions` is `[{avatar, item}]`,
+    both sorted by avatar then item, `item` being the catalog's `ingameName`.
 
 ## Scheduled job
 
