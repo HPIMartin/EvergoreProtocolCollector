@@ -182,7 +182,7 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
 - **Test-suite hygiene:** the test debt two feature gates
   left (B33, B34, B38), the release comparison's remaining edges (B42, B43, B44, B45), style
   alignment (B8), the shared boot fixture (B18), the parser's residual shapes (B22), deterministic
-  fixture ids (B23), the unexplained load-sensitive failure (B20), AssertJ in `SmokeTest` (B7).
+  fixture ids (B23), the unexplained load-sensitive failure (B20).
 - **Docs & code hygiene:** the doc-debt collection row (G18), the parser
   entrypoints made injectable (D15), exception/logging hygiene and dead code (D11).
 - **Craftsmanship, when a gap allows:** catalog refactor (D6), full repackaging (D3) last, on top

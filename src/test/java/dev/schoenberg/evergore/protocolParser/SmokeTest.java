@@ -40,9 +40,7 @@ import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.Exc
 import static java.time.Instant.EPOCH;
 import static java.util.Arrays.asList;
 import static kong.unirest.Unirest.config;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @MicronautTest
 class SmokeTest {
@@ -63,12 +61,12 @@ class SmokeTest {
 
 	@Test
 	void applicationIsStarting() {
-		assertTrue(server.isRunning());
+		assertThat(server.isRunning()).isTrue();
 
 		signals.awaitCollection();
 
-		assertFalse(signals.exceptionOccurred());
-		assertTrue(signals.dataLoaded());
+		assertThat(signals.exceptionOccurred()).isFalse();
+		assertThat(signals.dataLoaded()).isTrue();
 	}
 
 	@Test
@@ -79,9 +77,10 @@ class SmokeTest {
 
 		HttpResponse<String> response = get("/api/v1/avatars/BankTestAvatar/bank");
 
-		assertTrue(response.getStatus() >= 200 && response.getStatus() < 300, "Status code was: " + response.getStatus());
-		assertEquals("{\"page\":0,\"size\":100,\"totalCount\":1,\"items\":["
-				+ "{\"timestamp\":\"1900-05-04T12:37:00Z\",\"avatar\":\"BankTestAvatar\",\"amount\":42,\"transferType\":\"DEPOSIT\"}]}", response.getBody());
+		assertThat(response.getStatus()).isBetween(200, 299);
+		assertThat(response.getBody())
+				.isEqualTo("{\"page\":0,\"size\":100,\"totalCount\":1,\"items\":["
+						+ "{\"timestamp\":\"1900-05-04T12:37:00Z\",\"avatar\":\"BankTestAvatar\",\"amount\":42,\"transferType\":\"DEPOSIT\"}]}");
 	}
 
 	@Test
@@ -92,10 +91,10 @@ class SmokeTest {
 
 		HttpResponse<String> response = get("/api/v1/avatars/StorageTestAvatar/storage");
 
-		assertTrue(response.getStatus() >= 200 && response.getStatus() < 300, "Status code was: " + response.getStatus());
-		assertEquals("{\"page\":0,\"size\":100,\"totalCount\":1,\"items\":["
-				+ "{\"timestamp\":\"1900-05-04T12:37:00Z\",\"avatar\":\"StorageTestAvatar\",\"quantity\":1,\"name\":\"TestItem\",\"quality\":42,\"transferType\":\"DEPOSIT\"}]}",
-				response.getBody());
+		assertThat(response.getStatus()).isBetween(200, 299);
+		assertThat(response.getBody())
+				.isEqualTo("{\"page\":0,\"size\":100,\"totalCount\":1,\"items\":["
+						+ "{\"timestamp\":\"1900-05-04T12:37:00Z\",\"avatar\":\"StorageTestAvatar\",\"quantity\":1,\"name\":\"TestItem\",\"quality\":42,\"transferType\":\"DEPOSIT\"}]}");
 	}
 
 	@Test
@@ -111,27 +110,25 @@ class SmokeTest {
 
 		HttpResponse<String> response = get("/api/v1/avatars");
 
-		assertTrue(response.getStatus() >= 200 && response.getStatus() < 300, "Status code was: " + response.getStatus());
-		assertTrue(response
-				.getBody()
+		assertThat(response.getStatus()).isBetween(200, 299);
+		assertThat(response.getBody())
 				.contains(
 						"{\"avatar\":\"OverviewTestAvatar\",\"bankWithdrawn\":42,\"bankDeposited\":1337,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":1295,\"donation\":null,\"craftSubsidy\":null,\"balance\":null,"
-								+ "\"lastBankActivity\":\"1970-01-01T00:00:00Z\",\"lastStorageActivity\":null,\"staleSumsFrom\":null}"),
-				"Body was: " + response.getBody());
+								+ "\"lastBankActivity\":\"1970-01-01T00:00:00Z\",\"lastStorageActivity\":null,\"staleSumsFrom\":null}");
 	}
 
 	@Test
 	void requestNotExisitingEndpoint() {
 		int statusCode = get("/thatEndpointDoesNotExist").getStatus();
 
-		assertTrue(statusCode >= 400 && statusCode < 500);
+		assertThat(statusCode).isBetween(400, 499);
 	}
 
 	@Test
 	void pageSourceResolvesToTheSeleniumAdapter() {
 		PageSource pageSource = server.getApplicationContext().getBean(PageSource.class);
 
-		assertTrue(pageSource instanceof SeleniumPageSource, "Expected SeleniumPageSource but was " + pageSource.getClass());
+		assertThat(pageSource).isInstanceOf(SeleniumPageSource.class);
 	}
 
 	@MockBean(PreDatabaseConnectionHook.class)
