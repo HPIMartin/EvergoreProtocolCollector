@@ -383,10 +383,10 @@ any push.
     sits a few `[doc]` commits behind the tip;
   - the author deploys the gated tip although `main` moved on during the gate, as at `0.3.0`
     (decision 2026-10-13).
-
-  The version commit may sit far behind and carry none of it. Tagging it instead would name a stand
-  nobody built or ran (at `0.1.0`, the version commit carries a broken image build and credential
-  handling the release replaced).
+- **The version commit may sit far behind the tagged commit** and carry none of the released state.
+- **Tagging the version commit instead would name a stand nobody built or ran.**
+  - At `0.1.0`, the version commit carries a broken image build and credential handling the release
+    replaced.
 - **Consequence: a build off an untagged `main` commit is not identified by its version alone**
   (between releases `version` still names the release being prepared). Such a build is tagged
   `evergore-protocol-collector:<version>-<short sha>`; a **bare**
@@ -483,11 +483,8 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
 - **What the self-test does not prove:** the transport, the real filesystem permissions and real
   Docker semantics are stubbed, because the home server is not reachable from the work machine's
   agent session.
-- **The script drove the `0.2.0` release on the home server** (2026-09-21): dry run, deploy,
-  rollback onto `pre-0.2.0` and the same-day re-deploy, each through it and each green at the first
-  attempt, after a rehearsal against the work machine's Docker daemon on a copy of the production
-  snapshot had found and fixed three defects the same morning (recipe below). Start every release
-  with `--dry-run` as its own step, and schedule it with time to read a log.
+- **Every release starts with `--dry-run` as its own step.**
+- **A release is scheduled with time to read a log.**
 - **Password-based hosts:** the home server is reached by password only (its user has no
   authorized key) on its own port, and the deploy reaches the system engine through `sudo` (see
   "Which stand is running?"). `EPC_DEPLOY_SSH=deploy/ssh-with-password` with `EPC_DEPLOY_SSH_PORT`,
@@ -533,11 +530,10 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
   5. Set `EPC_DEPLOY_DATABASE_DIR` in `deploy.local.env` to the new directory, so the next
      deploy's pre-flight matches. `epc-old` does not bother the next deploy, which only touches
      `epc`; remove it once the new directory has run for a while.
-- **Moved on the home server 2026-09-29** (by the host's admins, by hand, per the steps above): the
-  old data disk was failing and is retired, so the database directory now lives on the system disk.
-  Same `0.2.0` image id, health `200`, the api `401` without a token; the old container is kept
-  stopped as the short-term rollback. Copies of release files that lived only on the old disk are
-  gone; the repository and the work machine are the authoritative copies.
+- **The home server's database directory lives on the system disk.**
+- **A stopped `epc-old` container may still exist on the home server**; the next deploy leaves it
+  alone (step 5 above).
+- **The repository and the work machine hold the authoritative copies of the release files.**
 
 **Rehearsing on the work machine** (repeat before every release; nothing on the home server is
 touched):
@@ -818,8 +814,8 @@ ledger and touches no row. What this means for a deploy:
   `V1`/`V2` both recorded successful, a second run a no-op.
 - **Budget minutes, not seconds, on a slow mount.** The copy is fsync-heavy: the same rebuild took
   ~1 s on a local disk and **~4 min** on this devcontainer's `/workspaces` bind mount, 4 min 7 s
-  inside the container on the same drive, and **2.2 s** on the home server's disk over the live
-  database (all 2026-09-21; that disk was retired 2026-09-29). The first
+  inside the container on the same drive, and **2.2 s** on the home server's old data disk over the
+  live database (all measured 2026-09-21). The first
   boot blocks until it finishes, so do not kill the container because it looks hung; killing it is
   safe (the transaction rolls back) but buys nothing.
 - **The file roughly doubles.** The rebuild leaves the old tables' pages as free pages and nothing
