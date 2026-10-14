@@ -577,6 +577,8 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    - Copy it with the container **stopped**, and prove the stop rather than assuming it: `docker stop`
      must echo the name, and `docker ps --filter name=epc` must come back empty. A `No such container`
      is easy to read past, and the copy then runs against a live database.
+   - Any other look into the data reads such a copy, never the live file while the container runs
+     ([risks.md](../risks.md)).
    - One file is enough: the database runs in rollback-journal mode, so no `-wal`/`-shm` sidecar
      outlives a write and there is no second file to keep consistent with it.
    - The script names the copy `<database>.bak-<yyyymmdd>`, verifies its size against the source,

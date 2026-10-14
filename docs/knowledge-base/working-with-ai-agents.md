@@ -216,6 +216,14 @@ command) inside guardrails. Two files:
     unset;** with it set, every project `deny`, `ask` and `allow` is ignored, so after any policy
     change a harmless command the floor must stop (`rm` of a path that does not exist) proves it is
     live.
+- **The push guards' accepted residue** (author decision 2026-10-13,
+  [open-questions.md](../open-questions.md)), beside the `git -C` prompts of "A rule that pairs an
+  inner `*` with the `:*` suffix does not fire" (below); no rule closes these gaps:
+  - `pull.ff`, `merge.ff` and `branch.autoSetupMerge` stay unset.
+  - `git branch -d -f` acts as `-D`.
+  - `git switch -f`, `--discard-changes` and `-C <branch> <start>` pass the plain `git switch`
+    allow.
+  - No check pins the settings file's rule shapes or its push denies.
 - **Where auto-mode rules live:** Claude Code's auto-mode configuration page states that the
   classifier reads `autoMode` (`environment`, `allow`, `soft_deny`, `hard_deny`) only from the user's
   `~/.claude/settings.json`, from managed settings and from `--settings`, never from
