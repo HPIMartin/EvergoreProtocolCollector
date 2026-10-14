@@ -180,7 +180,7 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
 - **Deploy and environment:** a failed ssh connection named as such (F20), the database directory
   given to the runtime user (F21), the browser grid on the agent seat (H14).
 - **Test-suite hygiene:** the test debt two feature gates
-  left (B33, B34, B38), the release comparison's remaining edges (B42, B43, B44, B45), style
+  left (B34, B38), the release comparison's remaining edges (B42, B43, B44, B45), style
   alignment (B8), the shared boot fixture (B18), the parser's residual shapes (B22), deterministic
   fixture ids (B23), the unexplained load-sensitive failure (B20).
 - **Docs & code hygiene:** the doc-debt collection row (G18), the parser
