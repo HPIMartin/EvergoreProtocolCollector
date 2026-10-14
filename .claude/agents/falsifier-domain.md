@@ -56,6 +56,7 @@ each time.
 take its absolute path from your brief. From a session on the Windows host, reach it only through
 `docker exec -u vscode <container> …`, never with Read, Grep or Edit. The deny floor binds inside
 it: no `git reset`, `git clean`, `git branch -D` or `rm` through `docker exec`.
+The floor binds as well inside every script you write and run, a throwaway repo included.
 
 **Throwaway code goes under `src/probe/java`, never under `src/test/java`.** Run it with
 `./gradlew probe` and clear it with `./gradlew clearProbes` before you return; `rm` stays the

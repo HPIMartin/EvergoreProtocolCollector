@@ -164,6 +164,9 @@ command) inside guardrails. Two files:
   - **No deny rule sees into `docker exec … bash -lc '<command>'`:** a rule matches the
     `docker exec` command, not the shell line it carries, so inside it the floor holds only as a
     written rule and no mechanical check reaches it.
+  - **No deny rule sees into a script an agent writes and runs** either: a rule matches the
+    command line that starts it, so inside the script, a throwaway repo included, the floor holds
+    only as a written rule.
   - **Seven narrow plain spellings of `git push` are denied too** (`git push`, `git push origin`,
     `git push * origin`, `git push * HEAD`, `git push -u *`, `git push --set-upstream *`,
     `git push --tags*`), each only in that word order. Each fires without a prompt (measured

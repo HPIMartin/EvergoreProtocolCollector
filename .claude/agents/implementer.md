@@ -103,6 +103,7 @@ each time.
 take its absolute path from your brief. From a session on the Windows host, reach it only through
 `docker exec -u vscode <container> …`, never with Read, Grep or Edit. The deny floor binds inside
 it: no `git reset`, `git clean`, `git branch -D` or `rm` through `docker exec`.
+The floor binds as well inside every script you write and run, a throwaway repo included.
 
 **Code that is not meant to stay goes under `src/probe/java`** (probing a library's real behaviour
 before you write the helper, reproducing something by hand), never into `src/test/java`. Run it with
