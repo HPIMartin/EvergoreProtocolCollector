@@ -26,10 +26,12 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 class EntityParserContractTest {
 
 	private LoggerSpy logger;
+	private EntryFactory entryFactory;
 
 	@BeforeEach
 	void setup() {
 		logger = new LoggerSpy();
+		entryFactory = new EntryFactory(logger);
 	}
 
 	@Test
@@ -191,7 +193,7 @@ class EntityParserContractTest {
 
 	@Test
 	void warnsAboutASkippedItemLineWithoutAnAmount() {
-		EntryFactory.parseContent(List.of("01.01.2000 00:00 Name Einlagerung", " Ghost", "2 Item"), logger);
+		entryFactory.parseContent(List.of("01.01.2000 00:00 Name Einlagerung", " Ghost", "2 Item"));
 
 		assertThat(logger.warnMessages()).containsExactly("Skipping item line with an unparseable number:  Ghost");
 	}
@@ -207,7 +209,7 @@ class EntityParserContractTest {
 
 	@Test
 	void warnsWhenARecognizedEntryYieldsNoParseableItems() {
-		EntryFactory.parseContent(List.of("01.01.2000 00:00 Name Einlagerung", "1.000 Gold"), logger);
+		entryFactory.parseContent(List.of("01.01.2000 00:00 Name Einlagerung", "1.000 Gold"));
 
 		assertThat(logger.warnMessages()).containsExactly("Protocol entry yielded no parseable items: 01.01.2000 00:00 Name Einlagerung");
 	}
@@ -227,7 +229,7 @@ class EntityParserContractTest {
 	@ValueSource(strings = {"01.01.2000 00:00 Entnahmefreund Auszahlung", "01.01.2000 00:00 Anna Entnahmeübersicht", "01.01.2000 00:00 XX-Entnahme-XX",
 			"01.01.2000 00:00 BobEntnahme"})
 	void dropsAHeadlineWhoseTypeWordIsNoWhitespaceDelimitedToken(String headline) {
-		Optional<Entry> entry = EntryFactory.parseContent(List.of(headline, "5 Ghost"), logger);
+		Optional<Entry> entry = entryFactory.parseContent(List.of(headline, "5 Ghost"));
 
 		assertThat(entry).isEmpty();
 		assertThat(logger.warnMessages()).containsExactly("Dropping protocol entry: unmatched transfer type in headline: " + headline);
@@ -244,14 +246,14 @@ class EntityParserContractTest {
 	void warnsWhenABlockHeadFailingTheStrictHeadlineMatchIsDropped() {
 		String headline = "11.12X2001 13:37 Bad Einlagerung";
 
-		EntryFactory.parseContent(List.of(headline, "5 Ghost"), logger);
+		entryFactory.parseContent(List.of(headline, "5 Ghost"));
 
 		assertThat(logger.warnMessages()).containsExactly("Dropping protocol entry: malformed headline: " + headline);
 	}
 
 	@Test
 	void warnsWhenATypedHeadlineWithAnOutOfRangeDateIsDropped() {
-		EntryFactory.parseContent(List.of("31.13.2001 25:99 Bad Einlagerung", "5 Ghost"), logger);
+		entryFactory.parseContent(List.of("31.13.2001 25:99 Bad Einlagerung", "5 Ghost"));
 
 		assertThat(logger.warnMessages()).containsExactly("Dropping protocol entry: out-of-range date in headline: 31.13.2001 25:99 Bad Einlagerung");
 	}
@@ -270,7 +272,7 @@ class EntityParserContractTest {
 	}
 
 	private Entry parse(String... lines) {
-		return EntryFactory.parseContent(List.of(lines), logger).orElseThrow();
+		return entryFactory.parseContent(List.of(lines)).orElseThrow();
 	}
 
 	private static LocalDateTime berlinTime(Entry entry) {

@@ -16,11 +16,13 @@ class EntryFactoryTest {
 
 	private List<String> input;
 	private LoggerSpy logger;
+	private EntryFactory tested;
 
 	@BeforeEach
 	public void setup() {
 		input = new ArrayList<>();
 		logger = new LoggerSpy();
+		tested = new EntryFactory(logger);
 	}
 
 	@Test
@@ -29,7 +31,7 @@ class EntryFactoryTest {
 		input.add("5 Drachenhaut");
 		input.add("7 Drachenhaut");
 
-		Entry e = EntryFactory.parseContent(input, logger).orElseThrow();
+		Entry e = tested.parseContent(input).orElseThrow();
 
 		assertThat(e.items()).hasSize(1);
 	}
@@ -40,7 +42,7 @@ class EntryFactoryTest {
 		input.add(headline);
 		input.add("1 Gold");
 
-		Optional<Entry> entry = EntryFactory.parseContent(input, logger);
+		Optional<Entry> entry = tested.parseContent(input);
 
 		assertThat(entry).isEmpty();
 		assertThat(logger.warnMessages()).containsExactly("Dropping protocol entry: unmatched transfer type in headline: " + headline);

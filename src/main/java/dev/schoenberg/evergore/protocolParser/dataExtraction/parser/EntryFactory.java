@@ -26,19 +26,23 @@ public class EntryFactory {
 	// Stricter than LAGER_EINTRAG_BOUNDARY (literal dots) to tell an unknown type apart from a malformed date when warning.
 	private static final Pattern TIMESTAMPED_HEADLINE = Pattern.compile("^\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}.*");
 
-	private EntryFactory() {}
+	private final Logger logger;
 
-	public static Optional<Entry> parseContent(List<String> rawContent, Logger logger) {
+	public EntryFactory(Logger logger) {
+		this.logger = logger;
+	}
+
+	public Optional<Entry> parseContent(List<String> rawContent) {
 		String headline = rawContent.get(0);
-		List<Item> items = parseItems(rawContent.subList(1, rawContent.size()), logger);
-		Optional<Entry> entry = generateEntry(headline, items, logger);
+		List<Item> items = parseItems(rawContent.subList(1, rawContent.size()));
+		Optional<Entry> entry = generateEntry(headline, items);
 		if (entry.isPresent() && items.isEmpty()) {
 			logger.warn("Protocol entry yielded no parseable items: " + headline);
 		}
 		return entry;
 	}
 
-	private static Optional<Entry> generateEntry(String headline, List<Item> items, Logger logger) {
+	private Optional<Entry> generateEntry(String headline, List<Item> items) {
 		Pattern pattern = Pattern.compile(LAGER_EINTRAG_START);
 		Matcher matcher = pattern.matcher(headline);
 		if (!matcher.find()) {
@@ -65,7 +69,7 @@ public class EntryFactory {
 		return Optional.of(new Entry(avatar.trim(), date, items, TransferType.EINLAGERUNG));
 	}
 
-	private static List<Item> parseItems(List<String> rawItems, Logger logger) {
+	private List<Item> parseItems(List<String> rawItems) {
 		String amount = "amount";
 		String itemName = "name";
 		String itemQuality = "quality";
@@ -97,7 +101,7 @@ public class EntryFactory {
 		return deduplicate(items);
 	}
 
-	private static Optional<Item> toItem(String amount, String itemName, String itemQuality) {
+	private Optional<Item> toItem(String amount, String itemName, String itemQuality) {
 		try {
 			return Optional.of(new Item(Integer.parseInt(amount), itemName.trim(), parseQuality(itemQuality)));
 		} catch (NumberFormatException e) {
@@ -105,7 +109,7 @@ public class EntryFactory {
 		}
 	}
 
-	private static List<Item> deduplicate(List<Item> items) {
+	private List<Item> deduplicate(List<Item> items) {
 		List<Item> filtered = new ArrayList<>();
 		for (Item item : items) {
 			Optional<Item> any = filtered.stream().filter(x -> x.name().equals(item.name()) && x.quality() == item.quality()).findAny();
@@ -122,7 +126,7 @@ public class EntryFactory {
 		return filtered;
 	}
 
-	private static int parseQuality(String quality) {
+	private int parseQuality(String quality) {
 		if (quality == null || quality.isEmpty()) {
 			return 100;
 		}
