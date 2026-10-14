@@ -19,7 +19,7 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M16 | 0.4.0 reaches the guild | the explanation page with the corrected note and the invented trader (E19, E36, E20), the release comparison against 0.3.0, the gate guards, the release (F23) | **First** (author decision 2026-10-13): the page goes live with 0.4.0, and nothing in it moves a figure |
+| M16 | 0.4.0 reaches the guild | the explanation page with the corrected note and the invented trader, the release comparison against 0.3.0, the gate guards, the release (F23) | **First** (author decision 2026-10-13): the page goes live with 0.4.0, and nothing in it moves a figure |
 | M17 | 0.5.0: members log in | accounts, login and a JWT on every endpoint (C11), the user management (C12), the usage records (C13) | **After 0.4.0** (author decision 2026-10-14): auth is the feature 0.5.0 carries, and nothing else for now |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | D24 with F12, F10; the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
@@ -33,10 +33,9 @@
 Slice: a member can follow how his own row comes about, on a page the release carries, through a
 release gate that expects no figure to move.
 
-- [ ] A page reachable from the overview explains every header figure, every credit tier and every
+- [x] A page reachable from the overview explains every header figure, every credit tier and every
       option a member can switch, with worked examples kept current as the author chose; it
-      carries the corrected note of a row not yet computed and an invented trader (backlog E19,
-      E36, E20).
+      carries the corrected note of a row not yet computed and an invented trader.
 - [x] The release comparison runs against 0.3.0 as the running side.
 - [x] The gate guards refuse a red record that is a mutation of its commit's code, a commit at a
       rebase's conflict stop and added conflict markers.

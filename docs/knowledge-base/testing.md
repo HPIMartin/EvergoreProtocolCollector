@@ -612,6 +612,19 @@ the full credit of the ammunition the market stall sells (re-measured 2026-10-01
   table's `Einlagerung` and `Nach Abzügen` by `3.995.648` each and left `Gildenlagerwert`,
   `Gildenspende` and `Vor Abzügen` where they were: `3.645.942` of it reached the trader, who moved
   from `-2.189.599`, and `349.706` the other members, whose 41 rounded rows add up to `349.704`.
+- Before the deductions the guild's trader reads `-36.405.029` (re-measured 2026-10-01): that figure
+  strips the trader's own full credit, the `38.758.510` of subsidy above, back to the guild's price,
+  which is the arrangement working as announced.
+- The explanation page explains this figure on an invented trader.
+- By category on 2026-09-10 the trader withdrew `1.414.601` units of hunt loot (`117.180.150` at
+  market, charged `70.308.090`) and deposited bought crafting material credited at its full market
+  value (`87.781.420`).
+- The trader crafts nothing, so the hunt loot is stock bought at 60 % to sell.
+- What the ledger cannot see, measured beside it:
+  - `5.500.000` gold the trader held rather than banked on 2026-09-10, by the author's count, which
+    alone lifts the figure after the deductions to about `+6.960.000`;
+  - `750.000` of `Sternenessenz`, ammunition the market stall does not sell, that stays credited at
+    60 % whether bought or crafted.
 
 ### The ledger index on real data (2026-09-27)
 
