@@ -87,7 +87,8 @@ natively on the host.** Focused tests: `./verify focus <path>`; the `@wip` scena
 `./verify bdd`; full suite before hand-off: `./verify all`. On the Windows host only, Bash stdout
 may not surface: redirect to a file (`./verify all > o.txt 2>&1`) and Read it; in-container (the
 normal case), Bash output is fine. `rm` (all forms), `git reset` and `git branch -D` are
-permission-blocked. Prefer Read/Grep/Glob. See `docs/knowledge-base/dev-environment.md`.
+permission-blocked. Prefer Read/Grep/Glob. See `docs/knowledge-base/dev-environment.md`, "Rule for
+all contributors".
 
 **The working directory is not reliable.** Why: `docs/knowledge-base/multi-agent-playbook.md`,
 "Environment gotchas", the bullet "The shell's working directory drifts between worktrees".
@@ -112,7 +113,7 @@ The floor binds as well inside every script you write and run, a throwaway repo 
 before you write the helper, reproducing something by hand), never into `src/test/java`. Run it with
 `./gradlew probe`, clear it with `./gradlew clearProbes` before you hand off; `rm` stays the author's
 command, for your own probes too (handbook §7). Details:
-`docs/knowledge-base/build-run-deploy.md`.
+`docs/knowledge-base/build-run-deploy.md`, "Build", the bullet "Throwaway probes".
 
 ## Return (your final message = data for the orchestrator)
 

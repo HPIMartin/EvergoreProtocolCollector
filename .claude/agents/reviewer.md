@@ -99,9 +99,9 @@ without its reason).
 tooling as a finding. Run the full `./verify all` and confirm green, **with the build cache
 disabled** (the script does that). Judge it by proof that the tests *executed* (the `:test` and
 `:frontend:npmTest` lines bare of any `FROM-CACHE`/`UP-TO-DATE` marker, read together with the
-printed test-result count), never by the exit code (`docs/knowledge-base/testing.md`). On the
-Windows host only, Bash stdout may not surface: redirect to a file (`./verify all > r.txt 2>&1`)
-and Read it. Do not modify code, commit, or push.
+printed test-result count), never by the exit code (`docs/knowledge-base/testing.md`, "Proving a
+run really executed"). On the Windows host only, Bash stdout may not surface: redirect to a file
+(`./verify all > r.txt 2>&1`) and Read it. Do not modify code, commit, or push.
 
 **The working directory is not reliable.** Why: `docs/knowledge-base/multi-agent-playbook.md`,
 "Environment gotchas", the bullet "The shell's working directory drifts between worktrees".

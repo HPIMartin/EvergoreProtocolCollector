@@ -3,19 +3,21 @@ description: Derive the missing Gherkin scenarios of an existing codebase from i
 argument-hint: [optional: a scope, e.g. "the order module" or "the next uncovered capability"]
 ---
 
-You are catching up the executable specification of the Evergore Protocol Collector: a codebase that predates its
-scenarios (handbook §5, "Projects that predate their scenarios"). CLAUDE.md is auto-loaded every
-session; its rules and KB pointers apply without re-reading them here.
+You are catching up the executable specification of the Evergore Protocol Collector, a codebase
+that predates its scenarios.
 
-**What this is for.** An existing project adopting the process has behavior no `.feature` names.
-Until it does, every feature strand builds on unspecified ground. `/adopt` seeds this work as
-**task 0, priority 0**, before any feature work; this skill performs it, one capability per run, in
-its own session so the reading it needs stays out of every other context.
+- The rule this skill carries out: handbook §5, "Projects that predate their scenarios".
+- `CLAUDE.md` is auto-loaded every session; its rules and KB pointers apply without re-reading them
+  here.
 
-**The two truths.** The code is the truth for what the software *does*; the author decides what it
-*should* do. A scenario derived from code is a hypothesis about intent until the author confirms it,
-so it carries `@characterization` until then, and a confirmation is a decision that goes to
-`docs/open-questions.md`.
+**What this is for.**
+
+- An existing project adopting the process has behavior no `.feature` names.
+- Until a `.feature` names it, every feature strand builds on unspecified ground.
+- The template's adoption (`.template/baseline/.claude/skills/adopt/SKILL.md`) seeds this work as
+  **task 0, priority 0**, before any feature work.
+- This skill performs it, one capability per run.
+- Each run takes its own session, so the reading it needs stays out of every other context.
 
 **Rules for this run**
 
