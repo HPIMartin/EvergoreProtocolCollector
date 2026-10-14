@@ -27,7 +27,7 @@ export type Column<Row> =
       readonly kind: 'number'
       readonly tone: Tone
       readonly value: (row: Row) => number | null
-      readonly missingNote?: string
+      readonly missingNote?: (row: Row) => string | null
     })
   | (ColumnHead & {
       readonly kind: 'timestamp'
@@ -73,7 +73,7 @@ const shownMissingNote = <Row,>(
   if (column.kind !== 'number' || column.missingNote === undefined) {
     return null
   }
-  return column.value(row) === null ? column.missingNote : null
+  return column.value(row) === null ? column.missingNote(row) : null
 }
 
 const shownMark = (text: string | null | undefined): string | null =>

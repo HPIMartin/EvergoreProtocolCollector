@@ -263,7 +263,8 @@ function figureColumn(figure: Figure): Column<AvatarSummary> {
       kind: 'number',
       tone: 'neutral',
       value: (summary) => summary.balance,
-      missingNote: UNCOMPUTED_BALANCE_NOTE,
+      missingNote: (summary) =>
+        isUncomputed(summary) ? null : UNCOMPUTED_BALANCE_NOTE,
     }
   }
 

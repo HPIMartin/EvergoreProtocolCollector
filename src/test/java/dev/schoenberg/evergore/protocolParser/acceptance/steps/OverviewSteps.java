@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class OverviewSteps {
 	private static final String GUILD_ROW = "Gilde";
-	private static final String NO_FIGURE = "–";
 	private static final String NAME_SEPARATOR = ", ";
 	private static final String FIGURE_HEADER_READS = "[...document.querySelectorAll('[data-testid=active-roster] [data-testid=column-label]')]"
 			+ ".some((label) => label.textContent.trim() === arguments[0])";
@@ -182,22 +181,22 @@ public class OverviewSteps {
 		assertThat(overview.active().figureHeader()).isEqualTo(figure);
 	}
 
-	@Then("{word}'s {string} shows no figure, noted {string}")
-	public void showsNoFigureNoted(String member, String header, String note) {
+	@Then("{word}'s {string} carries no note")
+	public void carriesNoNote(String member, String header) {
 		Placed row = browser.overview().rowOf(member);
 		int column = row.columnOf(header);
 
 		Optional<String> shown = browser.noteShownInTheCellOf(member, column);
-		assertNoFigureNoted(row, column, note, shown);
+		assertNoNote(row, column, shown);
 	}
 
-	@Then("the guild row's {string} shows no figure, noted {string}")
-	public void theGuildRowShowsNoFigureNoted(String header, String note) {
+	@Then("the guild row's {string} carries no note")
+	public void theGuildRowCarriesNoNote(String header) {
 		Placed row = guildRowOf(browser.overview());
 		int column = row.columnOf(header);
 
 		Optional<String> shown = browser.noteShownInTheGuildRowsCell(column);
-		assertNoFigureNoted(row, column, note, shown);
+		assertNoNote(row, column, shown);
 	}
 
 	@Then("{word}'s row is marked {string}")
@@ -237,10 +236,9 @@ public class OverviewSteps {
 		browser.awaitUntil(FIGURE_HEADER_READS, figure);
 	}
 
-	private static void assertNoFigureNoted(Placed row, int column, String note, Optional<String> shown) {
-		assertThat(row.row().cells().get(column)).isEqualTo(NO_FIGURE);
-		assertThat(row.row().notes().get(column)).isEqualTo(note);
-		assertThat(shown).contains(note);
+	private static void assertNoNote(Placed row, int column, Optional<String> shown) {
+		assertThat(row.row().notes().get(column)).isNull();
+		assertThat(shown).isEmpty();
 	}
 
 	private static Placed guildRowOf(Overview overview) {

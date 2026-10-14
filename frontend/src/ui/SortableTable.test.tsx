@@ -80,7 +80,7 @@ const notedColumns: readonly Column<Member>[] = [
     kind: 'number',
     tone: 'neutral',
     value: (member) => member.deposited,
-    missingNote: 'Kein Wert: noch nicht berechnet.',
+    missingNote: () => 'Kein Wert: noch nicht berechnet.',
   },
 ]
 

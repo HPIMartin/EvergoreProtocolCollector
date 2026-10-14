@@ -120,10 +120,12 @@ Four top-level folders under `frontend/src/`:
 - **`StatHeader`** renders a row of named figures, each formatted by `formatGold` and toned by the
   shared rule; a figure of `null` renders the note the caller supplies and is marked `data-absent`,
   so "not computed yet" can never be read as a zero.
-- **A number column may carry a `missingNote`**, and then a `null` in it renders the same `!` mark
-  with a hover note that a stale row carries at its name, instead of the bare missing-value dash
-  (author rule 2026-09-10). The dash keeps its single meaning, "nothing happened here": a figure the
-  view cannot compute says so.
+- **A number column may carry a `missingNote`**, a function of the row, and then a `null` in it
+  renders the note it returns as the same `!` mark with a hover note that a stale row carries at its
+  name, instead of the bare missing-value dash (author rule 2026-09-10). The dash keeps its single
+  meaning, "nothing happened here": a figure the view cannot compute says so.
+  - The overview's "Vor Abzügen" returns no note for a row not yet computed, or the guild row while
+    one is: the row's mark already names that state (author decision 2026-10-14).
 - **`OptionSwitch`** is a radio `fieldset` over two or more labelled options, so switching a view's
   figure needs no library and stays keyboard-reachable and announced.
 - **`tone.ts` holds the one tone rule** both the table cells and the header figures read: zero is

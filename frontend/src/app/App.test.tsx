@@ -765,7 +765,7 @@ describe('App', () => {
     expect(cells).toStrictEqual(['–', '–', '–', '–', '–'])
   })
 
-  it('keeps the mark of a row not yet computed beside the note on its figure before the deductions', async () => {
+  it('keeps the mark of a row not yet computed and gives its figure before the deductions no note of its own', async () => {
     await shellAt(
       `/overview?token=${TOKEN}`,
       alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
@@ -780,10 +780,19 @@ describe('App', () => {
         : within(row).getByTestId('row-mark').textContent,
     ).toBe('!Noch nicht berechnet.')
     expect(
-      row === undefined
-        ? null
-        : within(row).getByTestId('cell-mark').textContent,
-    ).toContain('Kein Saldo')
+      row === undefined ? null : within(row).queryAllByTestId('cell-mark'),
+    ).toStrictEqual([])
+  })
+
+  it('gives the guild row no note before the deductions while a row is not yet computed', async () => {
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
+    )
+
+    fireEvent.click(screen.getByLabelText('Vor Abzügen'))
+
+    expect(screen.queryByTestId('total-cell-mark')).toBeNull()
   })
 
   it('says the guild contains a row not yet computed even when that row is off the page', async () => {

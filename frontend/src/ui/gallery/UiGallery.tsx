@@ -94,7 +94,7 @@ const overviewColumns: readonly Column<OverviewRow>[] = [
     kind: 'number',
     tone: 'neutral',
     value: (row) => row.guildValue,
-    missingNote: 'Kein Wert: für diese Zeile noch nicht berechnet.',
+    missingNote: () => 'Kein Wert: für diese Zeile noch nicht berechnet.',
   },
   {
     key: 'lastStorageActivity',
