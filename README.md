@@ -33,7 +33,7 @@ Per-session bootstrap for AI agents: [CLAUDE.md](CLAUDE.md).
 - The `./verify` modes: [build-run-deploy.md](docs/knowledge-base/build-run-deploy.md), "The verify
   script (the one entry point)".
 - The JDK-upgrade procedure: [dev-environment.md](docs/knowledge-base/dev-environment.md), "JDK
-  version is single-sourced (upgrade procedure)".
+  version (upgrade procedure)".
 - Production image and runtime config:
   [build-run-deploy.md](docs/knowledge-base/build-run-deploy.md).
 

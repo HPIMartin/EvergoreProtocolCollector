@@ -19,9 +19,8 @@
   on a local machine a strand is never pushed ([engineering-handbook.md](engineering-handbook.md)
   §7).
 - **LF line endings** enforced via `.gitattributes` (`* text=auto eol=lf`; binaries marked
-  `binary`). Why: the repo originally had no `.gitattributes` and mixed CRLF/LF, making
-  working-tree diffs look enormous (~95% line-ending churn). If a diff ever looks huge again,
-  check line endings first (`git diff --ignore-all-space`).
+  `binary`). Why: mixed CRLF/LF makes working-tree diffs look enormous.
+- If a diff looks huge, check line endings first (`git diff --ignore-all-space`).
 - The IDE re-saves edited files as **CRLF**; `.gitattributes` normalizes them to LF on commit,
   so the warning is expected (`git diff --check` if unsure). A working tree holding CRLF templates
   makes the running build **serve** CRLF; a clean LF checkout serves LF. The scripted 1:1 comparison

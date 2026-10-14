@@ -38,29 +38,16 @@ Independent read path:  HTTP ▶ filters (audit log, rate limit, unreadable-requ
                         ▶ wire records ▶ JSON
 
 Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut management
-                        ▶ LastRunHealthIndicator ▶ reports UNKNOWN (no recompute attempted yet), UP
-                        (the latest recompute succeeded) or DOWN (the latest recompute failed, even
-                        after an earlier success) + lastSuccessfulRecompute timestamp; scrape and
-                        recompute outcomes are tracked independently, so the details also carry
-                        lastSuccessfulScrape/lastScrapeFailure/lastRecomputeFailure when present,
-                        telling "could not scrape" apart from
-                        "could not recompute", + unknownItemCount/unknownItemNames
-                        (the count is the number of distinct names, the names are in German order;
-                        every name list and its count follow this rule) when the last run hit
-                        unknown items, + failedAvatarCount/failedAvatarNames when an avatar could not be
-                        recomputed, + roundTripCount/roundTrips when the last run's RoundTripDetector
-                        reported one, + roundTripAbstentionCount/roundTripAbstentions when it abstained
-                        from judging a pair
+                        ▶ LastRunHealthIndicator ▶ a verdict on the latest recompute + the lastRun
+                        details, both read from LastRunStatus
 
 Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ AdminStatusController
-                        ▶ lastUpdated read from AvatarContributions/MetaInformationRepository (persisted,
-                        stamped on the last completed evaluation) + the four scrape/recompute outcome
-                        instants, unknownItemNames/failedAvatarNames and roundTrips/roundTripAbstentions
-                        (names in German order, each once; round trips by avatar then item,
-                        item = ingameName, in German order) read from LastRunStatus
-                        (in-memory, the same source /health uses). It serves the facts; /health keeps the
-                        UP/DOWN verdict derived from them
+                        ▶ lastUpdated read from AvatarContributions/MetaInformationRepository
+                        (persisted) + the last run's facts read from LastRunStatus (in-memory, the
+                        source /health reads); it serves the facts, /health keeps the verdict
 ```
+
+- Each endpoint's verdict and fields: [build-run-deploy.md](build-run-deploy.md), "HTTP endpoints".
 
 ## Layers & responsibilities (condensed)
 
@@ -79,52 +66,74 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   `Entry`, regex from `Constants`). Coordinator `EvergoreDataExtractor` (delta filter) lives in
   `application`.
 - **Persistence:** three adapters implementing the businessLogic ports, all built on one database:
-  - `database/SqliteDatabase`, one per context: it opens the file once, runs the migrations and
-    hands out pooled connections, none to a second thread while one holds it, and a transaction
-    keeps its own connection until it ends, so a read on another thread cannot land inside it. The
-    exception is a commit SQLite refuses, because an outside process holds a read transaction longer
-    than the connection waits: that connection goes back to the pool with its transaction still open.
-    The context closes the database when it stops. Reads and write-first statements wait up to
-    **10 s** on another connection's lock before they fail with `SQLITE_BUSY` (sqlite-jdbc's implicit
-    bound is 3 s), so a read outlasts an unusually long write instead of answering 500. A commit also
-    waits up to 10 s for an outside reader to finish, and the meta `add` through `inTransaction`
-    commits twice, so it can wait about 20 s (measured 20.5 s). A transaction that reads before it
-    writes, the recompute's batch, fails at once under another writer's lock: SQLite answers
-    `SQLITE_BUSY` there without waiting. In-process that is unreachable, because the scheduled job is
-    the only writer.
-  - `database/LedgerDatabaseRepository`, the one ledger base: the seven ledger operations live here
-    once, over the `LedgerDatabaseEntry` row (the columns both ledger rows share), and so does the
-    transfer-type conversion through `TransferTypeDatabaseVisitor` (enum ⇄ German DB strings
-    "Einlagerung"/"Entnahme"). Its `add` converts the whole list first, so an entry that cannot be
-    converted stores nothing, then writes it as one batch on the batch's own connection, one commit,
-    because on the pool ORMLite's `create(Collection)` commits every row: 300 rows took 43 s against
-    210 ms. A row a constraint refuses keeps at most the rows before it and fails every run until it
-    leaves the game's 30-day window; an error on which SQLite rolls the transaction back itself
-    loses the whole batch; the extractor writes oldest first, so any stored part is the oldest rows.
-    A ledger page is read in a **total order** (decision 2026-10-05): the chosen column in the chosen
-    direction, then `timeStamp` newest first (left out when the time is the chosen column), then the
-    row `id` ascending, so a page boundary inside a run of ties neither repeats a row nor drops one;
-    the `id` is a random UUID, so rows that tie on everything before it stand in a stable but
-    arbitrary order. The port names the column by a key per ledger
-    (`BankSortKey`, `StorageSortKey`), and each ledger maps its keys to its own column constants
-    (`columnOf`), so no column name from a request reaches the SQL. The item name sorts `COLLATE
-    GERMAN_ORDER`, a collation that `GermanOrderConnectionSource` registers on every connection the
-    pool opens, so "Äpfel" sorts before "Zwiebel" rather than after it as SQLite's byte order would
-    put it. Each registration compares with a collator of its own (`GermanOrder.ownCollator()`), the
-    rules `GermanOrder` sorts by: a `Collator` compares under a lock, and one shared by every
-    connection queued concurrent name sorts (a synthetic probe, 16 sorts of 13,739 rows on 8
-    threads: 5.9 to 8.9 s shared, 0.55 s with one per connection). The avatar, the same on every
-    row of one avatar's ledger, sorts without the collation. The source subclasses
-    ORMLite's pool because `makeConnection` is the only per-connection hook it offers, and it
-    overrides `close()` to declare `SQLException`: ORMLite's `close() throws Exception` raises
-    `-Xlint:try` on every subclass, and the warning is fixed rather than suppressed (decision
-    2026-10-06). ORMLite 6.1's `close()` throws only `SQLException`; any other checked exception a
-    later version throws is wrapped in one. A connection whose registration fails is closed before the failure propagates,
-    so the pool never loses an open connection to it. The source keeps no record of the collations it
-    registers: a collation holds its connection, so any record would hold every connection the pool
-    ever opened; a test records them through the registration it hands the source instead.
-    `database/{bank,storage}/*` add only their row and the mapping between that row and its entry
-    record.
+  - `database/SqliteDatabase`, one per context, opens the file once and hands out pooled
+    connections:
+    - none to a second thread while one holds it;
+    - a transaction keeps its own connection until it ends, so a read on another thread cannot land
+      inside it;
+    - the exception is a commit SQLite refuses because an outside process holds a read transaction
+      longer than the connection waits: that connection goes back to the pool with its transaction
+      still open;
+    - the context closes the database when it stops.
+  - **Lock waits:**
+    - reads and write-first statements wait up to **10 s** on another connection's lock before they
+      fail with `SQLITE_BUSY`;
+      - why: a read outlasts an unusually long write instead of answering 500 (sqlite-jdbc's
+        implicit bound is 3 s);
+    - a commit also waits up to 10 s for an outside reader to finish;
+    - the meta `add` through `inTransaction` commits twice, so it can wait about 20 s (measured
+      20.5 s);
+    - a transaction that reads before it writes, the recompute's batch, fails at once under another
+      writer's lock (SQLite answers `SQLITE_BUSY` there without waiting);
+    - in-process that failure is unreachable, because the scheduled job is the only writer.
+  - `database/LedgerDatabaseRepository` is the one ledger base:
+    - the seven ledger operations live here once, over the `LedgerDatabaseEntry` row (the columns
+      both ledger rows share);
+    - so does the transfer-type conversion through `TransferTypeDatabaseVisitor` (enum ⇄ German DB
+      strings "Einlagerung"/"Entnahme");
+    - `database/{bank,storage}/*` add only their row and the mapping between that row and its entry
+      record.
+  - **A ledger write is one batch:**
+    - `add` converts the whole list first, so an entry that cannot be converted stores nothing;
+    - it then writes the list on the batch's own connection with one commit;
+      - why: on the pool ORMLite's `create(Collection)` commits every row (300 rows: 43 s against
+        210 ms);
+    - a row a constraint refuses keeps at most the rows before it;
+    - such a row fails every run until it leaves the game's 30-day window;
+    - an error on which SQLite rolls the transaction back itself loses the whole batch;
+    - the extractor writes oldest first, so any stored part is the oldest rows.
+  - **A ledger page is read in a total order** (decision 2026-10-05):
+    - the chosen column in the chosen direction, then `timeStamp` newest first, then the row `id`
+      ascending;
+      - why: a page boundary inside a run of ties neither repeats a row nor drops one;
+    - `timeStamp` is left out when the time is the chosen column;
+    - the `id` is a random UUID, so rows that tie on everything before it stand in a stable but
+      arbitrary order;
+    - the port names the column by a key per ledger (`BankSortKey`, `StorageSortKey`);
+    - each ledger maps its keys to its own column constants (`columnOf`);
+      - why: no column name from a request reaches the SQL;
+    - the avatar, the same on every row of one avatar's ledger, sorts without the collation below.
+  - **The item name sorts `COLLATE GERMAN_ORDER`,** so "Äpfel" sorts before "Zwiebel" rather than
+    after it as SQLite's byte order would put it:
+    - `GermanOrderConnectionSource` registers the collation on every connection the pool opens;
+    - each registration compares with a collator of its own (`GermanOrder.ownCollator()`), the
+      rules `GermanOrder` sorts by;
+      - why: a `Collator` compares under a lock, so a shared one serializes concurrent sorts;
+        - a synthetic probe, 16 sorts of 13,739 rows on 8 threads: 5.9 to 8.9 s shared, 0.55 s
+          with one per connection;
+    - the source subclasses ORMLite's pool because `makeConnection` is the only per-connection hook
+      it offers;
+    - it overrides `close()` to declare `SQLException`;
+      - why: ORMLite's `close() throws Exception` raises `-Xlint:try` on every subclass, and the
+        warning is fixed rather than suppressed (decision 2026-10-06);
+    - ORMLite 6.1's `close()` throws only `SQLException`;
+    - any other checked exception a later version throws is wrapped in one;
+    - a connection whose registration fails is closed before the failure propagates, so the pool
+      never loses an open connection to it;
+    - the source keeps no record of the collations it registers;
+      - why: a collation holds its connection, and any record would hold every connection the pool
+        ever opened;
+    - a test records them through the registration it hands the source instead.
   - `database/metaInformation/*`, the meta store: a recompute's batch is written in one
     `SqliteDatabase` transaction.
 - **Business logic (framework-free):** ports `BankRepository` and `StorageRepository` (each the
@@ -133,56 +142,67 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   `TransferType` + visitor · `MetaInformationKey` (typed: `DateTimeKey`/`LongKey`/`DoubleKey`) ·
   `contribution/{Contribution,AvatarContribution,AvatarContributions}` (the four ledger sums, their
   net and the guild total, assembled per known avatar) · `Constants`.
-- **Last activity comes from the ledgers, not from the meta store** (decision 2026-09-02): both
-  ledger ports answer `latestTimestampPerAvatar()` with **one grouped query** per ledger
-  (`MAX(timeStamp) GROUP BY avatar`), so the overview materializes one row per avatar instead of one
-  per ledger entry. Both ledgers carry an index on `(avatar, timeStamp)` (migration `V3`), which
-  serves this query as a covering index and the per-avatar page and count as an index search, so
-  none of the three scans the table. The domain types are real instants, so nothing here reintroduces
-  `MetaInformationKey.DateTimeKey`'s ambiguity and no key family joins the pending schema migration.
-  The ledger's **storage** format is a separate matter: it persists wall-clock text, so these
-  columns inherit **D14**'s DST fall-back defect until the epoch/UTC format lands, and today only
-  the container's UTC default keeps them right. `TimezoneStartupValidator` is the interim safeguard:
-  it aborts boot if the effective `ZoneId` (`ApplicationFactory#effectiveZone`, the JVM's
-  `ZoneId.systemDefault()`) is not a fixed offset, so a misconfigured deploy fails fast instead of
-  silently reintroducing the DST defect. It does not reach `last_updated`, which is pinned to the
-  hard-coded `Constants.APP_ZONE` and not to the effective zone the validator checks.
+- **Last activity comes from the ledgers, not from the meta store** (decision 2026-09-02):
+  - both ledger ports answer `latestTimestampPerAvatar()` with **one grouped query** per ledger
+    (`MAX(timeStamp) GROUP BY avatar`), so the overview materializes one row per avatar instead of
+    one per ledger entry;
+  - both ledgers carry an index on `(avatar, timeStamp)` (migration `V3`), which serves this query
+    as a covering index and the per-avatar page and count as an index search, so none of the three
+    scans the table;
+  - the domain types are real instants, so nothing here reintroduces
+    `MetaInformationKey.DateTimeKey`'s ambiguity and no key family joins the pending schema
+    migration;
+  - the ledger's **storage** format persists wall-clock text, so these columns inherit the DST
+    fall-back defect of the default-timezone timestamp strings until the epoch/UTC format lands
+    (backlog D14); only the container's UTC default keeps them right.
+- **`TimezoneStartupValidator` is the interim safeguard:**
+  - it aborts boot if the effective `ZoneId` (`ApplicationFactory#effectiveZone`, the JVM's
+    `ZoneId.systemDefault()`) is not a fixed offset, so a misconfigured deploy fails fast instead
+    of silently reintroducing the DST defect;
+  - it does not reach `last_updated`, which is pinned to the hard-coded `Constants.APP_ZONE` and
+    not to the effective zone the validator checks.
 - **Domain (framework-free):** `Entry`, `Item`, `EvergoreItem` (catalog + value math).
-- **REST:** `controller/api/*` (the JSON API under `/api/v1`: `AvatarSummariesController`,
-  `AvatarEntriesController`, `AdminStatusController` (anonymous, `/api/v1/admin/status`: the
-  operational facts an operator needs, separate from the token-protected member-facing overview),
-  and `controller/api/wire/*` holding the published contract types plus
-  `TransferTypeWireNames`; contract in
-  [frontend.md](frontend.md)) · `FaviconController` ·
-  `SpaHistoryFallbackController` (serves the SPA shell for unknown navigation paths;
-  `SpaNavigationPaths` decides which 404s it may answer) · filters `RequestAuditLogFilter` (one
-  `info` line per request) + `RateLimitFilter` (per-IP counters, held by `RateLimitCounters`) +
-  `UnreadableRequestFilter` (answers the stand-in request of a head the server cannot read; see [build-run-deploy.md](build-run-deploy.md)) +
-  `TokenValidationFilter` (`?token=`) · `ApplicationExceptionHandler` (dispatches via
-  the `TransferType`/exception visitors, no `instanceof`; the mapped status picks the log severity,
-  so an expected client error is one `info` line and only a server error logs its stack trace).
-- **The token scope is default-deny** (author decision 2026-08-04): **every** path needs a token
-  except the ones configured under `evergore.security.public-paths`, matched by `PublicPaths` with
-  Micronaut's `AntPathMatcher` so `/assets/**` is one entry. A new controller is therefore protected
-  the moment it exists; nobody has to remember to add it to a list. An empty or missing
-  configuration protects everything (fail closed).
-- Every path-based decision runs on the **canonicalized** path (`PathCanonicalizer`), so a `..`
-  segment cannot make a protected path look public and a leading `//` cannot be read as an authority.
-  The filter therefore stays mapped on `/**`: a narrower `@Filter` pattern is matched against the raw
-  path and would never reach the canonicalizing code. `PathCanonicalizer`, `PublicPaths` and
-  `SpaNavigationPaths` are injected `@Singleton`s, not static utilities (handbook §1).
+- **REST** (what each endpoint answers: [build-run-deploy.md](build-run-deploy.md), "HTTP
+  endpoints"; the JSON contract: [frontend.md](frontend.md)):
+  - `rest/controller/api/*` is the JSON API under `/api/v1`: `AvatarSummariesController`,
+    `AvatarEntriesController`, `AdminStatusController`;
+  - `AdminStatusController` keeps the operator's facts apart from the token-protected member-facing
+    overview;
+  - `rest/controller/api/wire/*` holds the published contract types plus `TransferTypeWireNames`;
+  - `FaviconController` serves the favicon;
+  - `SpaHistoryFallbackController` serves the SPA shell for unknown navigation paths;
+  - `SpaNavigationPaths` decides which 404s it may answer;
+  - the filter `RequestAuditLogFilter` writes one `info` line per request;
+  - the filter `RateLimitFilter` throttles per IP on counters `RateLimitCounters` holds;
+  - the filter `UnreadableRequestFilter` answers the stand-in request of a head the server cannot
+    read;
+  - the filter `TokenValidationFilter` checks `?token=`;
+  - `ApplicationExceptionHandler` dispatches via the `TransferType`/exception visitors, no
+    `instanceof`;
+  - its mapped status picks the log severity, so an expected client error is one `info` line and
+    only a server error logs its stack trace.
+- **The token scope is default-deny** (author decision 2026-08-04): every path needs a token except
+  the ones configured under `evergore.security.public-paths`.
+  - Why: a new controller is protected the moment it exists, with no list to remember.
+  - An empty or missing configuration protects everything (fail closed).
+  - `PublicPaths` matches the configured paths with Micronaut's `AntPathMatcher`, so `/assets/**`
+    is one entry.
+- **Every path-based decision runs on the canonicalized path** (`PathCanonicalizer`).
+  - Why: a `..` segment cannot make a protected path look public, and a leading `//` cannot be
+    read as an authority.
+  - The token filter therefore stays mapped on `/**`: a narrower `@Filter` pattern is matched
+    against the raw path and would never reach the canonicalizing code.
+  - `PathCanonicalizer`, `PublicPaths` and `SpaNavigationPaths` are injected `@Singleton`s, not
+    static utilities (handbook §1).
 - **The audit log and the rate limit know no exception** (author decision 2026-08-14): both filters
-  run for every path, so there is exactly one public surface, the configured `public-paths`, and no
-  second list of paths that skip counting or logging. `RateLimitCounters` **owns** the per-IP map and
-  bounds it: it forgets a client whose interval elapsed and is not blocked, and beyond
-  `evergore.rate-limit.max-tracked-clients` the least recently seen client, so the bound holds
-  against any number of distinct IPs. A `RateLimitCounter` never leaves that class, and the whole
-  decision (count the request, block on exceeding the budget, answer whether to reject) is **one**
-  `synchronized` call, so no client can be evicted between exceeding its budget and being blocked.
+  run for every path.
+  - Why: the configured `public-paths` stay the one list of paths with a special status.
+- **`RateLimitCounters` owns the per-IP map;** a `RateLimitCounter` never leaves that class.
+  - How it bounds the map and why its decision cannot evict a client mid-block:
+    [build-run-deploy.md](build-run-deploy.md), "HTTP endpoints".
 - **Monitoring:** `monitoring/LastRunHealthIndicator` (adapter implementing `HealthIndicator`,
-  exposed at `GET /health` via `micronaut-management`; UNKNOWN before any recompute is attempted,
-  then UP or DOWN depending on whether the latest recompute succeeded, with the `lastRun` details
-  listed in the pipeline above). Fed by `application/LastRunStatus` (above).
+  exposed at `GET /health` via `micronaut-management`), fed by `application/LastRunStatus` (above);
+  its verdict and details: [build-run-deploy.md](build-run-deploy.md), "HTTP endpoints".
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.
@@ -197,7 +217,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 - **Persistence correctly inverted** (genuine Dependency-Inversion seam): `businessLogic` defines
   the repository *interfaces*, `database/*` implements them, application/REST depend only on the
   interfaces; `ApplicationFactory` binds interface→impl.
-- **`FileLoader`, `Logger` are ports with adapters;** `Pre/PostCollectionHook` are deliberate test seams.
+- **`FileLoader`, `Logger` are ports with adapters;** `PreDatabaseConnectionHook` and
+  `PostCollectionHook` are deliberate test seams.
 - **`TransferType` as a visitor** removes enum `switch`/`instanceof` for transfer direction.
 
 ## Hexagonal gap analysis
@@ -208,21 +229,12 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 | File / driver access (`FileLoader`) | ✅ Exists, done right |
 | Logging (`Logger`) | ✅ Exists, done right |
 | **Page source (scrape raw protocol)** | ✅ `PageSource` interface in `dataExtraction`; `EvergoreDataExtractor` depends on it; `SeleniumPageSource` implements it with injected `Driver`. |
-| Output / presentation | 🟡 Partial: the `api` controllers map repository records to `wire` records in place; no outbound presentation port. The rendering itself now sits outside the service, in the SPA. |
+| Output / presentation | 🟡 Partial: the `api` controllers map repository records to `wire` records in place; no outbound presentation port. The rendering itself sits outside the service, in the SPA. |
 
-### Top violations to fix (detail in [../backlog.md](../backlog.md))
-
-1. **`Configuration` is config in name only:** hard-coded Java fields (browser, server, paths);
-   ignores `application.yml`/env. The secrets are the exception and are already
-   bound from the environment (`SecurityConfiguration`, `CredentialsConfiguration`).
-
-## Target structure (proposed, hexagonal)
-
-```
-domain/            EvergoreItem, Entry, Item, TransferType, value objects   (no framework)
-application/       use cases: CollectGuildData, EvaluateContributions, query services + PORT interfaces
-adapters/in/       rest controllers/filters, the scheduled job
-adapters/out/      selenium (PageSource impl), persistence (ORMLite repos), file, logging
-config/            Micronaut @Factory wiring + @ConfigurationProperties
-```
-Keeps the clean core, names the missing PageSource port, pushes Micronaut to `adapters` + `config` only.
+- **The open violation: `Configuration` is config in name only** (making it real: backlog C1):
+  - it holds hard-coded Java fields (browser, server, paths) and ignores `application.yml` and the
+    environment;
+  - the secrets are the exception, bound from the environment (`SecurityConfiguration`,
+    `CredentialsConfiguration`).
+- The target layering is handbook §1's
+  ([engineering-handbook.md](engineering-handbook.md), "1. Architecture rules (hexagonal)").

@@ -342,9 +342,9 @@ any push.
   mounted host `database/` dir. Being gitignored, it cannot carry the tagging rules: the image tag
   and the OCI labels it has to pass are specified in "Versioning & release tags" below.
 - *Note:* the production image **can** be built from inside the devcontainer — the
-  `docker-outside-of-docker` feature puts a `docker` CLI on the host daemon. The **devcontainer's own
-  image** is still built by the host's Dev Containers extension, so `.devcontainer/` changes only
-  land on the next rebuild. The new-stack **app behaviour is verified 1:1** by the scripted
+  `docker-outside-of-docker` feature puts a `docker` CLI on the host daemon. When a
+  `.devcontainer/` change takes effect: [dev-environment.md](dev-environment.md), "The devcontainer
+  (`.devcontainer/`)". The new-stack **app behaviour is verified 1:1** by the scripted
   comparison of the release against its predecessor on snapshot copies (see testing.md, "Scripted
   comparison").
 - **Build context vs. mount source (the devcontainer trap):** the two are resolved by *different*
@@ -671,9 +671,8 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      deletes that file once the container is up; `docker inspect` still shows the values.
    - `TZ=UTC` keeps the runtime off a DST zone while timestamps persist as default-timezone
      wall-clock text (backlog D14). The container default is already UTC; setting it explicitly
-     pins it. `TimezoneStartupValidator` backs this up: it aborts boot if the
-     effective zone is not a fixed offset, so a dropped or wrong `TZ` fails fast instead of
-     silently reintroducing the DST defect.
+     pins it. A `TZ` whose zone is not a fixed offset fails the boot
+     (`TimezoneStartupValidator`, [architecture.md](architecture.md)).
    - The fixed `--name` is what makes every command in "Which stand is running?" and in the
      rollback runnable as written.
    - **The published port is the target machine's choice, and it is not `8080` here.** The home

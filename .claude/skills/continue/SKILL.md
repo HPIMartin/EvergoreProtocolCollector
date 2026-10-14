@@ -1,6 +1,6 @@
 ---
 description: Orient from the persisted state and continue the next step (works in a fresh context)
-argument-hint: [optional: a specific focus, e.g. "B1" or "finish the storage WIP"]
+argument-hint: [optional: a specific focus, e.g. a backlog item or "finish the storage WIP"]
 ---
 
 You are resuming work on the Evergore Protocol Collector in a fresh context. Do NOT assume any prior
