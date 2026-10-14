@@ -43,12 +43,13 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
   when an item completes (DOC-5) ([README.md](README.md), "Doc conventions").
 - Small methods, early returns, no deep nesting; no commented-out code in commits.
 - **Strict data instead of defensive reads (author rule 2026-09-06).** Every database column is
-  `NOT NULL`; a value that cannot be absent is declared so at the type, not checked at each read.
-  Read paths therefore carry no null branches for states the schema forbids. Whoever wants to allow
-  a nullable column owns the handling of that null everywhere it can surface, and says so. The rule
-  exists because the quiet failures are worse than the loud ones: ORMLite reads a SQL `NULL` into a
-  primitive `int` as **0** without an exception, so a nullable `amount` would not crash, it would
-  silently change a member's sums.
+  `NOT NULL`.
+  - A value that cannot be absent is declared so at the type, not checked at each read.
+  - Read paths therefore carry no null branches for states the schema forbids.
+  - Whoever wants to allow a nullable column owns the handling of that null everywhere it can
+    surface, and says so.
+  - Why: ORMLite reads a SQL `NULL` into a primitive `int` as **0**, so a nullable `amount` would
+    silently change a member's sums.
 - **No logic in constructors; field assignment only** (no IO, no `init()`-style calls);
   construct + initialize via static **factory method** (`SqliteDatabase.open(...)`, Effective
   Java Item 1) or a lifecycle hook. Constructor logic breaks testability and SRP.
@@ -206,23 +207,27 @@ stakeholder's view (below), understandable without reading code:
 every scenario without asking a developer:
 
 - **One actor per scenario**: "a member", "the admin" or "the operator", named as the one who acts
-  or reads (`When a member opens the overview`); a trigger with no person behind it (the daily
-  collection, a client's request) does not replace the actor who reads its outcome, so a
-  scenario the throttle or a refused address answers names the operator in its `Then` (`Then the
-  operator finds the client turned away for sending too many requests`). A `Then`
-  asserts only what that actor sees or knows on their own surface: the member and the admin
-  through the UI, the operator through the health check (REST and JSON), the startup, the throttle
-  and the log. An address, a status code or an internal name never stands in a member's or an
-  admin's scenario; it belongs to the step definitions and the unit tests. A description sentence
-  starting "Today" may quote word for word what the actor sees today, technical words included;
-  the `Then` never does.
-- **One rule, stated once across the suite.** A rule counts wherever a scenario asserts it, in a
-  second `When`/`Then` pair too, not only where a title names it. Two scenarios asserting the same
-  rule for the same stakeholder with different data become one scenario, or one is dropped. The
-  same rule on two surfaces (the admin page and the health report) is one `Scenario Outline` over
-  the surface, each example row naming its own actor. Different stakeholders seeing different
-  consequences of one event (the game cannot be reached) stay apart, each asserting only what its
-  stakeholder needs.
+  or reads (`When a member opens the overview`).
+  - A trigger with no person behind it (the daily collection, a client's request) does not replace
+    the actor who reads its outcome.
+  - So a scenario the throttle or a refused address answers names the operator in its `Then`
+    (`Then the operator finds the client turned away for sending too many requests`).
+  - A `Then` asserts only what that actor sees or knows on their own surface.
+  - The member and the admin see it through the UI; the operator through the health check (REST
+    and JSON), the startup, the throttle and the log.
+  - An address, a status code or an internal name never stands in a member's or an admin's
+    scenario; it belongs to the step definitions and the unit tests.
+  - A description sentence starting "Today" may quote word for word what the actor sees today,
+    technical words included; the `Then` never does.
+- **One rule, stated once across the suite.**
+  - A rule counts wherever a scenario asserts it, in a second `When`/`Then` pair too, not only
+    where a title names it.
+  - Two scenarios asserting the same rule for the same stakeholder with different data become one
+    scenario, or one is dropped.
+  - The same rule on two surfaces (the admin page and the health report) is one
+    `Scenario Outline` over the surface, each example row naming its own actor.
+  - Different stakeholders seeing different consequences of one event (the game cannot be reached)
+    stay apart, each asserting only what its stakeholder needs.
 - **Every outcome reads on its own**: a `Then` names the state it expects ("in descending order"),
   never one the reader must carry over from an earlier step ("again").
 - **Placeable time**: the "Points in time" rules below (TIME-1 to TIME-8).
@@ -302,11 +307,15 @@ set goes back to the author before that behavior is written.
 7. **The panel and the review gate** (§9, the playbook), then **author gate 2**, the review of the
    rebased tip, then the landing (§7).
 
-**Projects that predate their scenarios.** This one does: the `/bdd-catch-up` skill derives the
-missing scenarios from the code, which is the truth for what *is*, while the author decides what
-*should be*; it runs one capability per session when the author picks it. Derived scenarios carry
-`@characterization` until the author confirms them, and `./verify all` excludes that tag like
-`@wip`; a rejected one becomes a bug in the backlog plus the corrected scenario tagged `@wip`.
+**Projects that predate their scenarios.** This one does:
+
+- the `/bdd-catch-up` skill derives the missing scenarios from the code, which is the truth for
+  what *is*;
+- the author decides what *should be*;
+- the skill runs one capability per session when the author picks it;
+- derived scenarios carry `@characterization` until the author confirms them;
+- `./verify all` excludes that tag like `@wip`;
+- a rejected one becomes a bug in the backlog plus the corrected scenario tagged `@wip`.
 
 ## 6. Test strategy (pyramid)
 
@@ -315,11 +324,13 @@ missing scenarios from the code, which is the truth for what *is*, while the aut
 - **Few** acceptance tests: the armed scenarios (§5), the collect→evaluate→overview flow via fakes,
   and a thin smoke test for wiring.
 - **Deterministic, never wall-clock-dependent**: must pass on any hardware (a first-gen Raspberry
-  Pi may just take longer); correctness never hinges on a `sleep`/`timeout` threshold. Wait on a
-  real signal (`CountDownLatch.await()` without timeout, a future, a condition), released on both
-  success and failure paths so a bad run fails an assertion instead of hanging. Timeout/retry is
-  mitigation, not fix; never "stabilise" a flake by bumping one ([testing.md](testing.md),
-  boot-signal seam).
+  Pi may just take longer).
+  - Correctness never hinges on a `sleep`/`timeout` threshold.
+  - Wait on a real signal (`CountDownLatch.await()` without timeout, a future, a condition).
+  - Release the signal on both success and failure paths, so a bad run fails an assertion instead
+    of hanging.
+  - Timeout/retry is mitigation, not fix; never "stabilise" a flake by bumping one
+    ([testing.md](testing.md), boot-signal seam).
 - **Arrange discipline**: shared, non-test-relevant preconditions (waiting for boot/collection,
   base-URL config) go in `@BeforeEach`, not each test body; a body holds only the arranges that
   make its act + assert legible. Exception: a precondition that *is* the behaviour under test
@@ -427,13 +438,17 @@ missing scenarios from the code, which is the truth for what *is*, while the aut
   - `--no-verify` only for genuine emergencies.
   - A `--no-verify` commit is left alone, so the emergency valve stays one.
 - **`[wip]` parking commits (pause only)**: `/pause` may autonomously park uncommitted work as ONE
-  local commit `[wip] <one-line state>` via `git commit --no-verify` (WIP legitimately fails the
-  hooks; the one sanctioned non-emergency bypass; no-secrets rule unchanged, eyeball the diff
-  first). A checkpoint, not history: `/continue` resolves it first (finish or rework, replace via
-  the normal commit protocol; reset-free rewrite recipe → multi-agent playbook). Never
-  survives to the review gateway or a push; parked on the strand's branch, never on `main` (work in
-  the primary checkout moves to a new `claude/<topic>` branch first, and the checkout returns to
-  `main`), and resolved before any new work.
+  local commit `[wip] <one-line state>` via `git commit --no-verify`.
+  - WIP legitimately fails the hooks; this is the one sanctioned non-emergency bypass.
+  - The no-secrets rule is unchanged: eyeball the diff first.
+  - It is a checkpoint, not history.
+  - `/continue` resolves it before any new work: it finishes or reworks the work, then replaces the
+    commit through the normal commit protocol.
+  - Reset-free rewrite recipe → multi-agent playbook.
+  - It never survives to the review gateway or a push.
+  - It is parked on the strand's branch, never on `main`.
+  - Work in the primary checkout moves to a new `claude/<topic>` branch first.
+  - The checkout then returns to `main`.
 - **Deleting project content is the author's act; cleaning up the scaffolding is not.** The rule
   protects the author's ownership of *his* files, and a deletion no rebase undoes.
   - **The agent never runs `rm`** (deny floor, `rm -rf` included). Anything tracked by git and
@@ -570,10 +585,8 @@ worktrees (own directory + HEAD + index) make parallel work safe.
      review it after a `git fetch`, in GitLens or in GitHub's compare view, from any machine. The
      push publishes the branch before that review, and deleting it does not unpublish it: a secret
      or host detail found then is purged by rewrite, a secret rotated ("No secrets" above). On a
-     local machine nothing is pushed: the author reviews the local branch in GitLens. Always state
-     the full worktree name (branch and absolute path) so the author can open it in the editor and
-     review all changes before the landing; the hand-off also carries the compare range,
-     `<tip>..<base>`, and on the agent seat the pull request's link (below).
+     local machine nothing is pushed: the author reviews the local branch in GitLens. What the
+     hand-off carries: the bullet "Asking the author to review" below.
   4. On PASS and the author's review, the author lands the tip: on the agent seat a `/land <tip>`
      comment on the strand's pull request, which the landing workflow turns into a fast-forward push
      of exactly that commit ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"), or
@@ -583,14 +596,15 @@ worktrees (own directory + HEAD + index) make parallel work safe.
        refs, and a tag `main` there beside the branch makes that push fail as ambiguous
        (`git help push`, `<refspec>`).
   5. Once `origin/main` holds the tip (`git fetch origin` and the sync's checks above, then `git
-     merge-base --is-ancestor <tip> refs/remotes/origin/main`), fast-forward the primary checkout's
-     `main` (precondition: clean, else stop and surface it), remove the worktree and delete the
-     landed branch (`git worktree remove` + `git branch -d`), and, where the strand was pushed,
-     delete its remote copy once that copy's current tip is in `origin/main` too (`git merge-base
-     --is-ancestor refs/remotes/origin/claude/<topic> refs/remotes/origin/main`, then, leased on
-     that tip, `git push --force-with-lease=claude/<topic>:<tip> origin --delete claude/<topic>`); a
-     copy that moved past the tip is unlanded work: report it. Autonomously, as part of the landing.
-     Every other machine fast-forwards at its next fetch.
+     merge-base --is-ancestor <tip> refs/remotes/origin/main`), autonomously, as part of the landing:
+     - fast-forward the primary checkout's `main` (precondition: clean, else stop and surface it);
+     - remove the worktree and delete the landed branch (`git worktree remove` + `git branch -d`);
+     - where the strand was pushed, delete its remote copy once that copy's current tip is in
+       `origin/main` too (`git merge-base --is-ancestor refs/remotes/origin/claude/<topic>
+       refs/remotes/origin/main`, then, leased on that tip,
+       `git push --force-with-lease=claude/<topic>:<tip> origin --delete claude/<topic>`);
+     - report a copy that moved past the tip: it is unlanded work.
+     - Every other machine fast-forwards at its next fetch.
 - **The gateway is two steps and is never collapsed into one.** (1) Present the full reviewable
   statement (the rebased branch log **and** the full diff) and *wait* for the author's explicit
   review verdict; (2) only then the landing (step 4). An "execute the gateway" approval is not the
@@ -724,10 +738,11 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - On the PC, such a fix after round 2 forces no further panel round (author decision
     2026-10-13): the doc-reviewer and the runs are repeated at the fixed tip, no lens runs again,
     and the dossier check closes it.
-- Fixes are folded into the commit they belong to (§7), never a "fix review" commit, and folded at
-  the moment of fixing rather than at the end of the round. The gate reads the branch log before
-  the diff: a commit that names a repair of an earlier commit is itself a FAIL, and an "and" joining
-  two clauses in a proposed message is the signal to split.
+- Fixes are folded into the commit they belong to (§7), never a "fix review" commit.
+  - They are folded at the moment of fixing rather than at the end of the round.
+  - The gate reads the branch log before the diff.
+  - A commit that names a repair of an earlier commit is itself a FAIL.
+  - An "and" joining two clauses in a proposed message is the signal to split.
 - **A gate agent's report is an input to the next gate agent**, not a message to the author alone:
   every lens and doc-reviewer verdict of an earlier round reaches the next reviewer run verbatim in
   the gate dossier. The gate dossier check refuses an incomplete dossier before a round closes

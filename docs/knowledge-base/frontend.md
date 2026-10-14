@@ -87,16 +87,20 @@ Four top-level folders under `frontend/src/`:
 - **Tone**: a number column declares itself `credit`, `debit` or `neutral`; a negative value is always
   `debit` and a zero always `neutral`, so "nothing moved" stays uncoloured.
 - **The row mark**: an optional `mark` (`(row) => string | null`) flags single rows without adding a
-  column. A row it answers a text for gets `data-stale` for the stripe, and an `!` in its **first**
-  cell, **ahead** of what that cell already shows; `total.mark` does the same for the `tfoot` row, so
-  a total can state something about the rows it sums. The text stands in the DOM at all times inside
-  a focusable `role="note"`, and CSS only collapses it visually until hover **or** keyboard focus:
-  a screen reader reads it while going through the row, and no hidden duplicate has to be kept in
-  step with a visible one. Revealing on `:focus` rather than `:focus-visible` keeps a tap on a
-  touch device working, where there is no hover at all, and the revealed note takes pointer events
-  back, so reading it with the mouse does not dismiss it. A mark whose text is blank counts as
-  **no** mark: an empty note would render a focusable element with no accessible name, a tab stop
-  that announces nothing.
+  column.
+  - A row it answers a text for gets `data-stale` for the stripe, and an `!` in its **first** cell,
+    **ahead** of what that cell already shows.
+  - `total.mark` does the same for the `tfoot` row, so a total can state something about the rows
+    it sums.
+  - The text stands in the DOM at all times inside a focusable `role="note"`; CSS only collapses it
+    visually until hover **or** keyboard focus.
+  - So a screen reader reads it while going through the row, and no hidden duplicate has to be kept
+    in step with a visible one.
+  - Revealing on `:focus` rather than `:focus-visible` keeps a tap on a touch device working, where
+    there is no hover at all.
+  - The revealed note takes pointer events back, so reading it with the mouse does not dismiss it.
+  - A mark whose text is blank counts as **no** mark: an empty note would render a focusable
+    element with no accessible name, a tab stop that announces nothing.
 - **The total row**: an optional `total` (`{label, row}`) renders one `tfoot` row, outside the sorted
   body, so a sum can never be mistaken for a member or reordered into the middle of the table. Its
   first column carries the label, number columns carry their total, and any other kind carries the
@@ -167,7 +171,7 @@ Four top-level folders under `frontend/src/`:
   A ledger's column head therefore sorts the **whole ledger**: the ledger view hands its table a
   `deliveredOrder`, so a click follows a link to the chosen order on the **first page**, and the
   table shows the rows in the order the API answered rather than sorting them again, since the
-  SPA's ICU collation and the server's `GermanOrder` order punctuation differently (**F13**).
+  SPA's ICU collation and the server's `GermanOrder` order punctuation differently (backlog F13).
   "Zurück" and "Weiter" carry the sort, so a page of a sorted ledger is a bookmark of that order.
   The "Bank" and "Lager" links in the frame carry none: the two ledgers sort by different columns.
 - **The views own their columns, the primitives own the rendering.** A view declares its
@@ -227,18 +231,20 @@ Four top-level folders under `frontend/src/`:
   it is the sum of neither half, so it keeps its `Gilde` label under the table a reader actually
   reads instead of stating the same guild-wide figure twice.
 - **The roster stands in two tables, active above and dormant below** (decision 2026-09-11):
-  `domain/rosterSplit.ts` divides the loaded rows, both tables render the **same** `Column` list, and
-  each keeps the German-collation order the API handed over, so the split reorders nothing. A row is
-  active when the later of its two activity timestamps is no older than `ACTIVITY_WINDOW_DAYS` before
-  the **newest activity in the loaded rows themselves**. The reference is the data's, never the
-  reader's clock: tied to the wall clock the whole roster falls into "dormant" as soon as the scraper
-  stalls, which is exactly when someone opens the page, whereas the row holding the maximum is active
-  by construction. With no activity anywhere there is no reference and every row stays active: the
-  dormant table is an exception list, and nothing moves into it without a measurable reason. The
-  window is 30 days rather than a calendar month because subtracting a month normalizes 31.07 to
-  01.07 and would change the window's length with the reference date. `lastUpdated` is deliberately
-  **not** read for this: it lives on `/api/v1/admin/status`, and the members' view does not reach
-  into an operator surface for a presentation question.
+  - `domain/rosterSplit.ts` divides the loaded rows.
+  - Both tables render the **same** `Column` list.
+  - Each keeps the German-collation order the API handed over, so the split reorders nothing.
+  - A row is active when the later of its two activity timestamps is no older than
+    `ACTIVITY_WINDOW_DAYS` before the **newest activity in the loaded rows themselves**.
+  - The reference is the data's, never the reader's clock: tied to the wall clock the whole roster
+    falls into "dormant" as soon as the scraper stalls, which is exactly when someone opens the
+    page, whereas the row holding the maximum is active by construction.
+  - With no activity anywhere there is no reference and every row stays active: the dormant table
+    is an exception list, and nothing moves into it without a measurable reason.
+  - The window is 30 days rather than a calendar month, because subtracting a month normalizes
+    31.07 to 01.07 and would change the window's length with the reference date.
+  - `lastUpdated` is deliberately **not** read for this: it lives on `/api/v1/admin/status`, and the
+    members' view does not reach into an operator surface for a presentation question.
 - **The split is client-side and therefore covers only the loaded page.** Both captions state their
   half against `totalCount` (`Aktiv (30 Tage vor dem letzten Vorgang): 24 von 42 Avataren`), so the
   two never claim to have sorted the whole guild; today `size` 100 against 42 avatars means one page
@@ -269,10 +275,10 @@ service's only read surface.
 
 | Route | Answers |
 |-------|---------|
-| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, the two flows `donation` and `craftSubsidy`, plus `lastBankActivity`, `lastStorageActivity` and `staleSumsFrom`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
+| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, the two flows `donation` and `craftSubsidy`, `balance` (the figure before the guild's share), plus `lastBankActivity`, `lastStorageActivity` and `staleSumsFrom`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
 | `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first unless `sort` names another order. |
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first unless `sort` names another order. |
-| `GET /api/v1/admin/status` | Anonymous, `token`-exempt (same trust level as `/health`): `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, `roundTrips`, `roundTripAbstentions`, every key always rendered (the two round-trip arrays as `[]` rather than `null` when empty). The operator-facing facts that used to sit on the overview; see below. |
+| `GET /api/v1/admin/status` | Anonymous, `token`-exempt (same trust level as `/health`): `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, `roundTrips`, `roundTripAbstentions`, every key always rendered (the two round-trip arrays as `[]` rather than `null` when empty). The operator-facing facts; see below. |
 
 - **One envelope for every collection**: `page`, `size`, `totalCount`, `items`. `/api/v1/avatars`
   adds `totals`.
@@ -286,9 +292,8 @@ service's only read surface.
   is the instant they were last recomputed, or, for a failed avatar whose stored sums carried no
   instant, the seeded bound his sums predate (domain-model.md). One nullable field rather than a flag beside a
   timestamp: present means both "stale" and "this old". The comparison happens **server-side**,
-  against the newest per-avatar recompute instant in the meta store, so no guild-wide collection
-  timestamp returns to this envelope; the one that used to sit here moved to
-  `/api/v1/admin/status`. A row a recompute failure skipped therefore states its own age, while
+  against the newest per-avatar recompute instant in the meta store, so this envelope carries no
+  guild-wide collection timestamp; `/api/v1/admin/status` serves it as `lastUpdated`. A row a recompute failure skipped therefore states its own age, while
   scrape time and the failure's own record stay operator's data on the admin surface. What the
   instant means, and why it is stored as epoch millis, is in
   [domain-model.md](domain-model.md).
@@ -317,11 +322,15 @@ service's only read surface.
   one avatar is not yet computed, since a guild figure must not leave him out, while
   `containsStaleSums` still answers. How the SPA shows the state is under the views above.
 - **The SPA reads a row or `totals` whose five sums are all `null` as carrying none**
-  (`sumsFrom` in `api/wire.ts`), and refuses one with only some of them absent, or without them
-  but with a flow, `balance` or `storageValue` (`refuseFiguresWithoutSums`), as a malformed answer,
-  and so a page whose row carries no sums while its `totals` still do, or one that holds the whole
-  guild with every row computed while its `totals` carry none. An age beside absent sums is
-  tolerated rather than refused, because the not-yet-computed mark wins over the outdated one anyway.
+  (`sumsFrom` in `api/wire.ts`).
+  - It refuses one with only some of the sums absent as a malformed answer.
+  - It refuses one without the sums but with a flow, `balance` or `storageValue` as a malformed
+    answer (`refuseFiguresWithoutSums`).
+  - It therefore refuses a page whose row carries no sums while its `totals` still do.
+  - It therefore refuses a page that holds the whole guild with every row computed while its
+    `totals` carry none.
+  - An age beside absent sums is tolerated rather than refused, because the not-yet-computed mark
+    wins over the outdated one anyway.
 - **`donation` and `craftSubsidy` are the two flows between what a deposit credited and what it is
   worth to the guild** (decision 2026-09-10): what a member gave for nothing, and what the guild
   paid above its own price for bought trader goods. They are served per avatar and in `totals`,
@@ -350,11 +359,9 @@ service's only read surface.
 - **`/api/v1/admin/status`'s `lastUpdated` is display-only and up to an hour off inside the DST
   fall-back hour.** It is stored as a Berlin wall-clock time, so the instant behind it is
   unrecoverable while the local hour repeats and the conversion resolves to the earlier offset. The
-  epoch/UTC storage format fixes this at the root. **Entry timestamps are not exempt** (falsifier
-  proof 2026-09-02): they are real instants in the domain but persist as wall-clock text too, so two
+  epoch/UTC storage format fixes this at the root. **Entry timestamps are not exempt**: they are real instants in the domain but persist as wall-clock text too, so two
   entries an hour apart inside the fall-back hour store the same text and both read back as the later
-  one. Only the container's UTC default keeps every timestamp the API serves correct today (backlog
-  D14).
+  one. Only the container's UTC default keeps every timestamp the API serves correct today.
 - **Timestamps** are ISO-8601 UTC and **`transferType`** is one of `DEPOSIT` / `WITHDRAWAL`; the
   client localizes both. The wire names come from `TransferTypeWireNames`, a visitor over the domain
   enum, so the German domain constants (`EINLAGERUNG`/`ENTNAHME`) never reach the contract and stay
@@ -382,7 +389,7 @@ service's only read surface.
 
 ## Build integration
 
-- **Node is pinned centrally**: `gradle.properties` → `nodeVersion` (currently `24.18.0`). The
+- **Node is pinned centrally**: `gradle.properties` → `nodeVersion` holds the version. The
   `com.github.node-gradle.node` plugin downloads that version per machine
   (`node { version = providers.gradleProperty("nodeVersion").get(); download = true }`); no Node
   install required on host or devcontainer (see `dev-environment.md`).
@@ -401,8 +408,8 @@ service's only read surface.
 - **Dev server against a running application:** `npm run dev` serves the SPA on 5173 and proxies
   `/api` to `http://localhost:8080` (`server.proxy` in `vite.config.ts`), so the SPA can be driven
   against real data with hot reload. Deep links work there because Vite answers unknown paths with
-  `index.html`, and in the packaged application because no controller owns the three dashboard paths
-  any more, so the history fallback answers them with the shell.
+  `index.html`, and in the packaged application because no controller owns the three dashboard
+  paths, so the history fallback answers them with the shell.
 - Run `vitest`/`eslint` from `frontend/`: the Vitest config (jsdom environment) lives in
   `frontend/vite.config.ts`, and a run started from the repo root silently uses none of it.
 - The built SPA reaches the main jar via a **`frontendDist` Gradle configuration**:
@@ -411,8 +418,8 @@ service's only read surface.
     `static/ui`.
   - Micronaut serves the SPA as static resources, with a catch-all fallback to `index.html` for
     unknown navigation paths (client-side routing).
-  - Existing dashboard URLs (`/overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`)
-    stay as the SPA's client routes (not renamed).
+  - The dashboard URLs (`/overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`) are
+    the SPA's client routes.
 - **Docker**: the image build copies `frontend/` and `gradle.properties` and runs
   `./gradlew clean check installDist` (not `clean test installDist`): `test` matches nothing under
   `:frontend`, so `check` gates the frontend's tests and lint too. See `build-run-deploy.md`.
