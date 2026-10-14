@@ -75,8 +75,7 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    (branch, worktree identity, compare range, on the agent seat the pull request), YOU review the
    rebased tip
    - a re-rebase after your review: clean and green → landed without a second review; a
-     conflict resolution → the reviewer, the doc-reviewer and the lenses whose read paths it
-     touches, the resolution as their delta, then your review again
+     conflict resolution → the gate agents handbook §7 names re-run, then your review again
 6. LANDING (YOU): `/land <tip>` on the pull request, or `git push origin <tip>:refs/heads/main`
    (handbook §7); a fast-forward either way
    - once origin/main holds the tip, the agent fast-forwards main and cleans up the worktree,
@@ -184,11 +183,10 @@ and lands through the gateway; no commit is made on `main`
   only a green tip is pushed again with a lease. If the strand was already author-reviewed **and**
   the rebase ran clean (no conflicts, no judgment-call resolutions) **and** that build is green, it
   goes to the author's landing without a further review round-trip. When the rebase hit a conflict:
-  resolve it, run the full build, **re-run the reviewer, the doc-reviewer and every lens whose
-  read paths the resolution touches on the resolved tip**, the resolution as their delta (handbook
-  §7), then present exactly what was resolved plus the compare range and wait for the author's go.
-  Conflict resolutions are the one place new, unreviewed content can appear, so both reviews stay
-  exactly there. Moving `origin/main` always stays with the author.
+  resolve it, run the full build, **re-run the gate agents handbook §7 names for a conflict
+  resolution** (the bullet "Every rebase is followed by the full gateway build"), then present
+  exactly what was resolved plus the compare range and wait for the author's go. Moving
+  `origin/main` always stays with the author.
 - **Clean up landed strands immediately, without asking:** once `origin/main` holds a strand's tip
   and the primary checkout's `main` has fast-forwarded to it, `./verify stop` in its worktree, then
   `git worktree remove <path>` and `git branch -d <branch>`, then `git worktree prune` (inside the
@@ -249,10 +247,13 @@ says where each piece of evidence lives.
 - **When:** every piece of evidence but the reports is in place before a round's gate agents are
   spawned. The round closes only on a PASS once every report is in, and that PASS line opens the
   hand-off to the author.
-- **The reviewer runs the check as its first act**, beside the lenses: a refusal of class `lens`,
-  `report`, `finding` or `tip` that names a report the round spawned beside it concerns that
-  report; any other refusal is its finding, one naming an earlier round's report or the
-  disposition of an earlier round's finding included.
+- **The reviewer runs the check as its first act**, from the strand worktree, beside the lenses:
+  - a refusal of class `lens`, `report`, `finding` or `tip` that names a report the round spawned
+    beside it concerns that report: the reviewer quotes it, it is not the reviewer's;
+  - every other refusal is a `process` finding of a FAIL;
+  - among them: a refusal naming a report of an earlier round, and a `finding` refusal about the
+    disposition of an earlier round's finding (`fixed` at no strand commit, a backlog row the tip
+    lacks, a rejection without its reason).
 - **Location:** `<strand worktree>/gate.local.d/`, ignored by git (`*.local.*`), so no build
   cleans it and the worktree's removal takes it along. A dossier anywhere else, or a symlink in its
   place, is refused.

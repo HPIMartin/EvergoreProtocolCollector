@@ -39,12 +39,8 @@ Read `CLAUDE.md`, `docs/knowledge-base/engineering-handbook.md` (esp. §1–§9)
 
 At the feature gate, your first act is `gate/dossier-check <strand worktree> <tip>`, run from the
 strand worktree. The gate's evidence lives in `<strand worktree>/gate.local.d/`
-(`docs/knowledge-base/multi-agent-playbook.md`, "The gate dossier"). A refusal of class `lens`,
-`report`, `finding` or `tip` that names a report this round spawned beside you concerns that
-report; quote it, it is not yours. Every other refusal is a `process` finding of a FAIL, among
-them one naming a report of an earlier round and a `finding` refusal about the disposition of an
-earlier round's finding (`fixed` at no strand commit, a backlog row the tip lacks, a rejection
-without its reason).
+(`docs/knowledge-base/multi-agent-playbook.md`, "The gate dossier"). Route each refusal as that
+section's bullet "The reviewer runs the check as its first act" says.
 
 ## Process checks (the author cares about these)
 
