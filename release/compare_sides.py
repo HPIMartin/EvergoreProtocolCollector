@@ -19,6 +19,7 @@ TOKEN_VARIABLE = "EVERGORE_SECURITY_API_TOKEN"
 LEDGERS = ("bank", "storage")
 CRASH_EXIT_CODE = 4
 ADMIN_NAME_LISTS = ("unknownItemNames",)
+ADMIN_ENTRY_LISTS = ("roundTrips", "roundTripAbstentions")
 ADMIN_LISTS = ("unknownItemNames", "failedAvatarNames")
 FIGURE_SCOPES = ("row", "totals")
 
@@ -107,16 +108,16 @@ def _ledger_differences(running, candidate):
 
 
 def _entry_differences(scope, running, candidate):
-    running_entries = _entry_multiset(running)
-    candidate_entries = _entry_multiset(candidate)
+    running_entries = _entry_multiset(running["items"])
+    candidate_entries = _entry_multiset(candidate["items"])
     for entry, count in sorted((running_entries - candidate_entries).items()):
         yield f"{scope}: {count} more of {entry} in the running side only"
     for entry, count in sorted((candidate_entries - running_entries).items()):
         yield f"{scope}: {count} more of {entry} in the candidate side only"
 
 
-def _entry_multiset(ledger):
-    return Counter(json.dumps(entry, sort_keys=True, ensure_ascii=False) for entry in ledger["items"])
+def _entry_multiset(entries):
+    return Counter(json.dumps(entry, sort_keys=True, ensure_ascii=False) for entry in entries)
 
 
 def _total_count_differences(scope, running, candidate):
@@ -254,6 +255,14 @@ def _admin_differences(running, candidate):
                 yield f"admin: {field} lists {name} in the running side only"
             for name in sorted(only_candidate.elements()):
                 yield f"admin: {field} lists {name} in the candidate side only"
+    for field in ADMIN_ENTRY_LISTS:
+        if isinstance(running.get(field), list) and isinstance(candidate.get(field), list):
+            running_entries = _entry_multiset(running[field])
+            candidate_entries = _entry_multiset(candidate[field])
+            for entry in sorted((running_entries - candidate_entries).elements()):
+                yield f"admin: {field} lists {entry} in the running side only"
+            for entry in sorted((candidate_entries - running_entries).elements()):
+                yield f"admin: {field} lists {entry} in the candidate side only"
 
 
 def _recompute_status_findings(side, admin):

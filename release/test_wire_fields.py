@@ -215,6 +215,40 @@ class AdminValues(unittest.TestCase):
         for expected in ("unknownItemNames", "Zwerg", "running"):
             self.assertIn(expected, tested.findings[0])
 
+    def test_a_round_trip_only_one_side_lists_is_a_finding_for_each_side(self):
+        running = side(admin=admin(roundTrips=[{"avatar": "Älf", "item": "Drachenzunder", "quantity": 150}]))
+        candidate = side(admin=admin(roundTrips=[{"avatar": "Älf", "item": "Drachenzunder", "quantity": 151}]))
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(
+            [
+                'admin: roundTrips lists {"avatar": "Älf", "item": "Drachenzunder", "quantity": 150} in the running side only',
+                'admin: roundTrips lists {"avatar": "Älf", "item": "Drachenzunder", "quantity": 151} in the candidate side only',
+            ],
+            tested.findings,
+        )
+
+    def test_a_round_trip_abstention_only_one_side_lists_is_a_finding(self):
+        running = side(admin=admin(roundTripAbstentions=[{"avatar": "Bambor", "item": "Drachenzunder"}]))
+        candidate = side(admin=admin(roundTripAbstentions=[]))
+
+        tested = compare(running, candidate)
+
+        self.assertEqual(
+            ['admin: roundTripAbstentions lists {"avatar": "Bambor", "item": "Drachenzunder"} in the running side only'],
+            tested.findings,
+        )
+
+    def test_round_trips_listed_in_another_order_are_no_finding(self):
+        trips = [{"avatar": "Älf", "item": "Drachenzunder", "quantity": 150}, {"avatar": "Bambor", "item": "Eisen", "quantity": 2}]
+        running = side(admin=admin(roundTrips=trips))
+        candidate = side(admin=admin(roundTrips=list(reversed(trips))))
+
+        tested = compare(running, candidate)
+
+        self.assertEqual([], tested.findings)
+
 
 if __name__ == "__main__":
     unittest.main()

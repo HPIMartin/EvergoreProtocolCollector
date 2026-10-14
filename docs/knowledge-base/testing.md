@@ -394,6 +394,7 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
   - so are round trips it serves as anything but a list; their content is not compared (the
     report says so);
   - `unknownItemNames` as a multiset;
+  - the round trips and round-trip abstentions both sides serve, each as a multiset of whole entries;
   - `unknownItemNames` or `failedAvatarNames` served as anything but a list is a finding;
   - every member `failedAvatarNames` names on either side is a finding, also where both name it;
   - the five run instants of the admin status differ by construction and are not compared (the
