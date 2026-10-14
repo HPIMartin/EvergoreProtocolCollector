@@ -118,7 +118,7 @@ class SmokeTest {
 	}
 
 	@Test
-	void requestNotExisitingEndpoint() {
+	void requestNotExistingEndpoint() {
 		int statusCode = get("/thatEndpointDoesNotExist").getStatus();
 
 		assertThat(statusCode).isBetween(400, 499);
