@@ -4,6 +4,7 @@ const SEPARATOR = '/'
 const AVATARS = 'avatars'
 const OVERVIEW = 'overview'
 const ADMIN = 'admin'
+const EXPLANATION = 'explanation'
 const BANK = 'bank'
 const STORAGE = 'storage'
 const LEDGER_SEGMENT_COUNT = 3
@@ -18,6 +19,7 @@ export const DIRECTION = 'direction'
 export interface RouteVisitor<R> {
   overview: () => R
   admin: () => R
+  explanation: () => R
   bank: (avatar: string, page: number, sort: LedgerSort | null) => R
   storage: (avatar: string, page: number, sort: LedgerSort | null) => R
   unknownPath: (path: string) => R
@@ -33,6 +35,10 @@ export function overviewPath(): string {
 
 export function adminPath(): string {
   return `${SEPARATOR}${ADMIN}`
+}
+
+export function explanationPath(): string {
+  return `${SEPARATOR}${EXPLANATION}`
 }
 
 export function bankPath(avatar: string): string {
@@ -51,6 +57,9 @@ export function routeOf(path: string, search: string): Route {
   if (onlyTheAdminStatusPage(segments)) {
     return ADMIN_ROUTE
   }
+  if (onlyTheExplanationPage(segments)) {
+    return EXPLANATION_ROUTE
+  }
 
   return (
     ledgerRouteOf(segments, pageIn(search), sortIn(search)) ??
@@ -60,6 +69,9 @@ export function routeOf(path: string, search: string): Route {
 
 const OVERVIEW_ROUTE: Route = { accept: (visitor) => visitor.overview() }
 const ADMIN_ROUTE: Route = { accept: (visitor) => visitor.admin() }
+const EXPLANATION_ROUTE: Route = {
+  accept: (visitor) => visitor.explanation(),
+}
 
 function bankRoute(
   avatar: string,
@@ -114,6 +126,10 @@ function onlyTheOverview(segments: readonly string[]): boolean {
 
 function onlyTheAdminStatusPage(segments: readonly string[]): boolean {
   return segments.length === 1 && segments[0] === ADMIN
+}
+
+function onlyTheExplanationPage(segments: readonly string[]): boolean {
+  return segments.length === 1 && segments[0] === EXPLANATION
 }
 
 function ledgerRouteOf(

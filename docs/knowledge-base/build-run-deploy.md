@@ -1001,7 +1001,7 @@ answered (measured on Micronaut 4.10.9).
 | `GET /api/v1/avatars` | JSON overview: per-avatar bank totals. Contract in [frontend.md](frontend.md). |
 | `GET /api/v1/avatars/{avatar}/bank?page=N&size=M&sort=C&direction=D` | JSON bank entries for one avatar, newest first unless sorted. |
 | `GET /api/v1/avatars/{avatar}/storage?page=N&size=M&sort=C&direction=D` | JSON storage entries for one avatar, newest first unless sorted. |
-| `GET /overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`, `/admin` | SPA client routes. No controller owns them: `/overview`/`/avatars/**` fall through to the shell with a token, `/admin` is public and needs none, so a deep link or a bookmark works either way. |
+| `GET /overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`, `/explanation`, `/admin` | SPA client routes. No controller owns them: `/overview`, `/explanation` and `/avatars/**` fall through to the shell with a token, `/admin` is public and needs none, so a deep link or a bookmark works either way. |
 | `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle. **Public** (no token), but rate-limited and logged like any other request. An unknown navigation path **with a token** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
 | `GET /favicon.ico` | Favicon: public, but rate-limited and logged like any other request. |
 | `GET /health` | Micronaut management health endpoint, token-exempt and anonymous: the liveness/last-run monitor hook (what it reports: bullets below the table). |

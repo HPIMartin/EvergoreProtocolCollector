@@ -6,6 +6,7 @@ import type { RouteVisitor } from './route.ts'
 import {
   adminPath,
   bankPath,
+  explanationPath,
   overviewPath,
   routeOf,
   storagePath,
@@ -18,6 +19,7 @@ function sortedBy(sort: LedgerSort | null): string {
 const describingVisitor: RouteVisitor<string> = {
   overview: () => 'the overview',
   admin: () => 'the admin status page',
+  explanation: () => 'the explanation page',
   bank: (avatar, page, sort) =>
     `the bank of ${avatar} at page ${String(page)}${sortedBy(sort)}`,
   storage: (avatar, page, sort) =>
@@ -48,6 +50,12 @@ describe('route', () => {
     const described = routeOf('/admin', '').accept(describingVisitor)
 
     expect(described).toBe('the admin status page')
+  })
+
+  it('shows the explanation page at its own path', () => {
+    const described = routeOf('/explanation', '').accept(describingVisitor)
+
+    expect(described).toBe('the explanation page')
   })
 
   it('shows one avatar bank ledger at page 0 when the address names none', () => {
@@ -172,6 +180,12 @@ describe('route', () => {
     const path = adminPath()
 
     expect(path).toBe('/admin')
+  })
+
+  it('names the path the explanation page is reached at', () => {
+    const path = explanationPath()
+
+    expect(path).toBe('/explanation')
   })
 
   it('names the path a bank ledger is reached at', () => {

@@ -2305,6 +2305,29 @@ describe('App', () => {
     })
   })
 
+  it('heads the explanation page at its own address', async () => {
+    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+
+    expect(screen.getByTestId('view-title').textContent).toBe(
+      'So entstehen eure Zahlen',
+    )
+  })
+
+  it("offers only the overview, not marked as current, in the explanation page's navigation", async () => {
+    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+
+    const navigation = screen
+      .getAllByRole('navigation')[0]
+      ?.querySelectorAll('a')
+
+    expect(
+      [...(navigation ?? [])].map(
+        (link) =>
+          `${link.textContent} ${link.getAttribute('href') ?? ''} ${link.getAttribute('aria-current') ?? 'not current'}`,
+      ),
+    ).toStrictEqual(['Übersicht /overview?token=a-test-token not current'])
+  })
+
   it('offers the ledgers of the avatar it shows in its navigation', async () => {
     await shellAt(
       `/avatars/Calix/bank?token=${TOKEN}`,

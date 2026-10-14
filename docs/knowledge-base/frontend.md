@@ -139,8 +139,12 @@ Four top-level folders under `frontend/src/`:
 ## The SPA's views
 
 - **Client routes:** `/` and `/overview` show the guild overview, `/avatars/{avatar}/bank` and
-  `/avatars/{avatar}/storage` show one avatar's ledger. Every other path renders "no view", so a typo
-  in a bookmark says so instead of showing an empty page.
+  `/avatars/{avatar}/storage` show one avatar's ledger, and `/explanation` the explanation page
+  (`ExplanationView.tsx`). Every other path renders "no view", so a typo in a bookmark says so
+  instead of showing an empty page.
+- **`/explanation` loads no data**: it stays behind the guild's token because the server refuses a
+  deep link without it, not because a request of its own would fail (decision 2026-10-14).
+  - Its frame offers the overview only.
 - **`/admin` shows the collection status** (`AdminView.tsx`): `lastUpdated` plus the last successful
   scrape and recompute as freshness text (each with its own "never ran" wording), and the two failure
   instants and two name lists from `/api/v1/admin/status`, each shown only when the server reports one.
@@ -155,11 +159,11 @@ Four top-level folders under `frontend/src/`:
   `evergore.security.public-paths`, at the same trust level as `/health`.
 - The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
   malformed escape is "no view", not a crash.
-- **Every view passes through one of five outcomes** (`useLoad` + `LoadedView`): loading, loaded,
-  token refused, no such page (a ledger read the API answers 400), failed. A failure shows one
-  fixed German text and never the API's status or message. A ledger view additionally tells
-  **"known avatar, no entries"** from **"unknown avatar"**, which is the client side of the 404
-  decision below.
+- **Every view that loads data passes through one of five outcomes** (`useLoad` + `LoadedView`):
+  loading, loaded, token refused, no such page (a ledger read the API answers 400), failed. A
+  failure shows one fixed German text and never the API's status or message. A ledger view
+  additionally tells **"known avatar, no entries"** from **"unknown avatar"**, which is the client
+  side of the 404 decision below.
 - **The token is read once from the address** (`?token=`) and carried into every request and every
   in-app link; it is kept nowhere else (no cookie, no `localStorage`), so a link is the whole
   credential and closing the tab ends the session.
@@ -428,8 +432,8 @@ service's only read surface.
 - **Dev server against a running application:** `npm run dev` serves the SPA on 5173 and proxies
   `/api` to `http://localhost:8080` (`server.proxy` in `vite.config.ts`), so the SPA can be driven
   against real data with hot reload. Deep links work there because Vite answers unknown paths with
-  `index.html`, and in the packaged application because no controller owns the three dashboard
-  paths, so the history fallback answers them with the shell.
+  `index.html`, and in the packaged application because no controller owns the dashboard paths or
+  `/explanation`, so the history fallback answers them with the shell.
 - Run `vitest`/`eslint` from `frontend/`: the Vitest config (jsdom environment) lives in
   `frontend/vite.config.ts`, and a run started from the repo root silently uses none of it.
 - The built SPA reaches the main jar via a **`frontendDist` Gradle configuration**:
@@ -438,8 +442,8 @@ service's only read surface.
     `static/ui`.
   - Micronaut serves the SPA as static resources, with a catch-all fallback to `index.html` for
     unknown navigation paths (client-side routing).
-  - The dashboard URLs (`/overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`) are
-    the SPA's client routes.
+  - The client routes (`/overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`,
+    `/explanation`) are the SPA's.
 - **Docker**: the image build gates on the frontend's tests and lint too; its build command:
   [build-run-deploy.md](build-run-deploy.md), "Run via Docker (primary path)".
 - **Vulnerability scanning**:
