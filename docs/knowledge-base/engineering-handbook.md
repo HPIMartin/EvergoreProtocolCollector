@@ -463,7 +463,7 @@ directory; two writers on one checkout race (index/HEAD flicker, clobbered stage
 worktrees (own directory + HEAD + index) make parallel work safe.
 
 - **A worktree per context.** Each problem/feature/context gets its own branch in its own
-  worktree under the worktree root; parallel contexts (incl. other-model agents) = parallel
+  worktree; parallel contexts (incl. other-model agents) = parallel
   worktrees; the primary checkout stays on `main`. Worktrees branch from a freshly synced `main`
   (below): `git worktree add -b claude/<topic> <root>/<topic> main`. `worktree.baseRef: "head"`
   makes the harness's subagent worktrees branch from that same `main`; `"fresh"` would branch from
@@ -478,6 +478,8 @@ worktrees (own directory + HEAD + index) make parallel work safe.
       `docker exec -u vscode <container> printenv EPC_WORKTREES`;
     - `git worktree prune` runs only in a container that has the volume mounted.
   - Which seat sets it, and why: [dev-environment.md](dev-environment.md), "Worktrees on a volume".
+  - Where Claude Code puts an `Agent` subagent's `isolation: "worktree"` checkout, and why strands
+    avoid it: [multi-agent-playbook.md](multi-agent-playbook.md), "One track".
 - **`main` follows `origin/main` on every machine** (author decision 2026-10-04): `origin/main`
   moves only by the author's landings and the pull requests the author merges on GitHub
   (Dependabot's), so a machine that does not fetch works on a stale `main`.

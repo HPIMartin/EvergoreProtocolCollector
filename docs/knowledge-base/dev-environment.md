@@ -82,7 +82,7 @@
   handbook §7 on the PC.
 - **Why:** the Windows bind mount (9p/drvfs) is much slower for file-heavy steps (decision
   2026-10-12, [open-questions.md](../open-questions.md)).
-- **`.git` stays in the primary checkout on the bind mount;** only the checked-out files move.
+- **`.git` stays in the primary checkout on the bind mount.**
 - **The volume survives a rebuild** like the caches.
 - **Its worktrees keep resolving after a rebuild:** each one's `.git` file points at
   `/workspaces/EvergoreProtocolCollector/.git`, a path the rebuild does not change.
@@ -91,9 +91,10 @@
   - Staged changes and commits survive in `.git`, which holds every worktree's index and objects.
 - **Deleting the volume deletes those files:** `docker volume rm`, `docker volume prune --all`, or a
   reset of Docker Desktop or of its WSL disk.
+  - Both volume commands delete the volume only once no container, running or stopped, mounts it.
 - **Run every command in the container as `vscode`** (`docker exec -u vscode` from the host).
-  - A session started in the container's VS Code terminal runs as `vscode`; a bare `docker exec`
-    runs as `root`.
+  - A session started in the container's VS Code terminal runs as `vscode`.
+  - A bare `docker exec` runs as `root`.
   - `vscode` cannot edit the files of a worktree a `root` shell created.
   - A `root` shell that writes to `.git` leaves directories `vscode` cannot write, so a later commit
     as `vscode` fails with `insufficient permission`.
@@ -110,17 +111,17 @@
     path.
   - A strand is best driven from a session in the container ("How to work in it", below).
 - **Why a container without the volume misreads the worktrees** (rule: handbook §7):
-  - Git lists a worktree whose directory it cannot see as `prunable`, and `git worktree prune`
-    drops its registration.
+  - Git lists a worktree whose directory it cannot see as `prunable`.
+  - `git worktree prune` drops the registration of a `prunable` worktree.
   - `git gc` prunes such a registration on its own once it is older than
     `gc.worktreePruneExpire` (three months by default).
   - Host git lists every worktree under `/worktrees` as `prunable`.
   - A container without the volume does too.
 - **The agent seat leaves `EPC_WORKTREES` unset,** so its root is the default of handbook §7.
-  - The agent image blanks the `devcontainer.metadata` label, which carries `containerEnv` and the
-    mounts ("The agent image", below), so it inherits neither.
-  - A volume for the seat would change its mounts and environment, which the agent machine's
-    administration owns.
+  - The agent image blanks the `devcontainer.metadata` label ("The agent image", below).
+  - That label carries `containerEnv` and the mounts, so the seat inherits neither.
+  - A volume for the seat would change its mounts and environment.
+  - The agent machine's administration owns those.
 
 ### `postCreateCommand`
 

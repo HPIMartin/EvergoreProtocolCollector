@@ -82,6 +82,8 @@ Applies to every `*.md` in the repo (root, `docs/`, `.claude/`). Findings cite r
   - No commit narration.
   - No was/now diffs.
   - No session references.
+  - The two dated logs, open-questions.md and process-learnings.md, record events by date; DOC-3
+    does not apply to their rows (decision 2026-10-14, [open-questions.md](../open-questions.md)).
 - **DOC-4 Single home:** each rule/fact lives in exactly one doc. Duplication drifts.
   - Everything else cross-links.
   - Exception: `.claude/agents/*.md` are prompts, not docs, and an agent only ever reads its own

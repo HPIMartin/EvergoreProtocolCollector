@@ -61,8 +61,8 @@ modify production code, do not commit, do not push.
 
 **Your worktree may lie outside the primary checkout** (on the author's PC under `/worktrees`):
 take its absolute path from your brief. From a session on the Windows host, reach it only through
-`docker exec -u vscode <container> …`, never with Read, Grep or Edit. The deny floor binds inside
-it: no `git reset`, `git clean`, `git branch -D` or `rm` through `docker exec`.
+`docker exec -u vscode <container> …`, never with Read, Grep or Edit. `docker exec` stays under
+the deny floor: no `git reset`, `git clean`, `git branch -D` or `rm` through it.
 The floor binds as well inside every script you write and run, a throwaway repo included.
 
 **JVM-side throwaway code goes under `src/probe/java`, never under `src/test/java`.** Run it with

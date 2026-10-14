@@ -50,17 +50,21 @@ Slice: the figures the header named are complete, and the rule behind them is de
 ledger cannot decide it.
 
 - [x] Every storage name carries the value the game gives it, is recorded as a parser miss, or is
-      recorded as unpriced by the game with the date of the read that found no price (2026-09-22):
-      of the 15 names over 31 rows, 13 are gem pieces no complete read priced and 2 are parser
-      misses. The recompute was re-run on the 03.09.2026 snapshot and the guild position did not
-      move ([testing.md](knowledge-base/testing.md)).
+      recorded as unpriced by the game with the date of the read that found no price (2026-09-22).
+      - Of the 15 names over 31 rows, 13 are gem pieces no complete read priced and 2 are parser
+        misses.
+      - Recording them moves no sum on the 03.09.2026 snapshot
+        ([testing.md](knowledge-base/testing.md)).
 - [x] The three ammunition sorts the NPC sells are credited in full, every other sort at 60 %, as
-      decided 2026-09-27 (2026-10-01): a rule the ledger can apply that bounds the double payment
-      to crafters; on the 03.09.2026 snapshot the guild trader moves from `-2.189.599` to
-      `+1.456.343` ([testing.md](knowledge-base/testing.md)). It belongs here because it changes what a deposit credits.
+      decided 2026-09-27 (2026-10-01).
+      - Why: a rule the ledger can apply that bounds the double payment to crafters.
+      - On the 03.09.2026 snapshot the guild trader stands at `+1.456.343`
+        ([testing.md](knowledge-base/testing.md)).
+      - It belongs here because it changes what a deposit credits.
 - [x] A member's row, the guild row and the header figures are each rounded once from the exact
-      values, as decided 2026-09-27, halves away from zero (2026-09-30). On the 03.09.2026 snapshot 7 of
-      42 rows and four guild figures differ by one gold ([testing.md](knowledge-base/testing.md)).
+      values, halves away from zero, as decided 2026-09-27 (2026-09-30).
+      - On the 03.09.2026 snapshot 7 of 42 rows and four guild figures differ by one gold from
+        `v0.2.0`'s ([testing.md](knowledge-base/testing.md)).
 - [x] A member cycling trader goods through the storage is named with the item and the overlapping
       quantity, and a test proves the warning stays silent for a crafter who withdraws material and
       deposits the product.
@@ -157,16 +161,20 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
 
 ## Ongoing (no milestone; pull into any gap)
 
-- **Mechanical error prevention, the showcase's thesis:** the tool-level enforcement hooks, whose
-  working-directory-drift guard addresses a failure mode that has already cost work (G7); the one
-  remaining hole in the git gate, a prefix-squattable host-path scan (G13); the React hook rules,
-  which nothing enforces today (B24); agent-environment polish, including the shared probe result directory that makes
-  concurrent falsifier runs flaky and the two worktree costs folded in from the dissolved
-  build-performance analysis (G11); and the SessionStart hook that injects the lessons
-  deterministically (G10). The learnings repeatedly show a session forgetting a written rule. Also
-  the Gradle daemons' memory under parallel strands (H13), and the gate, agent-tool and doc rows
-  (G21 to G79), pulled when a gate meets one, most doc-debt rows in the 0.4.0 harvest; after 0.4.0
-  the gate mechanics (G51 with G32, G40, G65).
+- **Mechanical error prevention, the showcase's thesis.** Why: the learnings repeatedly show a
+  session forgetting a written rule.
+  - The tool-level enforcement hooks (G7), whose working-directory-drift guard addresses a failure
+    mode that has already cost work.
+  - The one remaining hole in the git gate, a prefix-squattable host-path scan (G13).
+  - The React hook rules, which nothing enforces today (B24).
+  - Agent-environment polish (G11), including the shared probe result directory that makes
+    concurrent falsifier runs flaky and the two worktree costs of the dissolved build-performance
+    analysis.
+  - The SessionStart hook that injects the lessons deterministically (G10).
+  - The Gradle daemons' memory under parallel strands (H13).
+  - The gate, agent-tool and doc rows (G21 to G79), pulled when a gate meets one.
+  - Most doc-debt rows go into the 0.4.0 harvest.
+  - After 0.4.0, the gate mechanics (G51 with G32, G40, G65).
 - **Request handling at the edge:** the line slicer's per-line cost (F15) and the browser lost for
   a target with a broken escape (F18).
 - **Deploy and environment:** a failed ssh connection named as such (F20), the database directory

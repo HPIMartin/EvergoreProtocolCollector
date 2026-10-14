@@ -148,9 +148,11 @@ command) inside guardrails. Two files:
 - **The PC's worktree root lies outside the project directory**
   ([dev-environment.md](dev-environment.md), "Worktrees on a volume"), so the committed file
   carries rules for it.
-  - `Read`, `Write` and `Edit` are allowed on `//worktrees/**`.
+  - The rules serve only a session in the container, since a session on the Windows host cannot
+    see `/worktrees`.
+  - `Read`, `Write` and `Edit` are allowed (once trusted) on `//worktrees/**`.
   - A leading `//` anchors a rule at the filesystem root.
-  - A leading `cd /worktrees` or below auto-allows.
+  - A leading `cd /worktrees` or below auto-allows (once trusted).
   - A seat whose `EPC_WORKTREES` names another path adds the same rules for it in its local file.
 - **Autonomy within guardrails.** Maximum useful autonomy, minimum ceremony, a deny floor
   underneath. A deny is matched against each command of a chain, not against the whole line
