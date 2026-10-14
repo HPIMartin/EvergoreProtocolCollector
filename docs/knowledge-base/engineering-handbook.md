@@ -126,10 +126,13 @@ means, the TDD cycles drive them green, step definitions included.
   `resolvesErdeEibenlanzeByItsRealIngameSpelling`, which pins the catalog name the game spells
   Erde-Eibenlanze).
 - **An existing test adapted to a changed behavior** cannot be seen red first; it pays that debt
-  with a **recorded mutation**: mutate the production code so the adapted assertion must fail, run
-  only that test class (`./verify focus <path>`), keep the output, revert. The record (what was
-  mutated, the failing line) goes into the step's report like red evidence. Where a harness exists
-  this is the only substitution; a *new* test that drives new code is always seen red.
+  with a **recorded mutation**:
+  - mutate the production code so the adapted assertion must fail;
+  - run only that test class (`./verify focus <path>`) and keep the output;
+  - revert the mutation;
+  - the record (what was mutated, the failing line) goes into the step's report like red evidence.
+  - Where a harness exists this is the only substitution.
+  - A *new* test that drives new code is always seen red.
 - **A new test that pins behavior the code already has** (one a panel asks for) cannot start red
   either and pays the same way.
   - Its mutation stays in the gate dossier (playbook, `mutation/`).
@@ -154,12 +157,17 @@ scenario of the catch-up (`/bdd-catch-up`) is armed and run by
 observable behavior starts with its scenarios; pure refactoring, `[doc]` and build/infra claim the
 exemption below explicitly.
 
-**Scope.** Every feature with behavior a user, an operator or a caller can observe: new
-capabilities, API and UI changes. A bug fix gets a scenario when the bug is visible at the
-acceptance boundary; otherwise a reproducing unit test (§4) is its specification. A change inside
-the scope of an existing scenario adjusts that scenario. **Exempt**: pure refactorings that change
-no behavior, `[doc]` and process commits, and build/infra work. The exemption is *claimed
-explicitly* by the planner and named in the plan; it is never the silent default.
+**Scope.**
+
+- Every feature with behavior a user, an operator or a caller can observe: new capabilities, API
+  and UI changes.
+- A bug fix gets a scenario when the bug is visible at the acceptance boundary.
+- Otherwise a reproducing unit test (§4) is the bug fix's specification.
+- A change inside the scope of an existing scenario adjusts that scenario.
+- **Exempt**: pure refactorings that change no behavior, `[doc]` and process commits, and
+  build/infra work.
+- The exemption is *claimed explicitly* by the planner and named in the plan; it is never the
+  silent default.
 
 **The artifact: `.feature` files, executed.** Scenarios are Gherkin (`Feature`, `Rule`, `Scenario`,
 `Scenario Outline`) bound to step definitions and run by **cucumber-jvm** on the JUnit platform
@@ -460,12 +468,13 @@ set goes back to the author before that behavior is written.
     the worktrees it created under the worktree root, defined below (`git worktree remove
     [--force]`, `git worktree prune`) and the branches that have landed (`git branch -d`, and its
     `-C` form).
-    Deliberately *git-native*, never `rm`: `git branch -d` refuses a branch that is not fully merged,
-    so the safety lives in the command instead of in the agent's judgment. A directory a removal
-    leaves behind empty under the worktree root goes with `rmdir`, which refuses anything that is
-    not empty, so the same safety holds (author decision 2026-09-27). After a landing,
-    removing the worktree and deleting the branch is part of the landing, not a separate
-    request; the commits live on in `main`, and the reflog still holds deleted tips for a while.
+    - Deliberately *git-native*, never `rm`: `git branch -d` refuses a branch that is not fully
+      merged, so the safety lives in the command instead of in the agent's judgment.
+    - A directory a removal leaves behind empty under the worktree root goes with `rmdir`, which
+      refuses anything that is not empty, so the same safety holds (author decision 2026-09-27).
+    - After a landing, removing the worktree and deleting the branch is part of the landing, not a
+      separate request.
+    - The commits live on in `main`, and the reflog still holds deleted tips for a while.
   - **`git branch -D` stays off the table** (deny floor, and a Claude Code built-in besides). A
     branch that is not merged holds work nobody reviewed; discarding it is the author's call. Drop a
     genuinely stale scratch ref with `git update-ref -d refs/heads/<name>` only where the playbook's
@@ -579,14 +588,16 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   1. Everything committed in the worktree.
   2. `git fetch origin`, sync local `main` from `origin/main` (above, with its stop), then rebase
      onto it, resolving conflicts there.
-  3. Review the rebased tip: with rebase + fast-forward it is byte-identical to what `main`
-     becomes, so reviewing it *is* reviewing the final state, one feature, no merge artifacts
-     (falsifier + reviewer gate here). On the agent seat, then push it (above), so the author can
-     review it after a `git fetch`, in GitLens or in GitHub's compare view, from any machine. The
-     push publishes the branch before that review, and deleting it does not unpublish it: a secret
-     or host detail found then is purged by rewrite, a secret rotated ("No secrets" above). On a
-     local machine nothing is pushed: the author reviews the local branch in GitLens. What the
-     hand-off carries: the bullet "Asking the author to review" below.
+  3. Review the rebased tip (falsifier + reviewer gate here).
+     - With rebase + fast-forward it is byte-identical to what `main` becomes, so reviewing it *is*
+       reviewing the final state, one feature, no merge artifacts.
+     - On the agent seat, then push it (above), so the author can review it after a `git fetch`, in
+       GitLens or in GitHub's compare view, from any machine.
+     - The push publishes the branch before that review, and deleting it does not unpublish it: a
+       secret or host detail found then is purged by rewrite, a secret rotated ("No secrets"
+       above).
+     - On a local machine nothing is pushed: the author reviews the local branch in GitLens.
+     - What the hand-off carries: the bullet "Asking the author to review" below.
   4. On PASS and the author's review, the author lands the tip: on the agent seat a `/land <tip>`
      comment on the strand's pull request, which the landing workflow turns into a fast-forward push
      of exactly that commit ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"), or
