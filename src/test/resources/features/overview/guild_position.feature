@@ -77,7 +77,6 @@ Feature: The guild's position
         | Gildenbank            | Gildenlagerwert       | Gildenspende          | Handwerkssubventionen |
         | Noch nicht berechnet. | Noch nicht berechnet. | Noch nicht berechnet. | Noch nicht berechnet. |
 
-    @wip
     Scenario: A row not yet computed, and the guild row holding it, show a dash under "Vor Abzügen" and keep their marks as the only reason
       A note naming "Gildenspende" and "Handwerkssubventionen" as not yet computed would blame two
       figures while the whole row is not computed. A mark is the "!" a row carries, which shows its

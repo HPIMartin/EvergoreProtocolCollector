@@ -21,7 +21,6 @@ Feature: Finding one's way through the dashboard
     When a member opens a bookmark of the overview
     Then the page is headed "Übersicht"
 
-  @wip
   Scenario: The overview leads to the explanation of its figures
     Given a member has opened the overview
     When the member follows "Wie entstehen diese Zahlen?"
@@ -65,12 +64,8 @@ Feature: Finding one's way through the dashboard
     Then no link on the page leads to the admin page
 
     Examples:
-      | page         |
-      | the overview |
-
-    @wip
-    Examples:
       | page                 |
+      | the overview         |
       | the explanation page |
 
   Scenario Outline: The frame of <page> offers the overview as its only link
@@ -80,11 +75,7 @@ Feature: Finding one's way through the dashboard
       | Übersicht | the overview | <current>         |
 
     Examples:
-      | page           | reading                        | current |
-      | the overview   | a member opens the overview    | yes     |
-      | the admin page | the admin opens the admin page | no      |
-
-    @wip
-    Examples:
       | page                 | reading                             | current |
+      | the overview         | a member opens the overview         | yes     |
+      | the admin page       | the admin opens the admin page      | no      |
       | the explanation page | a member opens the explanation page | no      |

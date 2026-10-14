@@ -1,4 +1,3 @@
-@wip
 Feature: Explaining the figures
   The explanation page, see "The explanation page", works every figure of the overview out in an
   example of its invented members moving real items of the game, so a member can follow how the

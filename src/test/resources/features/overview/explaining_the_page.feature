@@ -1,4 +1,3 @@
-@wip
 Feature: The explanation page
   The overview leads to a page, written by the guild leadership to the guild, that answers the
   questions a member asks about the overview. It introduces its invented members, Mira Mitglied,

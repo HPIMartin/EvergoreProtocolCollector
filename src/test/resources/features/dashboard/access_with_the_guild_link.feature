@@ -36,11 +36,7 @@ Feature: Access with the guild's link
       | the bank ledger of "Aurora"        | without the token  |
       | the storage ledger of "Aurora"     | with a wrong token |
       | a page the dashboard does not have | without the token  |
-
-    @wip
-    Examples:
-      | page                 | how               |
-      | the explanation page | without the token |
+      | the explanation page               | without the token  |
 
   Scenario Outline: Every link on <page> opens its page
     Aurora's bank ledger is long enough to offer "Weiter".
@@ -54,8 +50,4 @@ Feature: Access with the guild's link
       | page                        |
       | the overview                |
       | the bank ledger of "Aurora" |
-
-    @wip
-    Examples:
-      | page                 |
-      | the explanation page |
+      | the explanation page        |

@@ -1,4 +1,3 @@
-@wip
 Feature: Explaining the rules
   Every answer on the explanation page (see "The explanation page") opens with its rule, written in
   the words a member reads on the overview, before the example "Explaining the figures" works out.
