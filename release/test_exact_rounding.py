@@ -1,7 +1,7 @@
 import unittest
 
 from compare_sides import compare
-from sample_sides import row, side, totals
+from sample_sides import row, side, side_of, totals
 
 STORED = {
     "bank_placement": 100,
@@ -101,6 +101,40 @@ class CandidateRounding(unittest.TestCase):
 
         found = [f for f in tested.findings if "Alice" in f and "candidate" in f and "net" in f]
         self.assertEqual(1, len(found))
+
+
+FRACTIONAL = dict(STORED, storage_placement=10.5, storage_withdrawl=2.4)
+
+
+class RunningRounding(unittest.TestCase):
+    def test_a_running_side_served_by_the_rules_of_0_3_0_is_no_finding_against_the_same_candidate(self):
+        running, candidate = side_of({"Alice": FRACTIONAL}), side_of({"Alice": FRACTIONAL})
+
+        tested = compare(running, candidate)
+
+        self.assertEqual([], tested.findings)
+
+    def test_a_running_balance_its_exact_sums_do_not_yield_is_a_finding(self):
+        running, candidate = side_of({"Alice": STORED}), side_of({"Alice": STORED})
+        running["overview"]["items"][0]["balance"] = 79
+
+        tested = compare(running, candidate)
+
+        self.assertCountEqual(
+            ["Alice: running serves balance 79, its exact sums yield 78", "Alice: balance differs, running 79, candidate 78"],
+            tested.findings,
+        )
+
+    def test_a_running_guild_figure_that_is_not_the_rounding_of_its_exact_sums_is_a_finding(self):
+        running, candidate = side_of({"Alice": STORED}), side_of({"Alice": STORED})
+        running["overview"]["totals"]["storageValue"] = 9
+
+        tested = compare(running, candidate)
+
+        self.assertCountEqual(
+            ["totals: running serves storageValue 9, its exact sums yield 8", "totals: storageValue differs, running 9, candidate 8"],
+            tested.findings,
+        )
 
 
 if __name__ == "__main__":

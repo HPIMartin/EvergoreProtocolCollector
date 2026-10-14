@@ -318,17 +318,10 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
 - **Run it:**
   - `release/compare RUNNING_DIST CANDIDATE_DIST SNAPSHOT`, where a distribution is a directory
     holding `bin/protocolParser`.
-  - The previous release, `0.2.0`, whose wire output the script's rules expect, is built in its
-    own worktree, detached on its tag.
+  - The running release, `0.3.0`, is built in its own worktree, detached on its tag `v0.3.0`, by
+    that worktree's own `./verify all`; its `./verify stop` stops the daemon.
   - The candidate is built from the strand.
   - A distribution is the unpacked `build/distributions/*.tar` that `./verify all` leaves behind.
-  - The tag's own `./verify` predates the build lock and the per-worktree daemon registry.
-  - Run it as `GRADLE_OPTS=-Dorg.gradle.daemon.registry.base=<that worktree>/registry.local.d flock
-    /tmp/epc-build.lock <that worktree>/verify all`.
-  - As another user than the lock file's owner, hold the lock through a descriptor opened for
-    reading, as `./verify` does ([build-run-deploy.md](build-run-deploy.md), "The verify script"):
-    `( flock 9 && GRADLE_OPTS=… <that worktree>/verify all ) 9</tmp/epc-build.lock`.
-  - Stop its daemon through the same registry, never with a bare `--stop`.
   - Snapshot copies live only under `<worktree>/build/release-comparison/`.
   - That directory is replaced at the start of a run and left after it for inspection.
   - The original snapshot is copied once per side and never opened.
@@ -365,22 +358,19 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
     `/api/v1/admin/status`;
   - each copy's exact sums from `metaInformation`, read-only, after both sides are stopped; this
     couples the script to the internal meta key names (decision 2026-10-10).
-- **Rules over the exact sums** (decision 2026-10-10):
-  - Rounding, the ammunition credit and last-bit drift are rules over the exact values, not
-    tolerances.
-  - The ammunition delta is recomputed from the member's deposits and may differ from the stored
-    one only by float accumulation over that member's storage entries, `n + 4` ulp.
-  - Any other exact storage sum may drift by as much.
-  - A member whose deposited ammunition earns the credit while the candidate's exact sums lack it
+- **Rules over the exact sums** (decisions 2026-10-10 and 2026-10-14):
+  - Both sides are held to the rules `0.3.0` serves by, `release/candidate_rules.py`.
+  - Every row and guild figure a side serves is the rounding of that side's exact sums, rounded
+    once, halves away from zero; any other figure is a finding.
+  - Every exact sum of a member both sides list is compared; any difference, the last bit included,
     is a finding.
 - **What it compares:**
   - a stored sum that is not finite is a finding that ends the comparison there;
   - that both sides recomputed in this run: a side without `lastSuccessfulRecompute` is a finding;
   - so is a member whose `sums_recomputed_at_` in that side's copy predates the run's start;
-  - a member with no stored sums on either side is exempt from that (decision 2026-10-10), so the
-    not-yet-computed rule can apply;
+  - a member with no stored sums on either side is exempt from that (decision 2026-10-10);
   - every row and totals figure, with its JSON type: a whole number served as a fraction is a
-    finding, a listed addition included;
+    finding;
   - the members each side lists, and their order;
   - a run in which neither side lists a member is a finding;
   - a member one side lists twice is a finding;
@@ -390,23 +380,17 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
   - each row against the other rows of its side: a figure one row leaves out is a finding that
     ends the comparison there;
   - a row or totals field only one side serves ends the comparison there too;
-  - a listed addition the candidate does not serve is a finding;
-  - so are round trips it serves as anything but a list; their content is not compared (the
-    report says so);
   - `unknownItemNames` as a multiset;
   - the round trips and round-trip abstentions both sides serve, each as a multiset of whole entries;
-  - `unknownItemNames` or `failedAvatarNames` served as anything but a list is a finding;
+  - `unknownItemNames`, `failedAvatarNames`, the round trips or the round-trip abstentions served
+    as anything but a list on either side is a finding;
   - every member `failedAvatarNames` names on either side is a finding, also where both name it;
   - the five run instants of the admin status differ by construction and are not compared (the
-    report says so);
-  - `0.2.0` serves no `balance` or storage value; both are derived from its rounded figures as its
-    overview did.
-- **Expected deviations:**
-  - `release/expected_deviations.py` lists each rule with its name and the decisions behind it.
-  - Every difference outside the list is a finding.
-  - A listed rule that did not occur does not fail the run.
+    report says so).
+- **Expected deviations:** none (decision 2026-10-14); every difference between the two sides is a
+  finding.
 - **Exit status:**
-  - `0`: no finding, only listed deviations.
+  - `0`: no finding.
   - `1`: at least one finding.
   - `2`: the call was refused before anything started:
     - a missing snapshot or distribution, or the same distribution for both sides;
@@ -432,9 +416,8 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
   - `pre-commit` runs it too ([build-run-deploy.md](build-run-deploy.md), "Git hooks").
 - **The report:**
   - It lists every finding first.
-  - Then, per expected-deviation rule with its decision dates, each acceptance and their count: a
-    shown figure or an exact sum with both values, a wire field only the candidate serves by name.
-  - Then the rules that did not occur.
+  - Then it says that no deviation is expected and that the run instants are not compared.
+  - It ends on `PASS` or `FAIL`.
 
 ### Parity evidence on record
 
@@ -493,6 +476,14 @@ candidate = `main` as it stood on 2026-10-09. **No finding.**
   listed wire fields, one line per accepted figure, exact sum or field.
 - All 1,936 ammunition entries of the snapshot have quality 100, so only the synthetic cases
   exercise the credit's quality scaling.
+
+**Scripted, `main` against `0.3.0` (2026-10-14).** Both sides on copies of the 10.10.2026
+snapshot, which `0.2.0` wrote; running = `v0.3.0`, candidate = `main` at `31a0ce16`. **No finding.**
+
+- `main`'s production code differs from the tag by refactorings only.
+- Compared: 42 members, 7,849 bank and 249,357 storage entries, every row and guild figure, and
+  the 252 exact sums of each side.
+- Also compared: 104 round trips, 39 round-trip abstentions and 14 unknown item names.
 
 **Rounding alone, the 03.09.2026 snapshot (2026-10-10).** Running = `v0.2.0`, candidate = `main`
 as it stood on 2026-09-30, which rounds every figure once and predates the full ammunition credit.

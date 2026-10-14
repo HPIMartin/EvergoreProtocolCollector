@@ -13,54 +13,6 @@ def with_entries(*entries):
     return side(ledgers={"Alice": {"bank": {"totalCount": 0, "items": []}, "storage": ledger}})
 
 
-class ListedAdditions(unittest.TestCase):
-    def test_the_candidate_only_fields_listed_as_additions_are_no_finding(self):
-        running = side(
-            [without(row("Alice"), "balance")],
-            without(totals(), "balance", "storageValue"),
-            admin=without(admin(), "roundTrips", "roundTripAbstentions"),
-        )
-        candidate = side()
-
-        tested = compare(running, candidate)
-
-        self.assertEqual([], tested.findings)
-
-
-    def test_a_listed_admin_addition_served_as_anything_but_a_list_is_a_finding(self):
-        for served, kind in ((None, "NoneType"), ("x", "str"), (3.5, "float"), (0, "int")):
-            with self.subTest(served=served):
-                running = side(admin=without(admin(), "roundTrips", "roundTripAbstentions"))
-                candidate = side(admin=admin(roundTrips=served))
-
-                tested = compare(running, candidate)
-
-                self.assertEqual([f"admin: roundTrips is served as {kind} by the candidate side, a list is expected"], tested.findings)
-
-    def test_a_listed_addition_neither_side_serves_is_a_finding(self):
-        running = side(
-            [without(row("Alice"), "balance")],
-            without(totals(), "balance", "storageValue"),
-            admin=without(admin(), "roundTrips", "roundTripAbstentions"),
-        )
-        candidate = side(
-            [without(row("Alice"), "balance")],
-            without(totals(), "balance", "storageValue"),
-            admin=without(admin(), "roundTrips"),
-        )
-
-        tested = compare(running, candidate)
-
-        self.assertEqual(
-            [
-                "row: field balance is a listed addition the candidate side does not serve",
-                "totals: field balance is a listed addition the candidate side does not serve",
-                "totals: field storageValue is a listed addition the candidate side does not serve",
-                "admin: field roundTrips is a listed addition the candidate side does not serve",
-            ],
-            tested.findings,
-        )
-
 class UnlistedFields(unittest.TestCase):
     def test_an_extra_row_field_on_the_candidate_is_a_finding_naming_field_and_side(self):
         running = side([row("Alice")])
@@ -95,20 +47,8 @@ class UnlistedFields(unittest.TestCase):
             tested.findings,
         )
 
-    def test_a_candidate_only_figure_one_row_leaves_out_is_a_finding_for_that_member(self):
-        running = side([without(row("Alice"), "balance"), without(row("Bob"), "balance")], without(totals(), "balance", "storageValue"))
-        candidate = side([without(row("Alice"), "balance"), row("Bob")])
-
-        tested = compare(running, candidate)
-
-        self.assertEqual(["Alice: field balance is left out of this row on the candidate side"], tested.findings)
-
     def test_a_figure_one_running_row_leaves_out_is_a_finding_and_no_crash(self):
-        running = side(
-            [without(row("Alice"), "balance"), without(row("Bob"), "balance", "net")],
-            without(totals(), "balance", "storageValue"),
-            admin=without(admin(), "roundTrips", "roundTripAbstentions"),
-        )
+        running = side([row("Alice"), without(row("Bob"), "net")])
         candidate = side([row("Alice"), row("Bob")])
 
         tested = compare(running, candidate)
@@ -116,11 +56,7 @@ class UnlistedFields(unittest.TestCase):
         self.assertEqual(["Bob: field net is left out of this row on the running side"], tested.findings)
 
     def test_a_figure_the_running_side_serves_in_no_row_is_a_finding_and_no_crash(self):
-        running = side(
-            [without(row("Alice"), "balance", "net")],
-            without(totals(), "balance", "storageValue", "net"),
-            admin=without(admin(), "roundTrips", "roundTripAbstentions"),
-        )
+        running = side([without(row("Alice"), "net")], without(totals(), "net"))
         candidate = side([row("Alice")])
 
         tested = compare(running, candidate)
@@ -137,15 +73,6 @@ class UnlistedFields(unittest.TestCase):
         tested = compare(running, candidate)
 
         self.assertEqual(["row: field donation is served by the running side only"], tested.findings)
-
-    def test_a_listed_addition_on_the_wrong_side_is_a_finding(self):
-        running = side()
-        candidate = side([without(row("Alice"), "balance")])
-
-        tested = compare(running, candidate)
-
-        found = [f for f in tested.findings if "balance" in f and "running" in f]
-        self.assertEqual(1, len(found))
 
     def test_a_totals_field_difference_is_a_finding(self):
         running = side(overview_totals=totals())
@@ -176,6 +103,29 @@ class UnlistedFields(unittest.TestCase):
         found = [f for f in tested.findings if "ledger entry" in f and "source" in f]
         self.assertEqual(1, len(found))
         self.assertIn("candidate", found[0])
+
+
+class CandidateOnlyFields(unittest.TestCase):
+    def test_every_field_only_the_candidate_serves_is_a_finding(self):
+        running = side(
+            [without(row("Alice"), "balance")],
+            without(totals(), "balance", "storageValue"),
+            admin=without(admin(), "roundTrips", "roundTripAbstentions"),
+        )
+        candidate = side()
+
+        tested = compare(running, candidate)
+
+        self.assertCountEqual(
+            [
+                "row: field balance is served by the candidate side only",
+                "totals: field balance is served by the candidate side only",
+                "totals: field storageValue is served by the candidate side only",
+                "admin: field roundTripAbstentions is served by the candidate side only",
+                "admin: field roundTrips is served by the candidate side only",
+            ],
+            tested.findings,
+        )
 
 
 class AdminValues(unittest.TestCase):
@@ -214,6 +164,19 @@ class AdminValues(unittest.TestCase):
         self.assertEqual(1, len(tested.findings))
         for expected in ("unknownItemNames", "Zwerg", "running"):
             self.assertIn(expected, tested.findings[0])
+
+    def test_round_trips_served_as_anything_but_a_list_are_a_finding_on_either_side(self):
+        trip = {"avatar": "Älf", "item": "Drachenzunder", "quantity": 150}
+        for field in ("roundTrips", "roundTripAbstentions"):
+            for served, kind in ((None, "NoneType"), ({}, "dict"), ("x", "str"), (0, "int")):
+                for label in ("running", "candidate"):
+                    with self.subTest(field=field, served=served, side=label):
+                        sides = {name: side(admin=admin(**{field: [trip]})) for name in ("running", "candidate")}
+                        sides[label]["admin"][field] = served
+
+                        tested = compare(sides["running"], sides["candidate"])
+
+                        self.assertEqual([f"admin: {field} is served as {kind} by the {label} side, a list is expected"], tested.findings)
 
     def test_a_round_trip_only_one_side_lists_is_a_finding_for_each_side(self):
         running = side(admin=admin(roundTrips=[{"avatar": "Älf", "item": "Drachenzunder", "quantity": 150}]))

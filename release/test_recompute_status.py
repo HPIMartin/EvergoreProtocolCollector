@@ -1,7 +1,7 @@
 import unittest
 
 from compare_sides import compare
-from sample_sides import admin, candidate_side_of, running_side_of, side
+from sample_sides import admin, side, side_of
 
 INSTANT = "2026-10-10T08:00:00Z"
 
@@ -64,11 +64,11 @@ STORED = {
 
 
 def running_recomputed(**instants):
-    return running_side_of({"Alice": STORED}, recomputed=instants)
+    return side_of({"Alice": STORED}, recomputed=instants)
 
 
 def candidate_recomputed(**instants):
-    return candidate_side_of({"Alice": STORED}, recomputed=instants)
+    return side_of({"Alice": STORED}, recomputed=instants)
 
 
 def without_stored_sums():

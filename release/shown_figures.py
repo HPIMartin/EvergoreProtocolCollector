@@ -1,31 +1,10 @@
 from collections import namedtuple
 
-import running_rules
-from candidate_rules import GUILD_FIGURES, is_computed
-from derived_figures import with_derived_figures
-from expected_deviations import NOT_REACHED, ROUNDING
-
 Difference = namedtuple("Difference", "scope figure running candidate")
-Accepted = namedtuple("Accepted", "rule scope figure running candidate")
-Context = namedtuple("Context", "differing explained running candidate")
-
-ROW_SUMS = ("bankWithdrawn", "bankDeposited", "storageWithdrawn", "storageDeposited", "net")
-ROW_FLOWS = ("donation", "craftSubsidy")
-NOT_REACHED_ROW_FIGURES = ROW_SUMS + ROW_FLOWS + ("balance", "staleSumsFrom")
 
 SUM_KEYS = ("bank_placement", "bank_withdrawl", "storage_placement", "storage_withdrawl")
 SHARE_KEYS = ("storage_donation", "storage_craft_subsidy")
 EXACT_KEYS = SUM_KEYS + SHARE_KEYS
-
-ROUNDED_FIGURE_INPUTS = {
-    "storageWithdrawn": ("storage_withdrawl",),
-    "storageDeposited": ("storage_placement",),
-    "donation": ("storage_donation",),
-    "craftSubsidy": ("storage_craft_subsidy",),
-    "net": SUM_KEYS,
-    "balance": SUM_KEYS + SHARE_KEYS,
-    "storageValue": ("storage_placement", "storage_withdrawl") + SHARE_KEYS,
-}
 
 
 def text_of(difference):
@@ -62,94 +41,3 @@ def exact_differences(running, candidate):
             if stored_running.get(key) != stored_candidate.get(key):
                 found.setdefault(member, {})[key] = (stored_running.get(key), stored_candidate.get(key))
     return found
-
-
-def explanation(difference, context):
-    if _is_not_reached(difference, context):
-        return [NOT_REACHED]
-    if difference.running is None or difference.candidate is None:
-        return []
-    inputs = ROUNDED_FIGURE_INPUTS.get(difference.figure)
-    if inputs is None:
-        return []
-    running_rule_on_candidate = _running_rule_on_candidate(context).get(difference.scope, {}).get(difference.figure)
-    if running_rule_on_candidate is None:
-        return []
-    rules = set()
-    if running_rule_on_candidate != difference.running:
-        exact_rules = _exact_rules(difference, inputs, context)
-        if not exact_rules:
-            return []
-        rules.update(exact_rules)
-    if running_rule_on_candidate != difference.candidate:
-        rules.add(ROUNDING)
-    return sorted(rules)
-
-
-def _exact_rules(difference, inputs, context):
-    members = list(context.differing) if difference.scope == "totals" else [difference.scope]
-    rules = set()
-    for member in members:
-        for key in set(context.differing.get(member, {})) & set(inputs):
-            rule = context.explained[member].get(key)
-            if rule is None:
-                return set()
-            rules.add(rule)
-    return rules
-
-
-def _running_rule_on_candidate(context):
-    rows = []
-    for row in context.candidate["overview"]["items"]:
-        figures = running_rules.member_figures(context.candidate["exact"].get(row["avatar"], {})) or {}
-        rows.append({"avatar": row["avatar"], **{figure: figures.get(figure) for figure in ROW_SUMS + ROW_FLOWS}})
-    totals = {figure: None for figure in ROW_SUMS + ROW_FLOWS}
-    if all(row["net"] is not None for row in rows):
-        totals.update(running_rules.totals_of_rows(rows))
-    derived = with_derived_figures({"items": [row for row in rows if row["net"] is not None], "totals": totals})
-    return {**{row["avatar"]: row for row in derived["items"]}, "totals": derived["totals"]}
-
-
-def _is_not_reached(difference, context):
-    if difference.candidate is not None:
-        return False
-    if difference.scope == "totals":
-        unreached = _unreached_members(context)
-        return difference.figure in GUILD_FIGURES and bool(unreached) and all(
-            _is_zero_running_row(member, context) for member in unreached
-        )
-    return difference.figure in NOT_REACHED_ROW_FIGURES and _is_zero_running_row(difference.scope, context)
-
-
-def _unreached_members(context):
-    return [
-        row["avatar"]
-        for row in context.candidate["overview"]["items"]
-        if not is_computed(context.candidate["exact"].get(row["avatar"], {}))
-    ]
-
-
-def _is_zero_running_row(member, context):
-    if is_computed(context.running["exact"].get(member, {})):
-        return False
-    if is_computed(context.candidate["exact"].get(member, {})):
-        return False
-    row = next((r for r in context.running["overview"]["items"] if r["avatar"] == member), None)
-    return (
-        row is not None
-        and all(row[figure] == 0 for figure in ROW_SUMS)
-        and all(row[figure] in (None, 0) for figure in ROW_FLOWS)
-    )
-
-
-def running_rule_differences(running):
-    overview = running["overview"]
-    for row in overview["items"]:
-        expected = running_rules.member_figures(running["exact"].get(row["avatar"], {}))
-        for figure, value in (expected or {}).items():
-            if row[figure] != value:
-                yield f"{row['avatar']}: running serves {figure} {row[figure]!r}, its exact sums yield {value!r}"
-    totals = overview["totals"]
-    for figure, value in running_rules.totals_of_rows(overview["items"]).items():
-        if totals[figure] != value:
-            yield f"totals: running serves {figure} {totals[figure]!r}, the sum of its rows is {value!r}"

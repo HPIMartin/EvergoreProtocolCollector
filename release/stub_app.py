@@ -10,9 +10,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
 import candidate_rules
-import running_rules
 from exact_sums import read_exact_sums
-from sample_sides import row, totals, without
+from sample_sides import row, totals
 
 STARTED = time.time()
 SIDE = os.path.basename(os.getcwd())
@@ -26,12 +25,8 @@ def recompute_shows():
 
 
 def figures_of_side():
-    if SIDE == "running":
-        rows = [without(row(member, **running_rules.member_figures(stored)), "balance") for member, stored in STORED.items()]
-        guild = without(totals(**running_rules.totals_of_rows(rows)), "balance", "storageValue")
-    else:
-        rows = [row(member, **candidate_rules.member_figures(stored)) for member, stored in STORED.items()]
-        guild = totals(**candidate_rules.guild_figures(list(STORED.values())))
+    rows = [row(member, **candidate_rules.member_figures(stored)) for member, stored in STORED.items()]
+    guild = totals(**candidate_rules.guild_figures(list(STORED.values())))
     tweak = os.environ.get("STUB_TWEAK")
     if SIDE == "candidate" and tweak and rows:
         rows[0][tweak] += 1
@@ -49,9 +44,9 @@ def admin_status():
         "lastRecomputeFailure": "2026-10-10T08:01:00Z" if failed else None,
         "unknownItemNames": [],
         "failedAvatarNames": [],
+        "roundTrips": [],
+        "roundTripAbstentions": [],
     }
-    if SIDE == "candidate":
-        status.update(roundTrips=[], roundTripAbstentions=[])
     return status
 
 

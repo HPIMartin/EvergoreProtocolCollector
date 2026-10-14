@@ -1,7 +1,6 @@
 import copy
 
 import candidate_rules
-import running_rules
 
 ROW_FIGURES = (
     "bankWithdrawn",
@@ -101,16 +100,7 @@ def ledgers_holding(*storage_entries, member="Alice"):
     return {member: {"bank": {"totalCount": 0, "items": []}, "storage": storage}}
 
 
-def running_side_of(stored_by_member, **parts):
-    rows = []
-    for member, stored in stored_by_member.items():
-        figures = running_rules.member_figures(stored)
-        rows.append(without(row(member, **figures), "balance"))
-    guild = without(totals(**running_rules.totals_of_rows(rows)), "balance", "storageValue")
-    return side(rows, guild, exact=stored_by_member, **parts)
-
-
-def candidate_side_of(stored_by_member, **parts):
+def side_of(stored_by_member, **parts):
     rows = [row(member, **candidate_rules.member_figures(stored)) for member, stored in stored_by_member.items()]
     guild = totals(**candidate_rules.guild_figures(list(stored_by_member.values())))
     return side(rows, guild, exact=stored_by_member, **parts)

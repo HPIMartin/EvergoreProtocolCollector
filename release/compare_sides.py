@@ -6,35 +6,31 @@ import sys
 from collections import Counter
 
 from candidate_rules import GUILD_FIGURES, guild_figures, member_figures
-from derived_figures import with_derived_figures
-from exact_explanations import explain, missing_ammunition_credits
-from expected_deviations import ADDITIONS, LISTED_ADDITIONS, NOT_REACHED
 from exact_sums import read_exact_sums, read_recompute_instants
 from process_group import is_alive, members_of, stop_group
 from report import Report
 from side_fetch import PAGE_SIZE, Pacer, fetch_side, http_get_json, wait_for_recompute
-from shown_figures import Accepted, Context, differences, exact_differences, explanation, running_rule_differences, text_of
+from shown_figures import differences, exact_differences, text_of
 
 TOKEN_VARIABLE = "EVERGORE_SECURITY_API_TOKEN"
 LEDGERS = ("bank", "storage")
 CRASH_EXIT_CODE = 4
 ADMIN_NAME_LISTS = ("unknownItemNames",)
 ADMIN_ENTRY_LISTS = ("roundTrips", "roundTripAbstentions")
-ADMIN_LISTS = ("unknownItemNames", "failedAvatarNames")
+ADMIN_LISTS = ("unknownItemNames", "failedAvatarNames") + ADMIN_ENTRY_LISTS
 FIGURE_SCOPES = ("row", "totals")
 
 
 def compare(running, candidate, started=None):
     non_finite = list(_non_finite_sums("running", running)) + list(_non_finite_sums("candidate", candidate))
     if non_finite:
-        return Report(non_finite, [], [])
+        return Report(non_finite)
     findings = []
-    accepted = []
-    field_findings, added_fields, figures_missing = _field_set_differences(running, candidate)
+    field_findings, figures_missing = _field_set_differences(running, candidate)
     findings.extend(field_findings)
     row_gaps = list(_row_field_differences(running["overview"]["items"], candidate["overview"]["items"]))
     if row_gaps or figures_missing:
-        return Report(findings + row_gaps, [], [])
+        return Report(findings + row_gaps)
     findings.extend(_admin_list_findings(running["admin"], candidate["admin"]))
     findings.extend(_admin_differences(running["admin"], candidate["admin"]))
     findings.extend(_recompute_status_findings("running", running["admin"]))
@@ -48,33 +44,13 @@ def compare(running, candidate, started=None):
     findings.extend(_order_differences(running["overview"], candidate["overview"]))
     findings.extend(_no_member_findings(running["overview"], candidate["overview"]))
     findings.extend(_type_differences(running["overview"], candidate["overview"]))
-    findings.extend(_addition_type_findings(running["overview"], candidate["overview"]))
-    findings.extend(_admin_addition_findings(running["admin"], candidate["admin"]))
-    shown = differences(with_derived_figures(running["overview"]), with_derived_figures(candidate["overview"]))
     if "exact" in running and "exact" in candidate:
-        differing = exact_differences(running, candidate)
-        explained = explain(differing, running, candidate)
-        findings.extend(_exact_differences(differing, explained))
-        findings.extend(missing_ammunition_credits(explained, running, candidate))
-        findings.extend(running_rule_differences(running))
-        findings.extend(_candidate_rounding_differences(candidate))
-    else:
-        differing = None
-        explained = None
-    for difference in shown:
-        rules = [] if differing is None else explanation(difference, Context(differing, explained, running, candidate))
-        if not rules:
-            findings.append(text_of(difference))
-        accepted.extend(Accepted(rule, *difference) for rule in rules)
+        findings.extend(_exact_differences(exact_differences(running, candidate)))
+        findings.extend(_rounding_differences_of("running", running))
+        findings.extend(_rounding_differences_of("candidate", candidate))
+    findings.extend(text_of(difference) for difference in differences(running["overview"], candidate["overview"]))
     findings.extend(_ledger_differences(running["ledgers"], candidate["ledgers"]))
-    unshown = [
-        Accepted(ADDITIONS, scope, f"field {field} served by the candidate side only", None, None)
-        for scope, field in added_fields
-    ]
-    for member, keys in (explained or {}).items():
-        for key, rule in keys.items():
-            unshown.append(Accepted(rule, member, f"exact {key}", *differing[member][key]))
-    return Report(findings, accepted, _uncompared_guild_figures(accepted, candidate), unshown)
+    return Report(findings)
 
 
 def _non_finite_sums(label, side):
@@ -84,18 +60,9 @@ def _non_finite_sums(label, side):
                 yield f"{member}: exact {key} is {value} on the {label} side"
 
 
-def _uncompared_guild_figures(accepted, candidate):
-    if not any(a.scope == "totals" and a.rule == NOT_REACHED for a in accepted):
-        return []
-    totals = candidate["overview"]["totals"]
-    return [figure for figure in GUILD_FIGURES if totals.get(figure) is None]
-
-
-def _exact_differences(differing, explained):
+def _exact_differences(differing):
     for member, keys in differing.items():
         for key, (running, candidate) in keys.items():
-            if key in explained[member]:
-                continue
             yield f"{member}: exact {key} differs, running {running!r}, candidate {candidate!r}"
 
 
@@ -174,23 +141,6 @@ def _type_differences(running, candidate):
                 )
 
 
-def _addition_type_findings(running, candidate):
-    running_rows = {row["avatar"]: row for row in running["items"]}
-    pairs = [(row["avatar"], running_rows.get(row["avatar"], {}), row, LISTED_ADDITIONS["row"]) for row in candidate["items"]]
-    pairs.append(("totals", running["totals"], candidate["totals"], LISTED_ADDITIONS["totals"]))
-    for scope, running_figures, candidate_figures, additions in pairs:
-        for figure in additions:
-            value = candidate_figures.get(figure)
-            if figure not in running_figures and value is not None and type(value) is not int:
-                yield f"{scope}: {figure} is served as {type(value).__name__} by the candidate side, a whole number is expected"
-
-
-def _admin_addition_findings(running, candidate):
-    for field in LISTED_ADDITIONS["admin"]:
-        if field in candidate and field not in running and not isinstance(candidate[field], list):
-            yield f"admin: {field} is served as {type(candidate[field]).__name__} by the candidate side, a list is expected"
-
-
 def _field_set_differences(running, candidate):
     shapes = (
         ("row", lambda side: _fields_of(side["overview"]["items"])),
@@ -199,23 +149,16 @@ def _field_set_differences(running, candidate):
         ("ledger entry", lambda side: _fields_of(_all_entries(side))),
     )
     findings = []
-    added = []
     figures_missing = False
     for scope, fields_of in shapes:
         running_fields = fields_of(running)
         candidate_fields = fields_of(candidate)
-        listed = set(LISTED_ADDITIONS.get(scope, ()))
-        unmatched = (running_fields - candidate_fields) | (candidate_fields - running_fields - listed)
-        figures_missing = figures_missing or (scope in FIGURE_SCOPES and bool(unmatched))
+        figures_missing = figures_missing or (scope in FIGURE_SCOPES and running_fields != candidate_fields)
         for field in sorted(running_fields - candidate_fields):
             findings.append(f"{scope}: field {field} is served by the running side only")
-        added.extend((scope, field) for field in sorted(candidate_fields - running_fields & listed))
-        for field in sorted(candidate_fields - running_fields - listed):
+        for field in sorted(candidate_fields - running_fields):
             findings.append(f"{scope}: field {field} is served by the candidate side only")
-        required = listed if candidate_fields or running_fields else set()
-        for field in sorted(required - candidate_fields - running_fields):
-            findings.append(f"{scope}: field {field} is a listed addition the candidate side does not serve")
-    return findings, added, figures_missing
+    return findings, figures_missing
 
 
 def _row_field_differences(running_rows, candidate_rows):
@@ -293,20 +236,20 @@ def _stale_sums_findings(label, side, started, unstored):
             yield f"{row['avatar']}: the {label} side did not recompute the sums in this run"
 
 
-def _candidate_rounding_differences(candidate):
-    overview = candidate["overview"]
-    exact = candidate["exact"]
+def _rounding_differences_of(label, side):
+    overview = side["overview"]
+    exact = side["exact"]
     stored_in_served_order = [exact.get(row["avatar"], {}) for row in overview["items"]]
     for row, stored in zip(overview["items"], stored_in_served_order):
         expected = member_figures(stored) or {figure: None for figure in GUILD_FIGURES}
-        yield from _rounding_differences(row["avatar"], row, expected)
-    yield from _rounding_differences("totals", overview["totals"], guild_figures(stored_in_served_order))
+        yield from _rounding_differences(label, row["avatar"], row, expected)
+    yield from _rounding_differences(label, "totals", overview["totals"], guild_figures(stored_in_served_order))
 
 
-def _rounding_differences(scope, shown, expected):
+def _rounding_differences(label, scope, shown, expected):
     for figure, value in expected.items():
         if figure in shown and shown[figure] != value:
-            yield f"{scope}: candidate serves {figure} {shown[figure]!r}, its exact sums yield {value!r}"
+            yield f"{scope}: {label} serves {figure} {shown[figure]!r}, its exact sums yield {value!r}"
 
 
 def main(argv, environ, out, err=sys.stderr):

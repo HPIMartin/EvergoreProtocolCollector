@@ -1,7 +1,7 @@
 import unittest
 
 from compare_sides import compare
-from sample_sides import candidate_side_of, running_side_of
+from sample_sides import side_of
 
 STORED = {
     "bank_placement": 500,
@@ -18,8 +18,8 @@ class NonFiniteSums(unittest.TestCase):
         for label, value in (("nan", float("nan")), ("inf", float("inf")), ("-inf", float("-inf"))):
             for side_name in ("running", "candidate"):
                 with self.subTest(value=label, side=side_name):
-                    running = running_side_of({"Alice": STORED})
-                    candidate = candidate_side_of({"Alice": STORED})
+                    running = side_of({"Alice": STORED})
+                    candidate = side_of({"Alice": STORED})
                     {"running": running, "candidate": candidate}[side_name]["exact"]["Alice"] = {
                         **STORED,
                         "storage_withdrawl": value,

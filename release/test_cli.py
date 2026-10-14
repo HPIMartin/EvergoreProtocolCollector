@@ -5,7 +5,7 @@ import unittest
 from unittest import mock
 
 from compare_sides import main
-from sample_sides import candidate_side_of, running_side_of
+from sample_sides import side_of
 from temp_directories import temp_directory
 
 STORED = {
@@ -36,9 +36,9 @@ def write_side(directory, name, side, stored_by_member):
 
 def run_compare(test, running_stored, candidate_stored):
     directory = temp_directory(test)
-    running_wire, running_db = write_side(directory, "running", running_side_of({"Älf B": running_stored}), {"Älf B": running_stored})
+    running_wire, running_db = write_side(directory, "running", side_of({"Älf B": running_stored}), {"Älf B": running_stored})
     candidate_wire, candidate_db = write_side(
-        directory, "candidate", candidate_side_of({"Älf B": candidate_stored}), {"Älf B": candidate_stored}
+        directory, "candidate", side_of({"Älf B": candidate_stored}), {"Älf B": candidate_stored}
     )
     out = io.StringIO()
     code = main(
@@ -81,8 +81,8 @@ class ComparatorCrash(unittest.TestCase):
 
     def test_malformed_json_is_exit_four_with_the_error_on_stderr_and_no_verdict_line(self):
         directory = temp_directory(self)
-        write_side(directory, "running", running_side_of({"Älf B": STORED}), {"Älf B": STORED})
-        write_side(directory, "candidate", candidate_side_of({"Älf B": STORED}), {"Älf B": STORED})
+        write_side(directory, "running", side_of({"Älf B": STORED}), {"Älf B": STORED})
+        write_side(directory, "candidate", side_of({"Älf B": STORED}), {"Älf B": STORED})
         (directory / "candidate.json").write_text("{not json", encoding="utf-8")
         out, err = io.StringIO(), io.StringIO()
 
@@ -95,8 +95,8 @@ class ComparatorCrash(unittest.TestCase):
 
     def test_a_database_without_the_meta_information_table_is_exit_four_with_the_error_on_stderr(self):
         directory = temp_directory(self)
-        write_side(directory, "running", running_side_of({"Älf B": STORED}), {"Älf B": STORED})
-        write_side(directory, "candidate", candidate_side_of({"Älf B": STORED}), {"Älf B": STORED})
+        write_side(directory, "running", side_of({"Älf B": STORED}), {"Älf B": STORED})
+        write_side(directory, "candidate", side_of({"Älf B": STORED}), {"Älf B": STORED})
         connection = sqlite3.connect(directory / "candidate.sqlite")
         connection.execute("DROP TABLE metaInformation")
         connection.commit()
