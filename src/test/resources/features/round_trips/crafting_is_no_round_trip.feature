@@ -1,10 +1,12 @@
 Feature: Crafting is not a round trip
   A crafter withdraws trader goods, deposits the product they became and later restocks the same
-  goods. That is the guild working as intended, not a round trip. The published recipes tell the
-  two apart: what a deposited product's recipe consumed is used up, and only what is left of a
+  goods. That is the guild working as intended, not a round trip. The published recipes tell the two
+  apart: what a deposited product's recipe consumed is used up, and only what is left of a
   withdrawal can come back as a round trip. Where the recipe of a deposited product has never been
-  read, see "Products of unread recipe". All times are German wall-clock time, as the game shows
-  them.
+  read, see "Products of unread recipe". Trader goods are the goods a member buys at the market
+  stall (see "Suspected round trips of trader goods"), not whatever a guild trader, a member who
+  trades for the guild, handles, which can be goods the market stall does not sell. All times are
+  German wall-clock time, as the game shows them.
 
   Rule: Trader goods a deposited product's recipe consumed are used up
 
@@ -64,7 +66,7 @@ Feature: Crafting is not a round trip
       When the admin opens the admin page
       Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: 100 × Federn"
 
-  Rule: Ammunition the game's own trader sells comes back as itself before it counts as crafted
+  Rule: Ammunition the market stall sells comes back as itself before it counts as crafted
     "Pfeile", "Bolzen" and "Magieessenz" are trader goods themselves, and their recipes consume
     other trader goods. A deposit of one of them first answers what of the same sort went out; only
     the quantity beyond that counts as crafted and uses up the trader goods of its recipe. The same

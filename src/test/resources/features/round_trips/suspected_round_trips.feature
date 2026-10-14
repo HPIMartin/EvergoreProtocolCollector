@@ -1,6 +1,6 @@
 Feature: Suspected round trips of trader goods
-  Trader goods are the goods a member pays a trader for: goods bought from the guild trader, and the
-  ammunition the game's own trader sells ("Pfeile", "Bolzen" and "Magieessenz"). They credit their
+  Trader goods are the goods a member buys at the market stall: crafting material, and the
+  ammunition it sells ("Pfeile", "Bolzen" and "Magieessenz"). They credit their
   full market value when deposited but cost only 60 % when withdrawn, so taking them out and putting
   them back in earns 40 % out of nothing. The guild's rule relies on trust; the service does not
   prevent a round trip, it makes one visible: after each collection the admin page names every
@@ -89,7 +89,7 @@ Feature: Suspected round trips of trader goods
     Any other good credits at most the 60 % its withdrawal costs, so taking it out and bringing it
     back earns nothing.
 
-    Scenario: The ammunition the game's own trader sells is reported when it goes out and comes back
+    Scenario: The ammunition the market stall sells is reported when it goes out and comes back
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
         | 01.01.2026 12:00 | Alrik  | 100   | Pfeile      | 100      | Entnahme    |

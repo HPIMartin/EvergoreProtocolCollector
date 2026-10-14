@@ -67,7 +67,7 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
 - **`ingameName`**: the exact German name as it appears in the scraped protocol (the parser
   matches on this).
 - **`marketValue`**: base gold value (Goldwert). For the simple ammunition types it is the price the
-  **NPC trader charges**, confirmed by the author 2026-09-10 against the game: `PFEILE` 3, `BOLZEN` 12,
+  **market stall charges**, confirmed by the author 2026-09-10 against the game: `PFEILE` 3, `BOLZEN` 12,
   `MAGIEESSENZ` 4, exactly the catalog's numbers. So a member can buy those for `marketValue` rather
   than craft them, which is what makes a 60 % credit a real loss of gold for whoever buys them; their
   entries are marked `SOLD_BY_THE_GAMES_TRADER` and a deposit of them credits in full ("The value
@@ -106,7 +106,7 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   seen, `Kriegshammer` and `Sense` among them, off their two-handed twin and drop them out of the
   unknown-name report (34 against the catalog as it now stands), which is the signal the rest of the catalog work depends on.
 - **Two families are catalogued at zero on purpose.** `Übungsstück-*` trains a craft without
-  spending materials and sells only to the trader for almost nothing; `Mystisch*` items are quest
+  spending materials and sells only at the market stall for almost nothing; `Mystisch*` items are quest
   rewards. They are entries rather than gaps so a catalog hole stays distinguishable from a
   deliberate zero, and `/health` counts them apart as `zeroValuedItemCount`/`zeroValuedItemNames`.
 - **Gem-forged gear follows a price ladder, which is a finding and not a rule the code applies.**
@@ -180,8 +180,8 @@ The rule has two sources, and the difference matters. The **60 % price in both d
 **zero credit for mined, hunted and gem deposits** are the guild's own rule, announced to its members
 in 2020; the source document is the author's local copy of those announcements, deliberately outside
 the repo (gitignored beside `zugang.txt`), so the rule itself is recorded here. The **100 % credit for
-goods bought from the guild trader** and the **60 % credit for boards and bars** are author decisions
-of 2026-09-10, and the **100 % credit for the ammunition the game's own trader sells** one of
+goods bought at the market stall** and the **60 % credit for boards and bars** are author decisions
+of 2026-09-10, and the **100 % credit for the ammunition the market stall sells** one of
 2026-09-27, that knowingly depart from that announcement, each for a reason given below.
 
 **Withdrawal cost**: what *taking an item out* costs the member, for every category:
@@ -192,7 +192,7 @@ getWithdrawlValue() = marketValue × category.withdrawl      // withdrawl is 0.6
 - `KRISTALL` (gem): 500 × 0.6 = **300** ✓
 
 **Deposit credit**: what *putting an item in* credits the member, decided by its category, and for
-the three sorts the game's own trader sells by the entry:
+the three sorts the market stall sells by the entry:
 ```
 getStorageValue() = marketValue × placement()     // category.placement, or 1.0 for SOLD_BY_THE_GAMES_TRADER
 ```
@@ -200,15 +200,23 @@ getStorageValue() = marketValue × placement()     // category.placement, or 1.0
 | `placement` | Categories | Source | Why |
 |---|---|---|---|
 | **0** | `ROHSTOFFE`, `JAGDBEUTEN`, `EDELSTEINE` | announced | Mined or hunted, so they cost the member only time; depositing them **is** the guild's tax, which is what lets the guild run without levying one in gold |
-| **1.0** | `HANDWERKSMATERIAL` | **departs from the announcement**, which names only raw materials and gems as exceptions | Bought from the guild trader with the member's own gold, and gold is measured 1:1, so a 60 % credit confiscates 40 % of every purchase and leaves the trader role unable to come out positive however well it haggles |
-| **1.0** | `PFEILE`, `BOLZEN`, `MAGIEESSENZ` (marked `SOLD_BY_THE_GAMES_TRADER`; their categories are `MUNITION_*`) | **departs from the announcement**, which credits all ammunition at 60 % | The game's own trader sells them at their catalog value, so a member who bought them paid it in gold and a 60 % credit confiscates 40 %; the ledger cannot tell a bought one from a crafted one, but it knows which sorts the trader sells, and measured on the 03.09.2026 snapshot 91 % of what was deposited of them is the guild trader's. The credit is decided per entry because the three share their categories with sorts that can only be crafted, which stay at 60 % |
+| **1.0** | `HANDWERKSMATERIAL` | **departs from the announcement**, which names only raw materials and gems as exceptions | Bought at the market stall with the member's own gold, and gold is measured 1:1, so a 60 % credit confiscates 40 % of every purchase and leaves the trader role unable to come out positive however well it haggles |
+| **1.0** | `PFEILE`, `BOLZEN`, `MAGIEESSENZ` (marked `SOLD_BY_THE_GAMES_TRADER`; their categories are `MUNITION_*`) | **departs from the announcement**, which credits all ammunition at 60 % | The market stall sells them at their catalog value, so a member who bought them paid it in gold and a 60 % credit confiscates 40 % |
 | **0.6** | everything else | announced | The guild's price for goods, the same in both directions, so moving something out and back is neutral and crafting earns the margin between ingredients and product |
 | **0.6** | `VERARBEITETE_ROHSTOFFE` | **departs from the announcement**, which counts boards and bars as raw materials and says their gain is not credited to the character | The announcement gives two reasons for excluding them and the second is a limit of the sheet it was written for ("wir diese aktuell nicht gesondert in unserer Übersicht behandeln"), which no longer applies; their recipes also consume bought trader goods, so a zero credit would take that gold |
+
+The full credit of the three ammunition sorts:
+
+- The ledger cannot tell a bought one from a crafted one, but it knows which sorts the market
+  stall sells; measured on the 03.09.2026 snapshot, 91 % of what was deposited of them is the guild
+  trader's.
+- The credit is decided per entry, because the three share their categories with sorts that can
+  only be crafted, which stay at 60 %.
 
 - `MAGISCHE_AETHERBINDE` (`BANDAGEN`, market value 257): 257 × 0.6 = **154.2** ✓
 - `MAGIESPLITTER` (`HANDWERKSMATERIAL`, market value 60): 60 × 1.0 = **60** ✓
 - `EISENBARREN` (`VERARBEITETE_ROHSTOFFE`, market value 120): 120 × 0.6 = **72** ✓
-- `PFEILE` (`MUNITION_BOEGEN`, sold by the game's trader, market value 3): 3 × 1.0 = **3** ✓, beside
+- `PFEILE` (`MUNITION_BOEGEN`, sold at the market stall, market value 3): 3 × 1.0 = **3** ✓, beside
   `JAGDPFEILE` (`MUNITION_BOEGEN`, crafted only, market value 5): 5 × 0.6 = **3** ✓
 
 **How the guild's rule 2 is implemented, without a rule of its own.** The announcement lets a member
@@ -267,7 +275,7 @@ the guild position in [testing.md](testing.md).
 > tier far from 0.6 would need that checked again.
 
 > **Where the 100 % credit can be gamed:** a `HANDWERKSMATERIAL` deposit, and one of the three
-> ammunition sorts the game's own trader sells, credits 100 % while its withdrawal costs 60 %, so
+> ammunition sorts the market stall sells, credits 100 % while its withdrawal costs 60 %, so
 > cycling the same goods earns 40 % of their value out of nothing.
 > Detecting that is the round-trip detection below ("The round-trip detection: `RoundTripDetector`");
 > the guild's rule is trust-based, and the software's job is
@@ -309,7 +317,7 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   `placement` with what it credits the member, and, against `getWithdrawlValue()` as the guild's own
   price for the same goods, into **`donation`** where the credit falls short of that price (mined,
   hunted and gem deposits, which credit nothing) and into **`craftSubsidy`** where it exceeds it
-  (trader goods and the ammunition the game's own trader sells, credited at 100 % of a price the
+  (trader goods and the ammunition the market stall sells, credited at 100 % of a price the
   guild values at 60 %). Exactly one of the two can
   be non-zero per deposit. A withdrawal counts into `withdrawl` alone.
 - Results are keyed per avatar (`getBankPlacement(avatar)`, `getBankWithdrawl`,
@@ -433,7 +441,7 @@ again within **48 hours** (`RoundTripDetector.WINDOW = Duration.ofHours(48)`, au
 before deposits at an equal timestamp (the game stamps to the minute, so a same-minute out-and-in
 is exactly the cycle the rule is about). An item is watched when its deposit credits more than its
 withdrawal costs (`EvergoreItem.creditsMoreThanItsWithdrawalCosts()`): the `HANDWERKSMATERIAL`
-goods and the three ammunition sorts the game's own trader sells. A withdrawal of a watched item
+goods and the three ammunition sorts the market stall sells. A withdrawal of a watched item
 opens a lot of that quantity; a deposit of the same item consumes the avatar's open lots for that item **oldest first**,
 after dropping lots the window has already passed (a deposit exactly 48 h after the withdrawal still
 matches, one minute later does not), and the consumed quantity is reported as one `RoundTrip` per

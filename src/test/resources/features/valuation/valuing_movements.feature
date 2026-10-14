@@ -1,9 +1,9 @@
 Feature: Valuing the guild's movements
   Gold counts at face value. Goods are valued from the price list the service ships: a withdrawal
   costs the member 60 % of the item's market value, and a deposit credits them according to the kind
-  of item, and for ammunition according to whether the game's own trader sells it. Most of this is
-  the rule the guild announced in 2020; the full credit for goods bought from the guild trader and
-  for the ammunition the game's own trader sells, and the 60 % credit for boards and bars depart
+  of item, and for ammunition according to whether the market stall sells it. Most of this is
+  the rule the guild announced in 2020; the full credit for goods bought at the market stall and
+  for the ammunition the market stall sells, and the 60 % credit for boards and bars depart
   from that announcement on purpose. The price list step names the prices an example relies on; it
   cannot set a price, it states the one the service ships.
 
@@ -44,11 +44,11 @@ Feature: Valuing the guild's movements
         | Kriegspfeile       | Munition Bögen         | 7            | 5        | 21         |
         | Götterstich        | Munition Bögen         | 9            | 5        | 27         |
 
-  Rule: A deposit credits the member according to the kind of item, ammunition according to whether the game's own trader sells it
+  Rule: A deposit credits the member according to the kind of item, ammunition according to whether the market stall sells it
     Raw materials ("Rohstoffe": ore, stone and wood), hunt loot and gems credit nothing: depositing
-    them is the guild's tax. Goods bought from the guild trader credit their full market value,
+    them is the guild's tax. Goods bought at the market stall credit their full market value,
     because the member paid for them in gold. So do "Pfeile", "Bolzen" and "Magieessenz": the
-    game's own trader sells them at their market value, and the ledger cannot tell a bought one
+    market stall sells them at their market value, and the ledger cannot tell a bought one
     from a crafted one, so a crafted one credits in full too. Everything else, boards, bars and
     every other ammunition included, credits 60 %. The guild's 2020 announcement credits all
     ammunition at 60 %. "Jagdpfeile" are worth 5 and "Pfeile" 3, so at 60 % the one credits what
@@ -74,7 +74,7 @@ Feature: Valuing the guild's movements
         | Eisenbarren        | verarbeitete Rohstoffe | 120          | 60 %  | 72     |
         | Gute Baumwollbinde | Bandagen               | 65           | 60 %  | 39     |
 
-      Examples: ammunition the game's own trader sells
+      Examples: ammunition the market stall sells
         | item        | kind                | market value | share | credit |
         | Pfeile      | Munition Bögen      | 3            | 100 % | 3      |
         | Bolzen      | Munition Armbrüste  | 12           | 100 % | 12     |
@@ -135,7 +135,7 @@ Feature: Valuing the guild's movements
         | Federn      | Handwerksmaterial      | 25           | 1        | a subsidy             | 25     | 0    | 10      |
         | Eisenbarren | verarbeitete Rohstoffe | 120          | 1        | neither               | 72     | 0    | 0       |
 
-      Examples: ammunition the game's own trader sells
+      Examples: ammunition the market stall sells
         | item   | kind           | market value | quantity | what the guild booked | credit | gift | subsidy |
         | Pfeile | Munition Bögen | 3            | 5        | a subsidy             | 15     | 0    | 6       |
 
@@ -156,7 +156,7 @@ Feature: Valuing the guild's movements
 
     Scenario: The guild's announced example: arrows crafted from beech and feathers
       The guild announced this example with the arrows credited at 60 %: 243 for a gain of 96.
-      "Pfeile" are ammunition the game's own trader sells and credit in full.
+      "Pfeile" are ammunition the market stall sells and credit in full.
 
       Given the price list the service ships values:
         | item       | kind              | market value |

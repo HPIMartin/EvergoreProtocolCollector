@@ -2,8 +2,10 @@ Feature: Products of unread recipe
   Gem-forged gear is crafted from blueprints whose ingredients no page of the game shows. When such
   a product is deposited, nobody can say whether it consumed a trader good the member had withdrawn,
   so the service abstains instead of accusing: that member and good are listed as not judgeable
-  ("Nicht beurteilbar (Rezept ungelesen)") on the admin page and in the health report. All times
-  are German wall-clock time, as the game shows them.
+  ("Nicht beurteilbar (Rezept ungelesen)") on the admin page and in the health report. Trader goods
+  are the goods a member buys at the market stall (see "Suspected round trips of trader goods"), not
+  whatever a guild trader, a member who trades for the guild, handles. All times are German
+  wall-clock time, as the game shows them.
 
   Rule: A product of unread recipe leaves every trader good still open unjudged
     A withdrawal is still open while it lies at most 48 hours back and has not come back or gone
@@ -26,7 +28,7 @@ Feature: Products of unread recipe
         | trader good | pairs                            |
         | Federn      | Alrik: Federn, Alrik: Kristallat |
 
-      Examples: ammunition the game's own trader sells
+      Examples: ammunition the market stall sells
         | trader good | pairs                            |
         | Pfeile      | Alrik: Kristallat, Alrik: Pfeile |
 

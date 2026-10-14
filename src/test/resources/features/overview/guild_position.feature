@@ -3,8 +3,8 @@ Feature: The guild's position
   side so that the header does not add measured gold to modelled goods: the gold in the guild bank
   ("Gildenbank"), the value of the goods in the guild storage ("Gildenlagerwert"), what members
   deposited that the guild credited below its own price ("Gildenspende"), and what the guild
-  credited above its own price when members deposited goods bought from the guild trader, or
-  ammunition the game's own trader sells ("Handwerkssubventionen"). The guild's own price for goods
+  credited above its own price when members deposited goods bought at the market stall, or
+  ammunition the market stall sells ("Handwerkssubventionen"). The guild's own price for goods
   is 60 % of their market value. The table's last column can switch between a member's figure after
   the guild's share ("Nach Abzügen") and before it ("Vor Abzügen").
 

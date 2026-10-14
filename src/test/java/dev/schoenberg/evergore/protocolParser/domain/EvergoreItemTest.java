@@ -96,7 +96,7 @@ class EvergoreItemTest {
 	}
 
 	@Test
-	void depositingGoodsBoughtFromTheGuildTraderCreditsTheirFullMarketValue() {
+	void depositingGoodsBoughtAtTheMarketStallCreditsTheirFullMarketValue() {
 		double credited = MAGIESPLITTER.getStorageValue();
 
 		assertThat(credited).isCloseTo(60d, within(0.0001d));
@@ -144,7 +144,7 @@ class EvergoreItemTest {
 	}
 
 	@Test
-	void onlyTheGoodsBoughtFromTheGuildTraderAndTheAmmunitionTheGamesTraderSellsAreCreditedInFull() {
+	void onlyTheGoodsBoughtAtTheMarketStallAndTheAmmunitionTheGamesTraderSellsAreCreditedInFull() {
 		Set<String> creditedInFull = stream(EvergoreItem.values()).filter(item -> item.placement() == 1d).map(item -> item.ingameName).collect(toSet());
 
 		assertThat(creditedInFull).containsExactlyInAnyOrderElementsOf(Stream.concat(TRADER_GOODS.stream(), AMMUNITION_THE_GAMES_TRADER_SELLS.stream()).toList());

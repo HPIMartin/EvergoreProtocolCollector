@@ -13,6 +13,9 @@
 | Evergore | The browser game (evergore.de) |
 | Avatar | A player's character = a guild member (identified by name) |
 | Gilde | Guild |
+| Gildenhändler | Guild trader: a member who trades for the guild, taking stock from the guild storage and selling it on, at the market stall too |
+| Marktstand | Market stall: the game's own trader, an NPC with fixed prices, endless stock and room to haggle |
+| Handwerksmaterial vom Marktstand | The "trader goods": crafting material (`HANDWERKSMATERIAL`) bought at the market stall |
 | Gildenbank / Bank | Guild bank (holds gold) |
 | (Gilden)Lager | Guild storage / warehouse (holds items) |
 | Welt / Server (z.B. "zyrthania") | Game world / server shard |
