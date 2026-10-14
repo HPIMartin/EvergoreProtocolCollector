@@ -678,9 +678,10 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - its brief carries the delta (`<previous tip>..<tip>`) and the dispositions so far;
   - every other lens report stands while the dossier accepts it
     ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier").
-- **A docs-only fold** (code tree unchanged) re-runs only the doc-reviewer, since it checks a docs
-  fix of the reviewer's finding too:
-  - the lens verdicts stand, since a lens judges the code and such a fold changes none.
+- **A docs-only fold** (code tree unchanged) re-runs only the doc-reviewer:
+  - it checks a docs fix of the reviewer's finding too;
+  - the lens verdicts stand;
+  - a lens judges the code, and such a fold changes none.
 - **A passing round whose findings are all low ends the panel** (author decision 2026-10-12):
   - every report passes;
   - each finding is a lens's `low`, or one a passing doc-reviewer or reviewer raised;
