@@ -3,19 +3,23 @@ package dev.schoenberg.evergore.protocolParser.dataExtraction.parser;
 import java.util.ArrayList;
 import java.util.List;
 
-import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.domain.Entry;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.LAGER_EINTRAG_BOUNDARY;
 
 public class EntityParser {
+	private final EntryFactory entryFactory;
 
-	public static List<Entry> parse(List<String> content, Logger logger) {
-		List<Integer> entryBeginnings = findEntries(content);
-		return loadEntries(content, entryBeginnings, new EntryFactory(logger));
+	public EntityParser(EntryFactory entryFactory) {
+		this.entryFactory = entryFactory;
 	}
 
-	private static List<Integer> findEntries(List<String> lines) {
+	public List<Entry> parse(List<String> content) {
+		List<Integer> entryBeginnings = findEntries(content);
+		return loadEntries(content, entryBeginnings);
+	}
+
+	private List<Integer> findEntries(List<String> lines) {
 		List<Integer> result = new ArrayList<>();
 		int lineCounter = 0;
 		for (String line : lines) {
@@ -27,7 +31,7 @@ public class EntityParser {
 		return result;
 	}
 
-	private static List<Entry> loadEntries(List<String> lines, List<Integer> entryBeginnings, EntryFactory entryFactory) {
+	private List<Entry> loadEntries(List<String> lines, List<Integer> entryBeginnings) {
 		List<Entry> result = new ArrayList<>();
 		Integer previousBeginning = null;
 		for (int beginning : entryBeginnings) {

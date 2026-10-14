@@ -20,6 +20,8 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.Meta
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepository;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.parser.EntityParser;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.parser.EntryFactory;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
 import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 import dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseRepository;
@@ -39,8 +41,13 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public EvergoreDataExtractor evergoreDataExtractor(PageSource pageSource, BankRepository bankRepo, StorageRepository storageRepo, Logger logger) {
-		return new EvergoreDataExtractor(pageSource, bankRepo, storageRepo, logger);
+	public EvergoreDataExtractor evergoreDataExtractor(PageSource pageSource, BankRepository bankRepo, StorageRepository storageRepo, EntityParser parser) {
+		return new EvergoreDataExtractor(pageSource, bankRepo, storageRepo, parser);
+	}
+
+	@Singleton
+	public EntityParser entityParser(Logger logger) {
+		return new EntityParser(new EntryFactory(logger));
 	}
 
 	@Singleton

@@ -15,6 +15,8 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageEntry
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageContents;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.parser.EntityParser;
+import dev.schoenberg.evergore.protocolParser.dataExtraction.parser.EntryFactory;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.EINLAGERUNG;
@@ -28,6 +30,8 @@ class EvergoreDataExtractorTest {
 
 	private static final Instant BOUNDARY_TIMESTAMP = LocalDateTime.of(2001, 12, 11, 13, 37).atZone(APP_ZONE).toInstant();
 
+	private final EntityParser parser = new EntityParser(new EntryFactory(new LoggerSpy()));
+
 	private CapturingBankRepository bankRepo;
 	private CapturingStorageRepository storageRepo;
 	private EvergoreDataExtractor tested;
@@ -36,7 +40,7 @@ class EvergoreDataExtractorTest {
 	void setup() {
 		bankRepo = new CapturingBankRepository();
 		storageRepo = new CapturingStorageRepository();
-		tested = new EvergoreDataExtractor(new FakePageSource(), bankRepo, storageRepo, new LoggerSpy());
+		tested = new EvergoreDataExtractor(new FakePageSource(), bankRepo, storageRepo, parser);
 	}
 
 	@Test
@@ -96,7 +100,7 @@ class EvergoreDataExtractorTest {
 
 	@Test
 	void ingestsOnlyTheSurplusWhenAnIdenticalPairHasOneAlreadyStored() {
-		tested = new EvergoreDataExtractor(new DuplicateBankLinePageSource(), bankRepo, storageRepo, new LoggerSpy());
+		tested = new EvergoreDataExtractor(new DuplicateBankLinePageSource(), bankRepo, storageRepo, parser);
 		BankEntry alreadyStored = new BankEntry(BOUNDARY_TIMESTAMP, "TestAvatar", 100, EINLAGERUNG);
 		bankRepo.expectedSinceArgument = BOUNDARY_TIMESTAMP;
 		bankRepo.storedSince = List.of(alreadyStored);
@@ -109,7 +113,7 @@ class EvergoreDataExtractorTest {
 	// Two identical entries at the same minute are legitimate (occurrence counting, not set semantics).
 	@Test
 	void ingestsBothIdenticalScrapedRowsWhenNeitherIsStoredYet() {
-		tested = new EvergoreDataExtractor(new DuplicateBankLinePageSource(), bankRepo, storageRepo, new LoggerSpy());
+		tested = new EvergoreDataExtractor(new DuplicateBankLinePageSource(), bankRepo, storageRepo, parser);
 
 		tested.loadData();
 
@@ -119,7 +123,7 @@ class EvergoreDataExtractorTest {
 
 	@Test // page source: newest entry first, as scraped
 	void ingestsOldestFirstSoAPartialBatchKeepsTheEntriesClosestToLeavingTheWindow() {
-		tested = new EvergoreDataExtractor(new NewestFirstPageSource(), bankRepo, storageRepo, new LoggerSpy());
+		tested = new EvergoreDataExtractor(new NewestFirstPageSource(), bankRepo, storageRepo, parser);
 
 		tested.loadData();
 
@@ -130,7 +134,7 @@ class EvergoreDataExtractorTest {
 
 	@Test // the dedup window must start at the OLDEST scraped timestamp, or older still-visible rows re-ingest forever
 	void usesTheOldestScrapedTimestampAsTheDedupWindowBoundary() {
-		tested = new EvergoreDataExtractor(new NewestFirstPageSource(), bankRepo, storageRepo, new LoggerSpy());
+		tested = new EvergoreDataExtractor(new NewestFirstPageSource(), bankRepo, storageRepo, parser);
 		BankEntry olderAlreadyStored = new BankEntry(BOUNDARY_TIMESTAMP, "TestAvatar", 100, EINLAGERUNG);
 		bankRepo.expectedSinceArgument = BOUNDARY_TIMESTAMP;
 		bankRepo.storedSince = List.of(olderAlreadyStored);

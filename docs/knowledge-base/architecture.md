@@ -63,7 +63,7 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 - **Extraction pipeline:** `helper/selenium/{Browser,Driver,FileLoader}` ·
   `dataExtraction/website/SeleniumPageSource` (Selenium adapter: login, cookie banner, pagination;
   implements `PageSource`) · `PageContents` (DTO) · `parser/{EntityParser,EntryFactory}` (text ▶
-  `Entry`, regex from `Constants`). Coordinator `EvergoreDataExtractor` (delta filter) lives in
+  `Entry`, regex from `Constants`; `ApplicationFactory` builds the `EntityParser` around the `Logger` bean and injects it into the extractor). Coordinator `EvergoreDataExtractor` (delta filter) lives in
   `application`.
 - **Persistence:** three adapters implementing the businessLogic ports, all built on one database:
   - `database/SqliteDatabase`, one per context, opens the file once and hands out pooled

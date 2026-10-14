@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
@@ -24,19 +23,19 @@ public class EvergoreDataExtractor {
 	private final PageSource pageSource;
 	private final BankRepository bankRepo;
 	private final StorageRepository storageRepo;
-	private final Logger logger;
+	private final EntityParser parser;
 
-	public EvergoreDataExtractor(PageSource pageSource, BankRepository bankRepo, StorageRepository storageRepo, Logger logger) {
+	public EvergoreDataExtractor(PageSource pageSource, BankRepository bankRepo, StorageRepository storageRepo, EntityParser parser) {
 		this.pageSource = pageSource;
 		this.bankRepo = bankRepo;
 		this.storageRepo = storageRepo;
-		this.logger = logger;
+		this.parser = parser;
 	}
 
 	public void loadData() {
 		PageContents load = pageSource.load();
-		updateBankEntries(EntityParser.parse(load.bank(), logger));
-		updateLagerEntries(EntityParser.parse(load.lager(), logger));
+		updateBankEntries(parser.parse(load.bank()));
+		updateLagerEntries(parser.parse(load.lager()));
 	}
 
 	private void updateLagerEntries(List<Entry> lager) {

@@ -27,11 +27,13 @@ class EntityParserContractTest {
 
 	private LoggerSpy logger;
 	private EntryFactory entryFactory;
+	private EntityParser tested;
 
 	@BeforeEach
 	void setup() {
 		logger = new LoggerSpy();
 		entryFactory = new EntryFactory(logger);
+		tested = new EntityParser(entryFactory);
 	}
 
 	@Test
@@ -100,7 +102,7 @@ class EntityParserContractTest {
 
 	@Test
 	void splitsProtocolIntoOneEntryPerHeadline() {
-		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "02.02.2002 12:00 Bert Entnahme", "2 Other"), logger);
+		List<Entry> entries = tested.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "02.02.2002 12:00 Bert Entnahme", "2 Other"));
 
 		assertThat(entries).hasSize(2);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
@@ -109,13 +111,14 @@ class EntityParserContractTest {
 
 	@Test
 	void returnsNoEntriesForEmptyProtocol() {
-		assertThat(EntityParser.parse(List.of(), logger)).isEmpty();
+		List<Entry> entries = tested.parse(List.of());
+
+		assertThat(entries).isEmpty();
 	}
 
 	@Test
 	void skipsAHeadlineWithAMalformedDateAndStillParsesNeighbouringEntries() {
-		List<Entry> entries = EntityParser
-				.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "11.12X2001 13:37 Bad Einlagerung", "02.02.2002 12:00 Bert Entnahme", "2 Other"), logger);
+		List<Entry> entries = tested.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "11.12X2001 13:37 Bad Einlagerung", "02.02.2002 12:00 Bert Entnahme", "2 Other"));
 
 		assertThat(entries).hasSize(2);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
@@ -124,8 +127,8 @@ class EntityParserContractTest {
 
 	@Test
 	void doesNotFoldAMalformedHeadlinesItemsIntoThePrecedingEntry() {
-		List<Entry> entries = EntityParser
-				.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "11.12X2001 13:37 Bad Einlagerung", "5 Ghost", "02.02.2002 12:00 Bert Entnahme", "2 Other"), logger);
+		List<Entry> entries = tested
+				.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "11.12X2001 13:37 Bad Einlagerung", "5 Ghost", "02.02.2002 12:00 Bert Entnahme", "2 Other"));
 
 		assertThat(entries).hasSize(2);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
@@ -135,7 +138,7 @@ class EntityParserContractTest {
 	@ParameterizedTest
 	@MethodSource("headlinesWithSingleDigitDateFields")
 	void doesNotFoldTheItemsOfAHeadlineWithSingleDigitDateFieldsIntoThePrecedingEntry(String headline) {
-		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", headline, "5 Ghost"), logger);
+		List<Entry> entries = tested.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", headline, "5 Ghost"));
 
 		assertThat(entries).hasSize(1);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
@@ -144,7 +147,7 @@ class EntityParserContractTest {
 	@ParameterizedTest
 	@MethodSource("headlinesWithSingleDigitDateFields")
 	void warnsAboutADroppedHeadlineWithSingleDigitDateFields(String headline) {
-		EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", headline, "5 Ghost"), logger);
+		tested.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", headline, "5 Ghost"));
 
 		assertThat(logger.warnMessages()).containsExactly("Dropping protocol entry: malformed headline: " + headline);
 	}
@@ -152,7 +155,7 @@ class EntityParserContractTest {
 	@ParameterizedTest
 	@MethodSource("itemLinesThatReadLikeADateAndTime")
 	void keepsAnItemLineThatReadsLikeADateAndTimeInItsEntry(String itemLine, Item item) {
-		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", itemLine, "1 Later"), logger);
+		List<Entry> entries = tested.parse(List.of("01.01.2000 00:00 Anna Einlagerung", itemLine, "1 Later"));
 
 		assertThat(entries).hasSize(1);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG, item, new Item(1, "Later", 100));
@@ -162,7 +165,7 @@ class EntityParserContractTest {
 	@ValueSource(strings = {"1.1.2000x1:30", "1.1.2000 1x30", "100.1.2000 1:30", "1.100.2000 1:30", ".1.2000 1:30", "1..2000 1:30", "1.1.20000 1:30", "1.1.200 1:30",
 			"1.1.20001:30", "1.1.2000\t1:30", "1.1.2000 100:30", "1.1.2000 :30", "1.1.2000 1:", "1.1.2000 1:x", "123.2026 1:30"})
 	void keepsTheLinesAfterALineShapedAlmostLikeAHeadlineInTheirEntry(String line) {
-		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", line, "2 Later"), logger);
+		List<Entry> entries = tested.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", line, "2 Later"));
 
 		assertThat(entries).hasSize(1);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100), new Item(2, "Later", 100));
@@ -171,7 +174,7 @@ class EntityParserContractTest {
 
 	@Test
 	void doesNotAbortTheIngestOnAnOutOfRangeDate() {
-		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "31.13.2001 25:99 Bad Einlagerung", "5 Ghost"), logger);
+		List<Entry> entries = tested.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "31.13.2001 25:99 Bad Einlagerung", "5 Ghost"));
 
 		assertThat(entries).hasSize(1);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
@@ -200,7 +203,7 @@ class EntityParserContractTest {
 
 	@Test
 	void doesNotAbortTheIngestOnAnItemLineWithoutAnAmount() {
-		List<Entry> entries = EntityParser.parse(List.of("01.01.2000 00:00 Anna Einlagerung", " Ghost", "02.02.2002 12:00 Bert Entnahme", "2 Other"), logger);
+		List<Entry> entries = tested.parse(List.of("01.01.2000 00:00 Anna Einlagerung", " Ghost", "02.02.2002 12:00 Bert Entnahme", "2 Other"));
 
 		assertThat(entries).hasSize(2);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG);
@@ -216,9 +219,9 @@ class EntityParserContractTest {
 
 	@Test
 	void doesNotMintAnEntryFromATypeWordInsideAnAvatarName() {
-		List<Entry> entries = EntityParser
-				.parse(List.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "02.02.2002 12:00 Entnahmefreund Auszahlung", "5 Ghost", "03.03.2003 12:00 Bert Entnahme", "2 Other"),
-						logger);
+		List<Entry> entries = tested
+				.parse(List
+						.of("01.01.2000 00:00 Anna Einlagerung", "1 Item", "02.02.2002 12:00 Entnahmefreund Auszahlung", "5 Ghost", "03.03.2003 12:00 Bert Entnahme", "2 Other"));
 
 		assertThat(entries).hasSize(2);
 		assertEntry(entries.get(0), "Anna", EINLAGERUNG, new Item(1, "Item", 100));
