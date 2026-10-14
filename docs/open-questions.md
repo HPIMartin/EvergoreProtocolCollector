@@ -347,6 +347,13 @@ second copy.
 | 2026-10-14 | **The release comparison compares the round trips and round-trip abstentions both sides serve as multisets of whole entries** (author go on the strand's plan) → testing.md "1:1 against the production instance" | 0.3.0 serves both lists, so a moved quantity in them would pass a comparison that checks only their shape |
 | 2026-10-14 | **Dependabot groups each ecosystem's minor and patch updates into one pull request; a major still comes alone** (author go on the recommendation; follow-up to the 2026-10-13 row) → `.github/dependabot.yml`, build-run-deploy.md "CI / dev environment" | Five pull requests opened in one week, and Dependabot's `react` group moved `react` to 19.3.0 without `react-dom`, a pair React requires at one exact version; a group keeps such pairs together. Majors stay apart so a held major (TypeScript 7) blocks no weekly group. Alternative offered on 2026-10-13: version updates off through `open-pull-requests-limit: 0` |
 | 2026-10-14 | **The strand that takes the week's five Dependabot updates carries no `.feature`: handbook §5's build/infra exemption applies** (claimed by the agent under the author's go on the strand) | It bumps dependencies and the Dependabot configuration, no product behaviour a stakeholder sees; the existing scenarios and the walk over every commit are its net |
+| 2026-10-14 | **0.5.0 carries accounts, a login and a JWT on every endpoint, the user management on the admin page and the usage records** (author request) → backlog: accounts and login (C11), user management (C12), usage records (C13); roadmap M17 | One shared URL token cannot tell members apart, the admin page is open, and the author wants to read the next features off how the guild uses the app |
+| 2026-10-14 | **0.5.0's accounts: one per avatar, created from the member list the scraper reads; the avatar `Alessia` is seeded as admin; at every start the app prints a temporary admin key on the console, valid until the next restart, so the machine's operator always has an admin login** (author answers to D-22) → backlog C11 | The game allows no second accounts in practice; the console key needs no stored secret and dies with the deployment |
+| 2026-10-14 | **The app sends the password by in-game message itself; the message form is explored in a session where the author logs the agent in as `Alessia` in the browser** (author answer to D-22) → backlog C11, C12 | The scraper's browser already holds a game session, and copying passwords by hand does not scale with every reset |
+| 2026-10-14 | **The token lives in an `HttpOnly` cookie; a member still sees every member's figures** (author answers to D-22) → backlog C11 | A script cannot read an `HttpOnly` cookie; the guild's transparency stays as it is for now |
+| 2026-10-14 | **`/health` stays open without a token with the bare minimum of payload, and shows more with a valid JWT** (author answer to D-22) → backlog C11 | The deploy script waits on `/health` without a login, and an anonymous caller learns nothing beyond up or down |
+| 2026-10-14 | **What a member does inside the page reaches the usage records through an event endpoint the SPA calls; the guild learns of the records through a banner shown at the first login** (author answers to D-22) → backlog C13 | A server filter sees requests only, not a switched option; the banner tells every member before anything about them is read |
+| 2026-10-14 | **0.5.0 carries the accounts, the user management and the usage records and nothing else for now** (author answer to D-22) → roadmap M17 | More may join once the author thinks of it |
 
 ## Recorded mutations (red evidence where a new case could not start red)
 
@@ -539,6 +546,15 @@ second copy.
 - **D-16 (Where 1.0 is cut):** no milestone closes 1.0; one item is planned "before 1.0" (the
   failure pictures) and the skills milestone "after". Which milestone ends 1.0, and what does 1.0
   promise the guild?
+- **D-22 (The accounts of 0.5.0), still open after the author's answers of 2026-10-14:**
+  - HTTPS: does a reverse proxy in front of the app terminate TLS, and how does it fit the
+    author's FritzBox setup? A password and a token over plain HTTP protect nothing.
+  - What happens to the account of a member who leaves the guild?
+  - Is the sent password kept, or changed at the first login?
+  - Is there a logout?
+  - How long are raw usage records kept, and are IP addresses stored?
+  - Is the first-login banner a notice only, or can a member opt out of the records?
+  - Does the gate mechanics strand precede 0.5.0?
 - **D-11 (ToS / PII, enterprise-audit Pitfall #7):** the tool scrapes evergore.de and stores *other*
   guild members' bank/storage activity. No production pressure (Q2), but a deliberate stance is due:
   is the scraping within the site's ToS, and is storing other members' activity acceptable for the

@@ -20,11 +20,12 @@
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
 | M16 | 0.4.0 reaches the guild | the explanation page with the corrected note and the invented trader (E19, E36, E20), the release comparison against 0.3.0, the gate guards, the release (F23) | **First** (author decision 2026-10-13): the page goes live with 0.4.0, and nothing in it moves a figure |
+| M17 | 0.5.0: members log in | accounts, login and a JWT on every endpoint (C11), the user management (C12), the usage records (C13) | **After 0.4.0** (author decision 2026-10-14): auth is the feature 0.5.0 carries, and nothing else for now |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | D24 with F12, F10; the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
 | M10 | What the bottlenecks release | B36→D25 with D9→D18, D14 | Measured request-path cost and the timezone fix at its root |
 | M11 | Product build-out | E12→E13, E3, E27, E30, E37, F13 | E12 inherits D18's query shape, so it follows it |
-| M12 | Ops, security & environment | F1, H11, C1, C8, A4, C11→E28, E17, H2, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
+| M12 | Ops, security & environment | F1, H11, C1, C8, A4, E28, E17, H2, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
 | M14 | The guild's skills | E31→E32→E33, E34 | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open, D-16). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
 
 ## M16: 0.4.0 reaches the guild
@@ -41,6 +42,18 @@ release gate that expects no figure to move.
       rebase's conflict stop and added conflict markers.
 - [ ] 0.4.0 is deployed and tagged, its comparison against `v0.3.0` reporting no finding (backlog
       F23).
+
+## M17: 0.5.0, members log in
+
+Slice: every guild member logs in with an own account, the admin manages the accounts on the admin
+page, and the author sees who uses the app and how.
+
+- [ ] Every member has an account with a password the author sends in game; every endpoint but the
+      login demands a JWT valid for 7 days; only an admin opens the admin page (backlog C11).
+- [ ] The admin page lists the accounts and resets a password to a new random one (backlog C12).
+- [ ] The admin page shows who logged in when and which views and options each member uses
+      (backlog C13).
+- [ ] 0.5.0 is deployed and tagged.
 
 ## M8: The numbers hold up
 
@@ -136,9 +149,8 @@ reaches its current major.
 - [ ] `Configuration` is real and immutable (C1); `vulnScan` is at zero and gated (C8).
 - [ ] Every pull request head is built by CI, and the landing refuses a head without its green named
       check (backlog A4), after the gate mechanics.
-- [ ] Auth, session and rate limiting move to JWT, so no credential travels in a URL (backlog C11).
-- [ ] The admin page leads to the members it names, on the roles above (backlog E28).
-- [ ] The admin page offers a manual scrape and recompute, beside the JWT move (backlog E17).
+- [ ] The admin page leads to the members it names, on the roles of M17 (backlog E28).
+- [ ] The admin page offers a manual scrape and recompute, beside the JWT move of M17 (backlog E17).
 - [ ] A `selenium/standalone-firefox` service backs an integration test, and the server-booting
       tests split into their own Gradle set (H2).
 - [ ] Micronaut 5, endpoints 1:1 against the prod snapshot (H9). Precondition: the nets above.
