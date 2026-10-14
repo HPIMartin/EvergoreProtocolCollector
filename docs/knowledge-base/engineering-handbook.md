@@ -514,7 +514,7 @@ worktrees (own directory + HEAD + index) make parallel work safe.
     - On a local machine, where it is unset, a strand stays a local `claude/<topic>` branch in its
       worktree: it is never pushed and opens no pull request.
     - There the author reviews it in GitLens on the same checkout and lands it with
-      `git push origin <tip>:main`.
+      `git push origin <tip>:refs/heads/main` (the gateway's step 4 below).
   - **Every branch an agent pushes is named `claude/<topic>`**, the strand's branch from its first
     commit.
     - It is opened as a pull request against `main` at its first push (standing approval, author
@@ -532,8 +532,10 @@ worktrees (own directory + HEAD + index) make parallel work safe.
       `push.default` to `nothing` (the devcontainer's `postCreateCommand` does; an older checkout
       runs `git config push.default nothing` once).
     - No checkout configures `remote.origin.push`, which git would use first.
-    - git then refuses a push that names neither a refspec nor `--tags`, `--all` or `--mirror`,
-      whatever its spelling.
+    - git then refuses a push that names neither a refspec nor `--tags`, `--all`, `--branches` or
+      `--mirror`.
+    - A `-c push.default=<value>` on the command line overrides the setting for that one command
+      (`git -c push.default=current push origin`).
   - **A refspec still pushes what it names:** `@` the checked-out branch, `:` and `refs/heads/*`
     every matching or local branch, `main` among them.
   - **Set no upstream:** an upstream makes `git branch -d` test the branch against its own remote
@@ -573,8 +575,11 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   4. On PASS and the author's review, the author lands the tip: on the agent seat a `/land <tip>`
      comment on the strand's pull request, which the landing workflow turns into a fast-forward push
      of exactly that commit ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"), or
-     `git fetch origin`, then `git push origin <tip>:main`, a fast-forward without force. Either is
-     refused once `origin/main` has moved (then back to step 2).
+     `git fetch origin`, then `git push origin <tip>:refs/heads/main`, a fast-forward without force.
+     Either is refused once `origin/main` has moved (then back to step 2).
+     - The destination is spelled in full because git looks a short `main` up among `origin`'s
+       refs, and a tag `main` there beside the branch makes that push fail as ambiguous
+       (`git help push`, `<refspec>`).
   5. Once `origin/main` holds the tip (`git fetch origin` and the sync's checks above, then `git
      merge-base --is-ancestor <tip> refs/remotes/origin/main`), fast-forward the primary checkout's
      `main` (precondition: clean, else stop and surface it), remove the worktree and delete the

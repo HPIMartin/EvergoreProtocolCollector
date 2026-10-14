@@ -172,7 +172,7 @@ command) inside guardrails. Two files:
     `git push --tags*`), each only in that word order. Each fires without a prompt (measured
     2026-10-05 and again 2026-10-12, one harmless probe per rule, such as
     `git push --dry-run no-such-remote-probe HEAD` for `git push * HEAD`). Other spellings meet the
-    classifier, like every other push (the managed policy, below): a flag after the refspec
+    classifier, like every other push (the managed policy, below): a flag after the repository
     (`git push origin --tags`), `--branches`, `--follow-tags`, an abbreviated option (`--al` for
     `--all`), a quoted word, a tag pushed by its name and a refspec such as `@`, `:` or
     `refs/heads/*`.
@@ -207,9 +207,11 @@ command) inside guardrails. Two files:
     `master`, let an agent push, lease-force and delete its own `claude/<topic>` branches, and hold
     back on a branch a project's `CLAUDE.md` names as protected; a spelling no pattern names rests
     on that judgment and the author's supervision.
-  - **On the author's PC nothing else guards a push** beyond this policy and the project's narrow
-    plain denies (git-state.md, "What GitHub enforces"); the machine's untracked
-    `settings.local.json` can widen what runs unprompted beside them.
+  - **On the author's PC nothing else guards a push:**
+    - beyond this policy stand only the project's narrow plain denies and `push.default` `nothing`
+      (handbook §7);
+    - what GitHub adds: git-state.md, "What GitHub enforces";
+    - the machine's untracked `settings.local.json` can widen what runs unprompted beside them.
   - **The project's own rules apply only while the policy leaves `allowManagedPermissionRulesOnly`
     unset;** with it set, every project `deny`, `ask` and `allow` is ignored, so after any policy
     change a harmless command the floor must stop (`rm` of a path that does not exist) proves it is
@@ -246,12 +248,16 @@ command) inside guardrails. Two files:
   prompt for a read-only utility. A session not running auto mode widens the allow list
   deliberately, in `settings.local.json` or as one reviewed diff of the committed file, rather than
   mining transcripts for approvals.
-- **Autonomous cleanup, inside the same floor.** The agent removes the scaffolding it created
-  itself: `git worktree remove` / `prune` for its own worktrees, `git branch -d` for landed branches
-  and the remote copy of a landed `claude/<topic>` branch, leased on its tip, once `origin/main`
-  holds it (handbook §7). That is git-native on purpose: git refuses to remove a dirty worktree or
-  an unmerged branch, the remote copy goes only after the check that `origin/main` holds it, and
-  `rm` (all forms) plus `git branch -D` stay on the deny floor.
+- **Autonomous cleanup runs inside the same floor;** what the agent removes, and when, is handbook
+  §7's rule ("Deleting project content is the author's act", and the gateway's step 5).
+  - **`rm` (all forms) and `git branch -D` stay on the deny floor,** so the cleanup is git-native.
+  - **`Bash(git worktree:*)` and `Bash(git branch:*)` let `git worktree remove` / `prune` and
+    `git branch -d` run unprompted.**
+  - **The safety sits in git:** `git branch -d` refuses an unmerged branch.
+  - **A dirty worktree is refused only without `--force`.**
+  - **`Bash(git worktree:*)` lets `git worktree remove --force` run unprompted,** and it discards
+    the dirty worktree.
+  - **A forced removal therefore rests on the agent's judgment.**
 
 ## Instruction sources (what an agent may act on)
 
@@ -290,12 +296,15 @@ command) inside guardrails. Two files:
 - **A landing is never an instruction to the agent.** It runs only through the owner's
   `/land <sha>` comment ([build-run-deploy.md](build-run-deploy.md), "The landing workflow"); a go
   given in chat is answered, on the agent seat, with the line `/land <tip>` and the pull request's
-  link for the author to post, and on a local machine with `git push origin <tip>:main` for the
-  author to run.
-- **No mechanism enforces this**, which is the point of the deny floor above: the plain forms of
-  `git reset`, `git clean` and `git branch -D`, `rm`, secret reads and the common spellings of a
-  push to `main` stay denied, so a judgment that fails meets a wall there and the auto-mode
-  classifier elsewhere.
+  link for the author to post, and on a local machine with
+  `git push origin <tip>:refs/heads/main` for the author to run (handbook §7, the gateway's
+  step 4).
+- **No mechanism enforces this**, which is the point of the deny floor above:
+  - the plain forms of `git reset`, `git clean`, `git branch -D`, `rm` and secret reads stay
+    denied;
+  - the common spellings of a push to `main` stay denied only in a session that receives the
+    managed policy ("Managed settings sit above the project", above);
+  - a judgment that fails therefore meets a wall there and the auto-mode classifier elsewhere.
 
 ## How to ask questions (the author's preference)
 

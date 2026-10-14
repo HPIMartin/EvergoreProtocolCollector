@@ -77,8 +77,8 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    - a re-rebase after your review: clean and green → landed without a second review; a
      conflict resolution → the reviewer, the doc-reviewer and the lenses whose read paths it
      touches, the resolution as their delta, then your review again
-6. LANDING (YOU): `/land <tip>` on the pull request, or `git push origin <tip>:main`; a
-   fast-forward either way
+6. LANDING (YOU): `/land <tip>` on the pull request, or `git push origin <tip>:refs/heads/main`
+   (handbook §7); a fast-forward either way
    - once origin/main holds the tip, the agent fast-forwards main and cleans up the worktree,
      the branch and its remote copy
 ```
@@ -387,7 +387,7 @@ says where each piece of evidence lives.
    that net.
 4. **Falsify and review, one round side by side:** domain lens recomputes ① ② by hand; robustness lens: does ③ assert the log? quality=0 edge? is green real if the production line is reverted? → counter-tests; doc-reviewer: `domain-model.md`/`testing.md` updated, backlog row removed?; reviewer: boundaries clean, messages one-line verb-first? → PASS once the dossier check passes.
 5. **You, author gate 2:** the rebased tip with its compare range on your review; you land it
-   with `/land <tip>` on its pull request (agent seat) or `git push origin <tip>:main`.
+   with `/land <tip>` on its pull request (agent seat) or `git push origin <tip>:refs/heads/main`.
 
 ## Evolution
 
