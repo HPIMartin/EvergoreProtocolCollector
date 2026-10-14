@@ -3,11 +3,14 @@ description: Upgrade an adopted project to a newer template version by a three-w
 argument-hint: [optional: path of the extracted new template payload, default .template/incoming/]
 ---
 
-You are upgrading the Evergore Protocol Collector to a newer version of the AI-assisted development process
-template. CLAUDE.md is auto-loaded every session; its rules and KB pointers apply without re-reading
-them here. Ask, don't guess (multiple-choice, recommended first); push only the strand's own
-`claude/<topic>` branch; hand every deletion of project content to the author as an exact command;
-your own worktree and branch you clean up yourself after the landing (handbook §7).
+You are upgrading the Evergore Protocol Collector to a newer version of the AI-assisted development
+process template.
+
+- `CLAUDE.md` is auto-loaded every session; its rules and KB pointers apply without re-reading them
+  here.
+- Asking the author follows `CLAUDE.md`, "Ask, don't guess".
+- Pushing, deleting project content and cleaning up your own worktree and branch follow handbook
+  §7.
 
 **The mechanism.** Adoption keeps two things for this moment: `TEMPLATE-VERSION`, the version the
 project was built from, and `.template/baseline/`, the **unmodified payload** of that version,
@@ -30,13 +33,15 @@ through the review gateway like any feature (handbook §7).
 
 - `.template/baseline/` present: it must carry `TEMPLATE-VERSION` equal to N; otherwise stop and
   ask, the project's history has to explain the mismatch.
-- **Absent** (a project adopted before the baseline existed): reconstruct it from the template
-  repository, which tags every released version `v<N>` (`git -C <template checkout> archive v<N> |
-  tar -x -C .template/baseline`), or from the archived zip of that version. A project with **no**
-  `TEMPLATE-VERSION` at all is the origin project the template was extracted from: use `v1` and tell
-  the author to expect more conflicts. Commit the reconstructed baseline as its own commit
-  (`Record the template baseline this project was adopted from`) before any merge, so the merge
-  history is reviewable against it.
+- **Absent** (a project adopted before the baseline existed): reconstruct it.
+  - From the template repository, which tags every released version `v<N>`:
+    `git -C <template checkout> archive v<N> | tar -x -C .template/baseline`.
+  - Or from the archived zip of that version.
+  - A project with **no** `TEMPLATE-VERSION` at all is the origin project the template was
+    extracted from: use `v1`.
+  - Tell the author of such a project to expect more conflicts.
+  - Commit the reconstructed baseline as its own commit (`Record the template baseline this project
+    was adopted from`) before any merge, so the merge history is reviewable against it.
 
 ## 3. Merge, file by file
 
@@ -78,19 +83,24 @@ new section a skeleton now carries), present the hunk as a suggestion for the au
 
 ## 5. Verify
 
-`sh hooks/self-test` with every case passing; `sh -n` per hook; `./verify format` green; `jq .` on
-`.claude/settings.json`; `git ls-files -s hooks/` all `100755`; `git config core.hooksPath` set;
-relative doc links resolving; `grep -rn "ADAPT:" .` outside `.template/` listing only the spots the
-author keeps on purpose.
+- `sh hooks/self-test` with every case passing.
+- `sh -n` per hook.
+- `./verify format` green.
+- `jq .` on `.claude/settings.json`.
+- `git ls-files -s hooks/` all `100755`.
+- `git config core.hooksPath` set.
+- Relative doc links resolving.
+- `grep -rn "ADAPT:" .` outside `.template/` listing only the spots the author keeps on purpose.
 
 ## 6. Finish
 
 - Replace `.template/baseline/` with the incoming payload (it is the next baseline), set
   `TEMPLATE-VERSION` to M, and hand the author the removal command for `.template/incoming/`.
 - Commit per handbook §7 in reviewable slices (the baseline bootstrap, the merged process docs, the
-  merged hooks and settings, the interview decisions), messages worded per §7, pushed only on the
-  strand's `claude/<topic>` branch; the last one sets the version (`Upgrade the process template to
-  version M`).
+  merged hooks and settings, the interview decisions), messages worded per §7.
+- The last commit sets the version (`Upgrade the process template to version M`).
+- Push per handbook §7, "Pushing": only the agent seat pushes the strand's `claude/<topic>` branch;
+  on a local machine the strand stays a local branch.
 - Land through the gateway: rebase, `./verify all`, the compare range for the author, the author's
   landing, cleanup. In-flight strands then rebase and finish under the rules they started with plus
   the mechanical gates now on `main`.
