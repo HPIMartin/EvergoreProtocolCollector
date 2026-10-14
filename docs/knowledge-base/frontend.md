@@ -210,6 +210,8 @@ Four top-level folders under `frontend/src/`:
   - `StatHeader` states `Gildenbank`, `Gildenlagerwert`, `Gildenspende` and
     `Handwerkssubventionen` side by side, so measured gold is never added to modelled material and
     no figure has to net a donation against a payout to fit one label.
+  - Below the four figures the overview's content links to the explanation page ("Wie entstehen
+    diese Zahlen?"); the frame keeps its one link (decision 2026-10-14).
   - `OptionSwitch` toggles the table's sixth column between `Nach Abzügen`, what the guild credits
     the member, and `Vor Abzügen`, what he moved before the guild's share is taken off.
   - The two differ by that row's `donation - craftSubsidy`, give or take a gold, since each is
@@ -275,12 +277,12 @@ Four top-level folders under `frontend/src/`:
   - The active caption names the window's **reference** rather than reading "letzte 30 Tage",
     which a member would take to mean 30 days from today and which is false on exactly the stale
     data the cut exists for.
-- **Navigation lives in the frame and in the overview's own cells.** `PageFrame` carries
-  "Übersicht" plus, on a ledger, that avatar's "Bank" and "Lager". In the overview the avatar cell
-  links into the bank, and the two activity cells link into the ledger each of them reports on, so
-  every column head sorts something real instead of offering a sort on a column of identical words.
-  A cell without a timestamp links nowhere: nothing happened there to open. All of it goes through
-  `Link`, so the shell is never reloaded.
+- **Navigation lives in the frame, in the overview's own cells and in its link to the explanation
+  page.** `PageFrame` carries "Übersicht" plus, on a ledger, that avatar's "Bank" and "Lager". In
+  the overview the avatar cell links into the bank, and the two activity cells link into the ledger
+  each of them reports on, so every column head sorts something real instead of offering a sort on a
+  column of identical words. A cell without a timestamp links nowhere: nothing happened there to
+  open. All of it goes through `Link`, so the shell is never reloaded.
 - **Tests reach no network.** The faked seam is `HttpGet`, answering a real `Response`, so status
   handling and URL building are exercised for real. Asynchronous assertions flush microtasks with
   `act`; no test uses a timer, a `waitFor` poll or a wall-clock wait.

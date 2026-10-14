@@ -15,11 +15,17 @@ import {
   staleSumsNoteOf,
 } from '../domain'
 import type { Column, Stat, SwitchOption, Total } from '../ui'
-import { OptionSwitch, SortableTable, StatHeader, formatTimestamp } from '../ui'
+import {
+  Link,
+  OptionSwitch,
+  SortableTable,
+  StatHeader,
+  formatTimestamp,
+} from '../ui'
 
 import { LoadedView } from './LoadedView.tsx'
 import { requestKeyOf } from './requestKey.ts'
-import { bankPath, storagePath } from './route.ts'
+import { bankPath, explanationPath, storagePath } from './route.ts'
 import { hrefOf } from './token.ts'
 import { useLoad } from './useLoad.ts'
 
@@ -52,6 +58,11 @@ export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
         {(overview) => (
           <>
             <StatHeader stats={statsOf(overview.totals)} />
+            <p>
+              <Link href={hrefOf(explanationPath(), token)} onFollow={onFollow}>
+                Wie entstehen diese Zahlen?
+              </Link>
+            </p>
             <OptionSwitch
               legend="Letzte Spalte"
               name="figure"

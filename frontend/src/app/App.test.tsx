@@ -2305,6 +2305,37 @@ describe('App', () => {
     })
   })
 
+  it("links from below the guild's position to the explanation of its figures", async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    const link = screen.getByRole('link', {
+      name: 'Wie entstehen diese Zahlen?',
+    })
+
+    expect({
+      href: link.getAttribute('href'),
+      afterThePosition:
+        screen.getByTestId('stat-header').compareDocumentPosition(link) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    }).toStrictEqual({
+      href: '/explanation?token=a-test-token',
+      afterThePosition: Node.DOCUMENT_POSITION_FOLLOWING,
+    })
+  })
+
+  it('opens the explanation page when the member follows its link from the overview', async () => {
+    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+
+    fireEvent.click(
+      screen.getByRole('link', { name: 'Wie entstehen diese Zahlen?' }),
+    )
+    await act(async () => undefined)
+
+    expect(screen.getByTestId('view-title').textContent).toBe(
+      'So entstehen eure Zahlen',
+    )
+  })
+
   it('heads the explanation page at its own address', async () => {
     await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
 
