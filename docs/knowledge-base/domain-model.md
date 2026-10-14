@@ -307,6 +307,11 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   that), then add `itemValue × quantity × (quality / 100)` into `placement` / `withdrawl`, where
   `itemValue` is `getStorageValue()` for deposits and `getWithdrawlValue()` for withdrawals
   (`TransferTypeStorageEntryVisitor`). **Quality scales value linearly.**
+  - Only equipment carries a quality in the game (weapons, staves, armour, shields; every sub-100
+    quality in the 2026-10-10 snapshot is equipment).
+  - With whole prices and equipment priced in hundreds, every exact figure is a multiple of 0.2
+    gold, never exactly half a gold.
+  - That rests on the game alone: the parser and the valuation accept a quality on any item.
 - **The same resolved storage entries feed the round-trip detection.** Each avatar's ledger is
   resolved into `ResolvedStorageEntry`s once, valued as above and handed to
   `RoundTripDetector.detect(avatar, entries)`; its `RoundTripReport` is collected into the run's

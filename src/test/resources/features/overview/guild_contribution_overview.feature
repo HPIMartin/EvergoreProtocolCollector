@@ -79,15 +79,20 @@ Feature: Guild contribution overview
     A member's row, the guild row and the guild's position are each worked out from the exact
     values and rounded only where they are shown, so a shown figure can differ from the sum of the
     shown figures beside or above it. A figure goes to the nearer whole gold, above zero as below
-    it, and half a gold counts as a whole one: 0,5 shows as 1 and -0,5 as -1.
+    it. Only equipment has a quality; the ledgers show 100 for every other item. The game's prices
+    never give a figure of exactly half a gold: gold is whole, equipment is priced in whole hundreds
+    so that its quality still leaves a whole price, and every credit or charge is such a price or
+    60 % of one, so each exact figure is a multiple of 0,2. The prices used here: "Götterstich" 9,
+    "Kriegspfeile" 7, "Streitaxt" 1800, "Pfeile" 3, "Magieessenz" 4 and "Kupfererz" 20.
 
     Scenario Outline: A member who generated <exact> gold is shown <shown>
-      Depositing a Kriegspfeil credits what withdrawing it costs, so a withdrawal mirrors a
-      deposit below zero. A figure nearer to 0 than to -1 shows as 0, with no minus sign.
+      "Götterstich" and "Streitaxt" are credited at 60 %, the axe in proportion to its quality; a
+      withdrawal of "Pfeile" or "Magieessenz" costs 60 % and takes the member's "Nach Abzügen" below
+      zero.
 
       Given the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand   | Qualität  | Vorgang    |
-        | 01.01.2026 12:00 | Aurora | 1     | Kriegspfeile | <quality> | <movement> |
+        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität  | Vorgang    |
+        | 01.01.2026 12:00 | Aurora | 1     | <item>     | <quality> | <movement> |
       And the daily collection has run
       When a member opens the overview
       Then the overview shows:
@@ -95,85 +100,89 @@ Feature: Guild contribution overview
         | Aurora | <value>    | <shown>      |
 
       Examples:
-        | quality | movement    | value | exact | shown |
-        | 70      | Einlagerung | 3     | 2,94  | 3     |
-        | 30      | Einlagerung | 1     | 1,26  | 1     |
-        | 30      | Entnahme    | 1     | -1,26 | -1    |
-        | 10      | Entnahme    | 0     | -0,42 | 0     |
+        | item        | quality | movement    | value | exact | shown |
+        | Götterstich | 100     | Einlagerung | 5     | 5,4   | 5     |
+        | Streitaxt   | 1       | Einlagerung | 11    | 10,8  | 11    |
+        | Pfeile      | 100     | Entnahme    | 2     | -1,8  | -2    |
+        | Magieessenz | 100     | Entnahme    | 2     | -2,4  | -2    |
 
     Scenario: A member's row is rounded from its exact value, not from its rounded columns
-      Aurora deposited goods worth 1,26 and withdrew goods worth 0,54, so she generated 0,72.
+      Aurora deposited goods worth 4,2 and withdrew goods worth 3,6, so she generated 0,6.
 
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand   | Qualität | Vorgang     |
-        | 01.01.2026 12:00 | Aurora | 1     | Kriegspfeile | 30       | Einlagerung |
-        | 02.01.2026 12:00 | Aurora | 1     | Götterstich  | 10       | Entnahme    |
+        | 01.01.2026 12:00 | Aurora | 1     | Kriegspfeile | 100      | Einlagerung |
+        | 02.01.2026 12:00 | Aurora | 2     | Pfeile       | 100      | Entnahme    |
       And the daily collection has run
       When a member opens the overview
       Then the overview shows:
         | Avatar | Einlagerung | Entnahme | Nach Abzügen |
-        | Aurora | 1           | 1        | 1            |
+        | Aurora | 4           | 4        | 1            |
 
-    Scenario: Half a gold is shown as a whole one, above zero as below it
-      Aurora took 1 gold from the guild bank and deposited feathers worth 0,5, credited in full,
-      so she generated -0,5. Her deposit of 0,5 shows as 1, and her -0,5 shows as -1, not as 0,
-      in her row and in the guild row, which holds only her.
+    Scenario: A figure nearer to 0 than to -1 shows as 0, with no minus sign
+      Aurora took 1 gold from the guild bank, deposited goods worth 4,2 and withdrew goods worth
+      3,6, so she generated -0,4.
 
       Given the guild bank ledger holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang  |
         | 01.01.2026 12:00 | Aurora | 1      | Entnahme |
       And the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 02.01.2026 12:00 | Aurora | 1     | Federn     | 2        | Einlagerung |
+        | Zeitpunkt        | Avatar | Menge | Gegenstand   | Qualität | Vorgang     |
+        | 02.01.2026 12:00 | Aurora | 1     | Kriegspfeile | 100      | Einlagerung |
+        | 03.01.2026 12:00 | Aurora | 2     | Pfeile       | 100      | Entnahme    |
       And the daily collection has run
       When a member opens the overview
       Then the overview shows:
-        | Avatar | Einlagerung | Nach Abzügen |
-        | Aurora | 1           | -1           |
-      And the guild row shows:
         | Avatar | Nach Abzügen |
-        | Gilde  | -1           |
+        | Aurora | 0            |
 
     Scenario: The figure before the guild's share is rounded from its exact value
-      Aurora deposited feathers worth 0,5, credited in full, of which the guild paid 0,2 above its
-      own price, so before the guild's share she moved 0,3.
+      Aurora deposited "Magieessenz" credited in full at 4, of which the guild paid 1,6 above its own
+      price, and "Kriegspfeile" worth 4,2, so after the guild's share she moved 8,2 and before it
+      6,6, which shows as 7; taken from the rounded figures, the 8 after the share less the 2 of the
+      subsidy, it would be 6. The guild's stock value is the same 6,6 at the guild's price, shown as
+      7, and its subsidy 1,6, shown as 2.
 
       Given the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
-        | 01.01.2026 12:00 | Aurora | 1     | Federn     | 2        | Einlagerung |
+        | Zeitpunkt        | Avatar | Menge | Gegenstand   | Qualität | Vorgang     |
+        | 01.01.2026 12:00 | Aurora | 1     | Magieessenz  | 100      | Einlagerung |
+        | 02.01.2026 12:00 | Aurora | 1     | Kriegspfeile | 100      | Einlagerung |
       And the daily collection has run
       And a member has opened the overview
       When the member switches the last column to "Vor Abzügen"
       Then the overview shows:
         | Avatar | Vor Abzügen |
-        | Aurora | 0           |
+        | Aurora | 7           |
       And the guild row shows:
         | Avatar | Vor Abzügen |
-        | Gilde  | 0           |
+        | Gilde  | 7           |
+      And the guild's position reads:
+        | Gildenbank | Gildenlagerwert | Gildenspende | Handwerkssubventionen |
+        | 0          | 7               | 0            | 2                     |
 
     Scenario: The guild row and the guild's position are rounded from the guild's exact values
-      Aurora and Boreas each deposited goods credited 2,34 in all: the guild paid 0,6 above its own
-      price for the feathers and was given 0,36 for nothing in copper ore. Each row shows 2.
-      Exactly, the guild row is 4,68, the guild paid 1,2 above its price, was given 0,72 and holds
-      4,68 + 0,72 - 1,2 = 4,2.
+      Aurora and Boreas each deposited goods credited 9,4: "Götterstich" worth 5,4 and "Magieessenz"
+      credited in full at 4, of which the guild paid 1,6 above its own price, and "Kupfererz" credited
+      nothing, which gave the guild 12. Each row shows 9. Exactly, the guild row is 18,8, the guild
+      paid 3,2 above its price, was given 24 and holds 18,8 + 24 - 3,2 = 39,6.
 
       Given the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand   | Qualität | Vorgang     |
-        | 01.01.2026 12:00 | Aurora | 1     | Kriegspfeile | 20       | Einlagerung |
-        | 02.01.2026 12:00 | Aurora | 1     | Federn       | 6        | Einlagerung |
-        | 03.01.2026 12:00 | Aurora | 1     | Kupfererz    | 3        | Einlagerung |
-        | 04.01.2026 12:00 | Boreas | 1     | Kriegspfeile | 20       | Einlagerung |
-        | 05.01.2026 12:00 | Boreas | 1     | Federn       | 6        | Einlagerung |
-        | 06.01.2026 12:00 | Boreas | 1     | Kupfererz    | 3        | Einlagerung |
+        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
+        | 01.01.2026 12:00 | Aurora | 1     | Götterstich | 100      | Einlagerung |
+        | 02.01.2026 12:00 | Aurora | 1     | Magieessenz | 100      | Einlagerung |
+        | 03.01.2026 12:00 | Aurora | 1     | Kupfererz   | 100      | Einlagerung |
+        | 04.01.2026 12:00 | Boreas | 1     | Götterstich | 100      | Einlagerung |
+        | 05.01.2026 12:00 | Boreas | 1     | Magieessenz | 100      | Einlagerung |
+        | 06.01.2026 12:00 | Boreas | 1     | Kupfererz   | 100      | Einlagerung |
       And the daily collection has run
       When a member opens the overview
       Then the overview shows:
         | Avatar | Einlagerung | Nach Abzügen |
-        | Aurora | 2           | 2            |
-        | Boreas | 2           | 2            |
+        | Aurora | 9           | 9            |
+        | Boreas | 9           | 9            |
       And the guild row shows:
         | Avatar | Einlagerung | Nach Abzügen |
-        | Gilde  | 5           | 5            |
+        | Gilde  | 19          | 19           |
       And the guild's position reads:
         | Gildenbank | Gildenlagerwert | Gildenspende | Handwerkssubventionen |
-        | 0          | 4               | 1            | 1                     |
+        | 0          | 40              | 24           | 3                     |

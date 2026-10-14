@@ -27,14 +27,14 @@ Feature: A member's bank and storage ledgers
     Given the guild storage ledger holds:
       | Zeitpunkt        | Avatar | Menge | Gegenstand          | Qualität | Vorgang     |
       | 01.01.2026 12:00 | Aurora | 10    | Kupfererz           | 100      | Einlagerung |
-      | 02.01.2026 12:00 | Aurora | 2     | Magische Ätherbinde | 50       | Einlagerung |
+      | 02.01.2026 12:00 | Aurora | 2     | Leinen-Handschuhe   | 50       | Einlagerung |
       | 03.01.2026 12:00 | Aurora | 1     | Kristall            | 100      | Entnahme    |
     When a member opens the storage ledger of "Aurora"
     Then the page is headed "Lager von Aurora"
     And the storage ledger of "Aurora" shows exactly:
       | Zeitpunkt        | Avatar | Menge | Gegenstand          | Qualität | Vorgang     |
       | 03.01.2026 12:00 | Aurora | 1     | Kristall            | 100      | Entnahme    |
-      | 02.01.2026 12:00 | Aurora | 2     | Magische Ätherbinde | 50       | Einlagerung |
+      | 02.01.2026 12:00 | Aurora | 2     | Leinen-Handschuhe   | 50       | Einlagerung |
       | 01.01.2026 12:00 | Aurora | 10    | Kupfererz           | 100      | Einlagerung |
     And the ledger offers neither "Zurück" nor "Weiter"
 

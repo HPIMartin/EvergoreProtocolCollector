@@ -10,21 +10,20 @@ Feature: Suspected round trips of trader goods
 
   Rule: A trader good withdrawn and deposited again within 48 hours is reported
 
-    Scenario Outline: Only the quantity that went out and came back counts, whatever its quality: <out> out, <in> in
+    Scenario Outline: Only the quantity that went out and came back counts: <out> out, <in> in
       Given the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität      | Vorgang     |
-        | 01.01.2026 12:00 | Alrik  | <out> | Federn     | <out quality> | Entnahme    |
-        | 01.01.2026 13:00 | Alrik  | <in>  | Federn     | <in quality>  | Einlagerung |
+        | Zeitpunkt        | Avatar | Menge | Gegenstand | Qualität | Vorgang     |
+        | 01.01.2026 12:00 | Alrik  | <out> | Federn     | 100      | Entnahme    |
+        | 01.01.2026 13:00 | Alrik  | <in>  | Federn     | 100      | Einlagerung |
       And the daily collection has run
       When the admin opens the admin page
       Then the admin page reads "Verdacht auf Warenkreislauf: Alrik: <round trip> × Federn"
 
       Examples:
-        | out | out quality | in  | in quality | round trip |
-        | 100 | 100         | 100 | 100        | 100        |
-        | 100 | 100         | 60  | 100        | 60         |
-        | 50  | 100         | 80  | 100        | 50         |
-        | 100 | 50          | 100 | 100        | 100        |
+        | out | in  | round trip |
+        | 100 | 100 | 100        |
+        | 100 | 60  | 60         |
+        | 50  | 80  | 50         |
 
     Scenario Outline: A deposit <when> is still reported
       Given the guild storage ledger holds:
