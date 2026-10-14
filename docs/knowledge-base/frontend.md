@@ -1,7 +1,6 @@
 # 14: Frontend
 
-- The dashboard rebuild (decision 2026-07-04) replaces the server-rendered HTML-string
-  templates with a JSON API + a React single-page app (SPA).
+- The dashboard is a React single-page app (SPA) over a JSON API (decision 2026-07-04).
 - This doc covers both the SPA and the JSON API it reads from.
 
 ## Stack
@@ -59,12 +58,17 @@ Four top-level folders under `frontend/src/`:
 - Token groups: `--color-*`, `--font-*`, `--space-*`, plus `--radius`, `--border-width`,
   `--content-width`. The look they encode (dark tavern climate, compact rows, serif display type over
   a sans body) is the 2026-08-07 decision in [open-questions.md](../open-questions.md).
-- `theme.test.ts` guards the stylesheet rather than the pixels: no rule may set a longhand and then
-  reset it with a later shorthand (`border-top` before `border` silently loses the longhand, and
-  jsdom computes no layout, so no component test can see it); every `var()` resolves, every declared
-  token is used, no token is declared twice, no literal colour stands outside the token block, and every
-  colour-bearing property is painted from a token, so a CSS keyword colour cannot slip past the literal
-  check. Together they keep "one place" true as the sheet grows.
+- `theme.test.ts` guards the stylesheet rather than the pixels:
+  - no rule may set a longhand and then reset it with a later shorthand (`border-top` before
+    `border` silently loses the longhand, and jsdom computes no layout, so no component test can
+    see it);
+  - every `var()` resolves;
+  - every declared token is used;
+  - no token is declared twice;
+  - no literal colour stands outside the token block;
+  - every colour-bearing property is painted from a token, so a CSS keyword colour cannot slip past
+    the literal check.
+  - Together these checks keep "one place" true as the sheet grows.
 - **Primitives.** All presentational: everything arrives as props, none of them knows `fetch` or a
   route. They live in `src/ui/` and are re-exported from `src/ui/index.ts`.
 
@@ -72,9 +76,13 @@ Four top-level folders under `frontend/src/`:
 |-----------|---------|
 | `PageFrame` | Banner with brand and navigation (`aria-current="page"` marks the current link), `<main>` for the view. |
 | `Link` | An `<a href>` that reports a **plain** click to its `onFollow` and leaves a modified or middle click to the browser, so in-app navigation costs no reload while bookmarking and open-in-new-tab keep working. `PageFrame` and a `link` column render through it. |
-| `SortableTable<Row>` | Semantic `<table>`; a column is `text`, `number`, `timestamp` or `link`; a `timestamp` may carry an `href` and then links what it shows; a header click sorts, a second click reverses; given a `deliveredOrder`, it sorts nothing itself and hands the chosen sort to its source instead, marking the column the rows arrived sorted by; an optional `total` adds a `tfoot` row; an optional `mark` flags single rows. |
+| `SortableTable<Row>` | Semantic `<table>` whose header click sorts and whose second click reverses; its columns, `deliveredOrder`, `total` and `mark` are in the bullets below. |
 | `StatusPanel` | The `loading` / `empty` / `error` states; `role="alert"` for the error, `role="status"` otherwise. |
 
+- **The sortable table's columns**: a column is `text`, `number`, `timestamp` or `link`.
+  - A `timestamp` may carry an `href` and then links what it shows.
+- **A `deliveredOrder`** makes the table sort nothing itself: it hands the chosen sort to its
+  source instead and marks the column the rows arrived sorted by.
 - `format.ts` carries the German domain notation: gold with `de-DE` grouping, instants as Berlin
   wall-clock `dd.MM.yyyy HH:mm`. The zone is pinned to `Europe/Berlin` instead of taken from the
   runtime, so a browser in another zone still shows the time the game showed.
@@ -153,16 +161,19 @@ Four top-level folders under `frontend/src/`:
 - **The token is read once from the address** (`?token=`) and carried into every request and every
   in-app link; it is kept nowhere else (no cookie, no `localStorage`), so a link is the whole
   credential and closing the tab ends the session.
-- **Ledger paging is server-side and bookmarkable.** A ledger view fetches `windowOf(page)`
-  (`?page=&size=100`) and shows `items.length` of `totalCount`; the page number round-trips through
-  the address (`route.ts`'s `PAGE` param), so `Pagination` (`ui/Pagination.tsx`) can build "Zurück"/
-  "Weiter" links from it via `hrefOf`. A page past the end is not a failure: the API answers 200 with
-  `items: []`, rendered as the existing empty state. An invalid page (negative or non-numeric) is
-  passed through **unclamped**, so the API's `@Min(0)` violation answers 400 and the ledger says
-  "Diese Seite gibt es nicht.", because clamping it client-side would hide a bad link instead of
-  showing it. Only a ledger read maps a 400 that way, because the page number and the sort are
-  the only request values the client does not fix (the size is constant, a bad token answers
-  401); on the overview or the admin page a 400 is a plain failure.
+- **Ledger paging is server-side and bookmarkable.**
+  - A ledger view fetches `windowOf(page)` (`?page=&size=100`) and shows `items.length` of
+    `totalCount`.
+  - The page number round-trips through the address (`route.ts`'s `PAGE` param), so `Pagination`
+    (`ui/Pagination.tsx`) can build "Zurück"/"Weiter" links from it via `hrefOf`.
+  - A page past the end is not a failure: the API answers 200 with `items: []`, rendered as the
+    existing empty state.
+  - An invalid page (negative or non-numeric) is passed through **unclamped**, so the API's
+    `@Min(0)` violation answers 400 and the ledger says "Diese Seite gibt es nicht.".
+  - Why unclamped: clamping it client-side would hide a bad link instead of showing it.
+  - Only a ledger read maps a 400 that way, because the page number and the sort are the only
+    request values the client does not fix (the size is constant, a bad token answers 401).
+  - On the overview or the admin page a 400 is a plain failure.
 - **A ledger's sort is address state too** (decision 2026-10-05): `route.ts` reads `sort` and
   `direction` (`SORT`, `DIRECTION`), completes an address that names only one of them with the
   API's defaults (`timestamp`, `descending`), and the view asks the API for that order. A value
@@ -189,22 +200,26 @@ Four top-level folders under `frontend/src/`:
   withdrawals the debit tone, and the switched figure carries neither until it turns negative, which
   the shared tone rule in `ui/tone.ts` does for every number column and for the header's figures.
 - **The guild's position is a header above the table, not a number inside it** (decision
-  2026-09-04, four figures since 2026-09-10): `StatHeader` states `Gildenbank`, `Gildenlagerwert`,
-  `Gildenspende` and `Handwerkssubventionen` side by side, so measured gold is never added to
-  modelled material and no figure has to net a donation against a payout to fit one label.
-  `OptionSwitch` toggles the table's sixth column between `Nach Abzügen`, what the guild credits the
-  member, and `Vor Abzügen`, what he moved before the guild's share is taken off; the two differ by
-  that row's `donation - craftSubsidy`, give or take a gold, since each is rounded from its exact
-  value. The table keeps its eight columns and its density either way, and the sixth column keeps
-  **one key** (`figure`), changing only its header and value, because the table remembers a sort by
-  column key and would otherwise throw on a sort the switch renamed away. `domain/guildPosition.ts`
-  gathers the header's figures from the served numbers and derives only the bank, so the view holds
-  no arithmetic and `ui` stays presentational. A figure the flows are missing for renders the note
-  from `domain` instead of a number, marked `data-absent`, while the bank still answers because it
-  is measured rather than modelled; only while a member is not yet computed, and the totals come
-  without sums, does the bank read the same note, since leaving his gold out would be wrong without
-  a trace. The note names no next run, because an avatar whose recompute keeps failing would never
-  bring one.
+  2026-09-04, four figures since 2026-09-10):
+  - `StatHeader` states `Gildenbank`, `Gildenlagerwert`, `Gildenspende` and
+    `Handwerkssubventionen` side by side, so measured gold is never added to modelled material and
+    no figure has to net a donation against a payout to fit one label.
+  - `OptionSwitch` toggles the table's sixth column between `Nach Abzügen`, what the guild credits
+    the member, and `Vor Abzügen`, what he moved before the guild's share is taken off.
+  - The two differ by that row's `donation - craftSubsidy`, give or take a gold, since each is
+    rounded from its exact value.
+  - The table keeps its eight columns and its density either way.
+  - The sixth column keeps **one key** (`figure`), changing only its header and value, because the
+    table remembers a sort by column key and would otherwise throw on a sort the switch renamed
+    away.
+  - `domain/guildPosition.ts` gathers the header's figures from the served numbers and derives only
+    the bank, so the view holds no arithmetic and `ui` stays presentational.
+  - A figure the flows are missing for renders the note from `domain` instead of a number, marked
+    `data-absent`, while the bank still answers because it is measured rather than modelled.
+  - Only while a member is not yet computed, and the totals come without sums, does the bank read
+    the same note, since leaving his gold out would be wrong without a trace.
+  - The note names no next run, because an avatar whose recompute keeps failing would never bring
+    one.
 - **The chosen figure is view state, not address state:** it resets to `Nach Abzügen` on a reload and on
   a route round trip, unlike the ledger's page number, which `route.ts` round-trips on purpose. A
   shared link therefore always opens on `Nach Abzügen`.
@@ -245,12 +260,15 @@ Four top-level folders under `frontend/src/`:
     31.07 to 01.07 and would change the window's length with the reference date.
   - `lastUpdated` is deliberately **not** read for this: it lives on `/api/v1/admin/status`, and the
     members' view does not reach into an operator surface for a presentation question.
-- **The split is client-side and therefore covers only the loaded page.** Both captions state their
-  half against `totalCount` (`Aktiv (30 Tage vor dem letzten Vorgang): 24 von 42 Avataren`), so the
-  two never claim to have sorted the whole guild; today `size` 100 against 42 avatars means one page
-  holds all of them. The active caption names the window's **reference** rather than reading "letzte
-  30 Tage", which a member would take to mean 30 days from today and which is false on exactly the
-  stale data the cut exists for.
+- **The split is client-side and therefore covers only the loaded page.**
+  - Both captions state their half against `totalCount`
+    (`Aktiv (30 Tage vor dem letzten Vorgang): 24 von 42 Avataren`), so the two never claim to have
+    sorted the whole guild.
+  - The overview asks for a page `size` of 100, so one page holds the whole guild while it has at
+    most 100 avatars.
+  - The active caption names the window's **reference** rather than reading "letzte 30 Tage",
+    which a member would take to mean 30 days from today and which is false on exactly the stale
+    data the cut exists for.
 - **Navigation lives in the frame and in the overview's own cells.** `PageFrame` carries
   "Übersicht" plus, on a ledger, that avatar's "Bank" and "Lager". In the overview the avatar cell
   links into the bank, and the two activity cells link into the ledger each of them reports on, so
@@ -399,12 +417,11 @@ service's only read surface.
   skip-when-unchanged (`UP-TO-DATE`/`FROM-CACHE`):
   - `npmBuild` (`vite build` into `frontend/build/dist`); wired into `assemble`.
   - `npmTest` (`vitest run`) and `npmLint` (`eslint` + `prettier --check`); wired into `check`.
-- **`npmTest` never runs while the Java suite runs** (`mustRunAfter(":test")`) and the Vitest worker
-  fan-out is bounded (`test.maxWorkers: 2`). Almost every test file boots its own jsdom, and beside
-  Gradle's parallel `:test` the fork pool starved: whole files never *started* ("Failed to start forks
-  worker", "Timeout waiting for worker to respond") while no single test failed, so `./gradlew build`
-  went red under load and the result XML looked green with a short test count. Standalone the suite
-  never failed, which is why the ordering carries the fix and the bound is only the second net.
+- **`npmTest` never runs while the Java suite runs** (`mustRunAfter(":test")`).
+  - Why: almost every test file boots its own jsdom, and beside Gradle's parallel `:test` the fork
+    pool starves, so whole files never start ("Failed to start forks worker") while no test fails,
+    and the build goes red under load.
+  - The Vitest worker fan-out is bounded too (`test.maxWorkers: 2`), as a second net.
 - **Dev server against a running application:** `npm run dev` serves the SPA on 5173 and proxies
   `/api` to `http://localhost:8080` (`server.proxy` in `vite.config.ts`), so the SPA can be driven
   against real data with hot reload. Deep links work there because Vite answers unknown paths with
@@ -420,13 +437,11 @@ service's only read surface.
     unknown navigation paths (client-side routing).
   - The dashboard URLs (`/overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`) are
     the SPA's client routes.
-- **Docker**: the image build copies `frontend/` and `gradle.properties` and runs
-  `./gradlew clean check installDist` (not `clean test installDist`): `test` matches nothing under
-  `:frontend`, so `check` gates the frontend's tests and lint too. See `build-run-deploy.md`.
+- **Docker**: the image build gates on the frontend's tests and lint too; its build command:
+  [build-run-deploy.md](build-run-deploy.md), "Run via Docker (primary path)".
 - **Vulnerability scanning**:
-  - `:frontend` has its own `vulnScan` Exec task (`trivy fs --scanners vuln --skip-dirs node_modules .`,
-    picking up `package-lock.json`), honoring the same `vulnScan.failOnSeverity` property as root.
-  - The root `vulnScan` `dependsOn` it, so one `./gradlew vulnScan` covers both the JVM (CycloneDX
-    SBOM) and npm dependency graphs.
-  - Like the root task, it is **not** wired into `build`/`check` (on-demand, CI/delivery-gate territory).
+  - `:frontend` has its own `vulnScan` task, which the root `vulnScan` depends on.
+  - Its command, its gating property and why it stays out of `build`/`check`:
+    [build-run-deploy.md](build-run-deploy.md), "Build", the bullet "Dependency vulnerability
+    scan, Trivy (on-demand)".
   - Dependabot also watches `frontend/` (`npm` ecosystem) alongside the root `devcontainers` ecosystem.
