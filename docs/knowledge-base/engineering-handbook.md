@@ -459,11 +459,18 @@ set goes back to the author before that behavior is written.
   - The checkout then returns to `main`.
 - **Deleting project content is the author's act; cleaning up the scaffolding is not.** The rule
   protects the author's ownership of *his* files, and a deletion no rebase undoes.
-  - **The agent never runs `rm`** (deny floor, `rm -rf` included). Anything tracked by git and
-    anything the author wrote is handed over as an exact command for the author to run, or removed
-    by a committed, reviewed build task whose scope lives in code rather than in a permission rule:
-    probes under the gitignored `src/probe/java` go through `./gradlew clearProbes`
-    ([build-run-deploy.md](build-run-deploy.md)).
+  - A file its own strand retires is the one exception, below.
+  - **The agent never runs `rm`** (deny floor, `rm -rf` included).
+    - Outside a strand's own commits, anything tracked by git and anything the author wrote is
+      handed over as an exact command for the author to run.
+    - Or it is removed by a committed, reviewed build task whose scope lives in code rather than in
+      a permission rule.
+    - Probes under the gitignored `src/probe/java` go through `./gradlew clearProbes`
+      ([build-run-deploy.md](build-run-deploy.md)).
+  - **A tracked file its own strand retires, the agent removes with `git rm`** (author decision
+    2026-10-14).
+    - Why: a reviewed commit the author lands.
+    - A file a template upgrade removes stays the author's call (`template-upgrade`).
   - **The development scaffolding is the agent's own, and it cleans it up itself, without asking:**
     the worktrees it created under the worktree root, defined below (`git worktree remove
     [--force]`, `git worktree prune`) and the branches that have landed (`git branch -d`, and its

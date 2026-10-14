@@ -354,6 +354,7 @@ second copy.
 | 2026-10-14 | **`/health` stays open without a token with the bare minimum of payload, and shows more with a valid JWT** (author answer to D-22) → backlog C11 | The deploy script waits on `/health` without a login, and an anonymous caller learns nothing beyond up or down |
 | 2026-10-14 | **What a member does inside the page reaches the usage records through an event endpoint the SPA calls; the guild learns of the records through a banner shown at the first login** (author answers to D-22) → backlog C13 | A server filter sees requests only, not a switched option; the banner tells every member before anything about them is read |
 | 2026-10-14 | **0.5.0 carries the accounts, the user management and the usage records and nothing else for now** (author answer to D-22) → roadmap M17 | More may join once the author thinks of it |
+| 2026-10-14 | **A tracked file its own strand retires, the agent removes with `git rm` in a reviewed commit; `main` stays the author's** (author decision; the strand that writes it down claims handbook §5's `[doc]` exemption) → handbook §7, "Deleting project content is the author's act" | The removal reaches `main` only through the author's review and landing, and on the agent seat no command can be handed over, so the question cost a round on the release comparison against 0.3.0; a file a template upgrade removes stays the author's call. Alternatives offered: ask before every removal; let the agent remove a template upgrade's files too |
 
 ## Recorded mutations (red evidence where a new case could not start red)
 

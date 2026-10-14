@@ -120,7 +120,7 @@
     green one nobody ran. It is task-scoped: a `@Test`-less class beside a discovered sibling still
     passes, and an empty `src/probe/java` leaves the task `NO-SOURCE` for Gradle to skip.
   - `./gradlew clearProbes` deletes `src/probe` with everything in it, so a falsifier agent gets rid
-    of its own probes without ever running `rm` (the deletion rule keeps no exception, handbook §7);
+    of its own probes without ever running `rm` (the `rm` rule keeps no exception, handbook §7);
     nothing under `src/probe/` is reviewed or shipped.
 - **Dependency vulnerability scan, Trivy (on-demand):**
   - `./gradlew vulnScan` generates a CycloneDX SBOM of the resolved dependency graph
