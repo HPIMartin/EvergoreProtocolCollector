@@ -95,7 +95,7 @@ Applies to every `*.md` in the repo (root, `docs/`, `.claude/`). Findings cite r
   - Rejected/deferred items stay, with rationale.
 - **DOC-6 KB-current:** a behavior/config change updates the relevant KB doc in the same change.
   - A doc hunk describing a code change rides **in that commit**, never in a trailing `[doc]`
-    follow-up.
+    follow-up, which cannot stand alone for revert or cherry-pick.
   - A doc claim also lands no earlier than the thing it names.
   - The check is per hunk, in both directions:
     - still true after reverting only the code commit (then misplaced);

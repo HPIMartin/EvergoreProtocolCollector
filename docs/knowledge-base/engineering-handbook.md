@@ -38,10 +38,9 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
   things by what they are or do (domain/capability role).
 - Names never reference backlog/ticket IDs or the producing task: `ProtocolEvaluationAcceptanceTest`,
   not `D2AcceptanceTest`.
-- Durable docs (KB, decisions log, `process-learnings.md`) likewise: identify by
-  symbol/behavior/file/concept, never backlog shortcode (`D5`/`H7`/…); IDs stay in the backlog; a
-  shortcode in prose only as optional pointer to a **still-live** item. Completing an item removes
-  its row **and** every shortcode reference repo-wide (no `git` archaeology to resolve references).
+- Durable docs (KB, decisions log, `process-learnings.md`) follow the same rule for backlog
+  shortcodes: the KB README's DOC checklist holds it (DOC-8) and the removal of every reference
+  when an item completes (DOC-5) ([README.md](README.md), "Doc conventions").
 - Small methods, early returns, no deep nesting; no commented-out code in commits.
 - **Strict data instead of defensive reads (author rule 2026-09-06).** Every database column is
   `NOT NULL`; a value that cannot be absent is declared so at the type, not checked at each read.
@@ -53,14 +52,15 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
 - **No logic in constructors; field assignment only** (no IO, no `init()`-style calls);
   construct + initialize via static **factory method** (`SqliteDatabase.open(...)`, Effective
   Java Item 1) or a lifecycle hook. Constructor logic breaks testability and SRP.
-- **`static` is a smell, mutable static state above all**: hidden cross-instance/cross-test
-  coupling (a `public static int DELAY_IN_SEC` once stomped between two boot-test contexts).
-  Prefer DI, instance state, a proper seam. Boot tests sharing bean-written state use an injected
-  DI-shared recorder: a `@Singleton` bean from a test `@Factory` (not the GoF static-`getInstance`
-  antipattern), never static flags; the `@TestInstance(PER_CLASS)` alternative broke `SmokeTest`,
-  so the recorder is the proven seam (see [testing.md](testing.md), `BootSignalRecorder`).
-  Defensible only as a static initializer for setup that must precede framework boot (e.g.
-  seeding/deleting a test DB), in **test** code; in production, justify hard.
+- **`static` is a smell, mutable static state above all**, since it couples instances and tests
+  through state no signature shows.
+  - Prefer DI, instance state, a proper seam.
+  - Boot tests sharing bean-written state use an injected DI-shared recorder: a `@Singleton` bean
+    from a test `@Factory` (not the GoF static-`getInstance` antipattern), never static flags.
+  - The seam (`BootSignalRecorder`) and why `@TestInstance(PER_CLASS)` is no alternative:
+    [testing.md](testing.md), "Boot-signal seam".
+  - Defensible only as a static initializer for setup that must precede framework boot (e.g.
+    seeding/deleting a test DB), in **test** code; in production, justify hard.
 - **Comments and doc comments are an absolute no-go; make the code say it** (author decision
   2026-08-04). No `//`, no `/* */`, no doc-comment block (Javadoc, JSDoc) on classes, methods,
   records or fields, and none in config or infrastructure. Non-obvious knowledge goes into an
@@ -68,8 +68,8 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
   never into a comment and never into both. Where the *why* is a real constraint, restructure so
   the code carries it rather than annotating it.
   - Reviewers (human or agent) flag **every** comment a diff adds, not only the ones they judge
-    unnecessary: "is this one necessary?" is the judgment call that let ten of them through three
-    review rounds (2026-09-02).
+    unnecessary, since "is this one necessary?" is a judgment call that lets comments through
+    review.
   - It is enforced mechanically, not by memory: `hooks/content-gate` refuses any diff that adds a
     comment line to a listed source extension (`.java`, `.kts`, `.ts` and `.tsx` among them; the
     list is the gate's config block, [`hooks/README.md`](../../hooks/README.md)). **There is no
@@ -83,16 +83,19 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
   (Java/Micronaut/Gradle), dependency lists, file/test counts live in `build.gradle.kts` and the
   code; docs point, never restate (restated facts rot silently). Doc contradicts build ⇒ build
   wins, doc fixed in the same change.
-- **Immutable `record`s over getter/setter boilerplate** for value objects, DTOs, config. DTO
-  public fields are fine (`BankEntry`/`StorageEntry`); record accessors (`config.apiToken()`) are
-  not bean getters. No `getX()`/`setX()` unless a framework strictly requires it (Micronaut binds
-  `@ConfigurationProperties` to a record with no extra annotation). Return `Optional`, not sentinels.
+- **Immutable `record`s over getter/setter boilerplate** for value objects, DTOs, config
+  (`BankEntry`, `StorageEntry`).
+  - DTO public fields are fine.
+  - Record accessors (`config.apiToken()`, `BankEntry.amount()`) are not bean getters.
+  - No `getX()`/`setX()` unless a framework strictly requires it (Micronaut binds
+    `@ConfigurationProperties` to a record with no extra annotation).
+  - Return `Optional`, not sentinels.
 - **`Logger` is the last constructor parameter**: collaborators first, incidental infrastructure last.
 - Constants/config over magic values; **no secrets in source** (token, credentials → config).
-- **Warnings are errors**: `-Xlint:all` + `-Werror` on every `JavaCompile` in `build.gradle.kts`.
-  Fix, don't suppress. Excluded as genuinely obsolete: `-serial` (missing `serialVersionUID`,
-  irrelevant on modern Java), `-processing` (unclaimed Micronaut/JUnit annotations, inherent to the
-  stack). Unsure fix vs. exclude ⇒ ask the author.
+- **Warnings are errors**: fix, don't suppress.
+  - The compiler flags, the two deliberate exclusions and the probe compile's exception:
+    [build-run-deploy.md](build-run-deploy.md), "Build".
+  - Unsure fix vs. exclude ⇒ ask the author.
 
 ## 4. TDD workflow (red → green → refactor → commit)
 
@@ -118,7 +121,9 @@ means, the TDD cycles drive them green, step definitions included.
 - One behavior per test; arrange/act/assert; table-driven where inputs vary (parser, item values).
   When a class's tests repeat the same act, wrap it in a short-named helper (e.g. `snapshot()`) so
   the call itself reads as the Act, not an expression buried inside each assertion.
-- Bug fix ⇒ reproducing test first, then fix (e.g. the double `getAllDifferentAvatars`).
+- Bug fix ⇒ reproducing test first, then fix (e.g. `EvergoreDataEvaluatorTest`'s
+  `resolvesErdeEibenlanzeByItsRealIngameSpelling`, which pins the catalog name the game spells
+  Erde-Eibenlanze).
 - **An existing test adapted to a changed behavior** cannot be seen red first; it pays that debt
   with a **recorded mutation**: mutate the production code so the adapted assertion must fail, run
   only that test class (`./verify focus <path>`), keep the output, revert. The record (what was
@@ -137,11 +142,10 @@ means, the TDD cycles drive them green, step definitions included.
 
 ## 5. BDD (product-owner perspective): mandatory, and gated by the author
 
-**BDD is not optional in this process** (the template's rule, adopted 2026-09-20 in place of the
-earlier documentation-only stance). Work on observable behavior starts with executable Gherkin
-scenarios, the author confirms them, and only then does implementation begin. The scenarios, not
-the plan text, are what "done" means, and they stay in the repository as the executable
-specification.
+**BDD is not optional in this process** (the template's rule). Work on observable behavior starts
+with executable Gherkin scenarios, the author confirms them, and only then does implementation
+begin. The scenarios, not the plan text, are what "done" means, and they stay in the repository as
+the executable specification.
 
 **Status in this project (author decision 2026-09-27): in force for every strand.** Every
 scenario of the catch-up (`/bdd-catch-up`) is armed and run by
@@ -300,10 +304,9 @@ set goes back to the author before that behavior is written.
 
 **Projects that predate their scenarios.** This one does: the `/bdd-catch-up` skill derives the
 missing scenarios from the code, which is the truth for what *is*, while the author decides what
-*should be*; it is the backlog item named under the status above, run one capability per session
-when the author picks it. Derived scenarios carry `@characterization` until the author confirms
-them, and `./verify all` excludes that tag like `@wip`; a rejected one becomes a bug in the backlog
-plus the corrected scenario tagged `@wip`.
+*should be*; it runs one capability per session when the author picks it. Derived scenarios carry
+`@characterization` until the author confirms them, and `./verify all` excludes that tag like
+`@wip`; a rejected one becomes a bug in the backlog plus the corrected scenario tagged `@wip`.
 
 ## 6. Test strategy (pyramid)
 
@@ -341,15 +344,13 @@ plus the corrected scenario tagged `@wip`.
 - **`[doc]` prefix** for pure documentation/process/meta commits (only `docs/`, `.claude/`, or
   top-level `*.md`; no product-code/build change); code & build commits stay bare. `[doc]` is the
   only permitted prefix (keeps `git log` two-tier and scannable).
-- Docs describing a code change ride in that commit, never a standalone `Refresh/Update docs after
-  X` follow-up (can't stand alone for revert/cherry-pick). Before staging a doc hunk, run the
-  **revert check in both directions**: "is this sentence still true after reverting just the code
-  commit?" (if yes, it belongs elsewhere) and "is it true *at* the commit it rides in?" (`git grep
-  <symbol> <sha>` against that commit's own tree, never the working tree, which is the tip and
-  always agrees). Only backlog, roadmap and decision hygiene, and a measurement over the combined
-  effect of several commits, earn a standalone `[doc]` commit, and its message says which it is.
-- **LF line endings** via `.gitattributes` (`* text=auto eol=lf`; binaries marked).
-  Whitespace/format changes in their **own** commit, never mixed with logic.
+- Docs describing a code change ride in that commit, and each doc hunk passes the **revert check in
+  both directions** before it is staged: the KB README's DOC checklist holds both (DOC-6,
+  [README.md](README.md), "Doc conventions").
+  - Only backlog, roadmap and decision hygiene, and a measurement over the combined effect of
+    several commits, earn a standalone `[doc]` commit, and its message says which it is.
+- **LF line endings**: [git-state.md](git-state.md) holds the rule.
+- Whitespace/format changes in their **own** commit, never mixed with logic.
 - One logical change per commit; cohesion test: group parts only if reverting/cherry-picking one
   alone would break the build or leave the tree inconsistent. Keep `main` releasable; local
   `./verify all` green before committing.
@@ -371,7 +372,7 @@ plus the corrected scenario tagged `@wip`.
   their trees unchanged (`git rev-parse <sha>^{tree}` against the walked ones), and a fold that
   touched only docs proves the code tree unchanged instead of re-running (author decision
   2026-09-29).
-  A doc or test reference likewise lands no earlier than its referent.
+  A test reference likewise lands no earlier than its referent.
 - **A strand's shape follows the work, not the plan it started with** (author decision
   2026-08-15). A planned commit count is an estimate: when the work needs more commits, it gets
   them; never inflate one commit to honour the original estimate. Clean code covers the history
@@ -393,40 +394,38 @@ plus the corrected scenario tagged `@wip`.
   - A `git -C …` command matches no `Bash(git <sub>:*)` rule, so always-allow would pin a
     host-path rule per worktree hash. What a `git -C` command meets instead:
     working-with-ai-agents.md, "Permissions & autonomy".
-- **The commit log is the changelog**: no separate `CHANGELOG`, no mirroring history/diffs in docs;
-  `git log` / `git diff` are the source of truth for what changed.
-- **Git enforcement hooks (must be active)**: POSIX-sh hooks in `hooks/`, wired via
-  `git config core.hooksPath hooks` (devcontainer `postCreate` sets it); ensure active in any
-  checkout. `commit-msg` enforces the message rules above; `content-gate` scans the staged content
-  for secrets, personal/host data, per-language smells, **every comment line a diff adds** (§3,
-  no opt-out) and conflict markers a diff adds in any file; `format-gate` runs `./verify format`.
-  Tests and full build are deliberately excluded (keeps the TDD micro-commit loop fast; commits are
-  already green).
-  - **A hook that only prints is not a gate.** **git asks `pre-commit` only for `git commit`**, so
+- **The commit log is the changelog**: [git-state.md](git-state.md) holds the rule.
+- **Git enforcement hooks (must be active)**: the POSIX-sh hooks in `hooks/` gate every commit.
+  - Every checkout keeps them active with `git config core.hooksPath hooks`.
+  - The devcontainer `postCreate` sets it.
+  - Which hook checks and records what: [`hooks/README.md`](../../hooks/README.md).
+  - This project's gate configuration and its self-test legs in `pre-commit`:
+    [build-run-deploy.md](build-run-deploy.md), "Git hooks (local enforcement)".
+  - `commit-msg` enforces the message rules above.
+  - `content-gate` refuses **every comment line a diff adds** to a listed source extension (§3, no
+    opt-out).
+  - `content-gate` refuses the conflict markers a diff adds, in any file.
+  - Tests and full build are deliberately excluded, since they would slow the TDD micro-commit loop
+    and its commits are already green.
+  - **A hook that only prints is not a gate:** **git asks `pre-commit` only for `git commit`**, so
     every commit the sequencer creates (rebase, `cherry-pick`, `revert`) is ungated at the moment it
-    is made; `post-rewrite` and `post-commit` record it afterwards, and a recorded commit blocks
-    every further commit until it is gone. `git am` and a merge commit that break a rule are
-    refused outright, by `pre-applypatch` and `pre-merge-commit`, which run before their commit
-    exists. A `--no-verify`
-    commit is left alone, so the emergency valve stays one.
+    is made.
+  - `post-rewrite` and `post-commit` record such a commit afterwards when it breaks a rule.
+  - A recorded commit blocks every further commit until it is gone.
+  - Mechanics: [`hooks/README.md`](../../hooks/README.md), "The gate, in one paragraph".
   - **A conflict stop is finished by `git rebase --continue`, never by a commit or an amend**, which
-    would fold the conflicted state into the wrong commit; `pre-commit` refuses both there.
+    would fold the conflicted state into the wrong commit.
+    - `pre-commit` refuses both there.
     - An amend at an `edit` stop is the playbook's fold and passes.
     - A commit at a `break` stop passes.
     - A commit after a finished rebase that left its `REBASE_HEAD` behind passes.
   - **Never read a hook's output as the verdict on the commit that follows it;** ask the history.
-    `hooks/self-test` asserts exactly that (resulting history, never printed text). `pre-commit`
-    runs it on every commit that touches `hooks/`, `deploy/self-test` on every commit that touches
-    `deploy/`, `gate/self-test` on every commit that touches `gate/`, `land/self-test` on every
-    commit that touches `land/` or the landing workflow, `agent/self-test` on every commit that
-    touches `agent/`, `release/self-test` on every commit that touches `release/` and
-    `.devcontainer/agent/self-test` on every commit that touches `.devcontainer/agent/`, so no
-    weakened gate, deploy check, dossier check, landing, token minting, release comparison or agent
-    image build can land; it refuses a commit that lets the SHARED sections of `CLAUDE.md` and the
-    agent entry template drift apart.
-  - Safety net, not substitute; `--no-verify` only for genuine emergencies. Mechanics:
-    [`hooks/README.md`](../../hooks/README.md); this project's gate configuration:
-    [build-run-deploy.md](build-run-deploy.md).
+  - `hooks/self-test` asserts exactly that (resulting history, never printed text).
+  - `pre-commit` runs it and each other self-test leg on every commit that touches that leg's
+    directory, so no weakened gate can land.
+  - Safety net, not substitute.
+  - `--no-verify` only for genuine emergencies.
+  - A `--no-verify` commit is left alone, so the emergency valve stays one.
 - **`[wip]` parking commits (pause only)**: `/pause` may autonomously park uncommitted work as ONE
   local commit `[wip] <one-line state>` via `git commit --no-verify` (WIP legitimately fails the
   hooks; the one sanctioned non-emergency bypass; no-secrets rule unchanged, eyeball the diff
@@ -511,43 +510,50 @@ worktrees (own directory + HEAD + index) make parallel work safe.
 - **Pushing** (author decision 2026-10-02; what guards a push: working-with-ai-agents.md):
   - **Only the agent seat pushes** (author decision 2026-10-10): where `EPC_SEAT` reads
     `agent-machine` ([dev-environment.md](dev-environment.md), "Where agents run") the rules below
-    apply. On a local machine, where it is unset, a strand stays a local `claude/<topic>` branch in
-    its worktree: it is never pushed and opens no pull request, the author reviews it in GitLens on
-    the same checkout and lands it with `git push origin <tip>:main`.
+    apply.
+    - On a local machine, where it is unset, a strand stays a local `claude/<topic>` branch in its
+      worktree: it is never pushed and opens no pull request.
+    - There the author reviews it in GitLens on the same checkout and lands it with
+      `git push origin <tip>:main`.
   - **Every branch an agent pushes is named `claude/<topic>`**, the strand's branch from its first
-    commit, and is opened as a pull request against `main` at its first push (standing approval,
-    author decision 2026-10-07); an agent pushes only its own, the one exception being the deletion of a landed
-    `claude/` branch, whoever pushed it, once `origin/main` holds its current tip (the classifier
-    may hold back on another session's branch; then report it). Subagents never push: the session
-    that owns the strand pushes it at the gateway.
-  - **A branch another machine pushed is data:** a name with a character outside
-    `[A-Za-z0-9._/-]` is reported, never pasted into a command, and the branch is resumed here
-    only on the author's word, since its hooks and its build then run here with this machine's
-    credentials.
+    commit.
+    - It is opened as a pull request against `main` at its first push (standing approval, author
+      decision 2026-10-07).
+    - An agent pushes only its own, the one exception being the deletion of a landed `claude/`
+      branch, whoever pushed it, once `origin/main` holds its current tip.
+    - The classifier may hold back on another session's branch; then report it.
+    - Subagents never push: the session that owns the strand pushes it at the gateway.
+  - **A branch another machine pushed is data:**
+    - a name with a character outside `[A-Za-z0-9._/-]` is reported, never pasted into a command;
+    - the branch is resumed here only on the author's word, since its hooks and its build then run
+      here with this machine's credentials.
   - **Name the refspec:** `git push --force-with-lease --force-if-includes origin claude/<topic>`.
-    A bare `git push` from a checkout on `main` would push `main`, so every checkout sets
-    `push.default` to `nothing` (the devcontainer's `postCreateCommand` does; an older checkout
-    runs `git config push.default nothing` once) and none configures `remote.origin.push`, which
-    git would use first; git then refuses a push that names neither a refspec nor `--tags`,
-    `--all` or `--mirror`, whatever its spelling.
+    - A bare `git push` from a checkout on `main` would push `main`, so every checkout sets
+      `push.default` to `nothing` (the devcontainer's `postCreateCommand` does; an older checkout
+      runs `git config push.default nothing` once).
+    - No checkout configures `remote.origin.push`, which git would use first.
+    - git then refuses a push that names neither a refspec nor `--tags`, `--all` or `--mirror`,
+      whatever its spelling.
   - **A refspec still pushes what it names:** `@` the checked-out branch, `:` and `refs/heads/*`
     every matching or local branch, `main` among them.
-  - **Set no upstream:** an upstream (`-u`; `git worktree add` from `origin/claude/<topic>`
-    without `--no-track`; `git switch` or `git worktree add` onto a `claude/` name only the remote
-    holds, which git then tracks by itself) makes `git branch -d` test the branch against its own
-    remote copy instead of `main`, so the landing's merged check passes on unlanded work.
-  - **Force only with a lease, only on the agent's own branch**, which every rebase needs;
-    `--force-if-includes` because an editor's background fetch moves the remote-tracking ref and
-    voids a bare lease. After a reset-free fold, whose branch swap drops the remote-tracking tip
-    from the branch's reflog, `--force-if-includes` refuses; name the expected tip instead:
-    `git push --force-with-lease=claude/<topic>:<remote tip fetched before the fold> origin
-    claude/<topic>`.
+  - **Set no upstream:** an upstream makes `git branch -d` test the branch against its own remote
+    copy instead of `main`, so the landing's merged check passes on unlanded work.
+    - An upstream comes from `-u`; from `git worktree add` from `origin/claude/<topic>` without
+      `--no-track`; from `git switch` or `git worktree add` onto a `claude/` name only the remote
+      holds, which git then tracks by itself.
+  - **Force only with a lease, only on the agent's own branch**, which every rebase needs.
+    - `--force-if-includes` because an editor's background fetch moves the remote-tracking ref and
+      voids a bare lease.
+    - After a reset-free fold, whose branch swap drops the remote-tracking tip from the branch's
+      reflog, `--force-if-includes` refuses; name the expected tip instead:
+      `git push --force-with-lease=claude/<topic>:<remote tip fetched before the fold> origin
+      claude/<topic>`.
   - **A `[wip]` commit is never pushed:** no push from a tip whose `main..` range holds a `[wip]`
     subject.
   - **`main` is the author's, tags too:** no agent moves either in any form (a push, a merged pull
-    request, an API call, a `/land` comment); a strand reaches `main` only by the author's landing
-    of the reviewed tip (the gateway below; [git-state.md](git-state.md) names the ruleset on it
-    and its bypass).
+    request, an API call, a `/land` comment).
+    - A strand reaches `main` only by the author's landing of the reviewed tip (the gateway below;
+      [git-state.md](git-state.md) names the ruleset on it and its bypass).
 - **On the branch**: the implementer runs the full TDD loop and commits each red→green→refactor
   step itself, protocol-conform messages, no per-commit pre-approval.
 - **The review gateway (per feature, serialized):**
@@ -619,7 +625,8 @@ worktrees (own directory + HEAD + index) make parallel work safe.
   `.claude/settings.json`): session history is filed per working directory, so a relocated session
   drops out of the primary checkout's resume list and is unreachable from the editor window that
   opened it. Sessions stay in the primary checkout and reach the worktree by absolute path, the
-  discipline the cwd-drift gotcha (backlog) already demands.
+  discipline the bullet "The shell's working directory drifts between worktrees" already demands
+  ([multi-agent-playbook.md](multi-agent-playbook.md), "Environment gotchas").
 
 ## 8. Definition of Done (checklist)
 

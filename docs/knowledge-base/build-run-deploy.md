@@ -28,8 +28,9 @@
 - **Wrapper integrity:** `gradle-wrapper.properties` carries `distributionSha256Sum` next to
   `distributionUrl`; the wrapper aborts if the downloaded distribution does not match. Bump both
   together on a Gradle upgrade.
-- **Warnings are errors:** every `JavaCompile` runs `-Xlint:all` + `-Werror`, so any compiler/lint
-  warning fails the build. Excluded deliberately: `-serial` (obsolete `serialVersionUID` ceremony)
+- **Warnings are errors:** every `JavaCompile` runs `-Xlint:all` and `-Werror`, except the throwaway
+  probes' compile (below), so any compiler/lint warning fails the build. Excluded deliberately:
+  `-serial` (obsolete `serialVersionUID` ceremony)
   and `-processing` (Micronaut/ORMLite/JUnit/ArchUnit annotations no processor claims, inherent to
   the stack, not our code). The code is otherwise warning-clean.
 - **Java 25 native access:** Netty calls restricted `System::loadLibrary`, which the JVM warns
