@@ -246,9 +246,8 @@ command) inside guardrails. Two files:
   (`permissions.defaultMode: "auto"` in `~/.claude/settings.json`) or per session
   (`--permission-mode auto`), never from a project's own `settings.json`. Re-read that page when the
   harness changes; these statements are only as current as it. Under that assumption most
-  convenience allows are dead weight, and a long list is a long list to audit. A project's own
-  allows stay in force only once trusted ("Which rule applies", above). The keep-or-cut rule: **an
-  allow rule stays when it admits the narrow form of a command a deny pattern guards** (the
+  convenience allows are dead weight, and a long list is a long list to audit. The keep-or-cut rule:
+  **an allow rule stays when it admits the narrow form of a command a deny pattern guards** (the
   project-anchored `cd` beside the `cd` escape denies; an allow that an `ask` or `deny` also matches
   in full never fires, "Which rule applies" above) **or when it names the project's own loop**
   (`./verify`, `sh hooks/*`, `sh deploy/*`, `./gradlew`, the npm and Vitest commands, `sqlite3`, and
