@@ -181,9 +181,9 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   of a tested core.
 - **Creative:** weekly guild report / delivery channel (F3).
 
-## Parked — explicitly not in this stage (decision 2026-09-04)
+## Parked: explicitly not in this stage (decision 2026-09-04)
 
 Kept in the backlog with their rationale, not deleted; revisit only on a new reason.
 
-- **G6** static-analysis / Sonar gate — waits on a condition that is not arriving.
+- **G6** static-analysis / Sonar gate: waits on a condition that is not arriving.
 - **F4** multi-guild / multi-world: speculative, since there is one guild and no second consumer.

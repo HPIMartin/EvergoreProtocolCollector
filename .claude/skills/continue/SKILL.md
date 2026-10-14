@@ -4,7 +4,7 @@ argument-hint: [optional: a specific focus, e.g. a backlog item or "finish the s
 ---
 
 You are resuming work on the Evergore Protocol Collector in a fresh context. Do NOT assume any prior
-chat memory — reconstruct the current state from the repo and git. CLAUDE.md is auto-loaded every
+chat memory: reconstruct the current state from the repo and git. CLAUDE.md is auto-loaded every
 session; its rules and KB pointers apply without re-reading it here.
 
 1. Sync, then orient (read, don't blindly re-scan the codebase):
@@ -15,12 +15,12 @@ session; its rules and KB pointers apply without re-reading it here.
      `hooks` and `git config --get remote.origin.push` prints nothing; else set the first two
      once (build-run-deploy.md, "Git hooks") and report the third.
    - `docs/knowledge-base/README.md` (plus the specific KB doc for whatever you'll touch)
-   - `docs/backlog.md` — especially the "▶ Current status / next action" section
+   - `docs/backlog.md`, especially the "▶ Current status / next action" section
    - `docs/open-questions.md` (decisions + open questions) and `docs/process-learnings.md`
 
 2. Determine the ACTUAL state from git, not just the docs (the tree may have moved on):
    - `git status` and `git log --oneline -15` (if Bash stdout isn't surfaced, redirect to a file and Read it).
-   - `git worktree list` — a pause may have left in-flight strands in worktrees (see the backlog's
+   - `git worktree list`: a pause may have left in-flight strands in worktrees (see the backlog's
      per-strand notes); drive such a strand **by absolute path** from this checkout, never by
      relocating the session or by a relative path (handbook §7). A worktree whose branch is already
      merged is stale: clean it up (`git worktree remove` + `git branch -d`) before resuming.
@@ -49,7 +49,7 @@ session; its rules and KB pointers apply without re-reading it here.
    - On the agent seat (`EPC_SEAT` reads `agent-machine`), list every backlog row marked
      `(seat: agent)` in the status summary as a strand this seat can pick up from `main`.
 
-4. Work to the project standards — they live in the KB, not here: **BDD first, then TDD** → handbook
+4. Work to the project standards, which live in the KB, not here: **BDD first, then TDD** → handbook
    §5/§4 (a feature with observable behavior needs its author-confirmed `.feature`, committed `@wip`,
    before any production code; check whether the parked work already has one and whether its
    scenarios are still `@wip` or already armed, `./verify bdd` tells); clean code, hexagonal,
@@ -60,6 +60,6 @@ session; its rules and KB pointers apply without re-reading it here.
 Optional focus from the author: $ARGUMENTS
 
 First, reply with a 3–5 line status summary (where we are; what's committed vs in progress). Then:
-if the focus above or the backlog's "▶ next action" is precise and unambiguous, start right away —
-the author approved it when it was written down. Only when it is ambiguous, stale, or an author-level
+if the focus above or the backlog's "▶ next action" is precise and unambiguous, start right away,
+since the author approved it when it was written down. Only when it is ambiguous, stale, or an author-level
 decision, propose the next step as multiple-choice options and wait for the go.

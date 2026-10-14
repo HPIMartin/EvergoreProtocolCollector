@@ -17,7 +17,7 @@
   `build/install/protocolParser/bin/protocolParser` + `lib/`), not a fat jar.
 - **Build performance (`gradle.properties`):** `org.gradle.caching` and `org.gradle.parallel` are on,
   with `org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=768m` for the daemon that parallel execution
-  needs. The local build cache (`~/.gradle/caches/build-cache-1`) is **shared by every worktree** —
+  needs. The local build cache (`~/.gradle/caches/build-cache-1`) is **shared by every worktree**:
   both compute the same cache key, so entries are portable, not path-bound. Verified 2026-08-01: a
   fresh worktree at an already-built commit builds green in **11s** with `compileJava`,
   `checkstyle*`, `spotless*`, the `:frontend` tasks, `test` and `jacocoTestReport` all `FROM-CACHE`.
@@ -328,7 +328,7 @@ any push.
     and all dependencies again (measured: ~4 min for the Gradle leg alone). The wrapper makes
     exactly **one** download attempt with a 10 s read timeout, so a slow network fails the build
     with `Downloading …/gradle-9.5.1-bin.zip failed: timeout (10000ms)` / `Attempt 1/1 failed`.
-    That is transient — repeat the build.
+    That is transient: repeat the build.
   - *runtime stage* `selenium/standalone-firefox:109.0` (Firefox + geckodriver for the `DOCKER`
     browser mode) with the **JDK 25 copied from the build stage** (Ubuntu base has no
     openjdk-25), the distribution copied to `/opt/protocolParser`,
@@ -341,7 +341,7 @@ any push.
   -v "<host>/database:/database"`. The container serves on **8080** and persists SQLite to a
   mounted host `database/` dir. Being gitignored, it cannot carry the tagging rules: the image tag
   and the OCI labels it has to pass are specified in "Versioning & release tags" below.
-- *Note:* the production image **can** be built from inside the devcontainer — the
+- *Note:* the production image **can** be built from inside the devcontainer: the
   `docker-outside-of-docker` feature puts a `docker` CLI on the host daemon. When a
   `.devcontainer/` change takes effect: [dev-environment.md](dev-environment.md), "The devcontainer
   (`.devcontainer/`)". The new-stack **app behaviour is verified 1:1** by the scripted
@@ -387,7 +387,7 @@ any push.
   The version commit may sit far behind and carry none of it. Tagging it instead would name a stand
   nobody built or ran (the `0.1.0` case: the version commit's image build was broken and its
   credential handling superseded).
-- **Consequence — a build off an untagged `main` commit is not identified by its version alone**
+- **Consequence: a build off an untagged `main` commit is not identified by its version alone**
   (between releases `version` still names the release being prepared). Such a build is tagged
   `evergore-protocol-collector:<version>-<short sha>`; a **bare**
   `evergore-protocol-collector:<version>` tag is reserved for the tagged release commit, so it
@@ -412,7 +412,7 @@ any push.
 
   The labels answer "which stand runs" even for an interim image, where the tag alone cannot. The
   base image contributes an empty `authors` label of its own; ignore it.
-- **Never delete the previous release's image** on the home server — it *is* the rollback target.
+- **Never delete the previous release's image** on the home server: it *is* the rollback target.
   `docker image prune -a` and `docker rmi` on the old tag remove the ability to roll back.
 
 ## Which stand is running?
@@ -431,14 +431,14 @@ docker images evergore-protocol-collector    # which tags are available to roll 
 - **`--type container` is not decoration.** `docker inspect` resolves a name against containers
   **first and images second**, and the home server has an *image* named after the service too. So a
   typo'd or renamed container does not fail: the command answers about the image and looks like a
-  valid reply. The tells are an **empty** `.Config.Image` and an `.Id` carrying a `sha256:` prefix —
-  a container's `.Id` is bare hex. Cost a snapshot in the `0.1.0` deploy: the `stop` that should have
+  valid reply. The tells are an **empty** `.Config.Image` and an `.Id` carrying a `sha256:` prefix
+  (a container's `.Id` is bare hex). Cost a snapshot in the `0.1.0` deploy: the `stop` that should have
   preceded it failed with `No such container` while the inspect before it had "answered".
 - `.Config.Image` is the reference the container was **started with** (a name, possibly untagged);
   `.Image` is the resolved image **ID**. Read the first to learn what it claims to run, the second
   when you need something `docker tag` can take.
 - The `revision` label is the authoritative answer: it is a commit sha and survives any tag
-  confusion. An image built before the labels existed reports empty labels — that alone dates it as
+  confusion. An image built before the labels existed reports empty labels; that alone dates it as
   pre-`0.1.0`.
 - On a host where the invoking user is not in the `docker` group, every command in this file needs
   `sudo`. Being in the group is not enough on its own: the user's Docker CLI context can point at
@@ -567,7 +567,7 @@ touched):
   - So neither the `/run/desktop/mnt/host` path nor the `host.docker.internal` rewrite applies
     there, and the shim only drops the target.
 
-Runs against the Docker host daemon — from a host shell or from the devcontainer, whose `docker`
+Runs against the Docker host daemon, from a host shell or from the devcontainer, whose `docker`
 CLI targets that same daemon; on the agent seat against its own daemon (above). Steps 1–3 must be done **before** the running container is replaced.
 
 1. **Back up the live database first.** Evergore serves only the last 30 days of logs, so
@@ -590,7 +590,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      matters for a restore that has to create the file.
 2. **Secure the rollback target:** confirm the currently running image carries a tag you can start
    again (`docker inspect --type container -f '{{.Config.Image}}' epc`). If it is untagged,
-   `<none>`, or a tag the next build overwrites, tag it now — the tag goes into the **repository the
+   `<none>`, or a tag the next build overwrites, tag it now; the tag goes into the **repository the
    image already has**, not the one the next release uses:
 
    ```sh
@@ -600,7 +600,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    An image the build orphans is still startable by id, but nothing left on the host says what it
    was. **This is the situation at the `0.1.0` release**, whose predecessor was built before the
    tagging scheme existed: it runs as the bare, untagged `evergore_protocol_collector`
-   (**underscores** — the pre-`0.1.0` name), so its rollback tag is
+   (**underscores**, the pre-`0.1.0` name), so its rollback tag is
    `evergore_protocol_collector:pre-0.1.0` while the release image is
    `evergore-protocol-collector:0.1.0`. The two names sit in different repositories, which is what
    keeps the new build from overwriting the rollback target.
@@ -611,7 +611,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    - That tag, `<repository>:pre-<version>`, is one the build never writes.
    - A running image behind a registry port (`host:5000/<repository>:<tag>`) keeps the port in its
      rollback tag.
-3. **Check the mount before starting anything** — both failures below are silent, and both leave a
+3. **Check the mount before starting anything:** both failures below are silent, and both leave a
    *running, healthy-looking* container serving wrong data:
 
    ```sh
@@ -626,7 +626,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      cannot write and SQLite fails; fix the mode on the host (`chmod 777 database`,
      `chmod 666 database/temp.sqlite`) rather than starting the app to find out.
    - **The redirection is `>>`, never `>`.** Both prove the same write permission, but `: >` opens
-     the file with `O_TRUNC` and empties the live database **while printing `FILE-OK`** — the check
+     the file with `O_TRUNC` and empties the live database **while printing `FILE-OK`**: the check
      would destroy exactly what it is run to protect, and the printed line would report success.
      Measured 2026-08-16 (23 bytes → 0); the version of this step carrying `>` was never run against
      a populated database. `: >>` opens for append and writes nothing: size and mtime stay put.
@@ -678,7 +678,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    - **The published port is the target machine's choice, and it is not `8080` here.** The home
      server maps **`-p 80:8080`** (the container always serves on 8080 inside), and the router
      forwards the external port onto that 80. Read it off the running container **before** replacing
-     it — `docker inspect --type container -f '{{json .HostConfig.PortBindings}}' epc` — because a
+     it (`docker inspect --type container -f '{{json .HostConfig.PortBindings}}' epc`), because a
      wrong host port yields a healthy container that every existing URL misses. The same inspection
      answers the **restart policy** (`{{.HostConfig.RestartPolicy.Name}}`), which this command does
      not set: the home server runs with **`unless-stopped`** (read off the container 2026-09-21),
@@ -687,7 +687,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    - **Timeline** (measured 2026-08-16 on both machines): the server answers after ~1 s, the first
      collection starts 30 s after startup (`getCollectorInitialDelaySeconds`), and extraction plus
      evaluation together took **16 s** on the work machine and **42 s** on the home server. So
-     `/health` turned `UP` **46 s** and **71 s** after container start — the older "~2.5 minutes"
+     `/health` turned `UP` **46 s** and **71 s** after container start. The older "~2.5 minutes"
      is a conservative upper bound, not the expected value. `UNKNOWN` before that is the documented
      state, not a failure; past ~3 minutes, read the log instead of waiting.
    - **Timeline with the `V2` rebuild** (measured 2026-09-21 on the work machine, Docker Desktop,
@@ -707,7 +707,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      `status` of its own, and several read `UP` while the service itself is still `UNKNOWN`. The
      script reads the **first**, top-level status only; a check that greps the whole body passes on
      a service that has not run once.
-6. **Verify**, in order — `<token>` is the same value passed in step 5:
+6. **Verify**, in order (`<token>` is the same value passed in step 5):
 
    ```sh
    curl -s -o /dev/null -w '%{http_code}\n' http://<host>/health          # 200
@@ -742,7 +742,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    - **Rate limit:** 30 requests per 10 s per client IP, then a 1-minute block. Nothing is exempt,
      so the four checks above cost **four** counted requests and fit in one window. A renewed burst
      while blocked pushes the block out again, so back off after a 429 instead of retrying.
-7. **Rollback** — the previous release's tag (`docker images evergore-protocol-collector` lists the
+7. **Rollback:** the previous release's tag (`docker images evergore-protocol-collector` lists the
    candidates; the pre-`0.1.0` predecessor lists under `evergore_protocol_collector`, see step 2):
 
    ```sh
@@ -776,7 +776,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      `<database>.superseded-<yyyymmddHHMMSS>` first. Those rows are in no backup, and a rollback
      decided in a hurry is exactly when they get lost.
    - `cp` onto an existing `temp.sqlite` keeps that file's mode, but a `cp` that *creates* the file
-     takes the backup's mode, which can be non-writable for uid 1200 again — re-run the step 3 check
+     takes the backup's mode, which can be non-writable for uid 1200 again; re-run the step 3 check
      after restoring.
    - The restored state is only observable in the **first 30 seconds**: the collection then runs
      again and writes the restored database forward. Verify `/api/v1/admin/status`'s `lastUpdated`
@@ -1009,8 +1009,8 @@ answered (measured on Micronaut 4.10.9).
 
 - **No real CI.** The one workflow, `.github/workflows/land.yml`, lands pull requests ("The landing
   workflow" above) and builds nothing. `.github/` also has `dependabot.yml` (`devcontainers`
-  ecosystem for the root, `docker` for `/.devcontainer` — the features lock does not cover the
-  base image — and `npm` for `/frontend`, all weekly) and
+  ecosystem for the root, `docker` for `/.devcontainer` (the features lock does not cover the
+  base image) and `npm` for `/frontend`, all weekly) and
   `.github/rulesets/`, a reconstruction of the three live rulesets ([git-state.md](git-state.md),
   "What GitHub enforces").
 - `.devcontainer/`: Java dev container (digest-pinned bookworm base + apt tools, `java` feature with
