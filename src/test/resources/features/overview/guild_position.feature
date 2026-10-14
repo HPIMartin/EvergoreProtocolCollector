@@ -1,7 +1,9 @@
 Feature: The guild's position
   Above the member table the overview states where the guild stands, in four figures kept side by
-  side so that the header does not add measured gold to modelled goods: the gold in the guild bank
-  ("Gildenbank"), the value of the goods in the guild storage ("Gildenlagerwert"), what members
+  side so that the header does not add gold, counted at face value, to goods valued at the guild's
+  price: the gold paid into the guild bank less the gold taken out since the first protocol
+  ("Gildenbank"), the goods deposited into the guild storage less those withdrawn since then, at the
+  guild's price ("Gildenlagerwert"), neither of them a counted balance, what members
   deposited that the guild credited below its own price ("Gildenspende"), and what the guild
   credited above its own price when members deposited goods bought at the market stall, or
   ammunition the market stall sells ("Handwerkssubventionen"). The guild's own price for goods
@@ -58,10 +60,11 @@ Feature: The guild's position
         | reloads the overview                                      |
         | follows "Übersicht" back from the bank ledger of "Aurora" |
 
-  Rule: While a member's figures are not computed yet, the figures that need them say so
+  Rule: While a member's figures are not computed yet, the guild's position says so, and "Vor Abzügen" gives no reason of its own
     Boreas's movement was collected after the last recompute, which therefore never reached him.
-    His own row, its dashes and marks, and the guild row's mark stand under the rule "A member no
-    run has computed yet is shown as not yet computed".
+    His row's mark, the guild row's mark and the dashes in his row while the last column reads "Nach
+    Abzügen" stand under the rule "A member no run has computed yet is shown as not yet computed";
+    what the switched last column shows, and that both marks stay after the switch, stands here.
 
     Background:
       Given the guild bank ledger also holds:
@@ -74,8 +77,28 @@ Feature: The guild's position
         | Gildenbank            | Gildenlagerwert       | Gildenspende          | Handwerkssubventionen |
         | Noch nicht berechnet. | Noch nicht berechnet. | Noch nicht berechnet. | Noch nicht berechnet. |
 
-    Scenario: Before the guild's share is known, "Vor Abzügen" says why it has no figure
+    @wip
+    Scenario: A row not yet computed, and the guild row holding it, show a dash under "Vor Abzügen" and keep their marks as the only reason
+      A note naming "Gildenspende" and "Handwerkssubventionen" as not yet computed would blame two
+      figures while the whole row is not computed. A mark is the "!" a row carries, which shows its
+      text when the member points at it; a note would be such a "!" in the cell itself. Boreas's row
+      is marked "Noch nicht berechnet." and the guild row "Enthält mindestens eine Zeile, die noch
+      nicht berechnet ist."; those marks give the reason. No note means the cell holds the dash and
+      nothing else, neither written beside it nor shown when the member points at the cell; the
+      marks stay while the last column reads "Vor Abzügen", and a computed row keeps its figure.
+      Aurora's 1.930 is her 1.300 in gold plus 990 in goods at the guild's price less the 360 she
+      withdrew; Boreas's deposit does not change it.
+
       Given a member has opened the overview
       When the member switches the last column to "Vor Abzügen"
-      Then Boreas's "Vor Abzügen" shows no figure, noted "Kein Saldo: für diese Zeile sind Gildenspende und Handwerkssubventionen noch nicht berechnet."
-      And the guild row's "Vor Abzügen" shows no figure, noted "Kein Saldo: für diese Zeile sind Gildenspende und Handwerkssubventionen noch nicht berechnet."
+      Then the overview shows:
+        | Avatar | Vor Abzügen |
+        | Aurora | 1.930       |
+        | Boreas | –           |
+      And the guild row shows:
+        | Avatar | Vor Abzügen |
+        | Gilde  | –           |
+      And Boreas's "Vor Abzügen" carries no note
+      And the guild row's "Vor Abzügen" carries no note
+      And Boreas's row is marked "Noch nicht berechnet."
+      And the guild row is marked "Enthält mindestens eine Zeile, die noch nicht berechnet ist."

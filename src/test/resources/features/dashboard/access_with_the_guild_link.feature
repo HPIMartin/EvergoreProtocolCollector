@@ -2,8 +2,10 @@ Feature: Access with the guild's link
   The guild's figures are for its members only. The guild hands out one link that carries the
   guild's token; whoever opens that link sees the dashboard, and every link the dashboard shows
   opens its page for them as well. Without the token the figures stay closed: the start page says
-  what is missing, and any other page of the dashboard shows nothing at all. The admin page opens
-  without the token, for now (see "The admin page: how the daily collection is going").
+  what is missing, and any other page of the dashboard shows nothing at all. The explanation page
+  shows none of the guild's figures but stays closed as well: the valuation rules it explains are
+  meant for the members. The admin page opens without the token, for now (see "The admin page: how
+  the daily collection is going").
 
   Scenario: The guild's link opens the overview
     Given the guild bank ledger holds:
@@ -35,6 +37,11 @@ Feature: Access with the guild's link
       | the storage ledger of "Aurora"     | with a wrong token |
       | a page the dashboard does not have | without the token  |
 
+    @wip
+    Examples:
+      | page                 | how               |
+      | the explanation page | without the token |
+
   Scenario Outline: Every link on <page> opens its page
     Aurora's bank ledger is long enough to offer "Weiter".
 
@@ -47,3 +54,8 @@ Feature: Access with the guild's link
       | page                        |
       | the overview                |
       | the bank ledger of "Aurora" |
+
+    @wip
+    Examples:
+      | page                 |
+      | the explanation page |

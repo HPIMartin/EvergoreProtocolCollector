@@ -1,8 +1,10 @@
 Feature: Finding one's way through the dashboard
-  The dashboard has the overview and, for every member, a bank ledger and a storage ledger. Every
-  page can be bookmarked, and the overview links from a member's name and last-activity dates to the
-  ledgers behind them. No page of the dashboard links to the admin page; the admin opens it
-  directly.
+  The dashboard has the overview, a page explaining its figures and, for every member, a bank ledger
+  and a storage ledger. Every page carries a frame, the bar of links at its top; a page's own
+  content can hold further links. Every page can be bookmarked. The overview's content links, under
+  the guild's four figures, to the explanation page, and from a member's name and last-activity
+  dates to the ledgers behind them. No page of the dashboard links to the admin page; the admin
+  opens it directly.
 
   Background:
     Given the guild bank ledger holds:
@@ -19,6 +21,12 @@ Feature: Finding one's way through the dashboard
     When a member opens a bookmark of the overview
     Then the page is headed "Übersicht"
 
+  @wip
+  Scenario: The overview leads to the explanation of its figures
+    Given a member has opened the overview
+    When the member follows "Wie entstehen diese Zahlen?"
+    Then the page is headed "So entstehen eure Zahlen"
+
   Scenario: The frame of a ledger links to the overview and to both of that member's ledgers
     When a member opens the storage ledger of "Aurora"
     Then the page's frame offers exactly the links:
@@ -26,12 +34,6 @@ Feature: Finding one's way through the dashboard
       | Übersicht | the overview                   | no                |
       | Bank      | the bank ledger of "Aurora"    | no                |
       | Lager     | the storage ledger of "Aurora" | yes               |
-
-  Scenario: The frame of the overview links only to the overview
-    When a member opens the overview
-    Then the page's frame offers exactly the links:
-      | link      | leads to     | marked as current |
-      | Übersicht | the overview | yes               |
 
   Scenario: A member's last-activity dates lead to the ledgers behind them
     When a member opens the overview
@@ -58,12 +60,31 @@ Feature: Finding one's way through the dashboard
     When a member opens a link to a page the dashboard does not have
     Then the page says there is no view for that link
 
-  Scenario: The overview does not link to the admin page
-    When a member opens the overview
+  Scenario Outline: <page> does not link to the admin page
+    When a member opens <page>
     Then no link on the page leads to the admin page
 
-  Scenario: The admin page links back to the overview only
-    When the admin opens the admin page
+    Examples:
+      | page         |
+      | the overview |
+
+    @wip
+    Examples:
+      | page                 |
+      | the explanation page |
+
+  Scenario Outline: The frame of <page> offers the overview as its only link
+    When <reading>
     Then the page's frame offers exactly the links:
       | link      | leads to     | marked as current |
-      | Übersicht | the overview | no                |
+      | Übersicht | the overview | <current>         |
+
+    Examples:
+      | page           | reading                        | current |
+      | the overview   | a member opens the overview    | yes     |
+      | the admin page | the admin opens the admin page | no      |
+
+    @wip
+    Examples:
+      | page                 | reading                             | current |
+      | the explanation page | a member opens the explanation page | no      |

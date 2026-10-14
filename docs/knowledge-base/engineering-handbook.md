@@ -247,7 +247,9 @@ every scenario without asking a developer:
 without arithmetic, because the value itself tells its role; the scenario gate checks each rule on
 the scenario text alone.
 
-- **TIME-1 One year:** every date is in 2026.
+- **TIME-1 One year:** every date is in 2026. A date the product shows as fixed text, such as the
+  first protocol's date on the explanation page, is quoted as it stands and is no moment of the
+  scenario.
 - **TIME-2 One month:** dates fall in January, from 01.01. on, in the order things happen. Three
   exceptions, each only where the claim needs it: the newest movement moves to 15.02. when
   something must lie clearly outside a 30-day window, 15.07. stands for summer time, and 31.12.

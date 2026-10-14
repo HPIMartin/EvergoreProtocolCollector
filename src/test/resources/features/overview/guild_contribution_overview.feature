@@ -69,7 +69,8 @@ Feature: Guild contribution overview
       | Gilde  | 101             |
 
   Scenario: When the figures cannot be loaded, the overview says so in plain German
-    The overview stands for every page of the dashboard, which all show a failure the same way.
+    The overview stands for every page of the dashboard that loads figures, which all show a
+    failure the same way.
 
     Given the figures cannot be loaded
     When a member opens the overview
