@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.application.EvaluationResult;
+import dev.schoenberg.evergore.protocolParser.application.EvaluationResultFixture;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
@@ -170,7 +171,7 @@ class EvergoreDataCollectorJobTest {
 			if (failOnEvaluate) {
 				throw new RuntimeException("evaluateData failed");
 			}
-			return new EvaluationResult(unknownItems, zeroValuedItems, List.of(), List.of(), List.of());
+			return new EvaluationResultFixture().unknownItemNames(unknownItems).zeroValuedItemNames(zeroValuedItems).build();
 		}
 	}
 }

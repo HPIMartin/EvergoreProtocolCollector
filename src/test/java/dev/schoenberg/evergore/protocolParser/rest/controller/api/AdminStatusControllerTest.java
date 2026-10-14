@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import dev.schoenberg.evergore.protocolParser.application.EvaluationResult;
+import dev.schoenberg.evergore.protocolParser.application.EvaluationResultFixture;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
@@ -31,7 +31,7 @@ class AdminStatusControllerTest {
 
 	@Test
 	void listsUnknownItemsAndUnrefreshedMembersInGermanOrderEachNameOnce() {
-		record(List.of("Zunder", "Äxtchen", "Zunder"), List.of("Zeder", "Ähre", "Zeder"), List.of(), List.of());
+		record(new EvaluationResultFixture().unknownItemNames(List.of("Zunder", "Äxtchen", "Zunder")).failedAvatarNames(List.of("Zeder", "Ähre", "Zeder")));
 
 		AdminStatus status = tested.status();
 
@@ -41,8 +41,10 @@ class AdminStatusControllerTest {
 
 	@Test
 	void listsRoundTripsAndAbstentionsByAvatarInGermanOrderThenByItem() {
-		record(List.of(), List.of(), List.of(new RoundTrip("Zorn", FEDERN, 1), new RoundTrip("Ärger", FEDERN, 1), new RoundTrip("Ärger", ACHAT_ARMBRUST, 2)),
-				List.of(new RoundTripAbstention("Zorn", FEDERN), new RoundTripAbstention("Ärger", FEDERN), new RoundTripAbstention("Ärger", ACHAT_ARMBRUST)));
+		record(new EvaluationResultFixture()
+				.roundTrips(List.of(new RoundTrip("Zorn", FEDERN, 1), new RoundTrip("Ärger", FEDERN, 1), new RoundTrip("Ärger", ACHAT_ARMBRUST, 2)))
+				.roundTripAbstentions(
+						List.of(new RoundTripAbstention("Zorn", FEDERN), new RoundTripAbstention("Ärger", FEDERN), new RoundTripAbstention("Ärger", ACHAT_ARMBRUST))));
 
 		AdminStatus status = tested.status();
 
@@ -53,7 +55,7 @@ class AdminStatusControllerTest {
 						new RoundTripAbstentionWire("Zorn", "Federn"));
 	}
 
-	private void record(List<String> unknown, List<String> failed, List<RoundTrip> trips, List<RoundTripAbstention> abstentions) {
-		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), new EvaluationResult(unknown, List.of(), failed, trips, abstentions));
+	private void record(EvaluationResultFixture fixture) {
+		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), fixture.build());
 	}
 }

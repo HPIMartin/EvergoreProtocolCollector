@@ -23,7 +23,7 @@ import kong.unirest.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import dev.schoenberg.evergore.protocolParser.application.EvaluationResult;
+import dev.schoenberg.evergore.protocolParser.application.EvaluationResultFixture;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 import dev.schoenberg.evergore.protocolParser.businessLogic.roundTrip.RoundTrip;
@@ -94,7 +94,7 @@ class AdminStatusEndpointTest {
 	void namesEveryUnknownItemAndFailedAvatarOfTheLastRunOnceAndInOrder() {
 		lastRunStatus
 				.recordSuccessfulRecompute(Instant.parse("2026-09-06T03:00:10Z"),
-						new EvaluationResult(List.of("Unobtainium", "Unobtainium"), List.of(), List.of("Zwerg", "Alrik"), List.of(), List.of()));
+						new EvaluationResultFixture().unknownItemNames(List.of("Unobtainium", "Unobtainium")).failedAvatarNames(List.of("Zwerg", "Alrik")).build());
 
 		JSONObject body = adminStatus();
 
@@ -106,7 +106,10 @@ class AdminStatusEndpointTest {
 	void namesEveryRoundTripAndAbstentionOfTheLastRun() {
 		lastRunStatus
 				.recordSuccessfulRecompute(Instant.parse("2026-09-06T03:00:10Z"),
-						new EvaluationResult(List.of(), List.of(), List.of(), List.of(new RoundTrip("Alrik", FEDERN, 100)), List.of(new RoundTripAbstention("Zwerg", KRISTALLAT))));
+						new EvaluationResultFixture()
+								.roundTrips(List.of(new RoundTrip("Alrik", FEDERN, 100)))
+								.roundTripAbstentions(List.of(new RoundTripAbstention("Zwerg", KRISTALLAT)))
+								.build());
 
 		JSONObject body = adminStatus();
 
