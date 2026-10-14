@@ -2344,6 +2344,87 @@ describe('App', () => {
     )
   })
 
+  it('introduces the invented members and the market stall before the first question', async () => {
+    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+
+    expect(
+      screen.getAllByTestId('legend-entry').map((entry) => entry.textContent),
+    ).toStrictEqual([
+      'Mira Mitglied ist ein Mitglied wie ihr: Sie zahlt ein, lagert ein, nimmt heraus und stellt die Übersicht um.',
+      'Hanna Handwerk fertigt Waren für die Gilde aus Zutaten aus dem Gildenlager.',
+      'Gero Gildenhändler handelt für die Gilde: Er nimmt Waren zum Verkauf heraus und legt Gekauftes ein.',
+      'Der Marktstand ist der Händler des Spiels, mit festen Preisen und endlosem Vorrat; dort kauft ihr Handwerksmaterial und Pfeile, Bolzen und Magieessenz, und dort könnt ihr feilschen.',
+    ])
+  })
+
+  it('asks its questions under their groups', async () => {
+    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+
+    expect(
+      screen
+        .getAllByTestId('explanation-group')
+        .map((group) => [
+          within(group).getByTestId('group-title').textContent,
+          within(group).getAllByTestId('question').length,
+        ]),
+    ).toStrictEqual([
+      ['Was zählt', 4],
+      ['Eure Zahl', 2],
+      ['Die Gilde', 7],
+      ['Die Übersicht lesen', 5],
+      ['Umstellen', 5],
+    ])
+  })
+
+  it('answers a question with its rule, its worked example and why', async () => {
+    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+
+    const answer = screen.getAllByTestId('answer')[0]
+
+    expect(
+      answer === undefined
+        ? null
+        : {
+            question: within(answer).getByTestId('question').textContent,
+            rule: within(answer).getByTestId('rule').textContent,
+            example: within(answer).getByTestId('example-intro').textContent,
+            calculations: within(answer)
+              .getAllByTestId('calculation')
+              .map((line) => line.textContent),
+            why: within(answer).getByTestId('why').textContent,
+          },
+    ).toStrictEqual({
+      question: 'Was zählt Gold in der Gildenbank?',
+      rule: 'Gold zählt, wie es ist: Jede Einzahlung in die Gildenbank steht voll unter „Bank-Einzahlung“, jede Auszahlung voll unter „Bank-Auszahlung“.',
+      example:
+        'Beispiel: Mira Mitglied zahlt 1.000 Gold ein und hebt später 200 Gold ab.',
+      calculations: [
+        'Mira Mitglied Bank-Einzahlung: 1.000 Gold × 100 % = 1.000 Gold',
+        'Mira Mitglied Bank-Auszahlung: 200 Gold × 100 % = 200 Gold',
+      ],
+      why: 'Warum? Gold ist Gold: Die Gilde kann damit genau so viel kaufen wie ihr.',
+    })
+  })
+
+  it('lists the points of an answer that has them as part of its rule', async () => {
+    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+
+    const answer = screen
+      .getAllByTestId('answer')
+      .find(
+        (candidate) =>
+          within(candidate).getByTestId('question').textContent ===
+          'Was kann das Protokoll nicht zeigen?',
+      )
+
+    expect(
+      answer === undefined
+        ? null
+        : within(within(answer).getByTestId('rule')).getAllByRole('listitem')
+            .length,
+    ).toBe(3)
+  })
+
   it("offers only the overview, not marked as current, in the explanation page's navigation", async () => {
     await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
 

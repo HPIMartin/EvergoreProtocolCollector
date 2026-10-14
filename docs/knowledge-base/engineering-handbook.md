@@ -684,6 +684,11 @@ worktrees (own directory + HEAD + index) make parallel work safe.
 - [ ] No secrets or personal/host data (passwords, tokens, keys/keystores, credentials, real emails/usernames, absolute paths, infra) in committed files
 - [ ] Relevant `docs/knowledge-base/` doc updated, riding in the commit whose change it describes,
       each hunk checked in both directions (§7)
+- [ ] A change to a valuation rule, to the meaning or label of a figure the overview shows, or to an
+      option a member can switch changes the explanation page (`frontend/src/app/explanation/`)
+      in the same commit
+  - `ExplanationExamplesTest` makes the page's figures fail the build when they drift
+  - the page's words are the author's to keep true
 - [ ] Every identifier, path or backlog ID the diff **deletes or renames** grepped across `docs/`, and
       every hit fixed in the same commit; every **figure** the change moves grepped repo-wide, and
       every hit outside a dated decision or learnings row rewritten in the same commit

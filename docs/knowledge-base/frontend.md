@@ -145,6 +145,13 @@ Four top-level folders under `frontend/src/`:
 - **`/explanation` loads no data**: it stays behind the guild's token because the server refuses a
   deep link without it, not because a request of its own would fail (decision 2026-10-14).
   - Its frame offers the overview only.
+  - Its content is one data file, `app/explanation/explanation.json`: the personas, the five
+    groups and each answer's question, rule, points, example ledger, calculation lines and "why".
+  - `domain/explanation.ts`'s `explanationFrom` reads that file, refusing what it cannot read.
+  - Its `calculationTexts` writes each calculation line in German, rounding a result that is no
+    whole gold as the overview does, beside its exact value.
+  - `ExplanationExamplesTest` recomputes the same file through the backend's valuation, so the page
+    and the overview cannot drift apart unnoticed (testing.md).
 - **`/admin` shows the collection status** (`AdminView.tsx`): `lastUpdated` plus the last successful
   scrape and recompute as freshness text (each with its own "never ran" wording), and the two failure
   instants and two name lists from `/api/v1/admin/status`, each shown only when the server reports one.

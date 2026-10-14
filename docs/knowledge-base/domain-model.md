@@ -176,6 +176,9 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
 
 ### The value math (verified against `EvergoreItemTest`)
 
+The members read this rule on the explanation page (`frontend/src/app/explanation/explanation.json`);
+a change here changes the page in the same commit (handbook §8).
+
 The rule has two sources, and the difference matters. The **60 % price in both directions** and the
 **zero credit for mined, hunted and gem deposits** are the guild's own rule, announced to its members
 in 2020; the source document is the author's local copy of those announcements, deliberately outside

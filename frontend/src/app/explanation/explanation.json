@@ -1297,9 +1297,9 @@
         },
         {
           "question": "Was bedeuten die Farben, „–“ und „!“?",
-          "rule": "Bank-Einzahlung und Einlagerung in der Farbe einer Gutschrift, Bank-Auszahlung und Entnahme in der Farbe einer Belastung. Die letzte Spalte färbt sich erst im Minus. Eine Null bleibt ohne Farbe. Gildenbank, Gildenlagerwert und Gildenspende färben sich nach ihrem Vorzeichen, Handwerkssubventionen nie in der Farbe einer Gutschrift. „–“ steht, wo es keine Zahl oder kein Datum gibt. „!“ steht bei einer Zeile, die noch nicht berechnet oder veraltet ist.",
+          "rule": "Bank-Einzahlung und Einlagerung in Grün, der Farbe einer Gutschrift, Bank-Auszahlung und Entnahme in Rot, der Farbe einer Belastung. Die letzte Spalte färbt sich erst im Minus. Eine Null bleibt ohne Farbe. Gildenbank, Gildenlagerwert und Gildenspende färben sich nach ihrem Vorzeichen, Handwerkssubventionen nie in der Farbe einer Gutschrift. „–“ steht, wo es keine Zahl oder kein Datum gibt. „!“ steht bei einer Zeile, die noch nicht berechnet oder veraltet ist.",
           "example": {
-            "intro": "Hanna Handwerk hat nur 300 Gold abgehoben. Ihre Bank-Auszahlung steht in der Farbe einer Belastung, ihre Einlagerung von 0 Gold ohne Farbe, „Nach Abzügen“ mit -300 Gold in der Farbe einer Belastung, und unter „Letzte Lageraktivität“ steht „–“.",
+            "intro": "Hanna Handwerk hat nur 300 Gold abgehoben. Ihre Bank-Auszahlung steht in Rot, ihre Einlagerung von 0 Gold ohne Farbe, „Nach Abzügen“ mit -300 Gold in Rot, und unter „Letzte Lageraktivität“ steht „–“.",
             "ledger": {
               "bank": [],
               "storage": []
@@ -1310,7 +1310,7 @@
         },
         {
           "question": "Was heißt „Noch nicht berechnet.“?",
-          "rule": "Diese Zeile wurde noch nie berechnet: Ein neues Mitglied steht schon im Protokoll, die nächste Berechnung kommt aber erst; solange ein Mitglied noch nicht berechnet ist, steht es auch bei den vier Zahlen der Gilde.",
+          "rule": "Diese Zeile wurde noch nie berechnet und zeigt „–“: Ein neues Mitglied steht schon im Protokoll, die nächste Berechnung kommt aber erst; solange ein Mitglied noch nicht berechnet ist, steht es auch bei den vier Zahlen der Gilde.",
           "example": {
             "intro": "Hanna Handwerk ist neu und zahlt zum ersten Mal Gold ein. Bis zur nächsten Berechnung steht in ihrer Zeile „–“ mit „Noch nicht berechnet.“, und oben bei Gildenbank, Gildenlagerwert, Gildenspende und Handwerkssubventionen ebenso.",
             "ledger": {
@@ -1323,7 +1323,7 @@
         },
         {
           "question": "Was heißt „Veraltete Zahlen“?",
-          "rule": "Die Zahlen dieser Zeile zeigen den Stand der letzten Berechnung, die das Mitglied erreicht hat; das Datum steht dabei.",
+          "rule": "Die Zahlen dieser Zeile zeigen den Stand der letzten erfolgreichen Aktualisierung, die das Mitglied erreicht hat; dabei steht „Letzte erfolgreiche Aktualisierung vom …“ mit dem Datum.",
           "example": {
             "intro": "Die Vorgänge von Mira Mitglied konnten bei der letzten Berechnung nicht gelesen werden. Ihre Zeile zeigt weiter die Zahlen vom Vortag, mit „Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom …“.",
             "ledger": {
@@ -1354,7 +1354,7 @@
       "answers": [
         {
           "question": "Kann ich die letzte Spalte umstellen?",
-          "rule": "Ihr könnt die letzte Spalte zwischen „Nach Abzügen“ und „Vor Abzügen“ umschalten. Beim Neuladen steht wieder „Nach Abzügen“.",
+          "rule": "Ihr könnt die letzte Spalte zwischen „Nach Abzügen“ und „Vor Abzügen“ umschalten. Beim Neuladen und beim Zurückkehren zur Übersicht steht wieder „Nach Abzügen“.",
           "example": {
             "intro": "Mira Mitglied hat 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle eingelagert und schaltet auf „Vor Abzügen“.",
             "ledger": {
@@ -1465,7 +1465,7 @@
         },
         {
           "question": "Wie sortiere ich die Übersicht?",
-          "rule": "Ihr könnt nach jeder Spalte sortieren: Ein Klick auf die Spaltenüberschrift sortiert, ein zweiter kehrt die Reihenfolge um. Jede Tabelle sortiert für sich. Die Zeile „Gilde“ bleibt unten.",
+          "rule": "Ihr könnt nach jeder Spalte sortieren: Ein Klick auf die Spaltenüberschrift sortiert, ein zweiter kehrt die Reihenfolge um. Jede Tabelle sortiert für sich. Die Zeile „Gilde“ bleibt unten. Die Sortierung folgt dem Umschalten der letzten Spalte.",
           "example": {
             "intro": "Mira Mitglied sortiert „Aktiv“ nach „Einlagerung“ und steht mit 1.000 Gold oben. „Ruhend“ bleibt, wie es war, und „Gilde“ steht weiter unten.",
             "ledger": {
@@ -1491,7 +1491,7 @@
         },
         {
           "question": "Wie sortiere und blättere ich in meinen Vorgängen?",
-          "rule": "Auch hier sortiert ein Klick auf die Spaltenüberschrift; eine Sortierung sortiert alle Vorgänge, nicht nur die Seite. Ihr seht 100 Vorgänge je Seite. Mit „Weiter“ und „Zurück“ blättert ihr. Die Sortierung steht in der Adresse.",
+          "rule": "Ein Klick auf die Spaltenüberschrift sortiert alle Vorgänge, nicht nur die Seite. Ihr seht 100 Vorgänge je Seite. Mit „Weiter“ und „Zurück“ blättert ihr. Die Sortierung steht in der Adresse.",
           "example": {
             "intro": "Gero Gildenhändler hat 150 Vorgänge im Lager. Er sortiert nach Menge und blättert mit „Weiter“ auf Seite 2: Dort stehen die übrigen 50, weiter nach Menge sortiert.",
             "ledger": {
