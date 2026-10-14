@@ -597,6 +597,15 @@ second copy.
       included, must then read;
     - keep the file-based refs and the case check alone;
     - make the checkout's directory case-sensitive on the Windows host.
+- **D-23 (Plan approval for a strand without product behaviour), for the next plan:** a strand
+  that claims handbook §5's build/infra or `[doc]` exemption still waits for the author's go on its
+  cut and test list.
+  - On the release comparison against 0.3.0 (2026-10-14) that go was one of the two questions an
+    unattended agent seat waited on.
+  - Options, recommended first:
+    - such a plan goes to the chat as information and the agent goes on unless the author
+      objects; a strand with product behaviour keeps the approval;
+    - keep the approval for every strand.
 
 ## Assumptions currently baked into the plan (challenge if wrong)
 
