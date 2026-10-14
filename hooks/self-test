@@ -92,6 +92,106 @@ check "a staged credential literal leaves no commit behind" "$r"
 if "$hooks_dir/content-gate" --staged >/dev/null 2>&1; then r=1; else r=0; fi
 check "the content gate itself is what refused the credential literal" "$r"
 
+new_repo secretumlaut
+secret_file 'Ä.txt'
+if refuses "Add the config"; then r=0; else r=1; fi
+check "a staged credential literal in a file whose path is not ASCII leaves no commit behind" "$r"
+
+new_repo keystoreumlaut
+write_file 'Ü.pem' 'x'
+if refuses "Add the key"; then r=0; else r=1; fi
+check "a key file whose path is not ASCII leaves no commit behind" "$r"
+
+new_repo secrettypechange
+ln -s Seed1.java config.txt
+git add -A
+git commit -q --no-verify -m "Link the config"
+secret_file replacement.txt
+mv -f replacement.txt config.txt
+if refuses "Replace the config link"; then r=0; else r=1; fi
+check "a credential literal in a file that replaces a link leaves no commit behind" "$r"
+
+new_repo secretcopy
+write_file Orig.txt 'one' 'two' 'three' 'four' 'five' 'six' 'seven'
+git add -A
+git commit -q --no-verify -m "Add the original config"
+git config diff.renames copies
+write_file Orig.txt 'one' 'two' 'three' 'four' 'five' 'six' 'seven' 'eight'
+write_file Copy.txt 'one' 'two' 'three' 'four' 'five' 'six' 'seven' 'api_key = "not-a-real-value"'
+if refuses "Copy the config"; then r=0; else r=1; fi
+check "a credential literal in a near-copy of a changed file leaves no commit behind under diff.renames=copies" "$r"
+
+new_repo secretrebaseumlaut
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~1 >/dev/null 2>&1
+secret_file 'Ä.txt'
+git add 'Ä.txt'
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+if git log --oneline -- 'Ä.txt' | grep -q . && [ -f "$(git rev-parse --git-common-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a rebase that commits a credential literal in a file whose path is not ASCII is recorded" "$r"
+
+new_repo secretrebasetypechange
+ln -s Seed1.java config.txt
+git add -A
+git commit -q --no-verify -m "Link the config"
+clean_file Later
+git add -A
+git commit -q --no-verify -m "Add later class"
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~1 >/dev/null 2>&1
+secret_file replacement.txt
+mv -f replacement.txt config.txt
+git add config.txt
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+if [ ! -L config.txt ] && [ -f "$(git rev-parse --git-common-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a rebase that turns a link into a file with a credential literal is recorded" "$r"
+
+new_repo keydelete
+write_file old.pem 'x'
+git add -A
+git commit -q --no-verify -m "Add the key"
+git rm -q old.pem
+if accepts "Remove the key"; then r=0; else r=1; fi
+check "deleting a committed key file commits" "$r"
+
+new_repo secretmodified
+write_file config.txt 'one'
+git add -A
+git commit -q --no-verify -m "Add the config"
+write_file config.txt 'one' 'api_key = "not-a-real-value"'
+if refuses "Change the config"; then r=0; else r=1; fi
+check "a credential literal added to a tracked file leaves no commit behind" "$r"
+
+new_repo secretrebasenested
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i HEAD~1 >/dev/null 2>&1
+write_file dir/deeper/config.txt 'api_key = "not-a-real-value"'
+git add dir
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+if git log --oneline -- dir | grep -q . && [ -f "$(git rev-parse --git-common-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a rebase that commits a credential literal in a nested path is recorded" "$r"
+
+new_repo secretrebaseroot
+GIT_SEQUENCE_EDITOR="sed -i '1s/^pick/edit/'" git rebase -i --root >/dev/null 2>&1
+secret_file config.txt
+git add config.txt
+GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+if git log --oneline -- config.txt | grep -q . && [ -f "$(git rev-parse --git-common-dir)/gate-breach" ]; then r=0; else r=1; fi
+check "a rebase that commits a credential literal into the root commit is recorded" "$r"
+
+new_repo keydeletecommit
+write_file old.pem 'x'
+git add -A
+git commit -q --no-verify -m "Add the key"
+git rm -q old.pem
+git commit -q --no-verify -m "Remove the key"
+if "$hooks_dir/content-gate" --commit HEAD >/dev/null 2>&1; then r=0; else r=1; fi
+check "the content gate passes a commit that deletes a key file" "$r"
+
+new_repo templatebaselinecommit
+write_file .template/baseline/config.txt 'api_key = "not-a-real-value"' 'home = /home/someone/work'
+git add -A
+git commit -q --no-verify -m "Add the template baseline"
+if "$hooks_dir/content-gate" --commit HEAD >/dev/null 2>&1; then r=0; else r=1; fi
+check "the content gate passes a commit that adds only the template baseline" "$r"
+
 new_repo smell
 smelly_file Loud
 if refuses "Add loud class"; then r=0; else r=1; fi

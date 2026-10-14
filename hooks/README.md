@@ -86,7 +86,8 @@ offending sha, whereupon `pre-commit` refuses every further commit until that sh
   **Both diff scans** (comments and conflict markers) read a plain diff: no external driver, colour
   or textconv, binary files as text and type changes included, renames detected but no copies, and
   non-ASCII paths unquoted, since each of those would hide the lines a commit adds or misname their
-  file.
+  file. The file list the secret, key-file and smell scans read takes the same flags, so a copied,
+  type-changed or non-ASCII path is scanned too.
 
   A file counts as **production source** when it starts with one of `production_trees`, starts with
   none of `test_trees` and matches none of `test_name_re`; the rules that bind production code only

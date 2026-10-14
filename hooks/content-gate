@@ -138,8 +138,8 @@ added_lines() {
 
 changed_files() {
 	case "$mode" in
-		--staged) git diff --cached --name-only --diff-filter=ACMR -- . $scan_exclude ;;
-		--commit) git diff-tree -r --root --no-commit-id --name-only --diff-merges=first-parent --diff-filter=ACMR "$sha" -- . $scan_exclude ;;
+		--staged) plain_git diff --cached --name-only $plain_diff -- . $scan_exclude ;;
+		--commit) plain_git diff-tree -r --root --no-commit-id --name-only --diff-merges=first-parent $plain_diff "$sha" -- . $scan_exclude ;;
 	esac
 }
 
