@@ -688,7 +688,8 @@ worktrees (own directory + HEAD + index) make parallel work safe.
       option a member can switch changes the explanation page (`frontend/src/app/explanation/`)
       in the same commit
   - `ExplanationExamplesTest` makes the page's figures fail the build when they drift
-  - the page's words are the author's to keep true
+  - the approved-text test fails on a changed word until `explanation.approved.txt` changes with
+    it, for the author to approve
 - [ ] Every identifier, path or backlog ID the diff **deletes or renames** grepped across `docs/`, and
       every hit fixed in the same commit; every **figure** the change moves grepped repo-wide, and
       every hit outside a dated decision or learnings row rewritten in the same commit

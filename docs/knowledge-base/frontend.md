@@ -154,6 +154,9 @@ Four top-level folders under `frontend/src/`:
     whole gold as the overview does, beside its exact value.
   - `ExplanationExamplesTest` recomputes the same file through the backend's valuation, so the page
     and the overview cannot drift apart unnoticed (testing.md).
+  - `ExplanationView.test.tsx` renders the page and compares its whole visible text with
+    `app/explanation/explanation.approved.txt`, the text the author approved; a changed word fails
+    until that file changes in the same commit (decision 2026-10-15).
 - **`/admin` shows the collection status** (`AdminView.tsx`): `lastUpdated` plus the last successful
   scrape and recompute as freshness text (each with its own "never ran" wording), and the two failure
   instants and two name lists from `/api/v1/admin/status`, each shown only when the server reports one.

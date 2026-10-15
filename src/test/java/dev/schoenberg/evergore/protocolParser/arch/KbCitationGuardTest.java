@@ -41,6 +41,7 @@ class KbCitationGuardTest {
 		references.add("frontend.md: OptionSwitch");
 		references.add("frontend.md: AdminView");
 		references.add("frontend.md: ExplanationView");
+		references.add("frontend.md: ExplanationView");
 		references.add("frontend.md: LoadedView");
 		references.add("frontend.md: SortableTable");
 		references.add("frontend.md: SortableTable");

@@ -1,0 +1,190 @@
+So entstehen eure Zahlen
+
+Mira Mitglied ist ein Mitglied wie ihr: Sie zahlt ein, lagert ein, nimmt heraus und stellt die Übersicht um.
+Hanna Handwerk fertigt Waren für die Gilde aus Zutaten aus dem Gildenlager.
+Gero Gildenhändler handelt für die Gilde: Er nimmt Waren zum Verkauf heraus und legt Gekauftes ein.
+Der Marktstand ist der Händler des Spiels, mit festen Preisen und endlosem Vorrat; dort kauft ihr Handwerksmaterial und Pfeile, Bolzen und Magieessenz, und dort könnt ihr feilschen.
+
+## Was zählt
+
+### Was zählt Gold in der Gildenbank?
+Gold zählt, wie es ist: Jede Einzahlung in die Gildenbank steht voll unter „Bank-Einzahlung“, jede Auszahlung voll unter „Bank-Auszahlung“.
+Beispiel: Mira Mitglied zahlt 1.000 Gold ein und hebt später 200 Gold ab.
+Mira Mitglied Bank-Einzahlung: 1.000 Gold × 100 % = 1.000 Gold
+Mira Mitglied Bank-Auszahlung: 200 Gold × 100 % = 200 Gold
+Warum? Gold ist Gold: Die Gilde kann damit genau so viel kaufen wie ihr.
+
+### Was bringt mir eine Einlagerung?
+Was ihr ins Gildenlager legt, schreiben wir euch gut, je nach Art der Ware: Rohstoffe, Jagdbeute und Edelsteine bringen nichts; Handwerksmaterial bringt den vollen Marktwert; Pfeile, Bolzen und Magieessenz bringen den vollen Marktwert, auch selbst gefertigte; alles andere bringt 60 % des Marktwerts, Ausrüstung im Verhältnis zu ihrer Qualität.
+Beispiel: Mira Mitglied legt sechs Waren ein.
+Mira Mitglied legt 10 Eisenerz ein: 10 × 40 Gold × 0 % = 0 Gold
+Mira Mitglied legt 10 Steinkohle vom Marktstand ein: 10 × 100 Gold × 100 % = 1.000 Gold
+Mira Mitglied legt 100 Pfeile vom Marktstand ein: 100 × 3 Gold × 100 % = 300 Gold
+Mira Mitglied legt 10 Jagdpfeile ein: 10 × 5 Gold × 60 % = 30 Gold
+Mira Mitglied legt 10 Eisenbarren ein: 10 × 120 Gold × 60 % = 720 Gold
+Mira Mitglied legt 1 Kurzbogen der Qualität 50 ein: 1 × 2.000 Gold × 60 % × 50 % = 600 Gold
+Mira Mitglied Einlagerung: 0 Gold + 1.000 Gold + 300 Gold + 30 Gold + 720 Gold + 600 Gold = 2.650 Gold
+Warum so? Rohstoffe, Jagdbeute und Edelsteine habt ihr gesammelt: Sie sind eure Abgabe an die Gilde. Handwerksmaterial und Pfeile, Bolzen und Magieessenz kauft ihr am Marktstand mit Gold, also zählen sie voll. Jagdpfeile verkauft der Marktstand nicht; sie zählen wie alles andere. Ein Kurzbogen der Qualität 50 ist nur halb so viel wert wie ein neuer.
+
+### Und wenn ich etwas herausnehme?
+Jede Entnahme kostet 60 % des Marktwerts, egal welche Ware, und Ausrüstung im Verhältnis zur Qualität. Qualität gibt es nur bei Ausrüstung: Waffen, Stäbe, Rüstung und Schilde.
+Beispiel: Mira Mitglied nimmt zwei Kurzschwerter heraus, ein neues und eines der Qualität 50.
+Mira Mitglied nimmt 1 Kurzschwert heraus: 1 × 1.200 Gold × 60 % = 720 Gold
+Mira Mitglied nimmt 1 Kurzschwert der Qualität 50 heraus: 1 × 1.200 Gold × 60 % × 50 % = 360 Gold
+Mira Mitglied Entnahme: 720 Gold + 360 Gold = 1.080 Gold
+Warum? Wer herausnimmt, zahlt der Gilde ihren Preis. Legt Mira Mitglied das neue Kurzschwert unverändert zurück, bekommt sie genau die 720 Gold wieder.
+
+### Lohnt sich Handwerk für mich?
+Ihr gewinnt, was das Fertige gutgeschrieben bekommt, abzüglich 60 % der Zutaten, die ihr aus dem Gildenlager nehmt.
+Beispiel: Hanna Handwerk fertigt aus 5 Eisenerz und 2 Steinkohle 5 Eisenbarren.
+Hanna Handwerk nimmt 5 Eisenerz heraus: 5 × 40 Gold × 60 % = 120 Gold
+Hanna Handwerk nimmt 2 Steinkohle heraus: 2 × 100 Gold × 60 % = 120 Gold
+Hanna Handwerk legt 5 Eisenbarren ein: 5 × 120 Gold × 60 % = 360 Gold
+Hanna Handwerk Nach Abzügen: 360 Gold − 120 Gold − 120 Gold = 120 Gold
+Warum? Wer für die Gilde fertigt, soll etwas davon haben: Der Gewinn ist der Unterschied zwischen der fertigen Ware und ihren Zutaten.
+
+## Eure Zahl
+
+### Was steht unter „Nach Abzügen“?
+„Nach Abzügen“ ist Bank-Einzahlung und Einlagerung abzüglich Bank-Auszahlung und Entnahme.
+Beispiel: Mira Mitglied zahlt 500 Gold ein, hebt 200 Gold ab, legt 10 Steinkohle vom Marktstand ein und nimmt 10 Eisenbarren heraus.
+Mira Mitglied legt 10 Steinkohle vom Marktstand ein: 10 × 100 Gold × 100 % = 1.000 Gold
+Mira Mitglied nimmt 10 Eisenbarren heraus: 10 × 120 Gold × 60 % = 720 Gold
+Mira Mitglied Nach Abzügen: 500 Gold − 200 Gold + 1.000 Gold − 720 Gold = 580 Gold
+Warum? Das ist alles, was ihr der Gilde gebracht habt, abzüglich dessen, was ihr von ihr bekommen habt.
+
+### Was zeigt „Vor Abzügen“?
+„Vor Abzügen“ zählt jede Einlagerung zum Gildenpreis von 60 %, auch was ihr mit Gold gekauft habt, also vor Abzug der Gildenspende und ohne Handwerkssubventionen. „Nach Abzügen“ zählt Gekauftes voll.
+Beispiel: Mira Mitglied legt 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle ein.
+Mira Mitglied legt 10 Eisenerz ein, zum Gildenpreis: 10 × 40 Gold × 60 % = 240 Gold
+Mira Mitglied legt 10 Steinkohle vom Marktstand ein, zum Gildenpreis: 10 × 100 Gold × 60 % = 600 Gold
+Mira Mitglied Vor Abzügen: 240 Gold + 600 Gold = 840 Gold
+Warum? So seht ihr, was eure Waren der Gilde zu ihrem eigenen Preis wert sind, bevor wir Gesammeltes als Abgabe und Gekauftes voll anrechnen.
+
+## Die Gilde
+
+### Was ist die „Gildenbank“?
+Die Gildenbank ist die Summe aller Bank-Einzahlungen abzüglich aller Bank-Auszahlungen seit dem ersten Protokoll vom 22.01.2023, kein gezählter Kontostand.
+Beispiel: Mira Mitglied zahlt 1.000 Gold ein und legt 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle ein. Hanna Handwerk hebt 300 Gold ab und nimmt 5 Steinkohle heraus.
+Gildenbank: 1.000 Gold − 300 Gold = 700 Gold
+Warum? Wir sehen nur, was das Protokoll seit seinem ersten Tag zeigt; was davor in der Bank lag, ist nicht dabei.
+
+### Was ist der „Gildenlagerwert“?
+Der Gildenlagerwert ist die Summe aller Einlagerungen abzüglich aller Entnahmen seit dem ersten Protokoll vom 22.01.2023, zum Gildenpreis von 60 %; er ist kein gezählter Bestand.
+Beispiel: Mira Mitglied zahlt 1.000 Gold ein und legt 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle ein. Hanna Handwerk hebt 300 Gold ab und nimmt 5 Steinkohle heraus.
+Mira Mitglied legt 10 Eisenerz ein, zum Gildenpreis: 10 × 40 Gold × 60 % = 240 Gold
+Mira Mitglied legt 10 Steinkohle vom Marktstand ein, zum Gildenpreis: 10 × 100 Gold × 60 % = 600 Gold
+Hanna Handwerk nimmt 5 Steinkohle heraus: 5 × 100 Gold × 60 % = 300 Gold
+Gildenlagerwert: 240 Gold + 600 Gold − 300 Gold = 540 Gold
+Warum? So viel sind die Waren der Gilde zu ihrem eigenen Preis wert, soweit das Protokoll sie zeigt.
+
+### Was ist die „Gildenspende“?
+Die Gildenspende ist, was die Gilde zu ihrem Preis von 60 % gezahlt hätte, aber nicht gutschrieb, seit dem ersten Protokoll vom 22.01.2023.
+Beispiel: Mira Mitglied zahlt 1.000 Gold ein und legt 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle ein. Hanna Handwerk hebt 300 Gold ab und nimmt 5 Steinkohle heraus.
+Mira Mitglied legt 10 Eisenerz ein, zum Gildenpreis: 10 × 40 Gold × 60 % = 240 Gold
+Mira Mitglied legt 10 Eisenerz ein: 10 × 40 Gold × 0 % = 0 Gold
+Gildenspende: 240 Gold − 0 Gold = 240 Gold
+Warum? Gesammeltes ist eure Abgabe an die Gilde; hier seht ihr, wie viel sie wert ist.
+
+### Was sind „Handwerkssubventionen“?
+Handwerkssubventionen sind, was die Gilde seit dem ersten Protokoll vom 22.01.2023 über ihren Preis hinaus gutschreibt, für Handwerksmaterial und für Pfeile, Bolzen und Magieessenz.
+Beispiel: Mira Mitglied zahlt 1.000 Gold ein und legt 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle ein. Hanna Handwerk hebt 300 Gold ab und nimmt 5 Steinkohle heraus.
+Mira Mitglied legt 10 Steinkohle vom Marktstand ein: 10 × 100 Gold × 100 % = 1.000 Gold
+Mira Mitglied legt 10 Steinkohle vom Marktstand ein, zum Gildenpreis: 10 × 100 Gold × 60 % = 600 Gold
+Handwerkssubventionen: 1.000 Gold − 600 Gold = 400 Gold
+Warum? Was ihr mit Gold gekauft habt, soll euch kein Gold kosten; die 40 % über ihrem Preis trägt die Gilde.
+
+### Was zeigt die Zeile „Gilde“?
+Die Zeile „Gilde“ zählt alle Mitglieder zusammen, auch die ruhenden. „!“ bei der Gilde heißt: mindestens eine Zeile ist noch nicht berechnet oder veraltet.
+Beispiel: Mira Mitglied zahlt 1.000 Gold ein und legt 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle ein. Hanna Handwerk hebt 300 Gold ab und nimmt 5 Steinkohle heraus.
+Mira Mitglied legt 10 Eisenerz ein: 10 × 40 Gold × 0 % = 0 Gold
+Mira Mitglied legt 10 Steinkohle vom Marktstand ein: 10 × 100 Gold × 100 % = 1.000 Gold
+Hanna Handwerk nimmt 5 Steinkohle heraus: 5 × 100 Gold × 60 % = 300 Gold
+Mira Mitglied Nach Abzügen: 1.000 Gold + 0 Gold + 1.000 Gold = 2.000 Gold
+Hanna Handwerk Nach Abzügen: 0 Gold − 300 Gold − 300 Gold = -600 Gold
+Gilde Nach Abzügen: 2.000 Gold + (-600 Gold) = 1.400 Gold
+Warum? Unten steht, was die ganze Gilde bewegt hat. Oben steht dieselbe Summe, aufgeteilt: 700 Gold Gildenbank + 540 Gold Gildenlagerwert − 240 Gold Gildenspende + 400 Gold Handwerkssubventionen.
+
+### Warum steht beim Gildenhändler „Vor Abzügen“ im Minus?
+„Vor Abzügen“ zählt die Einlagerung des Gildenhändlers ohne die Handwerkssubventionen, also nur zum Gildenpreis.
+Beispiel: Gero Gildenhändler handelt für die Gilde. Er nimmt 50 Hartpelz heraus, um sie zu verkaufen, kauft vom Erlös 25 Steinkohle am Marktstand und legt sie ein.
+Gero Gildenhändler nimmt 50 Hartpelz heraus: 50 × 60 Gold × 60 % = 1.800 Gold
+Gero Gildenhändler legt 25 Steinkohle vom Marktstand ein: 25 × 100 Gold × 100 % = 2.500 Gold
+Gero Gildenhändler legt 25 Steinkohle vom Marktstand ein, zum Gildenpreis: 25 × 100 Gold × 60 % = 1.500 Gold
+Gero Gildenhändler Nach Abzügen: 2.500 Gold − 1.800 Gold = 700 Gold
+Gero Gildenhändler Vor Abzügen: 1.500 Gold − 1.800 Gold = -300 Gold
+Warum? Gekauftes zählt voll, weil Gero Gildenhändler es mit Gold bezahlt hat. Vor den Abzügen fehlen ihm die 1.000 Gold Handwerkssubventionen, und er steht im Minus.
+
+### Was kann das Protokoll nicht zeigen?
+Drei Dinge kann das Protokoll nicht zeigen:
+- Gold, das ein Mitglied behält, statt es in die Gildenbank zu zahlen
+- ob Munition gekauft oder selbst gefertigt wurde
+- ob eine Entnahme ins Handwerk ging oder verkauft wurde
+Beispiel: Gero Gildenhändler verkauft die 50 Hartpelz für 3.000 Gold und bezahlt die Steinkohle mit 2.500 Gold. Die übrigen 500 Gold behält er für die nächste Runde; im Protokoll steht davon nichts.
+Gero Gildenhändler nimmt 50 Hartpelz heraus: 50 × 60 Gold × 60 % = 1.800 Gold
+Gero Gildenhändler legt 25 Steinkohle vom Marktstand ein: 25 × 100 Gold × 100 % = 2.500 Gold
+Gero Gildenhändler Nach Abzügen: 2.500 Gold − 1.800 Gold = 700 Gold
+Warum? Im Protokoll sehen diese Fälle gleich aus; was es nicht zeigt, klären wir miteinander.
+
+## Die Übersicht lesen
+
+### Warum passt eine Summe manchmal um 1 Gold nicht?
+Jede Zahl wird einmal gerundet, aus ihrem genauen Wert auf das nächste ganze Gold.
+Beispiel: Mira Mitglied legt 1 Magische Ätherbinde ein und nimmt 2 Pfeile heraus.
+Mira Mitglied legt 1 Magische Ätherbinde ein: 1 × 257 Gold × 60 % = 154,2 Gold → 154 Gold
+Mira Mitglied nimmt 2 Pfeile heraus: 2 × 3 Gold × 60 % = 3,6 Gold → 4 Gold
+Mira Mitglied Nach Abzügen: 154,2 Gold − 3,6 Gold = 150,6 Gold → 151 Gold
+Warum? 154 − 4 wären 150. Weil jede Zahl für sich aus ihrem genauen Wert einmal gerundet wird, steht in der Zeile von Mira Mitglied 151.
+
+### Was bedeuten die Farben, „–“ und „!“?
+Bank-Einzahlung und Einlagerung in Grün, der Farbe einer Gutschrift, Bank-Auszahlung und Entnahme in Rot, der Farbe einer Belastung. Die letzte Spalte färbt sich erst im Minus. Eine Null bleibt ohne Farbe. Gildenbank, Gildenlagerwert und Gildenspende färben sich nach ihrem Vorzeichen, Handwerkssubventionen nie in der Farbe einer Gutschrift. „–“ steht, wo es keine Zahl oder kein Datum gibt. „!“ steht bei einer Zeile, die noch nicht berechnet oder veraltet ist.
+Beispiel: Hanna Handwerk hat nur 300 Gold abgehoben. Ihre Bank-Auszahlung steht in Rot, ihre Einlagerung von 0 Gold ohne Farbe, „Nach Abzügen“ mit -300 Gold in Rot, und unter „Letzte Lageraktivität“ steht „–“.
+Warum? So seht ihr auf einen Blick, wer gibt, wer nimmt und wo noch etwas fehlt.
+
+### Was heißt „Noch nicht berechnet.“?
+Diese Zeile wurde noch nie berechnet und zeigt „–“: Ein neues Mitglied steht schon im Protokoll, die nächste Berechnung kommt aber erst; solange ein Mitglied noch nicht berechnet ist, steht es auch bei den vier Zahlen der Gilde.
+Beispiel: Hanna Handwerk ist neu und zahlt zum ersten Mal Gold ein. Bis zur nächsten Berechnung steht in ihrer Zeile „–“ mit „Noch nicht berechnet.“, und oben bei Gildenbank, Gildenlagerwert, Gildenspende und Handwerkssubventionen ebenso.
+Warum? Lieber keine Zahl als eine, die ein Mitglied auslässt.
+
+### Was heißt „Veraltete Zahlen“?
+Die Zahlen dieser Zeile zeigen den Stand der letzten erfolgreichen Aktualisierung, die das Mitglied erreicht hat; dabei steht „Letzte erfolgreiche Aktualisierung vom …“ mit dem Datum.
+Beispiel: Die Vorgänge von Mira Mitglied konnten bei der letzten Berechnung nicht gelesen werden. Ihre Zeile zeigt weiter die Zahlen vom Vortag, mit „Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom …“.
+Warum? Die anderen Mitglieder bleiben aktuell, auch wenn bei einem etwas klemmt.
+
+### Wer steht unter „Aktiv“, wer unter „Ruhend“?
+Unter „Aktiv“ steht, wer in den 30 Tagen vor dem letzten Vorgang der Gilde etwas bewegt hat; alle anderen stehen unter „Ruhend“.
+Beispiel: Der letzte Vorgang der Gilde ist vom 31.01. Mira Mitglied hat am 10.01. eingelagert und steht unter „Aktiv“; Hanna Handwerk hat zuletzt am 20.12. etwas bewegt und steht unter „Ruhend“.
+Warum? Gemessen wird am Protokoll, nicht am heutigen Tag: Kommt das Protokoll einmal später, wird deshalb niemand ruhend.
+
+## Umstellen
+
+### Kann ich die letzte Spalte umstellen?
+Ihr könnt die letzte Spalte zwischen „Nach Abzügen“ und „Vor Abzügen“ umschalten. Beim Neuladen und beim Zurückkehren zur Übersicht steht wieder „Nach Abzügen“.
+Beispiel: Mira Mitglied hat 10 Eisenerz und 10 am Marktstand gekaufte Steinkohle eingelagert und schaltet auf „Vor Abzügen“.
+Mira Mitglied legt 10 Eisenerz ein: 10 × 40 Gold × 0 % = 0 Gold
+Mira Mitglied legt 10 Steinkohle vom Marktstand ein: 10 × 100 Gold × 100 % = 1.000 Gold
+Mira Mitglied legt 10 Eisenerz ein, zum Gildenpreis: 10 × 40 Gold × 60 % = 240 Gold
+Mira Mitglied legt 10 Steinkohle vom Marktstand ein, zum Gildenpreis: 10 × 100 Gold × 60 % = 600 Gold
+Mira Mitglied Nach Abzügen: 0 Gold + 1.000 Gold = 1.000 Gold
+Mira Mitglied Vor Abzügen: 240 Gold + 600 Gold = 840 Gold
+Warum? „Nach Abzügen“ ist die Zahl, die zählt; „Vor Abzügen“ ist zum Vergleichen da.
+
+### Wie sortiere ich die Übersicht?
+Ihr könnt nach jeder Spalte sortieren: Ein Klick auf die Spaltenüberschrift sortiert, ein zweiter kehrt die Reihenfolge um. Jede Tabelle sortiert für sich. Die Zeile „Gilde“ bleibt unten. Die Sortierung folgt dem Umschalten der letzten Spalte.
+Beispiel: Mira Mitglied sortiert „Aktiv“ nach „Einlagerung“ und steht mit 1.000 Gold oben. „Ruhend“ bleibt, wie es war, und „Gilde“ steht weiter unten.
+Warum? So findet ihr schnell, wer am meisten gibt oder nimmt, ohne die Gilde aus dem Blick zu verlieren.
+
+### Wo finde ich meine eigenen Vorgänge?
+Euer Name führt zu euren Vorgängen in der Bank. „Letzte Bankaktivität“ zeigt euren neuesten Vorgang in der Bank und führt dorthin. „Letzte Lageraktivität“ zeigt euren neuesten Vorgang im Lager und führt dorthin.
+Beispiel: Mira Mitglied tippt auf ihren Namen und sieht „Bank von Mira Mitglied“; über ihr Datum unter „Letzte Lageraktivität“ kommt sie zu „Lager von Mira Mitglied“.
+Warum? Jede Zahl der Übersicht lässt sich bis zum einzelnen Vorgang zurückverfolgen.
+
+### Wie sortiere und blättere ich in meinen Vorgängen?
+Ein Klick auf die Spaltenüberschrift sortiert alle Vorgänge, nicht nur die Seite. Ihr seht 100 Vorgänge je Seite. Mit „Weiter“ und „Zurück“ blättert ihr. Die Sortierung steht in der Adresse.
+Beispiel: Gero Gildenhändler hat 150 Vorgänge im Lager. Er sortiert nach Menge und blättert mit „Weiter“ auf Seite 2: Dort stehen die übrigen 50, weiter nach Menge sortiert.
+Warum? So findet ihr auch einen alten Vorgang, ohne alle Seiten durchzusehen.
+
+### Kann ich mir eine Seite merken?
+Jede Seite lässt sich als Lesezeichen merken. Sortierung und Seite eurer Vorgänge bleiben im Lesezeichen erhalten.
+Beispiel: Gero Gildenhändler merkt sich Seite 2 seines Lagers, nach Menge sortiert; das Lesezeichen öffnet genau diese Seite.
+Warum? Der Link mit dem Gildenschlüssel ist euer Zugang; behaltet ihn für euch.
