@@ -132,6 +132,38 @@ describe('calculationTexts', () => {
     ])
   })
 
+  it('shows a result just below zero as 0 whole gold, without a sign, as the overview does', () => {
+    const texts = calculationTexts([
+      {
+        kind: 'figure',
+        row: 'Mira Mitglied',
+        label: 'Nach Abzügen',
+        terms: [{ amount: 0 }, { amount: 0.4 }],
+        operators: ['−'],
+        result: -0.4,
+      },
+    ])
+
+    expect(texts).toStrictEqual([
+      'Mira Mitglied Nach Abzügen: 0 Gold − 0,4 Gold = -0,4 Gold → 0 Gold',
+    ])
+  })
+
+  it('writes an amount of negative zero without a sign', () => {
+    const texts = calculationTexts([
+      {
+        kind: 'figure',
+        row: null,
+        label: 'Gildenbank',
+        terms: [{ amount: -0 }, { amount: 0 }],
+        operators: ['+'],
+        result: -0,
+      },
+    ])
+
+    expect(texts).toStrictEqual(['Gildenbank: 0 Gold + 0 Gold = 0 Gold'])
+  })
+
   it('rounds half a gold away from zero, as the overview does', () => {
     const texts = calculationTexts([
       {

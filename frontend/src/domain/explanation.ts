@@ -100,7 +100,7 @@ function wholeGoldOf(exact: number): number {
 }
 
 function gold(value: number): string {
-  return `${goldFormat.format(value)} Gold`
+  return `${goldFormat.format(value === 0 ? 0 : value)} Gold`
 }
 
 function share(percent: number): string {
