@@ -340,6 +340,9 @@ command) inside guardrails. Two files:
 - Always multiple-choice; the author free-types only if none fit.
 - Recommended option first, and say so. Be picky: surface trade-offs the author may not have
   considered rather than quietly defaulting.
+- Number each question and letter each option in the text itself ("question 3", "3a"), never only
+  as a list marker, which a page's styles can hide, so the author can answer in one line, "3a 4b"
+  (author direction 2026-10-15, [open-questions.md](../open-questions.md)).
 
 ## Handing the author a review
 

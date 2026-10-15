@@ -99,6 +99,8 @@ taken, and the questions still open.
   (valuation math, time and timezones, concurrency, data migration, the auth and security surface).
 - The **reasoning effort** to set, and separately the size estimate, so the author can plan time
   instead of inferring it.
+- **Where it runs**, placed by dev-environment.md, "Where agents run".
+- A block on the PC says why it runs there.
 
 **The start plan.** What the author opens when, as **waves**, not as a lane grid. A grid of lanes
 by ordinal columns ("first / then / later") failed in practice: the columns read as global phases

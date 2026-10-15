@@ -186,6 +186,10 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
 
 - **Unattended agents run only on the agent machine; the PC stays simple** (decision 2026-10-04,
   [open-questions.md](../open-questions.md)).
+- **A planned session runs on the agent seat unless its work must run on the PC** (author direction
+  2026-10-15, [open-questions.md](../open-questions.md)):
+  - work that must run on the PC: a deploy, the home server, a browser login such as the game's;
+  - the machines' current load never decides where a session runs.
 - **An agent on the PC holds the author's rights in practice**, through the credential and the
   Docker socket in the table; accepted on purpose. What GitHub binds: [git-state.md](git-state.md),
   "What GitHub enforces".
