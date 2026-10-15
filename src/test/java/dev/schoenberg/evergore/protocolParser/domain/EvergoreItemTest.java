@@ -16,15 +16,21 @@ import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.Publish
 import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Recipe.Unread;
 
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.BOLZEN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.BANDAGEN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.BAUTEILE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.EDELSTEINE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.HANDWERKSMATERIAL;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.JAGDBEUTEN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.LEICHTE_RUESTUNG_LEDER;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.LEICHTE_RUESTUNG_STOFF;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.LEICHTE_SCHILDE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.MUNITION_ARMBRUESTE;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.MUNITION_BOEGEN;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.MUNITION_MAGIESTAEBE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.ROHSTOFFE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.SCHWERER_SCHILDE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.SCHWERE_RUESTUNG_METALL;
+import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.Category.VERARBEITETE_ROHSTOFFE;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.EISENBARREN;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.GRANIT;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.JAGDBOLZEN;
@@ -59,11 +65,20 @@ class EvergoreItemTest {
 	private static final Set<Category> ARMOUR = Set.of(LEICHTE_RUESTUNG_LEDER, LEICHTE_RUESTUNG_STOFF, SCHWERE_RUESTUNG_METALL, LEICHTE_SCHILDE, SCHWERER_SCHILDE);
 	private static final List<EvergoreItem> RAW_STONES = List.of(MARMOR, GRANIT, SCHIEFER);
 	private static final Set<Category> DONATED_CATEGORIES = Set.of(ROHSTOFFE, JAGDBEUTEN, EDELSTEINE);
+	private static final Set<Category> NON_EQUIPMENT_CATEGORIES = Set
+			.of(ROHSTOFFE, JAGDBEUTEN, EDELSTEINE, HANDWERKSMATERIAL, VERARBEITETE_ROHSTOFFE, BANDAGEN, BAUTEILE, MUNITION_BOEGEN, MUNITION_ARMBRUESTE, MUNITION_MAGIESTAEBE);
 	private static final Set<String> TRADER_GOODS = Set
 			.of("Schmiedeöl", "Bogensalbe", "Harz", "Zwirn", "Steinkohle", "Nähgarn", "Lederfett", "Magiesplitter", "Federn", "Salz", "Mörtel", "Schleifstein", "Elbenhaar",
 					"Wattierung", "Granitharz", "Glaszwirn", "Drachenzunder", "Schutzpolster", "Ledernieten", "Phasenkraut", "Pfeilharz", "Kristallat", "Edelmörtel", "Griffband",
 					"Nieten", "Vulkandraht", "Beschläge", "Erdenblut", "Drachinschneiden");
 	private static final Set<String> AMMUNITION_THE_GAMES_TRADER_SELLS = Set.of("Pfeile", "Bolzen", "Magieessenz");
+
+	@Test
+	void pricesEveryPieceOfEquipmentInWholeHundreds() {
+		List<EvergoreItem> equipment = stream(EvergoreItem.values()).filter(item -> !NON_EQUIPMENT_CATEGORIES.contains(item.category)).toList();
+
+		assertThat(equipment).isNotEmpty().allSatisfy(item -> assertThat(item.marketValue % 100).as("the price of %s", item.ingameName).isZero());
+	}
 
 	@Test
 	void everyItemCostsSixtyPercentOfItsMarketValueWhenWithdrawn() {

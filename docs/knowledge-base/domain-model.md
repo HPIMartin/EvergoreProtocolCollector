@@ -315,6 +315,7 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   - With whole prices and equipment priced in hundreds, every exact figure is a multiple of 0.2
     gold, never exactly half a gold.
   - That rests on the game alone: the parser and the valuation accept a quality on any item.
+  - `EvergoreItemTest` keeps every equipment price a whole hundred.
 - **The same resolved storage entries feed the round-trip detection.** Each avatar's ledger is
   resolved into `ResolvedStorageEntry`s once, valued as above and handed to
   `RoundTripDetector.detect(avatar, entries)`; its `RoundTripReport` is collected into the run's
