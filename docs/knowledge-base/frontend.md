@@ -390,8 +390,9 @@ service's only read surface.
   column and every `@DatabaseTable` its table. There is no JDK-standard annotation for this (JSON
   binding never landed in Java SE), so the Jackson annotation is deliberate and confined to the
   `wire` package.
-- **A tokenless deep link answers 401.** Only `/` and `/index.html` are public, so the shell loads
-  from there and the client carries `?token=` across its routes (see the SPA's views above).
+- **A tokenless deep link answers 401.** Of the SPA's paths only `/`, `/index.html` and `/admin` are
+  public (`evergore.security.public-paths`), so the shell loads from there and the client carries
+  `?token=` across its routes (see the SPA's views above).
 - **404 vs. empty page** (author decision 2026-08-05): a **404 means the avatar is unknown**, i.e. has
   no row in either ledger. A known avatar whose bank or storage ledger happens to be empty answers 200
   with `totalCount: 0` and `items: []`, like the overview does, so the SPA can tell "no storage
