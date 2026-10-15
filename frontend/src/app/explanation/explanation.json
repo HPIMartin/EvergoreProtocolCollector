@@ -310,7 +310,7 @@
         },
         {
           "question": "Lohnt sich Handwerk für mich?",
-          "rule": "Ihr gewinnt, was das Fertige gutgeschrieben bekommt, abzüglich 60 % der Zutaten, die ihr aus dem Gildenlager nehmt.",
+          "rule": "Ihr gewinnt, was das Fertige gutgeschrieben bekommt, abzüglich 60 % des Marktwerts der Zutaten, die ihr aus dem Gildenlager nehmt.",
           "example": {
             "intro": "Hanna Handwerk fertigt aus 5 Eisenerz und 2 Steinkohle 5 Eisenbarren.",
             "ledger": {

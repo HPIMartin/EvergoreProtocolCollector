@@ -35,7 +35,7 @@ Mira Mitglied Entnahme: 720 Gold + 360 Gold = 1.080 Gold
 Warum? Wer herausnimmt, zahlt der Gilde ihren Preis. Legt Mira Mitglied das neue Kurzschwert unverändert zurück, bekommt sie genau die 720 Gold wieder.
 
 ### Lohnt sich Handwerk für mich?
-Ihr gewinnt, was das Fertige gutgeschrieben bekommt, abzüglich 60 % der Zutaten, die ihr aus dem Gildenlager nehmt.
+Ihr gewinnt, was das Fertige gutgeschrieben bekommt, abzüglich 60 % des Marktwerts der Zutaten, die ihr aus dem Gildenlager nehmt.
 Beispiel: Hanna Handwerk fertigt aus 5 Eisenerz und 2 Steinkohle 5 Eisenbarren.
 Hanna Handwerk nimmt 5 Eisenerz heraus: 5 × 40 Gold × 60 % = 120 Gold
 Hanna Handwerk nimmt 2 Steinkohle heraus: 2 × 100 Gold × 60 % = 120 Gold
