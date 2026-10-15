@@ -22,11 +22,11 @@
 | M16 | 0.4.0 reaches the guild | the explanation page with the corrected note and the invented trader, the release comparison against 0.3.0, the gate guards, the release (F23) | **First** (author decision 2026-10-13): the page goes live with 0.4.0, and nothing in it moves a figure |
 | M17 | 0.5.0: members log in | accounts, login and a JWT on every endpoint (C11), the user management (C12), the usage records (C13) | **After 0.4.0** (author decision 2026-10-14): auth is the feature 0.5.0 carries, and nothing else for now |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
-| M9 | Clear the last bottleneck | D24 with F12, F10; the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
-| M10 | What the bottlenecks release | B36→D25 with D9→D18, D14 | Measured request-path cost and the timezone fix at its root |
-| M11 | Product build-out | E12→E13, E3, E27, E30, E37, F13 | E12 inherits D18's query shape, so it follows it |
-| M12 | Ops, security & environment | F1, H11, C1, C8, A4, E28, E17, H2, H9 | F1 before the author's history rewrite; H9 last, on the nets built above |
-| M14 | The guild's skills | E31→E32→E33, E34 | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open, D-16). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
+| M9 | Clear the last bottleneck | the atomic bank+storage ingest (D24) with the refused commit's open transaction (F12) and the job outliving the closed context (F10); the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
+| M10 | What the bottlenecks release | the unreadable meta value (B36) → exact fixed-point sums (D25), with the naming follow-ups (D9) → the aggregation in SQL (D18); timestamps in UTC (D14) | Measured request-path cost and the timezone fix at its root |
+| M11 | Product build-out | the time filter (E12) → the member of the month (E13); the estimated hunt deposits (E3); failure pages with a picture (E27); recurring round trips flagged (E30); a ledger keeping its place on reload (E37); the collation of punctuation (F13) | The time filter inherits the SQL aggregation's query shape, so it follows it |
+| M12 | Ops, security & environment | removing the bundled webdrivers (F1); Dependabot for docker and gradle (H11); a real `Configuration` (C1); vulnScan at zero (C8); CI on every pull request (A4); the admin page linking its members (E28); a manual scrape trigger (E17); a Selenium Firefox service (H2); Micronaut 5.0 (H9) | Removing the webdrivers before the author's history rewrite; Micronaut 5.0 last, on the nets built above |
+| M14 | The guild's skills | reading the ranking (E31) → skill levels every 7 days (E32) → a skills page (E33); skill progress marked (E34) | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open (D-16)). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
 
 ## M16: 0.4.0 reaches the guild
 
@@ -61,20 +61,20 @@ ledger cannot decide it.
 
 - [x] Every storage name carries the value the game gives it, is recorded as a parser miss, or is
       recorded as unpriced by the game with the date of the read that found no price (2026-09-22).
-      - Of the 15 names over 31 rows, 13 are gem pieces no complete read priced and 2 are parser
-        misses.
-      - Recording them moves no sum on the 03.09.2026 snapshot
-        ([testing.md](knowledge-base/testing.md)).
+  - Of the 15 names over 31 rows, 13 are gem pieces no complete read priced and 2 are parser
+    misses.
+  - Recording them moves no sum on the 03.09.2026 snapshot
+    ([testing.md](knowledge-base/testing.md)).
 - [x] The three ammunition sorts the NPC sells are credited in full, every other sort at 60 %, as
       decided 2026-09-27 (2026-10-01).
-      - Why: a rule the ledger can apply that bounds the double payment to crafters.
-      - On the 03.09.2026 snapshot the guild trader stands at `+1.456.343`
-        ([testing.md](knowledge-base/testing.md)).
-      - It belongs here because it changes what a deposit credits.
+  - Why: a rule the ledger can apply that bounds the double payment to crafters.
+  - On the 03.09.2026 snapshot the guild trader stands at `+1.456.343`
+    ([testing.md](knowledge-base/testing.md)).
+  - It belongs here because it changes what a deposit credits.
 - [x] A member's row, the guild row and the header figures are each rounded once from the exact
       values, halves away from zero, as decided 2026-09-27 (2026-09-30).
-      - On the 03.09.2026 snapshot 7 of 42 rows and four guild figures differ by one gold from
-        `v0.2.0`'s ([testing.md](knowledge-base/testing.md)).
+  - On the 03.09.2026 snapshot 7 of 42 rows and four guild figures differ by one gold from
+    `v0.2.0`'s ([testing.md](knowledge-base/testing.md)).
 - [x] A member cycling trader goods through the storage is named with the item and the overlapping
       quantity, and a test proves the warning stays silent for a crafter who withdraws material and
       deposits the product.
@@ -101,8 +101,8 @@ Slice: a scrape that aborts midway leaves both ledgers where they were.
 Slice: the measured costs come down and the timezone hazard is fixed at its root.
 
 - [x] Both ledgers carry an index on `(avatar, timeStamp)`, reaching an existing database through a
-      migration; the query plans show `SEARCH … USING INDEX`. Two of the three affected queries sit
-      in the request path.
+      migration; the query plans show `SEARCH … USING INDEX`.
+  - Two of the three affected queries sit in the request path.
 - [ ] A stored meta value that cannot be read costs only its own avatar, on the overview and in the
       recompute, before any migration of the meta store meets one (backlog B36).
 - [ ] The value sums are exact fixed-point gold, converted by one migration (backlog D25).
@@ -121,11 +121,13 @@ its due.
 
 - [ ] A windowed aggregation answers per-avatar sums for an arbitrary `[from,to]`; the filter
       round-trips through the URL on all three views (backlog E12, absorbing the date-range
-      reporting). It shares its query shape with D18, which is why it follows it.
+      reporting). It shares its query shape with the aggregation in SQL (D18), which is why it
+      follows it.
 - [ ] "Gildenmitglied des Monats": four awards per calendar month, last completed month and running
       standing (backlog E13).
-- [ ] Hunt-loot estimate (backlog E3). Its valuation half is decided; only the display estimate of
-      open question D-4 still gates it.
+- [ ] Hunt-loot estimate (backlog E3).
+  - Its valuation half is decided; only the display estimate, the hunt-loot estimate formula (D-4),
+    still gates it.
 - [ ] A load failure and a dead link each show a picture of their own, the "link dead" among
       them, before 1.0 (backlog E27).
 - [ ] A member whose suspected round trips recur is flagged (backlog E30).
@@ -138,10 +140,10 @@ its due.
 Slice: the stand deploys, scans and authenticates the way a showcase should, and the framework
 reaches its current major.
 
-- [ ] The bundled webdriver binaries and the local-browser machinery are gone (backlog F1); the
-      author's history rewrite follows, once **no** worktree is open, no pushed `claude/` branch or
-      open pull request remains, both machines clone afresh, and the author moves the protected tags
-      `v0.1.0`, `v0.2.0` and `v0.3.0`.
+- [ ] The bundled webdriver binaries and the local-browser machinery are gone (backlog F1).
+  - The author's history rewrite follows, once **no** worktree is open, no pushed `claude/` branch
+    or open pull request remains, both machines clone afresh, and the author moves the protected
+    tags `v0.1.0`, `v0.2.0` and `v0.3.0`.
 - [ ] Dependabot covers all three ecosystems and one refresh pass has run (backlog H11).
 - [ ] The browser's first-launch race is removed or recorded as outside the project's reach, with the
       refresh (backlog H11).
@@ -200,5 +202,5 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
 
 Kept in the backlog with their rationale, not deleted; revisit only on a new reason.
 
-- **G6** static-analysis / Sonar gate: waits on a condition that is not arriving.
-- **F4** multi-guild / multi-world: speculative, since there is one guild and no second consumer.
+- **Static-analysis / Sonar gate** (G6): waits on a condition that is not arriving.
+- **Multi-guild / multi-world** (F4): speculative, since there is one guild and no second consumer.

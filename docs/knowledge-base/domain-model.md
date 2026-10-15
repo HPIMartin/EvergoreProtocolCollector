@@ -404,7 +404,7 @@ one statement over the whole store) and answers every avatar's four sums, the de
 guild-wide total **and** `last_updated` out of it. Together with the recompute's single transaction
 this makes the **computed sums** one consistent state of the meta store rather than up to four reads
 per avatar that a concurrent recompute could interleave (decision 2026-09-03). There is deliberately
-**no** per-key read on the port: the shape that could tear no longer exists. The scope of that
+**no** per-key read on the port, so no read can tear a recompute. The scope of that
 guarantee is the meta store only: the two **last-activity** columns are separate live queries against
 the ledger tables (`latestTimestampPerAvatar`), so a ledger write landing between the snapshot and
 those queries can show an activity timestamp newer than the sums beside it. The columns are
