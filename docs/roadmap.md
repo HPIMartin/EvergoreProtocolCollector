@@ -26,7 +26,7 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M17 | 0.5.0: members log in | before the login, the fixes of the two risks accepted for 0.3.0 and 0.4.0 (F11, F12, listed under M9 until they land) and the timestamps as instants (D14); accounts, login and a JWT on every endpoint (C11), the game's message form (C14) and the password delivery (C15), the user management (C12), the usage records (C13), the release tooling (F24), the release (F25) | **After 0.4.0** (author decisions 2026-10-14 and 2026-10-15): auth is the feature 0.5.0 carries |
+| M17 | 0.5.0: members log in | before the login: the fixes of the two accepted risks (F11, F12; listed under M9 until they land), the timestamps (D14) and the preparation (B47, F15, B46, H16, G23, B24, G84, G66, G85); the login (C11) with the message form (C14), the password delivery (C15), the user management (C12) and the usage records (C13); the deploy script (F21, F20) and the release tooling (F24); the release (F25) | **After 0.4.0** (author decisions 2026-10-14 and 2026-10-15): auth is the feature 0.5.0 carries |
 | M18 | Right after 0.5.0 | HTTPS through a reverse proxy (C16), the manual scrape trigger (E17), the admin page's member links (E28), dropping the old timestamp columns (D26) | **After 0.5.0** (author decisions 2026-10-15): HTTPS follows the login over plain HTTP, the roles of 0.5.0 carry the admin page's additions, and the old timestamp columns go once 0.5.0 is stable |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | the atomic bank+storage ingest (D24) with the refused commit's open transaction (F12) and the job outliving the closed context (F10); the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
@@ -45,6 +45,16 @@ page, and the author sees who uses the app and how.
 - [ ] Timestamps and `last_updated` round-trip timezone-independently as instants (backlog D14).
 - [ ] The new timestamp columns stand beside the old, so that 0.4.0 still runs on the database
       (backlog D14).
+- [ ] The preparation has landed before the login's first implementation commit: the
+      unreadable-head test, the line slicer, the sweep test, the browser start, the `MemberBrowser`
+      split, the React hook rules and the act-in-assertion check (backlog B47, F15, B46, H16, G23,
+      B24, G84).
+- [ ] The browser's first-launch race is removed or recorded as outside the project's reach (backlog
+      H16).
+- [ ] The scenario gate holds its reviewer to the files the falsifiers judged (backlog G66).
+- [ ] A security lens reads the login from its first feature-gate panel (backlog G85).
+- [ ] The database directory belongs to the runtime user (backlog F21).
+- [ ] A failed ssh connection is named as such (backlog F20).
 - [ ] Accounts, login and the password delivery are in place (backlog C11, C14, C15).
 - [ ] The admin page manages the accounts (backlog C12).
 - [ ] The admin page shows who logged in when and which views and options each member uses
@@ -150,8 +160,6 @@ reaches its current major.
     or open pull request remains, both machines clone afresh, and the author moves the protected
     tags `v0.1.0`, `v0.2.0` and `v0.3.0`.
 - [ ] Dependabot covers all three ecosystems and one refresh pass has run (backlog H11).
-- [ ] The browser's first-launch race is removed or recorded as outside the project's reach, with the
-      refresh (backlog H11).
 - [ ] `Configuration` is real and immutable (C1); `vulnScan` is at zero and gated (C8).
 - [ ] Every pull request head is built by CI, and the landing refuses a head without its green named
       check (backlog A4), after the gate mechanics.
@@ -180,7 +188,6 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   - The tool-level enforcement hooks (G7), whose working-directory-drift guard addresses a failure
     mode that has already cost work.
   - The one remaining hole in the git gate, a prefix-squattable host-path scan (G13).
-  - The React hook rules, which nothing enforces today (B24).
   - Agent-environment polish (G11), including the shared probe result directory that makes
     concurrent falsifier runs flaky and the two worktree costs of the dissolved build-performance
     analysis.
@@ -188,10 +195,8 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   - The Gradle daemons' memory under parallel strands (H13).
   - The gate, agent-tool and doc rows (from G21 on), pulled when a gate meets one.
   - After 0.5.0, the gate mechanics (G51 with G32, G40, G65).
-- **Request handling at the edge:** the line slicer's per-line cost (F15) and the browser lost for
-  a target with a broken escape (F18).
-- **Deploy and environment:** a failed ssh connection named as such (F20), the database directory
-  given to the runtime user (F21), the browser grid on the agent seat (H14).
+- **Request handling at the edge:** the browser lost for a target with a broken escape (F18).
+- **Deploy and environment:** the browser grid on the agent seat (H14).
 - **Test-suite hygiene:** the test debt two feature gates
   left (B34, B38), the release comparison's remaining edges (B42, B43, B44, B45), style
   alignment (B8), the shared boot fixture (B18), the parser's residual shapes (B22), deterministic
