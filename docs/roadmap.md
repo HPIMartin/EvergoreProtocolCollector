@@ -26,11 +26,11 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M17 | 0.5.0: members log in | accounts, login and a JWT on every endpoint (C11), the game's message form (C14) and the password delivery (C15), the user management (C12), the usage records (C13), the release tooling (F24), the release (F25) | **After 0.4.0** (author decisions 2026-10-14 and 2026-10-15): auth is the feature 0.5.0 carries |
-| M18 | Right after 0.5.0 | HTTPS through a reverse proxy (C16), the manual scrape trigger (E17), the admin page's member links (E28) | **After 0.5.0** (author decisions 2026-10-15): HTTPS follows the login over plain HTTP, and the roles of 0.5.0 carry the admin page's additions |
+| M17 | 0.5.0: members log in | before the login, the fixes of the two risks accepted for 0.3.0 and 0.4.0 (F11, F12, listed under M9 until they land) and the timestamps as instants (D14); accounts, login and a JWT on every endpoint (C11), the game's message form (C14) and the password delivery (C15), the user management (C12), the usage records (C13), the release tooling (F24), the release (F25) | **After 0.4.0** (author decisions 2026-10-14 and 2026-10-15): auth is the feature 0.5.0 carries |
+| M18 | Right after 0.5.0 | HTTPS through a reverse proxy (C16), the manual scrape trigger (E17), the admin page's member links (E28), dropping the old timestamp columns (D26) | **After 0.5.0** (author decisions 2026-10-15): HTTPS follows the login over plain HTTP, the roles of 0.5.0 carry the admin page's additions, and the old timestamp columns go once 0.5.0 is stable |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | the atomic bank+storage ingest (D24) with the refused commit's open transaction (F12) and the job outliving the closed context (F10); the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
-| M10 | What the bottlenecks release | the unreadable meta value (B36) → exact fixed-point sums (D25), with the naming follow-ups (D9) → the aggregation in SQL (D18); timestamps in UTC (D14) | Measured request-path cost and the timezone fix at its root |
+| M10 | What the bottlenecks release | the unreadable meta value (B36) → exact fixed-point sums (D25), with the naming follow-ups (D9) → the aggregation in SQL (D18) | Measured request-path cost |
 | M11 | Product build-out | the time filter (E12) → the member of the month (E13); the estimated hunt deposits (E3); failure pages with a picture (E27); recurring round trips flagged (E30); a ledger keeping its place on reload (E37); the collation of punctuation (F13) | The time filter inherits the SQL aggregation's query shape, so it follows it |
 | M12 | Ops, security & environment | removing the bundled webdrivers (F1); Dependabot for docker and gradle (H11); a real `Configuration` (C1); vulnScan at zero (C8); CI on every pull request (A4); a Selenium Firefox service (H2); Micronaut 5.0 (H9) | Removing the webdrivers before the author's history rewrite; Micronaut 5.0 last, on the nets built above |
 | M14 | The guild's skills | reading the ranking (E31) → skill levels every 7 days (E32) → a skills page (E33); skill progress marked (E34) | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open (D-16)). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
@@ -40,6 +40,11 @@
 Slice: every guild member logs in with an own account, the admin manages the accounts on the admin
 page, and the author sees who uses the app and how.
 
+- [ ] The two risks accepted for 0.3.0 and 0.4.0 are fixed: the reads off the event loop and the
+      refused commit (backlog F11, F12).
+- [ ] Timestamps and `last_updated` round-trip timezone-independently as instants (backlog D14).
+- [ ] The new timestamp columns stand beside the old, so that 0.4.0 still runs on the database
+      (backlog D14).
 - [ ] Accounts, login and the password delivery are in place (backlog C11, C14, C15).
 - [ ] The admin page manages the accounts (backlog C12).
 - [ ] The admin page shows who logged in when and which views and options each member uses
@@ -54,6 +59,7 @@ Slice: what the author placed right after the login release.
 - [ ] The app answers the guild over HTTPS (backlog C16).
 - [ ] The admin page leads to the members it names, on the roles of M17 (backlog E28).
 - [ ] The admin page offers a manual scrape and recompute, on the roles of M17 (backlog E17).
+- [ ] The old timestamp columns are gone once 0.5.0 is stable (backlog D26).
 
 ## M8: The numbers hold up
 
@@ -99,7 +105,7 @@ Slice: a scrape that aborts midway leaves both ledgers where they were.
 
 ## M10: What the bottlenecks release
 
-Slice: the measured costs come down and the timezone hazard is fixed at its root.
+Slice: the measured costs come down.
 
 - [x] Both ledgers carry an index on `(avatar, timeStamp)`, reaching an existing database through a
       migration; the query plans show `SEARCH … USING INDEX`.
@@ -110,8 +116,6 @@ Slice: the measured costs come down and the timezone hazard is fixed at its root
 - [ ] The recompute reads pre-grouped sums instead of loading whole ledgers into the JVM; per-avatar
       values stay identical on the production snapshot, and the round-trip detection keeps the
       per-entry rows it needs (backlog D18).
-- [ ] Timestamps and `last_updated` round-trip timezone-independently as instants (backlog D14),
-      retiring the interim startup guard, `TimezoneStartupValidator`.
 - [ ] The `withdrawl` → `withdrawal` rename runs as a migration, values preserved 1:1, in the same
       migration as the fixed-point sums (backlog D9).
 
