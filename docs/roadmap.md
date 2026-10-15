@@ -9,22 +9,30 @@
 > ([multi-agent-playbook.md](knowledge-base/multi-agent-playbook.md), handbook §7); landings stay
 > author-serialized.
 >
-> **Ordering rule** (each decision and its why in [open-questions.md](open-questions.md)): the next
-> release and the work it carries go first; then what changes what the numbers are, then the
-> bottlenecks, then product build-out and operations; the skills milestone follows 1.0. The
-> explanation page changes in the same commit as any rule it explains, so a rule that lands after
-> it extends the page instead of waiting for it. A parked set stays explicitly out of this stage.
+> **Ordering rule** (each decision and its why in [open-questions.md](open-questions.md)):
+>
+> - the next release and the work it carries go first;
+> - then what the author placed right after it;
+> - then what changes what the numbers are;
+> - then the bottlenecks;
+> - then product build-out and operations;
+> - the skills milestone follows 1.0.
+>
+> The explanation page changes in the same commit as any rule it explains, so a rule that lands
+> after it extends the page instead of waiting for it. A parked set stays explicitly out of this
+> stage.
 
 ## Order
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
 | M17 | 0.5.0: members log in | accounts, login and a JWT on every endpoint (C11), the user management (C12), the usage records (C13) | **After 0.4.0** (author decision 2026-10-14): auth is the feature 0.5.0 carries, and nothing else for now |
+| M18 | Right after 0.5.0 | the manual scrape trigger (E17), the admin page's member links (E28) | **After 0.5.0** (author decision 2026-10-15): the roles of 0.5.0 carry the admin page's additions |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | the atomic bank+storage ingest (D24) with the refused commit's open transaction (F12) and the job outliving the closed context (F10); the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
 | M10 | What the bottlenecks release | the unreadable meta value (B36) → exact fixed-point sums (D25), with the naming follow-ups (D9) → the aggregation in SQL (D18); timestamps in UTC (D14) | Measured request-path cost and the timezone fix at its root |
 | M11 | Product build-out | the time filter (E12) → the member of the month (E13); the estimated hunt deposits (E3); failure pages with a picture (E27); recurring round trips flagged (E30); a ledger keeping its place on reload (E37); the collation of punctuation (F13) | The time filter inherits the SQL aggregation's query shape, so it follows it |
-| M12 | Ops, security & environment | removing the bundled webdrivers (F1); Dependabot for docker and gradle (H11); a real `Configuration` (C1); vulnScan at zero (C8); CI on every pull request (A4); the admin page linking its members (E28); a manual scrape trigger (E17); a Selenium Firefox service (H2); Micronaut 5.0 (H9) | Removing the webdrivers before the author's history rewrite; Micronaut 5.0 last, on the nets built above |
+| M12 | Ops, security & environment | removing the bundled webdrivers (F1); Dependabot for docker and gradle (H11); a real `Configuration` (C1); vulnScan at zero (C8); CI on every pull request (A4); a Selenium Firefox service (H2); Micronaut 5.0 (H9) | Removing the webdrivers before the author's history rewrite; Micronaut 5.0 last, on the nets built above |
 | M14 | The guild's skills | reading the ranking (E31) → skill levels every 7 days (E32) → a skills page (E33); skill progress marked (E34) | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open (D-16)). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
 
 ## M17: 0.5.0, members log in
@@ -38,6 +46,13 @@ page, and the author sees who uses the app and how.
 - [ ] The admin page shows who logged in when and which views and options each member uses
       (backlog C13).
 - [ ] 0.5.0 is deployed and tagged.
+
+## M18: Right after 0.5.0
+
+Slice: what the author placed right after the login release.
+
+- [ ] The admin page leads to the members it names, on the roles of M17 (backlog E28).
+- [ ] The admin page offers a manual scrape and recompute, on the roles of M17 (backlog E17).
 
 ## M8: The numbers hold up
 
@@ -135,8 +150,6 @@ reaches its current major.
 - [ ] `Configuration` is real and immutable (C1); `vulnScan` is at zero and gated (C8).
 - [ ] Every pull request head is built by CI, and the landing refuses a head without its green named
       check (backlog A4), after the gate mechanics.
-- [ ] The admin page leads to the members it names, on the roles of M17 (backlog E28).
-- [ ] The admin page offers a manual scrape and recompute, beside the JWT move of M17 (backlog E17).
 - [ ] A `selenium/standalone-firefox` service backs an integration test, and the server-booting
       tests split into their own Gradle set (H2).
 - [ ] Micronaut 5, endpoints 1:1 against the prod snapshot (H9). Precondition: the nets above.
@@ -169,7 +182,7 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   - The SessionStart hook that injects the lessons deterministically (G10).
   - The Gradle daemons' memory under parallel strands (H13).
   - The gate, agent-tool and doc rows (from G21 on), pulled when a gate meets one.
-  - After 0.4.0, the gate mechanics (G51 with G32, G40, G65).
+  - After 0.5.0, the gate mechanics (G51 with G32, G40, G65).
 - **Request handling at the edge:** the line slicer's per-line cost (F15) and the browser lost for
   a target with a broken escape (F18).
 - **Deploy and environment:** a failed ssh connection named as such (F20), the database directory
