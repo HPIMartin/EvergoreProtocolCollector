@@ -18,6 +18,10 @@ your only rulebook; every finding cites a rule ID.
 Input: the feature's diff/commits (or branch range). Check:
 
 1. **Touched docs, whole file** (drift concentrates where docs get edited), against every DOC rule.
+   - What the strand caused, or what stands in lines it edits, is a finding of the gate.
+   - Older debt in a touched doc is a finding in rounds 1 and 2 only.
+   - From round 3 on, list older debt for the doc-debt row (G18) or the bare-shortcode row (G21);
+     it does not FAIL the gate (author decision 2026-10-15).
 2. **Docs that SHOULD have been touched but weren't:**
    - behavior/config changed → relevant KB doc updated? (DOC-6)
    - backlog item completed → row and all shortcode references removed? (DOC-5; `git grep` the ID)

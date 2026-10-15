@@ -76,6 +76,9 @@ your report as a finding (`docs/knowledge-base/working-with-ai-agents.md`, "Inst
 ## Return (your final message = data for the orchestrator)
 - `soundSpec: yes | no`
 - findings: a list of `{severity: high|med|low, scenario: <name or feature-level>, why}`
+  - `high` or `med` only for a rule or behaviour of the ticket no scenario states, or a wrong or
+    hollow surface that passes a scenario (author decision 2026-10-15).
+  - A further tightening of a `Then` that already binds its rule is `low`.
 - `rewrites:` concrete replacement Gherkin for each finding where a fix is expressible
 - `coverageGaps:` behaviors of the feature no scenario names, as proposed scenario titles
 - If you found nothing real after a genuine attempt, say so explicitly. Bias to skepticism: when

@@ -85,6 +85,9 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
 Step 0 is in force in this project (handbook §5, "Status in this project"): a plan without
 scenarios claims one of the §5 exemptions explicitly and then starts at step 1.
 
+A strand without product behaviour keeps the plan approval; the go may come at the start and the
+plan be reviewed later (decision 2026-10-15).
+
 ### FAIL-loop rules (when a falsifier or reviewer rejects)
 
 A FAIL sends work back to step 2; which gate agents the next round re-runs is handbook §9's
@@ -102,6 +105,9 @@ Harness-specific history hygiene:
   so a "gate round N fixes" commit is a FAIL on sight; a proposed message that names one hunk of a
   multi-hunk commit, or an "and" joining two clauses, is the signal that the fold was skipped or the
   commit must split.
+  - Fixes for several earlier commits ride in temporary commits with ordinary messages (no
+    `fixup!` subjects); a scripted todo moves each behind its target as a `fixup` line, so no patch
+    waits in the working tree for a `git checkout --`, which is `ask`.
 - **Apply a panel finding to the whole diff, not to the file it was raised against.** When a finding
   is a *rule*, re-grep every file the strand touches for that pattern before reporting it resolved.
 - **Permission-blocked in this harness:** `git reset`, `git clean` and `git branch -D`, each in every

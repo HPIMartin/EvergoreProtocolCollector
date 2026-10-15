@@ -384,6 +384,10 @@ second copy.
 | 2026-10-15 | **The explanation page notes that some market values are still missing and that the guild row is rounded from its own exact value; the rounding question asks "Warum passt eine Summe manchmal nicht ganz?"** (author decisions on the domain lens's two findings: keep the credit rule and note the missing values; 2a) → `frontend/src/app/explanation/explanation.approved.txt` | A name the catalog cannot price counts 0 gold, and the guild row can differ from the sum of the shown rows by more than 1 gold. Alternatives: a fourth point under "Was kann das Protokoll nicht zeigen?"; keep the question |
 | 2026-10-15 | **The two risks accepted for 0.3.0, the refused commit and the reads on the event loop, stand for 0.4.0, and both fixes go into 0.5.0** (author decision; keeping them for 0.4.0 was the recommendation, the fixes in 0.5.0 are the author's addition; where they stand in backlog.md and roadmap.md is set by the planning of 0.5.0, the author's routing) → risks.md, the refused-commit item (**F12**) and the event-loop reads item (**F11**) | 0.4.0 changes no valuation and no data path, so neither trigger changed since 0.3.0. Alternative offered: one fix as a strand of its own before the cut |
 | 2026-10-15 | **0.4.0 ships with the image-build failure of the orphaned-browser sweep test open** (author decision, recommendation taken): the release image is built from the gated tip until its `check` runs green, its labels are proven, and the deploy runs with `--skip-build` or reruns its own build on a red one → the sweep-test failure item (**B46**) | The failing test is test code, unchanged since `v0.3.0`; a green image carries the same production artifact, and a red build stops `deploy/epc-deploy` before it reaches the host. Alternatives offered: finding the cause first as a strand of its own, which delays the release; measuring the failure rate first |
+| 2026-10-15 | **A strand without product behaviour keeps the author's go on its cut and test list; the author may give the go at the start and review the plan later** (author answer to the open question on plan approval, option 2) → multi-agent-playbook.md | The author usually starts a strand awake, not just before the night. Alternative: the plan goes to the chat as information and the agent goes on unless the author objects |
+| 2026-10-15 | **Older doc debt in a touched doc gets two fold rounds; what remains then goes to the doc-debt row (G18) or the bare-shortcode row (G21) and does not block the gate** (author decision, refining the scope of the same day) → handbook §9; `.claude/agents/doc-reviewer.md` | Debt is cleared along the way when it can be, but never drives the time of the strand at hand. Alternative: clear every finding until the review passes |
+| 2026-10-15 | **An agent session gets no new rights for unattended work; it changes its command shapes, and the gate helpers and a worktree's build auto-allow** (author decisions on the retro of the explanation page's strand: no wider settings, `gate/walk` and `gate/tip-evidence` in the repo, the recipes in the KB) → working-with-ai-agents.md, "Permissions & autonomy" | Every wait and denial of that strand came from a command's shape, none from a missing right. Alternative: allow `git checkout --` inside the agent's worktrees |
+| 2026-10-15 | **A page of text keeps product-owner scenarios and pins its words 1:1 to an approved file; falsifier-scenario rates a further tightening of a bound `Then` `low`, falsifier-stakeholder smoother wording** (author decision 4a on the retro) → handbook §5; `.claude/agents/falsifier-scenario.md`, `.claude/agents/falsifier-stakeholder.md` | The explanation page's scenario gate ran 25 rounds on tightenings a reader judges better. Alternative: keep the rules to the explanation page's decision |
 
 ## Recorded mutations (red evidence where a new case could not start red)
 
@@ -641,14 +645,6 @@ second copy.
       included, must then read;
     - keep the file-based refs and the case check alone;
     - make the checkout's directory case-sensitive on the Windows host.
-- **D-23 (Plan approval for a strand without product behaviour), for the next plan:** a strand
-  that claims handbook §5's build/infra or `[doc]` exemption still waits for the author's go on its
-  cut and test list.
-  - On the agent seat the wait costs a round, since nobody is there to answer at once.
-  - Options, recommended first:
-    - such a plan goes to the chat as information and the agent goes on unless the author
-      objects;
-    - keep the approval for every strand.
 
 ## Assumptions currently baked into the plan (challenge if wrong)
 

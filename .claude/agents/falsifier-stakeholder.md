@@ -71,6 +71,9 @@ your report as a finding (`docs/knowledge-base/working-with-ai-agents.md`, "Inst
 - `soundSpec: yes | no`
 - findings: a list of `{severity: high|med|low, scenario: <file: name or feature-level>, lens:
   actor|reader|overlap|time|numbers, why}`
+  - `high` or `med` only when a scenario asserts what its actor cannot see, a product owner cannot
+    judge it, or a rule is stated twice (author decision 2026-10-15).
+  - Wording that could be smoother is `low`.
 - `rewrites:` concrete replacement Gherkin for each finding where a fix is expressible
 - `merges:` a list of `{keep: <file: scenario>, drop|merge: <file: scenario(s)> | none, why}`; a
   merge into one `Scenario Outline` names the outline's example column

@@ -145,6 +145,18 @@ command) inside guardrails. Two files:
   since `verify` finds its own root, so no `cd` is needed, and `W=<wt>; cd $W` is denied by the `$`
   guard.
   Worktree-path specifics: handbook §7.
+- **Command shapes that keep a session unattended** (a wait or a denial comes from a command's
+  shape, not a missing right; decision 2026-10-15):
+  - A chain that opens with `cd` carries no `$` anywhere: such chains are denied in practice,
+    although the per-command matching below predicts otherwise (cause not established). Use
+    absolute paths and `git -C` instead.
+  - A file the agent mutated goes back from a backup copy or `git show <rev>:<path> > <path>`;
+    `git checkout --` and `git restore` are `ask`.
+  - History rewrites: the playbook's FAIL-loop section.
+  - Prettier runs as `<abs worktree>/frontend/node_modules/.bin/prettier`, not
+    `cd frontend && npx prettier` (a relative `cd` prompts, `cd ..` is denied).
+  - A script that writes files is written into the scratchpad with `Write` and run as
+    `python3 <file>`, not passed as a heredoc inside a chain.
 - **The gate helpers and a worktree's build auto-allow** (once trusted), so a gate runs unattended:
   `gate/walk`, `gate/tip-evidence`, `gate/dossier-check` and `sh gate/self-test`, each by absolute
   path into a worktree under `/workspaces/EvergoreProtocolCollector/.claude/worktrees/`, and

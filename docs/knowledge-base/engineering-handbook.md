@@ -194,6 +194,11 @@ stakeholder's view (below), understandable without reading code:
   see it ("One actor per scenario", below).
 - **One acceptance runner for the system:** cucumber-jvm drives the whole system, backend and SPA;
   the frontend keeps its Vitest unit tests only.
+- **A page of text keeps the scenarios a product owner asks for** (author decision 2026-10-15, on
+  the explanation page): that it exists and is reached, its headings and structure, and what it
+  must never show.
+  - Its words are the text the author approved, pinned 1:1 by a test against an approved file.
+  - A figure it states is recomputed by a test of its own.
 - **Feature files live in `src/test/resources/features/`**, one place for the system, one file per
   capability. A file over about ten scenarios is a split signal; `Rule:` groups the scenarios of one
   business rule and `Scenario Outline` carries the variants of one behavior.
@@ -715,6 +720,12 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - At the scenario gate, `falsifier-scenario`, `falsifier-stakeholder` and the reviewer re-run in
     full on every re-gate, with no delta and no "already decided" list, since a draft `.feature`
     is small and reread whole anyway.
+
+- **Older doc debt in a touched doc is a finding in rounds 1 and 2 only** (author decision
+  2026-10-15):
+  - the strand tries twice to clear it, so old debt is cleared along the way when it can be;
+  - what remains then goes to the doc-debt row (G18) or the bare-shortcode row (G21), so it never
+    drives the time of the strand at hand.
 
 - **A delta round re-runs only what the fold concerns** (author decision 2026-10-12), since a full
   panel after every tip change was the largest cost of a strand:
