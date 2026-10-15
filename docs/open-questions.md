@@ -557,9 +557,10 @@ second copy.
   those are not a guild convention. Whether that holds for the rest, and how a price change reaches
   the catalog, is still open.
 - **D-4 (Hunt-loot estimate formula):** how is the sheet's estimated hunt-deposit value (col 6)
-  computed? Only the display estimate is still open: crediting a hunt-loot deposit with **zero** is
-  the guild's deliberate tax, decided 2026-09-10 from the guild's own announcements, so the
-  valuation half of this question is answered (gates E3).
+  computed? It gates the hunt-loot estimate (E3).
+  - Only the display estimate is still open.
+  - The valuation half is answered: crediting a hunt-loot deposit with **zero** is the guild's
+    deliberate tax, decided 2026-09-10 from the guild's own announcements.
 - **D-13 (Row identity on the wire):** an entry carries no id, so a ledger row is keyed by its
   position in the loaded page. That holds while a page is replaced as a whole (sorting reorders the
   same objects, and ledger paging is server-side, so each fetch replaces the array), but paging

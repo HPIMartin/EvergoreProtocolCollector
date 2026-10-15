@@ -18,8 +18,7 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
 - `domain`, `businessLogic`, `application` never import `io.micronaut`, `selenium`, `ormlite`, or
   any adapter; enforced by `HexagonalArchitectureTest`. Keep it true.
 - Every outbound dependency goes through a **port** (interface owned by the inner layer): new
-  external integration ⇒ port first, then adapter. (Missing today: a `PageSource` port for
-  scraping; `SeleniumPageSource` is wired without an inner-layer interface.)
+  external integration ⇒ port first, then adapter.
 - Only the composition root (`ApplicationFactory` / `config`) knows concrete classes.
 
 ## 2. SOLID, applied here
@@ -32,8 +31,10 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
 
 ## 3. Clean-code rules
 
-- Intention-revealing names; no non-domain abbreviations; no joke/placeholder names (clean up the
-  existing `stupidMerge()` / debug `"shit"`, don't copy them).
+- Names:
+  - Intention-revealing.
+  - No non-domain abbreviations.
+  - No joke or placeholder names.
 - Code stands on its own: understandable without backlog, tickets, chat, or design notes; name
   things by what they are or do (domain/capability role).
 - Names never reference backlog/ticket IDs or the producing task: `ProtocolEvaluationAcceptanceTest`,

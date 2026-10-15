@@ -124,9 +124,8 @@ Harness-specific history hygiene:
   `git update-ref -d refs/heads/<name>` (plumbing bypasses the `-D` block).
 - Tip-only fix: `git commit --amend`. `git rebase -i` has no interactive TTY here.
 
-**Cadence (cost vs rigor; decided 2026-06-13, panel + escalation 2026-07-03, per-surface lenses +
-doc fast lane 2026-07-17):** micro-steps run lightweight; falsifier panel + review gate run **at
-the feature commit**, not per micro-commit.
+**Cadence (cost vs rigor; decisions in open-questions.md):** micro-steps run lightweight;
+falsifier panel + review gate run **at the feature commit**, not per micro-commit.
 
 - **Spawn only the lenses the change can break:** backend-only → `falsifier-domain` +
   `falsifier-robustness`; frontend-only → `falsifier-frontend` + `falsifier-robustness`; full-stack
@@ -392,19 +391,22 @@ says where each piece of evidence lives.
   ([testing.md](testing.md)).
 - **The shell's working directory drifts between worktrees.** With a strand worktree checked out
   beside `main`, a Bash call can silently run in the wrong one, and a relative path then reads or
-  writes the wrong tree with no error at all (seen three times in one gate, once losing two
-  process-learnings rows into the main worktree while the branch stayed without them). Address the
-  target explicitly in every call: `git -C <absolute path>`, absolute paths for reads, writes and
-  Gradle, and `git status --short` in **both** worktrees before a gateway claim. `git show <sha>`
-  keeps working from either place (worktrees share one object database), so a file check that
-  disagrees with `git show` is a directory problem until proven otherwise; before the **first**
-  edit of a session, require `git rev-parse --is-inside-work-tree` to answer `true`. A drifted
-  Gradle run is **green**, so an exit code proves nothing: count the test-result XMLs in the
-  worktree's own `build/` and check the strand's new test classes are among them, or the suite ran
-  without the change. Mechanical enforcement is still open (backlog **G7**).
+  writes the wrong tree with no error at all.
+  - Address the target explicitly in every call: `git -C <absolute path>`, absolute paths for
+    reads, writes and Gradle.
+  - Run `git status --short` in **both** worktrees before a gateway claim.
+  - `git show <sha>` keeps working from either place (worktrees share one object database), so a
+    file check that disagrees with `git show` is a directory problem until proven otherwise.
+  - Before the **first** edit of a session, require `git rev-parse --is-inside-work-tree` to answer
+    `true`.
+  - A drifted Gradle run is **green**, so an exit code proves nothing: count the test-result XMLs in
+    the worktree's own `build/` and check the strand's new test classes are among them, or the
+    suite ran without the change.
+  - Mechanical enforcement is still open (backlog **G7**).
 - **Run a worktree's build by its absolute path:** `<abs worktree>/verify focus <abs path>`, never
   `W=<wt>; cd $W && ./verify …`, which the `cd` guard denies (working-with-ai-agents.md,
-  "Permissions & autonomy"); every brief in `.claude/agents/` says so.
+  "Permissions & autonomy").
+  - Every brief in `.claude/agents/` that runs a build says so.
 
 ## Worked example (the storage-value evaluator feature)
 

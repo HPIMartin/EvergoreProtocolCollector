@@ -200,10 +200,11 @@ command) inside guardrails. Two files:
   - **An `ask` tier** between allow and deny covers legitimate but risky commands (`gh api` can
     mutate the remote, `git restore` can discard working-tree state): always prompt, never drift
     into blanket allow.
-  - **A guardrail against accidents, not a sandbox:** broad interpreter allows (`python3`, `node`,
-    `find`, `sed -i`, shell redirects) could reach the same effects and are trusted by design
-    (single trusted author, accident threat model). Never weaken the deny floor; route anything
-    genuinely destructive or outward-facing through the human.
+  - **A guardrail against accidents, not a sandbox:** commands reached unprompted (`python3`,
+    `node`, `find`, `sed -i`, shell redirects, through auto mode or a local allow) could reach the
+    same effects and are trusted by design (single trusted author, accident threat model).
+    - Never weaken the deny floor.
+    - Route anything genuinely destructive or outward-facing through the human.
 - **Which rule applies** (measured 2026-10-05; Claude Code's permissions documentation):
   - **Rules are checked deny, then ask, then allow, and the first that matches wins.** An allow
     never carves anything out of an `ask` or a `deny`: an `xargs stat` allow never fires under the
