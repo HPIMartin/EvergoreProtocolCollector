@@ -5,9 +5,10 @@ Feature: The explanation page
   question. A group stands under its heading and a question under its own; the answer below a
   question gives its rule, then one example, which opens with "Beispiel:" and names at least one of
   the invented members, then a sentence on why. The page reads nothing of the guild: what it shows
-  is the same for every member, and it opens even when the figures cannot be loaded. How the
-  examples work their figures out is "Explaining the figures"; what each rule says is "Explaining
-  the rules".
+  is the same for every member, and it opens even when the figures cannot be loaded. The words of
+  the page are the ones the author approved, kept word for word by a test beside these scenarios;
+  every figure of its examples is recomputed through the guild's valuation by a test run with every
+  build.
 
   Rule: The page answers the questions a member asks, in five groups
 

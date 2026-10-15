@@ -4,11 +4,7 @@ const levelOf = (element) => element !== null && /^H[1-6]$/.test(element.tagName
 const answerOf = (answer) => ({
   question: textOf(within(answer, 'question')),
   questionLevel: levelOf(within(answer, 'question')),
-  rule: textOf(within(answer, 'rule')),
-  points: [...within(answer, 'rule').querySelectorAll('li')].map(textOf),
   example: textOf(within(answer, 'example')),
-  exampleIntro: textOf(within(answer, 'example-intro')),
-  calculations: [...answer.querySelectorAll('[data-testid=calculation]')].map(textOf),
   examples: answer.querySelectorAll('[data-testid=example]').length,
   ruleBeforeExample: (() => {
     const rule = within(answer, 'rule')
@@ -18,7 +14,6 @@ const answerOf = (answer) => ({
 })
 const content = document.querySelector('[data-testid=page-content]')
 return JSON.stringify({
-  heading: textOf(document.querySelector('[data-testid=view-title]')),
   text: content === null ? '' : content.innerText,
   legend: [...document.querySelectorAll('[data-testid=legend-entry]')].map(textOf),
   legendAboveTheGroups: (() => {
