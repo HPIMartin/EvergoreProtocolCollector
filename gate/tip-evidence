@@ -1,0 +1,65 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	printf 'usage: gate/tip-evidence <strand worktree>\n' >&2
+	exit 2
+}
+
+refuse() {
+	printf 'gate/tip-evidence: %s\n' "$1" >&2
+	exit 2
+}
+
+[ $# -eq 1 ] || usage
+strand=$(git -C "$1" rev-parse --show-toplevel) || refuse "$1 is no git worktree"
+gate_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+[ -z "$(git -C "$strand" status --porcelain)" ] || refuse "$strand is not clean; commit or set the change aside first"
+dossier="$strand/gate.local.d"
+tip=$(git -C "$strand" rev-parse HEAD)
+mkdir -p "$dossier"
+exec 8< "$dossier"
+flock -n 8 || refuse "another run holds $dossier"
+trap '"$strand/verify" stop > /dev/null 2>&1 || true' EXIT
+
+{
+	printf 'tip: %s\n' "$tip"
+	"$strand/verify" bdd 2>&1 || true
+} > "$dossier/bdd.log.tmp"
+mv "$dossier/bdd.log.tmp" "$dossier/bdd.log"
+printf 'bdd.log: %s\n' "$(grep -E '^BUILD (SUCCESSFUL|FAILED)' "$dossier/bdd.log" | tail -1)"
+
+guarded=0
+guard=$(git -C "$strand" ls-files '*KbCitationGuardTest.java' | head -1)
+if [ -z "$guard" ]; then
+	rm -f "$dossier/kb-guard.log"
+	printf 'kb-guard.log: none, the strand holds no KbCitationGuardTest\n'
+	guarded=1
+else
+	status=0
+	{
+		printf 'tip: %s\n' "$tip"
+		printf 'command: %s/verify focus %s/%s\n' "$strand" "$strand" "$guard"
+		"$strand/verify" focus "$strand/$guard" 2>&1 || status=$?
+	} > "$dossier/kb-guard.log.tmp"
+	mv "$dossier/kb-guard.log.tmp" "$dossier/kb-guard.log"
+	printf 'kb-guard.log: %s\n' "$(grep -E '^BUILD (SUCCESSFUL|FAILED)' "$dossier/kb-guard.log" | tail -1)"
+	if [ "$status" -ne 0 ] || ! grep -q '^BUILD SUCCESSFUL' "$dossier/kb-guard.log"; then
+		guarded=1
+	fi
+fi
+
+if [ "$(git -C "$strand" rev-parse HEAD)" != "$tip" ] || [ -n "$(git -C "$strand" status --porcelain)" ]; then
+	rm -f "$dossier/bdd.log" "$dossier/kb-guard.log"
+	refuse "$strand moved during the runs, so they prove no tip; run again on a still worktree"
+fi
+
+wip=$("$gate_dir/dossier-check" --wip "$strand" "$tip") || refuse "the @wip scenarios at $tip could not be read"
+if [ -n "$wip" ]; then
+	printf 'wip.expected: kept, since a scenario is still @wip; name each expected failure and the tip yourself\n'
+else
+	printf 'tip: %s\n' "$tip" > "$dossier/wip.expected"
+	printf 'wip.expected: the tip alone, no scenario is @wip\n'
+fi
+
+exit "$guarded"

@@ -2664,6 +2664,114 @@ walked walk_keeps || true
 if [ "$(builds)" -eq 1 ] && [ "$(git rev-parse HEAD)" = "$before" ] && [ -z "$(git status --porcelain)" ]; then r=0; else r=1; fi
 check "the walk leaves the strand worktree at its tip and clean" "$r"
 
+tip_evidence="$gate_dir/tip-evidence"
+
+guarded_strand() {
+	new_walked_strand "$1"
+	write_file src/test/java/dev/example/arch/KbCitationGuardTest.java 'class KbCitationGuardTest {' '}'
+	commit_all 'Add the guard'
+	write_file gate.local.d/red/guard.txt 'commit: Add the guard' 'exempt: a fixture class without a test'
+}
+
+armed_strand() {
+	guarded_strand "$1"
+	write_file src/test/resources/features/ledger.feature 'Feature: Sorting the tables' '' \
+		'  Scenario: Sorting a ledger orders the whole ledger' '    Given a ledger'
+	commit_all 'Arm the scenarios'
+	write_file gate.local.d/red/arm.txt 'commit: Arm the scenarios' 'exempt: the scenarios are armed'
+}
+
+evidenced() { "$tip_evidence" "$repo" > "$work/out" 2>&1; }
+
+guarded_strand evidence_tip
+evidenced || true
+if [ "$(sed -n 1p gate.local.d/bdd.log)" = "tip: $(tip)" ] && [ "$(sed -n 1p gate.local.d/kb-guard.log)" = "tip: $(tip)" ] \
+	&& grep -q '^command: .*verify focus .*KbCitationGuardTest.java$' gate.local.d/kb-guard.log && grep -qx '> Task :test' gate.local.d/kb-guard.log \
+	&& grep -q '^bdd ' "$GATE_BUILDS" && grep -q '^focus ' "$GATE_BUILDS"; then
+	r=0
+else
+	r=1
+fi
+check "tip evidence opens bdd.log and kb-guard.log with the tip" "$r"
+
+armed_strand evidence_armed
+evidenced || true
+if [ "$(cat gate.local.d/wip.expected 2> /dev/null)" = "tip: $(tip)" ]; then r=0; else r=1; fi
+check "tip evidence writes a wip.expected that names only the tip when no scenario is @wip" "$r"
+
+guarded_strand evidence_wip
+write_file gate.local.d/wip.expected 'tip: an earlier tip' 'a failing scenario | its failure'
+evidenced || true
+if [ "$(sed -n 2p gate.local.d/wip.expected)" = 'a failing scenario | its failure' ] && grep -q 'wip.expected' "$work/out"; then r=0; else r=1; fi
+check "tip evidence keeps wip.expected and says so while a scenario is @wip" "$r"
+
+armed_strand evidence_accepted
+complete_dossier
+rm -f gate.local.d/bdd.log gate.local.d/wip.expected
+evidenced || true
+if accepts; then r=0; else r=1; fi
+check "the dossier check accepts the runs tip evidence writes" "$r"
+
+guarded_strand evidence_guard_fails
+if GATE_FOCUS_FAILS=1 evidenced; then r=1; else r=0; fi
+check "tip evidence exits non-zero when the KB guard fails" "$r"
+
+guarded_strand evidence_slash
+"$tip_evidence" "$repo/" > "$work/out" 2>&1 || true
+if grep -q '^BUILD SUCCESSFUL' gate.local.d/kb-guard.log 2> /dev/null; then r=0; else r=1; fi
+check "tip evidence takes a strand path with a trailing slash" "$r"
+
+new_walked_strand evidence_unguarded
+write_file gate.local.d/kb-guard.log 'tip: an earlier tip' 'BUILD SUCCESSFUL in 1s'
+if evidenced; then r=1; elif [ ! -e gate.local.d/kb-guard.log ]; then r=0; else r=1; fi
+check "tip evidence without a KB guard fails and leaves no older guard run" "$r"
+
+guarded_strand evidence_dirty
+write_file src/main/Unsaved.java 'class Unsaved {' '}'
+if evidenced; then r=1; elif ! grep -q '^bdd ' "$GATE_BUILDS"; then r=0; else r=1; fi
+check "tip evidence refuses a strand worktree that is not clean" "$r"
+
+armed_strand evidence_lookalike
+write_file src/test/resources/features/ledger.feature 'Feature: Sorting the tables' '' '  # @wip was removed' \
+	'  @wipe' '  Scenario: Sorting a ledger orders the whole ledger' '    Given a ledger'
+commit_all 'Tag the scenario otherwise'
+write_file gate.local.d/red/lookalike.txt 'commit: Tag the scenario otherwise' 'exempt: a tag change'
+evidenced || true
+if [ "$(cat gate.local.d/wip.expected 2> /dev/null)" = "tip: $(tip)" ]; then r=0; else r=1; fi
+check "tip evidence counts no comment and no other tag as @wip" "$r"
+
+guarded_strand evidence_guard_exits
+if GATE_FOCUS_EXITS=1 evidenced; then r=1; else r=0; fi
+check "tip evidence exits non-zero when the KB guard run exits non-zero" "$r"
+
+guarded_strand evidence_moved
+if GATE_BDD_MOVES=1 evidenced; then r=1; elif [ ! -e gate.local.d/bdd.log ] && [ ! -e gate.local.d/kb-guard.log ]; then r=0; else r=1; fi
+check "tip evidence keeps no run when the strand moves during it" "$r"
+
+armed_strand evidence_commented
+write_file src/test/resources/features/ledger.feature 'Feature: Sorting the tables' '' '  @slow #note @wip' \
+	'  Scenario: Sorting a ledger orders the whole ledger' '    Given a ledger'
+commit_all 'Tag the scenario with a note'
+write_file gate.local.d/red/commented.txt 'commit: Tag the scenario with a note' 'exempt: a tag change'
+write_file gate.local.d/wip.expected 'tip: an earlier tip' 'LedgerScenarios > Sorting a ledger | expected'
+evidenced || true
+if grep -q '^LedgerScenarios > Sorting a ledger' gate.local.d/wip.expected; then r=0; else r=1; fi
+check "tip evidence reads @wip as the dossier check does" "$r"
+
+guarded_strand evidence_dirtied
+if GATE_BDD_DIRTIES=1 evidenced; then r=1; elif [ ! -e gate.local.d/bdd.log ] && [ ! -e gate.local.d/kb-guard.log ]; then r=0; else r=1; fi
+check "tip evidence keeps no run when the strand worktree gets dirty during it" "$r"
+
+guarded_strand wip_unreadable
+if "$dossier_check" --wip "$repo" nosuchref > "$work/out" 2>&1; then r=1; else r=0; fi
+check "the @wip reader refuses a commit it cannot read" "$r"
+
+guarded_strand evidence_locked
+mkdir -p gate.local.d
+if (flock 7 && evidenced) 7< "$repo/gate.local.d"; then r=1
+elif [ ! -e gate.local.d/bdd.log ] && ! grep -q '^bdd ' "$GATE_BUILDS"; then r=0; else r=1; fi
+check "tip evidence refuses while another run on the strand holds its dossier" "$r"
+
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'
 else

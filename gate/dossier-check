@@ -4,6 +4,7 @@ set -eu
 usage() {
 	printf 'usage: gate/dossier-check <strand worktree> <tip>\n' >&2
 	printf '       gate/dossier-check --walk-log <strand worktree> <commit>\n' >&2
+	printf '       gate/dossier-check --wip <strand worktree> <commit>\n' >&2
 	exit 2
 }
 
@@ -12,6 +13,36 @@ code_tree_key() {
 	code=$(printf '%s\n' "$listing" | awk -F '\t' '$2 !~ /\.md$/') || return 1
 	printf '%s\n' "$code" | git hash-object --stdin
 }
+
+wip_scenarios() {
+	git -c core.quotepath=off -C "$1" ls-tree -r --name-only "$2" -- src/test/resources/features | grep '\.feature$' \
+		| while IFS= read -r feature; do
+			git -c core.quotepath=off -C "$1" show "$2:$feature" | awk '
+				function flush() { if (name != "" && wip) print name; name = "" }
+				{ sub(/^[ \t]+/, "") }
+				/^("""|```)/ { in_docstring = !in_docstring; next }
+				in_docstring { next }
+				/^#/ || $0 == "" { next }
+				/^@/ { tags = tags " " $0; next }
+				/^Feature:/ { flush(); feature_wip = (tags ~ /@wip([^A-Za-z0-9_-]|$)/); rule_wip = 0; tags = ""; next }
+				/^Rule:/ { flush(); rule_wip = (tags ~ /@wip([^A-Za-z0-9_-]|$)/); tags = ""; next }
+				/^(Scenario|Scenario Outline|Scenario Template|Example):/ {
+					flush(); name = $0; sub(/^[^:]*:[ \t]*/, "", name)
+					wip = feature_wip || rule_wip || (tags ~ /@wip([^A-Za-z0-9_-]|$)/); tags = ""; next
+				}
+				/^(Examples|Scenarios):/ { if (tags ~ /@wip([^A-Za-z0-9_-]|$)/) wip = 1; tags = ""; next }
+				{ tags = "" }
+				END { flush() }
+			' || printf '?unread-feature@%s\n' "$feature"
+		done
+}
+
+if [ "${1:-}" = --wip ]; then
+	[ $# -eq 3 ] || usage
+	git -C "$2" rev-parse --verify --quiet "$3^{commit}" > /dev/null || usage
+	wip_scenarios "$2" "$3"
+	exit 0
+fi
 
 if [ "${1:-}" = --walk-log ]; then
 	[ $# -eq 3 ] || usage
@@ -552,26 +583,7 @@ fi
 
 bdd_log="$dossier/bdd.log"
 expected="$dossier/wip.expected"
-wip_at_tip=$(in_worktree ls-tree -r --name-only "$tip" -- src/test/resources/features | grep '\.feature$' \
-	| while IFS= read -r feature; do
-		in_worktree show "$tip:$feature" | awk '
-			function flush() { if (name != "" && wip) print name; name = "" }
-			{ sub(/^[ \t]+/, "") }
-			/^("""|```)/ { in_docstring = !in_docstring; next }
-			in_docstring { next }
-			/^#/ || $0 == "" { next }
-			/^@/ { tags = tags " " $0; next }
-			/^Feature:/ { flush(); feature_wip = (tags ~ /@wip([^A-Za-z0-9_-]|$)/); rule_wip = 0; tags = ""; next }
-			/^Rule:/ { flush(); rule_wip = (tags ~ /@wip([^A-Za-z0-9_-]|$)/); tags = ""; next }
-			/^(Scenario|Scenario Outline|Scenario Template|Example):/ {
-				flush(); name = $0; sub(/^[^:]*:[ \t]*/, "", name)
-				wip = feature_wip || rule_wip || (tags ~ /@wip([^A-Za-z0-9_-]|$)/); tags = ""; next
-			}
-			/^(Examples|Scenarios):/ { if (tags ~ /@wip([^A-Za-z0-9_-]|$)/) wip = 1; tags = ""; next }
-			{ tags = "" }
-			END { flush() }
-		' || printf '?unread-feature@%s\n' "$feature"
-	done)
+wip_at_tip=$(wip_scenarios "$worktree" "$tip")
 
 for unread in $(printf '%s\n' "$wip_at_tip" | sed -n 's/^?unread-feature@//p'); do
 	refuse wip "the check could not read the scenarios of $unread, so its @wip scenarios cannot be listed (playbook, The gate dossier)"

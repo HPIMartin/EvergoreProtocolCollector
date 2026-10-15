@@ -347,6 +347,16 @@ says where each piece of evidence lives.
   `BUILD SUCCESSFUL` or a test summary counting its FAILED lines; those failures must be exactly
   the listed ones, each with its line, and every scenario tagged `@wip` at the tip
   (on itself, its feature, its rule or one of its `Examples`) must be among them.
+  - `<abs worktree>/gate/tip-evidence <strand worktree>` writes `bdd.log` and `kb-guard.log`
+    at the tip, each opening with `tip: <sha>`.
+    - With no `@wip` scenario it writes a `wip.expected` naming the tip alone; while one is, it
+      keeps `wip.expected` for its expected failures and says so.
+    - It refuses a strand worktree that is not clean, and exits non-zero when the strand holds no
+      `KbCitationGuardTest` or its run fails.
+    - A strand that moves or gets dirty during the runs keeps neither log.
+    - It locks the strand's dossier for the run, so a second run on the strand refuses.
+    - It reads `@wip` through `gate/dossier-check --wip <worktree> <commit>`, which prints the
+      `@wip` scenarios as the check reads them and refuses a commit it cannot read.
 
 ## Environment gotchas (tell every agent)
 
