@@ -247,7 +247,7 @@ says where each piece of evidence lives.
 - **When:** every piece of evidence but the reports is in place before a round's gate agents are
   spawned. The round closes only on a PASS once every report is in, and that PASS line opens the
   hand-off to the author.
-- **The reviewer runs the check as its first act**, from the strand worktree, beside the lenses:
+- **The reviewer runs the check as its first act**, on the strand worktree, beside the lenses:
   - a refusal of class `lens`, `report`, `finding` or `tip` that names a report the round spawned
     beside it concerns that report: the reviewer quotes it, it is not the reviewer's;
   - every other refusal is a `process` finding of a FAIL;

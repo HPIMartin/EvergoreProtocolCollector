@@ -37,8 +37,9 @@ Read `CLAUDE.md`, `docs/knowledge-base/engineering-handbook.md` (esp. §1–§9)
 - judge each rejected finding;
 - if a verdict is missing, say so and stop instead of re-deriving it.
 
-At the feature gate, your first act is `gate/dossier-check <strand worktree> <tip>`, run from the
-strand worktree. The gate's evidence lives in `<strand worktree>/gate.local.d/`
+At the feature gate, your first act is
+`<abs strand worktree>/gate/dossier-check <abs strand worktree> <tip>`.
+The gate's evidence lives in `<strand worktree>/gate.local.d/`
 (`docs/knowledge-base/multi-agent-playbook.md`, "The gate dossier"). Route each refusal as that
 section's bullet "The reviewer runs the check as its first act" says.
 

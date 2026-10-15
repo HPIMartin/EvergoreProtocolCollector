@@ -145,6 +145,13 @@ command) inside guardrails. Two files:
   since `verify` finds its own root, so no `cd` is needed, and `W=<wt>; cd $W` is denied by the `$`
   guard.
   Worktree-path specifics: handbook §7.
+- **The gate helpers and a worktree's build auto-allow** (once trusted), so a gate runs unattended:
+  `gate/walk`, `gate/tip-evidence`, `gate/dossier-check` and `sh gate/self-test`, each by absolute
+  path into a worktree under `/workspaces/EvergoreProtocolCollector/.claude/worktrees/`, and
+  `<abs worktree>/verify …` for such a worktree.
+  - A relative form of a gate helper is not allowed, since the working directory can wander.
+  - A `..` anywhere in such a command is denied; a `*` still spans `/`, so a script of that name
+    deeper under the worktree root runs unprompted too (a guardrail against accidents).
 - **The PC's worktree root lies outside the project directory**
   ([dev-environment.md](dev-environment.md), "Worktrees on a volume"), so the committed file
   carries rules for it.
