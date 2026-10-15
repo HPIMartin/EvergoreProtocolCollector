@@ -486,6 +486,13 @@ snapshot, which `0.2.0` wrote; running = `v0.3.0`, candidate = `main` at `31a0ce
   the 252 exact sums of each side.
 - Also compared: 104 round trips, 39 round-trip abstentions and 14 unknown item names.
 
+**Scripted, the `0.4.0` release against `0.3.0` (2026-10-15).** Both sides on copies of the
+15.10.2026 snapshot, which `0.3.0` wrote (`V3` in `flyway_schema_history`); running = `v0.3.0`,
+candidate = the released tip `4231502a`. **No finding.**
+
+- Compared: 42 members, 7,870 bank and 250,150 storage entries, every row and guild figure.
+- Also compared: 104 round trips, 39 round-trip abstentions and 14 unknown item names.
+
 **Rounding alone, the 03.09.2026 snapshot (2026-10-10).** Running = `v0.2.0`, candidate = `main`
 as it stood on 2026-09-30, which rounds every figure once and predates the full ammunition credit.
 **No finding.**
