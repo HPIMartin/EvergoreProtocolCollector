@@ -2344,6 +2344,31 @@ describe('App', () => {
     )
   })
 
+  it('asks the server nothing for the explanation page', async () => {
+    const server = alwaysServing(200, '{}')
+    await shellAt(`/explanation?token=${TOKEN}`, server)
+
+    expect(server.askedFor).toStrictEqual([])
+  })
+
+  it('heads each group one level below the page and each question one level below its group', async () => {
+    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+
+    expect({
+      page: screen.getByTestId('view-title').tagName,
+      groups: new Set(
+        screen.getAllByTestId('group-title').map((title) => title.tagName),
+      ),
+      questions: new Set(
+        screen.getAllByTestId('question').map((question) => question.tagName),
+      ),
+    }).toStrictEqual({
+      page: 'H2',
+      groups: new Set(['H3']),
+      questions: new Set(['H4']),
+    })
+  })
+
   it('introduces the invented members and the market stall before the first question', async () => {
     await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
 
