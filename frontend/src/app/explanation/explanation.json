@@ -78,7 +78,7 @@
         },
         {
           "question": "Was bringt mir eine Einlagerung?",
-          "rule": "Was ihr ins Gildenlager legt, schreiben wir euch gut, je nach Art der Ware: Rohstoffe, Jagdbeute und Edelsteine bringen nichts; Handwerksmaterial bringt den vollen Marktwert; Pfeile, Bolzen und Magieessenz bringen den vollen Marktwert, auch selbst gefertigte; alles andere bringt 60 % des Marktwerts, Ausrüstung im Verhältnis zu ihrer Qualität.",
+          "rule": "Was ihr ins Gildenlager legt, schreiben wir euch gut, je nach Art der Ware: Rohstoffe, Jagdbeute und Edelsteine bringen nichts; Handwerksmaterial bringt den vollen Marktwert; Pfeile, Bolzen und Magieessenz bringen den vollen Marktwert, auch selbst gefertigte; alles andere bringt 60 % des Marktwerts, Ausrüstung im Verhältnis zu ihrer Qualität. Für einige Waren fehlt uns noch der Marktwert; bis wir ihn kennen, zählen sie 0 Gold.",
           "example": {
             "intro": "Mira Mitglied legt sechs Waren ein.",
             "ledger": {
@@ -1226,8 +1226,8 @@
       "title": "Die Übersicht lesen",
       "answers": [
         {
-          "question": "Warum passt eine Summe manchmal um 1 Gold nicht?",
-          "rule": "Jede Zahl wird einmal gerundet, aus ihrem genauen Wert auf das nächste ganze Gold.",
+          "question": "Warum passt eine Summe manchmal nicht ganz?",
+          "rule": "Jede Zahl wird einmal gerundet, aus ihrem genauen Wert auf das nächste ganze Gold. Auch die Zeile „Gilde“ wird aus ihrem genauen Wert gerundet, nicht aus den gerundeten Zeilen; bei vielen Mitgliedern kann sie deshalb um mehr als 1 Gold von deren Summe abweichen.",
           "example": {
             "intro": "Mira Mitglied legt 1 Magische Ätherbinde ein und nimmt 2 Pfeile heraus.",
             "ledger": {

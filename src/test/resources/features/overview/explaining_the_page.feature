@@ -29,7 +29,7 @@ Feature: The explanation page
         | Die Gilde           | Was zeigt die Zeile „Gilde“?                           |
         | Die Gilde           | Warum steht beim Gildenhändler „Vor Abzügen“ im Minus? |
         | Die Gilde           | Was kann das Protokoll nicht zeigen?                   |
-        | Die Übersicht lesen | Warum passt eine Summe manchmal um 1 Gold nicht?       |
+        | Die Übersicht lesen | Warum passt eine Summe manchmal nicht ganz?            |
         | Die Übersicht lesen | Was bedeuten die Farben, „–“ und „!“?                  |
         | Die Übersicht lesen | Was heißt „Noch nicht berechnet.“?                     |
         | Die Übersicht lesen | Was heißt „Veraltete Zahlen“?                          |

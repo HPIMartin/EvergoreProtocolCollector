@@ -381,6 +381,7 @@ second copy.
 | 2026-10-15 | **The explanation page gets no bookmark row "with the token"** (author decision 5a, on the scenario lenses' disagreement) → `src/test/resources/features/dashboard/access_with_the_guild_link.feature` | The rows without the token and with every link already cover the page. Alternative: add the row |
 | 2026-10-15 | **The page's examples that work out no figure stay as they are** (author decision 6a) → `frontend/src/app/explanation/explanation.approved.txt` | Their words and dates are in the approved text. Alternative: give them calculations the test recomputes |
 | 2026-10-15 | **Mutation evidence lives in the gate dossier only; no "Recorded mutations" row is added for it** (author decision 7a, confirming the decision of 2026-10-13) → multi-agent-playbook.md, "The gate dossier" | The dossier check reads it there. Alternative: a row per mutation |
+| 2026-10-15 | **The explanation page notes that some market values are still missing and that the guild row is rounded from its own exact value; the rounding question asks "Warum passt eine Summe manchmal nicht ganz?"** (author decisions on the domain lens's two findings: keep the credit rule and note the missing values; 2a) → `frontend/src/app/explanation/explanation.approved.txt` | A name the catalog cannot price counts 0 gold, and the guild row can differ from the sum of the shown rows by more than 1 gold. Alternatives: a fourth point under "Was kann das Protokoll nicht zeigen?"; keep the question |
 
 ## Recorded mutations (red evidence where a new case could not start red)
 

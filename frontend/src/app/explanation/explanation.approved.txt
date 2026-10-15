@@ -15,7 +15,7 @@ Mira Mitglied Bank-Auszahlung: 200 Gold × 100 % = 200 Gold
 Warum? Gold ist Gold: Die Gilde kann damit genau so viel kaufen wie ihr.
 
 ### Was bringt mir eine Einlagerung?
-Was ihr ins Gildenlager legt, schreiben wir euch gut, je nach Art der Ware: Rohstoffe, Jagdbeute und Edelsteine bringen nichts; Handwerksmaterial bringt den vollen Marktwert; Pfeile, Bolzen und Magieessenz bringen den vollen Marktwert, auch selbst gefertigte; alles andere bringt 60 % des Marktwerts, Ausrüstung im Verhältnis zu ihrer Qualität.
+Was ihr ins Gildenlager legt, schreiben wir euch gut, je nach Art der Ware: Rohstoffe, Jagdbeute und Edelsteine bringen nichts; Handwerksmaterial bringt den vollen Marktwert; Pfeile, Bolzen und Magieessenz bringen den vollen Marktwert, auch selbst gefertigte; alles andere bringt 60 % des Marktwerts, Ausrüstung im Verhältnis zu ihrer Qualität. Für einige Waren fehlt uns noch der Marktwert; bis wir ihn kennen, zählen sie 0 Gold.
 Beispiel: Mira Mitglied legt sechs Waren ein.
 Mira Mitglied legt 10 Eisenerz ein: 10 × 40 Gold × 0 % = 0 Gold
 Mira Mitglied legt 10 Steinkohle vom Marktstand ein: 10 × 100 Gold × 100 % = 1.000 Gold
@@ -128,8 +128,8 @@ Warum? Im Protokoll sehen diese Fälle gleich aus; was es nicht zeigt, klären w
 
 ## Die Übersicht lesen
 
-### Warum passt eine Summe manchmal um 1 Gold nicht?
-Jede Zahl wird einmal gerundet, aus ihrem genauen Wert auf das nächste ganze Gold.
+### Warum passt eine Summe manchmal nicht ganz?
+Jede Zahl wird einmal gerundet, aus ihrem genauen Wert auf das nächste ganze Gold. Auch die Zeile „Gilde“ wird aus ihrem genauen Wert gerundet, nicht aus den gerundeten Zeilen; bei vielen Mitgliedern kann sie deshalb um mehr als 1 Gold von deren Summe abweichen.
 Beispiel: Mira Mitglied legt 1 Magische Ätherbinde ein und nimmt 2 Pfeile heraus.
 Mira Mitglied legt 1 Magische Ätherbinde ein: 1 × 257 Gold × 60 % = 154,2 Gold → 154 Gold
 Mira Mitglied nimmt 2 Pfeile heraus: 2 × 3 Gold × 60 % = 3,6 Gold → 4 Gold
