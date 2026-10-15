@@ -558,15 +558,35 @@ check "the ssh target is composed from the passed user and host" "$r"
 
 new_case
 printf 'an older snapshot worth restoring\n' > "$backup_path"
-run_rollback --backup "$(basename "$backup_path")"
+statement_reference=evergore-protocol-collector:pre-0.4.0
+run_epc rollback --host "$host_name" --ssh-user "$ssh_account" --container "$container_name" \
+	--database-dir "$database_dir" --image "$statement_reference" --backup "$(basename "$backup_path")"
 if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
 check "a rollback without --yes changes nothing" "$r"
-if printf '%s' "$output" | grep -qF 'puts the schema back to V2, without the two ledger indexes'; then r=0; else r=1; fi
-check "and it says what restoring the backup does to the migrated schema" "$r"
-if printf '%s' "$output" | grep -qF 'starts on a database this release has already migrated to V3'; then r=0; else r=1; fi
-check "and it says the older image starts on the database this release migrated" "$r"
-if printf '%s' "$output" | grep -qF "going back to $rollback_reference, the 0.2.0 line, is safe:"; then r=0; else r=1; fi
-check "and it names the image it rolls back to as the 0.2.0 line, the one step proven" "$r"
+if printf '%s' "$output" | grep -qF 'Rollback moves two things back, and they are not the same decision.'; then r=0; else r=1; fi
+check "and it says the image and the database are two decisions" "$r"
+if printf '%s' "$output" | grep -qF 'it starts on the database this release ran on.'; then r=0; else r=1; fi
+check "and it says the older image starts on the database this release ran on" "$r"
+if printf '%s' "$output" | grep -qF 'This release added no migration, so the schema stays at V3'; then r=0; else r=1; fi
+check "and it says the older image starts on a schema this release left unchanged" "$r"
+if printf '%s' "$output" | grep -qF 'both lines write the same tables'; then r=0; else r=1; fi
+check "and it says both lines write the same tables" "$r"
+if printf '%s' "$output" | grep -qF "is the copy this release's deploy took"; then r=0; else r=1; fi
+check "and it says which backup its schema claim holds for" "$r"
+if printf '%s' "$output" | grep -qF 'leaves the schema at V3'; then r=0; else r=1; fi
+check "and it says restoring the backup leaves the schema at V3" "$r"
+if printf '%s' "$output" | grep -qF 'discards every row written since that copy was taken'; then r=0; else r=1; fi
+check "and it says restoring the backup discards every row written since" "$r"
+if printf '%s' "$output" | grep -qF 'Deploying this release again afterwards runs no migration'; then r=0; else r=1; fi
+check "and it says deploying this release again after the restore migrates nothing" "$r"
+if printf '%s' "$output" | grep -qF 'The restored state is observable for about 30 seconds'; then r=0; else r=1; fi
+check "and it says how long the restored state is observable" "$r"
+if printf '%s' "$output" | grep -qF "going back to $statement_reference, the 0.3.0 line, is safe:"; then r=0; else r=1; fi
+check "and it names the image it rolls back to as the 0.3.0 line, the one step proven" "$r"
+if printf '%s' "$output" | grep -qF 'V2'; then r=1; else r=0; fi
+check "and it no longer names the V2 schema of the step before" "$r"
+if printf '%s' "$output" | grep -qF '0.2.0'; then r=1; else r=0; fi
+check "and it no longer names the 0.2.0 line of the step before" "$r"
 if printf '%s' "$output" | grep -qF 'flyway_schema_history'; then r=1; else r=0; fi
 check "and it no longer claims the older code ignores the schema history" "$r"
 

@@ -469,14 +469,14 @@ cmd_rollback() {
 
 Rollback moves two things back, and they are not the same decision.
 
-  The image: going back to $image, the 0.2.0 line, is safe:
-  it starts on a database this release has already migrated to V3. Its Flyway logs that schema
-  version 3 is newer than its newest migration and carries on, and the two ledger indexes V3
-  added change no row and no column.
+  The image: going back to $image, the 0.3.0 line, is safe:
+  it starts on the database this release ran on.
+  This release added no migration, so the schema stays at V3, the newest migration the 0.3.0
+  line carries, and both lines write the same tables.
 
-  The database: restoring $backup_name puts the schema back to V2, without the two ledger indexes,
-  and discards every row written since that copy was taken. Deploying this release again
-  afterwards runs V3 over the restored file, which takes seconds.
+  The database: if $backup_name is the copy this release's deploy took, restoring it
+  leaves the schema at V3, and it discards every row written since that copy was taken.
+  Deploying this release again afterwards runs no migration.
 
 The restored state is observable for about 30 seconds; the collector then writes it forward.
 STATEMENT

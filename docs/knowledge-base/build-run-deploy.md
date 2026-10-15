@@ -758,14 +758,14 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      *forward* again without them fails at startup, which is the intended noise.
 
    - **A rollback moves two things back, and they are separate decisions.**
-     - The *image* going back is safe against a database this release has migrated (see "Schema
-       migrations" below).
-     - The *database* going back puts the schema to what the backup holds: for `0.3.0`, back to
-       `V2` without the two ledger indexes.
+     - The *image* going back is safe on the database this release ran on (see "Schema migrations"
+       below).
+     - The *database* going back puts the schema to what the backup holds: for the copy the `0.4.0`
+       deploy took, still `V3`, since `0.4.0` adds no migration.
      - It discards every row written since the copy was taken.
-     - A later deploy of this release runs `V3` over the restored file again.
-     - The script prints both halves for the step from `0.3.0` to `0.2.0`.
-     - That text holds for the rollback onto the `pre-0.3.0` tag only, the one step proven
+     - A later deploy of this release runs no migration over the restored file.
+     - The script prints both halves for the step from `0.4.0` to `0.3.0`.
+     - That text holds for the rollback onto the `pre-0.4.0` tag only, the one step proven
        (decision 2026-10-11).
      - The script will not act without `--yes`.
    - Restore the backup **before** starting the old image: the new version may have written entries
@@ -846,6 +846,17 @@ ledger and touches no row. What this means for a deploy:
   - Proven 2026-10-10: `v0.2.0`'s `ProductionSnapshotRecomputeCheck` booted the real context over
     a `V3` copy of `epc-20261010-214455.sqlite` and passed.
   - In that run it recomputed and wrote the meta sums.
+  - `flyway_schema_history` kept its four rows.
+  - Both indexes stayed.
+- Rolling back to `0.3.0` over a database `0.4.0` ran on is safe: `0.4.0` adds no migration, so
+  both lines find the schema at `V3` and migrate nothing.
+  - Proven 2026-10-15 by `release/compare`, `v0.3.0` against the `0.4.0` candidate.
+  - Both sides ran on a copy of the database the candidate side had written in the release
+    comparison.
+  - That comparison started from a snapshot `0.3.0` wrote.
+  - `v0.3.0` logged `Schema "main" is up to date`.
+  - It recomputed and wrote the meta sums.
+  - The comparison found nothing.
   - `flyway_schema_history` kept its four rows.
   - Both indexes stayed.
 - The first boot migrates from whichever thread gets there first, the scheduled collector or an
