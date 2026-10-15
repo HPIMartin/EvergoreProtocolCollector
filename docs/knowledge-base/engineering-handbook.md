@@ -383,17 +383,15 @@ set goes back to the author before that behavior is written.
   a code change rides with it, unrelated documentation gets its own `[doc]` commit; a finding that
   falls out along the way is its own commit rather than a passenger. Where a slice cannot stand
   green alone, that is the signal to reorder, not to merge it into a bigger one.
-- **Every commit compiles and is green on its own, not just the tip.** A build-file or dependency
-  change belongs in the **first** commit that uses it, not the one it was written for. Verify it, do
-  not derive it: the "the rebased tip is byte-identical to `main`" argument covers the tip only, so
-  walk the commits before making the claim
-  (`for c in $(git rev-list --reverse main..HEAD); do git switch --detach $c && ./verify all; done`;
-  `git switch`, because `git checkout` sits in the `ask` tier, which prompts in auto mode too).
-  After a fold, the walk starts at the first commit whose tree changed: the commits before it prove
-  their trees unchanged (`git rev-parse <sha>^{tree}` against the walked ones), and a fold that
-  touched only docs proves the code tree unchanged instead of re-running (author decision
-  2026-09-29).
-  A test reference likewise lands no earlier than its referent.
+- **Every commit compiles and is green on its own, not just the tip.**
+  - A build-file or dependency change belongs in the **first** commit that uses it, not the one it
+    was written for.
+  - A test reference likewise lands no earlier than its referent.
+  - Verify it, do not derive it: the "the rebased tip is byte-identical to `main`" argument covers
+    the tip only, so walk the commits before making the claim (`gate/walk`;
+    multi-agent-playbook.md, "The gate dossier", `walk/`).
+  - After a fold, `gate/walk` builds only the commits whose code tree has no green log (author
+    decision 2026-09-29).
 - **A strand's shape follows the work, not the plan it started with** (author decision
   2026-08-15). A planned commit count is an estimate: when the work needs more commits, it gets
   them; never inflate one commit to honour the original estimate. Clean code covers the history

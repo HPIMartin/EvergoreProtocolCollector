@@ -2404,6 +2404,266 @@ write_file gate.local.d/red/sides.txt 'commit: Compare the sides' \
 if accepts; then r=0; else r=1; fi
 check "a method without the test prefix is no new release Python test" "$r"
 
+walk="$gate_dir/walk"
+
+new_walked_strand() {
+	new_strand "$1"
+	git checkout -q main
+	write_file verify '#!/bin/sh' 'root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)' 'cd "$root"' \
+		'if [ "$1" = bdd ] && [ -n "${GATE_BDD_DIRTIES:-}" ]; then echo "class Stray {}" > src/main/Stray.java; fi' \
+		'if [ "$1" = bdd ] && [ -n "${GATE_BDD_MOVES:-}" ]; then echo "class Moved {}" > src/main/Moved.java; git add -A; git commit -q --no-verify -m "Move the tip"; fi' \
+		'case "$1" in' \
+		'	stop) exit 0 ;;' \
+		'	focus)' \
+		'		printf "focus %s\n" "$2" >> "$GATE_BUILDS"' \
+		'		case "$2" in "$root"/src/test/*) ;; *) echo "$2 belongs to no stack"; exit 1 ;; esac' \
+		'		if [ -n "${GATE_FOCUS_FAILS:-}" ]; then echo "BUILD FAILED in 1s"; exit 1; fi' \
+		'		if [ -n "${GATE_FOCUS_EXITS:-}" ]; then echo "BUILD SUCCESSFUL in 1s"; exit 1; fi ;;' \
+		'	*) printf "%s %s\n" "$1" "$(git rev-parse HEAD)" >> "$GATE_BUILDS" ;;' \
+		'esac' 'echo "> Task :test"' 'echo "> Task :frontend:npmTest"' \
+		'if [ -f src/main/Broken.java ]; then echo "BUILD FAILED in 1s"; exit 1; fi' \
+		'if [ "$1" = all ] && [ -f src/main/Dirty.java ]; then echo "// touched" >> src/main/Seed.java; fi' \
+		'if [ "$1" = all ] && [ -f src/main/Generator.java ]; then echo "class Needed {}" > src/main/Needed.java; fi' \
+		'if grep -q Needed src/main/User.java 2> /dev/null && [ ! -f src/main/Needed.java ]; then echo "BUILD FAILED in 1s"; exit 1; fi' \
+		'echo "[verify] executed test classes: 3"' 'echo "BUILD SUCCESSFUL in 1s"' \
+		'if [ -f src/main/Lost.java ]; then echo "[verify] the test results could not be collected"; exit 1; fi'
+	chmod +x verify
+	commit_all 'Stub the build'
+	git checkout -q strand
+	git rebase -q main
+	GATE_BUILDS="$work/$1.builds"
+	export GATE_BUILDS
+	: > "$GATE_BUILDS"
+}
+
+walked() { "$walk" "$repo" "$work/$1-walk" > "$work/out" 2>&1; }
+
+builds() { grep -c '^all ' "$GATE_BUILDS" || true; }
+
+new_walked_strand walk_proves
+if walked walk_proves; then r=0; else r=1; fi
+log=$("$dossier_check" --walk-log "$repo" HEAD)
+if [ "$r" -eq 0 ] && [ "$(sed -n 1p "$log")" = "tree: $(git rev-parse 'HEAD^{tree}')" ] && grep -q '^BUILD SUCCESSFUL' "$log" \
+	&& [ "$(builds)" -eq 1 ]; then r=0; else r=1; fi
+check "the walk proves each strand commit with a log that opens with its tree" "$r"
+
+new_walked_strand walk_skips
+walk_logs
+if walked walk_skips && [ "$(builds)" -eq 0 ]; then r=0; else r=1; fi
+check "the walk builds no commit whose code tree already has a green log" "$r"
+
+new_walked_strand walk_docs
+write_file docs/notes.md '# Notes'
+commit_all 'Add the notes'
+if walked walk_docs && [ "$(builds)" -eq 1 ]; then r=0; else r=1; fi
+check "the walk builds no commit whose code tree an earlier commit's log already proves" "$r"
+
+new_walked_strand walk_rebuilds
+walk_logs
+walk_log HEAD '> Task :test FAILED' 'BUILD FAILED in 1s'
+if walked walk_rebuilds && [ "$(builds)" -eq 1 ] && grep -q '^BUILD SUCCESSFUL' "$("$dossier_check" --walk-log "$repo" HEAD)"; then
+	r=0
+else
+	r=1
+fi
+check "the walk builds again a commit whose log shows a failed build" "$r"
+
+new_walked_strand walk_fails
+write_file src/main/Broken.java 'class Broken {' '}'
+commit_all 'Break the build'
+log=$("$dossier_check" --walk-log "$repo" HEAD)
+if walked walk_fails; then r=1; elif grep -q '^BUILD FAILED' "$log.failed" && [ ! -e "$log" ]; then r=0; else r=1; fi
+check "the walk reports a failed build, keeps its log apart and exits non-zero" "$r"
+
+new_walked_strand walk_each
+write_file src/main/Second.java 'class Second {' '}'
+commit_all 'Add the second'
+walked walk_each || true
+if [ "$(sed -n 's/^all //p' "$GATE_BUILDS")" = "$(git rev-list --reverse main..strand)" ]; then r=0; else r=1; fi
+check "the walk builds every strand commit at that commit" "$r"
+
+new_walked_strand walk_foreign
+mkdir -p "$repo/stale-walk"
+if "$walk" "$repo" "$repo/stale-walk" > "$work/out" 2>&1; then r=1; elif [ "$(git symbolic-ref -q HEAD)" = refs/heads/strand ] && [ "$(builds)" -eq 0 ]; then r=0; else r=1; fi
+check "the walk refuses a walk directory that is no worktree of its own" "$r"
+
+new_walked_strand walk_self
+if "$walk" "$repo" "$repo" > "$work/out" 2>&1; then r=1; elif [ "$(git symbolic-ref -q HEAD)" = refs/heads/strand ]; then r=0; else r=1; fi
+check "the walk refuses the strand worktree as its walk worktree" "$r"
+
+new_walked_strand walk_lost
+write_file src/main/Lost.java 'class Lost {' '}'
+commit_all 'Lose the results'
+if walked walk_lost; then r=1; elif [ ! -e "$("$dossier_check" --walk-log "$repo" HEAD)" ]; then r=0; else r=1; fi
+check "the walk counts a build whose verify exits non-zero as failed" "$r"
+
+new_walked_strand walk_nobase
+git branch -q -m main trunk
+if walked walk_nobase; then r=1; else r=0; fi
+check "the walk without a main to walk from fails" "$r"
+
+new_walked_strand walk_dirty
+git worktree add -q --detach "$work/walk_dirty-walk" main
+write_file "$work/walk_dirty-walk/src/main/Stray.java" 'class Stray {' '}'
+if walked walk_dirty; then r=1; elif [ "$(builds)" -eq 0 ]; then r=0; else r=1; fi
+check "the walk refuses a walk worktree that is not clean" "$r"
+
+new_walked_strand walk_weak
+walk_logs
+walk_log HEAD 'BUILD SUCCESSFUL in 1s'
+if walked walk_weak && [ "$(builds)" -eq 1 ]; then r=0; else r=1; fi
+check "the walk builds again a commit whose log the dossier check would refuse" "$r"
+
+new_walked_strand walk_relative
+if (cd "$work" && "$walk" "$repo" walk_relative-walk > "$work/out" 2>&1) && [ "$(builds)" -eq 1 ]; then r=0; else r=1; fi
+check "the walk takes a walk worktree relative to the caller" "$r"
+
+new_walked_strand walk_settles
+write_file docs/notes.md '# Notes'
+commit_all 'Add the notes'
+walked walk_settles || true
+: > "$GATE_BUILDS"
+if walked walk_settles && [ "$(builds)" -eq 0 ]; then r=0; else r=1; fi
+check "a second walk builds nothing when every code tree has a green log" "$r"
+
+new_walked_strand walk_fold
+walked walk_fold || true
+write_file docs/notes.md '# Folded notes'
+git add -A
+git commit -q --no-verify --amend --no-edit
+: > "$GATE_BUILDS"
+if walked walk_fold && [ "$(builds)" -eq 0 ]; then r=0; else r=1; fi
+check "the walk reuses the proof of a commit whose fold touched only docs" "$r"
+
+new_walked_strand walk_noclasses
+walk_logs
+walk_log HEAD '> Task :test' '> Task :frontend:npmTest' '[verify] executed test classes: 0' 'BUILD SUCCESSFUL in 1s'
+if walked walk_noclasses && [ "$(builds)" -eq 1 ]; then r=0; else r=1; fi
+check "the walk builds again a commit whose log executed no test class" "$r"
+
+new_walked_strand walk_nonpm
+walk_logs
+walk_log HEAD '> Task :test' '[verify] executed test classes: 3' 'BUILD SUCCESSFUL in 1s'
+if walked walk_nonpm && [ "$(builds)" -eq 1 ]; then r=0; else r=1; fi
+check "the walk builds again a commit whose log ran no frontend tests" "$r"
+
+new_walked_strand walk_notree
+walk_logs
+write_file "$("$dossier_check" --walk-log "$repo" HEAD)" '> Task :test' '> Task :frontend:npmTest' \
+	'[verify] executed test classes: 3' 'BUILD SUCCESSFUL in 1s'
+if walked walk_notree && [ "$(builds)" -eq 1 ]; then r=0; else r=1; fi
+check "the walk builds again a commit whose log names no tree" "$r"
+
+new_walked_strand walk_doconly
+git checkout -q -B strand main
+write_file docs/notes.md '# Notes'
+commit_all 'Add the notes'
+if walked walk_doconly && [ "$(builds)" -eq 0 ] && grep -q 'unchanged from main' "$work/out"; then r=0; else r=1; fi
+check "the walk builds no commit whose code tree is main's" "$r"
+
+new_walked_strand walk_behind
+git checkout -q -B strand main
+write_file docs/notes.md '# Notes'
+commit_all 'Add the notes'
+write_file src/main/Third.java 'class Third {' '}'
+commit_all 'Add the third'
+git checkout -q main
+write_file src/main/Later.java 'class Later {' '}'
+commit_all 'Add a later class'
+git checkout -q strand
+if walked walk_behind && [ "$(builds)" -eq 1 ]; then r=0; else r=1; fi
+check "the walk measures a strand behind main against its merge base" "$r"
+
+new_walked_strand walk_lens
+git worktree add -q --detach "$work/walk_lens-lens" main
+mkdir -p "$work/walk_lens-lens/stale-walk"
+if "$walk" "$repo" "$work/walk_lens-lens/stale-walk" > "$work/out" 2>&1; then r=1
+elif [ "$(git -C "$work/walk_lens-lens" rev-parse HEAD)" = "$(git rev-parse main)" ] && [ "$(builds)" -eq 0 ]; then r=0; else r=1; fi
+check "the walk refuses a directory inside another worktree" "$r"
+
+new_walked_strand walk_named
+git worktree add -q --detach "$work/walk_named-lens" main
+if "$walk" "$repo" "$work/walk_named-lens" > "$work/out" 2>&1; then r=1
+elif [ "$(git -C "$work/walk_named-lens" rev-parse HEAD)" = "$(git rev-parse main)" ] && [ "$(builds)" -eq 0 ]; then r=0; else r=1; fi
+check "the walk refuses a worktree whose name does not end in -walk" "$r"
+
+new_walked_strand walk_branch
+git worktree add -q -b other "$work/walk_branch-walk" main
+if walked walk_branch; then r=1; elif [ "$(git -C "$work/walk_branch-walk" symbolic-ref -q HEAD)" = refs/heads/other ] && [ "$(builds)" -eq 0 ]; then r=0; else r=1; fi
+check "the walk refuses a walk worktree with a branch checked out" "$r"
+
+new_walked_strand walk_locked
+git worktree add -q --detach "$work/walk_locked-walk" main
+write_file "$work/walk_locked-walk/src/main/Building.java" 'class Building {' '}'
+mkdir -p gate.local.d/walk
+if (flock 7 && walked walk_locked) 7< "$repo/gate.local.d/walk"; then r=1
+elif [ "$(builds)" -eq 0 ] && grep -q 'another walk' "$work/out"; then r=0; else r=1; fi
+check "the walk refuses while another walk of the strand runs, before it reads the walk worktree" "$r"
+
+new_walked_strand walk_inside
+git worktree add -q --detach "$work/walk_inside-lens" main
+if "$walk" "$repo" "$work/walk_inside-lens/new-walk" > "$work/out" 2>&1; then r=1
+elif [ -z "$(git -C "$work/walk_inside-lens" status --porcelain)" ] && [ "$(builds)" -eq 0 ]; then r=0; else r=1; fi
+check "the walk refuses a new walk path inside another worktree" "$r"
+
+new_walked_strand walk_shared
+git worktree add -q --detach "$work/walk_shared-walk" main
+write_file "$work/walk_shared-walk/src/main/Building.java" 'class Building {' '}'
+git worktree add -q --detach "$work/walk_shared-other" strand
+if (flock 7 && "$walk" "$work/walk_shared-other" "$work/walk_shared-walk" > "$work/out" 2>&1) 7< "$work/walk_shared-walk"; then r=1
+elif [ "$(git -C "$work/walk_shared-walk" rev-parse HEAD)" = "$(git rev-parse main)" ] && [ "$(builds)" -eq 0 ] \
+	&& grep -q 'another walk' "$work/out"; then r=0; else r=1; fi
+check "the walk refuses a walk worktree another strand's walk holds, before it reads it" "$r"
+
+new_walked_strand walk_nested
+git worktree add -q --detach "$work/walk_nested-lens" main
+if "$walk" "$repo" "$work/walk_nested-lens/sub/new-walk" > "$work/out" 2>&1; then r=1
+elif [ -z "$(git -C "$work/walk_nested-lens" status --porcelain)" ] && [ "$(builds)" -eq 0 ]; then r=0; else r=1; fi
+check "the walk refuses a new walk path nested deeper inside another worktree" "$r"
+
+new_strand walk_then_check
+complete_dossier
+walked walk_then_check || true
+if accepts; then r=0; else r=1; fi
+check "the dossier check accepts a dossier after a walk" "$r"
+
+new_walked_strand walk_leftover
+write_file src/main/Generator.java 'class Generator {}'
+commit_all 'Add a generator'
+git rm -q src/main/Generator.java
+write_file src/main/User.java 'class User { Needed n; }'
+commit_all 'Use the generated class'
+log=$("$dossier_check" --walk-log "$repo" HEAD)
+if walked walk_leftover; then r=1; elif [ ! -e "$log" ]; then r=0; else r=1; fi
+check "the walk proves no commit whose build ran on a tree an earlier build dirtied" "$r"
+
+new_walked_strand walk_dirtying
+write_file src/main/Dirty.java 'class Dirty {}'
+commit_all 'Dirty the tree while building'
+log=$("$dossier_check" --walk-log "$repo" HEAD)
+if walked walk_dirtying; then r=1; elif [ ! -e "$log" ]; then r=0; else r=1; fi
+check "the walk counts a build that dirties the walk worktree as failed" "$r"
+
+new_walked_strand walk_ignored
+git worktree add -q --detach "$work/walk_ignored-lens" main
+if "$walk" "$repo" "$work/walk_ignored-lens/x.local.d/new-walk" > "$work/out" 2>&1; then r=1
+elif [ "$(builds)" -eq 0 ]; then r=0; else r=1; fi
+check "the walk refuses a new walk path in another worktree's ignored directory" "$r"
+
+new_walked_strand walk_stale
+write_file src/main/Broken.java 'class Broken {' '}'
+commit_all 'Break the build'
+log=$("$dossier_check" --walk-log "$repo" HEAD)
+write_file "$log" '> Task :test' '> Task :frontend:npmTest' '[verify] executed test classes: 3' 'BUILD SUCCESSFUL in 1s'
+if walked walk_stale; then r=1; elif [ ! -e "$log" ] && [ -e "$log.failed" ]; then r=0; else r=1; fi
+check "the walk leaves no older log at the proof path when the rebuild fails" "$r"
+
+new_walked_strand walk_keeps
+before=$(git rev-parse HEAD)
+walked walk_keeps || true
+if [ "$(builds)" -eq 1 ] && [ "$(git rev-parse HEAD)" = "$before" ] && [ -z "$(git status --porcelain)" ]; then r=0; else r=1; fi
+check "the walk leaves the strand worktree at its tip and clean" "$r"
+
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'
 else

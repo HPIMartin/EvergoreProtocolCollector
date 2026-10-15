@@ -318,6 +318,19 @@ says where each piece of evidence lives.
   tree SHA>`; it shows `BUILD SUCCESSFUL`, bare `> Task :test` and `> Task :frontend:npmTest` lines
   and a non-zero `[verify] executed test classes`. A commit whose code tree is unchanged since the
   last walk, or since `main`, reuses that proof, so after a fold only the changed trees run again.
+  - `<abs worktree>/gate/walk <strand worktree> <walk worktree>` writes those logs:
+    it builds each commit of `main..HEAD` whose code tree has no green log yet, in a detached walk
+    worktree.
+    - It prints one line per commit and exits non-zero when a build failed.
+    - A failed build's log goes to `<log>.failed`, never to the proof path; an older log counts
+      only when the dossier check would accept it.
+    - It takes only a walk path that ends in `-walk`, and refuses one that is no worktree's top
+      level, has a branch checked out or is not clean, and a new one inside another worktree unless
+      it lies in that worktree's ignored `.claude/worktrees/`.
+    - A build that leaves the walk worktree moved or dirty counts as failed and ends the walk.
+    - It locks the strand's `walk/` directory and the walk worktree for the run, so a second walk of
+      the strand, or of another strand on the same walk worktree, refuses.
+    - It walks from the strand's merge base with `main`, as the dossier check does.
 - **`kb-guard.log`:** whenever a commit is proven by a run on other docs than its own (a docs-only
   fold, a `[doc]` commit), a `./verify focus` run of `KbCitationGuardTest` at the tip, since that
   test reads the KB prose; it shows the command, a bare `> Task :test` and `BUILD SUCCESSFUL`.

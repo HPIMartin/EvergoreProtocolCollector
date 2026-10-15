@@ -1,0 +1,117 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	printf 'usage: gate/walk <strand worktree> <walk worktree>\n' >&2
+	exit 2
+}
+
+refuse() {
+	printf 'gate/walk: %s\n' "$1" >&2
+	exit 2
+}
+
+absolute() {
+	case "$1" in
+		/*) printf '%s\n' "$1" ;;
+		*) printf '%s/%s\n' "$PWD" "$1" ;;
+	esac
+}
+
+green() {
+	sed -n 1p "$1" | grep -Eqx 'tree: [0-9a-f]{40,64}' \
+		&& grep -qx '> Task :test' "$1" \
+		&& grep -qx '> Task :frontend:npmTest' "$1" \
+		&& grep -Eq '^\[verify\] executed test classes: [1-9]' "$1" \
+		&& grep -q '^BUILD SUCCESSFUL' "$1"
+}
+
+still() {
+	[ "$(git -C "$walk" rev-parse HEAD)" = "$1" ] && [ -z "$(git -C "$walk" status --porcelain)" ]
+}
+
+[ $# -eq 2 ] || usage
+strand=$(git -C "$1" rev-parse --show-toplevel) || refuse "$1 is no git worktree"
+walk=$(absolute "$2")
+walk=${walk%/}
+case "$walk" in
+	*-walk) ;;
+	*) refuse "$walk does not end in -walk, so it may be another session's worktree" ;;
+esac
+gate_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+base=$(git -C "$strand" merge-base HEAD main) || refuse "the strand has no main to walk from"
+commits=$(git -C "$strand" rev-list --reverse "$base..HEAD")
+[ -n "$commits" ] || refuse "the strand has no commit since its merge base with main"
+mkdir -p "$strand/gate.local.d/walk"
+exec 8< "$strand/gate.local.d/walk"
+flock -n 8 || refuse "another walk of $strand runs"
+
+if [ ! -e "$walk" ]; then
+	ancestor=$(dirname -- "$walk")
+	while [ ! -d "$ancestor" ]; do ancestor=$(dirname -- "$ancestor"); done
+	if enclosing=$(LC_ALL=C git -C "$ancestor" rev-parse --show-toplevel 2>&1); then
+		case "$walk" in
+			"$enclosing"/.claude/worktrees/*) git -C "$ancestor" check-ignore -q "$walk" ;;
+			*) false ;;
+		esac || refuse "$walk would lie inside the worktree $enclosing"
+	else
+		case "$enclosing" in
+			*"not a git repository"*) ;;
+			*) refuse "git cannot read $ancestor: $enclosing" ;;
+		esac
+	fi
+	git -C "$strand" worktree add -q --detach "$walk" "$base"
+fi
+exec 9< "$walk"
+flock -n 9 || refuse "another walk uses $walk"
+[ "$(git -C "$walk" rev-parse --show-toplevel 2> /dev/null || true)" = "$(cd "$walk" && pwd -P)" ] \
+	|| refuse "$walk is no worktree of its own"
+[ "$(cd "$walk" && pwd -P)" != "$(cd "$strand" && pwd -P)" ] || refuse "$walk is the strand worktree"
+git -C "$walk" symbolic-ref -q HEAD > /dev/null && refuse "$walk has a branch checked out, not a detached head"
+[ -z "$(git -C "$walk" status --porcelain)" ] || refuse "$walk is not clean"
+
+trap '[ -x "$walk/verify" ] && "$walk/verify" stop > /dev/null 2>&1 || true' EXIT
+failed=0
+base_key=$("$gate_dir/dossier-check" --walk-log "$strand" "$base")
+
+for commit in $commits; do
+	short=$(git -C "$strand" rev-parse --short "$commit")
+	tree=$(git -C "$strand" rev-parse "$commit^{tree}")
+	log=$("$gate_dir/dossier-check" --walk-log "$strand" "$commit")
+	if [ "$log" = "$base_key" ]; then
+		printf '%s unchanged from main\n' "$short"
+		continue
+	fi
+	if [ -s "$log" ] && green "$log" "$tree"; then
+		printf '%s proven\n' "$short"
+		continue
+	fi
+	git -C "$walk" checkout -q --detach "$commit"
+	still "$commit" || refuse "$walk is not clean at $short before its build"
+	mkdir -p "${log%/*}"
+	status=0
+	{
+		printf 'tree: %s\n' "$tree"
+		"$walk/verify" all 2>&1 || status=$?
+		printf '[gate/walk] verify exited %s\n' "$status"
+	} > "$log.tmp"
+	clean=yes
+	still "$commit" || clean=no
+	[ "$clean" = yes ] || printf '[gate/walk] the build left %s moved or dirty\n' "$walk" >> "$log.tmp"
+	if [ "$clean" = yes ] && [ "$status" -eq 0 ] && green "$log.tmp" "$tree"; then
+		mv "$log.tmp" "$log"
+		rm -f "$log.failed"
+		printf '%s BUILD SUCCESSFUL\n' "$short"
+	else
+		mv "$log.tmp" "$log.failed"
+		rm -f "$log"
+		printf '%s BUILD FAILED (log: %s)\n' "$short" "$log.failed"
+		failed=1
+		if [ "$clean" = no ]; then
+			printf 'the build left %s moved or dirty, so no later commit is built there\n' "$walk"
+			break
+		fi
+	fi
+done
+
+exit "$failed"
