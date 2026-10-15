@@ -148,32 +148,114 @@ describe('calculationTexts', () => {
       'Mira Mitglied Nach Abzügen: 0 Gold − 0,5 Gold = -0,5 Gold → -1 Gold',
     ])
   })
+})
 
-  it('refuses a calculation of a kind it cannot write', () => {
-    const data = {
-      personas: [],
-      groups: [
+const withLines = (lines: readonly unknown[], answer: object = {}) => ({
+  personas: [],
+  groups: [
+    {
+      title: 'Was zählt',
+      answers: [
         {
-          title: 'Was zählt',
-          answers: [
-            {
-              question: 'Was zählt Gold in der Gildenbank?',
-              rule: 'Gold zählt, wie es ist.',
-              example: {
-                intro: 'Mira Mitglied zahlt ein.',
-                lines: [{ kind: 'guess' }],
-              },
-              why: 'Warum? Gold ist Gold.',
-            },
-          ],
+          question: 'Was zählt Gold in der Gildenbank?',
+          rule: 'Gold zählt, wie es ist.',
+          example: { intro: 'Mira Mitglied zahlt ein.', lines },
+          why: 'Warum? Gold ist Gold.',
+          ...answer,
         },
       ],
-    }
+    },
+  ],
+})
 
-    const reading = () => explanationFrom(data)
+const movement = (fields: object) => ({
+  kind: 'movement',
+  member: 'Mira Mitglied',
+  movement: 'Einlagerung',
+  quantity: 1,
+  item: 'Steinkohle',
+  quality: 100,
+  marketStall: true,
+  atGuildPrice: false,
+  price: 100,
+  share: 100,
+  result: 100,
+  ...fields,
+})
+
+const figure = (fields: object) => ({
+  kind: 'figure',
+  row: null,
+  label: 'Gildenbank',
+  terms: [{ amount: 1000 }, { amount: 300 }],
+  operators: ['−'],
+  result: 700,
+  ...fields,
+})
+
+describe('explanationFrom', () => {
+  it('refuses a calculation of a kind it cannot write', () => {
+    const reading = () => explanationFrom(withLines([{ kind: 'guess' }]))
 
     expect(reading).toThrow(
       'The explanation page cannot read a calculation of an unknown kind.',
     )
+  })
+
+  it.each([
+    ['a rule', withLines([], { rule: 7 })],
+    ['an operator', withLines([figure({ operators: ['-'] })])],
+    ['a movement', withLines([movement({ movement: 'Kauf' })])],
+    ['a quality', withLines([movement({ quality: '100' })])],
+    ['a price', withLines([movement({ price: Number.POSITIVE_INFINITY })])],
+    ['the market stall', withLines([movement({ marketStall: 'ja' })])],
+  ])('refuses %s it cannot read', (what, data) => {
+    const reading = () => explanationFrom(data)
+
+    expect(reading).toThrow(`The explanation page cannot read ${what}.`)
+  })
+
+  it.each([
+    ['one operator short', figure({ operators: [] })],
+    ['one operator too many', figure({ operators: ['−', '+'] })],
+    ['no terms', figure({ terms: [], operators: [] })],
+  ])('refuses a figure with %s', (_, line) => {
+    const reading = () => explanationFrom(withLines([line]))
+
+    expect(reading).toThrow(
+      "The explanation page cannot read a figure's operators.",
+    )
+  })
+
+  it.each([
+    [
+      'a later calculation',
+      [
+        figure({ terms: [{ line: 1 }, { amount: 1 }], operators: ['+'] }),
+        movement({}),
+      ],
+    ],
+    [
+      'itself',
+      [figure({ terms: [{ line: 0 }, { amount: 1 }], operators: ['+'] })],
+    ],
+    [
+      'a calculation before the first',
+      [
+        movement({}),
+        figure({ terms: [{ line: -1 }, { amount: 1 }], operators: ['+'] }),
+      ],
+    ],
+    [
+      'a part of a calculation',
+      [
+        movement({}),
+        figure({ terms: [{ line: 0.5 }, { amount: 1 }], operators: ['+'] }),
+      ],
+    ],
+  ])('refuses a term taking %s', (_, lines) => {
+    const reading = () => explanationFrom(withLines(lines))
+
+    expect(reading).toThrow("The explanation page cannot read a term's line.")
   })
 })

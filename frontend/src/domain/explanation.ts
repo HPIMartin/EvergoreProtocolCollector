@@ -168,12 +168,14 @@ function answerOf(raw: unknown): Answer {
             textOf(point, 'a point'),
           ),
     intro: textOf(example.intro, "an example's intro"),
-    lines: listOf(example.lines, "an example's lines").map(lineOf),
+    lines: listOf(example.lines, "an example's lines").map((line, index) =>
+      lineOf(line, index),
+    ),
     why: textOf(answer.why, 'a sentence on why'),
   }
 }
 
-function lineOf(raw: unknown): CalculationLine {
+function lineOf(raw: unknown, index: number): CalculationLine {
   const line = recordOf(raw, 'a calculation')
   if (line.kind === 'movement') {
     return {
@@ -191,22 +193,35 @@ function lineOf(raw: unknown): CalculationLine {
     }
   }
   if (line.kind === 'figure') {
+    const terms = listOf(line.terms, "a figure's terms").map((term) =>
+      termOf(term, index),
+    )
+    const operators = listOf(line.operators, "a figure's operators").map(
+      operatorOf,
+    )
+    if (operators.length !== terms.length - 1) {
+      throw unreadable("a figure's operators")
+    }
     return {
       kind: 'figure',
       row: line.row === null ? null : textOf(line.row, "a figure's row"),
       label: textOf(line.label, "a figure's label"),
-      terms: listOf(line.terms, "a figure's terms").map(termOf),
-      operators: listOf(line.operators, "a figure's operators").map(operatorOf),
+      terms,
+      operators,
       result: numberOf(line.result, 'a result'),
     }
   }
   throw unreadable('a calculation of an unknown kind')
 }
 
-function termOf(raw: unknown): Term {
+function termOf(raw: unknown, before: number): Term {
   const term = recordOf(raw, 'a term')
   if (term.line !== undefined && term.line !== null) {
-    return { line: numberOf(term.line, "a term's line") }
+    const line = numberOf(term.line, "a term's line")
+    if (!Number.isInteger(line) || line < 0 || line >= before) {
+      throw unreadable("a term's line")
+    }
+    return { line }
   }
   if (term.share !== undefined && term.share !== null) {
     return { share: numberOf(term.share, "a term's share") }

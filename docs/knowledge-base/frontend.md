@@ -147,7 +147,9 @@ Four top-level folders under `frontend/src/`:
   - Its frame offers the overview only.
   - Its content is one data file, `app/explanation/explanation.json`: the personas, the five
     groups and each answer's question, rule, points, example ledger, calculation lines and "why".
-  - `domain/explanation.ts`'s `explanationFrom` reads that file, refusing what it cannot read.
+  - `domain/explanation.ts`'s `explanationFrom` reads that file, refusing what it cannot read, a
+    figure whose operators do not join its terms and a term naming a calculation that does not
+    come before its figure.
   - Its `calculationTexts` writes each calculation line in German, rounding a result that is no
     whole gold as the overview does, beside its exact value.
   - `ExplanationExamplesTest` recomputes the same file through the backend's valuation, so the page
