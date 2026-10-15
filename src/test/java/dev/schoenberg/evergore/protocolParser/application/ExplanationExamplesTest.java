@@ -8,9 +8,12 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -43,8 +46,8 @@ class ExplanationExamplesTest {
 	private static final String DEPOSIT = "Einlagerung";
 	private static final String MULTIPLY = "×";
 	private static final String ADD = "+";
+	private static final Set<String> OPERATORS = Set.of(MULTIPLY, ADD, "−");
 	private static final double EXACT = 1e-9;
-	private static final double GUILD_PRICE = 60;
 
 	@ParameterizedTest
 	@MethodSource("answersWithCalculations")
@@ -80,8 +83,87 @@ class ExplanationExamplesTest {
 		}
 	}
 
+	@ParameterizedTest
+	@MethodSource("answersWithCalculations")
+	void writesEveryMovementAsItsLedgerHoldsIt(String question, Example example) {
+		for (Line line : movementsOf(example)) {
+			assertThat(example.ledger().storage())
+					.as("the ledger entry behind %s %s %s %s of quality %s", line.member(), line.movement(), line.quantity(), line.item(), line.quality())
+					.anyMatch(entry -> entry.member().equals(line.member()) && entry.movement().equals(line.movement()) && entry.item().equals(line.item())
+							&& entry.quantity() == line.quantity() && entry.quality() == line.quality());
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("answersWithCalculations")
+	void takesEveryAmountOfAFigureFromItsRowsBankLedger(String question, Example example) {
+		for (Line line : figuresOf(example)) {
+			for (Term term : line.terms()) {
+				if (term.amount() == null || term.amount() == 0) {
+					continue;
+				}
+
+				assertThat(example.ledger().bank())
+						.as("a bank movement of %s Gold behind %s %s", term.amount(), line.row(), line.label())
+						.anyMatch(movement -> movement.amount() == term.amount() && (isTheGuild(line.row()) || movement.member().equals(line.row())));
+			}
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("answersWithCalculations")
+	void takesOnlyItsRowsMovementsIntoAMembersFigure(String question, Example example) {
+		for (Line line : figuresOf(example)) {
+			if (isTheGuild(line.row())) {
+				continue;
+			}
+
+			List<Line> taken = line
+					.terms()
+					.stream()
+					.filter(term -> term.line() != null)
+					.map(term -> example.lines().get(term.line()))
+					.filter(candidate -> candidate.kind().equals("movement"))
+					.toList();
+
+			assertThat(taken).as("the movements %s %s takes", line.row(), line.label()).allMatch(movement -> movement.member().equals(line.row()));
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("answersWithCalculations")
+	void feedsEveryMovementIntoAFigure(String question, Example example) {
+		Set<Integer> fed = figuresOf(example).stream().flatMap(line -> line.terms().stream()).map(Term::line).filter(index -> index != null).collect(Collectors.toSet());
+
+		List<Integer> movements = IntStream.range(0, example.lines().size()).filter(index -> example.lines().get(index).kind().equals("movement")).boxed().toList();
+
+		assertThat(movements).allMatch(fed::contains);
+	}
+
+	@ParameterizedTest
+	@MethodSource("answersWithCalculations")
+	void joinsEveryTwoTermsOfAFigureWithOneOperatorThePageWrites(String question, Example example) {
+		for (int index = 0; index < example.lines().size(); index++) {
+			Line line = example.lines().get(index);
+			if (!line.kind().equals("figure")) {
+				continue;
+			}
+			int at = index;
+
+			assertThat(line.terms()).as("the terms of %s", line.label()).isNotEmpty();
+			assertThat(line.operators()).as("the operators of %s", line.label()).hasSize(line.terms().size() - 1).allMatch(OPERATORS::contains);
+			assertThat(line.terms()).as("the earlier calculations %s takes", line.label()).allMatch(term -> term.line() == null || term.line() >= 0 && term.line() < at);
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("answersWithCalculations")
+	void endsEveryExampleOnAFigure(String question, Example example) {
+		assertThat(figuresOf(example)).isNotEmpty();
+	}
+
 	static Stream<Arguments> answersWithCalculations() throws IOException {
-		Explanation explanation = new ObjectMapper().readValue(EXAMPLES.toFile(), Explanation.class);
+		Explanation explanation = new ObjectMapper().disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT).readValue(EXAMPLES.toFile(), Explanation.class);
 		return explanation
 				.groups()
 				.stream()
@@ -99,10 +181,11 @@ class ExplanationExamplesTest {
 	}
 
 	private static int shareOf(Line line, EvergoreItem item) {
-		if (line.atGuildPrice() || !line.movement().equals(DEPOSIT)) {
-			return (int) GUILD_PRICE;
-		}
-		return (int) Math.round(item.placement() * 100);
+		return (int) Math.round((line.movement().equals(DEPOSIT) && !line.atGuildPrice() ? item.placement() : item.category.withdrawl) * 100);
+	}
+
+	private static boolean isTheGuild(String row) {
+		return row == null || row.equals(GUILD);
 	}
 
 	private static boolean isADepositBoughtAtTheMarketStall(Line line, EvergoreItem item) {
@@ -171,7 +254,7 @@ class ExplanationExamplesTest {
 	}
 
 	private static long shownFigure(GuildContributions guild, String row, String label) {
-		WholeGoldContribution figures = row == null || row.equals(GUILD) ? guild.total().orElseThrow().inWholeGold() : wholeGoldOf(guild, row);
+		WholeGoldContribution figures = isTheGuild(row) ? guild.total().orElseThrow().inWholeGold() : wholeGoldOf(guild, row);
 		WholeGoldShare share = figures.guildShare().orElseThrow();
 		return switch (label) {
 			case "Bank-Einzahlung" -> figures.bankDeposited();
@@ -203,8 +286,20 @@ class ExplanationExamplesTest {
 		return exact < 0 ? -Math.round(-exact) : Math.round(exact);
 	}
 
-	private static TransferType transferOf(String movement) {
-		return movement.equals(DEPOSIT) || movement.equals("Einzahlung") ? EINLAGERUNG : ENTNAHME;
+	private static TransferType bankTransferOf(String movement) {
+		return switch (movement) {
+			case "Einzahlung" -> EINLAGERUNG;
+			case "Entnahme" -> ENTNAHME;
+			default -> throw new AssertionError("no movement of the bank ledger is called " + movement);
+		};
+	}
+
+	private static TransferType storageTransferOf(String movement) {
+		return switch (movement) {
+			case DEPOSIT -> EINLAGERUNG;
+			case "Entnahme" -> ENTNAHME;
+			default -> throw new AssertionError("no movement of the storage ledger is called " + movement);
+		};
 	}
 
 	record Explanation(List<Persona> personas, List<Group> groups) {}
@@ -221,13 +316,13 @@ class ExplanationExamplesTest {
 
 	record BankMovement(String member, int amount, String movement) {
 		BankEntry entry() {
-			return new BankEntry(Instant.EPOCH, member, amount, transferOf(movement));
+			return new BankEntry(Instant.EPOCH, member, amount, bankTransferOf(movement));
 		}
 	}
 
 	record StorageMovement(String member, int quantity, String item, int quality, String movement) {
 		StorageEntry entry() {
-			return new StorageEntry(Instant.EPOCH, member, quantity, item, quality, transferOf(movement));
+			return new StorageEntry(Instant.EPOCH, member, quantity, item, quality, storageTransferOf(movement));
 		}
 	}
 
