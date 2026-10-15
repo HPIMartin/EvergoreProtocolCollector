@@ -25,7 +25,7 @@ a strand of its own from `main`, `(seat: PC)` when it needs the PC (handbook §9
   point, the template's hook suite gates every commit, and the acceptance runner (cucumber-jvm,
   `RunAcceptanceScenariosTest`) runs every scenario the author confirmed, green since 2026-09-29,
   and BDD is in force for every strand (decision 2026-09-27).
-- `0.3.0` runs on the home server; its stand, rollback target and database directory are in
+- `0.4.0` runs on the home server; its stand, rollback target and database directory are in
   [build-run-deploy.md](knowledge-base/build-run-deploy.md).
 - The catalog is closed against the game: the three raw stones renamed, magic affixes normalised,
   156 entries priced as the game prices them, `Steinbrecher` and `Jagdpfeile` corrected, and
@@ -50,8 +50,7 @@ a strand of its own from `main`, `(seat: PC)` when it needs the PC (handbook §9
 **Next, in order** (decided 2026-10-13: each wave starts on its blocker, at most four strands at
 once, the author schedules the agent seat's two sessions, landings stay serialized)
 
-1. Once a snapshot 0.3.0 wrote exists: cutting 0.4.0 (**F23**).
-2. Then 0.5.0: accounts, login and JWT (**C11**), the user management (**C12**) and the usage
+1. 0.5.0: accounts, login and JWT (**C11**), the user management (**C12**) and the usage
    records (**C13**), and nothing else for now; the questions still open, HTTPS through a reverse
    proxy among them, stand in D-22 (open-questions.md).
 
@@ -168,7 +167,6 @@ SOLID / hexagonal §1–§3, TDD §4, BDD §5, Definition of Done §8); not rest
 | **F19** | **Log a ledger read that takes longer than 1 s** (author decision 2026-10-11, with the bound for the deepest ledger page): nothing measures how long a request takes; the two info lines `AvatarEntriesController` writes ("Looking for entries for …", "Found N entries.") carry millisecond timestamps, so a slow page shows only to someone reading the log by hand | The bound of 1 s on the home server rests on an estimate (about 0.5 s for the busiest avatar's last page sorted by the item name, scaled from the work machine); a page that crosses it as the ledger grows should show in the log, not in a member's complaint | A ledger read over 1 s logs one WARN line naming the avatar, the ledger, the sort, the page and the duration, and a read under it logs no warning, pinned by tests | S |
 | **F20** | **Name a failed ssh connection as such instead of as a missing curl** (seat: agent) (0.3.0 release 2026-10-13): `require_remote_tools` in `deploy/epc-deploy` runs the first remote command and reports any failure of it, an unknown host key or a refused login among them, as "no curl on <host>"; the 0.3.0 dry run met it after a devcontainer rebuild had dropped the pinned host key. **Release gate of 0.4.0 (2026-10-15, robustness lens):** the rollback starts whatever `--image` names and reads only its id, so a `pre-0.3.0` tag still on the host prints "the 0.3.0 line" and starts 0.2.0, with no check on the image's version label (a check is the author's call); the usage text still justifies the 900 s health timeout with the `V2` table rebuild; the refusal of an existing backup still says it would replace the only pre-migration copy with an already migrated one, which is false for a release without a migration and is what a same-day re-deploy after a rollback meets | A misnamed cause sends the operator after curl on the host while the fix is a host key on the work machine | A connection that fails is reported with ssh's own reason before the curl probe runs, pinned by a self-test case; the rollback checks the version label of the image it starts against the step its statement names, or the author decides against that check; the usage text and the existing-backup refusal name no migration a release does not carry | S |
 | **F21** | **Give the database directory to the runtime user instead of opening it to everyone** (seat: PC) (0.3.0 release 2026-10-13, home-server admin): release step 3 in build-run-deploy.md has the operator `chmod 777` the database directory and `666` the database so that uid 1200 can write, and the home server's database directory and `temp.sqlite` stand at mode 777 | Every account on the host can rewrite or delete the guild's only history | Step 3 and the mount pre-flight rest on ownership by uid 1200 with a narrow mode, and the home server's directory follows it | S |
-| **F23** | **Release 0.4.0: carry the explanation page to the guild** (plan of 2026-10-13): production runs `0.3.0`, tag `v0.3.0` on `b81fe789`; 0.4.0 carries the explanation page with the corrected note and the invented trader and the gate guards, and changes no valuation | The page reaches the guild only with a release | The comparison against `v0.3.0` reports no finding on a snapshot 0.3.0 wrote; the rollback text and its self-test fit the step from 0.4.0 back to 0.3.0; the version commit declares 0.4.0; the author decides, recorded in open-questions.md, whether the two risks accepted for 0.3.0, the refused commit and the reads on the event loop, stand for 0.4.0; the author deploys and tags | S |
 
 ## Epic G: Documentation, standards & Claude-workflow showcase `P0→P1`
 

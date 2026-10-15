@@ -423,8 +423,8 @@ docker inspect --type container -f '{{index .Config.Labels "org.opencontainers.i
 docker images evergore-protocol-collector    # which tags are available to roll back to
 ```
 
-- **The home server runs `0.3.0`** since 2026-10-13 10:15 UTC (image revision `b81fe78`).
-  - `pre-0.3.0`, the `0.2.0` image, is the rollback target.
+- **The home server runs `0.4.0`** since 2026-10-15 13:26 UTC (image revision `4231502`).
+  - `pre-0.4.0`, the `0.3.0` image, is the rollback target.
 - The container runs under the fixed name **`epc`** on the home server (see the deploy steps), so
   every command here and in the rollback needs no container id. The image keeps the long name; only
   the container is short.

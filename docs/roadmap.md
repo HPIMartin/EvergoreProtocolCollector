@@ -19,7 +19,6 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M16 | 0.4.0 reaches the guild | the explanation page with the corrected note and the invented trader, the release comparison against 0.3.0, the gate guards, the release (F23) | **First** (author decision 2026-10-13): the page goes live with 0.4.0, and nothing in it moves a figure |
 | M17 | 0.5.0: members log in | accounts, login and a JWT on every endpoint (C11), the user management (C12), the usage records (C13) | **After 0.4.0** (author decision 2026-10-14): auth is the feature 0.5.0 carries, and nothing else for now |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | the atomic bank+storage ingest (D24) with the refused commit's open transaction (F12) and the job outliving the closed context (F10); the reads off the event loop (F11); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
@@ -27,20 +26,6 @@
 | M11 | Product build-out | the time filter (E12) → the member of the month (E13); the estimated hunt deposits (E3); failure pages with a picture (E27); recurring round trips flagged (E30); a ledger keeping its place on reload (E37); the collation of punctuation (F13) | The time filter inherits the SQL aggregation's query shape, so it follows it |
 | M12 | Ops, security & environment | removing the bundled webdrivers (F1); Dependabot for docker and gradle (H11); a real `Configuration` (C1); vulnScan at zero (C8); CI on every pull request (A4); the admin page linking its members (E28); a manual scrape trigger (E17); a Selenium Firefox service (H2); Micronaut 5.0 (H9) | Removing the webdrivers before the author's history rewrite; Micronaut 5.0 last, on the nets built above |
 | M14 | The guild's skills | reading the ranking (E31) → skill levels every 7 days (E32) → a skills page (E33); skill progress marked (E34) | **After 1.0** (author decision 2026-09-30; where 1.0 is cut is open (D-16)). The ranking is read before anything is built on it; the progress mark waits on about six months of readings |
-
-## M16: 0.4.0 reaches the guild
-
-Slice: a member can follow how his own row comes about, on a page the release carries, through a
-release gate that expects no figure to move.
-
-- [x] A page reachable from the overview explains every header figure, every credit tier and every
-      option a member can switch, with worked examples kept current as the author chose; it
-      carries the corrected note of a row not yet computed and an invented trader.
-- [x] The release comparison runs against 0.3.0 as the running side.
-- [x] The gate guards refuse a red record that is a mutation of its commit's code, a commit at a
-      rebase's conflict stop and added conflict markers.
-- [ ] 0.4.0 is deployed and tagged, its comparison against `v0.3.0` reporting no finding (backlog
-      F23).
 
 ## M17: 0.5.0, members log in
 
