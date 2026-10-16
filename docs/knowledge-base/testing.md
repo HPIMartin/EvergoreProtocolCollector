@@ -47,7 +47,7 @@
 | `AdminStatusEmptyStateEndpointTest` | Boots the server against an **empty** database with the collector disabled and asserts `GET /api/v1/admin/status` answers byte for byte with every key present and `null`/empty, the "no run yet" counterpart to `AdminStatusEndpointTest`; the one test that pins that the admin surface renders a missing outcome rather than dropping the key, `roundTrips`/`roundTripAbstentions` the sole exception, serving `[]` rather than `null` (recorded mutation: the controller serving `null` for the pair instead). | `@MicronautTest` integration |
 | `TransferTypeTest` | Locks `TransferType.toGermanString()` for both constants (`EINLAGERUNG`→"Einlagerung", `ENTNAHME`→"Entnahme"), the single source for the enum→German mapping. | pure unit |
 | `ApplicationExceptionHandlerTest` | Unit tests asserting each `ProtocolParserException` subclass maps to its HTTP status via the visitor, plus the `onUnknown` branch, plus that the logged path carries **no** token query parameter, plus the log severity per mapped status (client error → one `info` line, server error → `error` with the exception) and that a failing response mapping is still logged with its trace before it propagates. `accept` is `abstract`, so a new exception subclass is a compile error rather than a silent fallback. | pure unit |
-| `ApplicationExceptionHandlerHttpTest` | Boots the server against its own fixture DB copy and drives the not-found path through the **real Netty write**, which the pure unit test cannot reach: an unknown avatar answers 404 with the default `Not Found` reason phrase (no echo of the requested name), and an unknown avatar whose percent-encoded name carries `CRLF` still answers 404 instead of the 500 that a control character in the reason phrase used to cause. | `@MicronautTest` integration |
+| `ApplicationExceptionHandlerHttpTest` | Boots the server against its own fixture DB copy and drives the not-found path through the **real Netty write**, which the pure unit test cannot reach: an unknown avatar answers 404 with the default `Not Found` reason phrase (no echo of the requested name), and an unknown avatar whose percent-encoded name carries `CRLF` still answers 404, where a control character in the reason phrase would answer 500. | `@MicronautTest` integration |
 | `ApiReadsOffTheEventLoopTest` | Boots the server with one event-loop thread and stub repositories that record each read's thread: every `/api/v1` route reads on a platform thread that is no event loop, `GET /health` answers while a bank read waits on a latch standing in for a writer's lock, and a request beyond the IO pool waits in the pool's queue. | `@MicronautTest` integration |
 | `ProductionSnapshotRecomputeCheck` | **Opt-in, on-demand** (`-DprodSnapshot.check=true`): boots the real context against a *copy* of a local production snapshot (`temp.sqlite`, gitignored) with the scraper stubbed, so the real `EvergoreDataEvaluator` recomputes the meta sums on real data and the delta can be inspected before a deploy. Writes the summaries response verbatim to `build/tmp/prodSnapshot/overview-after-recompute.json` (decision 2026-08-08) and asserts the artifact carries every avatar rather than a first page of them, which holds up to the API's `MAX_SIZE` of 1000 avatars and fails rather than truncates beyond it; also exports the valuation catalog and asserts item names are unique (the lookup takes an arbitrary entry carrying the name, see [domain-model.md](domain-model.md)). Holds every meta sum the snapshot stored against the one recomputed from the same rows and writes the pair to `metaSums-stored-vs-recomputed.tsv`; it asserts that every stored key was compared and that none was dropped, so a failed read cannot pass as an empty diff. It does **not** assert equality: the diff is the measurement, not a gate. It does assert that every served figure, per row and in the totals, is its recomputed exact value rounded once, halves away from zero, which the old rule of adding rounded figures fails on this snapshot, and that the header identity reconciles within two gold. Details: [1:1 against the production instance](#11-against-the-production-instance). | `@MicronautTest` on-demand check |
 | `ProductionSnapshotMigrationCheck` | **Opt-in, on-demand** (`-DprodSnapshot.check=true`, same flag as the recompute check): runs the real `DatabaseMigration` over a *copy* of the local production snapshot and holds every row of all three tables against a SHA-256 taken before it, so a migration that drops, reorders or rewrites a row fails instead of being noticed after the deploy. Also pins that every column comes out `NOT NULL`, that no `*_strict` table is left behind, that a second run is a no-op, and that the migrated copy carries both ledger indexes and reads the busiest avatar's ledger page of either ledger by an index search. Run it before every deploy that carries a new migration. Each of its two tests migrates its own copy, so a snapshot older than `V2` pays the table rebuild twice. Measured 2026-09-07: 237,538 rows, digests identical, ~4 min per rebuild on a slow bind mount; 2026-09-27 over a `V2` copy of the 03.09.2026 snapshot (251,300 rows): digests identical, both indexes present, `V3` in 1.3 s. | on-demand check |
@@ -339,15 +339,14 @@ observable behaviour**:
 - **1:1 against production data:** the migrated distribution rendered the production snapshot
   identically to the live instance. Method and current result: [1:1 against the production
   instance](#11-against-the-production-instance).
-- **JDK 25 behaviour change found & fixed:** `java.sql.Timestamp.from(Instant)` now uses
-  `Math.multiplyExact` and **throws** on extreme instants where JDK 17 silently wrapped. The
-  evaluator's then-existing empty-watermark sentinel (`LocalDateTime.MIN`) hit this on the first
-  run and was replaced with an earliest-representable valid instant (the watermark itself is gone
-  since the full-recompute rework; avoid extreme sentinel instants in anything converted to
-  `Timestamp`). `SmokeTest`'s throwaway `Instant.MIN` timestamp was likewise made a valid instant. `ArchUnit` was bumped to 1.4.1 so it parses Java 25 bytecode (1.3.0 silently
-  imported zero classes, making the hexagonal guard a false green).
+- **JDK 25 behaviour:** `java.sql.Timestamp.from(Instant)` uses `Math.multiplyExact` and
+  **throws** on extreme instants where JDK 17 silently wrapped, so no instant converted to
+  `Timestamp` may be an extreme sentinel such as `LocalDateTime.MIN` or `Instant.MIN`.
+  - `SmokeTest`'s throwaway timestamp is a valid instant.
+  - `ArchUnit` is 1.4.1, since 1.3.0 imports no class of Java 25 bytecode and the hexagonal guard
+    would pass vacuously.
 
-An automated, offline acceptance test of the same flow now exists as `ProtocolEvaluationAcceptanceTest`,
+The same flow is covered offline by the acceptance test `ProtocolEvaluationAcceptanceTest`,
 driven by a **synthetic** committed fixture DB (`TestDataGenerator` → `testdata.sqlite`): no
 production data, no PII, so the fixture is safe to commit and the test is fully reproducible. The
 richer variant (boot against a real prod snapshot) is `ProductionSnapshotRecomputeCheck`: committed
@@ -633,8 +632,7 @@ recomputed value per key.
 - **Not reproducible:** the per-avatar ratio band of `0.12`-`1.33` first reported from the 31.07.2026 file. No quantity tried (per key, per
   family, gross, deposits, withdrawals, net) yields a `0.12` lower bound on any surviving snapshot;
   per-avatar `net` ratios are unbounded because `net` crosses zero. The file that band came from
-  (`last_updated` 31.07.2026) is no longer on disk, the root snapshot having been replaced on
-  2026-09-03, so that band cannot be re-derived. Its Fugger figures do reconcile:
+  (`last_updated` 31.07.2026) is not on disk, so that band cannot be re-derived. Its Fugger figures do reconcile:
   `66 141 289` → `94 063 645` is
   the **same** `+27 922 356` gap measured above.
 
@@ -712,7 +710,7 @@ the same lines) on the devcontainer's `/workspaces` bind mount.
   `storageWithdrawl` of one avatar, moves in its last bit (`…002E7` → `…001E7`), and the other 167
   of the keys the snapshot stores come out bitwise equal (the domain gate's probe through the real
   repository and catalog). The overview's whole gold is unchanged, and so is the snapshot recompute
-  check's count of changed keys (its 60 come from the catalog having moved since the snapshot);
+  check's count of changed keys (its 60 are catalog changes the snapshot predates);
   only that one key's recomputed figure differs.
 
 ### The sorted ledger page on real data (2026-10-10)

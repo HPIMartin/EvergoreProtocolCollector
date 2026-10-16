@@ -72,25 +72,6 @@ Slice: what the author placed right after the login release.
 Slice: the figures the header named are complete, and the rule behind them is decided where the
 ledger cannot decide it.
 
-- [x] Every storage name carries the value the game gives it, is recorded as a parser miss, or is
-      recorded as unpriced by the game with the date of the read that found no price (2026-09-22).
-  - Of the 15 names over 31 rows, 13 are gem pieces no complete read priced and 2 are parser
-    misses.
-  - Recording them moves no sum on the 03.09.2026 snapshot
-    ([testing.md](knowledge-base/testing.md)).
-- [x] The three ammunition sorts the NPC sells are credited in full, every other sort at 60 %, as
-      decided 2026-09-27 (2026-10-01).
-  - Why: a rule the ledger can apply that bounds the double payment to crafters.
-  - On the 03.09.2026 snapshot the guild trader stands at `+1.456.343`
-    ([testing.md](knowledge-base/testing.md)).
-  - It belongs here because it changes what a deposit credits.
-- [x] A member's row, the guild row and the header figures are each rounded once from the exact
-      values, halves away from zero, as decided 2026-09-27 (2026-09-30).
-  - On the 03.09.2026 snapshot 7 of 42 rows and four guild figures differ by one gold from
-    `v0.2.0`'s ([testing.md](knowledge-base/testing.md)).
-- [x] A member cycling trader goods through the storage is named with the item and the overlapping
-      quantity, and a test proves the warning stays silent for a crafter who withdraws material and
-      deposits the product.
 - [ ] The consent-banner text is purged from the ledger and the path that let it in is closed
       (backlog F8).
 - [ ] One opening entry per avatar books the counted stock at a chosen instant, marked as such on the
@@ -102,8 +83,6 @@ ledger cannot decide it.
 
 Slice: a scrape that aborts midway leaves both ledgers where they were.
 
-- [x] The duplicated bank/storage repositories are unified, one managed connection source, no
-      cross-entity constant use.
 - [ ] A scrape that aborts after the bank step leaves neither ledger table changed (backlog D24).
       It needs a transaction spanning both repositories, which is why it follows the unification.
 - [ ] A commit SQLite refuses leaves no pooled connection inside an open transaction, and a
@@ -113,9 +92,6 @@ Slice: a scrape that aborts midway leaves both ledgers where they were.
 
 Slice: the measured costs come down.
 
-- [x] Both ledgers carry an index on `(avatar, timeStamp)`, reaching an existing database through a
-      migration; the query plans show `SEARCH … USING INDEX`.
-  - Two of the three affected queries sit in the request path.
 - [ ] A stored meta value that cannot be read costs only its own avatar, on the overview and in the
       recompute, before any migration of the meta store meets one (backlog B36).
 - [ ] The value sums are exact fixed-point gold, converted by one migration (backlog D25).

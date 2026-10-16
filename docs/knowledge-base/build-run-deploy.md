@@ -8,7 +8,7 @@
   below), which wraps `./gradlew clean build --no-build-cache`.
 - **Key deps:** Selenium 4.7.2, ORMLite-JDBC 6.1, sqlite-jdbc 3.41.2.2, flyway-core 11.20.3 (schema
   migrations), micronaut-openapi (Swagger/RapiDoc/ReDoc), `micronaut-management` (health endpoint +
-  indicators), snakeyaml (Micronaut 4 no longer bundles it). Test only: micronaut-test-junit5, JUnit
+  indicators), snakeyaml (not bundled by Micronaut 4). Test only: micronaut-test-junit5, JUnit
   5 (+ `junit-platform-launcher`), unirest-java 3.11.11 (used by `SmokeTest`), AssertJ 3.27.7,
   ArchUnit 1.4.1 (reads Java 25 bytecode).
 - **Entry point / deployable:** the Gradle wrapper (`./gradlew`, distribution pinned in
