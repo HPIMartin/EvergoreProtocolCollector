@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class OrphanedBrowserSweepTest {
 	private static final Path PLANT_ROOT = Paths.get("build/tmp/orphanedBrowserSweep");
+	private static final Path A_BINARY_THAT_IGNORES_ITS_OWN_NAME = Paths.get("/usr/bin/perl");
+	private static final String SLEEP_FOR_THE_FIRST_ARGUMENT = "sleep shift";
 	private static final String LIFETIME_IN_SECONDS = "300";
+	private static final long SETTLING_TIME_IN_MILLISECONDS = 1000;
 
 	private final List<ProcessHandle> planted = new ArrayList<>();
 
@@ -51,6 +55,24 @@ class OrphanedBrowserSweepTest {
 	}
 
 	@Test
+	void aFakeDriverUnderThisJvmOutlivesTheSettlingTime() throws Exception {
+		ProcessHandle plant = plantAFakeDriverUnderThisJvm("lifetimeUnderThisJvm");
+
+		boolean exitedOnItsOwn = exitsWithinTheSettlingTime(plant);
+
+		assertThat(exitedOnItsOwn).isFalse();
+	}
+
+	@Test
+	void aDetachedFakeDriverOutlivesTheSettlingTime() throws Exception {
+		ProcessHandle plant = plantADetachedFakeDriver("lifetimeDetached");
+
+		boolean exitedOnItsOwn = exitsWithinTheSettlingTime(plant);
+
+		assertThat(exitedOnItsOwn).isFalse();
+	}
+
+	@Test
 	void failsTheRunWhenTheSweepFoundALeftover() {
 		assertThatThrownBy(() -> failOnAnyLeftover(List.of("geckodriver [pid 4711]"))).isInstanceOf(IllegalStateException.class).hasMessageContaining("4711");
 	}
@@ -62,14 +84,14 @@ class OrphanedBrowserSweepTest {
 
 	private ProcessHandle plantAFakeDriverUnderThisJvm(String plantName) throws Exception {
 		Path driver = fakeDriverNamedLikeTheRealOne(plantName);
-		ProcessHandle plant = new ProcessBuilder(driver.toString(), LIFETIME_IN_SECONDS).start().toHandle();
+		ProcessHandle plant = new ProcessBuilder(driver.toString(), "-e", SLEEP_FOR_THE_FIRST_ARGUMENT, LIFETIME_IN_SECONDS).start().toHandle();
 		planted.add(plant);
 		return plant;
 	}
 
 	private ProcessHandle plantADetachedFakeDriver(String plantName) throws Exception {
 		Path driver = fakeDriverNamedLikeTheRealOne(plantName);
-		new ProcessBuilder("setsid", "--fork", driver.toString(), LIFETIME_IN_SECONDS).start().waitFor();
+		new ProcessBuilder("setsid", "--fork", driver.toString(), "-e", SLEEP_FOR_THE_FIRST_ARGUMENT, LIFETIME_IN_SECONDS).start().waitFor();
 		ProcessHandle plant = awaitTheProcessRunning(driver);
 		planted.add(plant);
 		return plant;
@@ -78,7 +100,7 @@ class OrphanedBrowserSweepTest {
 	private static Path fakeDriverNamedLikeTheRealOne(String plantName) throws IOException {
 		Path driver = PLANT_ROOT.resolve(plantName).resolve("geckodriver").toAbsolutePath();
 		Files.createDirectories(driver.getParent());
-		Files.copy(Paths.get("/bin/sleep"), driver, REPLACE_EXISTING);
+		Files.copy(A_BINARY_THAT_IGNORES_ITS_OWN_NAME, driver, REPLACE_EXISTING);
 		driver.toFile().setExecutable(true);
 		return driver;
 	}
@@ -96,6 +118,15 @@ class OrphanedBrowserSweepTest {
 
 	private static boolean runs(ProcessHandle process, Path driver) {
 		return process.info().command().filter(driver.toString()::equals).isPresent();
+	}
+
+	private static boolean exitsWithinTheSettlingTime(ProcessHandle process) throws Exception {
+		try {
+			process.onExit().get(SETTLING_TIME_IN_MILLISECONDS, MILLISECONDS);
+			return true;
+		} catch (TimeoutException stillRunning) {
+			return false;
+		}
 	}
 
 	private static boolean hasExitedWithinTheGuard(ProcessHandle process) throws InterruptedException {
