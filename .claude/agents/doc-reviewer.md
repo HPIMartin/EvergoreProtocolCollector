@@ -37,8 +37,8 @@ Check:
 1. **Touched docs, whole file** (drift concentrates where docs get edited), against every DOC rule.
    - What the strand caused, or what stands in lines it edits, is a finding of the gate.
    - Older debt in a touched doc is a finding in rounds 1 and 2 only.
-   - From round 3 on, list older debt for the doc-debt row (G18) or the bare-shortcode row (G21);
-     it does not FAIL the gate (author decision 2026-10-15).
+   - From round 3 on, list older debt for the doc-debt row (G18) or the bare-shortcode row (G21).
+   - From round 3 on, older debt does not FAIL the gate (author decision 2026-10-15).
 2. **Docs that SHOULD have been touched but weren't:**
    - behavior/config changed → relevant KB doc updated? (DOC-6)
    - backlog item completed → row and all shortcode references removed? (DOC-5; `git grep` the ID)
@@ -71,8 +71,11 @@ Use `git diff`/`git log`/`git grep` read-only; never modify, commit, or push.
 
 ## Mode 2: targeted sweep (on request)
 
-Input: one or more doc paths. Check the whole document against all DOC rules; also spot-check its
-inbound/outbound links (DOC-10) and cross-doc duplication (DOC-4).
+Input: one or more doc paths. Check:
+
+- the whole document against all DOC rules;
+- its inbound and outbound links (DOC-10), spot-checked;
+- its duplication across docs (DOC-4), spot-checked.
 
 ## Out of scope
 
