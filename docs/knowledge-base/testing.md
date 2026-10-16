@@ -214,6 +214,7 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   `MemberBrowser`; no separate pool exists per actor (handbook §5).
 - **`MemberBrowser` hands out its parts** through accessors.
   - `tokenOpening()`: `TokenOpening`, the token and deep-link opening the acceptance browser uses.
+  - `clock()`: `ShiftedClock`.
   - `MemberBrowser` itself keeps the driver's lifecycle and the navigation.
 - **The operator reads over HTTP, not the browser** (handbook §5): `HealthReport`
   (`acceptance.world`) `GET`s `/health` on the running service's port, with the guild's token
@@ -229,7 +230,7 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   The throttle's windows move on `ScenarioTime`, starting off the clock's ten-second grid and 30 ms
   a request, so neither a fixed window nor a count from the latest request passes; no step waits
   one out.
-- **The browser's clock** is shifted with a WebDriver BiDi preload script
+- **The browser's clock** (`ShiftedClock`) is shifted with a WebDriver BiDi preload script
   (`script.addPreloadScript`) and checked with `script.evaluate` in the page's realm, because the
   classic `executeScript` runs in a sandbox that does not see the page's `Date`.
 - **A local Firefox start takes the geckodriver kept for its test JVM** (`GeckoDriverExecutable`):

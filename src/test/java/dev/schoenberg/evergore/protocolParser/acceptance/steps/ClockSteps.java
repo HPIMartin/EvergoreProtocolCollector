@@ -19,6 +19,6 @@ public class ClockSteps {
 	@Given("the clocks of the service and of the member's browser read {moment}")
 	public void theClocksRead(LocalDateTime moment) {
 		time.setTo(moment);
-		browser.readsTheClock(time.now());
+		browser.clock().reads(time.now());
 	}
 }

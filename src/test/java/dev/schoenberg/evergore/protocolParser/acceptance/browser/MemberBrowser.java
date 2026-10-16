@@ -3,9 +3,7 @@ package dev.schoenberg.evergore.protocolParser.acceptance.browser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.lang.reflect.Type;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,40 +13,28 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.bidi.BiDi;
-import org.openqa.selenium.bidi.Command;
-import org.openqa.selenium.bidi.HasBiDi;
-import org.openqa.selenium.json.TypeToken;
-import org.openqa.selenium.remote.Augmenter;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
 
 public final class MemberBrowser {
 	private static final Duration HANG_GUARD = Duration.ofSeconds(30);
-	private static final Duration CLOCK_TOLERANCE = Duration.ofMinutes(1);
 	private static final String SETTLED = "const content = document.querySelector('[data-testid=page-content]'); return content !== null && content.children.length > 0"
 			+ " && document.querySelector('[data-testid=status-panel][data-variant=loading]') === null";
-	private static final String SHIFTED_CLOCK = "() => { const shift = %d - Date.now(); const RealDate = Date;"
-			+ " class ScenarioDate extends RealDate { constructor(...parts) { if (parts.length === 0) { super(RealDate.now() + shift) } else { super(...parts) } }"
-			+ " static now() { return RealDate.now() + shift } } globalThis.Date = ScenarioDate }";
 	private static final ObjectMapper JSON = new ObjectMapper();
 	private static final String MEMBER = "member";
 	private static final String GUILD = "guild";
 	private static final String MARK = "mark";
 	private static final String COLUMN = "column";
-	private static final Type BIDI_RESULT = new TypeToken<Map<String, Object>>() {}.getType();
 
 	private final RunningService service;
 	private final BrowserChoice choice;
 	private final TokenOpening tokenOpening;
+	private final ShiftedClock shiftedClock;
 	private WebDriver driver;
-	private Instant clock;
-	private String clockScript;
 	private String lastReachedUrl;
 	private String timeZone;
 	private boolean dedicated;
@@ -57,28 +43,25 @@ public final class MemberBrowser {
 		this.service = service;
 		this.choice = choice;
 		this.tokenOpening = new TokenOpening(this);
+		this.shiftedClock = new ShiftedClock(() -> driver);
 	}
 
 	public TokenOpening tokenOpening() {
 		return tokenOpening;
 	}
 
-	public void runsInTimeZone(String zone) {
-		timeZone = zone;
+	public ShiftedClock clock() {
+		return shiftedClock;
 	}
 
-	public void readsTheClock(Instant instant) {
-		clock = instant;
-		if (driver != null) {
-			forgetTheShiftedClock();
-			shiftTheClock();
-		}
+	public void runsInTimeZone(String zone) {
+		timeZone = zone;
 	}
 
 	public void openHref(String href) {
 		driver().get(addressOf(href));
 		awaitSettled();
-		assertTheClockIsShifted();
+		shiftedClock.assertIsShown();
 		rememberTheReachedUrl();
 	}
 
@@ -101,7 +84,7 @@ public final class MemberBrowser {
 	public void openExactly(String href) {
 		driver().get(href);
 		awaitSettled();
-		assertTheClockIsShifted();
+		shiftedClock.assertIsShown();
 		rememberTheReachedUrl();
 	}
 
@@ -189,7 +172,7 @@ public final class MemberBrowser {
 			return;
 		}
 		try {
-			forgetTheShiftedClock();
+			shiftedClock.forget();
 			driver.get("about:blank");
 			driver.manage().deleteAllCookies();
 		} catch (RuntimeException | Error cleanupFailure) {
@@ -230,17 +213,9 @@ public final class MemberBrowser {
 				dedicated = true;
 				assertTheBrowserRunsInTheRequestedTimeZone();
 			}
-			if (clock != null) {
-				shiftTheClock();
-			}
+			shiftedClock.shiftIfRead();
 		}
 		return driver;
-	}
-
-	private void shiftTheClock() {
-		Map<String, Object> added = bidi()
-				.send(new Command<Map<String, Object>>("script.addPreloadScript", Map.of("functionDeclaration", SHIFTED_CLOCK.formatted(clock.toEpochMilli())), BIDI_RESULT));
-		clockScript = (String) added.get("script");
 	}
 
 	private String colourOfTheFigureIn(WebElement holder) {
@@ -268,38 +243,10 @@ public final class MemberBrowser {
 		return hints.stream().map(WebElement::getText).filter(text -> !text.isBlank()).findFirst().map(String::trim);
 	}
 
-	private void forgetTheShiftedClock() {
-		if (clockScript != null) {
-			bidi().send(new Command<Map<String, Object>>("script.removePreloadScript", Map.of("script", clockScript), BIDI_RESULT));
-			clockScript = null;
-		}
-	}
-
 	private void assertTheBrowserRunsInTheRequestedTimeZone() {
 		Object zone = javascript(driver).executeScript("return Intl.DateTimeFormat().resolvedOptions().timeZone");
 
 		assertThat(zone).as("the time zone of the member's dedicated browser").isEqualTo(timeZone);
-	}
-
-	private void assertTheClockIsShifted() {
-		if (clock == null) {
-			return;
-		}
-		Map<String, Object> evaluated = bidi()
-				.send(new Command<Map<String, Object>>("script.evaluate",
-						Map.of("expression", "Date.now()", "target", Map.of("context", driver.getWindowHandle()), "awaitPromise", false), BIDI_RESULT));
-		long browserNow = numberIn(evaluated.get("result")).orElseThrow(() -> new AssertionError("The browser answered no number for Date.now(): " + evaluated));
-
-		assertThat(browserNow).as("the member's browser reads the scenario's clock").isCloseTo(clock.toEpochMilli(), within(CLOCK_TOLERANCE.toMillis()));
-	}
-
-	private static Optional<Long> numberIn(Object result) {
-		return result instanceof Map<?, ?> value && value.get("value") instanceof Number now ? Optional.of(now.longValue()) : Optional.empty();
-	}
-
-	private BiDi bidi() {
-		WebDriver augmented = driver instanceof HasBiDi ? driver : new Augmenter().augment(driver);
-		return ((HasBiDi) augmented).getBiDi();
 	}
 
 	private void awaitTheMoveFrom(String before) {
