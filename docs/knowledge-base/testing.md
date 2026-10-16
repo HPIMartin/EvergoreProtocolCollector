@@ -201,23 +201,31 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
     equals the requested zone, so a silent fallback to the container's UTC fails loudly.
 - **Reading a page:** one `executeScript` per view (`read-overview.js`, `read-ledger.js`,
   `read-navigation.js`, `read-admin.js` under `src/test/resources/acceptance/`) returns the rendered
-  text as JSON (`read-navigation.js`: the page frame's links with their `href` and current mark, plus
-  every `href` on the page), a
-  note's text the way a reader of the `role=note` gets it (none inside `aria-hidden`). A mark or a
-  note a step names is also read the way the member sees it: focused, then the text WebDriver
-  reports as displayed (`find-note.js`), so a note the stylesheet never shows fails. A colour a step names is read as the browser computes
-  it, anchored to the design tokens (`colour-of-token.js` reads a token through a probe element,
-  `find-cell.js` and `find-stat.js` find a member's figure cell and a figure of the guild's
-  position, `colour-of-figure.js` reads the colour of the element holding the figure's last text
-  node, its text-fill colour where set, so a child element's colour or a text-fill colour overriding the cell
-  or box cannot hide): a credit or debit figure equals `--color-positive` or `--color-negative`, an
-  uncoloured one equals `--color-text` and its parent's colour, and that parent equals
-  `--color-text` too, so a rule painting a whole row fails. The admin reads through the same
-  `MemberBrowser`; no separate pool exists per actor (handbook §5).
+  text as JSON.
+  - `read-navigation.js` returns the page frame's links with their `href` and current mark.
+  - `read-navigation.js` also returns every `href` on the page.
+  - A note's text is read the way a reader of the `role=note` gets it (none inside `aria-hidden`).
+  - A mark or a note a step names is also read the way the member sees it (`find-note.js`):
+    focused, then the text WebDriver reports as displayed, so a note the stylesheet never
+    shows fails.
+  - A colour a step names is read as the browser computes it (`ComputedColours`), anchored to the
+    design tokens.
+  - `colour-of-token.js` reads a token through a probe element.
+  - `find-cell.js` finds a member's figure cell.
+  - `find-stat.js` finds a figure of the guild's position.
+  - `colour-of-figure.js` reads the colour of the element holding the figure's last text node, its
+    text-fill colour where set, so a child element's colour or a text-fill colour overriding the
+    cell or box cannot hide.
+  - A credit or debit figure equals `--color-positive` or `--color-negative`.
+  - An uncoloured figure equals `--color-text` and its parent's colour.
+  - That parent equals `--color-text` too, so a rule painting a whole row fails.
+  - The admin reads through the same `MemberBrowser`.
+  - No separate pool exists per actor (handbook §5).
 - **`MemberBrowser` hands out its parts** through accessors.
   - `tokenOpening()`: `TokenOpening`, the token and deep-link opening the acceptance browser uses.
   - `clock()`: `ShiftedClock`.
   - `timeZone()`: `TimeZoneBrowser`.
+  - `colours()`: `ComputedColours`.
   - `MemberBrowser` itself keeps the driver's lifecycle and the navigation.
 - **The operator reads over HTTP, not the browser** (handbook §5): `HealthReport`
   (`acceptance.world`) `GET`s `/health` on the running service's port, with the guild's token

@@ -34,6 +34,7 @@ public final class MemberBrowser {
 	private final TokenOpening tokenOpening;
 	private final ShiftedClock shiftedClock;
 	private final TimeZoneBrowser timeZoneBrowser;
+	private final ComputedColours computedColours;
 	private WebDriver driver;
 	private String lastReachedUrl;
 
@@ -43,6 +44,7 @@ public final class MemberBrowser {
 		this.tokenOpening = new TokenOpening(this);
 		this.shiftedClock = new ShiftedClock(() -> driver);
 		this.timeZoneBrowser = new TimeZoneBrowser(choice);
+		this.computedColours = new ComputedColours(this);
 	}
 
 	public TokenOpening tokenOpening() {
@@ -55,6 +57,10 @@ public final class MemberBrowser {
 
 	public TimeZoneBrowser timeZone() {
 		return timeZoneBrowser;
+	}
+
+	public ComputedColours colours() {
+		return computedColours;
 	}
 
 	public void openHref(String href) {
@@ -146,26 +152,6 @@ public final class MemberBrowser {
 		return noteShown(Map.of(GUILD, true), Map.of(COLUMN, column));
 	}
 
-	public String colourOfTheToken(String token) {
-		return (String) javascript(driver()).executeScript(scriptFrom("colour-of-token.js"), token);
-	}
-
-	public String colourOfTheCellOf(String member, int column) {
-		return colourOfTheFigureIn(cellAt(Map.of(MEMBER, member), Map.of(COLUMN, column)));
-	}
-
-	public String colourAroundTheCellOf(String member, int column) {
-		return cellAt(Map.of(MEMBER, member), Map.of(COLUMN, column)).findElement(By.xpath("..")).getCssValue("color");
-	}
-
-	public String colourOfTheStatLabelled(String label) {
-		return colourOfTheFigureIn(statValueLabelled(label));
-	}
-
-	public String colourAroundTheStatLabelled(String label) {
-		return statValueLabelled(label).findElement(By.xpath("..")).getCssValue("color");
-	}
-
 	public void leave() {
 		if (driver == null) {
 			return;
@@ -215,18 +201,6 @@ public final class MemberBrowser {
 		return driver;
 	}
 
-	private String colourOfTheFigureIn(WebElement holder) {
-		return (String) javascript(driver()).executeScript(scriptFrom("colour-of-figure.js"), holder);
-	}
-
-	private WebElement statValueLabelled(String label) {
-		return (WebElement) javascript(driver()).executeScript(scriptFrom("find-stat.js"), label);
-	}
-
-	private WebElement cellAt(Map<String, Object> row, Map<String, Object> cell) {
-		return (WebElement) javascript(driver()).executeScript(scriptFrom("find-cell.js"), row, cell);
-	}
-
 	private Optional<String> noteShown(Map<String, Object> row, Map<String, Object> cell) {
 		Object found = javascript(driver()).executeScript(scriptFrom("find-note.js"), row, cell);
 		if (!(found instanceof WebElement note)) {
@@ -256,6 +230,10 @@ public final class MemberBrowser {
 
 	Object execute(String script, Object... arguments) {
 		return javascript(driver()).executeScript(script, arguments);
+	}
+
+	Object executeResource(String resource, Object... arguments) {
+		return execute(scriptFrom(resource), arguments);
 	}
 
 	String addressOf(String href) {
