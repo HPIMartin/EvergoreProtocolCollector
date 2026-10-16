@@ -102,8 +102,10 @@ to the prompt cache; minimize context size × session length:
   since the PC and the agent seat share one 5-hour quota.
 - **Parallel contexts stay free:** the saving comes from the orchestrator and the tiers, never from
   running fewer gate agents side by side.
-- Subagent tiers are pinned per role in the `.claude/agents/` frontmatter; one-off gate escalation
-  per the playbook's escalation rule.
+- Subagent tiers are pinned per role in the `.claude/agents/` frontmatter.
+- A gate overrides a tier one-off per the playbook's escalation rule.
+- A split round 1 overrides the doc-reviewer's tier per handbook §9, "Round 1 of a large docs-only
+  strand splits the doc-reviewer".
 
 ## Permissions & autonomy (committed vs local)
 

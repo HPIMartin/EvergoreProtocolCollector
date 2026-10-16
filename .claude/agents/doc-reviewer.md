@@ -15,7 +15,24 @@ your only rulebook; every finding cites a rule ID.
 
 ## Mode 1: task-scoped (default, at every review gate)
 
-Input: the feature's diff/commits (or branch range). Check:
+Input: the feature's diff/commits (or branch range). What you run depends on the round:
+
+- **Round 1:** items 1 to 3 below and the rotating sweep.
+- **Round 1, split** (handbook §9, a large docs-only strand), your brief names your part:
+  - a doc part runs item 1 on its doc;
+  - a doc part runs item 3 on its doc's hunks;
+  - the range part runs item 2;
+  - the range part runs the rotating sweep.
+- **From round 2 on**, your brief carries the delta (`<previous tip>..<tip>`):
+  - item 1 on the docs the delta touches;
+  - item 3 on the delta's hunks;
+  - item 2 against the delta;
+  - the rotating sweep.
+- **The run that closes a split round 1 without a fold:**
+  - item 2 against the range;
+  - the rotating sweep.
+
+Check:
 
 1. **Touched docs, whole file** (drift concentrates where docs get edited), against every DOC rule.
    - What the strand caused, or what stands in lines it edits, is a finding of the gate.
@@ -31,8 +48,11 @@ Input: the feature's diff/commits (or branch range). Check:
    path or test name it names present at the commit it rides in (`git grep <name> <sha>` against
    that commit, never the working tree)?
 
-Then run the **rotating sweep**: pick one tracked doc statelessly and check it whole, with `wt` set
-to the absolute path of the worktree under review (see Environment):
+The **rotating sweep**, where the list above names it:
+
+- it picks one tracked doc statelessly;
+- it checks that doc whole;
+- `wt` is the absolute path of the worktree under review (see Environment):
 
 ```
 docs=$(git -C "$wt" ls-files '*.md' ':(exclude).template/*' | sort); n=$(echo "$docs" | wc -l)

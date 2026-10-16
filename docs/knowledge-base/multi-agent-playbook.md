@@ -13,7 +13,7 @@ independent agents try to break it and gate the commit.** Part of the project's 
 | **Stakeholder falsifier** | `falsifier-stakeholder` (`model: opus`) | Yes (fresh) | A draft `.feature` (or the whole suite) read against every `.feature` file → verdict on actor, product-owner readability, time, numbers + rewrites + merge proposals for overlaps |
 | **Implementer** | `implementer` (frontmatter `model: sonnet`) | Yes | Approved plan → red→green→refactor per step, commits each locally, arms the scenarios → summary |
 | **Falsifier panel** | `falsifier-domain` · `falsifier-robustness` · `falsifier-frontend` (each `model: sonnet`); spawned per touched surface (see cadence) | Yes (fresh) | Feature diff/commits → adversarial verdicts (domain math · test honesty/robustness · SPA behavior) + counter-tests |
-| **Doc reviewer** | `doc-reviewer` (`model: haiku`) | Yes (fresh) | Feature diff/commits → PASS/FAIL against the KB README's DOC checklist + findings with rule IDs |
+| **Doc reviewer** | `doc-reviewer` (`model: haiku`; round 1 of a large docs-only strand: handbook §9) | Yes (fresh) | Feature diff/commits → PASS/FAIL against the KB README's DOC checklist + findings with rule IDs |
 | **Reviewer / Gate** | `reviewer` (`model: opus`) | Yes (fresh, per gate) | Scenario gate: the draft `.feature` + both scenario-gate falsifiers' reports → PASS/FAIL. Feature gate: feature commits, from round 2 on also the earlier rounds' panel and doc-reviewer reports → PASS/FAIL + findings + proposed `process-learnings.md` entry |
 
 **Non-negotiable:** falsifiers, doc-reviewer and Reviewer are **fresh, independent** agents, never
@@ -143,6 +143,7 @@ falsifier panel + review gate run **at the feature commit**, not per micro-commi
   strand and what the plan leaves out, so a lens does not raise them again each round.
 - **Pure documentation/process changes (`[doc]` scope) skip the falsifier panel:** the
   `doc-reviewer` is the gate; add the `reviewer` only when process adherence is genuinely in doubt.
+  - Round 1 of a large docs-only strand splits the doc-reviewer (handbook §9).
 - **Escalation:** features touching valuation math, time/timezones, concurrency, data migration or
   the auth/security surface (filters, token handling, what is publicly exposed) → spawn gate agents
   with a one-off `model` override on `opus`; frontmatter defaults stay unchanged.
@@ -255,6 +256,8 @@ says where each piece of evidence lives.
 - **The reviewer runs the check as its first act**, on the strand worktree, beside the lenses:
   - a refusal of class `lens`, `report`, `finding` or `tip` that names a report the round spawned
     beside it concerns that report: the reviewer quotes it, it is not the reviewer's;
+  - in a split round 1 (handbook §9), the refusal of the missing `doc-reviewer.md` concerns the
+    split doc-reviewers;
   - every other refusal is a `process` finding of a FAIL;
   - among them: a refusal naming a report of an earlier round, and a `finding` refusal about the
     disposition of an earlier round's finding (`fixed` at no strand commit, a backlog row the tip
@@ -293,6 +296,24 @@ says where each piece of evidence lives.
   - A choice such as `yes | no` on that line reads as no verdict.
   - A verdict quoted further into a line or in a blockquote counts for nothing, since a delta-round
     report quotes the round before it.
+- **A split round 1** (handbook §9) writes no top-level `doc-reviewer.md`:
+  - each part's report, verbatim, is `round1/doc-reviewer-<part>.md`;
+  - a doc's part is its path without `.md` and without a leading dot, each `/` read as `-`
+    (`docs-knowledge-base-engineering-handbook`);
+  - the range's part is `range`;
+  - the top-level `findings.txt` traces the split findings as `<part>-<n>` (author decision
+    2026-10-15);
+  - those lines are numbered per report;
+  - they stay for the rest of the gate;
+  - the check tests their dispositions as any other;
+  - the count of `doc-reviewer-<n>` leaves them out;
+  - the reviewer counts each part's findings against its `<part>-<n>` lines;
+  - after a fold, round 2's delta run writes the top-level `doc-reviewer.md`;
+  - when no fold follows, one run on the default model writes it;
+  - that run writes at the tip under review;
+  - that tip follows the lows' row of "A passing round whose findings are all low" (handbook §9),
+    if there is one;
+  - that run belongs to round 1 (author decision 2026-10-16).
 - **Required reports** follow the strand's diff against its base: `doc-reviewer.md` always; any
   path outside `*.md` adds `lens-robustness.md`, one under `src/` adds `lens-domain.md`, one under
   `frontend/` adds `lens-frontend.md` (→ Cadence). A docs-only strand needs the doc-reviewer alone.
@@ -344,7 +365,8 @@ says where each piece of evidence lives.
   1..n per report in their order, each traced once; a report whose own verdict is no readable
   `robust: yes` or `verdict: PASS` lists at least one): `<lens>-<n> fixed <strand commit>`,
   `<lens>-<n> backlog <ID>` (a row `docs/backlog.md` holds at the tip) or `<lens>-<n> rejected
-  <reason>`; the doc-reviewer's findings count as `doc-reviewer-<n>`. Anything else is refused.
+  <reason>`; the doc-reviewer's findings count as `doc-reviewer-<n>`, a split round 1's as
+  `<part>-<n>` (→ "A split round 1"). Anything else is refused.
 - **`bdd.log` and `wip.expected`:** for a strand that touches `src/` or `frontend/`, the
   `./verify bdd` run at the tip, and one line per expected
   failure, `<the failing test's line without FAILED> | <its failure line>`, the failure line never

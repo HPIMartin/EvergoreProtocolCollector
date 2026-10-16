@@ -739,6 +739,22 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - it checks a docs fix of the reviewer's finding too;
   - the lens verdicts stand;
   - a lens judges the code, and such a fold changes none.
+- **Round 1 of a large docs-only strand splits the doc-reviewer** (author decision 2026-10-15),
+  since one `haiku` full pass left findings in text it had read to later rounds (cause not
+  established):
+  - large means more than three docs touched or more than 100 lines added
+    (`git diff --shortstat main..<tip>`);
+  - one `doc-reviewer` per touched doc checks that doc whole;
+  - the same run checks the range's hunks in that doc;
+  - one more checks the docs the range should have touched;
+  - that one also runs the rotating sweep;
+  - all of them run in parallel;
+  - each runs on `sonnet`;
+  - a failing round 1's findings fold once;
+  - from round 2 on, a single `doc-reviewer` on its default model runs the delta
+    (`.claude/agents/doc-reviewer.md`, Mode 1);
+  - how the dossier holds the split reports and their findings:
+    [multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier".
 - **A passing round whose findings are all low ends the panel** (author decision 2026-10-12):
   - every report passes;
   - each finding is a lens's `low`, or one a passing doc-reviewer or reviewer raised;
