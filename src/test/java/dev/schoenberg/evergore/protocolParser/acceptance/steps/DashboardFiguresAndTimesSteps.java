@@ -43,11 +43,20 @@ public class DashboardFiguresAndTimesSteps {
 	}
 
 	private void assertToneIsShown(Tone tone, String colour, Supplier<String> colourAround, String subject) {
-		assertThat(colour).as(subject).isEqualTo(expectedColourOf(tone, colourAround));
+		String expected = expectedColourOf(tone, colourAround);
+
+		assertThat(colour).as(subject).isEqualTo(expected);
 		if (tone == Tone.NEUTRAL) {
-			assertThat(colourAround.get()).as(subject + ": the plain text colour around it").isEqualTo(browser.colours().ofTheToken(TEXT_TOKEN));
+			assertThePlainTextColourIsAround(colourAround, subject);
 		}
 		assertTonesArePaintedApart(colourAround, subject);
+	}
+
+	private void assertThePlainTextColourIsAround(Supplier<String> colourAround, String subject) {
+		String around = colourAround.get();
+		String plainText = browser.colours().ofTheToken(TEXT_TOKEN);
+
+		assertThat(around).as(subject + ": the plain text colour around it").isEqualTo(plainText);
 	}
 
 	private void assertTonesArePaintedApart(Supplier<String> colourAround, String subject) {

@@ -123,7 +123,9 @@ public class MemberLedgerSteps {
 	@Then("the {ledger} ledger of {string} says {string}")
 	public void theNamedLedgerSays(LedgerName namedLedger, String member, String message) {
 		browser.tokenOpening().open(namedLedger.pathOf(member));
-		assertThat(browser.ledger().emptyMessage()).isEqualTo(message);
+		MemberLedger ledger = browser.ledger();
+
+		assertThat(ledger.emptyMessage()).isEqualTo(message);
 	}
 
 	@Then("the ledger's caption reads {string}")
