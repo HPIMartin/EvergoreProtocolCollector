@@ -16,6 +16,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.BANK;
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.STORAGE;
+import static dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger.AMOUNT_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.NO_VIEW_FOR_THAT_LINK;
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.UNKNOWN;
@@ -46,7 +47,7 @@ public class DashboardNavigationSteps {
 	@Then("the ledger shows a movement of {word} gold")
 	public void theLedgerShowsAMovementOfGold(String gold) {
 		MemberLedger ledger = browser.ledger();
-		int column = ledger.columnOf("Betrag");
+		int column = ledger.columnOf(AMOUNT_COLUMN);
 
 		assertThat(ledger.rows()).extracting(row -> row.get(column)).contains(gold);
 	}
