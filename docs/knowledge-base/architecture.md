@@ -181,6 +181,27 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     `instanceof`;
   - its mapped status picks the log severity, so an expected client error is one `info` line and
     only a server error logs its stack trace.
+- **Controllers run off the event loop** (author decisions 2026-10-16,
+  [open-questions.md](../open-questions.md)): `micronaut.server.thread-selection: IO` hands every
+  controller method to Micronaut's IO pool.
+  - Why: a read that waits on an outside writer's lock, up to the 10 s `busy_timeout`, costs its
+    own request, not every connection its event-loop thread serves.
+  - The management endpoints such as `/health` run on that pool too.
+  - The setting covers a new controller the moment it exists, with no annotation to remember.
+  - Filters and the handlers under `rest/netty/` still run on the event loop.
+  - Blocking work, such as a database read, therefore belongs in a controller or below it, never in
+    a filter.
+- **The IO pool is fixed** (`micronaut.executors.io.type: fixed`; author decision 2026-10-16,
+  [open-questions.md](../open-questions.md)).
+  - Why: an unbounded pool would let any client start a platform thread per request while an
+    outside lock lasts.
+  - Its size is Micronaut's default, twice the machine's cores.
+  - Requests beyond the pool wait in its queue.
+  - While an outside writer's lock holds as many reads as the pool has threads, every further
+    request, `/health` included, waits until the lock lifts.
+- **The IO pool's threads are platform threads, not the virtual threads of
+  `TaskExecutors.BLOCKING`** (author decision 2026-10-16, [open-questions.md](../open-questions.md)).
+  - Why: SQLite waits for a lock in native code, which pins a virtual thread's carrier.
 - **The token scope is default-deny** (author decision 2026-08-04): every path needs a token except
   the ones configured under `evergore.security.public-paths`.
   - Why: a new controller is protected the moment it exists, with no list to remember.

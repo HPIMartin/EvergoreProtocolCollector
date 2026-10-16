@@ -913,6 +913,9 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
   `EVERGORE_CREDENTIALS_PASSWORD`, via `CredentialsConfiguration`). None of them has a value in
   `application.yml`, so none lives in the repo; `application-test.yml` carries dummy values because
   every boot test would otherwise fail the startup validation.
+  - It also sets the server's thread selection (`micronaut.server.thread-selection`) and the fixed
+    IO pool (`micronaut.executors.io`), see [architecture.md](architecture.md), "Layers &
+    responsibilities (condensed)".
 - **`logback.xml`**: single colored STDOUT appender, root level `info`. Nothing logs a request URI's
   query string, so the `?token=…` credential never reaches the log: `RequestAuditLogFilter` logs only
   client IP and user-agent, and the exception handler logs `request.getPath()`, which excludes the

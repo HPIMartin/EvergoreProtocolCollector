@@ -1,6 +1,11 @@
 micronaut:
   application:
     name: Evergore Protocol Parser
+  server:
+    thread-selection: IO
+  executors:
+    io:
+      type: fixed
   router:
     static-resources:
       swagger:
