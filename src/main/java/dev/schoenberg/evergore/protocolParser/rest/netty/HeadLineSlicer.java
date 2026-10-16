@@ -10,6 +10,8 @@ final class HeadLineSlicer extends ChannelInboundHandlerAdapter {
 
 	private final UnreadableHeadReplacer replacer;
 	private final RecentLines recentLines;
+	private boolean atHeadStart = true;
+	private boolean betweenMessages;
 
 	HeadLineSlicer(UnreadableHeadReplacer replacer, int maxHeaderSize) {
 		this.replacer = replacer;
@@ -25,6 +27,21 @@ final class HeadLineSlicer extends ChannelInboundHandlerAdapter {
 
 		try {
 			while (bytes.isReadable()) {
+				boolean wholeRead = replacer.passesWholeReads();
+				int unsliced = replacer.unslicedBytesWithin(bytes.readableBytes());
+				if (unsliced > 0) {
+					context.fireChannelRead(bytes.readRetainedSlice(unsliced));
+					replacer.unslicedBytesPassed();
+					atHeadStart = !wholeRead;
+					betweenMessages = true;
+					continue;
+				}
+				int idle = atHeadStart && !replacer.isCollecting() ? lengthOfIdleBytes(bytes) : 0;
+				if (idle > 0) {
+					context.fireChannelRead(bytes.readRetainedSlice(idle));
+					replacer.idleBytesPassed();
+					continue;
+				}
 				pass(context, bytes.readRetainedSlice(lengthOfNextSlice(bytes)));
 			}
 		} finally {
@@ -34,6 +51,11 @@ final class HeadLineSlicer extends ChannelInboundHandlerAdapter {
 
 	private void pass(ChannelHandlerContext context, ByteBuf slice) {
 		SliceEnd end = recentLines.append(slice);
+		boolean idleLine = end == SliceEnd.END_OF_LINE && recentLines.currentLineIsIdle();
+		if (end == SliceEnd.END_OF_LINE && !idleLine) {
+			betweenMessages = false;
+		}
+		atHeadStart = end == SliceEnd.END_OF_HEAD || (idleLine && betweenMessages);
 		if (replacer.isCollecting()) {
 			byte[] collected = ByteBufUtil.getBytes(slice);
 			slice.release();
@@ -43,6 +65,11 @@ final class HeadLineSlicer extends ChannelInboundHandlerAdapter {
 
 		context.fireChannelRead(slice);
 		replacer.headForwarded(end, recentLines);
+	}
+
+	private static int lengthOfIdleBytes(ByteBuf bytes) {
+		int firstOfTheHead = bytes.forEachByte(RecentLines::isIdle);
+		return firstOfTheHead < 0 ? bytes.readableBytes() : firstOfTheHead - bytes.readerIndex();
 	}
 
 	private static int lengthOfNextSlice(ByteBuf bytes) {

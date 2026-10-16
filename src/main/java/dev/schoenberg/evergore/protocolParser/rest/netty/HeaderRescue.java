@@ -14,18 +14,24 @@ final class HeaderRescue {
 	private final int budget;
 	private final List<RescuedHeader> headers = new ArrayList<>();
 	private final StringBuilder lineSoFar = new StringBuilder();
+	private boolean awaitingTheRequestLine;
 	private boolean skippingRejectedLine;
 	private boolean complete;
 	private int used;
 
-	private HeaderRescue(int budget, boolean skippingRejectedLine, boolean complete) {
+	private HeaderRescue(int budget, boolean awaitingTheRequestLine, boolean skippingRejectedLine, boolean complete) {
 		this.budget = budget;
+		this.awaitingTheRequestLine = awaitingTheRequestLine;
 		this.skippingRejectedLine = skippingRejectedLine;
 		this.complete = complete;
 	}
 
 	static HeaderRescue after(SliceEnd failureSlice, int budget) {
-		return new HeaderRescue(budget, failureSlice == SliceEnd.MID_LINE, failureSlice == SliceEnd.END_OF_HEAD);
+		return new HeaderRescue(budget, false, failureSlice == SliceEnd.MID_LINE, failureSlice == SliceEnd.END_OF_HEAD);
+	}
+
+	static HeaderRescue beforeTheRequestLine(int budget) {
+		return new HeaderRescue(budget, true, false, false);
 	}
 
 	void feed(byte[] slice) {
@@ -37,6 +43,13 @@ final class HeaderRescue {
 		if (used > budget) {
 			complete = true;
 			return;
+		}
+		if (awaitingTheRequestLine) {
+			if (isIdle(slice)) {
+				return;
+			}
+			awaitingTheRequestLine = false;
+			skippingRejectedLine = true;
 		}
 		if (skippingRejectedLine) {
 			skippingRejectedLine = !endsLine(slice);
@@ -93,6 +106,15 @@ final class HeaderRescue {
 		if (!name.isEmpty() && name.chars().noneMatch(Character::isWhitespace)) {
 			headers.add(new RescuedHeader(name, withoutOptionalWhitespace(line.substring(colon + 1))));
 		}
+	}
+
+	private static boolean isIdle(byte[] slice) {
+		for (byte value : slice) {
+			if (!RecentLines.isIdle(value)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private static boolean endsLine(byte[] slice) {

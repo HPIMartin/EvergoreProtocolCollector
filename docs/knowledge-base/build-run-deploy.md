@@ -989,7 +989,25 @@ before any filter runs. `HeadLineSlicer` (ahead of the HTTP codec) and `Unreadab
 - a client that never sends the blank line, before the rescue has exceeded the header budget, keeps
   its connection until `micronaut.server.idle-timeout` closes it;
 - the stand-in's headers stay within `micronaut.server.netty.max-header-size`;
-- the handlers split every inbound byte of the connection into one pipeline message per line;
+- the handlers split the bytes of a head into one pipeline message per line;
+- a body of a known length (`Content-Length`) passes to the codec in one message per read, up to its
+  last byte;
+  - its end is counted by the body bytes the codec reads;
+- a chunked body passes to the codec as it was read, until the codec has read its end;
+- the bytes up to 0x20 before a head (line ends, spaces, tabs, other control bytes) pass to the codec
+  as they were read;
+  - so a long run of them meets the codec's request-line limit as with Netty alone;
+  - while the rescue of a rejected head collects, they count against its budget instead;
+  - when the codec rejects them before a request line, the rescue skips them and that request line;
+- once the stand-in of a rejected head is passed on, or the codec has rejected a chunk, every further
+  byte of the connection passes to the codec as it was read;
+- known limit: an unreadable head the codec rejects in the same read as the end of a chunked body
+  is answered and counted at once, without the rest of its head and before its blank line;
+- known limit: such a head can leave the browser out of its audit line;
+- known limit: a head that starts in that read and is rejected in a later one can leave the browser
+  out of its audit line;
+- known limit: such a later-rejected head can carry a header cut from lines the slicer did not see
+  whole;
 - known limit: a header line over the limit, whose read the network splits within the last
   header-budget bytes before it, leaves the browser out of the audit line;
 - known limit: a rejected second header line, over the limit or ended by a bare line feed, leaves

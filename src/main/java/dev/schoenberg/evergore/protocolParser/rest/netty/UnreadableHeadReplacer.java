@@ -5,9 +5,12 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 
 final class UnreadableHeadReplacer extends ChannelInboundHandlerAdapter {
@@ -17,6 +20,9 @@ final class UnreadableHeadReplacer extends ChannelInboundHandlerAdapter {
 	private HttpHeaders rejectedHeaders;
 	private boolean rejectedAtAHeaderLine;
 	private HeaderRescue rescue;
+	private boolean chunkedBody;
+	private long bodyBytesLeft;
+	private boolean discarding;
 
 	UnreadableHeadReplacer(int maxHeaderSize) {
 		this.maxHeaderSize = maxHeaderSize;
@@ -37,7 +43,37 @@ final class UnreadableHeadReplacer extends ChannelInboundHandlerAdapter {
 			return;
 		}
 
+		trackTheBody(message);
 		context.fireChannelRead(message);
+	}
+
+	int unslicedBytesWithin(int readable) {
+		if (passesWholeReads()) {
+			return readable;
+		}
+		return (int) Math.min(bodyBytesLeft, readable);
+	}
+
+	boolean passesWholeReads() {
+		return discarding || chunkedBody;
+	}
+
+	void unslicedBytesPassed() {
+		if (rejectedStatus == null || rescue != null) {
+			return;
+		}
+
+		rescue = HeaderRescue.after(SliceEnd.END_OF_HEAD, maxHeaderSize);
+		passOnIfComplete();
+	}
+
+	void idleBytesPassed() {
+		if (rejectedStatus == null || rescue != null) {
+			return;
+		}
+
+		rescue = rejectedAtAHeaderLine ? HeaderRescue.after(SliceEnd.END_OF_HEAD, maxHeaderSize) : HeaderRescue.beforeTheRequestLine(maxHeaderSize);
+		passOnIfComplete();
 	}
 
 	boolean isCollecting() {
@@ -68,6 +104,7 @@ final class UnreadableHeadReplacer extends ChannelInboundHandlerAdapter {
 
 		UnreadableRequest standIn = UnreadableRequest.standingInFor(rejectedStatus, rejectedHeaders, rescue.headers(), maxHeaderSize);
 		forgetTheRejection();
+		discarding = true;
 		context.fireChannelRead(standIn);
 	}
 
@@ -80,6 +117,21 @@ final class UnreadableHeadReplacer extends ChannelInboundHandlerAdapter {
 		}
 		if (end == SliceEnd.MID_LINE) {
 			rescue.finishTheRejectedLine(lines.currentLine());
+		}
+	}
+
+	private void trackTheBody(Object message) {
+		if (message instanceof HttpRequest request && request.decoderResult().isSuccess()) {
+			chunkedBody = HttpUtil.isTransferEncodingChunked(request);
+			bodyBytesLeft = HttpUtil.getContentLength(request, 0L);
+		}
+		if (message instanceof HttpContent content) {
+			bodyBytesLeft = Math.max(0, bodyBytesLeft - content.content().readableBytes());
+		}
+		if (message instanceof LastHttpContent last) {
+			chunkedBody = false;
+			bodyBytesLeft = 0;
+			discarding = last.decoderResult().isFailure();
 		}
 	}
 

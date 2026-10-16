@@ -46,6 +46,22 @@ final class RecentLines {
 		return current.toByteArray();
 	}
 
+	boolean currentLineIsIdle() {
+		if (currentLength > capacity) {
+			return false;
+		}
+		for (byte value : current.toByteArray()) {
+			if (!isIdle(value)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	static boolean isIdle(byte value) {
+		return (value & 0xFF) <= ' ';
+	}
+
 	private void moveOnToTheNextLine() {
 		previous = current.toByteArray();
 		current.reset();
