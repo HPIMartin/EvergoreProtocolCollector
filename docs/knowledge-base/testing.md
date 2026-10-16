@@ -175,9 +175,9 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   state was: DISPOSED`, `No bean of type EvergoreDataExtractor`).
 - **The member through the browser** (`MemberBrowser`): a pool of browsers (`Browsers`), each
   started once and reused by later scenarios, at most one per scenario running at a time, cleared
-  to `about:blank` between scenarios and quit in `@AfterAll`. The pool is the one run-scoped
-  static state the steps keep (author decision 2026-09-28,
-  [open-questions.md](../open-questions.md)):
+  to `about:blank` between scenarios and quit in `@AfterAll`. The pool and the geckodriver path
+  its starts share (below) are the run-scoped static state the steps keep (the pool: author
+  decision 2026-09-28, [open-questions.md](../open-questions.md)):
   cucumber-picocontainer knows no run scope, and a browser per scenario costs a cold start of
   about 20 s. The pool does not tell browsers apart: it holds one choice per run (the
   `EPC_ACCEPTANCE_*` variables, read once), so a step that needs a second browser at the same time
@@ -229,6 +229,38 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
 - **The browser's clock** is shifted with a WebDriver BiDi preload script
   (`script.addPreloadScript`) and checked with `script.evaluate` in the page's realm, because the
   classic `executeScript` runs in a sandbox that does not see the page's `Date`.
+- **A local Firefox start takes the geckodriver kept for its test JVM** (`GeckoDriverExecutable`):
+  the pool's start and the dedicated time-zone one build their `GeckoDriverService` in
+  `BrowserChoice.geckoDriver`, which hands the kept file to `usingDriverExecutable`.
+  - The look-up keeps Selenium's own order: `webdriver.gecko.driver`, defaulting to a geckodriver on
+    the PATH, then Selenium Manager.
+  - Selenium Manager runs only when neither `webdriver.gecko.driver` nor a geckodriver on the PATH
+    answers.
+  - A look-up runs again only while no executable file is kept.
+  - Why: Selenium 4.7.2's `SeleniumManager.getBinary` publishes the binary it unpacks before the
+    file is written and executable, so parallel first starts ran it half-written ("Text file
+    busy", "Permission denied").
+  - Selenium Manager then answers an empty path.
+  - On the default driver service that empty path fails the start with an `IllegalStateException`
+    at `Require.java:314`.
+  - Only an executable file is kept.
+  - A look-up that failed or answered no executable file is tried again on the next start.
+  - A kept driver that is no longer an executable file is looked up again.
+- **A grid start takes no geckodriver.**
+- **`AcceptanceBrowserStartTest` keeps the acceptance code off the default driver service**, in
+  three ArchUnit rules:
+  - nothing calls `FirefoxDriver`'s service-less constructors, `FirefoxDriver.builder` or
+    `GeckoDriverService.createDefaultService`;
+  - no code unit but `BrowserChoice.geckoDriver` constructs a `GeckoDriverService.Builder`;
+  - `BrowserChoice.geckoDriver` calls `GeckoDriverExecutable.ofThisJvm` and the builder's
+    `usingDriverExecutable`.
+- **The browser smoke tests start through the production browser** (`Browser.java`).
+  - The production browser runs Selenium Manager on each start.
+  - JUnit runs the smoke classes one after another.
+  - `junit-platform.properties` runs only the scenarios in parallel.
+- **Two suites side by side are kept apart by the build lock of `./verify`**, not by Selenium
+  Manager.
+  - Selenium Manager's cache, `~/.cache/selenium`, has no lock of its own.
 - **Parallel**: `junit-platform.properties` runs 4 scenarios at a time;
   `EPC_ACCEPTANCE_PARALLELISM` overrides both the parallelism and the pool's maximum (the pool
   grows to its maximum while a worker blocks, so the parallelism alone does not bound it).

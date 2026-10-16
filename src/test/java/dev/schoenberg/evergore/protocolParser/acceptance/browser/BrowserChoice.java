@@ -42,7 +42,7 @@ public class BrowserChoice {
 		if (!firefoxIsOnPath()) {
 			throw new TestAbortedException("no firefox on the PATH: browser-driven scenario skipped");
 		}
-		return new FirefoxDriver(firefox());
+		return new FirefoxDriver(geckoDriver(Map.of()), firefox());
 	}
 
 	WebDriver startInTimeZone(String zone) {
@@ -55,8 +55,11 @@ public class BrowserChoice {
 		if (!firefoxIsOnPath()) {
 			throw new TestAbortedException("no firefox on the PATH: browser-driven scenario skipped");
 		}
-		GeckoDriverService service = new GeckoDriverService.Builder().withEnvironment(Map.of("TZ", zone)).build();
-		return new FirefoxDriver(service, firefox());
+		return new FirefoxDriver(geckoDriver(Map.of("TZ", zone)), firefox());
+	}
+
+	private static GeckoDriverService geckoDriver(Map<String, String> environment) {
+		return new GeckoDriverService.Builder().usingDriverExecutable(GeckoDriverExecutable.ofThisJvm()).withEnvironment(environment).build();
 	}
 
 	private static Capabilities optionsFor(String browser) {
