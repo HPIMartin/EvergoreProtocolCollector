@@ -83,7 +83,7 @@ public class MemberBrowser {
 	public void openADeepLinkBookmark(String path, TokenChoice tokenChoice) {
 		String href = tokenChoice == TokenChoice.WRONG_TOKEN ? path + tokenParameterSeparator(path) + "token=wrong-token" : path;
 		requestedDeepLink = path;
-		driver().get("http://" + choice.serviceHost() + ":" + service.port() + href);
+		driver().get(addressOf(href));
 	}
 
 	public boolean isAtTheRequestedDeepLink() {
@@ -97,8 +97,7 @@ public class MemberBrowser {
 	}
 
 	public void openHref(String href) {
-		WebDriver browser = driver();
-		browser.get("http://" + choice.serviceHost() + ":" + service.port() + href);
+		driver().get(addressOf(href));
 		awaitSettled();
 		assertTheClockIsShifted();
 		rememberTheReachedUrl();
@@ -340,6 +339,10 @@ public class MemberBrowser {
 
 	private void awaitSettled() {
 		new WebDriverWait(driver(), HANG_GUARD).until(browser -> Boolean.TRUE.equals(javascript(browser).executeScript(SETTLED)));
+	}
+
+	private String addressOf(String href) {
+		return "http://" + choice.serviceHost() + ":" + service.port() + href;
 	}
 
 	private static String tokenParameterSeparator(String path) {
