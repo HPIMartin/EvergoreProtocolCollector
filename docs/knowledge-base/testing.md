@@ -178,8 +178,8 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
 - **The member through the browser** (`MemberBrowser`): a pool of browsers (`Browsers`), each
   started once and reused by later scenarios, at most one per scenario running at a time, cleared
   to `about:blank` between scenarios and quit in `@AfterAll`. The pool and the geckodriver path
-  its starts share (below) are the run-scoped static state the steps keep (the pool: author
-  decision 2026-09-28, [open-questions.md](../open-questions.md)):
+  its starts share (below) are the run-scoped static state the steps keep (author decisions
+  2026-09-28 and 2026-10-16, [open-questions.md](../open-questions.md)):
   cucumber-picocontainer knows no run scope, and a browser per scenario costs a cold start of
   about 20 s. The pool does not tell browsers apart: it holds one choice per run (the
   `EPC_ACCEPTANCE_*` variables, read once), so a step that needs a second browser at the same time
