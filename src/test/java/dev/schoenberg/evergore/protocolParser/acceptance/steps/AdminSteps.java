@@ -19,7 +19,7 @@ public class AdminSteps {
 
 	@When("the admin opens the admin page")
 	public void theAdminOpensTheAdminPage() {
-		browser.open(ADMIN);
+		browser.tokenOpening().open(ADMIN);
 	}
 
 	@Then("the admin page reads {string}")

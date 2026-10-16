@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Type;
-import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -29,8 +28,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
-public class MemberBrowser {
-	private static final String TOKEN = "test-token";
+public final class MemberBrowser {
 	private static final Duration HANG_GUARD = Duration.ofSeconds(30);
 	private static final Duration CLOCK_TOLERANCE = Duration.ofMinutes(1);
 	private static final String SETTLED = "const content = document.querySelector('[data-testid=page-content]'); return content !== null && content.children.length > 0"
@@ -47,17 +45,22 @@ public class MemberBrowser {
 
 	private final RunningService service;
 	private final BrowserChoice choice;
+	private final TokenOpening tokenOpening;
 	private WebDriver driver;
 	private Instant clock;
 	private String clockScript;
 	private String lastReachedUrl;
-	private String requestedDeepLink;
 	private String timeZone;
 	private boolean dedicated;
 
 	public MemberBrowser(RunningService service, BrowserChoice choice) {
 		this.service = service;
 		this.choice = choice;
+		this.tokenOpening = new TokenOpening(this);
+	}
+
+	public TokenOpening tokenOpening() {
+		return tokenOpening;
 	}
 
 	public void runsInTimeZone(String zone) {
@@ -70,30 +73,6 @@ public class MemberBrowser {
 			forgetTheShiftedClock();
 			shiftTheClock();
 		}
-	}
-
-	public void open(String path) {
-		openHref(path + tokenParameterSeparator(path) + "token=" + TOKEN);
-	}
-
-	public void openTheStartPage(TokenChoice tokenChoice) {
-		openHref(tokenChoice == TokenChoice.WRONG_TOKEN ? "/?token=wrong-token" : "/");
-	}
-
-	public void openADeepLinkBookmark(String path, TokenChoice tokenChoice) {
-		String href = tokenChoice == TokenChoice.WRONG_TOKEN ? path + tokenParameterSeparator(path) + "token=wrong-token" : path;
-		requestedDeepLink = path;
-		driver().get(addressOf(href));
-	}
-
-	public boolean isAtTheRequestedDeepLink() {
-		awaitTheDocumentLoaded();
-		return requestedDeepLink != null && URI.create(driver().getCurrentUrl()).getRawPath().equals(URI.create(requestedDeepLink).getRawPath());
-	}
-
-	public boolean showsNoPageBrand() {
-		awaitTheDocumentLoaded();
-		return Boolean.TRUE.equals(javascript(driver()).executeScript("return document.querySelector('[data-testid=page-brand]') === null"));
 	}
 
 	public void openHref(String href) {
@@ -242,7 +221,7 @@ public class MemberBrowser {
 		}
 	}
 
-	private WebDriver driver() {
+	WebDriver driver() {
 		if (driver == null) {
 			if (timeZone == null) {
 				driver = Browsers.acquire(choice);
@@ -333,20 +312,16 @@ public class MemberBrowser {
 		lastReachedUrl = driver().getCurrentUrl();
 	}
 
-	private void awaitTheDocumentLoaded() {
-		new WebDriverWait(driver(), HANG_GUARD).until(browser -> "complete".equals(javascript(browser).executeScript("return document.readyState")));
-	}
-
 	private void awaitSettled() {
 		new WebDriverWait(driver(), HANG_GUARD).until(browser -> Boolean.TRUE.equals(javascript(browser).executeScript(SETTLED)));
 	}
 
-	private String addressOf(String href) {
-		return "http://" + choice.serviceHost() + ":" + service.port() + href;
+	Object execute(String script, Object... arguments) {
+		return javascript(driver()).executeScript(script, arguments);
 	}
 
-	private static String tokenParameterSeparator(String path) {
-		return path.indexOf('?') < 0 ? "?" : "&";
+	String addressOf(String href) {
+		return "http://" + choice.serviceHost() + ":" + service.port() + href;
 	}
 
 	private static JavascriptExecutor javascript(WebDriver browser) {

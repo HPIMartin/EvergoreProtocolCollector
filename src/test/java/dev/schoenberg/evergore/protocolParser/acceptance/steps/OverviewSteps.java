@@ -35,12 +35,12 @@ public class OverviewSteps {
 
 	@When("a member opens the overview")
 	public void aMemberOpensTheOverview() {
-		browser.open(OVERVIEW);
+		browser.tokenOpening().open(OVERVIEW);
 	}
 
 	@Given("a member has opened the overview")
 	public void aMemberHasOpenedTheOverview() {
-		browser.open(OVERVIEW);
+		browser.tokenOpening().open(OVERVIEW);
 	}
 
 	@When("the member switches the last column to {string}")
@@ -50,7 +50,7 @@ public class OverviewSteps {
 
 	@Given("a member has switched the overview's last column to {string}")
 	public void aMemberHasSwitchedTheLastColumnTo(String figure) {
-		browser.open(OVERVIEW);
+		browser.tokenOpening().open(OVERVIEW);
 		switchTheLastColumnTo(figure);
 	}
 

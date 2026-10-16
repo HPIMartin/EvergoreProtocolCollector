@@ -212,6 +212,9 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   uncoloured one equals `--color-text` and its parent's colour, and that parent equals
   `--color-text` too, so a rule painting a whole row fails. The admin reads through the same
   `MemberBrowser`; no separate pool exists per actor (handbook §5).
+- **`MemberBrowser` hands out its parts** through accessors.
+  - `tokenOpening()`: `TokenOpening`, the token and deep-link opening the acceptance browser uses.
+  - `MemberBrowser` itself keeps the driver's lifecycle and the navigation.
 - **The operator reads over HTTP, not the browser** (handbook §5): `HealthReport`
   (`acceptance.world`) `GET`s `/health` on the running service's port, with the guild's token
   unless the step says without, and parses the `lastRun` indicator's `details`, so a step comparing

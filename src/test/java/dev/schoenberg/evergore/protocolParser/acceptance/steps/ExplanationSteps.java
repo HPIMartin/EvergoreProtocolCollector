@@ -28,17 +28,17 @@ public class ExplanationSteps {
 
 	@When("a member opens the explanation page")
 	public void aMemberOpensTheExplanationPage() {
-		browser.open(EXPLANATION);
+		browser.tokenOpening().open(EXPLANATION);
 	}
 
 	@When("a member opens a bookmark of the explanation page {tokenChoice}")
 	public void aMemberOpensABookmarkOfTheExplanationPage(TokenChoice choice) {
-		browser.openADeepLinkBookmark(EXPLANATION, choice);
+		browser.tokenOpening().openADeepLinkBookmark(EXPLANATION, choice);
 	}
 
 	@When("a member follows the guild's link to the explanation page")
 	public void aMemberFollowsTheGuildsLinkToTheExplanationPage() {
-		browser.open(START_PAGE);
+		browser.tokenOpening().open(START_PAGE);
 		browser.follow(LINK_FROM_THE_OVERVIEW);
 	}
 

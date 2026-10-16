@@ -35,7 +35,7 @@ public class DashboardNavigationSteps {
 
 	@When("a member opens a bookmark of the overview")
 	public void aMemberOpensABookmarkOfTheOverview() {
-		browser.open(OVERVIEW);
+		browser.tokenOpening().open(OVERVIEW);
 	}
 
 	@When("the member follows the name of {string} in the overview")
@@ -53,7 +53,7 @@ public class DashboardNavigationSteps {
 
 	@When("a member opens a link to a page the dashboard does not have")
 	public void aMemberOpensALinkToAPageTheDashboardDoesNotHave() {
-		browser.open(UNKNOWN);
+		browser.tokenOpening().open(UNKNOWN);
 	}
 
 	@Then("the page says there is no view for that link")
