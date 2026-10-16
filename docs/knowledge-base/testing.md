@@ -187,16 +187,18 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   `try`, clears the set whatever happens, and rethrows the first failure with the others suppressed,
   so a `quit` that throws a runtime exception does not stop the others), and the cleanup failure stays the exception
   `leave()` throws, with a failed `quit` attached as suppressed.
-- **A member's browser in its own real-world time zone** (`MemberBrowser.runsInTimeZone`,
-  `BrowserChoice.startInTimeZone`) skips the pool rather than keying it: geckodriver has no session
-  capability for the browser process's time zone, but `GeckoDriverService.Builder.withEnvironment`
-  sets `TZ` on the geckodriver process it starts, and geckodriver's child Firefox inherits it
-  (measured: the page's `resolvedOptions().timeZone` reads the given zone).
-  A dedicated `FirefoxDriver` is built once for the scenario that asks and quit in `leave()` instead
-  of returned to `Browsers`, since a `TZ` env var can only take effect at process start. Local
-  Firefox only; the grid has no equivalent wired up yet. Right after it starts, `MemberBrowser`
-  asserts the browser's own `resolvedOptions().timeZone` equals the requested zone, so a silent
-  fallback to the container's UTC fails loudly.
+- **A member's browser in its own real-world time zone** (`TimeZoneBrowser`,
+  `BrowserChoice.startInTimeZone`) skips the pool rather than keying it.
+  - geckodriver has no session capability for the browser process's time zone.
+  - `GeckoDriverService.Builder.withEnvironment` sets `TZ` on the geckodriver process it starts.
+  - geckodriver's child Firefox inherits that `TZ`.
+  - Measured: the page's `resolvedOptions().timeZone` reads the given zone.
+  - A dedicated `FirefoxDriver` is built once for the scenario that asks.
+  - It is quit in `leave()` instead of returned to `Browsers`, since a `TZ` env var takes effect at
+    process start only.
+  - It runs on local Firefox only, since the grid has no equivalent wired up yet.
+  - Right after it starts, `TimeZoneBrowser` asserts the browser's own `resolvedOptions().timeZone`
+    equals the requested zone, so a silent fallback to the container's UTC fails loudly.
 - **Reading a page:** one `executeScript` per view (`read-overview.js`, `read-ledger.js`,
   `read-navigation.js`, `read-admin.js` under `src/test/resources/acceptance/`) returns the rendered
   text as JSON (`read-navigation.js`: the page frame's links with their `href` and current mark, plus
@@ -215,6 +217,7 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
 - **`MemberBrowser` hands out its parts** through accessors.
   - `tokenOpening()`: `TokenOpening`, the token and deep-link opening the acceptance browser uses.
   - `clock()`: `ShiftedClock`.
+  - `timeZone()`: `TimeZoneBrowser`.
   - `MemberBrowser` itself keeps the driver's lifecycle and the navigation.
 - **The operator reads over HTTP, not the browser** (handbook §5): `HealthReport`
   (`acceptance.world`) `GET`s `/health` on the running service's port, with the guild's token

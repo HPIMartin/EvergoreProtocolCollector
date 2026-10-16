@@ -29,7 +29,7 @@ public class DashboardFiguresAndTimesSteps {
 
 	@Given("the member's browser runs on New York time")
 	public void theMembersBrowserRunsOnNewYorkTime() {
-		browser.runsInTimeZone(NEW_YORK);
+		browser.timeZone().runsIn(NEW_YORK);
 	}
 
 	@Then("{word}'s {string} shows {int} {tone}")

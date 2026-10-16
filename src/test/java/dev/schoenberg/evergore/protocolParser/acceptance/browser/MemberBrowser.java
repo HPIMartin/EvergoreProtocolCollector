@@ -18,7 +18,6 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.assertj.core.api.Assertions.assertThat;
 
 public final class MemberBrowser {
 	private static final Duration HANG_GUARD = Duration.ofSeconds(30);
@@ -34,16 +33,16 @@ public final class MemberBrowser {
 	private final BrowserChoice choice;
 	private final TokenOpening tokenOpening;
 	private final ShiftedClock shiftedClock;
+	private final TimeZoneBrowser timeZoneBrowser;
 	private WebDriver driver;
 	private String lastReachedUrl;
-	private String timeZone;
-	private boolean dedicated;
 
 	public MemberBrowser(RunningService service, BrowserChoice choice) {
 		this.service = service;
 		this.choice = choice;
 		this.tokenOpening = new TokenOpening(this);
 		this.shiftedClock = new ShiftedClock(() -> driver);
+		this.timeZoneBrowser = new TimeZoneBrowser(choice);
 	}
 
 	public TokenOpening tokenOpening() {
@@ -54,8 +53,8 @@ public final class MemberBrowser {
 		return shiftedClock;
 	}
 
-	public void runsInTimeZone(String zone) {
-		timeZone = zone;
+	public TimeZoneBrowser timeZone() {
+		return timeZoneBrowser;
 	}
 
 	public void openHref(String href) {
@@ -192,12 +191,11 @@ public final class MemberBrowser {
 
 	private void giveTheDriverBack(boolean cleaned) {
 		WebDriver leaving = driver;
-		boolean ownedByThisMember = dedicated;
 		driver = null;
-		dedicated = false;
-		if (ownedByThisMember) {
-			leaving.quit();
-		} else if (cleaned) {
+		if (timeZoneBrowser.quitIfStartedHere(leaving)) {
+			return;
+		}
+		if (cleaned) {
 			Browsers.release(leaving);
 		} else {
 			Browsers.discard(leaving);
@@ -206,12 +204,11 @@ public final class MemberBrowser {
 
 	WebDriver driver() {
 		if (driver == null) {
-			if (timeZone == null) {
-				driver = Browsers.acquire(choice);
+			if (timeZoneBrowser.isRequested()) {
+				driver = timeZoneBrowser.start();
+				timeZoneBrowser.assertIsAppliedTo(driver);
 			} else {
-				driver = choice.startInTimeZone(timeZone);
-				dedicated = true;
-				assertTheBrowserRunsInTheRequestedTimeZone();
+				driver = Browsers.acquire(choice);
 			}
 			shiftedClock.shiftIfRead();
 		}
@@ -241,12 +238,6 @@ public final class MemberBrowser {
 				.withMessage("the note never shows itself to the member")
 				.until(browser -> hints.stream().anyMatch(hint -> !hint.getText().isBlank()));
 		return hints.stream().map(WebElement::getText).filter(text -> !text.isBlank()).findFirst().map(String::trim);
-	}
-
-	private void assertTheBrowserRunsInTheRequestedTimeZone() {
-		Object zone = javascript(driver).executeScript("return Intl.DateTimeFormat().resolvedOptions().timeZone");
-
-		assertThat(zone).as("the time zone of the member's dedicated browser").isEqualTo(timeZone);
 	}
 
 	private void awaitTheMoveFrom(String before) {
