@@ -50,12 +50,13 @@ its bypass.
   author states it.
   Its key sits in the environment `landing`, which admits `main` alone as the author has set it,
   so no workflow on a `claude/` branch can push with it.
-- **Whom it binds:** only a credential that is not a bypass. The agent machine's deploy key is no
-  bypass, so all three rulesets bind it; a push from the author's PC
-  carries the bypass, so nothing binds it (each machine's credential:
-  [dev-environment.md](dev-environment.md), "Where agents run"). The landing App's token is a
-  bypass too: no ruleset rule binds its push, and `land/land` alone keeps it to a fast-forward of
-  the commanded commit, without force and without a deletion of `main`.
+- **Whom it binds:** only a credential that is not a bypass (each machine's credential:
+  [dev-environment.md](dev-environment.md), "Where agents run").
+  - The agent machine's deploy key is no bypass, so all three rulesets bind it.
+  - A push from the author's PC carries the bypass, so nothing binds it.
+  - The landing App's token is a bypass too, so no ruleset rule binds its push.
+  - `land/land` alone keeps that push to a fast-forward of the commanded commit, without force and
+    without a deletion of `main`.
 - **An agent can rely on:** a push to `main` made with the agent machine's deploy key is refused, as
   long as the bypass list is as the author states it; a push with that key seen refused would prove
   it. A landing through the workflow needs the owner's own `/land <sha>` comment, which an agent on
