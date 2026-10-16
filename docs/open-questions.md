@@ -424,7 +424,6 @@ second copy.
   re-runs it instead of taking the claim on trust (handbook §4).
 - A test that cannot start red, adapted or new, proves itself by its mutation in the gate dossier
   (decision 2026-10-13).
-- The rows that name test cases predate that decision.
 - Further recorded mutations stand as dated decision rows above (2026-09-09, 2026-09-12,
   2026-09-18).
 
