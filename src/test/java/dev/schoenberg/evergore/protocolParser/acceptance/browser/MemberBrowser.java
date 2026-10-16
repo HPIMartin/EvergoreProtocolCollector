@@ -4,15 +4,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
@@ -20,14 +16,10 @@ import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class MemberBrowser {
-	private static final Duration HANG_GUARD = Duration.ofSeconds(30);
+	static final Duration HANG_GUARD = Duration.ofSeconds(30);
 	private static final String SETTLED = "const content = document.querySelector('[data-testid=page-content]'); return content !== null && content.children.length > 0"
 			+ " && document.querySelector('[data-testid=status-panel][data-variant=loading]') === null";
 	private static final ObjectMapper JSON = new ObjectMapper();
-	private static final String MEMBER = "member";
-	private static final String GUILD = "guild";
-	private static final String MARK = "mark";
-	private static final String COLUMN = "column";
 
 	private final RunningService service;
 	private final BrowserChoice choice;
@@ -35,6 +27,7 @@ public final class MemberBrowser {
 	private final ShiftedClock shiftedClock;
 	private final TimeZoneBrowser timeZoneBrowser;
 	private final ComputedColours computedColours;
+	private final ShownNotes shownNotes;
 	private WebDriver driver;
 	private String lastReachedUrl;
 
@@ -45,6 +38,7 @@ public final class MemberBrowser {
 		this.shiftedClock = new ShiftedClock(() -> driver);
 		this.timeZoneBrowser = new TimeZoneBrowser(choice);
 		this.computedColours = new ComputedColours(this);
+		this.shownNotes = new ShownNotes(this);
 	}
 
 	public TokenOpening tokenOpening() {
@@ -61,6 +55,10 @@ public final class MemberBrowser {
 
 	public ComputedColours colours() {
 		return computedColours;
+	}
+
+	public ShownNotes notes() {
+		return shownNotes;
 	}
 
 	public void openHref(String href) {
@@ -116,7 +114,7 @@ public final class MemberBrowser {
 	}
 
 	public <T> T read(String scriptResource, Class<T> type) {
-		String json = (String) javascript(driver()).executeScript(scriptFrom(scriptResource));
+		String json = (String) executeResource(scriptResource);
 		try {
 			return JSON.readValue(json, type);
 		} catch (IOException e) {
@@ -134,22 +132,6 @@ public final class MemberBrowser {
 
 	public Navigation navigation() {
 		return read("read-navigation.js", Navigation.class);
-	}
-
-	public Optional<String> markShownOnTheRowOf(String member) {
-		return noteShown(Map.of(MEMBER, member), Map.of(MARK, true));
-	}
-
-	public Optional<String> markShownOnTheGuildRow() {
-		return noteShown(Map.of(GUILD, true), Map.of(MARK, true));
-	}
-
-	public Optional<String> noteShownInTheCellOf(String member, int column) {
-		return noteShown(Map.of(MEMBER, member), Map.of(COLUMN, column));
-	}
-
-	public Optional<String> noteShownInTheGuildRowsCell(int column) {
-		return noteShown(Map.of(GUILD, true), Map.of(COLUMN, column));
 	}
 
 	public void leave() {
@@ -199,19 +181,6 @@ public final class MemberBrowser {
 			shiftedClock.shiftIfRead();
 		}
 		return driver;
-	}
-
-	private Optional<String> noteShown(Map<String, Object> row, Map<String, Object> cell) {
-		Object found = javascript(driver()).executeScript(scriptFrom("find-note.js"), row, cell);
-		if (!(found instanceof WebElement note)) {
-			return Optional.empty();
-		}
-		javascript(driver()).executeScript("arguments[0].focus()", note);
-		List<WebElement> hints = note.findElements(By.xpath("./*[not(@aria-hidden='true')]"));
-		new WebDriverWait(driver(), HANG_GUARD)
-				.withMessage("the note never shows itself to the member")
-				.until(browser -> hints.stream().anyMatch(hint -> !hint.getText().isBlank()));
-		return hints.stream().map(WebElement::getText).filter(text -> !text.isBlank()).findFirst().map(String::trim);
 	}
 
 	private void awaitTheMoveFrom(String before) {

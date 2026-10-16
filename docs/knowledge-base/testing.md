@@ -205,9 +205,9 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - `read-navigation.js` returns the page frame's links with their `href` and current mark.
   - `read-navigation.js` also returns every `href` on the page.
   - A note's text is read the way a reader of the `role=note` gets it (none inside `aria-hidden`).
-  - A mark or a note a step names is also read the way the member sees it (`find-note.js`):
-    focused, then the text WebDriver reports as displayed, so a note the stylesheet never
-    shows fails.
+  - A mark or a note a step names is also read the way the member sees it (`ShownNotes`,
+    `find-note.js`): focused, then the text WebDriver reports as displayed, so a note the
+    stylesheet never shows fails.
   - A colour a step names is read as the browser computes it (`ComputedColours`), anchored to the
     design tokens.
   - `colour-of-token.js` reads a token through a probe element.
@@ -226,6 +226,7 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - `clock()`: `ShiftedClock`.
   - `timeZone()`: `TimeZoneBrowser`.
   - `colours()`: `ComputedColours`.
+  - `notes()`: `ShownNotes`.
   - `MemberBrowser` itself keeps the driver's lifecycle and the navigation.
 - **The operator reads over HTTP, not the browser** (handbook §5): `HealthReport`
   (`acceptance.world`) `GET`s `/health` on the running service's port, with the guild's token

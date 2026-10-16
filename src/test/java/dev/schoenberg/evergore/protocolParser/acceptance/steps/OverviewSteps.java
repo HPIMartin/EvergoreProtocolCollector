@@ -186,7 +186,7 @@ public class OverviewSteps {
 		Placed row = browser.overview().rowOf(member);
 		int column = row.columnOf(header);
 
-		Optional<String> shown = browser.noteShownInTheCellOf(member, column);
+		Optional<String> shown = browser.notes().inTheCellOf(member, column);
 		assertNoNote(row, column, shown);
 	}
 
@@ -195,7 +195,7 @@ public class OverviewSteps {
 		Placed row = guildRowOf(browser.overview());
 		int column = row.columnOf(header);
 
-		Optional<String> shown = browser.noteShownInTheGuildRowsCell(column);
+		Optional<String> shown = browser.notes().inTheGuildRowsCell(column);
 		assertNoNote(row, column, shown);
 	}
 
@@ -203,7 +203,7 @@ public class OverviewSteps {
 	public void rowIsMarked(String member, String mark) {
 		Placed row = browser.overview().rowOf(member);
 
-		Optional<String> shown = browser.markShownOnTheRowOf(member);
+		Optional<String> shown = browser.notes().markOnTheRowOf(member);
 		assertThat(row.row().mark()).isEqualTo(mark);
 		assertThat(shown).contains(mark);
 	}
@@ -219,7 +219,7 @@ public class OverviewSteps {
 	public void theGuildRowIsMarked(String mark) {
 		Placed row = guildRowOf(browser.overview());
 
-		Optional<String> shown = browser.markShownOnTheGuildRow();
+		Optional<String> shown = browser.notes().markOnTheGuildRow();
 		assertThat(row.row().mark()).isEqualTo(mark);
 		assertThat(shown).contains(mark);
 	}
