@@ -159,6 +159,89 @@ command) inside guardrails. Two files:
     `cd frontend && npx prettier` (a relative `cd` prompts, `cd ..` is denied).
   - A script that writes files is written into the scratchpad with `Write` and run as
     `python3 <file>`, not passed as a heredoc inside a chain.
+  - Found files reach a reader through `find … -exec cat {} +` or `grep -r`, not `| xargs`, which
+    is `ask`.
+- **`agent/bash-shape-guard` refuses the shapes listed below before the permission rules see them**
+  (author decision 2026-10-17): a Claude Code hook in the committed settings runs it before each
+  Bash call, so the agent rewrites a command instead of the author approving it.
+  - It refuses these forms that evaluate text as code: `$(…)`, a backtick, `${…}`, `$((…))`, `$[…]`,
+    an arithmetic command `((…))`, a `[[…]]` test, and `test` or `[` with `-v` or `-R`, outside single
+    quotes, `$'…'` strings and comments (author decision 2026-10-20).
+    - A plain variable such as `$HOME` passes.
+  - It refuses a line continuation (a backslash at a line end), so the words it reads are joined as
+    bash joins them; a command goes on one line.
+  - It refuses a statement that only sets a shell variable for a later command: `W=/x; …`,
+    `W+=/x`, a `for` or `select` variable, `printf -v`, and `export`, `declare`,
+    `readonly`, `local`, `typeset`, `read`, `let`, `mapfile`, `readarray` or `getopts`.
+  - It reads such a statement behind an environment prefix and behind `env`, `command`,
+    `builtin`, `eval` or `time`, when the wrapper takes no option.
+  - A command given as one quoted word behind such a wrapper (`eval "git reset"`) passes.
+  - An environment prefix of a command (`GIT_EDITOR=true git …`) passes.
+  - It refuses a heredoc.
+  - A here-string passes in a command that names no git and evaluates nothing.
+  - It refuses `xargs` as the command of a statement, also by its path and behind an environment
+    prefix or a wrapper that takes no option.
+  - It reads `$$` as one expansion, so a brace behind it opens nothing.
+  - It reads a quoted word that looks like a redirection (`'>'`) as an argument.
+  - It refuses `git reset`, `git clean` and a forced `git branch` (`-D`, `-f`, `-M`, `-C`,
+    `--force` or its abbreviation `--forc`), whose deny rules miss a `git -C` form.
+  - It refuses `git rebase` with `-x` or `--exec` (also `--ex`, or `-x` behind another flag), whose
+    command `Bash(git rebase:*)` would run unprompted.
+  - It refuses a command that names git unless the whole command is plain (author decision
+    2026-10-19).
+    - A command names git when the letters g, i, t stand in a row once every character but letters
+      and digits is dropped.
+    - Plain words hold letters, digits and `._/,=%~^@:+-`, text in single quotes, and text in double
+      quotes without `$`, a backtick or a backslash.
+    - They are joined by `;`, `&&`, `||`, `|` or a line break.
+    - Output goes only to `/dev/null`, another descriptor or the session's temporary tree.
+    - Input comes only from one unquoted plain word.
+    - The words it judges are the words git gets, a tilde expansion aside (`~`, `~user`, `~+`, `~-`,
+      `~N`, and after `=` or `:` in a word shaped like `name=…`).
+  - It refuses `--output`, which writes any file under `git log`, `git diff` or `git show`.
+  - Behind a wrapper that takes an option (`env -i git reset`, `command -p git reset`) these pass.
+  - It resolves `.` and `..` in a `git -C` path before it judges the path.
+  - It reads `-C` and `-c` with their values and every other global option as one word, so a
+    separate value (`--git-dir .git`) hides the subcommand from it.
+  - It refuses any other global option behind an agent worktree's `-C`.
+  - It refuses `checkout`, `restore` and `switch` unless they run as `git -C <one absolute path>`
+    outside the primary checkout, which other sessions share.
+  - Outside an agent worktree, a further global option beside that `-C` passes
+    (`git --no-pager -C /tmp checkout`).
+  - It reads the `-C` path as written, so `/proc/self/cwd` in it hides where git runs.
+  - It counts every folder of the project outside an agent worktree as the primary checkout.
+  - It also refuses such a call where git, asked from that path, opens the primary checkout's
+    repository, through a link or a `.git` file.
+  - It reads the subcommand as written, so an alias hides it.
+  - A `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE` or `GIT_CONFIG_*` prefix hides from the `-C`
+    checks the repository it names.
+  - It asks git before the command runs, so a folder an earlier statement of the same command
+    creates is not there yet.
+  - Wrappers outside its list (`exec`, `nohup`, `nice`, `timeout`, `stdbuf`) hide the command
+    behind them, and so do `function`, `coproc`, `trap`, a shell alias, `.` or `source`, `sh -c`,
+    `bash -c`, a pipe into `sh` and `find -exec`.
+  - It refuses a process substitution (`<(…)`, `>(…)`), which hides the command around it.
+  - It reads quotes, escapes, comments and redirections before a command and
+    before a git subcommand.
+  - It does not read the whole shell grammar; a shape it cannot see goes on to the permission rules.
+  - Its refusals are a shape aid, not a security boundary (author decision 2026-10-18).
+  - A shape an agent writes in normal work that could run unprompted under a broad allow rule is
+    closed (author decisions 2026-10-18 to 2026-10-20).
+  - A shape that only deliberate obfuscation produces is a narrowing, not a gate finding: the
+    server-side protections of `main` and tags, the author's landing and the worktree isolation stand
+    against it (author decision 2026-10-20).
+  - It reads no command inside another program's arguments or files, so an allowed program that runs
+    code of its own runs any command unprompted: `./gradlew` or `./verify` with an init script or an
+    edited build file, `npm run`, `sqlite3` with `.shell`, and a hook the worktree holds under an
+    allowed `git commit`.
+  - A payload it cannot read never blocks.
+  - A hook that runs past its time limit leaves the call to the permission rules.
+  - The settings run it only where `$CLAUDE_PROJECT_DIR/agent/bash-shape-guard` exists, so a
+    project without it leaves every call to the rules.
+  - A session without `python3` leaves every call to the rules as well.
+  - Claude Code reads hooks from the primary checkout's settings when a session starts.
+  - A landed change to the guard applies from the next Bash call once the primary checkout holds it.
+  - `agent/self-test` proves its cases.
 - **The gate helpers and a worktree's build auto-allow** (once trusted), so a gate runs unattended:
   `gate/walk`, `gate/tip-evidence`, `gate/dossier-check` and `sh gate/self-test`, each by absolute
   path into a worktree under `/workspaces/EvergoreProtocolCollector/.claude/worktrees/`, and
@@ -244,9 +327,6 @@ command) inside guardrails. Two files:
   [open-questions.md](../open-questions.md)), beside the `git -C` prompts of "A rule that pairs an
   inner `*` with the `:*` suffix does not fire" (below); no rule closes these gaps:
   - `pull.ff`, `merge.ff` and `branch.autoSetupMerge` stay unset.
-  - `git branch -d -f` acts as `-D`.
-  - `git switch -f`, `--discard-changes` and `-C <branch> <start>` pass the plain `git switch`
-    allow.
   - No check pins the settings file's rule shapes or its push denies.
 - **Where auto-mode rules live:** Claude Code's auto-mode configuration page states that the
   classifier reads `autoMode` (`environment`, `allow`, `soft_deny`, `hard_deny`) only from the user's

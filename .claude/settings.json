@@ -130,6 +130,19 @@
 			"/tmp"
 		]
 	},
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "[ ! -f \"$CLAUDE_PROJECT_DIR/agent/bash-shape-guard\" ] || python3 \"$CLAUDE_PROJECT_DIR/agent/bash-shape-guard\""
+					}
+				]
+			}
+		]
+	},
 	"worktree": {
 		"baseRef": "head"
 	}

@@ -1,0 +1,245 @@
+#!/usr/bin/env python3
+import contextlib
+import json
+import os
+import re
+import subprocess
+import sys
+
+ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(\[[^]]*\])?\+?=")
+HEREDOC = re.compile(r"<<[ \t]*\S")
+COMMENT = re.compile(r"#[^\n]*")
+REDIRECT = re.compile(r"(\{[A-Za-z_]\w*\}|[0-9]*|&)[<>]+[&|]?")
+OPERATOR_START = re.compile(r"(\{[A-Za-z_]\w*\}|[0-9]*|&)[<>]*")
+FORCED_BRANCH = re.compile(r"--forc|-\w*[DfMC]")
+EXEC = re.compile(r"--ex|-\w*x")
+OUTPUT = re.compile(r"--output(=|$)")
+KEYWORDS = {"{", "!", "if", "then", "elif", "else", "while", "until", "do"}
+SETTERS = {"export", "declare", "readonly", "local", "typeset", "read", "for", "select", "let", "mapfile",
+           "readarray", "getopts"}
+WRAPPERS = {"env", "command", "builtin", "eval", "time"}
+SEPARATORS = ";&|\n()"
+WORD_BOUNDARY = ("", " ", "\t", "\n", ";", "&", "|", "(", ")")
+EVALUATION = ("the command evaluates text as code ($(…), a backtick, ${…}, $((…)), $[…], ((…)), [[…]], or "
+              "test or [ with -v or -R), which hides what runs; compute the value in a step of its own and write "
+              "it literally")
+PLAIN_CHARACTER = "[A-Za-z0-9._/,=%~^@:+-]"
+PLAIN_PIECE = PLAIN_CHARACTER + r"|'[^']*'|" + r'"[^"$`\\]*"'
+WORD_END = r"(?=[ \t;&|\n]|$)"
+REDIRECT_START = r"(?<![^ \t;&|\n])"
+OUTPUT_TARGET = rf"(?:/dev/null|/tmp/claude-{os.getuid()}(?:/[A-Za-z0-9_,=%~^@:+-][A-Za-z0-9._,=%~^@:+-]*)+){WORD_END}"
+PLAIN_COMMAND = re.compile(rf"(?:[ \t]|&&|[;|\n]|{REDIRECT_START}(?:[0-9]?>>?|&>>?)[ \t]*{OUTPUT_TARGET}"
+                           rf"|{REDIRECT_START}[0-9]?>&[0-9]{WORD_END}"
+                           rf"|{REDIRECT_START}[0-9]?<[ \t]*{PLAIN_CHARACTER}+{WORD_END}|{PLAIN_PIECE})*")
+GUIDE = 'working-with-ai-agents.md, "Command shapes that keep a session unattended"'
+
+
+def heredoc_at(command, index):
+    return HEREDOC.match(command, index) and command[index - 1:index] != "<" and command[index + 2:index + 3] != "<"
+
+
+def marked_word(word, quoted):
+    text = "".join(word)
+    return "\0" + text if quoted and REDIRECT.match(text) else text
+
+
+def evaluates(command):
+    quote, index, escaped = None, 0, None
+    while index < len(command):
+        char = command[index]
+        if char == "\\" and quote != "'":
+            index, escaped = index + 2, index + 1
+            continue
+        if quote in ("'", "$'"):
+            quote = None if char == "'" else quote
+        elif char == "$" and command[index + 1:index + 2] == "$":
+            index += 1
+        elif char == "`" or char == "$" and command[index + 1:index + 2] in ("(", "{", "["):
+            return True
+        elif quote == '"':
+            quote = None if char == '"' else quote
+        elif char == "#" and command[index - 1:index] in WORD_BOUNDARY and escaped != index - 1:
+            index = COMMENT.match(command, index).end()
+            continue
+        elif command.startswith(("((", "[["), index) and command[index - 1:index] in WORD_BOUNDARY + ("!",):
+            return True
+        elif command.startswith("$'", index):
+            quote, index = "$'", index + 1
+        elif char in "'\"":
+            quote = char
+        index += 1
+    return False
+
+
+def scan(command):
+    statements, words, word = [], [], None
+    quote, heredoc, substitution, quoted = None, False, False, False
+    operator_at = -2
+    index = 0
+    while index < len(command):
+        char = command[index]
+        if word is None and char == "#":
+            index = COMMENT.match(command, index).end()
+            continue
+        heredoc = heredoc or quote not in ("'", "$'") and heredoc_at(command, index)
+        step, text = 1, None
+        if char == "\\" and quote != "'":
+            step, text = 2, command[index + 1:index + 2]
+        elif quote is not None:
+            quote, text = (None, "") if char == quote[-1] else (quote, None)
+        elif command.startswith("$'", index):
+            quote, step, text, quoted = "$'", 2, "", True
+        elif char in "'\"":
+            quote, text, quoted = char, "", True
+        elif (char in "<>" or command.startswith("&>", index)) and word is not None \
+                and not OPERATOR_START.fullmatch("".join(word)):
+            words.append(marked_word(word, quoted))
+            word, quoted = None, False
+        elif (char in " \t" or char in SEPARATORS) \
+                and not (char in "&|" and operator_at == index - 1) \
+                and not command.startswith("&>", index):
+            substitution = substitution or char == "(" and operator_at == index - 1
+            if word is not None:
+                words.append(marked_word(word, quoted))
+                word, quoted = None, False
+            if char in SEPARATORS:
+                statements.append(words)
+                words = []
+            index += 1
+            continue
+        operator_at = index if char in "<>" else operator_at
+        word = [] if word is None else word
+        word.append(command[index:index + step] if text is None else text)
+        index += step
+    if word is not None:
+        words.append(marked_word(word, quoted))
+    statements.append(words)
+    return statements, heredoc, substitution
+
+
+def names_git(command):
+    return "git" in re.sub("[^A-Za-z0-9]", "", command)
+
+
+def refusal(command, project):
+    if "\\\n" in command:
+        return f"a line continuation hides how bash joins the words; write the command on one line ({GUIDE})"
+    if evaluates(command):
+        return f"{EVALUATION} ({GUIDE})"
+    statements, heredoc, substitution = scan(command)
+    if heredoc:
+        return ("a heredoc carries a script or file body inside the command; write it with the Write "
+                f"tool into the scratchpad and run it by path ({GUIDE})")
+    if substitution:
+        return f"a process substitution hides the command around it; write to a file and read it ({GUIDE})"
+    if names_git(command) and not PLAIN_COMMAND.fullmatch(command):
+        return ("a command that names git runs unprompted only in plain words: letters, digits, ._/,=%~^@:+-, "
+                "text in single quotes and text in double quotes without $, a backtick or a backslash, joined by ;, "
+                "&&, ||, | or a line break, with output only to /dev/null, a descriptor or /tmp/claude-<uid>/; write "
+                f"it that way or split it ({GUIDE})")
+    reasons = (judged(words, project) for words in statements)
+    return next((reason for reason in reasons if reason), None)
+
+
+def judged(words, project):
+    with contextlib.suppress(ValueError):
+        return statement_refusal(program(command_words(unredirected(words))), project)
+
+
+def unredirected(words):
+    kept, rest = [], iter(words)
+    for word in rest:
+        if REDIRECT.fullmatch(word):
+            next(rest, None)
+        elif not REDIRECT.match(word):
+            kept.append(word)
+    return kept
+
+
+def command_words(words):
+    while words and words[0] in KEYWORDS:
+        words = words[1:]
+    return words
+
+
+def program(words):
+    while len(words) > 1 and (ASSIGNMENT.match(words[0]) or os.path.basename(words[0]) in WRAPPERS):
+        words = words[1:]
+    return words
+
+
+def statement_refusal(words, project):
+    if not words:
+        return None
+    if words[0] in SETTERS or words[:2] == ["printf", "-v"] or all(ASSIGNMENT.match(word) for word in words):
+        return (f"'{words[0]}' sets a shell variable for a later command, so that command matches no "
+                f"allow rule; write the literal value into it ({GUIDE})")
+    if os.path.basename(words[0]) in ("test", "[") and any(word in ("-v", "-R") for word in words[1:]):
+        return f"{EVALUATION} ({GUIDE})"
+    if os.path.basename(words[0]) == "xargs":
+        return ("xargs runs a command the permission rules cannot see, so it waits on the author; "
+                f"use 'find … -exec … {{}} +' or 'grep -r' ({GUIDE})")
+    return git_refusal(words[1:], project) if os.path.basename(words[0]) == "git" else None
+
+
+def normal(path):
+    return re.sub("^//", "/", os.path.normpath(path))
+
+
+def git_dir(path):
+    with contextlib.suppress(OSError):
+        return subprocess.run(["git", "-C", path, "rev-parse", "--absolute-git-dir"], capture_output=True,
+                              text=True).stdout.strip()
+
+
+def in_primary(path, project):
+    return (path + "/").startswith(project + "/") and not path.startswith(project + "/.claude/worktrees/")
+
+
+def git_refusal(words, project):
+    paths, options = [], []
+    while words and words[0].startswith("-"):
+        option, words = words[0], words[1:]
+        if option == "-C" and words:
+            paths.append(words[0])
+        else:
+            options.append(option)
+        if option in ("-C", "-c"):
+            words = words[1:]
+    subcommand, arguments = (words or [""])[0], words[1:]
+    if subcommand in ("reset", "clean"):
+        return f"'git {subcommand}' discards work and stays on the deny floor in every form; fold instead"
+    if subcommand == "branch" and any(FORCED_BRANCH.match(argument) for argument in arguments):
+        return "a forced branch deletion or move rewrites a branch git would protect; delete with -d"
+    if any(OUTPUT.match(argument) for argument in arguments):
+        return f"'--output' writes a file the write rules do not see; let the output go to the terminal ({GUIDE})"
+    if subcommand == "rebase" and any(EXEC.match(argument) for argument in arguments):
+        return ("'git rebase --exec' runs a command the permission rules cannot see; run each step as its own "
+                f"call ({GUIDE})")
+    if project is None:
+        return None
+    if any(normal(path).startswith(project + "/.claude/worktrees/") for path in paths) \
+            and (len(paths) > 1 or options):
+        return "behind an agent worktree's -C, no other global option may follow; name one -C and the subcommand"
+    if subcommand in ("checkout", "restore", "switch") and (len(paths) != 1 or not paths[0].startswith("/")
+                                                            or in_primary(normal(paths[0]), project)
+                                                            or git_dir(paths[0]) == project + "/.git"):
+        return (f"'git {subcommand}' runs only as 'git -C <absolute path of your own worktree> {subcommand}', never in "
+                "the primary checkout other sessions share")
+
+
+def main():
+    try:
+        payload = json.load(sys.stdin)
+        command = payload["tool_input"]["command"] if payload.get("tool_name") == "Bash" else None
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return 0
+    project = os.path.realpath(os.environ["CLAUDE_PROJECT_DIR"]) if "CLAUDE_PROJECT_DIR" in os.environ else None
+    reason = refusal(command, project) if isinstance(command, str) else None
+    if reason:
+        print(f"bash-shape-guard: {reason}.", file=sys.stderr)
+    return 2 if reason else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

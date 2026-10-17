@@ -406,6 +406,511 @@ r=0
 [ "$status" -eq 1 ] && [ ! -s "$stub/out" ] && grep -q 'refused the token request' "$stub/err" || r=1
 check 'a refused token request prints nothing and says so' "$r"
 
+guard="$agent_dir/bash-shape-guard"
+guard_project=/p/project
+
+run_guard() {
+	set +e
+	printf '%s' "$1" | CLAUDE_PROJECT_DIR=$guard_project timeout 20 python3 "$guard" > "$work/guard-out" 2> "$work/guard-err"
+	status=$?
+	set -e
+}
+
+bash_payload() { jq -cn --arg command "$1" '{tool_name: "Bash", tool_input: {command: $command}}'; }
+
+expect_guard() {
+	run_guard "$(bash_payload "$2")"
+	r=0
+	case "$1" in
+		refused) [ "$status" -eq 2 ] && grep -q '^bash-shape-guard: ' "$work/guard-err" || r=1 ;;
+		passed) [ "$status" -eq 0 ] && [ ! -s "$work/guard-err" ] && [ ! -s "$work/guard-out" ] || r=1 ;;
+		approved) [ "$status" -eq 0 ] && [ ! -s "$work/guard-err" ] \
+			&& [ "$(jq -r .hookSpecificOutput.permissionDecision "$work/guard-out" 2>/dev/null)" = allow ] \
+			&& [ "$(jq -r .hookSpecificOutput.hookEventName "$work/guard-out" 2>/dev/null)" = PreToolUse ] || r=1 ;;
+	esac
+	check "$3" "$r"
+}
+
+expect_payload_passes() {
+	run_guard "$1"
+	r=0
+	[ "$status" -eq 0 ] && [ ! -s "$work/guard-err" ] && [ ! -s "$work/guard-out" ] || r=1
+	check "$2" "$r"
+}
+
+expect_payload_passes '{"tool_name":"Read","tool_input":{"file_path":"/x"}}' 'the guard lets every other tool pass'
+expect_payload_passes '{"tool_name":"Bash","tool_input":{}}' 'the guard lets a call without a command pass'
+expect_payload_passes '{"tool_name":"Bash","tool_input":{"command":7}}' 'the guard lets a command that is no text pass'
+expect_payload_passes '["Bash"]' 'the guard lets a payload that is no object pass'
+expect_payload_passes 'not json' 'the guard never blocks a call it cannot read'
+expect_guard passed 'git status' 'the guard lets a plain command pass'
+
+guide='(working-with-ai-agents.md, "Command shapes that keep a session unattended").'
+expect_guard_says() {
+	run_guard "$(bash_payload "$1")"
+	r=0
+	[ "$status" -eq 2 ] && [ "$(cat "$work/guard-err")" = "bash-shape-guard: $2 $guide" ] || r=1
+	check "$3" "$r"
+}
+expect_guard_says "$(printf 'cat <<EOF\nx\nEOF')" 'a heredoc carries a script or file body inside the command; write it with the Write tool into the scratchpad and run it by path' 'the guard names the heredoc rule and its guide'
+expect_guard_says 'W=/x' "'W=/x' sets a shell variable for a later command, so that command matches no allow rule; write the literal value into it" 'the guard names the setter rule and its guide'
+expect_guard_says 'ls | xargs cat' "xargs runs a command the permission rules cannot see, so it waits on the author; use 'find … -exec … {} +' or 'grep -r'" 'the guard names the xargs rule and its guide'
+expect_guard_says 'git 2> >(cat) switch x' 'a process substitution hides the command around it; write to a file and read it' 'the guard names the process-substitution rule and its guide'
+
+expect_guard refused 'W=/x; ls $W' 'the guard refuses an assignment that stands before the command it feeds'
+expect_guard refused 'W=/x && ls $W' 'the guard refuses an assignment joined to its command by &&'
+expect_guard refused "$(printf 'W=/x\nls $W')" 'the guard refuses an assignment on a line of its own'
+expect_guard refused 'ls /x || W=/y' 'the guard refuses an assignment behind ||'
+expect_guard refused 'W=$(git rev-parse HEAD); git show $W' 'the guard refuses an assignment of a command substitution with spaces'
+expect_guard refused 'W=`git rev-parse HEAD`; git show $W' 'the guard refuses an assignment of a backtick substitution with spaces'
+expect_guard refused 'export W=/x; ls $W' 'the guard refuses an exported assignment'
+expect_guard refused 'declare -x W=/x; ls $W' 'the guard refuses a declared assignment with an option'
+expect_guard refused 'readonly W=/x' 'the guard refuses a read-only assignment'
+expect_guard refused '(W=/x; ls $W)' 'the guard refuses an assignment that opens a subshell'
+expect_guard refused '{ W=/x; ls $W; }' 'the guard refuses an assignment inside braces'
+expect_guard refused 'if true; then W=/x; fi' 'the guard refuses an assignment behind then'
+expect_guard refused '{ W=/x' 'the guard refuses an assignment behind an opening brace'
+expect_guard refused '! W=/x' 'the guard refuses an assignment behind a negation'
+expect_guard refused 'if W=/x' 'the guard refuses an assignment behind if'
+expect_guard refused 'elif W=/x' 'the guard refuses an assignment behind elif'
+expect_guard refused 'else W=/x' 'the guard refuses an assignment behind else'
+expect_guard refused 'while W=/x' 'the guard refuses an assignment behind while'
+expect_guard refused 'until W=/x' 'the guard refuses an assignment behind until'
+expect_guard refused 'do W=/x' 'the guard refuses an assignment behind do'
+expect_guard refused 'local W=/x' 'the guard refuses a local assignment'
+expect_guard refused 'typeset W=/x' 'the guard refuses a typeset assignment'
+expect_guard refused 'wa_2=/x; ls $wa_2' 'the guard refuses an assignment to a lowercase name with a digit'
+expect_guard refused '_W=/x; ls $_W' 'the guard refuses an assignment to a name that opens with an underscore'
+expect_guard passed 'env' 'the guard lets a bare env pass'
+expect_guard refused 'read W < /tmp/f; ls $W' 'the guard refuses a variable read into the shell'
+expect_guard refused 'for W in /x /y; do ls $W; done' 'the guard refuses a loop variable'
+expect_guard refused 'W+=/x; ls $W' 'the guard refuses an appending assignment'
+expect_guard refused 'printf -v W /x; ls $W' 'the guard refuses a variable printf writes'
+expect_guard passed "printf '%s' x" 'the guard lets printf without -v pass'
+expect_guard refused 'let W=1; ls $W' 'the guard refuses a variable let computes'
+expect_guard refused 'mapfile W < /tmp/f; ls $W' 'the guard refuses an array mapfile reads'
+expect_guard refused 'readarray W < /tmp/f; ls $W' 'the guard refuses an array readarray reads'
+expect_guard refused 'IFS= read -r W < /tmp/f; ls $W' 'the guard refuses a read behind an environment prefix'
+expect_guard refused 'command export W=/x' 'the guard refuses an export run through command'
+expect_guard refused 'builtin declare W=/x' 'the guard refuses a declare run through builtin'
+expect_guard refused 'eval W=/x' 'the guard refuses an assignment run through eval'
+expect_guard refused 'time W=/x' 'the guard refuses an assignment behind time'
+expect_guard refused 'select W in /x /y; do ls $W; done' 'the guard refuses a select variable'
+expect_guard refused 'getopts a W' 'the guard refuses a variable getopts sets'
+expect_guard passed 'GIT_SEQUENCE_EDITOR=true GIT_EDITOR=true git rebase -i main' 'the guard lets an environment prefix of a command pass'
+expect_guard passed "python3 -c 'import os; x = 1; print(x)'" 'the guard ignores an assignment inside single quotes'
+expect_guard passed 'git commit -m "Keep a; b=c apart"' 'the guard ignores an assignment inside double quotes'
+expect_guard passed 'echo a=b' 'the guard lets an assignment-shaped argument pass'
+
+expect_guard refused "$(printf "python3 - <<'PY'\nprint(1)\nPY")" 'the guard refuses a heredoc with a quoted delimiter'
+expect_guard refused "$(printf 'cat > /tmp/f <<EOF\nx\nEOF')" 'the guard refuses a heredoc that writes a file'
+expect_guard refused "$(printf 'cat <<-EOF\n\tx\nEOF')" 'the guard refuses a heredoc that strips tabs'
+expect_guard refused "$(printf 'cat <<\\EOF\nx\nEOF')" 'the guard refuses a heredoc with a backslash-quoted delimiter'
+expect_guard refused "$(printf 'cat <<1\nx\n1')" 'the guard refuses a heredoc with a digit delimiter'
+expect_guard refused "$(printf 'cat << EOF\nx\nEOF')" 'the guard refuses a heredoc with a space before its delimiter'
+expect_guard refused "$(printf 'cat <<\tEOF\nx\nEOF')" 'the guard refuses a heredoc with a tab before its delimiter'
+expect_guard refused "$(printf 'cat << -EOF\nx\n-EOF')" 'the guard refuses a heredoc whose delimiter starts with a dash'
+expect_guard refused "$(printf "cat <<'!'\nx\n!")" 'the guard refuses a heredoc with a punctuation delimiter'
+expect_guard refused "$(printf 'git commit -m "$(cat <<%sEOF%s\nmsg\nEOF\n)"' "'" "'")" 'the guard refuses a heredoc inside a quoted command substitution'
+expect_guard refused "$(printf "echo it\\\\'s; cat <<EOF\nx\nEOF")" 'an escaped quote does not hide a heredoc from the guard'
+expect_guard refused "$(printf "echo \$'it\\\\'s'; cat <<EOF\nx\nEOF")" 'an escaped quote inside an ANSI-C string does not hide a heredoc from the guard'
+expect_guard passed 'grep x <<< "a b"' 'the guard lets a here-string pass'
+expect_guard passed "python3 -c 'print(1<<3)'" 'the guard ignores a shift inside quotes'
+expect_guard passed "echo \$'a<<b'" 'the guard ignores a shift inside an ANSI-C string'
+
+expect_guard refused "$(printf "ls # don't\nW=/x\nls \$W")" 'a quote in a comment does not hide the next line from the guard'
+expect_guard passed 'ls # a; W=1' 'the guard ignores the text of a comment'
+expect_guard passed 'ls # <<EOF' 'the guard ignores a heredoc marker in a comment'
+expect_guard refused 'echo a#b; W=1' 'the guard reads a hash inside a word as part of the word'
+
+expect_guard refused 'find /x -name a.xml | xargs cat' 'the guard refuses xargs behind a pipe'
+expect_guard refused 'ls /x | LC_ALL=C xargs -r cat' 'the guard refuses xargs behind an environment prefix'
+expect_guard refused 'find /x | /usr/bin/xargs cat' 'the guard refuses xargs named by its path'
+expect_guard refused 'find /x | env xargs cat' 'the guard refuses xargs run through env'
+expect_guard refused 'find /x | command xargs cat' 'the guard refuses xargs run through command'
+expect_guard passed 'grep -rn xargs /x' 'the guard lets a command that names xargs as an argument pass'
+expect_guard passed 'git commit -m "Drop the | xargs cat"' 'the guard ignores xargs inside quotes'
+expect_guard passed 'find /x -name "*.log" -exec cat {} +' 'the guard lets find run its command itself'
+
+expect_guard refused 'git -C /p/project checkout -- docs' 'the guard refuses a checkout in the primary checkout'
+expect_guard refused 'git -C /p/project/ restore docs' 'the guard refuses a restore in the primary checkout, written with a trailing slash'
+expect_guard refused 'git -C /p//project/. switch main' 'the guard refuses a switch in the primary checkout, written with a doubled slash and a dot'
+expect_guard refused 'git -C //p/project checkout -- docs' 'the guard refuses a checkout in the primary checkout, written with a leading double slash'
+expect_guard refused 'git -C /p/project/.claude/worktrees/t/.. checkout x' 'the guard refuses a git -C path that climbs out with ..'
+expect_guard refused 'git -C /p/project/.claude/worktrees/t -C /p/project checkout -- .' 'the guard refuses a second -C behind an agent worktree'
+expect_guard refused 'git -C /p/project/.claude/worktrees/t -c core.fsmonitor=/tmp/x checkout main' 'the guard refuses a -c option behind an agent worktree'
+expect_guard refused 'git -C /p/project/.claude/worktrees/t --work-tree=/p/project checkout -- .' 'the guard refuses a work-tree option behind an agent worktree'
+expect_guard refused 'git -C /p/project/.claude/worktrees/t -C /tmp/r log' 'the guard refuses a second -C to another directory behind an agent worktree'
+expect_guard refused 'git -c core.quotepath=off clean -fdx' 'the guard reads past a -c value to the subcommand'
+expect_guard refused 'git -C /p/project/.claude/worktrees/t reset --hard' 'the guard refuses a reset through git -C'
+expect_guard refused 'git -C /tmp/r clean -fdx' 'the guard refuses a clean through git -C'
+expect_guard refused 'git -C /p/project/.claude/worktrees/t branch -D main' 'the guard refuses a forced branch deletion through git -C'
+expect_guard refused 'git branch -f main HEAD~1' 'the guard refuses a forced branch move'
+expect_guard refused 'git branch -M main' 'the guard refuses a forced branch rename'
+expect_guard refused 'git branch -C old main' 'the guard refuses a forced branch copy'
+expect_guard refused 'git branch --forc main HEAD~1' 'the guard refuses an abbreviated --force'
+expect_guard refused 'git branch --force main HEAD~1' 'the guard refuses a forced branch move spelled out'
+expect_guard refused 'git branch -qD x' 'the guard refuses a forced branch deletion behind another flag'
+expect_guard refused 'git branch -Dq x' 'the guard refuses a forced branch deletion before another flag'
+expect_guard_says 'git rebase -x "git reset --hard" main' "'git rebase --exec' runs a command the permission rules cannot see; run each step as its own call" 'the guard names the rebase exec rule and its guide'
+expect_guard refused "git rebase --exec 'git reset --hard' main" 'the guard refuses a rebase with --exec'
+expect_guard refused "git rebase --exec='git reset --hard' main" 'the guard refuses a rebase with --exec joined to its command'
+expect_guard refused "git rebase --ex 'git reset --hard' main" 'the guard refuses a rebase with --exec abbreviated'
+expect_guard refused "git rebase -ix 'git reset --hard' main" 'the guard refuses a rebase with -x bundled behind another flag'
+expect_guard refused "GIT_SEQUENCE_EDITOR=true GIT_EDITOR=true git rebase -x 'git reset --hard' main" 'the guard refuses a rebase exec behind the allowed environment prefix'
+expect_guard passed 'git rebase -Xours main' 'the guard lets a rebase strategy option pass'
+expect_guard passed 'git rebase --empty=drop main' 'the guard reads only --ex and its longer spellings as --exec'
+expect_guard passed 'git cherry-pick -x 0123abc' 'the guard reads -x as a command only for a rebase'
+expect_guard passed 'git rebasex -x y' 'the guard reads only rebase itself as the rebase subcommand'
+expect_guard_says 'git log --output=/p/project/.claude/settings.json' "'--output' writes a file the write rules do not see; let the output go to the terminal" 'the guard names the output-file rule and its guide'
+expect_guard refused 'git diff --output /tmp/x' 'the guard refuses a diff written to a file by a separate --output value'
+expect_guard refused 'git -C /p/project show --output=/tmp/x HEAD' 'the guard refuses a show written to a file behind -C'
+expect_guard passed 'git diff --output-indicator-new=+ HEAD' 'the guard reads only --output itself as an output file'
+expect_guard refused 'git branch -$(echo D) x' 'the guard refuses a branch argument spelled by a substitution'
+expect_guard refused 'git branch "$(echo -D)" x' 'the guard refuses a branch argument spelled by a quoted substitution'
+expect_guard refused 'git branch -{D,d} x' 'the guard refuses a branch argument spelled by a brace list'
+expect_guard refused 'git rebase -{x,} true main' 'the guard refuses a rebase argument spelled by a brace list'
+expect_guard refused 'git rebase "`echo -x`" true main' 'the guard refuses a rebase argument spelled by a backtick substitution'
+expect_guard refused 'git branch -{a..z} x' 'the guard refuses a branch argument spelled by a brace range'
+expect_guard passed "git branch x 'HEAD@{12}'" 'the guard lets a quoted reflog index pass'
+expect_guard refused 'git branch -d x{a,b' 'the guard refuses an unquoted brace in a git command'
+expect_guard passed 'git rebase -Xsubtree=lib/x main' 'the guard reads an x behind other characters than letters as no exec option'
+expect_guard passed 'git rebase claude/fix-x' 'the guard reads only a word that starts with a dash as an exec option'
+expect_guard refused "$(printf 'git\treset --hard')" 'the guard reads a tab as a word break'
+expect_guard passed 'git -C /p/project/.claude/worktrees/t checkout --detach abc' 'the guard lets a checkout in an agent worktree pass'
+expect_guard passed 'git -C /p/project log --oneline origin/main..main' 'the guard lets a range in a git -C read pass'
+expect_guard passed 'git -C /p/project/.claude/worktrees/t branch -d claude/x' 'the guard lets a safe branch deletion pass'
+expect_guard passed 'git -c core.quotepath=off log' 'the guard lets a global option without -C pass'
+
+expect_guard refused 'git -C "/p/project" checkout -- docs' 'the guard reads a git -C path in double quotes without its quotes'
+expect_guard refused "git -C '/p/project' restore docs" 'the guard reads a git -C path in single quotes without its quotes'
+expect_guard refused 'git -C /p/pro\ject checkout -- docs' 'the guard reads an escaped character outside quotes as the character'
+expect_guard refused 'git -C "/p/pro\ject" checkout -- docs' 'the guard reads an escaped character inside double quotes as the character'
+expect_guard refused 'git -C /p/project/docs checkout x' 'the guard refuses a checkout in a folder of the primary checkout'
+expect_guard refused 'git -C /p/project/.claude/worktrees checkout x' 'the guard refuses a checkout in the worktree root itself'
+expect_guard refused 'cd /p/project && git switch -C main HEAD~1' 'the guard refuses a switch without -C behind a cd'
+expect_guard refused 'git switch x' 'the guard refuses a switch without -C'
+expect_guard refused 'git checkout -- a.md' 'the guard refuses a checkout without -C'
+expect_guard refused 'git -c core.quotepath=off restore a.md' 'the guard refuses a restore without -C behind a -c option'
+expect_guard refused 'git -C project checkout x' 'the guard refuses a relative git -C path for a checkout'
+expect_guard refused 'git -C /tmp/a -C /tmp/b switch x' 'the guard refuses a second -C for a switch'
+expect_guard passed 'git -C /tmp/r switch x' 'the guard lets a switch in a folder outside the project pass'
+expect_guard passed 'git -c /p/project -C /tmp/r checkout x' 'the guard reads a -c value as no path'
+expect_guard refused '/usr/bin/git reset --hard' 'the guard refuses git named by its path'
+run_guard '{"tool_name":"Bash","tool_input":{"command":"git -C /tmp/a\u0000b switch x"}}'; r=0; [ "$status" -eq 2 ] && ! grep -q Traceback "$work/guard-err" || r=1; check 'the guard refuses a command that names git with a NUL, without a traceback' "$r"
+run_guard '{"tool_name":"Bash","tool_input":{"command":"git -C /tmp/a\ud800b switch x"}}'; r=0; [ "$status" -eq 2 ] && ! grep -q Traceback "$work/guard-err" || r=1; check 'the guard refuses a command that names git with a lone surrogate, without a traceback' "$r"
+expect_guard refused 'git -C //p/project/.claude/worktrees/t -c x=y status' 'the guard reads a worktree path spelled with a double slash'
+guard_project=/p/project/
+expect_guard refused 'git -C /p/project/docs checkout x' 'the guard refuses a checkout in the primary checkout of a project directory named with a trailing slash'
+guard_project=//p/project
+expect_guard refused 'git -C /p/project/docs checkout x' 'the guard refuses a checkout in the primary checkout of a project directory named with a leading double slash'
+guard_project=/p/project
+expect_guard refused "$(printf 'git \\\nswitch -C main HEAD~1')" 'the guard joins a continued line as bash does'
+expect_guard refused "$(printf 'gi\\\nt switch x')" 'the guard joins a continued line inside a word'
+expect_guard refused '</dev/null git switch -C main HEAD~1' 'the guard reads past a leading input redirection'
+expect_guard refused '2>/dev/null git switch x' 'the guard reads past a leading error redirection'
+expect_guard refused '< /dev/null git switch x' 'the guard reads past a leading redirection and its separate target'
+expect_guard refused '2>&1 git switch x' 'the guard reads a redirection onto a descriptor as one word'
+expect_guard refused '>>/tmp/log git switch x' 'the guard reads past a leading appending redirection'
+expect_guard refused '>> /tmp/log git switch x' 'the guard reads past a leading appending redirection and its separate target'
+expect_guard refused '>& /tmp/log git switch x' 'the guard reads past a leading redirection of both outputs and its separate target'
+expect_guard refused '0<&- git switch x' 'the guard reads an input redirection onto a descriptor as one word'
+expect_guard refused 'cat <(ls)' 'the guard refuses a process substitution as an argument'
+expect_guard refused '>|/dev/null git switch -C main HEAD~1' 'the guard reads past a leading clobbering redirection'
+expect_guard refused '>| /dev/null git switch x' 'the guard reads past a leading clobbering redirection and its separate target'
+expect_guard refused '{fd}>/dev/null git switch x' 'the guard reads past a leading named-descriptor redirection'
+expect_guard refused '{_fd}>/dev/null git switch x' 'the guard reads past a named descriptor that opens with an underscore'
+expect_guard refused '{fd1}>/dev/null git switch x' 'the guard reads past a named descriptor with a digit'
+expect_guard passed '{}>/dev/null xargs cat' 'the guard reads empty braces as no named descriptor'
+expect_guard refused 'git switch>/dev/null -C main HEAD~1' 'the guard reads a redirection written right after the subcommand'
+expect_guard refused 'git>/dev/null branch -f main HEAD~1' 'the guard reads a redirection written right after git'
+expect_guard refused 'git&>/dev/null switch -C main HEAD~1' 'the guard reads a both-outputs redirection written right after git'
+expect_guard refused 'git -C /p/project>/dev/null switch x' 'the guard reads a redirection written right after the -C path'
+expect_guard refused 'W=/x>/tmp/f' 'the guard refuses an assignment with a redirection written right after it'
+expect_guard refused 'git >| >(cat) switch -C main HEAD~1' 'the guard refuses a process substitution behind a clobbering redirection'
+expect_guard refused 'git >& >(cat) branch -M main x' 'the guard refuses a process substitution behind a both-outputs redirection'
+expect_guard refused "$(printf 'git > \\\n>(cat) switch -C main HEAD~1')" 'the guard refuses a process substitution behind a line continuation'
+expect_guard refused "$(printf 'git >| >\\\n(cat) switch -C main HEAD~1')" 'the guard keeps an operator joined to its process substitution across a line continuation'
+expect_guard refused "$(printf 'git >\\\n&2 switch -C main HEAD~1')" 'the guard keeps a redirection to a descriptor joined across a line continuation'
+expect_guard refused "$(printf 'git >\\\n| /dev/null switch -C main HEAD~1')" 'the guard keeps a clobbering redirection joined across a line continuation'
+expect_guard refused "$(printf 'git &\\\n>/dev/null switch -C main HEAD~1')" 'the guard keeps a both-outputs redirection joined across a line continuation'
+expect_guard refused "$(printf 'git&\\\n>/dev/null switch -C main HEAD~1')" 'the guard keeps a both-outputs redirection glued to a word joined across a line continuation'
+expect_guard refused "$(printf 'ls >/dev/null x\\\n&git reset --hard')" 'the guard reads a background & after a line continuation as a separator, an earlier redirection notwithstanding'
+expect_guard refused "$(printf 'git &\\\n\\\n>/dev/null switch -C main HEAD~1')" 'the guard keeps a both-outputs redirection joined across two line continuations'
+expect_guard passed 'ls >/dev/null; (ls)' 'the guard reads a parenthesis after an earlier redirection as a subshell'
+expect_guard refused 'ls \>& git switch -C main HEAD~1' 'the guard reads an escaped > before & as no operator'
+expect_guard refused 'ls \>| git switch -C main HEAD~1' 'the guard reads an escaped > before | as no operator'
+expect_guard refused 'git 1<(echo) switch -C main HEAD~1' 'the guard refuses a process substitution right after a descriptor word'
+expect_guard refused "git > ''>(cat) switch -C main HEAD~1" 'the guard refuses a process substitution behind an empty quote'
+expect_guard refused "git >''>(cat) switch -C main HEAD~1" 'the guard refuses a process substitution behind an operator and an empty quote'
+expect_guard refused 'git <> /dev/null switch -C main HEAD~1' 'the guard reads past a read-write redirection and its separate target'
+expect_guard refused 'git <<< x switch -C main HEAD~1' 'the guard reads past a here-string and its separate word'
+expect_guard refused 'true&git reset --hard' 'the guard reads a background & glued to a word as a separator'
+expect_guard refused 'a&git reset --hard' 'the guard reads a background & right behind the first character as a separator'
+expect_guard passed "git '{1}>x' switch -C main HEAD~1" 'the guard reads a quoted {1}>x as a plain word'
+expect_guard refused 'git -C >/dev/null /p/project switch x' 'the guard reads past a redirection between -C and its path'
+expect_guard passed 'git cleanup' 'the guard reads only clean itself as the clean subcommand'
+expect_guard passed 'git checkout-index -a -f' 'the guard reads only checkout itself as the checkout subcommand'
+expect_guard refused 'ls >x& git switch -C main HEAD~1' 'the guard reads & behind a redirection target as a separator'
+expect_guard passed "grep -n '> >(' x.txt" 'the guard leaves quoted text that looks like a process substitution alone'
+expect_guard passed '{1}>/dev/null xargs cat' 'the guard reads braces around a digit as a word, as bash does'
+expect_guard refused 'git -C {1}> x switch' 'the guard reads braces around a digit before a redirection as a word'
+expect_guard refused '{FD}>/dev/null git switch x' 'the guard reads past a named descriptor in capitals'
+expect_guard refused 'git 2>/dev/null switch -C main HEAD~1' 'the guard reads past a redirection between git and its subcommand'
+expect_guard refused 'git 2> /dev/null switch x' 'the guard reads past a redirection and its separate target between git and its subcommand'
+expect_guard refused 'git -C /p/project 2>/dev/null switch x' 'the guard reads past a redirection behind a git -C path'
+expect_guard passed 'git -C /p/project/.claude/worktrees/t 2>/dev/null status' 'the guard counts no redirection as a global option behind an agent worktree'
+expect_guard refused 'git &>/dev/null switch -C main HEAD~1' 'the guard reads past a both-outputs redirection between git and its subcommand'
+expect_guard refused 'git &>>/dev/null branch -M main x' 'the guard reads past an appending both-outputs redirection before a forced branch'
+expect_guard refused 'git -C /p/project &>/dev/null switch x' 'the guard reads past a both-outputs redirection behind a git -C path'
+expect_guard refused 'ls;>/dev/null git switch x' 'the guard reads a separator in front of a redirection as a separator'
+expect_guard refused 'git 2> >(cat) branch -f main HEAD~1' 'the guard refuses a redirection onto a process substitution'
+expect_guard refused 'git > >(cat) switch x' 'the guard refuses an output redirection onto a process substitution'
+expect_guard refused 'git < <(echo) switch x' 'the guard refuses an input redirection from a process substitution'
+run_guard "$(python3 -c 'import json; print(json.dumps({"tool_name": "Bash", "tool_input": {"command": "git -C /tmp/" + "0" * 140000 + " switch x; git switch -C main HEAD~1"}}))')"
+r=0
+[ "$status" -eq 2 ] && grep -q '^bash-shape-guard: ' "$work/guard-err" || r=1
+check 'the guard survives an over-long -C word and judges the next statement' "$r"
+expect_guard refused '/usr/bin/env xargs cat' 'the guard refuses xargs behind a wrapper named by its path'
+gp="$work/gp"
+git init -q -b main "$gp"
+git -C "$gp" -c user.name=t -c user.email=t@example.test commit -q --allow-empty -m A
+git -C "$gp" worktree add -q -b claude/w "$gp/.claude/worktrees/w"
+mkdir -p "$gp/.claude/worktrees/w/sub" "$work/gitfile"
+printf 'gitdir: %s/.git\n' "$gp" > "$gp/.claude/worktrees/w/sub/.git"
+printf 'gitdir: %s/.git\n' "$gp" > "$work/gitfile/.git"
+mkdir -p "$gp/docs"
+ln -s "$gp/docs" "$gp/.claude/worktrees/w/lk"
+guard_project=$gp
+expect_guard passed "git -C $gp/.claude/worktrees/w switch x" 'the guard lets a switch in a real linked worktree pass'
+expect_guard refused "git -C $gp/.claude/worktrees/w/sub switch x" 'the guard refuses a switch whose folder points git at the primary checkout'
+expect_guard refused "git -C $work/gitfile switch x" 'the guard refuses a switch outside the project that git runs in the primary checkout'
+ln -s "$gp" "$work/project-link"
+expect_guard refused "git -C $work/project-link switch x" 'the guard refuses a switch through a link to the primary checkout'
+guard_project=$work/project-link
+expect_guard refused "git -C $gp switch x" 'the guard refuses a switch in the primary checkout of a project directory reached through a link'
+expect_guard refused "git -C $work/project-link/.claude/worktrees/w/sub switch x" 'the guard refuses a switch the primary checkout would run, under a project directory reached through a link'
+guard_project=$gp
+expect_guard refused "git -C $gp/.claude/worktrees/w/lk/.. switch x" 'the guard asks git from the path as written, so a .. behind a link into the primary checkout counts'
+guard_project=/p/project
+run_guard '{"tool_name":"Bash","tool_input":{"command":"git -C /tmp/a\ud800 switch y; git switch -C main HEAD~1"}}'
+r=0
+[ "$status" -eq 2 ] && grep -q '^bash-shape-guard: ' "$work/guard-err" || r=1
+check 'the guard judges the next statement after one it cannot read' "$r"
+expect_guard passed "$(printf 'if true; then\nls; fi')" 'the guard lets a keyword stand alone on its line'
+expect_guard passed 'echo reset --hard' 'the guard reads reset only as a git subcommand'
+expect_guard passed 'gitk reset --hard' 'the guard reads only git itself as git'
+expect_guard passed 'xargsx cat' 'the guard reads only xargs itself as xargs'
+expect_guard passed 'git branchx -D x' 'the guard reads only branch itself as the branch subcommand'
+expect_guard passed 'ls >' 'the guard lets a redirection without a target pass without a traceback'
+expect_guard passed '(ls)' 'the guard lets a subshell pass'
+expect_guard passed 'git' 'the guard lets a bare git pass'
+expect_guard passed 'git -C' 'the guard lets a git -C without its path pass'
+expect_guard passed 'git --version' 'the guard lets git with only an option pass'
+expect_guard refused 'git --no-pager reset --hard' 'the guard reads past an option without a value to the subcommand'
+expect_guard passed 'git -C /p/project -c core.quotepath=off log' 'the guard lets a -c option behind the primary checkout pass'
+expect_guard passed 'git -C /p/project/.claude/worktreesx -c x=y status' 'the guard lets a -c option behind a sibling of the worktree root pass'
+expect_guard refused "$(printf 'ls\nls # x\nW=/x; ls $W')" 'the guard reads a comment on a later line to its end only'
+expect_guard refused 'ls | env xargs' 'the guard refuses a bare xargs run through env'
+expect_payload_passes '{"tool_name":"Read","tool_input":{"command":"W=/x; ls $W"}}' 'the guard reads a command only from a Bash call'
+expect_guard refused 'echo "\\"; W=/x' 'the guard reads an escaped backslash inside double quotes'
+expect_guard refused 'echo $(( (1) )); W=/x' 'the guard reads past nested arithmetic parentheses'
+expect_guard refused "echo \$''; W=/x" 'the guard reads past an empty ANSI-C string'
+expect_guard refused 'echo $(((1)) << 2)' 'the guard reads a parenthesis right behind an arithmetic opening as bash does, a command substitution with a heredoc'
+expect_guard refused 'echo $(); W=/x' 'the guard reads past an empty command substitution'
+expect_guard refused "echo 'a\\'; W=/x" 'the guard reads a backslash inside single quotes as a plain character'
+expect_guard passed 'git -C /p/projectx checkout x' 'the guard tells the primary checkout from a sibling with a longer name'
+expect_guard refused '(ls); W=/x' 'the guard reads past a closing subshell parenthesis'
+expect_guard refused 'find /x | "xargs" cat' 'the guard refuses a quoted xargs'
+expect_guard refused 'W="a b"; ls $W' 'the guard refuses an assignment of a quoted value with a space'
+expect_guard passed 'echo "a \" ; W=1"' 'an escaped quote inside double quotes does not end them'
+expect_guard refused "$(printf 'echo $((1)); cat <<EOF\nx\nEOF')" 'the guard reads a heredoc behind an arithmetic expansion'
+expect_guard refused '(git reset)' 'the guard reads a closing parenthesis as a statement end'
+expect_guard refused 'echo $(echo a); W=1' 'the guard reads past the end of a command substitution'
+expect_guard refused 'echo `date`; W=1' 'the guard reads past the end of a backtick substitution'
+expect_guard refused 'git log $(git reset --hard)' 'the guard judges the command inside a command substitution'
+expect_guard refused 'git log $(git reset)' 'the guard judges a command substitution up to its last character'
+expect_guard refused 'git log `git reset --hard`' 'the guard judges the command inside a backtick substitution'
+expect_guard refused 'git log `git reset`' 'the guard judges a backtick substitution up to its last character'
+expect_guard refused 'git log "$(git reset --hard)"' 'the guard judges a command substitution inside double quotes'
+expect_guard refused 'git log "`git reset --hard`"' 'the guard judges a backtick substitution inside double quotes'
+expect_guard refused "echo \`echo \\\` '\`; git reset --hard'\`" 'the guard skips an escaped backtick inside a backtick substitution'
+expect_guard refused 'echo "`echo \``"; git reset --hard' 'the guard ends a backtick substitution right behind an escaped backtick'
+expect_guard refused 'echo "``"; git reset --hard' 'the guard reads an empty backtick substitution inside double quotes'
+expect_guard refused 'echo "$()"; git reset --hard' 'the guard reads an empty command substitution inside double quotes'
+expect_guard refused 'echo $(( $(git reset --hard) + 1 ))' 'the guard judges a command substitution inside arithmetic'
+expect_guard refused 'echo "$(echo $((1)); git reset --hard)"' 'the guard reads arithmetic parentheses inside a command substitution as part of it'
+expect_guard refused 'git log "$(true; (true); git reset --hard)"' 'the guard judges a command behind a subshell inside a quoted substitution'
+expect_guard refused 'git log "$(echo ${x:-)}; git reset --hard)"' 'the guard reads a ) inside a parameter expansion as part of a quoted substitution'
+expect_guard refused 'echo $(( $(true; (true); git reset --hard) ))' 'the guard judges a command behind a subshell inside arithmetic'
+expect_guard refused 'git log $((git reset --hard) )' 'the guard reads a $(( that does not close as )) as a command substitution'
+expect_guard refused 'git log "$((git reset --hard) )"' 'the guard reads a $(( that does not close as )) inside double quotes as a command substitution'
+expect_guard refused 'git log `echo \`git reset --hard\``' 'the guard judges a backtick substitution nested by escaped backticks'
+expect_guard refused 'git log "`echo \`git reset --hard\``"' 'the guard judges a backtick substitution nested by escaped backticks inside double quotes'
+expect_guard refused 'git log `echo "\$(git reset --hard)"`' 'the guard reads an escaped dollar inside a backtick body as a substitution, as bash does'
+expect_guard refused 'echo `echo \\; xargs cat`' 'the guard refuses a backtick body with a backslash'
+expect_guard refused 'git log "$(true; { (true); }; git branch -D x)"' 'the guard judges a command behind a group with a subshell inside a quoted substitution'
+expect_guard refused 'echo "$( (true) )"; git reset --hard' 'the guard closes a subshell before the substitution around it'
+expect_guard refused 'echo $(()); git reset --hard' 'the guard closes an empty arithmetic expansion'
+expect_guard refused 'echo ${}; git reset --hard' 'the guard closes an empty parameter expansion'
+expect_guard_says "git branch \$'\\x2dD' x" 'a command that names git runs unprompted only in plain words: letters, digits, ._/,=%~^@:+-, text in single quotes and text in double quotes without $, a backtick or a backslash, joined by ;, &&, ||, | or a line break, with output only to /dev/null, a descriptor or /tmp/claude-<uid>/; write it that way or split it' 'the guard names the plain-command rule for git and its guide'
+expect_guard refused "git rebase \$'\\x2dx' true main" 'the guard refuses a git command with an ANSI-C string'
+expect_guard refused "git log \$'\\x2d-output=/tmp/x'" 'the guard refuses an output option spelled in an ANSI-C string'
+expect_guard refused 'git log $"--output=/tmp/x"' 'the guard refuses a git command with a locale string'
+expect_guard refused 'git log $HOME' 'the guard refuses a git command with a variable'
+expect_guard refused 'git branch -[D] x' 'the guard refuses a git command with an unquoted glob'
+expect_guard refused 'git log -- *.md' 'the guard refuses a git command with an unquoted star'
+expect_guard refused 'ls $HOME; git status' 'the guard reads the whole command that names git, not its git statement alone'
+expect_guard refused "git branch '>' -D x" 'the guard reads a quoted redirect word as an argument'
+expect_guard refused "git branch '2>' -D x" 'the guard reads a quoted descriptor redirect word as an argument'
+expect_guard refused "git rebase '>' -x true main" 'the guard reads a quoted redirect word before a rebase option as an argument'
+expect_guard refused "git log '>' --output=y" 'the guard reads a quoted redirect word before an output option as an argument'
+expect_guard refused 'echo $${; git rebase -x true main' 'the guard reads $$ as a pair, so a brace behind it opens no parameter expansion'
+expect_guard refused "$(printf 'echo $${\ngit rebase -x true main')" 'the guard reads $$ as a pair across a newline'
+expect_guard refused "$(printf 'echo $(( %s(%s ))\ngit branch -D x' '"' '"')" 'the guard refuses a quoted parenthesis inside arithmetic'
+expect_guard refused '<$(( ${x:- )); git rebase -x true main' 'the guard refuses a parameter expansion inside arithmetic'
+expect_guard refused "<\$(( '(' )); git reset" 'the guard refuses a single-quoted parenthesis inside arithmetic'
+expect_guard refused 'echo "$${"; git rebase -x true main' 'the guard reads $$ as a pair inside double quotes'
+expect_guard refused "git >'x' branch -D y" 'the guard refuses a redirection with a quoted target in a command that names git'
+expect_guard refused "git 2>'x' rebase -x true main" 'the guard refuses a descriptor redirection with a quoted target in a command that names git'
+expect_guard refused ">'x' git rebase -x true main" 'the guard refuses a leading redirection with a quoted target before git'
+expect_guard refused "git <<<'x' branch -D y" 'the guard refuses a here-string in a command that names git'
+expect_guard refused "git '2'>/dev/null branch -D y" 'the guard refuses a quoted descriptor glued to a redirection in a command that names git'
+expect_guard refused "$(printf 'echo $\\\n${; git rebase -x true main')" 'the guard refuses a line continuation in a command that names git'
+expect_guard refused "$(printf 'npm ls $\\\n${; git rebase -x true main')" 'the guard refuses a line continuation behind a dollar in a command that names git'
+expect_guard refused "$(printf '<$(\\\n( ${x:- )); git rebase -x true main')" 'the guard refuses a line continuation inside an arithmetic opening in a command that names git'
+expect_guard refused '((#)); git rebase -x true main' 'the guard refuses an arithmetic command in a command that names git'
+expect_guard refused "$(printf 'echo $[${x:-]\ngit rebase -x true main')" 'the guard refuses an old-style arithmetic expansion in a command that names git'
+expect_guard passed 'git log >/dev/null 2>&1' 'the guard lets output to /dev/null and a descriptor pass in a command that names git'
+expect_guard passed "git log > /tmp/claude-$(id -u)/x.txt" 'the guard lets output into the session temporary tree pass in a command that names git'
+expect_guard passed "git log --format='%h %s' -3 | head -2 && git status; ls" 'the guard lets a plain command with separators and quotes pass'
+expect_guard_says 'echo $(pwd)' 'the command evaluates text as code ($(…), a backtick, ${…}, $((…)), $[…], ((…)), [[…]], or test or [ with -v or -R), which hides what runs; compute the value in a step of its own and write it literally' 'the guard names the evaluation rule and its guide'
+expect_guard refused 'npm ls "${x@P}"' 'the guard refuses a parameter expansion in any command'
+expect_guard refused 'echo $((1 + 2))' 'the guard refuses an arithmetic expansion in any command'
+expect_guard refused 'echo $[1 + 2]' 'the guard refuses an old-style arithmetic expansion in any command'
+expect_guard passed 'echo $HOME "$1" $? $$ "$x"' 'the guard lets a plain variable pass'
+expect_guard passed "echo '\$(pwd)' '\`pwd\`' '\${x}'" 'the guard reads no evaluation inside single quotes'
+expect_guard passed 'echo \$(pwd) "\$(pwd)"' 'the guard reads no evaluation behind an escaped dollar'
+expect_guard refused "$(printf 'npm ls # %s\nnpm ls $(echo X)' "'")" 'the guard reads a quote inside a comment as text'
+expect_guard refused "$(printf 'npm ls # $%s\nnpm ls $(echo X)' "'")" 'the guard reads an ANSI-C opening inside a comment as text'
+expect_guard refused "$(printf 'echo ok # %s\necho `pwd`' "'")" 'the guard finds a backtick behind a comment that holds a quote'
+expect_guard passed 'ls # $(pwd) `pwd`' 'the guard reads no evaluation inside a comment'
+expect_guard refused "echo a#'b' \$(pwd)" 'the guard reads a hash inside a word as no comment'
+expect_guard_says "$(printf 'npm ls $\\\n%s\\%s%s x' "'" "'" "'")" 'a line continuation hides how bash joins the words; write the command on one line' 'the guard names the line-continuation rule and its guide'
+expect_guard refused "$(printf 'cat $\\\n%s\\%s%s <<E\nhello\nE' "'" "'" "'")" 'the guard refuses a line continuation before an ANSI-C string'
+expect_guard refused "$(printf 'ls a\\\nb')" 'the guard refuses a line continuation in any command'
+expect_guard refused "npm ls 'a[\$(pwd)]' && [[ _ -eq 0 ]]" 'the guard refuses a test in double brackets, which evaluates a name'
+expect_guard refused 'npm ls x; (( _ ))' 'the guard refuses an arithmetic command'
+expect_guard refused "test -v 'a[\$(pwd)]'" 'the guard refuses test -v, which evaluates a subscript'
+expect_guard refused '[ -R x ]' 'the guard refuses [ -R, which evaluates a name'
+expect_guard passed 'test -f x && [ -d y ] && grep -v x f' 'the guard lets test and [ without -v or -R pass'
+expect_guard refused '/usr/bin/test -v x' 'the guard reads test by its path'
+expect_guard refused '(ls)[[ -f x ]]' 'the guard finds double brackets behind a closing parenthesis'
+expect_guard refused 'npm ls \ #$(pwd)' 'the guard reads a hash behind an escaped space as no comment'
+expect_guard refused 'npm ls \;#$(pwd)' 'the guard reads a hash behind an escaped semicolon as no comment'
+expect_guard refused 'npm ls \&#$(pwd)' 'the guard reads a hash behind an escaped ampersand as no comment'
+expect_guard refused 'npm ls \|#$(pwd)' 'the guard reads a hash behind an escaped bar as no comment'
+expect_guard refused 'npm ls \(#$(pwd)' 'the guard reads a hash behind an escaped parenthesis as no comment'
+expect_guard refused 'npm ls \)#$(pwd)' 'the guard reads a hash behind an escaped closing parenthesis as no comment'
+expect_guard refused "$(printf 'npm ls \\\t#$(pwd)')" 'the guard reads a hash behind an escaped tab as no comment'
+expect_guard refused 'ls;!((x))' 'the guard finds an arithmetic command behind a negation'
+expect_guard refused 'ls; ![[ x ]]' 'the guard finds double brackets behind a negation'
+expect_guard refused "$(printf '# it%ss\nnpm ls $(pwd)' "'")" 'the guard reads a quote in a comment that opens the command as text'
+expect_guard passed '# $(pwd)' 'the guard reads a comment that opens the command as a comment'
+expect_guard refused 'arr[_]=1' 'the guard reads an assignment with a subscript as a setter'
+expect_guard refused '([[ -f x ]])' 'the guard finds double brackets inside a subshell'
+expect_guard refused 'ls||[[ -f x ]]' 'the guard finds double brackets behind ||'
+expect_guard refused 'ls&&[[ -f x ]]' 'the guard finds double brackets behind &&'
+expect_guard refused 'ls;[[ -f x ]]' 'the guard finds double brackets behind a semicolon'
+expect_guard refused "$(printf 'ls\n[[ -f x ]]')" 'the guard finds double brackets on a new line'
+expect_guard refused "$(printf 'ls\t[[ -f x ]]')" 'the guard finds double brackets behind a tab'
+expect_guard refused '[[ -f x ]]' 'the guard finds double brackets at the start of a command'
+expect_guard passed 'echo a[[b a((b' 'the guard reads double brackets and parentheses inside a word as text'
+expect_guard passed "echo \$'\\'\$(pwd)'" 'the guard reads an escaped quote inside an ANSI-C string as text'
+expect_guard passed "echo \"a\" '\$(pwd)'" 'the guard closes a double quote'
+expect_guard passed 'echo $${x}' 'the guard reads $$ before a brace as one expansion'
+expect_guard refused "echo 'a' \$(pwd)" 'the guard closes a single quote'
+expect_guard refused "echo '\\'\$(pwd)" 'the guard reads a backslash inside single quotes as text'
+expect_guard passed 'echo $$ {x}' 'the guard reads $$ as one expansion, so a brace behind a space opens nothing'
+expect_guard refused 'echo "`pwd`"' 'the guard refuses a backtick inside double quotes in any command'
+expect_guard refused "npm ls \$(sh -c 'g\${x}it reset --hard')" 'the guard refuses an interpreter inside a substitution'
+expect_guard refused "$(printf 'echo $\\\n(pwd)')" 'the guard reads a line continuation between a dollar and its parenthesis'
+expect_guard refused "$(printf 'echo \"$\\\n{x}\"')" 'the guard reads a line continuation between a dollar and its brace inside double quotes'
+expect_guard refused 'git log >/tmp/claude-0/x' 'the guard allows only the session owner temporary tree'
+expect_guard refused "$(printf 'git log <\rx')" 'the guard allows only spaces and tabs between an input redirection and its word'
+expect_guard refused 'git log 22<x' 'the guard allows one digit before an input redirection'
+expect_guard refused 'git log 2>&-' 'the guard allows only a digit as the target of a descriptor copy'
+expect_guard refused 'git log 22>&1' 'the guard allows one digit before a descriptor copy'
+expect_guard refused "$(printf 'git log >\r/dev/null')" 'the guard allows only spaces and tabs between an output redirection and its target'
+expect_guard refused 'git log & ls' 'the guard refuses a background & in a command that names git'
+expect_guard refused "git log > /tmp/claude-$(id -u)" 'the guard refuses the session temporary tree itself as an output file'
+expect_guard refused "git log > /tmp/claude-$(id -u)/../x" 'the guard refuses a climb out of the session temporary tree'
+expect_guard refused 'git log <x.txt"y"' 'the guard reads an input redirection only with a plain whole word'
+expect_guard refused 'git log >&2x' 'the guard reads a descriptor copy only as a whole word'
+expect_guard refused "npm ls \`\$'\\147it' rebase -x true main\`" 'the guard refuses a backtick body that is not plain'
+expect_guard refused 'npm ls $(/usr/bin/gi? rebase -x true main)' 'the guard refuses a substitution body with a glob'
+expect_guard refused "npm view x \$(\$'\\147it' reset --hard)" 'the guard refuses a substitution body with an ANSI-C string'
+expect_guard refused 'npm ls $(case x in x) ls;; esac)' 'the guard refuses a case pattern inside a substitution, whose ) ends it early'
+expect_guard refused 'npm ls $(ls; case)' 'the guard finds a case word at the end of a substitution'
+expect_guard refused "$(printf 'npm ls $(case\tx in x) ls;; esac)')" 'the guard finds a case pattern followed by a tab'
+expect_guard refused 'npm ls $(ls; case x in x) ls;; esac)' 'the guard finds a case pattern behind another statement in a substitution'
+expect_guard passed 'git log -1 --format=%h a._/,=%~^@:+-b' 'the guard lets every plain character pass in a command that names git'
+expect_guard passed "$(printf 'git\tstatus\nls || ls')" 'the guard lets a tab, a line break and || pass in a command that names git'
+expect_guard passed 'git log 2>/dev/null >> /dev/null' 'the guard lets a descriptor and an appending redirection to /dev/null pass in a command that names git'
+expect_guard passed 'git log &>/dev/null >&2 < x.txt' 'the guard lets a both-outputs redirection, a descriptor copy and an input pass in a command that names git'
+expect_guard refused 'git log "$HOME"' 'the guard refuses a dollar inside double quotes in a command that names git'
+expect_guard refused 'git log "`pwd`"' 'the guard refuses a backtick inside double quotes in a command that names git'
+expect_guard refused 'git log "a\b"' 'the guard refuses a backslash inside double quotes in a command that names git'
+expect_guard passed "$(printf 'git log >/dev/null\t2>&1|head -1;ls')" 'the guard ends a redirection target at a tab, a pipe or a semicolon in a command that names git'
+expect_guard refused 'git log > /tmp/x' 'the guard refuses an output redirection into a file in a command that names git'
+expect_guard refused 'git log >> docs/x.md' 'the guard refuses an appending redirection into a file in a command that names git'
+expect_guard refused 'git log &>/tmp/x' 'the guard refuses a both-outputs redirection into a file in a command that names git'
+expect_guard refused 'git log 2>/dev/nullx' 'the guard reads /dev/null only as a whole word'
+expect_guard refused 'g""it log > /tmp/x' 'the guard finds git spelled with an empty quote'
+expect_guard refused "W='1' >/tmp/f" 'the guard reads a redirection behind a quoted word and a space as a redirection'
+expect_guard refused "W='1'>/tmp/f" 'the guard reads a redirection right behind a quoted word as a redirection'
+expect_guard passed "W=1 \$'>' x" 'the guard reads a redirect word in an ANSI-C string as a word'
+expect_guard passed 'git log -- "*.md" "{a,b}"' 'the guard lets a quoted glob or brace in a git command pass'
+expect_guard refused 'git log -- a?.md' 'the guard refuses a git command with an unquoted question mark'
+expect_guard refused 'git log \$HOME' 'the guard refuses a git command with a backslash'
+expect_guard refused "echo '\$(('; git reset --hard" 'the guard reads no arithmetic inside single quotes'
+expect_guard refused "echo '\${'; git reset --hard" 'the guard reads no parameter expansion inside single quotes'
+expect_guard refused 'echo a); git reset --hard' 'the guard reads past an unmatched ) outside any substitution'
+expect_guard refused 'echo "${x}"; git reset --hard' 'the guard closes a parameter expansion inside double quotes'
+expect_guard refused 'echo "$(echo ")")"; git reset --hard' 'the guard reads a quoted parenthesis inside a command substitution as text'
+expect_guard refused 'echo $(cat <(git log))' 'the guard refuses a process substitution inside a command substitution'
+expect_guard passed "echo '\$(git reset --hard)' '\`git reset --hard\`'" 'the guard reads no substitution inside single quotes'
+expect_guard passed "echo \$'\$(xargs cat)'" 'the guard reads no substitution inside an ANSI-C string'
+expect_guard passed '{ ls; }' 'the guard lets a closing brace stand alone'
+expect_payload_passes '{"tool_name":"Bash","tool_input":"git status"}' 'the guard lets a tool input that is no object pass'
+expect_payload_passes '{"tool_name":"BashOutput","tool_input":{"command":"git reset --hard"}}' 'the guard reads only the Bash tool itself'
+
+set +e
+bash_payload 'git -C /p/project checkout -- docs' | env -u CLAUDE_PROJECT_DIR python3 "$guard" > "$work/guard-out" 2> "$work/guard-err"
+status=$?
+set -e
+r=0
+[ "$status" -eq 0 ] && [ ! -s "$work/guard-err" ] || r=1
+check 'without a project directory the guard knows no primary checkout to protect' "$r"
+
+hook_command=$(jq -r '.hooks.PreToolUse[] | select(.matcher == "Bash") | .hooks[0].command' "$agent_dir/../.claude/settings.json" 2>/dev/null || true)
+
+set +e
+bash_payload 'W=/x; ls $W' | CLAUDE_PROJECT_DIR="$work/no-project" sh -c "$hook_command" > "$work/hook-out" 2> "$work/hook-err"
+status=$?
+set -e
+r=0
+[ -n "$hook_command" ] && [ "$status" -ne 2 ] || r=1
+check 'the hook command never refuses where the project holds no guard' "$r"
+
+set +e
+bash_payload 'W=/x; ls $W' | CLAUDE_PROJECT_DIR="$agent_dir/.." sh -c "$hook_command" > "$work/hook-out" 2> "$work/hook-err"
+status=$?
+set -e
+r=0
+[ -n "$hook_command" ] && [ "$status" -eq 2 ] && grep -q '^bash-shape-guard: ' "$work/hook-err" || r=1
+check 'the hook command runs the project guard on every Bash call' "$r"
+
 if [ "$failures" -ne 0 ]; then
 	printf 'agent self-test: %s case(s) failed\n' "$failures"
 	exit 1
