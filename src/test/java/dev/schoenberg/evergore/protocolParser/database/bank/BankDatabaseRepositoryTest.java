@@ -179,6 +179,56 @@ class BankDatabaseRepositoryTest {
 	}
 
 	@Test
+	void aPageOfAnAvatarsLedgerLeavesNothingOpenOnceItReturns() {
+		BankDatabaseRepository tested = repositoryHoldingThreeRows();
+
+		tested.getAllFor("Aurora", new LedgerSort<>(BankSortKey.TIMESTAMP, DESCENDING), 0, 1);
+		Throwable lockRefusal = catchThrowable(databaseFile::takeAndReleaseTheExclusiveLockWithoutWaiting);
+
+		assertThat(lockRefusal).isNull();
+	}
+
+	@Test
+	void getAllSinceLeavesNothingOpenOnceItReturns() {
+		BankDatabaseRepository tested = repositoryHoldingThreeRows();
+
+		tested.getAllSince(ONE_MINUTE_BEFORE_BOUNDARY);
+		Throwable lockRefusal = catchThrowable(databaseFile::takeAndReleaseTheExclusiveLockWithoutWaiting);
+
+		assertThat(lockRefusal).isNull();
+	}
+
+	@Test
+	void countForLeavesNothingOpenOnceItReturns() {
+		BankDatabaseRepository tested = repositoryHoldingThreeRows();
+
+		tested.countFor("Aurora");
+		Throwable lockRefusal = catchThrowable(databaseFile::takeAndReleaseTheExclusiveLockWithoutWaiting);
+
+		assertThat(lockRefusal).isNull();
+	}
+
+	@Test
+	void getAllDifferentAvatarsLeavesNothingOpenOnceItReturns() {
+		BankDatabaseRepository tested = repositoryHoldingThreeRows();
+
+		tested.getAllDifferentAvatars();
+		Throwable lockRefusal = catchThrowable(databaseFile::takeAndReleaseTheExclusiveLockWithoutWaiting);
+
+		assertThat(lockRefusal).isNull();
+	}
+
+	@Test
+	void latestTimestampPerAvatarLeavesNothingOpenOnceItReturns() {
+		BankDatabaseRepository tested = repositoryHoldingThreeRows();
+
+		tested.latestTimestampPerAvatar();
+		Throwable lockRefusal = catchThrowable(databaseFile::takeAndReleaseTheExclusiveLockWithoutWaiting);
+
+		assertThat(lockRefusal).isNull();
+	}
+
+	@Test
 	void addStoresSeveralRowsInOneCommit() {
 		BankDatabaseRepository tested = repository();
 		List<BankEntry> severalRows = List.of(bankEntry("Aurora", BOUNDARY, 1), bankEntry("Aurora", BOUNDARY, 2), bankEntry("Boreas", BOUNDARY, 3));
@@ -201,7 +251,7 @@ class BankDatabaseRepositoryTest {
 	}
 
 	@Test
-	void aRefusedRowStoresAtMostTheRowsBeforeIt() {
+	void aRefusedRowStoresNoneOfItsBatch() {
 		BankDatabaseRepository tested = repository();
 		List<BankEntry> batch = List
 				.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1), bankEntry("Aurora", BOUNDARY, 2), entryWithoutAvatar(3), bankEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 4));
@@ -212,7 +262,7 @@ class BankDatabaseRepositoryTest {
 
 		assertThat(failure).hasStackTraceContaining("NOT NULL constraint failed");
 		assertThat(lockRefusal).isNull();
-		assertThat(List.of(List.of(), List.of(1), List.of(1, 2))).contains(committed);
+		assertThat(committed).isEmpty();
 	}
 
 	@Test
@@ -270,6 +320,12 @@ class BankDatabaseRepositoryTest {
 				return databasePath;
 			}
 		};
+	}
+
+	private BankDatabaseRepository repositoryHoldingThreeRows() {
+		BankDatabaseRepository repo = repository();
+		repo.add(List.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 100), bankEntry("Boreas", BOUNDARY, 200), bankEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 300)));
+		return repo;
 	}
 
 	private BankDatabaseRepository repository() {

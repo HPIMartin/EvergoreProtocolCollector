@@ -11,7 +11,6 @@
 |------|---|---|----------------|
 | The game serves only ~30 days of logs; DB loss or a >30-day scrape outage is irreversible | M | H | The author's monthly manual backup, whose restore re-scrapes the 30-day window ([open-questions.md](open-questions.md), 2026-07-17); every migration is proven row for row before its deploy ([build-run-deploy.md](knowledge-base/build-run-deploy.md), "Schema migrations (Flyway)") |
 | The production DB file is named `temp.sqlite`, inviting careless deletion | L | H | Rename once config is really bindable (backlog C1); until then a known trap |
-| A process outside the service holds a read transaction on the live database file past the 10 s `busy_timeout`, so SQLite refuses the service's next commit and leaves that pooled connection inside its open transaction | L | M | Accepted for `0.3.0` and `0.4.0`, since nothing but the service opens the live file while the container runs ([open-questions.md](open-questions.md), 2026-10-10 and 2026-10-15; [build-run-deploy.md](knowledge-base/build-run-deploy.md), "Deploy to the home server"); the fix is the refused-commit item (backlog F12), planned for `0.5.0` |
 
 ## External dependency: the game
 
