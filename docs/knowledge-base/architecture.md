@@ -88,9 +88,12 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
       - why: a read outlasts an unusually long write instead of answering 500 (sqlite-jdbc's
         implicit bound is 3 s);
     - a commit also waits up to 10 s for an outside reader to finish;
-    - a transaction that reads before it writes, the recompute's batch, fails at once under another
-      writer's lock (SQLite answers `SQLITE_BUSY` there without waiting);
-    - in-process that failure is unreachable, because the scheduled job is the only writer.
+    - a transaction takes the write lock when it begins (`BEGIN IMMEDIATE`), so under another
+      writer's lock it waits up to the same bound before its work starts;
+      - why: a deferred transaction that reads before it writes, such as the recompute's batch,
+        fails at once there (SQLite answers `SQLITE_BUSY` without waiting);
+    - only writes open a transaction;
+    - in-process no transaction waits on another, because the scheduled job is the only writer.
   - `database/LedgerDatabaseRepository` is the one ledger base:
     - the seven ledger operations live here once, over the `LedgerDatabaseEntry` row (the columns
       both ledger rows share);
@@ -103,6 +106,7 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     - it then writes the list in one `SqliteDatabase` transaction with one commit;
       - why: on the pool ORMLite's `create(Collection)` commits every row (300 rows: 43 s against
         210 ms);
+    - an empty list opens no transaction, so a run with nothing new needs no write lock;
     - a batch that fails stores none of its rows, whether a constraint refuses one, its commit is
       refused or SQLite rolls it back itself;
     - a row a constraint refuses fails its whole batch every run until it leaves the game's 30-day
