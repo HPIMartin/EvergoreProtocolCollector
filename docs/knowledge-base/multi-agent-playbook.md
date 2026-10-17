@@ -88,6 +88,11 @@ scenarios claims one of the §5 exemptions explicitly and then starts at step 1.
 A strand without product behaviour keeps the plan approval; the go may come at the start and the
 plan be reviewed later (decision 2026-10-15).
 
+On the agent seat (author decision 2026-10-17):
+
+- a brief that names the strands, their proofs and their exemptions is the approved plan;
+- the questions the agent may still ask are handbook §9's brakes.
+
 ### FAIL-loop rules (when a falsifier or reviewer rejects)
 
 A FAIL sends work back to step 2; which gate agents the next round re-runs is handbook §9's

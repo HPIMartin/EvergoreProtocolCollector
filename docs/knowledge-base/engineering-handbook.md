@@ -798,11 +798,12 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
 - **Early-escalate** when two consecutive rounds raise the *same* finding.
 - **No cap on the agent seat** (author decision 2026-10-07): where `EPC_SEAT` reads
   `agent-machine` ([dev-environment.md](dev-environment.md), "Where agents run"), the loop runs
-  until PASS, an unattended seat having nobody to wait for. Two brakes replace the cap there:
+  until PASS, an unattended seat having nobody to wait for. Three brakes replace the cap there:
   - a status update in the session's chat every three rounds (the phase, rounds run, findings
-    open, a time estimate);
-  - a question to the author as soon as a finding recurs or one round's fix reverses an earlier
-    round's.
+    open, recurring findings and reversed fixes, a time estimate);
+  - a question to the author only where a fix would reverse an author decision or the brief
+    leaves the scope open (author decision 2026-10-17);
+  - a finding that recurs, or a fix that reverses an earlier round's, gets its root cause fixed.
 - **Process-only FAILs** (whitespace not separated, KB not updated, commit-message format) are
   cheap mechanical fixes; they don't consume a round.
   - On the PC, such a fix after round 2 forces no further panel round (author decision
