@@ -16,15 +16,18 @@ import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformation;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey;
 import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
+import dev.schoenberg.evergore.protocolParser.database.SqliteFile;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 class MetaInformationDatabaseRepositoryTest {
 	private static final String FRESH_DB_PATH = "build/tmp/test/metaInformationRepositoryTest.sqlite";
 
+	private final SqliteFile databaseFile = new SqliteFile(FRESH_DB_PATH);
 	private SqliteDatabase database;
 
 	@BeforeEach
@@ -66,6 +69,17 @@ class MetaInformationDatabaseRepositoryTest {
 		assertThatThrownBy(() -> repo.add(batch)).isInstanceOf(RuntimeException.class);
 
 		assertThat(repo.snapshot().get(new IntegerKey("first"))).contains(1);
+	}
+
+	@Test
+	void snapshotLeavesNothingOpenOnceItReturns() {
+		MetaInformationDatabaseRepository repo = repositoryOnAFreshFile();
+		repo.add(List.of(entry("first", 1), entry("second", 2)));
+
+		repo.snapshot();
+		Throwable lockRefusal = catchThrowable(databaseFile::takeAndReleaseTheExclusiveLockWithoutWaiting);
+
+		assertThat(lockRefusal).isNull();
 	}
 
 	private static MetaInformation<Integer> entry(String id, int value) {
