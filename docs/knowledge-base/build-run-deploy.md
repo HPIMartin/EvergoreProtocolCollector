@@ -95,7 +95,7 @@
   `build/reports/jacoco/test/html/index.html`; `test` finalizes `jacocoTestReport`, so every
   `./gradlew build` regenerates it. No threshold is enforced (`jacocoTestCoverageVerification` is
   not wired): the report guides test work without gating a young suite (a threshold would come
-  later under G6).
+  later with the static-analysis gate (backlog G6)).
 - **Throwaway probes, `src/probe/java` (gitignored, on-demand):**
   - `./gradlew probe` compiles and runs that source set as a JUnit suite. Its compile and runtime
     classpath is the **test** classpath plus `sourceSets.test.output`, so a probe can use
