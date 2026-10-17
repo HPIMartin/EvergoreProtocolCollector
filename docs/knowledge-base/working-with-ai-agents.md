@@ -260,6 +260,12 @@ command) inside guardrails. Two files:
   - `git -C <worktree> checkout --detach <commit hash>`, or `checkout` with commit hashes or none,
     then `--` and at least one path, which restores those files from the commit or the index.
     - It never puts a worktree on a branch.
+  - `git -C <worktree> push --force-with-lease --force-if-includes origin claude/<topic>`, where
+    `claude/<topic>` is the branch the worktree has checked out and that branch exists: the strand's
+    push of handbook §7.
+  - A push in any other spelling meets the classifier and the managed policy.
+  - Where `core.hooksPath` is relative, an approved fold, checkout or push runs the hooks the
+    worktree itself holds, as `<abs worktree>/verify` runs its code.
   - A worktree there is a linked worktree of the project directly under `.claude/worktrees/`,
     whichever session made it.
   - The settings carry no allow rule for these shapes: a rule with a `*` admits more than the shape.
@@ -331,7 +337,7 @@ command) inside guardrails. Two files:
     `--prune`, and only in commands that begin with `git push` and spell those words unquoted.
   - **A push neither list denies meets the auto-mode classifier** (outside auto mode, a prompt):
     a `git -C` push, the form a strand driven by absolute path uses, matches no managed pattern and
-    no project rule.
+    no project rule, except the strand's leased push, which the shape guard approves (above).
   - **The classifier judges, it does not match:** its rules have it refuse a push to `main` or
     `master`, let an agent push, lease-force and delete its own `claude/<topic>` branches, and hold
     back on a branch a project's `CLAUDE.md` names as protected; a spelling no pattern names rests

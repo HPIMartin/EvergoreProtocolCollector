@@ -275,6 +275,11 @@ def checkout_words(words):
     return len(words) == 2 and words.count("--detach") == 1 and any(HASH.fullmatch(word) for word in words)
 
 
+def branch_exists(worktree, branch):
+    return subprocess.run(["git", "-C", worktree, "show-ref", "--verify", "refs/heads/" + branch],
+                          capture_output=True).returncode == 0
+
+
 def approval(command, project):
     words = None if project is None or len(command) > 4096 else plain_words(command)
     if words is None:
@@ -288,6 +293,11 @@ def approval(command, project):
     if words[:2] == ["git", "-C"] and words[3:4] == ["checkout"] and linked(words[2], project) \
             and checkout_words(words[4:]):
         return "git checkout"
+    gitdir = linked(words[2], project) if len(words) == 8 and words[:2] == ["git", "-C"] else None
+    if gitdir and words[3:7] == ["push", "--force-with-lease", "--force-if-includes", "origin"] \
+            and words[7].startswith("claude/") and text_of(gitdir + "/HEAD") == f"ref: refs/heads/{words[7]}\n" \
+            and branch_exists(words[2], words[7]):
+        return "git push"
 
 
 def main():

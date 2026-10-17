@@ -1247,6 +1247,13 @@ commit_file "$fx" a.txt 1 A
 git -C "$fx" worktree add -q -b claude/t "$fx/.claude/worktrees/t"
 git -C "$fx" worktree add -q -b claude/n "$fx/.claude/worktrees/a/b"
 git -C "$fx" worktree add -q -b claude/o "$work/outside"
+git -C "$fx" worktree add -q -b topic "$fx/.claude/worktrees/topic"
+git -C "$fx" worktree add -q -b claude/a/b.c "$fx/.claude/worktrees/abc"
+git -C "$fx" worktree add -q -b claudex "$fx/.claude/worktrees/claudex"
+git -C "$fx" worktree add -q -b claude/tx "$fx/.claude/worktrees/tx"
+git -C "$fx" worktree add -q --orphan -b claude/u "$fx/.claude/worktrees/u"
+git -C "$fx" tag claude/u
+git -C "$fx" update-ref refs/heads/refs/heads/claude/u "$(git -C "$fx" rev-parse HEAD)"
 mkdir -p "$fx/.claude/worktrees/plain" "$fx/.claude/worktrees/primary" "$fx/.claude/worktrees/stolen" \
 	"$fx/.claude/worktrees/fake" "$fx/.claude/worktrees/binary" "$work/fake-admin"
 printf 'gitdir: %s/.git\n' "$fx" > "$fx/.claude/worktrees/primary/.git"
@@ -1322,6 +1329,28 @@ expect_guard passed "git -C $fx/.claude/worktrees/t/sub checkout x" 'the guard l
 expect_guard passed "git -C $fx/.claude/worktrees/t checkout x; ls" 'the guard leaves a checkout in a chain to the permission rules'
 expect_guard passed "git -C $fx/.claude/worktrees/t switch x" 'the guard leaves a switch in an agent worktree to the permission rules'
 expect_guard passed "echo -C $fx/.claude/worktrees/t checkout claude/t" 'the guard approves no other program in the checkout shape'
+push="git -C $fx/.claude/worktrees/t push --force-with-lease --force-if-includes origin"
+expect_guard approved "$push claude/t" 'the guard approves the leased push of a claude/ branch'
+expect_guard approved "git -C $fx/.claude/worktrees/abc push --force-with-lease --force-if-includes origin claude/a/b.c" 'the guard approves the leased push of a claude/ branch with a slash and a dot'
+expect_guard passed "$push claude/t:main" 'the guard leaves a push onto main through a refspec to the permission rules'
+expect_guard passed "$push claude/t main" 'the guard leaves a push of a second branch to the permission rules'
+expect_guard passed "$push main" 'the guard leaves a leased push of main to the permission rules'
+expect_guard passed "$push claude/n" 'the guard leaves a push of a branch the worktree is not on to the permission rules'
+expect_guard passed "git -C $fx/.claude/worktrees/tx push --force-with-lease --force-if-includes origin claude/t" 'the guard leaves a push of a branch the checked-out branch only begins with to the permission rules'
+expect_guard passed "git -C $fx/.claude/worktrees/topic push --force-with-lease --force-if-includes origin topic" 'the guard leaves a push of a branch that is no claude/ branch to the permission rules'
+expect_guard passed "git -C $fx/.claude/worktrees/plain push --force-with-lease --force-if-includes origin claude/t" 'the guard leaves a push from a plain directory under the worktree root to the permission rules'
+expect_guard passed "git -C $fx/.claude/worktrees/t push origin claude/t" 'the guard leaves a push without a lease to the permission rules'
+expect_guard passed "git -C $fx/.claude/worktrees/t push --force --force-if-includes origin claude/t" 'the guard leaves a push forced without a lease to the permission rules'
+expect_guard passed "git -C $fx/.claude/worktrees/t push --force-with-lease --no-verify origin claude/t" 'the guard leaves a leased push without its includes check to the permission rules'
+expect_guard passed "git -C $fx/.claude/worktrees/t push --force-with-lease --force-if-includes upstream claude/t" 'the guard leaves a push to another remote to the permission rules'
+expect_guard passed "git -C $fx/.claude/worktrees/t push --force-with-lease --force-if-includes originx claude/t" 'the guard leaves a push to a remote named like origin with a suffix to the permission rules'
+expect_guard passed "git -C $fx/.claude/worktrees/t push --force-with-lease --force-if-includes origin claude/t $(printf 'main %.0s' $(seq 1 72))" 'the guard leaves a push of eighty words to the permission rules'
+expect_guard passed "git -C $fx/.claude/worktrees/t fetch --force-with-lease --force-if-includes origin claude/t" 'the guard leaves another subcommand of the push shape to the permission rules'
+expect_guard passed "$push claude/t; ls" 'the guard leaves a push in a chain to the permission rules'
+expect_guard passed "git -C $fx push --force-with-lease --force-if-includes origin claude/t" 'the guard leaves a push from the primary checkout to the permission rules'
+expect_guard passed "echo -C $fx/.claude/worktrees/t push --force-with-lease --force-if-includes origin claude/t" 'the guard approves no other program in the push shape'
+expect_guard passed "git -C $fx/.claude/worktrees/claudex push --force-with-lease --force-if-includes origin claudex" 'the guard leaves a push of a branch named like claude without its slash to the permission rules'
+expect_guard passed "git -C $fx/.claude/worktrees/u push --force-with-lease --force-if-includes origin claude/u" 'the guard leaves a push of a branch that does not exist yet to the permission rules'
 guard_project=/p/project
 
 set +e
