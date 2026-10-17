@@ -502,10 +502,12 @@ worktrees (own directory + HEAD + index) make parallel work safe.
 - **A worktree per context.** Each problem/feature/context gets its own branch in its own
   worktree; parallel contexts (incl. other-model agents) = parallel
   worktrees; the primary checkout stays on `main`. Worktrees branch from a freshly synced `main`
-  (below): `git worktree add -b claude/<topic> <root>/<topic> main`. `worktree.baseRef: "head"`
-  makes the harness's subagent worktrees branch from that same `main`; `"fresh"` would branch from
+  (below), a chained strand from its start point (sub-bullet). `worktree.baseRef: "head"`
+  makes the harness's subagent worktrees branch from that same start point; `"fresh"` would branch from
   `origin`'s default branch as Claude Code last fetched it, up to a day old, and miss that day's
   landings.
+  - The command is `git worktree add -b claude/<topic> <root>/<topic> <start>`, where `<start>` is
+    `main` or, for a chained strand, the tip of the strand before it ("Pushing").
 - **Every strand, gate and lens worktree is created under the worktree root.**
   - The root is `$EPC_WORKTREES` where that is set, else `.claude/worktrees/` in the primary
     checkout.
@@ -558,6 +560,10 @@ worktrees (own directory + HEAD + index) make parallel work safe.
     commit.
     - It is opened as a pull request against `main` at its first push (standing approval, author
       decision 2026-10-07).
+    - A strand cut from another strand's tip opens its pull request against that strand's branch
+      instead, so the pull request shows only its own commits (author decision 2026-10-17).
+      - Once the strand before it lands and its branch is deleted, GitHub moves the base to `main`.
+      - Where it does not, the agent sets it with `agent/gh pr edit <number> --base main`.
     - An agent pushes only its own, the one exception being the deletion of a landed `claude/`
       branch, whoever pushed it, once `origin/main` holds its current tip.
     - The classifier may hold back on another session's branch; then report it.
