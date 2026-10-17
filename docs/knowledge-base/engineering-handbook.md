@@ -737,7 +737,9 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   2026-10-15):
   - the strand tries twice to clear it, so old debt is cleared along the way when it can be;
   - what remains then goes to the doc-debt row (G18) or the bare-shortcode row (G21), so it never
-    drives the time of the strand at hand.
+    drives the time of the strand at hand;
+  - the strand files what a doc-reviewer lists there in its own last fold, without a question to
+    the author (author decision 2026-10-17).
 
 - **From round 3 on, a DOC-1 residue in a line an earlier round of the same panel had split is a
   low** (author decision 2026-10-19):
