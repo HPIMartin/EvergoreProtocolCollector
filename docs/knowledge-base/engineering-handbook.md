@@ -134,6 +134,11 @@ means, the TDD cycles drive them green, step definitions included.
   - the record (what was mutated, the failing line) goes into the step's report like red evidence.
   - Where a harness exists this is the only substitution.
   - A *new* test that drives new code is always seen red.
+  - **A production line written before the red test that needs it is a FAIL of the round**
+    (author decision 2026-10-17): the line comes out, the test is written and seen red, then the
+    line goes back in.
+    - A recorded mutation never stands in for that red run; it proves only an adapted test or a
+      test that pins behavior the code already has.
 - **A new test that pins behavior the code already has** (one a panel asks for) cannot start red
   either and pays the same way.
   - Its mutation stays in the gate dossier (playbook, `mutation/`).

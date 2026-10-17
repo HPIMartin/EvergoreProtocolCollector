@@ -57,6 +57,8 @@ section's bullet "The reviewer runs the check as its first act" says.
   implementer's report: the failing test's name and failure line, or, for an adapted existing test,
   the recorded mutation (what was mutated, the failing run, the revert). A cycle without it is a
   process FAIL (handbook §4).
+  - A production line written before the red test that needs it is a FAIL of the round
+    (handbook §4).
 - **Whitespace/format separate** from logic? LF endings?
 - Commit messages: single line, present-tense verb first, no body, no `Co-Authored-By`/footer?
   Nothing pushed but the strand's own `claude/<topic>` branch, and no `[wip]` commit on it?
