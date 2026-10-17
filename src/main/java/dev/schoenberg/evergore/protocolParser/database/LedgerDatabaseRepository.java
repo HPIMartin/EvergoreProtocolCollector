@@ -65,12 +65,12 @@ public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry,
 	public void add(List<E> newEntries) {
 		Dao<R, String> rows = rows();
 		List<R> newRows = newEntries.stream().map(this::toRow).toList();
-		silentThrow(() -> rows.callBatchTasks(() -> {
+		database.inTransaction(() -> {
 			for (R row : newRows) {
 				rows.create(row);
 			}
 			return null;
-		}));
+		});
 	}
 
 	@Override

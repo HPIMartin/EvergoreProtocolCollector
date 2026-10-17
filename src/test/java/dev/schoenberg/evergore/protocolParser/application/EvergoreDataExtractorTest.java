@@ -122,7 +122,7 @@ class EvergoreDataExtractorTest {
 	}
 
 	@Test // page source: newest entry first, as scraped
-	void ingestsOldestFirstSoAPartialBatchKeepsTheEntriesClosestToLeavingTheWindow() {
+	void ingestsTheScrapedEntriesOldestFirst() {
 		tested = new EvergoreDataExtractor(new NewestFirstPageSource(), bankRepo, storageRepo, parser);
 
 		tested.loadData();
