@@ -254,6 +254,10 @@ command) inside guardrails. Two files:
   - Its options are only `--base`, `--head`, `--title`, `--json`, `--comments` and `--body-file`.
   - `--body-file` names a file in the session's temporary tree, `/tmp/claude-<uid>/`, without a
     `..` step.
+  - `<project>/agent/fold <worktree> <commit hash>` (the playbook's FAIL-loop rules); a hex word
+    that names a branch stands for its commit.
+  - A worktree there is a linked worktree of the project directly under `.claude/worktrees/`,
+    whichever session made it.
   - The settings carry no allow rule for these shapes: a rule with a `*` admits more than the shape.
   - Where the hook is missing, the shapes fall back to the classifier.
 - **The gate helpers and a worktree's build auto-allow** (once trusted), so a gate runs unattended:

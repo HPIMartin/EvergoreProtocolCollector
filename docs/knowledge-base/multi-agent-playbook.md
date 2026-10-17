@@ -105,9 +105,19 @@ Harness-specific history hygiene:
   so a "gate round N fixes" commit is a FAIL on sight; a proposed message that names one hunk of a
   multi-hunk commit, or an "and" joining two clauses, is the signal that the fold was skipped or the
   commit must split.
-  - Fixes for several earlier commits ride in temporary commits with ordinary messages (no
-    `fixup!` subjects); a scripted todo moves each behind its target as a `fixup` line, so no patch
-    waits in the working tree for a `git checkout --`, which is `ask`.
+  - Fixes for several earlier commits ride in temporary commits with ordinary messages.
+  - They carry no `fixup!` subject, which `commit-msg` refuses.
+  - A scripted todo moves each behind its target as a `fixup` line (`agent/fold`, below).
+  - `agent/fold <worktree> <owning commit>` folds the worktree's last commit into the owning one.
+    - It keeps the owning commit's message.
+    - It folds only in a linked worktree on a `claude/` branch or a detached head.
+    - It refuses a worktree with tracked changes, a worktree without a commit, an owning commit
+      that is not an ancestor, a root commit and a range that holds a merge.
+    - A conflict stops the rebase where git stops it.
+    - `git -C <worktree> rebase --continue` or `--abort` then meets the classifier.
+    - `agent/bash-shape-guard` approves it with an absolute worktree path and a commit hash, so a
+      fold runs unattended.
+    - `agent/self-test` proves it in throwaway repositories.
 - **Apply a panel finding to the whole diff, not to the file it was raised against.** When a finding
   is a *rule*, re-grep every file the strand touches for that pattern before reporting it resolved.
 - **Permission-blocked in this harness:** `git reset`, `git clean` and `git branch -D`, each in every

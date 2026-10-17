@@ -516,6 +516,207 @@ r=0
 [ "$status" -ne 0 ] && [ ! -e "$stub/gh-argv" ] && grep -q '^github-token: ' "$stub/err" || r=1
 check 'agent/gh runs no gh when the minting fails' "$r"
 
+fold="$agent_dir/fold"
+
+commit_file() {
+	printf '%s\n' "$3" > "$1/$2"
+	git -C "$1" add "$2"
+	git -C "$1" commit -q -m "$4"
+}
+
+new_fold_repo() {
+	main="$work/fold-$1-main"
+	repo="$work/fold-$1"
+	git init -q ${2:-} -b main "$main"
+	git -C "$main" config user.name t
+	git -C "$main" config user.email t@example.test
+	commit_file "$main" a.txt 1 A
+	commit_file "$main" b.txt 1 B
+	commit_file "$main" c.txt 1 C
+	git -C "$main" worktree add -q -b claude/t "$repo" HEAD
+	target=$(git -C "$repo" rev-parse HEAD~1)
+	commit_file "$repo" b.txt 2 D
+	fix_tree=$(git -C "$repo" rev-parse 'HEAD^{tree}')
+	before=$(git -C "$repo" rev-parse HEAD)
+}
+
+run_fold() {
+	set +e
+	sh "${fold_script:-$fold}" "$repo" "$1" > "$work/fold-out" 2> "$work/fold-err"
+	status=$?
+	set -e
+}
+
+expect_folded() {
+	r=0
+	[ "$status" -eq 0 ] && [ "$(git -C "$repo" log --format=%s | tr '\n' ' ')" = 'C B A ' ] \
+		&& [ "$(git -C "$repo" show HEAD~1:b.txt)" = 2 ] && [ "$(git -C "$repo" rev-parse 'HEAD^{tree}')" = "$fix_tree" ] || r=1
+	check "$1" "$r"
+}
+
+expect_fold_refused() {
+	r=0
+	[ "$status" -eq 2 ] && grep -q '^fold: ' "$work/fold-err" && [ "$(wc -l < "$work/fold-err")" -eq 1 ] \
+		&& [ "$(git -C "$repo" rev-parse HEAD)" = "$before" ] || r=1
+	check "$1" "$r"
+}
+
+new_fold_repo folds
+run_fold "$target"
+expect_folded 'agent/fold folds the fix into its target and keeps the target message'
+
+new_fold_repo after-target
+run_fold "$target"
+r=0
+[ "$status" -eq 0 ] && [ "$(git -C "$repo" diff --name-only HEAD~1 HEAD)" = c.txt ] || r=1
+check 'agent/fold leaves the commits after the target as they were' "$r"
+
+new_fold_repo detached
+git -C "$repo" switch -q --detach
+run_fold "$target"
+expect_folded 'agent/fold folds on a detached head'
+r=0
+! grep -q 'fatal' "$work/fold-err" || r=1
+check 'agent/fold folds on a detached head without a fatal line' "$r"
+
+new_fold_repo abbreviated
+git -C "$repo" config rebase.abbreviateCommands true
+run_fold "$target"
+expect_folded 'agent/fold folds whatever rebase.abbreviateCommands says'
+
+new_fold_repo tagged
+git -C "$repo" tag -a -m owner owner "$target"
+run_fold owner
+expect_folded 'agent/fold folds onto an annotated tag of the owning commit'
+
+new_fold_repo relative
+set +e
+(cd "$agent_dir/.." && sh agent/fold "$repo" "$target") > "$work/fold-out" 2> "$work/fold-err"
+status=$?
+set -e
+expect_folded 'agent/fold folds when called by a relative path'
+
+new_fold_repo untracked
+printf 'x\n' > "$repo/scratch.txt"
+run_fold "$target"
+expect_folded 'agent/fold folds beside an untracked file'
+
+new_fold_repo update-refs
+git -C "$repo" config rebase.updateRefs true
+git -C "$repo" branch other "$target"
+run_fold "$target"
+r=0
+[ "$status" -eq 0 ] && [ "$(git -C "$repo" rev-parse other)" = "$target" ] || r=1
+check 'agent/fold moves no other branch, whatever rebase.updateRefs says' "$r"
+
+new_fold_repo sha256 --object-format=sha256
+run_fold "$target"
+expect_folded 'agent/fold folds in a repository of SHA-256 commits'
+
+new_fold_repo quoted-path
+mkdir -p "$work/it's/agent"
+if [ -f "$fold" ]; then cp "$fold" "$work/it's/agent/fold"; fi
+fold_script="$work/it's/agent/fold"
+run_fold "$target"
+fold_script=
+expect_folded 'agent/fold folds from a path that holds a quote'
+
+new_fold_repo dirty
+printf 'x\n' >> "$repo/a.txt"
+run_fold "$target"
+expect_fold_refused 'agent/fold refuses a worktree with uncommitted changes'
+
+new_fold_repo itself
+run_fold HEAD
+expect_fold_refused 'agent/fold refuses the fix as its own target'
+
+new_fold_repo root
+run_fold "$(git -C "$repo" rev-list --max-parents=0 HEAD)"
+expect_fold_refused 'agent/fold refuses a root commit as the target'
+
+new_fold_repo unknown
+run_fold no-such-commit
+expect_fold_refused 'agent/fold refuses a name that is no commit'
+
+new_fold_repo foreign
+git -C "$main" switch -q -c side HEAD~2
+commit_file "$main" e.txt 1 E
+run_fold "$(git -C "$main" rev-parse HEAD)"
+expect_fold_refused 'agent/fold refuses a target that is not an ancestor of the fix'
+
+new_fold_repo merge
+git -C "$repo" switch -q -c side HEAD~1
+commit_file "$repo" e.txt 1 E
+git -C "$repo" switch -q claude/t
+git -C "$repo" merge -q --no-edit side
+before=$(git -C "$repo" rev-parse HEAD)
+run_fold "$target"
+expect_fold_refused 'agent/fold refuses a range that holds a merge'
+
+new_fold_repo primary
+repo=$main
+git -C "$repo" switch -q -c claude/p
+target=$(git -C "$repo" rev-parse HEAD~1)
+commit_file "$repo" b.txt 2 D
+before=$(git -C "$repo" rev-parse HEAD)
+run_fold "$target"
+expect_fold_refused 'agent/fold refuses the primary checkout of a repository'
+
+new_fold_repo foreign-branch
+git -C "$repo" switch -q -c topic
+run_fold "$target"
+expect_fold_refused 'agent/fold refuses a branch that is no claude/ branch'
+
+new_fold_repo claudex
+git -C "$repo" switch -q -c claudex
+run_fold "$target"
+expect_fold_refused 'agent/fold refuses a branch named like claude without its slash'
+
+new_fold_repo no-repo
+repo="$work/no-repo"
+mkdir -p "$repo"
+before=
+set +e
+sh "$fold" "$repo" "$target" > "$work/fold-out" 2> "$work/fold-err"
+status=$?
+set -e
+r=0
+[ "$status" -eq 2 ] && [ "$(cat "$work/fold-err")" = "fold: $repo is no git worktree" ] && [ ! -s "$work/fold-out" ] || r=1
+check 'agent/fold refuses a path that is no git worktree' "$r"
+
+new_fold_repo one-argument
+set +e
+sh "$fold" "$repo" > "$work/fold-out" 2> "$work/fold-err"
+status=$?
+set -e
+expect_fold_refused 'agent/fold refuses a call without its target'
+
+new_fold_repo three-arguments
+set +e
+sh "$fold" "$repo" "$target" x > "$work/fold-out" 2> "$work/fold-err"
+status=$?
+set -e
+expect_fold_refused 'agent/fold refuses a third argument'
+
+new_fold_repo unborn
+repo="$work/fold-unborn-orphan"
+git -C "$main" worktree add -q --orphan -b claude/e "$repo"
+target=$(git -C "$main" rev-parse HEAD)
+before=
+run_fold "$target"
+r=0
+[ "$status" -eq 2 ] && [ "$(cat "$work/fold-err")" = 'fold: the worktree has no commit' ] || r=1
+check 'agent/fold refuses a worktree without a commit' "$r"
+
+printf 'pick 1 A\n' > "$work/todo"
+set +e
+env -u FOLD_HEAD -u FOLD_TARGET sh "$fold" --edit-todo "$work/todo" > /dev/null 2>&1
+status=$?
+set -e
+r=0
+[ "$status" -ne 0 ] && [ "$(cat "$work/todo")" = 'pick 1 A' ] || r=1
+check 'agent/fold edits no todo without the commits it moves' "$r"
+
 guard="$agent_dir/bash-shape-guard"
 guard_project=/p/project
 
@@ -688,7 +889,6 @@ expect_guard refused 'git branch -d x{a,b' 'the guard refuses an unquoted brace 
 expect_guard passed 'git rebase -Xsubtree=lib/x main' 'the guard reads an x behind other characters than letters as no exec option'
 expect_guard passed 'git rebase claude/fix-x' 'the guard reads only a word that starts with a dash as an exec option'
 expect_guard refused "$(printf 'git\treset --hard')" 'the guard reads a tab as a word break'
-expect_guard passed 'git -C /p/project/.claude/worktrees/t checkout --detach abc' 'the guard lets a checkout in an agent worktree pass'
 expect_guard passed 'git -C /p/project log --oneline origin/main..main' 'the guard lets a range in a git -C read pass'
 expect_guard passed 'git -C /p/project/.claude/worktrees/t branch -d claude/x' 'the guard lets a safe branch deletion pass'
 expect_guard passed 'git -c core.quotepath=off log' 'the guard lets a global option without -C pass'
@@ -1037,6 +1237,68 @@ expect_guard passed '/p/project/agent/gh pr create --body-file' 'the guard leave
 title=$(printf '%4058s' '' | tr ' ' a)
 expect_guard approved "/p/project/agent/gh pr view 7 --title $title" 'the guard approves a command of 4096 characters'
 expect_guard passed "/p/project/agent/gh pr view 7 --title ${title}a" 'the guard approves no command longer than 4096 characters'
+
+fx="$work/fx"
+git init -q -b main "$fx"
+git -C "$fx" config user.name t
+git -C "$fx" config user.email t@example.test
+commit_file "$fx" a.txt 1 A
+git -C "$fx" worktree add -q -b claude/t "$fx/.claude/worktrees/t"
+git -C "$fx" worktree add -q -b claude/n "$fx/.claude/worktrees/a/b"
+git -C "$fx" worktree add -q -b claude/o "$work/outside"
+mkdir -p "$fx/.claude/worktrees/plain" "$fx/.claude/worktrees/primary" "$fx/.claude/worktrees/stolen" \
+	"$fx/.claude/worktrees/fake" "$fx/.claude/worktrees/binary" "$work/fake-admin"
+printf 'gitdir: %s/.git\n' "$fx" > "$fx/.claude/worktrees/primary/.git"
+printf 'gitdir: %s/.git/worktrees/t\n' "$fx" > "$fx/.claude/worktrees/stolen/.git"
+printf 'gitdir: %s/fake-admin\n' "$work" > "$fx/.claude/worktrees/fake/.git"
+printf '%s/.claude/worktrees/fake/.git\n' "$fx" > "$work/fake-admin/gitdir"
+printf '\377\376' > "$fx/.claude/worktrees/binary/.git"
+mkdir -p "$fx/.claude/worktrees/folder/.git"
+ln -s "$fx" "$fx/.claude/worktrees/t/link"
+mkdir -p "$fx/.claude/worktrees/climb" "$fx/climb-admin"
+printf 'gitdir: %s/.git/worktrees/t/../../../climb-admin\n' "$fx" > "$fx/.claude/worktrees/climb/.git"
+printf '%s/.claude/worktrees/climb/.git\n' "$fx" > "$fx/climb-admin/gitdir"
+mkdir -p "$fx/.git/worktrees/forged" "$fx/.claude/worktrees/forged" "$fx/abcdefghijklmnopq"
+printf '%s/.claude/worktrees/forged/.git\n' "$fx" > "$fx/.git/worktrees/forged/gitdir"
+printf 'gitdir: %s/.gix/worktrees/forged\n' "$fx" > "$fx/.claude/worktrees/forged/.git"
+mkdir -p "$fx/.git/worktrees/spaced" "$fx/.claude/worktrees/spaced"
+printf '%s/.claude/worktrees/spaced/.git\n' "$fx" > "$fx/.git/worktrees/spaced/gitdir"
+printf 'gitdir: %s/.git/worktrees/spaced \n' "$fx" > "$fx/.claude/worktrees/spaced/.git"
+guard_project=$fx
+hex64=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+
+expect_guard approved "$fx/agent/fold $fx/.claude/worktrees/t 0123abc" 'the guard approves a fold in an agent worktree'
+expect_guard approved "$fx/agent/fold $fx/.claude/worktrees/t $hex64" 'the guard approves a fold onto a full SHA-256 hash'
+expect_guard passed "$fx/agent/fold $fx 0123abc" 'the guard leaves a fold in the primary checkout to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/.. 0123abc" 'the guard leaves a fold that climbs out of the worktree root to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/t HEAD~1" 'the guard leaves a fold onto a name that is no hash to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/t 0123ab" 'the guard leaves a fold onto a hash shorter than seven digits to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/t ${hex64}0" 'the guard leaves a fold onto a hash longer than 64 digits to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/t 0123abc x" 'the guard leaves a fold with a third argument to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/plain 0123abc" 'the guard leaves a fold in a plain directory under the worktree root to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/primary 0123abc" 'the guard leaves a fold in a directory pointing at the primary repository to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/stolen 0123abc" 'the guard leaves a fold in a directory borrowing another worktree to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/fake 0123abc" 'the guard leaves a fold in a directory whose admin directory lies outside the repository to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/binary 0123abc" 'the guard leaves a fold in a directory whose .git file is no text to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/a/b 0123abc" 'the guard leaves a fold in a worktree nested below the worktree root to the permission rules'
+expect_guard passed "$fx/agent/fold $work/outside 0123abc" 'the guard leaves a fold in a worktree outside the worktree root to the permission rules'
+expect_guard passed "/tmp/agent/fold $fx/.claude/worktrees/t 0123abc" 'the guard leaves a fold program outside the project to the permission rules'
+expect_guard passed "$fx/agent/foldx $fx/.claude/worktrees/t 0123abc" 'the guard leaves a program named like agent/fold with a suffix to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/t mainline" 'the guard leaves a fold onto a lowercase name to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/t 0123abc $(printf 'x %.0s' $(seq 1 27))" 'the guard leaves a fold of thirty words to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/folder 0123abc" 'the guard leaves a fold in a directory whose .git is a folder to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/climb 0123abc" 'the guard leaves a fold in a directory whose admin path climbs out of the repository to the permission rules'
+expect_guard refused "git -C $fx/.claude/worktrees/t --work-tree=$fx checkout -- ." 'the guard refuses a work-tree option behind a linked worktree'
+expect_guard refused "git -C $fx/.claude/worktrees/plain checkout -f HEAD" 'the guard refuses a checkout in a plain directory under the worktree root, which is the primary checkout'
+expect_guard passed "git -C $fx/.claude/worktrees/binary checkout -f HEAD" 'the guard leaves a checkout where git cannot read the .git file to the permission rules'
+expect_payload_passes "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$fx/agent/fold '$fx/.claude/worktrees/a\\u0000b' 0123abc\"}}" 'the guard lets a fold path with a NUL pass without a traceback'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/forged 0123abc" 'the guard leaves a fold in a directory whose .git points outside the repository admin folders to the permission rules'
+expect_guard passed "$fx/agent/fold $fx/.claude/worktrees/spaced 0123abc" 'the guard reads the worktree pointer strictly, trailing space included'
+expect_guard refused "git -C $fx/abcdefghijklmnopq/t checkout x" 'the guard reads a folder of the project as no worktree, whatever its name length'
+expect_guard refused "git -C $fx/.claude/worktrees/t/link switch -C main HEAD~1" 'the guard refuses a switch through a link inside a worktree to the primary checkout'
+expect_guard passed "git -C $fx/.claude/worktrees/t switch x" 'the guard lets a switch in a linked worktree pass'
+expect_guard passed "git -C $fx/.claude/worktrees/t checkout --detach 0123abc" 'the guard lets a checkout in a linked worktree pass'
+guard_project=/p/project
 
 set +e
 bash_payload '/p/project/agent/gh pr view 7' | env -u CLAUDE_PROJECT_DIR python3 "$guard" > "$work/guard-out" 2> "$work/guard-err"

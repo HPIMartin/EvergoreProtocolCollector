@@ -1,0 +1,39 @@
+#!/bin/sh
+set -u
+
+refuse() {
+	printf 'fold: %s\n' "$1" >&2
+	exit 2
+}
+
+if [ "${1:-}" = --edit-todo ]; then
+	awk -v head="$FOLD_HEAD" -v target="$FOLD_TARGET" '
+		$2 == head { next }
+		{ print }
+		$2 == target { print "fixup " head }
+	' "$2" > "$2.fold"
+	mv "$2.fold" "$2"
+	exit 0
+fi
+
+[ $# -eq 2 ] || refuse 'usage: fold <worktree> <target commit>'
+worktree=$1
+git -C "$worktree" rev-parse > /dev/null 2>&1 || refuse "$worktree is no git worktree"
+[ "$(git -C "$worktree" rev-parse --absolute-git-dir)" != "$(git -C "$worktree" rev-parse --path-format=absolute --git-common-dir)" ] \
+	|| refuse 'the primary checkout is shared; fold in a linked worktree'
+branch=$(git -C "$worktree" symbolic-ref --quiet --short HEAD)
+case "$branch" in
+	'' | claude/*) ;;
+	*) refuse "the branch '$branch' is no claude/ branch" ;;
+esac
+[ -z "$(git -C "$worktree" status --porcelain --untracked-files=no)" ] \
+	|| refuse 'the worktree has uncommitted changes; commit the fix first'
+head=$(git -C "$worktree" rev-parse --verify --quiet HEAD) || refuse 'the worktree has no commit'
+target=$(git -C "$worktree" rev-parse --verify --quiet "$2^{commit}") || refuse "'$2' names no commit"
+[ "$target" != "$head" ] || refuse 'the target is the fix itself'
+git -C "$worktree" merge-base --is-ancestor "$target" "$head" || refuse 'the target is not an ancestor of the fix'
+base=$(git -C "$worktree" rev-parse --verify --quiet "$target^") || refuse 'the target is a root commit'
+[ -z "$(git -C "$worktree" rev-list --merges "$base..$head")" ] || refuse 'the range from the target to the fix holds a merge'
+
+FOLD_SELF=$(realpath "$0") FOLD_HEAD=$head FOLD_TARGET=$target GIT_SEQUENCE_EDITOR='sh "$FOLD_SELF" --edit-todo' \
+	git -C "$worktree" -c core.abbrev=no -c rebase.updateRefs=false rebase -i "$base"

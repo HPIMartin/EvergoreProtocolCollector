@@ -248,6 +248,25 @@ def gh_arguments(words):
     return True
 
 
+def text_of(path):
+    try:
+        with open(path) as file:
+            return file.read()
+    except OSError:
+        return ""
+
+
+def linked(path, project):
+    root = project + "/.claude/worktrees/"
+    if not path.startswith(root) or "/" in path[len(root):]:
+        return None
+    prefix = "gitdir: " + project + "/.git/worktrees/"
+    pointer = text_of(path + "/.git")
+    name = pointer[len(prefix):].removesuffix("\n") if pointer.startswith(prefix) else ""
+    gitdir = project + "/.git/worktrees/" + name
+    return gitdir if "/" not in name and text_of(gitdir + "/gitdir") == path + "/.git\n" else None
+
+
 def approval(command, project):
     words = None if project is None or len(command) > 4096 else plain_words(command)
     if words is None:
@@ -255,6 +274,9 @@ def approval(command, project):
     if words[:2] == [project + "/agent/gh", "pr"] and len(words) > 2 and words[2] in GH_PR \
             and gh_arguments(words[3:]):
         return "agent/gh pr " + words[2]
+    if len(words) == 3 and words[0] == project + "/agent/fold" and linked(words[1], project) \
+            and re.fullmatch(r"[0-9a-f]{7,64}", words[2]):
+        return "agent/fold"
 
 
 def main():
@@ -265,7 +287,10 @@ def main():
         return 0
     project = os.path.realpath(os.environ["CLAUDE_PROJECT_DIR"]) if "CLAUDE_PROJECT_DIR" in os.environ else None
     reason = refusal(command, project) if isinstance(command, str) else None
-    shape = approval(command, project) if isinstance(command, str) else None
+    try:
+        shape = approval(command, project) if isinstance(command, str) else None
+    except ValueError:
+        shape = None
     if reason:
         print(f"bash-shape-guard: {reason}.", file=sys.stderr)
     if shape:
