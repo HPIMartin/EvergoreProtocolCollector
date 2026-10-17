@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.helper.config;
 
 import java.nio.file.Path;
+import java.time.Duration;
 
 import jakarta.inject.Singleton;
 
@@ -23,5 +24,9 @@ public class Configuration {
 
 	public int getCollectorInitialDelaySeconds() {
 		return 30;
+	}
+
+	public Duration getDatabaseBusyTimeout() {
+		return Duration.ofSeconds(10);
 	}
 }

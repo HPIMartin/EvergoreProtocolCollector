@@ -76,7 +76,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
       still open;
     - the context closes the database when it stops.
   - **Lock waits:**
-    - reads and write-first statements wait up to **10 s** on another connection's lock before they
+    - reads and write-first statements wait up to **10 s**
+      (`Configuration.getDatabaseBusyTimeout()`) on another connection's lock before they
       fail with `SQLITE_BUSY`;
       - why: a read outlasts an unusually long write instead of answering 500 (sqlite-jdbc's
         implicit bound is 3 s);
