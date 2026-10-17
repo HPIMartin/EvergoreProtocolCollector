@@ -201,7 +201,7 @@ class BankDatabaseRepositoryTest {
 	}
 
 	@Test
-	void aRefusedRowStoresAtMostTheRowsBeforeIt() {
+	void aRefusedRowStoresNoneOfItsBatch() {
 		BankDatabaseRepository tested = repository();
 		List<BankEntry> batch = List
 				.of(bankEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1), bankEntry("Aurora", BOUNDARY, 2), entryWithoutAvatar(3), bankEntry("Aurora", ONE_MINUTE_AFTER_BOUNDARY, 4));
@@ -212,7 +212,7 @@ class BankDatabaseRepositoryTest {
 
 		assertThat(failure).hasStackTraceContaining("NOT NULL constraint failed");
 		assertThat(lockRefusal).isNull();
-		assertThat(List.of(List.of(), List.of(1), List.of(1, 2))).contains(committed);
+		assertThat(committed).isEmpty();
 	}
 
 	@Test

@@ -71,9 +71,15 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     - none to a second thread while one holds it;
     - a transaction keeps its own connection until it ends, so a read on another thread cannot land
       inside it;
-    - the exception is a commit SQLite refuses because an outside process holds a read transaction
-      longer than the connection waits: that connection goes back to the pool with its transaction
-      still open;
+    - a transaction runs on one connection with its own `BEGIN`, `COMMIT` and `ROLLBACK`;
+    - any failure inside it, a commit SQLite refuses or an `Error` included, rolls it back before
+      the connection goes back to the pool, unless the rollback itself fails;
+      - why: sqlite-jdbc's `setAutoCommit(true)` marks the connection as autocommitting before its
+        `commit`, so after a refused commit the pool's rollback-on-release never fires;
+    - the caller sees that failure, with a failed rollback attached to it, not one from the
+      rollback;
+    - a transaction inside another one fails, since SQLite starts no transaction within a
+      transaction;
     - the context closes the database when it stops.
   - **Lock waits:**
     - reads and write-first statements wait up to **10 s**
@@ -82,8 +88,6 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
       - why: a read outlasts an unusually long write instead of answering 500 (sqlite-jdbc's
         implicit bound is 3 s);
     - a commit also waits up to 10 s for an outside reader to finish;
-    - the meta `add` through `inTransaction` commits twice, so it can wait about 20 s (measured
-      20.5 s);
     - a transaction that reads before it writes, the recompute's batch, fails at once under another
       writer's lock (SQLite answers `SQLITE_BUSY` there without waiting);
     - in-process that failure is unreachable, because the scheduled job is the only writer.
@@ -96,13 +100,14 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
       record.
   - **A ledger write is one batch:**
     - `add` converts the whole list first, so an entry that cannot be converted stores nothing;
-    - it then writes the list on the batch's own connection with one commit;
+    - it then writes the list in one `SqliteDatabase` transaction with one commit;
       - why: on the pool ORMLite's `create(Collection)` commits every row (300 rows: 43 s against
         210 ms);
-    - a row a constraint refuses keeps at most the rows before it;
-    - such a row fails every run until it leaves the game's 30-day window;
-    - an error on which SQLite rolls the transaction back itself loses the whole batch;
-    - the extractor writes oldest first, so any stored part is the oldest rows.
+    - a batch that fails stores none of its rows, whether a constraint refuses one, its commit is
+      refused or SQLite rolls it back itself;
+    - a row a constraint refuses fails its whole batch every run until it leaves the game's 30-day
+      window;
+    - rows of that batch older than it that leave the window meanwhile are lost.
   - **A ledger page is read in a total order** (decision 2026-10-05):
     - the chosen column in the chosen direction, then `timeStamp` newest first, then the row `id`
       ascending;

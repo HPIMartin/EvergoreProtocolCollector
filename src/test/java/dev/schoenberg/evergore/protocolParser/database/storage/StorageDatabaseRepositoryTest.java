@@ -161,7 +161,7 @@ class StorageDatabaseRepositoryTest {
 	}
 
 	@Test
-	void aRefusedRowStoresAtMostTheRowsBeforeIt() {
+	void aRefusedRowStoresNoneOfItsBatch() {
 		StorageDatabaseRepository tested = repository();
 		List<StorageEntry> batch = List
 				.of(storageEntry("Aurora", ONE_MINUTE_BEFORE_BOUNDARY, 1), storageEntry("Aurora", BOUNDARY, 2), entryWithoutAvatar(3),
@@ -173,7 +173,7 @@ class StorageDatabaseRepositoryTest {
 
 		assertThat(failure).hasStackTraceContaining("NOT NULL constraint failed");
 		assertThat(lockRefusal).isNull();
-		assertThat(List.of(List.of(), List.of(1), List.of(1, 2))).contains(committed);
+		assertThat(committed).isEmpty();
 	}
 
 	@Test
