@@ -275,8 +275,11 @@ command) inside guardrails. Two files:
   path into a worktree under `/workspaces/EvergoreProtocolCollector/.claude/worktrees/`, and
   `<abs worktree>/verify …` for such a worktree.
   - A relative form of a gate helper is not allowed, since the working directory can wander.
-  - A `..` anywhere in such a command is denied; a `*` still spans `/`, so a script of that name
-    deeper under the worktree root runs unprompted too (a guardrail against accidents).
+  - A `..` that climbs out of the worktree root is denied (`worktrees/..*`, `worktrees/*/..*`;
+    author decision 2026-10-17); a single leading `..` operand passes.
+  - A git range like `origin/main..HEAD` passes.
+  - A `*` still spans `/`, so a script of that name deeper under the worktree root runs unprompted
+    too (a guardrail against accidents).
 - **The PC's worktree root lies outside the project directory**
   ([dev-environment.md](dev-environment.md), "Worktrees on a volume"), so the committed file
   carries rules for it.
