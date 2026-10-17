@@ -132,8 +132,8 @@ command) inside guardrails. Two files:
   it and rewriting its indentation from tabs to spaces. Prefer bare commands that match the
   portable `Bash(<cmd>:*)` rules, and diff against `HEAD` when unsure. The worktree
   `git -C <absolute path>` re-prompt loop stays open: the committed file holds no `git -C` allow
-  (below), so outside auto mode such a command prompts. The indentation rewrite still needs
-  watching.
+  (below), so outside auto mode such a command prompts unless the shape guard approves its shape
+  (below). The indentation rewrite still needs watching.
 - **Token-efficient commands that still match.** Combined one-liners
   (`echo … && git status && grep …`) save round-trips and auto-allow when every segment matches an
   allow rule and no `ask` or `deny` rule matches (a project allow counts only once workspace trust
@@ -143,17 +143,18 @@ command) inside guardrails. Two files:
   into the PC's worktree root (below); deny rules block `cd` arguments containing `..`, `$`, `` ` ``
   or `~` (the working directory can't silently leave those trees); bare, relative and quoted `cd`
   still prompt. Prefer `git -C <path>` / absolute paths (a `git -C` command matches no allow rule, so
-  it meets the auto-mode classifier, below); a worktree's build runs as `<abs worktree>/verify …`,
-  since `verify` finds its own root, so no `cd` is needed, and `W=<wt>; cd $W` is denied by the `$`
-  guard.
+  it meets the auto-mode classifier unless the shape guard approves its shape, below); a worktree's
+  build runs as `<abs worktree>/verify …`, since `verify` finds its own root, so no `cd` is needed,
+  and `W=<wt>; cd $W` is denied by the `$` guard.
   Worktree-path specifics: handbook §7.
 - **Command shapes that keep a session unattended** (a wait or a denial comes from a command's
-  shape, not a missing right; decision 2026-10-15):
+  shape, not a missing right, except the shapes the guard approves below; decision 2026-10-15):
   - A chain that opens with `cd` carries no `$` anywhere: such chains are denied in practice,
     although the per-command matching below predicts otherwise (cause not established). Use
     absolute paths and `git -C` instead.
   - A file the agent mutated goes back from a backup copy or `git show <rev>:<path> > <path>`;
-    `git checkout --` and `git restore` are `ask`.
+    `git checkout --` and `git restore` are `ask`; the worktree form
+    `git -C <worktree> checkout -- <path>` is approved below.
   - History rewrites: the playbook's FAIL-loop section.
   - Prettier runs as `<abs worktree>/frontend/node_modules/.bin/prettier`, not
     `cd frontend && npx prettier` (a relative `cd` prompts, `cd ..` is denied).
@@ -256,6 +257,9 @@ command) inside guardrails. Two files:
     `..` step.
   - `<project>/agent/fold <worktree> <commit hash>` (the playbook's FAIL-loop rules); a hex word
     that names a branch stands for its commit.
+  - `git -C <worktree> checkout --detach <commit hash>`, or `checkout` with commit hashes or none,
+    then `--` and at least one path, which restores those files from the commit or the index.
+    - It never puts a worktree on a branch.
   - A worktree there is a linked worktree of the project directly under `.claude/worktrees/`,
     whichever session made it.
   - The settings carry no allow rule for these shapes: a rule with a `*` admits more than the shape.
@@ -359,7 +363,8 @@ command) inside guardrails. Two files:
   committed file's `Bash(git -C * <sub>:*)` asks and denies are therefore inert, and it keeps no
   `git -C` allow: a leading `*` that fires matches whatever stands before the fixed words, another
   subcommand included. A `git -C` command meets the auto-mode classifier, or a prompt outside auto
-  mode. A rule's shape is proven by a harmless probe of that shape, never read off the file.
+  mode, unless the shape guard approves its shape (above). A rule's shape is proven by a harmless
+  probe of that shape, never read off the file.
 - **Auto mode is the assumed session default, and the allow list is kept to what earns its place**
   (decided 2026-09-20). Claude Code's permission-modes documentation describes auto mode as a
   classifier approving ordinary tool calls, with `deny` rules honored in every mode, `ask` rules

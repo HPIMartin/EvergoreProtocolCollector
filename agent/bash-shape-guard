@@ -12,6 +12,7 @@ HEREDOC = re.compile(r"<<[ \t]*\S")
 COMMENT = re.compile(r"#[^\n]*")
 REDIRECT = re.compile(r"(\{[A-Za-z_]\w*\}|[0-9]*|&)[<>]+[&|]?")
 OPERATOR_START = re.compile(r"(\{[A-Za-z_]\w*\}|[0-9]*|&)[<>]*")
+HASH = re.compile(r"[0-9a-f]{7,64}")
 FORCED_BRANCH = re.compile(r"--forc|-\w*[DfMC]")
 EXEC = re.compile(r"--ex|-\w*x")
 OUTPUT = re.compile(r"--output(=|$)")
@@ -267,6 +268,13 @@ def linked(path, project):
     return gitdir if "/" not in name and text_of(gitdir + "/gitdir") == path + "/.git\n" else None
 
 
+def checkout_words(words):
+    if "--" in words:
+        paths = words.index("--")
+        return len(words) > paths + 1 and all(HASH.fullmatch(word) for word in words[:paths])
+    return len(words) == 2 and words.count("--detach") == 1 and any(HASH.fullmatch(word) for word in words)
+
+
 def approval(command, project):
     words = None if project is None or len(command) > 4096 else plain_words(command)
     if words is None:
@@ -275,8 +283,11 @@ def approval(command, project):
             and gh_arguments(words[3:]):
         return "agent/gh pr " + words[2]
     if len(words) == 3 and words[0] == project + "/agent/fold" and linked(words[1], project) \
-            and re.fullmatch(r"[0-9a-f]{7,64}", words[2]):
+            and HASH.fullmatch(words[2]):
         return "agent/fold"
+    if words[:2] == ["git", "-C"] and words[3:4] == ["checkout"] and linked(words[2], project) \
+            and checkout_words(words[4:]):
+        return "git checkout"
 
 
 def main():
