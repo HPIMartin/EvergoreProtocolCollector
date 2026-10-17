@@ -406,6 +406,116 @@ r=0
 [ "$status" -eq 1 ] && [ ! -s "$stub/out" ] && grep -q 'refused the token request' "$stub/err" || r=1
 check 'a refused token request prints nothing and says so' "$r"
 
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" > "$STUB_DIR/gh-argv"\nprintf "%%s\\n" "$@" > "$STUB_DIR/gh-args"\nprintf "%%s\\n" "$GH_TOKEN" > "$STUB_DIR/gh-token"\n' > "$work/bin/gh"
+chmod +x "$work/bin/gh"
+
+ssh_origin() { printf '%s@%s:octo/repo.git' git "$1"; }
+
+new_clone() {
+	new_case "$1"
+	clone="$work/clone-$1"
+	mkdir -p "$clone/agent"
+	git init -q "$clone"
+	if [ -n "$2" ]; then git -C "$clone" remote add origin "$2"; fi
+	cp "$agent_dir/github-token" "$clone/agent/"
+	if [ -f "$agent_dir/gh" ]; then cp "$agent_dir/gh" "$clone/agent/"; fi
+}
+
+run_gh() {
+	set +e
+	PATH="$work/bin:$PATH" STUB_DIR="$stub" EPC_AGENT_APP_ID=$app_id EPC_AGENT_KEY=$key \
+		sh "$clone/agent/gh" "$@" > "$stub/out" 2> "$stub/err"
+	status=$?
+	set -e
+}
+
+expect_gh_refused() {
+	r=0
+	[ "$status" -eq 2 ] && [ "$(calls)" = 0 ] && [ ! -e "$stub/gh-argv" ] && grep -q '^gh: ' "$stub/err" \
+		&& [ "$(wc -l < "$stub/err")" -eq 1 ] || r=1
+	check "$1" "$r"
+}
+
+new_clone gh-pr "$(ssh_origin github.com)"
+run_gh pr create --title 'Fold a fix'
+r=0
+[ "$status" -eq 0 ] && [ "$(cat "$stub/gh-argv")" = '-R octo/repo pr create --title Fold a fix' ] \
+	&& [ "$(cat "$stub/gh-token")" = ghs_example ] && grep -q 'repos/octo/repo/installation$' "$stub/urls" || r=1
+check 'agent/gh hands a pr command to gh with a token minted for the origin repository' "$r"
+
+new_clone gh-token-env "$(ssh_origin github.com)"
+run_gh pr view 7
+r=0
+[ "$status" -eq 0 ] && [ "$(cat "$stub/gh-token")" = ghs_example ] && ! grep -q ghs_example "$stub/gh-argv" || r=1
+check 'agent/gh keeps the token off the command line' "$r"
+
+new_clone gh-title "$(ssh_origin github.com)"
+run_gh pr create --title 'Fold a fix'
+r=0
+[ "$status" -eq 0 ] && grep -qx 'Fold a fix' "$stub/gh-args" || r=1
+check 'agent/gh hands a quoted title to gh as one argument' "$r"
+
+new_clone gh-https https://github.com/octo/repo.git
+run_gh pr view 7
+r=0
+[ "$status" -eq 0 ] && [ "$(cat "$stub/gh-argv")" = '-R octo/repo pr view 7' ] || r=1
+check 'agent/gh reads an https origin' "$r"
+
+new_clone gh-ssh-url "ssh://$(printf '%s@%s' git github.com)/octo/repo.git/"
+run_gh pr list
+r=0
+[ "$status" -eq 0 ] && [ "$(cat "$stub/gh-argv")" = '-R octo/repo pr list' ] || r=1
+check 'agent/gh reads an ssh URL origin with a trailing slash' "$r"
+
+for subcommand in edit diff checks comment; do
+	new_clone "gh-$subcommand" "$(ssh_origin github.com)"
+	run_gh pr "$subcommand" 7
+	r=0
+	[ "$status" -eq 0 ] && [ "$(cat "$stub/gh-argv")" = "-R octo/repo pr $subcommand 7" ] || r=1
+	check "agent/gh hands pr $subcommand to gh" "$r"
+done
+
+new_clone gh-api "$(ssh_origin github.com)"
+run_gh api repos/octo/repo
+expect_gh_refused 'agent/gh refuses any command but pr before minting'
+
+new_clone gh-issue "$(ssh_origin github.com)"
+run_gh issue create
+expect_gh_refused 'agent/gh refuses an issue command before minting'
+
+new_clone gh-bare "$(ssh_origin github.com)"
+run_gh
+expect_gh_refused 'agent/gh refuses a call without a command before minting'
+
+new_clone gh-merge "$(ssh_origin github.com)"
+run_gh pr merge 7 --merge
+expect_gh_refused 'agent/gh refuses a pull request merge before minting'
+
+new_clone gh-review "$(ssh_origin github.com)"
+run_gh pr review 7 --approve
+expect_gh_refused 'agent/gh refuses a pull request review before minting'
+
+new_clone gh-checkout "$(ssh_origin github.com)"
+run_gh pr checkout 7
+expect_gh_refused 'agent/gh refuses a pull request checkout before minting'
+
+new_clone gh-gitlab "$(ssh_origin gitlab.com)"
+run_gh pr list
+expect_gh_refused 'agent/gh refuses an origin that is not on GitHub before minting'
+
+new_clone gh-no-origin ''
+run_gh pr list
+r=0
+[ "$status" -eq 2 ] && [ "$(calls)" = 0 ] && [ "$(cat "$stub/err")" = 'gh: the checkout has no origin' ] || r=1
+check 'agent/gh refuses a checkout without an origin before minting' "$r"
+
+new_clone gh-unminted "$(ssh_origin github.com)"
+app_id=
+run_gh pr list
+r=0
+[ "$status" -ne 0 ] && [ ! -e "$stub/gh-argv" ] && grep -q '^github-token: ' "$stub/err" || r=1
+check 'agent/gh runs no gh when the minting fails' "$r"
+
 guard="$agent_dir/bash-shape-guard"
 guard_project=/p/project
 
@@ -426,7 +536,8 @@ expect_guard() {
 		passed) [ "$status" -eq 0 ] && [ ! -s "$work/guard-err" ] && [ ! -s "$work/guard-out" ] || r=1 ;;
 		approved) [ "$status" -eq 0 ] && [ ! -s "$work/guard-err" ] \
 			&& [ "$(jq -r .hookSpecificOutput.permissionDecision "$work/guard-out" 2>/dev/null)" = allow ] \
-			&& [ "$(jq -r .hookSpecificOutput.hookEventName "$work/guard-out" 2>/dev/null)" = PreToolUse ] || r=1 ;;
+			&& [ "$(jq -r .hookSpecificOutput.hookEventName "$work/guard-out" 2>/dev/null)" = PreToolUse ] \
+			&& jq -r .hookSpecificOutput.permissionDecisionReason "$work/guard-out" 2>/dev/null | grep -q '^bash-shape-guard: ' || r=1 ;;
 	esac
 	check "$3" "$r"
 }
@@ -884,6 +995,56 @@ expect_guard passed "echo \$'\$(xargs cat)'" 'the guard reads no substitution in
 expect_guard passed '{ ls; }' 'the guard lets a closing brace stand alone'
 expect_payload_passes '{"tool_name":"Bash","tool_input":"git status"}' 'the guard lets a tool input that is no object pass'
 expect_payload_passes '{"tool_name":"BashOutput","tool_input":{"command":"git reset --hard"}}' 'the guard reads only the Bash tool itself'
+
+expect_guard approved '/p/project/agent/gh pr view 7' 'the guard approves reading a pull request through agent/gh'
+expect_guard approved "/p/project/agent/gh pr create --title \"Fold a fix\" --body-file /tmp/claude-$(id -u)/Body_1.md --base claude/s1 --head claude/s2" 'the guard approves opening a pull request through agent/gh'
+expect_guard approved "/p/project/agent/gh pr create --title 'Fold a fix'" 'the guard approves a title in single quotes'
+expect_guard approved '/p/project/agent/gh pr view 7 --json number,state --comments' 'the guard approves reading a pull request with its fields and comments'
+expect_guard approved '/p/project/agent/gh pr list' 'the guard approves listing pull requests through agent/gh'
+expect_guard approved '/p/project/agent/gh pr diff 7' 'the guard approves reading a pull request diff through agent/gh'
+expect_guard approved '/p/project/agent/gh pr checks 7' 'the guard approves reading pull request checks through agent/gh'
+expect_guard approved "/p/project/agent/gh pr comment 7 --body-file /tmp/claude-$(id -u)/c.md" 'the guard approves commenting on a pull request through agent/gh'
+expect_guard passed '/p/project/agent/gh pr' 'the guard leaves agent/gh pr without a subcommand to the permission rules'
+guard_project=/p/project/
+expect_guard approved '/p/project/agent/gh pr view 7' 'the guard approves agent/gh under a project directory named with a trailing slash'
+guard_project=/p/project
+expect_guard approved '/p/project/agent/gh pr edit 7 --base main' 'the guard approves editing a pull request through agent/gh'
+expect_guard passed '/p/project/agent/gh pr merge 7' 'the guard leaves a pull request merge to the permission rules'
+expect_guard passed '/p/project/agent/gh pr view 7; ls' 'the guard leaves agent/gh in a chain to the permission rules'
+expect_guard passed '/p/project/agent/gh pr view 7 & ls' 'the guard leaves agent/gh in the background to the permission rules'
+expect_guard refused '/p/project/agent/gh pr view "$(cat /tmp/x)"' 'the guard leaves agent/gh with a substitution to the permission rules'
+expect_guard passed '/p/project/agent/gh pr view 7 > /tmp/o' 'the guard leaves agent/gh with a redirection to the permission rules'
+expect_guard passed '/tmp/agent/gh pr view 7' 'the guard leaves a gh wrapper outside the project to the permission rules'
+expect_guard passed 'agent/gh pr view 7' 'the guard leaves a relative agent/gh to the permission rules'
+expect_guard passed '/p/project/agent/ghx pr view 7' 'the guard leaves a program named like agent/gh with a suffix to the permission rules'
+expect_guard passed "/p/project/agent/gh pr view a\\' > /tmp/out \\'" 'an escaped quote does not hide a redirection from the approval'
+expect_guard refused "/p/project/agent/gh pr view a\\' \$(id) \\'" 'an escaped quote does not hide a substitution from the approval'
+expect_guard passed '/p/project/agent/gh pr view a\" > /tmp/out \"' 'an escaped double quote does not hide a redirection from the approval'
+expect_guard refused "/p/project/agent/gh pr view \"it's\" \`id\` 'x'" 'a single quote inside double quotes does not hide a backtick from the approval'
+expect_guard passed '/p/project/agent/gh pr create --title "a\b"' 'a backslash inside double quotes rules the approval out'
+expect_guard passed '/p/project/agent/gh pr create --title {x,--body-file} /x/f' 'the guard approves no brace expansion'
+expect_guard passed '/p/project/agent/gh pr view *' 'the guard approves no glob'
+expect_guard passed '/p/project/agent/gh pr comment 1 --body-file /proc/self/environ' 'the guard approves no body file outside the session temporary tree'
+expect_guard passed "/p/project/agent/gh pr comment 1 --body-file /tmp/claude-$(id -u)/../../etc/passwd" 'the guard approves no body file that climbs out with ..'
+expect_guard passed '/p/project/agent/gh pr create --recover /tmp/x' 'the guard approves no gh option outside its list'
+expect_guard passed "/p/project/agent/gh pr create --body-file=/tmp/claude-$(id -u)/b.md" 'the guard approves no option joined to its value'
+expect_guard passed "/p/project/agent/gh pr comment '--body-file=/etc/passwd' /tmp/claude-$(id -u)/x.md" 'the guard approves no quoted body-file option joined to its value'
+expect_guard passed "/p/project/agent/gh pr comment 1 --body-file /tmp/claude-$(id -u)0/x.md" 'the guard approves no body file in a sibling of the session temporary tree'
+expect_guard passed '/p/project/agent/gh pr create "--recover" /tmp/x' 'the guard reads a quoted option as the option'
+expect_guard approved "/p/project/agent/gh pr comment 1 --body-file /tmp/claude-$(id -u)/a..b.md" 'the guard approves a body file whose name holds two dots'
+expect_guard refused '/p/project/agent/gh pr create --title "a `id` b"' 'the guard approves no backtick inside double quotes'
+expect_guard passed '/p/project/agent/gh pr create --body-file' 'the guard leaves a body file option without its path to the permission rules'
+title=$(printf '%4058s' '' | tr ' ' a)
+expect_guard approved "/p/project/agent/gh pr view 7 --title $title" 'the guard approves a command of 4096 characters'
+expect_guard passed "/p/project/agent/gh pr view 7 --title ${title}a" 'the guard approves no command longer than 4096 characters'
+
+set +e
+bash_payload '/p/project/agent/gh pr view 7' | env -u CLAUDE_PROJECT_DIR python3 "$guard" > "$work/guard-out" 2> "$work/guard-err"
+status=$?
+set -e
+r=0
+[ "$status" -eq 0 ] && [ ! -s "$work/guard-out" ] || r=1
+check 'without a project directory the guard approves nothing' "$r"
 
 set +e
 bash_payload 'git -C /p/project checkout -- docs' | env -u CLAUDE_PROJECT_DIR python3 "$guard" > "$work/guard-out" 2> "$work/guard-err"

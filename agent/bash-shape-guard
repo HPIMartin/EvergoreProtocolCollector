@@ -3,6 +3,7 @@ import contextlib
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 
@@ -23,6 +24,9 @@ WORD_BOUNDARY = ("", " ", "\t", "\n", ";", "&", "|", "(", ")")
 EVALUATION = ("the command evaluates text as code ($(…), a backtick, ${…}, $((…)), $[…], ((…)), [[…]], or "
               "test or [ with -v or -R), which hides what runs; compute the value in a step of its own and write "
               "it literally")
+GH_PR = {"create", "edit", "view", "list", "diff", "checks", "comment"}
+GH_OPTIONS = {"--base", "--head", "--title", "--json", "--comments"}
+PLAIN = re.compile(r"""([A-Za-z0-9._/,-]|'[^']*'|"[^"$`\\]*"| )*""")
 PLAIN_CHARACTER = "[A-Za-z0-9._/,=%~^@:+-]"
 PLAIN_PIECE = PLAIN_CHARACTER + r"|'[^']*'|" + r'"[^"$`\\]*"'
 WORD_END = r"(?=[ \t;&|\n]|$)"
@@ -228,6 +232,31 @@ def git_refusal(words, project):
                 "the primary checkout other sessions share")
 
 
+def plain_words(command):
+    return shlex.split(command) if PLAIN.fullmatch(command) else None
+
+
+def gh_arguments(words):
+    rest = iter(words)
+    for word in rest:
+        if word == "--body-file":
+            path = next(rest, "")
+            if not path.startswith(f"/tmp/claude-{os.getuid()}/") or ".." in path.split("/"):
+                return False
+        elif word.startswith("-") and word not in GH_OPTIONS:
+            return False
+    return True
+
+
+def approval(command, project):
+    words = None if project is None or len(command) > 4096 else plain_words(command)
+    if words is None:
+        return None
+    if words[:2] == [project + "/agent/gh", "pr"] and len(words) > 2 and words[2] in GH_PR \
+            and gh_arguments(words[3:]):
+        return "agent/gh pr " + words[2]
+
+
 def main():
     try:
         payload = json.load(sys.stdin)
@@ -236,8 +265,12 @@ def main():
         return 0
     project = os.path.realpath(os.environ["CLAUDE_PROJECT_DIR"]) if "CLAUDE_PROJECT_DIR" in os.environ else None
     reason = refusal(command, project) if isinstance(command, str) else None
+    shape = approval(command, project) if isinstance(command, str) else None
     if reason:
         print(f"bash-shape-guard: {reason}.", file=sys.stderr)
+    if shape:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
+                                                "permissionDecisionReason": f"bash-shape-guard: {shape}"}}))
     return 2 if reason else 0
 
 

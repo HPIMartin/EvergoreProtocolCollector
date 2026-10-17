@@ -242,6 +242,20 @@ command) inside guardrails. Two files:
   - Claude Code reads hooks from the primary checkout's settings when a session starts.
   - A landed change to the guard applies from the next Bash call once the primary checkout holds it.
   - `agent/self-test` proves its cases.
+- **The guard approves a few exact shapes itself** (author decisions 2026-10-17): it answers such a
+  call with an allow decision, so the call runs without the classifier or a prompt.
+  - The same command in any other shape goes on to the permission rules.
+  - It approves only a command of plain words: letters, digits, `.`, `_`, `/`, `,` and `-`, text in
+    single quotes, and text in double quotes without `$`, a backtick or a backslash.
+  - It approves only a command of at most 4096 characters.
+  - It approves only where `CLAUDE_PROJECT_DIR` is set.
+  - `<project>/agent/gh pr` with a subcommand the wrapper admits
+    ([dev-environment.md](dev-environment.md), the App `epc-agent`).
+  - Its options are only `--base`, `--head`, `--title`, `--json`, `--comments` and `--body-file`.
+  - `--body-file` names a file in the session's temporary tree, `/tmp/claude-<uid>/`, without a
+    `..` step.
+  - The settings carry no allow rule for these shapes: a rule with a `*` admits more than the shape.
+  - Where the hook is missing, the shapes fall back to the classifier.
 - **The gate helpers and a worktree's build auto-allow** (once trusted), so a gate runs unattended:
   `gate/walk`, `gate/tip-evidence`, `gate/dossier-check` and `sh gate/self-test`, each by absolute
   path into a worktree under `/workspaces/EvergoreProtocolCollector/.claude/worktrees/`, and

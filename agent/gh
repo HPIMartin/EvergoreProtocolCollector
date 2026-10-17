@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+
+refuse() {
+	printf 'gh: %s\n' "$1" >&2
+	exit 2
+}
+
+[ "$1" = pr ] || refuse 'only pull request commands run here: agent/gh pr <subcommand> <arguments>'
+case "$2" in
+	create | edit | view | list | diff | checks | comment) ;;
+	*) refuse "'pr $2' is none of create, edit, view, list, diff, checks and comment" ;;
+esac
+
+agent_dir=$(dirname "$0")
+origin=$(git -C "$agent_dir" remote get-url origin 2>/dev/null) || refuse 'the checkout has no origin'
+origin=${origin%/}
+case "$origin" in
+	*@github.com:*) repository=${origin#*@github.com:} ;;
+	https://github.com/* | ssh://*@github.com/*) repository=${origin#*github.com/} ;;
+	*) refuse "the origin '$origin' is not on GitHub" ;;
+esac
+repository=${repository%.git}
+
+token=$(sh "$agent_dir/github-token" "$repository")
+GH_TOKEN=$token gh -R "$repository" "$@"

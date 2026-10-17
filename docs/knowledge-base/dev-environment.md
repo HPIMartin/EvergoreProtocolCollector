@@ -222,15 +222,22 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
     repository;
   - `agent/github-token <owner>/<repository>` mints an installation token, valid for an hour and
     restricted to that repository;
-  - `gh` reads the token from `GH_TOKEN`: `GH_TOKEN=$(<repo>/agent/github-token
-    <owner>/<repository>) gh pr create …`;
+  - `<repo>/agent/gh pr …` runs a pull request command as the App (author decision 2026-10-17):
+    - it mints a token for the repository the checkout's origin names on GitHub;
+    - it hands the token to `gh` through `GH_TOKEN`, never on the command line;
+    - it runs only `create`, `edit`, `view`, `list`, `diff`, `checks` and `comment`, so a merge, a
+      review and a checkout stay outside it;
+    - `agent/bash-shape-guard` approves it by its absolute path in the primary checkout, with the
+      options and body files listed there, so it runs unattended
+      ([working-with-ai-agents.md](working-with-ai-agents.md), "Permissions & autonomy");
   - its comments come from `epc-agent[bot]`, a `Bot`, which the landing workflow ignores;
   - without contents write it cannot push or merge through the API;
   - as no bypass of the `main` ruleset it is expected to be refused there by any route, an
     auto-merge it enables included;
   - a merge attempt by the App, seen refused, is the first check after its setup;
   - `agent/self-test` proves the minting against a throwaway key and a stubbed `curl`: the request,
-    the app token's signature, claims and encoding, and every refusal.
+    the app token's signature, claims and encoding, and every refusal;
+  - it proves `agent/gh` against a stubbed `gh` in throwaway clones.
 - **A commit the agent container has not pushed lives only in that container.**
 - **The agent seat may offer read-only snapshots of the production database** (author decision
   2026-10-10, [open-questions.md](../open-questions.md)):
