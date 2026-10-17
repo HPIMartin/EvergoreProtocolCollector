@@ -61,7 +61,7 @@ public class SqliteDatabase implements AutoCloseable {
 	}
 
 	private static <R> R committed(DatabaseConnection connection, Callable<R> work) throws Exception {
-		connection.executeStatement("BEGIN", DEFAULT_RESULT_FLAGS);
+		connection.executeStatement("BEGIN IMMEDIATE", DEFAULT_RESULT_FLAGS);
 		try {
 			R result = work.call();
 			connection.executeStatement("COMMIT", DEFAULT_RESULT_FLAGS);
