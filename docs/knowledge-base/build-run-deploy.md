@@ -801,7 +801,8 @@ it opens the connection source, so the first start of a new version migrates the
 the pre-Flyway tables `IF NOT EXISTS`, so it is a no-op on a database that already has them and
 still repairs one that is missing a table; `V2` rebuilds all three tables with `NOT NULL` on every
 column, copying every row into the new table; `V3` adds an index on `(avatar, timeStamp)` to each
-ledger and touches no row. What this means for a deploy:
+ledger and touches no row; `V4` adds a nullable `timeStampEpochMillis` beside each ledger's `timeStamp`,
+with an index on `(avatar, timeStampEpochMillis)`, and touches no row. What this means for a deploy:
 
 - **Take the backup first** (step 1 of the deploy already does), because `V2` rewrites all three
   tables rather than altering them in place.
@@ -832,7 +833,15 @@ ledger and touches no row. What this means for a deploy:
     - counts and digests unchanged;
     - `V3` recorded successful in 0.2 s;
     - the file still 78.5 MB.
-- A row that carries a `NULL` in any column **aborts the boot** instead of being dropped. That is
+- **Every migration ends by filling each ledger row's missing instant from its text**
+  (`afterMigrate__Fill_every_missing_instant_from_its_timestamp.sql`, a Flyway callback that runs at
+  every start):
+  - the text is read as UTC, the form a release before `V4` writes in the container's zone;
+  - the six-digit fraction counts as milliseconds (`.000123` is 123 ms);
+  - a row that has its instant keeps it;
+  - a release before `V4` writes rows without one, so a start after a rollback fills them.
+- A row that carries a `NULL` in any column but the instant **aborts the boot** instead of being
+  dropped. That is
   the intended strict behaviour (engineering-handbook §3), and the production snapshot holds no such
   row in any of the three tables (ledgers measured 2026-09-06, `metaInformation` 2026-09-07). The
   abort rolls back whole, so fixing the row and restarting migrates cleanly with no `flyway repair`

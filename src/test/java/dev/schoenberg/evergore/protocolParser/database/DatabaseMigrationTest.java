@@ -83,7 +83,8 @@ class DatabaseMigrationTest {
 
 		migrate();
 
-		assertThatThrownBy(() -> execute("INSERT INTO bankEntries VALUES ('b', NULL, 'Boreas', 1, 'EINLAGERUNG')")).hasMessageContaining("NOT NULL constraint failed");
+		assertThatThrownBy(() -> execute("INSERT INTO bankEntries (id, timeStamp, avatar, amount, type) VALUES ('b', NULL, 'Boreas', 1, 'EINLAGERUNG')"))
+				.hasMessageContaining("NOT NULL constraint failed");
 	}
 
 	@Test
@@ -96,7 +97,8 @@ class DatabaseMigrationTest {
 		migrate();
 
 		assertThat(allRows()).isEqualTo(afterFirst);
-		assertThatThrownBy(() -> execute("INSERT INTO bankEntries VALUES ('b', NULL, 'Boreas', 1, 'EINLAGERUNG')")).hasMessageContaining("NOT NULL constraint failed");
+		assertThatThrownBy(() -> execute("INSERT INTO bankEntries (id, timeStamp, avatar, amount, type) VALUES ('b', NULL, 'Boreas', 1, 'EINLAGERUNG')"))
+				.hasMessageContaining("NOT NULL constraint failed");
 	}
 
 	@Test
@@ -151,8 +153,8 @@ class DatabaseMigrationTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"bankEntries, SEARCH bankEntries USING COVERING INDEX bankEntries_avatar_timeStamp_idx (avatar=?)",
-			"storageEntries, SEARCH storageEntries USING COVERING INDEX storageEntries_avatar_timeStamp_idx (avatar=?)"})
+	@CsvSource({"bankEntries, SEARCH bankEntries USING COVERING INDEX bankEntries_avatar_timeStampEpochMillis_idx (avatar=?)",
+			"storageEntries, SEARCH storageEntries USING COVERING INDEX storageEntries_avatar_timeStampEpochMillis_idx (avatar=?)"})
 	void anEmptyDatabaseCountsAnAvatarsLedgerFromTheIndexAlone(String ledger, String plan) {
 		migrate();
 
@@ -169,7 +171,7 @@ class DatabaseMigrationTest {
 	}
 
 	@Test
-	void anExistingDatabaseGetsTheLedgerIndexThroughTheMigration() {
+	void anExistingDatabaseGetsBothLedgerIndexesThroughTheMigration() {
 		createLaxSchema();
 		execute("INSERT INTO bankEntries VALUES ('a', '2024-06-01 13:37:00.000000', 'Aurora', 1000, 'EINLAGERUNG')");
 		execute("INSERT INTO storageEntries VALUES ('s', '2024-06-02 08:00:00.000000', 'Boreas', 3, 'Drachenhaut', 80, 'AUSLAGERUNG')");
@@ -177,8 +179,11 @@ class DatabaseMigrationTest {
 		migrate();
 
 		assertThat(indexColumns())
-				.containsExactly("bankEntries|bankEntries_avatar_timeStamp_idx|0|avatar|", "bankEntries|bankEntries_avatar_timeStamp_idx|1|timeStamp|",
-						"storageEntries|storageEntries_avatar_timeStamp_idx|0|avatar|", "storageEntries|storageEntries_avatar_timeStamp_idx|1|timeStamp|");
+				.containsExactly("bankEntries|bankEntries_avatar_timeStampEpochMillis_idx|0|avatar|",
+						"bankEntries|bankEntries_avatar_timeStampEpochMillis_idx|1|timeStampEpochMillis|", "bankEntries|bankEntries_avatar_timeStamp_idx|0|avatar|",
+						"bankEntries|bankEntries_avatar_timeStamp_idx|1|timeStamp|", "storageEntries|storageEntries_avatar_timeStampEpochMillis_idx|0|avatar|",
+						"storageEntries|storageEntries_avatar_timeStampEpochMillis_idx|1|timeStampEpochMillis|", "storageEntries|storageEntries_avatar_timeStamp_idx|0|avatar|",
+						"storageEntries|storageEntries_avatar_timeStamp_idx|1|timeStamp|");
 	}
 
 	@Test
@@ -195,8 +200,35 @@ class DatabaseMigrationTest {
 		migrate();
 
 		assertThat(indexColumns())
-				.containsExactly("bankEntries|bankEntries_avatar_timeStamp_idx|0|avatar|", "bankEntries|bankEntries_avatar_timeStamp_idx|1|timeStamp|",
-						"storageEntries|storageEntries_avatar_timeStamp_idx|0|avatar|", "storageEntries|storageEntries_avatar_timeStamp_idx|1|timeStamp|");
+				.containsExactly("bankEntries|bankEntries_avatar_timeStampEpochMillis_idx|0|avatar|",
+						"bankEntries|bankEntries_avatar_timeStampEpochMillis_idx|1|timeStampEpochMillis|", "bankEntries|bankEntries_avatar_timeStamp_idx|0|avatar|",
+						"bankEntries|bankEntries_avatar_timeStamp_idx|1|timeStamp|", "storageEntries|storageEntries_avatar_timeStampEpochMillis_idx|0|avatar|",
+						"storageEntries|storageEntries_avatar_timeStampEpochMillis_idx|1|timeStampEpochMillis|", "storageEntries|storageEntries_avatar_timeStamp_idx|0|avatar|",
+						"storageEntries|storageEntries_avatar_timeStamp_idx|1|timeStamp|");
+	}
+
+	@Test
+	void aLedgerRowWithoutItsInstantGetsTheInstantItsTextNamesAtTheNextMigration() {
+		migrate();
+		execute("INSERT INTO bankEntries (id, timeStamp, avatar, amount, type) VALUES ('a', '2026-10-25 01:30:00.000123', 'Aurora', 1, 'Einlagerung')");
+		execute("INSERT INTO storageEntries (id, timeStamp, avatar, quantity, name, quality, type) VALUES ('s', '2026-10-25 01:30:00.000123', 'Boreas', 3, 'Federn', 100, 'Einlagerung')");
+
+		migrate();
+		List<String> instants = instantsOfBothLedgers();
+
+		assertThat(instants).containsExactly("a|1792891800123|", "s|1792891800123|");
+	}
+
+	@Test
+	void aLedgerRowThatCarriesItsInstantKeepsItAtTheNextMigration() {
+		migrate();
+		execute("INSERT INTO bankEntries (id, timeStamp, timeStampEpochMillis, avatar, amount, type) VALUES ('a', '2026-10-25 01:30:00.000000', 1792888200000, 'Aurora', 1, 'Einlagerung')");
+		execute("INSERT INTO storageEntries (id, timeStamp, timeStampEpochMillis, avatar, quantity, name, quality, type) VALUES ('s', '2026-10-25 01:30:00.000000', 1792888200000, 'Boreas', 3, 'Federn', 100, 'Einlagerung')");
+
+		migrate();
+		List<String> instants = instantsOfBothLedgers();
+
+		assertThat(instants).containsExactly("a|1792888200000|", "s|1792888200000|");
 	}
 
 	@Test
@@ -255,6 +287,7 @@ class DatabaseMigrationTest {
 				.baselineOnMigrate(true)
 				.baselineVersion("0")
 				.target(version)
+				.skipDefaultCallbacks(true)
 				.load()
 				.migrate();
 	}
@@ -287,6 +320,13 @@ class DatabaseMigrationTest {
 			}
 			return rows;
 		});
+	}
+
+	private static List<String> instantsOfBothLedgers() {
+		List<String> rows = new ArrayList<>();
+		rows.addAll(dump("SELECT id, timeStampEpochMillis FROM bankEntries ORDER BY id", 2));
+		rows.addAll(dump("SELECT id, timeStampEpochMillis FROM storageEntries ORDER BY id", 2));
+		return rows;
 	}
 
 	private static List<String> tableNames() {

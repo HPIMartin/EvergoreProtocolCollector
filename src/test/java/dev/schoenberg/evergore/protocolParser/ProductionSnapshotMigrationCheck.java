@@ -9,10 +9,14 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -28,6 +32,9 @@ class ProductionSnapshotMigrationCheck {
 	private static final Path SNAPSHOT = Paths.get(System.getProperty("prodSnapshot.file", "temp.sqlite"));
 	private static final Path WORKING_DB = Paths.get("build/tmp/prodSnapshotMigration/temp.sqlite");
 	private static final String SEPARATOR = "~|~";
+	private static final String INSTANT_COLUMN = "timeStampEpochMillis";
+	private static final List<String> LEDGERS = List.of("bankEntries", "storageEntries");
+	private static final DateTimeFormatter TO_THE_SECOND = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
 	private static final Map<String, String> EVERY_ROW = new LinkedHashMap<>();
 	static {
@@ -49,7 +56,10 @@ class ProductionSnapshotMigrationCheck {
 		assertThat(counts()).isEqualTo(countsBefore);
 		assertThat(digests()).isEqualTo(digestsBefore);
 		assertThat(tableNames()).containsExactlyInAnyOrder("bankEntries", "flyway_schema_history", "metaInformation", "storageEntries");
-		EVERY_ROW.keySet().forEach(table -> columnsOf(table).forEach(column -> assertThat(isNotNull(table, column)).describedAs("%s.%s is NOT NULL", table, column).isTrue()));
+		EVERY_ROW
+				.keySet()
+				.forEach(table -> requiredColumnsOf(table).forEach(column -> assertThat(isNotNull(table, column)).describedAs("%s.%s is NOT NULL", table, column).isTrue()));
+		LEDGERS.forEach(ledger -> assertThat(instantsThatDifferFromTheirTimestamp(ledger)).describedAs("%s rows whose instant is not their timestamp's", ledger).isEmpty());
 
 		migrate();
 
@@ -64,7 +74,8 @@ class ProductionSnapshotMigrationCheck {
 		migrate();
 
 		assertThat(query("SELECT name FROM sqlite_master WHERE type = 'index' AND sql IS NOT NULL AND tbl_name <> 'flyway_schema_history' ORDER BY name"))
-				.containsExactly("bankEntries_avatar_timeStamp_idx", "storageEntries_avatar_timeStamp_idx");
+				.containsExactly("bankEntries_avatar_timeStampEpochMillis_idx", "bankEntries_avatar_timeStamp_idx", "storageEntries_avatar_timeStampEpochMillis_idx",
+						"storageEntries_avatar_timeStamp_idx");
 		assertThat(planOfTheLedgerPage("bankEntries")).containsExactly("SEARCH bankEntries USING INDEX bankEntries_avatar_timeStamp_idx (avatar=?)");
 		assertThat(planOfTheLedgerPage("storageEntries")).containsExactly("SEARCH storageEntries USING INDEX storageEntries_avatar_timeStamp_idx (avatar=?)");
 	}
@@ -117,12 +128,28 @@ class ProductionSnapshotMigrationCheck {
 		});
 	}
 
+	private static List<String> instantsThatDifferFromTheirTimestamp(String ledger) {
+		return query("SELECT id, timeStamp, " + INSTANT_COLUMN + " FROM " + ledger + " ORDER BY id").stream().filter(row -> {
+			String[] cells = row.split(Pattern.quote(SEPARATOR));
+			return !String.valueOf(instantOf(cells[1])).equals(cells[2]);
+		}).toList();
+	}
+
+	private static long instantOf(String storedTimestamp) {
+		long seconds = LocalDateTime.parse(storedTimestamp.substring(0, 19), TO_THE_SECOND).toEpochSecond(ZoneOffset.UTC);
+		return seconds * 1000 + Long.parseLong(storedTimestamp.substring(20));
+	}
+
 	private static List<String> tableNames() {
 		return query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
 	}
 
 	private static List<String> columnsOf(String table) {
 		return query("SELECT name FROM pragma_table_info('" + table + "')");
+	}
+
+	private static List<String> requiredColumnsOf(String table) {
+		return columnsOf(table).stream().filter(column -> !column.equals(INSTANT_COLUMN)).toList();
 	}
 
 	private static boolean isNotNull(String table, String column) {
