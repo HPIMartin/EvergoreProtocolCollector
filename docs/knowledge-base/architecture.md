@@ -149,9 +149,9 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 - **Business logic (framework-free):** ports `BankRepository` and `StorageRepository` (each the
   generic `base/LedgerRepository` over its entry record, declaring nothing of its own),
   `MetaInformationRepository` · records `BankEntry`, `StorageEntry`, `MetaInformation` ·
-  `TransferType` + visitor · `MetaInformationKey` (typed: `DateTimeKey`/`LongKey`/`DoubleKey`) ·
-  `contribution/{Contribution,AvatarContribution,AvatarContributions}` (the four ledger sums, their
-  net and the guild total, assembled per known avatar) · `Constants`.
+  `TransferType` + visitor · `MetaInformationKey` (typed: `DateTimeKey`/`InstantKey`/`LongKey`/
+  `DoubleKey`) · `contribution/{Contribution,AvatarContribution,AvatarContributions}` (the four
+  ledger sums, their net and the guild total, assembled per known avatar) · `Constants`.
 - **Last activity comes from the ledgers, not from the meta store** (decision 2026-09-02):
   - both ledger ports answer `latestTimestampPerAvatar()` with **one grouped query** per ledger
     (`MAX(timeStampEpochMillis) GROUP BY avatar`), so the overview materializes one row per avatar instead of
