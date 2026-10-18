@@ -76,8 +76,8 @@ class ProductionSnapshotMigrationCheck {
 		assertThat(query("SELECT name FROM sqlite_master WHERE type = 'index' AND sql IS NOT NULL AND tbl_name <> 'flyway_schema_history' ORDER BY name"))
 				.containsExactly("bankEntries_avatar_timeStampEpochMillis_idx", "bankEntries_avatar_timeStamp_idx", "storageEntries_avatar_timeStampEpochMillis_idx",
 						"storageEntries_avatar_timeStamp_idx");
-		assertThat(planOfTheLedgerPage("bankEntries")).containsExactly("SEARCH bankEntries USING INDEX bankEntries_avatar_timeStamp_idx (avatar=?)");
-		assertThat(planOfTheLedgerPage("storageEntries")).containsExactly("SEARCH storageEntries USING INDEX storageEntries_avatar_timeStamp_idx (avatar=?)");
+		assertThat(planOfTheLedgerPage("bankEntries")).containsExactly("SEARCH bankEntries USING INDEX bankEntries_avatar_timeStampEpochMillis_idx (avatar=?)");
+		assertThat(planOfTheLedgerPage("storageEntries")).containsExactly("SEARCH storageEntries USING INDEX storageEntries_avatar_timeStampEpochMillis_idx (avatar=?)");
 	}
 
 	private static void copyTheSnapshot() {
@@ -92,7 +92,7 @@ class ProductionSnapshotMigrationCheck {
 
 	private static List<String> planOfTheLedgerPage(String ledger) {
 		String busiestAvatar = query("SELECT avatar FROM " + ledger + " GROUP BY avatar ORDER BY count(*) DESC LIMIT 1").get(0);
-		return query("EXPLAIN QUERY PLAN SELECT * FROM `" + ledger + "` WHERE `avatar` = '" + busiestAvatar + "' ORDER BY `timeStamp` DESC LIMIT 20 OFFSET 0")
+		return query("EXPLAIN QUERY PLAN SELECT * FROM `" + ledger + "` WHERE `avatar` = '" + busiestAvatar + "' ORDER BY `timeStampEpochMillis` DESC LIMIT 20 OFFSET 0")
 				.stream()
 				.map(row -> row.substring(row.lastIndexOf(SEPARATOR) + SEPARATOR.length()))
 				.toList();

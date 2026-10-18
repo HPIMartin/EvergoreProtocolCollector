@@ -113,10 +113,10 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
       window;
     - rows of that batch older than it that leave the window meanwhile are lost.
   - **A ledger page is read in a total order** (decision 2026-10-05):
-    - the chosen column in the chosen direction, then `timeStamp` newest first, then the row `id`
+    - the chosen column in the chosen direction, then the instant newest first, then the row `id`
       ascending;
       - why: a page boundary inside a run of ties neither repeats a row nor drops one;
-    - `timeStamp` is left out when the time is the chosen column;
+    - the instant is left out when the time is the chosen column;
     - the `id` is a random UUID, so rows that tie on everything before it stand in a stable but
       arbitrary order;
     - the port names the column by a key per ledger (`BankSortKey`, `StorageSortKey`);
@@ -154,19 +154,21 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   net and the guild total, assembled per known avatar) · `Constants`.
 - **Last activity comes from the ledgers, not from the meta store** (decision 2026-09-02):
   - both ledger ports answer `latestTimestampPerAvatar()` with **one grouped query** per ledger
-    (`MAX(timeStamp) GROUP BY avatar`), so the overview materializes one row per avatar instead of
+    (`MAX(timeStampEpochMillis) GROUP BY avatar`), so the overview materializes one row per avatar instead of
     one per ledger entry;
-  - both ledgers carry an index on `(avatar, timeStamp)` (migration `V3`), which serves this query
+  - both ledgers carry an index on `(avatar, timeStampEpochMillis)` (migration `V4`), which serves this query
     as a covering index and the per-avatar page and count as an index search, so none of the three
     scans the table;
   - the domain types are real instants, so nothing here reintroduces
-    `MetaInformationKey.DateTimeKey`'s ambiguity and no key family joins the pending schema
-    migration;
+    `MetaInformationKey.DateTimeKey`'s ambiguity and the ledger times stay out of the meta store;
   - a ledger row stores its time twice, whatever the JVM's zone:
     - `timeStampEpochMillis`, the instant in milliseconds since the epoch;
     - `timeStamp`, the same moment as text in UTC with its milliseconds padded to six digits
       (`UtcDateStringType`);
-      - why: a release before `V4` reads and writes that text, so it can still run on the file.
+      - why: a release before `V4` reads and writes that text, so it can still run on the file;
+    - every read, the ingest window, the sort, the latest movement and the entry itself, takes the
+      instant;
+    - the text's `(avatar, timeStamp)` index (migration `V3`) stays for a release before `V4`.
 - **`TimezoneStartupValidator` is the interim safeguard:**
   - it aborts boot if the effective `ZoneId` (`ApplicationFactory#effectiveZone`, the JVM's
     `ZoneId.systemDefault()`) is not a fixed offset, so a misconfigured deploy fails fast instead

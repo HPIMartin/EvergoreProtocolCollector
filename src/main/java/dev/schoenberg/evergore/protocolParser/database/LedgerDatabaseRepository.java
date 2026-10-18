@@ -16,9 +16,8 @@ import dev.schoenberg.evergore.protocolParser.exceptions.NoElementFound;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.SortDirection.ASCENDING;
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.AVATAR_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.ID_COLUMN;
-import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.TIMESTAMP_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.INSTANT_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
-import static java.sql.Timestamp.from;
 import static java.util.stream.Collectors.toMap;
 
 public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry, K> implements LedgerRepository<E, K> {
@@ -56,7 +55,7 @@ public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry,
 
 	@Override
 	public List<E> getAllSince(Instant timestampInclusive) {
-		List<R> result = silentThrow(() -> rows().queryBuilder().where().ge(TIMESTAMP_COLUMN, from(timestampInclusive)).query());
+		List<R> result = silentThrow(() -> rows().queryBuilder().where().ge(INSTANT_COLUMN, timestampInclusive.toEpochMilli()).query());
 
 		return toEntries(result);
 	}
@@ -85,13 +84,12 @@ public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry,
 	@Override
 	public Map<String, Instant> latestTimestampPerAvatar() {
 		Dao<R, String> rows = rows();
-		String newestPerAvatar = "SELECT " + AVATAR_COLUMN + ", MAX(" + TIMESTAMP_COLUMN + ") AS " + TIMESTAMP_COLUMN + " FROM " + rows.getTableName() + " GROUP BY "
-				+ AVATAR_COLUMN;
+		String newestPerAvatar = "SELECT " + AVATAR_COLUMN + ", MAX(" + INSTANT_COLUMN + ") AS " + INSTANT_COLUMN + " FROM " + rows.getTableName() + " GROUP BY " + AVATAR_COLUMN;
 
 		return silentThrow(() -> {
 			GenericRawResults<R> newest = rows.queryRaw(newestPerAvatar, rows.getRawRowMapper());
 			try {
-				return newest.getResults().stream().collect(toMap(row -> row.avatar, row -> row.timeStamp.toInstant()));
+				return newest.getResults().stream().collect(toMap(row -> row.avatar, LedgerDatabaseRepository::instantOf));
 			} finally {
 				newest.close();
 			}
@@ -103,6 +101,13 @@ public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry,
 	protected abstract E toEntry(R row);
 
 	protected abstract R toRow(E entry);
+
+	protected static Instant instantOf(LedgerDatabaseEntry row) {
+		if (row.timeStampEpochMillis == null) {
+			throw new IllegalStateException("Ledger row " + row.id + " of " + row.avatar + " has no instant beside its text " + row.timeStamp);
+		}
+		return Instant.ofEpochMilli(row.timeStampEpochMillis);
+	}
 
 	protected TransferType transferTypeOf(R row) {
 		return transferTypeVisitor.convert(row.type);
@@ -120,8 +125,8 @@ public abstract class LedgerDatabaseRepository<E, R extends LedgerDatabaseEntry,
 		} else {
 			query.orderBy(column.name(), ascending);
 		}
-		if (!column.name().equals(TIMESTAMP_COLUMN)) {
-			query.orderBy(TIMESTAMP_COLUMN, false);
+		if (!column.name().equals(INSTANT_COLUMN)) {
+			query.orderBy(INSTANT_COLUMN, false);
 		}
 		return query.orderBy(ID_COLUMN, true);
 	}

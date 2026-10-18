@@ -8,7 +8,7 @@ import dev.schoenberg.evergore.protocolParser.database.SortColumn;
 import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.AVATAR_COLUMN;
-import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.TIMESTAMP_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.INSTANT_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.TYPE_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.SortColumn.germanOrderOf;
 import static dev.schoenberg.evergore.protocolParser.database.SortColumn.of;
@@ -25,7 +25,7 @@ public class StorageDatabaseRepository extends LedgerDatabaseRepository<StorageE
 	@Override
 	protected SortColumn columnOf(StorageSortKey key) {
 		return switch (key) {
-			case TIMESTAMP -> of(TIMESTAMP_COLUMN);
+			case TIMESTAMP -> of(INSTANT_COLUMN);
 			case AVATAR -> of(AVATAR_COLUMN);
 			case QUANTITY -> of(QUANTITY_COLUMN);
 			case NAME -> germanOrderOf(NAME_COLUMN);
@@ -36,7 +36,7 @@ public class StorageDatabaseRepository extends LedgerDatabaseRepository<StorageE
 
 	@Override
 	protected StorageEntry toEntry(StorageDatabaseEntry row) {
-		return new StorageEntry(row.timeStamp.toInstant(), row.avatar, row.quantity, row.name, row.quality, transferTypeOf(row));
+		return new StorageEntry(instantOf(row), row.avatar, row.quantity, row.name, row.quality, transferTypeOf(row));
 	}
 
 	@Override

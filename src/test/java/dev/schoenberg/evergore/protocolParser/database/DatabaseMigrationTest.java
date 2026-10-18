@@ -144,8 +144,8 @@ class DatabaseMigrationTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"bankEntries, SEARCH bankEntries USING INDEX bankEntries_avatar_timeStamp_idx (avatar=?)",
-			"storageEntries, SEARCH storageEntries USING INDEX storageEntries_avatar_timeStamp_idx (avatar=?)"})
+	@CsvSource({"bankEntries, SEARCH bankEntries USING INDEX bankEntries_avatar_timeStampEpochMillis_idx (avatar=?)",
+			"storageEntries, SEARCH storageEntries USING INDEX storageEntries_avatar_timeStampEpochMillis_idx (avatar=?)"})
 	void anEmptyDatabaseReadsAnAvatarsLedgerPageInTimeOrderFromAnIndex(String ledger, String plan) {
 		migrate();
 
@@ -162,8 +162,8 @@ class DatabaseMigrationTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"bankEntries, SCAN bankEntries USING COVERING INDEX bankEntries_avatar_timeStamp_idx",
-			"storageEntries, SCAN storageEntries USING COVERING INDEX storageEntries_avatar_timeStamp_idx"})
+	@CsvSource({"bankEntries, SCAN bankEntries USING COVERING INDEX bankEntries_avatar_timeStampEpochMillis_idx",
+			"storageEntries, SCAN storageEntries USING COVERING INDEX storageEntries_avatar_timeStampEpochMillis_idx"})
 	void anEmptyDatabaseFindsEveryAvatarsLatestMovementFromTheIndexAlone(String ledger, String plan) {
 		migrate();
 
@@ -334,7 +334,7 @@ class DatabaseMigrationTest {
 	}
 
 	private static String ledgerPageOf(String ledger) {
-		return "SELECT * FROM `" + ledger + "` WHERE `avatar` = 'Aurora' ORDER BY `timeStamp` DESC LIMIT 20 OFFSET 0";
+		return "SELECT * FROM `" + ledger + "` WHERE `avatar` = 'Aurora' ORDER BY `timeStampEpochMillis` DESC LIMIT 20 OFFSET 0";
 	}
 
 	private static String ledgerCountOf(String ledger) {
@@ -342,7 +342,7 @@ class DatabaseMigrationTest {
 	}
 
 	private static String latestPerAvatarOf(String ledger) {
-		return "SELECT avatar, MAX(timeStamp) AS timeStamp FROM " + ledger + " GROUP BY avatar";
+		return "SELECT avatar, MAX(timeStampEpochMillis) AS timeStampEpochMillis FROM " + ledger + " GROUP BY avatar";
 	}
 
 	private static List<String> planOf(String query) {

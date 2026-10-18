@@ -8,7 +8,7 @@ import dev.schoenberg.evergore.protocolParser.database.SortColumn;
 import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.AVATAR_COLUMN;
-import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.TIMESTAMP_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.INSTANT_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.LedgerDatabaseEntry.TYPE_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.SortColumn.of;
 import static dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseEntry.AMOUNT_COLUMN;
@@ -22,7 +22,7 @@ public class BankDatabaseRepository extends LedgerDatabaseRepository<BankEntry, 
 	@Override
 	protected SortColumn columnOf(BankSortKey key) {
 		return switch (key) {
-			case TIMESTAMP -> of(TIMESTAMP_COLUMN);
+			case TIMESTAMP -> of(INSTANT_COLUMN);
 			case AVATAR -> of(AVATAR_COLUMN);
 			case AMOUNT -> of(AMOUNT_COLUMN);
 			case TRANSFER_TYPE -> of(TYPE_COLUMN);
@@ -31,7 +31,7 @@ public class BankDatabaseRepository extends LedgerDatabaseRepository<BankEntry, 
 
 	@Override
 	protected BankEntry toEntry(BankDatabaseEntry row) {
-		return new BankEntry(row.timeStamp.toInstant(), row.avatar, row.amount, transferTypeOf(row));
+		return new BankEntry(instantOf(row), row.avatar, row.amount, transferTypeOf(row));
 	}
 
 	@Override
