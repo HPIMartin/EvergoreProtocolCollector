@@ -32,6 +32,7 @@ import dev.schoenberg.evergore.protocolParser.domain.EvergoreItem;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedAtKey;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageCraftSubsidy;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageDonation;
@@ -39,6 +40,7 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformati
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageWithdrawl;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getSumsRecomputedAt;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.UNDEFINED;
+import static java.time.temporal.ChronoUnit.MINUTES;
 import static java.util.Arrays.asList;
 
 public class EvergoreDataEvaluator {
@@ -74,6 +76,7 @@ public class EvergoreDataEvaluator {
 		guild.forEach(avatar -> collectInformationOf(avatar, runInstant, recomputed, unknownItemNames, zeroValuedItemNames, failedAvatarNames, roundTrips, roundTripAbstentions));
 		failedAvatarNames.forEach(avatar -> seedRecomputeInstantOf(avatar, beforeThisRun, runBeforeThisOne, recomputed));
 		recomputed.add(new MetaInformation<>(getLastUpdatedKey(), LocalDateTime.ofInstant(runInstant, clock.getZone())));
+		recomputed.add(new MetaInformation<>(getLastUpdatedAtKey(), runInstant.truncatedTo(MINUTES)));
 		metaRepo.add(recomputed);
 
 		return new EvaluationResult(List.copyOf(unknownItemNames), List.copyOf(zeroValuedItemNames), List.copyOf(failedAvatarNames), List.copyOf(roundTrips),

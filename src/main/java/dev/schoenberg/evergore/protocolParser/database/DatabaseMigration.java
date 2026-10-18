@@ -6,6 +6,8 @@ import org.flywaydb.core.api.output.MigrateResult;
 import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+
 public class DatabaseMigration {
 	private static final String MIGRATIONS = "classpath:db/migration";
 	private static final String BEFORE_THE_FIRST_MIGRATION = "0";
@@ -21,9 +23,10 @@ public class DatabaseMigration {
 
 	public void migrate() {
 		synchronized (ONE_MIGRATION_AT_A_TIME) {
+			String url = "jdbc:sqlite:" + config.getDatabasePath();
 			MigrateResult result = Flyway
 					.configure()
-					.dataSource("jdbc:sqlite:" + config.getDatabasePath(), null, null)
+					.dataSource(url, null, null)
 					.locations(MIGRATIONS)
 					.baselineOnMigrate(true)
 					.baselineVersion(BEFORE_THE_FIRST_MIGRATION)
@@ -35,6 +38,7 @@ public class DatabaseMigration {
 			} else {
 				logger.info("Database schema migrated to version " + result.targetSchemaVersion + " by " + result.migrationsExecuted + " migration(s)");
 			}
+			silentThrow(() -> new LastUpdatedInstantFill(url, logger).fill());
 		}
 	}
 }

@@ -38,6 +38,7 @@ import static dev.schoenberg.evergore.protocolParser.businessLogic.base.Transfer
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.ENTNAHME;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedAtKey;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageCraftSubsidy;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageDonation;
@@ -129,7 +130,7 @@ class EvergoreDataEvaluatorTest {
 						getBankWithdrawl(STORAGE_ONLY_AVATAR).id, getStoragePlacement(STORAGE_ONLY_AVATAR).id, getStorageWithdrawl(STORAGE_ONLY_AVATAR).id,
 						getSumsRecomputedAt(STORAGE_ONLY_AVATAR).id, getStorageDonation(AVATAR).id, getStorageDonation(BANK_ONLY_AVATAR).id,
 						getStorageDonation(STORAGE_ONLY_AVATAR).id, getStorageCraftSubsidy(AVATAR).id, getStorageCraftSubsidy(BANK_ONLY_AVATAR).id,
-						getStorageCraftSubsidy(STORAGE_ONLY_AVATAR).id, getLastUpdatedKey().id);
+						getStorageCraftSubsidy(STORAGE_ONLY_AVATAR).id, getLastUpdatedKey().id, getLastUpdatedAtKey().id);
 	}
 
 	@Test
@@ -761,6 +762,19 @@ class EvergoreDataEvaluatorTest {
 		tested.evaluateData();
 
 		assertThat(metaRepo.<LocalDateTime>get(getLastUpdatedKey())).contains(LocalDateTime.of(2026, 6, 22, 1, 30));
+	}
+
+	@Test
+	void writesTheRunsInstantToTheMinuteBesideItsBerlinWallClock() {
+		Instant inTheSecondPassOfTwoThirty = Instant.parse("2026-10-25T01:30:20Z");
+		tested = new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, new KnownAvatars(bankRepo, storageRepo), Clock.fixed(inTheSecondPassOfTwoThirty, APP_ZONE), logger);
+		bankRepo.seedAvatars(List.of());
+		storageRepo.seedAvatars(List.of());
+
+		tested.evaluateData();
+
+		assertThat(metaRepo.<Instant>get(getLastUpdatedAtKey())).contains(Instant.parse("2026-10-25T01:30:00Z"));
+		assertThat(metaRepo.<LocalDateTime>get(getLastUpdatedKey())).contains(LocalDateTime.of(2026, 10, 25, 2, 30));
 	}
 
 	@Test

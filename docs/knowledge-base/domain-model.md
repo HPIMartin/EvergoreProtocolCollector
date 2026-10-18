@@ -363,10 +363,17 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   freshness claim; "how current is this member's row" is answered by that row's own
   `sums_recomputed_at_<avatar>` instant, and "when did the member last move something" by its two
   **last-activity** columns. It is served by `/api/v1/admin/status`, not by the overview.
+- That moment is stored twice, and every run writes both:
+  - `last_updated_at`, the run's instant cut to the minute as epoch millis, which the admin status
+    serves;
+  - `last_updated`, the same minute as Berlin wall-clock text (`dd.MM.yyyy HH:mm`), which a release
+    before `V4` reads and writes too.
+- Every start fills `last_updated_at` from `last_updated` when it is missing, unreadable or names
+  another minute, as after a release before `V4` ran:
+  - in the hour the clocks go back that fill takes the earlier pass, the one such a release serves;
+  - a `last_updated` that names no minute is logged and left alone.
 - The `sums_recomputed_at_<avatar>` key records **when that avatar's stored sums were last
-  recomputed**, as **epoch millis**, written in the same batch as his four sums. Epoch millis rather
-  than the wall-clock text `last_updated` uses, because that format cannot tell the two Berlin
-  fall-back hours apart (backlog **D14**) and a second wall-clock key would double the defect. An
+  recomputed**, as **epoch millis**, written in the same batch as his four sums. An
   avatar whose recompute fails keeps the instant of the last run that reached him, and one no run
   has reached gets none: he has no sums for an instant to date, and is not yet computed rather than
   outdated. A failed avatar whose four sums are stored **without** an instant (sums written before
@@ -383,9 +390,8 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   per-avatar guard; the avatar's next successful recompute overwrites such a sum, and until then the
   overview, which reads every stored sum, cannot be served. "Older than the last collection" is
   decidable server-side as "older than the newest of these keys among the avatars whose sums are
-  stored", with no second run-level key to keep in step. Neither the comparison nor the seed reads the wall-clock
-  `last_updated`, whose fall-back hour resolves to the earlier of its two passes and would date a
-  seeded avatar an hour before the run that produced his sums.
+  stored", with no second run-level key to keep in step. Neither the comparison nor the seed reads `last_updated`, whose Berlin minute reads twice in the
+  hour the clocks go back.
 
 This makes evaluation **idempotent** (a second run yields identical sums) and **self-healing per
 avatar**: a failing avatar's own sums are withheld and recomputed cleanly on the next run that

@@ -24,6 +24,9 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import dev.schoenberg.evergore.protocolParser.database.DatabaseMigration;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedAtKey;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,6 +36,7 @@ class ProductionSnapshotMigrationCheck {
 	private static final Path WORKING_DB = Paths.get("build/tmp/prodSnapshotMigration/temp.sqlite");
 	private static final String SEPARATOR = "~|~";
 	private static final String INSTANT_COLUMN = "timeStampEpochMillis";
+	private static final String LAST_UPDATED_AT = getLastUpdatedAtKey().id;
 	private static final List<String> LEDGERS = List.of("bankEntries", "storageEntries");
 	private static final DateTimeFormatter TO_THE_SECOND = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -40,7 +44,7 @@ class ProductionSnapshotMigrationCheck {
 	static {
 		EVERY_ROW.put("bankEntries", "SELECT id, timeStamp, avatar, amount, type FROM bankEntries ORDER BY id");
 		EVERY_ROW.put("storageEntries", "SELECT id, timeStamp, avatar, quantity, name, quality, type FROM storageEntries ORDER BY id");
-		EVERY_ROW.put("metaInformation", "SELECT key, value FROM metaInformation ORDER BY key");
+		EVERY_ROW.put("metaInformation", "SELECT key, value FROM metaInformation WHERE key <> '" + LAST_UPDATED_AT + "' ORDER BY key");
 	}
 
 	@Test
@@ -60,6 +64,7 @@ class ProductionSnapshotMigrationCheck {
 				.keySet()
 				.forEach(table -> requiredColumnsOf(table).forEach(column -> assertThat(isNotNull(table, column)).describedAs("%s.%s is NOT NULL", table, column).isTrue()));
 		LEDGERS.forEach(ledger -> assertThat(instantsThatDifferFromTheirTimestamp(ledger)).describedAs("%s rows whose instant is not their timestamp's", ledger).isEmpty());
+		assertThat(metaValueOf(LAST_UPDATED_AT)).contains(lastUpdatedInstantNamedByItsBerlinMinute());
 
 		migrate();
 
@@ -104,7 +109,7 @@ class ProductionSnapshotMigrationCheck {
 
 	private static Map<String, Integer> counts() {
 		Map<String, Integer> out = new LinkedHashMap<>();
-		EVERY_ROW.keySet().forEach(table -> out.put(table, Integer.valueOf(query("SELECT count(*) FROM " + table).get(0))));
+		EVERY_ROW.forEach((table, everyRow) -> out.put(table, query(everyRow).size()));
 		return out;
 	}
 
@@ -133,6 +138,15 @@ class ProductionSnapshotMigrationCheck {
 			String[] cells = row.split(Pattern.quote(SEPARATOR));
 			return !String.valueOf(instantOf(cells[1])).equals(cells[2]);
 		}).toList();
+	}
+
+	private static List<String> metaValueOf(String key) {
+		return query("SELECT value FROM metaInformation WHERE key = '" + key + "'");
+	}
+
+	private static String lastUpdatedInstantNamedByItsBerlinMinute() {
+		LocalDateTime berlinMinute = getLastUpdatedKey().deserialize(metaValueOf(getLastUpdatedKey().id).get(0));
+		return getLastUpdatedAtKey().serialize(berlinMinute.atZone(APP_ZONE).toInstant());
 	}
 
 	private static long instantOf(String storedTimestamp) {

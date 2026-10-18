@@ -1,7 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller.api;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import io.micronaut.http.annotation.Controller;
@@ -17,7 +16,6 @@ import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AdminStat
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.RoundTripAbstentionWire;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.RoundTripWire;
 
-import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
 import static io.micronaut.http.MediaType.APPLICATION_JSON;
 
 @Controller(AdminStatusController.PATH)
@@ -62,10 +60,6 @@ public class AdminStatusController {
 	}
 
 	private static Instant lastUpdated(GuildContributions recompute) {
-		return recompute.lastUpdated().map(AdminStatusController::toInstant).orElse(null);
-	}
-
-	private static Instant toInstant(LocalDateTime lastUpdated) {
-		return lastUpdated.atZone(APP_ZONE).toInstant();
+		return recompute.lastUpdated().orElse(null);
 	}
 }

@@ -14,7 +14,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepos
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankPlacement;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getBankWithdrawl;
-import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedAtKey;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageCraftSubsidy;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStorageDonation;
 import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getStoragePlacement;
@@ -49,7 +49,7 @@ public class AvatarContributions {
 						lastCollection))
 				.toList();
 
-		return new GuildContributions(recompute.get(getLastUpdatedKey()), avatars);
+		return new GuildContributions(recompute.get(getLastUpdatedAtKey()), avatars);
 	}
 
 	private static AvatarContribution contributionOf(MetaInformationSnapshot recompute, String avatar, Optional<Contribution> contribution, Instant lastBankActivity,

@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller.api;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,8 @@ import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AdminStat
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.RoundTripAbstentionWire;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.RoundTripWire;
 
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedAtKey;
+import static dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationKey.getLastUpdatedKey;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.ACHAT_ARMBRUST;
 import static dev.schoenberg.evergore.protocolParser.domain.EvergoreItem.FEDERN;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,8 +29,9 @@ class AdminStatusControllerTest {
 	private final BankRepositoryStub bankRepo = new BankRepositoryStub();
 	private final StorageRepositoryStub storageRepo = new StorageRepositoryStub();
 	private final LastRunStatus lastRunStatus = new LastRunStatus();
-	private final AdminStatusController tested = new AdminStatusController(
-			new AvatarContributions(new KnownAvatars(bankRepo, storageRepo), new FakeMetaInformationRepository(), bankRepo, storageRepo), lastRunStatus);
+	private final FakeMetaInformationRepository metaRepo = new FakeMetaInformationRepository();
+	private final AdminStatusController tested = new AdminStatusController(new AvatarContributions(new KnownAvatars(bankRepo, storageRepo), metaRepo, bankRepo, storageRepo),
+			lastRunStatus);
 
 	@Test
 	void listsUnknownItemsAndUnrefreshedMembersInGermanOrderEachNameOnce() {
@@ -53,6 +57,16 @@ class AdminStatusControllerTest {
 		assertThat(status.roundTripAbstentions())
 				.containsExactly(new RoundTripAbstentionWire("Ärger", "Achat-Armbrust"), new RoundTripAbstentionWire("Ärger", "Federn"),
 						new RoundTripAbstentionWire("Zorn", "Federn"));
+	}
+
+	@Test
+	void servesTheStoredInstantAsLastUpdatedAlsoInTheSecondPassOfTheHourTheClocksGoBack() {
+		metaRepo.put(getLastUpdatedKey(), LocalDateTime.of(2026, 10, 25, 2, 30));
+		metaRepo.put(getLastUpdatedAtKey(), Instant.parse("2026-10-25T01:30:00Z"));
+
+		AdminStatus status = tested.status();
+
+		assertThat(status.lastUpdated()).isEqualTo(Instant.parse("2026-10-25T01:30:00Z"));
 	}
 
 	private void record(EvaluationResultFixture fixture) {

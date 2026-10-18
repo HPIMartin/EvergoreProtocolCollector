@@ -13,6 +13,7 @@ import static java.time.format.DateTimeFormatter.ofPattern;
 
 public abstract class MetaInformationKey<T> {
 	private static final DateTimeKey LAST_UPDATED = new DateTimeKey("last_updated");
+	private static final InstantKey LAST_UPDATED_AT = new InstantKey("last_updated_at");
 
 	public final String id;
 
@@ -26,6 +27,10 @@ public abstract class MetaInformationKey<T> {
 
 	public static MetaInformationKey<LocalDateTime> getLastUpdatedKey() {
 		return LAST_UPDATED;
+	}
+
+	public static MetaInformationKey<Instant> getLastUpdatedAtKey() {
+		return LAST_UPDATED_AT;
 	}
 
 	public static MetaInformationKey<Long> getBankPlacement(String avatar) {

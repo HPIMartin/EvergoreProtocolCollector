@@ -392,10 +392,10 @@ service's only read surface.
 - **`/api/v1/admin/status`'s `lastUpdated: null`** means no collection run has completed. A sentinel
   instant is not an option: Java 25 throws when converting an extreme instant into
   `java.sql.Timestamp`.
-- **`/api/v1/admin/status`'s `lastUpdated` is display-only and up to an hour off inside the DST
-  fall-back hour.** It is stored as a Berlin wall-clock time, so the instant behind it is
-  unrecoverable while the local hour repeats and the conversion resolves to the earlier offset. The
-  epoch/UTC storage format fixes this at the root.
+- **`/api/v1/admin/status`'s `lastUpdated` is the recompute's instant cut to the minute**, also
+  inside the hour the clocks go back.
+  - After a release before `V4` recomputed in the second pass of that hour, the start fills it with
+    the first pass ([domain-model.md](domain-model.md)).
 - **Timestamps** are ISO-8601 UTC and **`transferType`** is one of `DEPOSIT` / `WITHDRAWAL`; the
   client localizes both. The wire names come from `TransferTypeWireNames`, a visitor over the domain
   enum, so the German domain constants (`EINLAGERUNG`/`ENTNAHME`) never reach the contract and stay

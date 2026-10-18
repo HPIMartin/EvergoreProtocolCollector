@@ -1,10 +1,10 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.contribution;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-public record GuildContributions(Optional<LocalDateTime> lastUpdated, List<AvatarContribution> avatars) {
+public record GuildContributions(Optional<Instant> lastUpdated, List<AvatarContribution> avatars) {
 	public Optional<Contribution> total() {
 		if (avatars.stream().anyMatch(avatar -> avatar.contribution().isEmpty())) {
 			return Optional.empty();

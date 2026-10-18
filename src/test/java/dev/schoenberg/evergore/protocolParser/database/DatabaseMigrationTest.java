@@ -232,6 +232,76 @@ class DatabaseMigrationTest {
 	}
 
 	@Test
+	void aStoredLastUpdatedWithoutItsInstantGetsTheInstantItsBerlinMinuteNamesAtTheNextMigration() {
+		migrate();
+		execute("INSERT INTO metaInformation (key, value) VALUES ('last_updated', '15.07.2026 14:00')");
+
+		migrate();
+		List<String> instant = dump("SELECT value FROM metaInformation WHERE key = 'last_updated_at'", 1);
+
+		assertThat(instant).containsExactly("1784116800000|");
+	}
+
+	@Test
+	void aLastUpdatedInstantThatNoLongerMatchesItsBerlinMinuteIsReplacedAtTheNextMigration() {
+		migrate();
+		execute("INSERT INTO metaInformation (key, value) VALUES ('last_updated', '15.07.2026 14:00')");
+		execute("INSERT INTO metaInformation (key, value) VALUES ('last_updated_at', '1771156800000')");
+
+		migrate();
+		List<String> instant = dump("SELECT value FROM metaInformation WHERE key = 'last_updated_at'", 1);
+
+		assertThat(instant).containsExactly("1784116800000|");
+	}
+
+	@Test
+	void aLastUpdatedInstantInTheSecondPassOfTheHourTheClocksGoBackKeepsIt() {
+		migrate();
+		execute("INSERT INTO metaInformation (key, value) VALUES ('last_updated', '25.10.2026 02:30')");
+		execute("INSERT INTO metaInformation (key, value) VALUES ('last_updated_at', '1792891800000')");
+
+		migrate();
+		List<String> instant = dump("SELECT value FROM metaInformation WHERE key = 'last_updated_at'", 1);
+
+		assertThat(instant).containsExactly("1792891800000|");
+	}
+
+	@Test
+	void aLastUpdatedInTheHourTheClocksGoBackWithoutItsInstantGetsTheFirstPass() {
+		migrate();
+		execute("INSERT INTO metaInformation (key, value) VALUES ('last_updated', '25.10.2026 02:30')");
+
+		migrate();
+		List<String> instant = dump("SELECT value FROM metaInformation WHERE key = 'last_updated_at'", 1);
+
+		assertThat(instant).containsExactly("1792888200000|");
+	}
+
+	@Test
+	void aLastUpdatedInstantThatCannotBeReadIsReplacedAtTheNextMigration() {
+		migrate();
+		execute("INSERT INTO metaInformation (key, value) VALUES ('last_updated', '15.07.2026 14:00')");
+		execute("INSERT INTO metaInformation (key, value) VALUES ('last_updated_at', 'unreadable')");
+
+		migrate();
+		List<String> instant = dump("SELECT value FROM metaInformation WHERE key = 'last_updated_at'", 1);
+
+		assertThat(instant).containsExactly("1784116800000|");
+	}
+
+	@Test
+	void aLastUpdatedThatCannotBeReadIsLoggedAndLeftAloneAtTheNextMigration() {
+		migrate();
+		execute("INSERT INTO metaInformation (key, value) VALUES ('last_updated', '2026-07-15T14:00')");
+
+		migrate();
+		List<String> instant = dump("SELECT value FROM metaInformation WHERE key = 'last_updated_at'", 1);
+
+		assertThat(instant).isEmpty();
+		assertThat(logger.warnMessages()).anySatisfy(warning -> assertThat(warning).contains("last_updated", "2026-07-15T14:00"));
+	}
+
+	@Test
 	void migratingFromSeveralThreadsAtOnceMigratesTheDatabaseExactlyOnce() {
 		int threads = 8;
 		CountDownLatch startTogether = new CountDownLatch(1);

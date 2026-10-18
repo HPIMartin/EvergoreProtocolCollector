@@ -794,7 +794,8 @@ and the database is left untouched, so a broken scrape degrades to stale data ra
 
 **Database compatibility:** the `bankEntries` / `storageEntries` columns and the `last_updated`,
 `bank_placement_<avatar>` and `bank_withdrawl_<avatar>` meta keys are stable, and the
-`storage_placement_<avatar>` / `storage_withdrawl_<avatar>` keys are additive.
+`storage_placement_<avatar>` / `storage_withdrawl_<avatar>` keys, the `timeStampEpochMillis` columns
+(`V4`) and the `last_updated_at` key are additive.
 
 **Schema migrations (Flyway):** `SqliteDatabase.open` runs `src/main/resources/db/migration` before
 it opens the connection source, so the first start of a new version migrates the live database. `V1` creates
@@ -868,6 +869,12 @@ with an index on `(avatar, timeStampEpochMillis)`, and touches no row. What this
   - The comparison found nothing.
   - `flyway_schema_history` kept its four rows.
   - Both indexes stayed.
+- Rolling back to `0.4.0` over a database at `V4` is safe, and so is starting a release at `V4`
+  again after it:
+  - `0.4.0` ignores `V4` as a newer migration;
+  - it writes ledger rows without their instant and updates `last_updated` but not
+    `last_updated_at`;
+  - the next start of a release at `V4` fills those instants and `last_updated_at`.
 - The first boot migrates from whichever thread gets there first, the scheduled collector or an
   early request; `migrate()` serializes them, so the rebuild runs once and the other threads wait.
 - If `V2` does refuse, the log names the column. Find the rows on the backup with
