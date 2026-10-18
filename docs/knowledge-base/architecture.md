@@ -162,9 +162,11 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   - the domain types are real instants, so nothing here reintroduces
     `MetaInformationKey.DateTimeKey`'s ambiguity and no key family joins the pending schema
     migration;
-  - the ledger's **storage** format persists wall-clock text, so these columns inherit the DST
-    fall-back defect of the default-timezone timestamp strings until the epoch/UTC format lands
-    (backlog D14); only the container's UTC default keeps them right.
+  - a ledger row stores its time twice, whatever the JVM's zone:
+    - `timeStampEpochMillis`, the instant in milliseconds since the epoch;
+    - `timeStamp`, the same moment as text in UTC with its milliseconds padded to six digits
+      (`UtcDateStringType`);
+      - why: a release before `V4` reads and writes that text, so it can still run on the file.
 - **`TimezoneStartupValidator` is the interim safeguard:**
   - it aborts boot if the effective `ZoneId` (`ApplicationFactory#effectiveZone`, the JVM's
     `ZoneId.systemDefault()`) is not a fixed offset, so a misconfigured deploy fails fast instead

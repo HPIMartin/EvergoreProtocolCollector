@@ -3,20 +3,23 @@ package dev.schoenberg.evergore.protocolParser.database;
 import java.util.Date;
 import java.util.UUID;
 
-import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
 
 public abstract class LedgerDatabaseEntry {
 	public static final String ID_COLUMN = "id";
 	public static final String TIMESTAMP_COLUMN = "timeStamp";
+	public static final String INSTANT_COLUMN = "timeStampEpochMillis";
 	public static final String AVATAR_COLUMN = "avatar";
 	public static final String TYPE_COLUMN = "type";
 
 	@DatabaseField(columnName = ID_COLUMN, generatedId = true, allowGeneratedIdInsert = true, canBeNull = false)
 	public UUID id;
 
-	@DatabaseField(columnName = TIMESTAMP_COLUMN, dataType = DataType.DATE_STRING, canBeNull = false)
+	@DatabaseField(columnName = TIMESTAMP_COLUMN, persisterClass = UtcDateStringType.class, canBeNull = false)
 	public Date timeStamp;
+
+	@DatabaseField(columnName = INSTANT_COLUMN)
+	public Long timeStampEpochMillis;
 
 	@DatabaseField(columnName = AVATAR_COLUMN, canBeNull = false)
 	public String avatar;
@@ -26,6 +29,7 @@ public abstract class LedgerDatabaseEntry {
 
 	protected LedgerDatabaseEntry(Date timeStamp, String avatar, String type) {
 		this.timeStamp = timeStamp;
+		this.timeStampEpochMillis = timeStamp.getTime();
 		this.avatar = avatar;
 		this.type = type;
 	}

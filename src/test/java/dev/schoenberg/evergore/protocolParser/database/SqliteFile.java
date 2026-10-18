@@ -54,6 +54,20 @@ public class SqliteFile {
 		});
 	}
 
+	public List<String> committedTexts(String table, String expression) {
+		return silentThrow(() -> {
+			try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + path);
+					Statement statement = connection.createStatement();
+					ResultSet rows = statement.executeQuery("SELECT " + expression + " FROM " + table + " ORDER BY rowid")) {
+				List<String> values = new ArrayList<>();
+				while (rows.next()) {
+					values.add(rows.getString(1));
+				}
+				return values;
+			}
+		});
+	}
+
 	public int commitsDuring(Runnable work) {
 		int before = changeCounter();
 		work.run();

@@ -388,18 +388,14 @@ service's only read surface.
   ledger**, which is the case the sheet leaves blank. They are read from the ledger rows rather than
   from the meta store, so they are as fresh as the last ingest instead of as fresh as the last
   evaluation; why they come from there is in [architecture.md](architecture.md) (decision
-  2026-09-02). They inherit the ledger's storage format, so like `/api/v1/admin/status`'s
-  `lastUpdated` they can read back an hour late for an activity inside the Berlin DST fall-back hour
-  until the epoch/UTC storage format lands (backlog D14).
+  2026-09-02).
 - **`/api/v1/admin/status`'s `lastUpdated: null`** means no collection run has completed. A sentinel
   instant is not an option: Java 25 throws when converting an extreme instant into
   `java.sql.Timestamp`.
 - **`/api/v1/admin/status`'s `lastUpdated` is display-only and up to an hour off inside the DST
   fall-back hour.** It is stored as a Berlin wall-clock time, so the instant behind it is
   unrecoverable while the local hour repeats and the conversion resolves to the earlier offset. The
-  epoch/UTC storage format fixes this at the root. **Entry timestamps are not exempt**: they are real instants in the domain but persist as wall-clock text too, so two
-  entries an hour apart inside the fall-back hour store the same text and both read back as the later
-  one. Only the container's UTC default keeps every timestamp the API serves correct today.
+  epoch/UTC storage format fixes this at the root.
 - **Timestamps** are ISO-8601 UTC and **`transferType`** is one of `DEPOSIT` / `WITHDRAWAL`; the
   client localizes both. The wire names come from `TransferTypeWireNames`, a visitor over the domain
   enum, so the German domain constants (`EINLAGERUNG`/`ENTNAHME`) never reach the contract and stay
