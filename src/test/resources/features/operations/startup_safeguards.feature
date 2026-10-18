@@ -25,7 +25,7 @@ Feature: The service refuses to start on a setting that would break it silently
   Rule: The service starts in any time zone
     No time zone is refused: one with summer time, one without it and UTC alike.
 
-    @wip @time-zone
+    @time-zone
     Scenario Outline: The service starts in the time zone "<zone>"
       Given the service's time zone is "<zone>"
       When the operator starts the service
