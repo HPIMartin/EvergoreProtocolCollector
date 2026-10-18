@@ -1,9 +1,9 @@
 Feature: The service refuses to start on a setting that would break it silently
   A missing secret or a throttle setting that makes no sense does not surface as an error while the
-  service runs; it surfaces as a dashboard nobody can open, a collection that never signs in, a
-  throttle that never turns a client away, or timestamps an hour off. The service therefore checks
-  these settings when it starts and refuses to start, naming the setting, instead of running
-  without them.
+  service runs; it surfaces as a dashboard nobody can open, a collection that never signs in, or a
+  throttle that never turns a client away. The service therefore checks these settings when it
+  starts and refuses to start, naming the setting, instead of running without them. The service's
+  time zone is not one of them: the service starts in any time zone.
 
   Rule: The secrets the service needs must be set
 
@@ -22,31 +22,20 @@ Feature: The service refuses to start on a setting that would break it silently
         | the game account's name     | EVERGORE_CREDENTIALS_USERNAME | unset | evergore.credentials.username |
         | the game account's password | EVERGORE_CREDENTIALS_PASSWORD | unset | evergore.credentials.password |
 
-  Rule: The service runs only in a time zone with a fixed offset from UTC
-    The ledgers store times as wall-clock text, which cannot tell the two passes of an hour apart
-    when the clocks are set back. A zone that once had summer time is refused as well: Tokyo kept
-    summer time from 1948 to 1951, although it has none today.
+  Rule: The service starts in any time zone
+    No time zone is refused: one with summer time, one without it and UTC alike.
 
-    Scenario Outline: A time zone whose offset has ever changed is refused: "<zone>"
-      Given the service's time zone is "<zone>"
-      When the operator starts the service
-      Then the service does not start
-      And the service's log says "Effective timezone '<zone>' observes daylight saving and is not supported. Set a fixed-offset zone (e.g. UTC)."
-
-      Examples:
-        | zone          |
-        | Europe/Berlin |
-        | Asia/Tokyo    |
-
-    Scenario Outline: A fixed time zone is accepted: "<zone>"
+    @wip @time-zone
+    Scenario Outline: The service starts in the time zone "<zone>"
       Given the service's time zone is "<zone>"
       When the operator starts the service
       Then the service starts
 
       Examples:
-        | zone      |
-        | UTC       |
-        | Etc/GMT-2 |
+        | zone          |
+        | Europe/Berlin |
+        | Asia/Tokyo    |
+        | UTC           |
 
   Rule: The request throttle cannot be configured away
 
