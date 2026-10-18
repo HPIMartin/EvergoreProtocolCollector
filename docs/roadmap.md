@@ -26,7 +26,7 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M17 | 0.5.0: members log in | before the login: the timestamps (D14) and the preparation: the unreadable-head test (B47), the React hook rules (B24), the act-in-assertion check (G84), the fingerprint check (G66), the security lens (G85); the login (C11) with the message form (C14), the password delivery (C15), the user management (C12) and the usage records (C13); the deploy script (F21, F20) and the release tooling (F24); the release (F25) | **After 0.4.0** (author decisions 2026-10-14 and 2026-10-15): auth is the feature 0.5.0 carries |
+| M17 | 0.5.0: members log in | before the login: the preparation: the unreadable-head test (B47), the React hook rules (B24), the act-in-assertion check (G84), the fingerprint check (G66), the security lens (G85); the login (C11) with the message form (C14), the password delivery (C15), the user management (C12) and the usage records (C13); the deploy script (F21, F20) and the release tooling (F24); the release (F25) | **After 0.4.0** (author decisions 2026-10-14 and 2026-10-15): auth is the feature 0.5.0 carries |
 | M18 | Right after 0.5.0 | HTTPS through a reverse proxy (C16), the manual scrape trigger (E17), the admin page's member links (E28), dropping the old timestamp columns (D26) | **After 0.5.0** (author decisions 2026-10-15): HTTPS follows the login over plain HTTP, the roles of 0.5.0 carry the admin page's additions, and the old timestamp columns go once 0.5.0 is stable |
 | M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | the atomic bank+storage ingest (D24) with the job outliving the closed context (F10); the slow-read warning (F19) | The transactional ingest rests on the unified repositories, which every later read method needed first |
@@ -40,9 +40,6 @@
 Slice: every guild member logs in with an own account, the admin manages the accounts on the admin
 page, and the author sees who uses the app and how.
 
-- [ ] Timestamps and `last_updated` round-trip timezone-independently as instants (backlog D14).
-- [ ] The new timestamp columns stand beside the old, so that 0.4.0 still runs on the database
-      (backlog D14).
 - [ ] The preparation has landed before the login's first implementation commit: the
       unreadable-head test, the React hook rules and the act-in-assertion check (backlog B47, B24,
       G84).

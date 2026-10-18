@@ -1,7 +1,6 @@
 package dev.schoenberg.evergore.protocolParser;
 
 import java.time.Clock;
-import java.time.ZoneId;
 
 import jakarta.inject.Singleton;
 
@@ -110,10 +109,5 @@ public class ApplicationFactory {
 	@Singleton
 	public Sleeper sleeper() {
 		return Sleeper.SYSTEM_SLEEPER;
-	}
-
-	@Singleton
-	public ZoneId effectiveZone() {
-		return ZoneId.systemDefault();
 	}
 }

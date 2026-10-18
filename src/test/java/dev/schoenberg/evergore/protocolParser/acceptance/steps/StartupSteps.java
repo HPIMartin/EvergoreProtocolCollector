@@ -3,7 +3,10 @@ package dev.schoenberg.evergore.protocolParser.acceptance.steps;
 import java.time.ZoneId;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TimeZone;
 
+import io.cucumber.java.After;
+import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -18,11 +21,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class StartupSteps {
 	private static final String THROTTLE = "evergore.rate-limit.";
 	private static final int SERVED = 200;
+	private static final String RUNS_ALONE = "@time-zone";
 
 	private final OperatorSettings settings;
 	private final RunningService service;
 	private final ServiceRequests requests;
 	private Optional<RuntimeException> refusal = Optional.empty();
+	private Optional<TimeZone> zoneBeforeTheScenario = Optional.empty();
+	private boolean runsAlone;
 
 	public StartupSteps(OperatorSettings settings, RunningService service, ServiceRequests requests) {
 		this.settings = settings;
@@ -42,7 +48,21 @@ public class StartupSteps {
 
 	@Given("the service's time zone is {string}")
 	public void theServicesTimeZoneIs(String zone) {
-		settings.runIn(ZoneId.of(zone));
+		if (!runsAlone) {
+			throw new IllegalStateException("A scenario that sets the service's time zone changes the zone of the whole JVM and must be tagged " + RUNS_ALONE);
+		}
+		zoneBeforeTheScenario = Optional.of(zoneBeforeTheScenario.orElse(TimeZone.getDefault()));
+		TimeZone.setDefault(TimeZone.getTimeZone(ZoneId.of(zone)));
+	}
+
+	@Before(RUNS_ALONE)
+	public void noteThatTheScenarioRunsAlone() {
+		runsAlone = true;
+	}
+
+	@After(RUNS_ALONE)
+	public void restoreTheZoneBeforeTheScenario() {
+		zoneBeforeTheScenario.ifPresent(TimeZone::setDefault);
 	}
 
 	@Given("the throttle setting {string} is {word}")

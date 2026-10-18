@@ -169,12 +169,10 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     - every read, the ingest window, the sort, the latest movement and the entry itself, takes the
       instant;
     - the text's `(avatar, timeStamp)` index (migration `V3`) stays for a release before `V4`.
-- **`TimezoneStartupValidator` is the interim safeguard:**
-  - it aborts boot if the effective `ZoneId` (`ApplicationFactory#effectiveZone`, the JVM's
-    `ZoneId.systemDefault()`) is not a fixed offset, so a misconfigured deploy fails fast instead
-    of silently reintroducing the DST defect;
-  - it does not reach `last_updated`, which is pinned to the hard-coded `Constants.APP_ZONE` and
-    not to the effective zone the validator checks.
+- **The service runs in any time zone:**
+  - no code reads the JVM's default zone;
+  - the meta store's minute is in `Constants.APP_ZONE`, beside its instant;
+  - the game's own times are read in `Constants.APP_ZONE` too.
 - **Domain (framework-free):** `Entry`, `Item`, `EvergoreItem` (catalog + value math).
 - **REST** (what each endpoint answers: [build-run-deploy.md](build-run-deploy.md), "HTTP
   endpoints"; the JSON contract: [frontend.md](frontend.md)):

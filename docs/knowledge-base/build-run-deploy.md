@@ -667,10 +667,9 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      (single-admin home server); nothing writes them to the log. The script keeps them out of the
      shell history half of that by passing a 0600 `--env-file` instead of `-e VAR=value`, and
      deletes that file once the container is up; `docker inspect` still shows the values.
-   - `TZ=UTC` keeps the runtime off a DST zone while timestamps persist as default-timezone
-     wall-clock text (backlog D14). The container default is already UTC; setting it explicitly
-     pins it. A `TZ` whose zone is not a fixed offset fails the boot
-     (`TimezoneStartupValidator`, [architecture.md](architecture.md)).
+   - `TZ=UTC` pins the container's default zone.
+   - The service runs in any zone ([architecture.md](architecture.md)); the fill at every start
+     reads the text a release before `V4` wrote under this setting as UTC.
    - The fixed `--name` is what makes every command in "Which stand is running?" and in the
      rollback runnable as written.
    - **The published port is the target machine's choice, and it is not `8080` here.** The home
@@ -844,7 +843,7 @@ with an index on `(avatar, timeStampEpochMillis)`, and touches no row. What this
 - A row that carries a `NULL` in any column but the instant **aborts the boot** instead of being
   dropped. That is
   the intended strict behaviour (engineering-handbook §3), and the production snapshot holds no such
-  row in any of the three tables (ledgers measured 2026-09-06, `metaInformation` 2026-09-07). The
+  row in any of the three tables. The
   abort rolls back whole, so fixing the row and restarting migrates cleanly with no `flyway repair`
   in between.
 - Rolling back to a pre-Flyway image is safe: the old code ignores the `flyway_schema_history` table

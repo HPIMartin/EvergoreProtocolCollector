@@ -89,7 +89,6 @@
 | `RateLimitStartupValidatorTest` | Startup fails, naming the offending property, for each value that would silently disable the throttle: a request budget of `0`, a zero or missing `interval`, a zero or negative `block-duration`, and a client budget of `0` or negative. The working configuration starts up and the `onApplicationEvent` entry point propagates the same failure. Keeps the config guard out of the constructor (handbook §3), the way `ApiTokenStartupValidator` does. | pure unit |
 | `ApiTokenStartupValidatorTest` | Startup fails with the property name (`evergore.security.api-token`) in the message for an empty, blank and absent token; a set token starts up; the `onApplicationEvent` entry point propagates the same failure; the logged error names the environment variable that sets the token. One test boots a **real `ApplicationContext`** without the `test` environment and without the token, so an unset variable is pinned to end in the same message as a blank one, not in a binding failure. The boot runs on `ThrowawayDatabaseFactory`. | pure unit + one real context boot |
 | `CredentialsStartupValidatorTest` | Startup fails with the property name (`evergore.credentials.username`/`.password`) in the message for an empty, blank and absent username or password; a set pair starts up; the `onApplicationEvent` entry point propagates the same failure; the logged error names the environment variable that sets the value and never the value itself. Three tests boot a **real `ApplicationContext`** (without the `test` environment for the unset ones), one with a blank login and one each without the username and the password, so the listener wiring is pinned too, not just the validator method: a lost `@Singleton` would fail them, and an unset variable is pinned to end in the same message as a blank one, not in a binding failure. The boots run on `ThrowawayDatabaseFactory`. | pure unit + three real context boots |
-| `TimezoneStartupValidatorTest` | Startup fails naming the zone when the injected `ZoneId`'s rules are not a fixed offset (`Europe/Berlin`); a fixed-offset zone starts up whether it is `UTC` or another fixed offset (`Etc/GMT-2`), proving the check is "fixed offset", not "must be UTC"; the `onApplicationEvent` entry point propagates the same failure; the logged error names the zone. One test boots a **real `ApplicationContext`** under the real system default zone (UTC in this environment), pinning the `ApplicationFactory` wiring of the effective zone. A second boot test replaces the injected `ZoneId` bean with a DST-observing one (`Europe/Berlin`, via a `spec.name`-guarded `@Replaces` test factory) and asserts the boot itself fails naming the zone, so the reject path is proven through the real bean graph too, not only via a hand-constructed instance. Both boots run on `ThrowawayDatabaseFactory`. Why the validator exists: [architecture.md](architecture.md). | pure unit + two real context boots |
 | `BootSignalRecorderTest` | `awaitCollection()` unblocks both on `recordCollectionFinished()` and on `recordException()` (real threads, no timeouts), and the `dataLoaded`/`exceptionOccurred` queries flip false→true. Pins the boot-signal seam itself. | pure unit (concurrency) |
 | `NoApplicationTextInHttpStatusTest` | ArchUnit guard, one rule: no class calls a reason-phrase-carrying `status(…)` overload. Covers all **six** that micronaut-http's response API offers, enumerated from the jar: `HttpResponse.status(HttpStatus\|int, String)`, `MutableHttpResponse.status(HttpStatus\|int, CharSequence)` and the `HttpResponseFactory.status(HttpStatus\|int, String)` the static helpers delegate to (missing that pair leaves a reachable bypass). `HttpStatus` is an enum and has no reason setter, so those six are the complete set. Each leg verified non-vacuous by a temporary probe calling all six; the rule flags every call by file and line. | architecture guard (ArchUnit + JUnit 5) |
 | `BankEntryEqualityTest` / `StorageEntryEqualityTest` | Value equality of the two entry records: equal when all fields match, different for each single field in turn (timestamp, avatar, amount/quantity, name, quality, transfer type). The window-dedup in `EvergoreDataExtractor` compares entries by value, so this is load-bearing, not record boilerplate. | pure unit |
@@ -179,8 +178,8 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
     service's log" in a scenario is this record; the framework's own logging is not in it. A
     collection against a reachable game fails its step unless it logs that it read the game, so a
     scrape that crashes cannot pass for one that found nothing.
-  - `OperatorSettings`: the environment variables, throttle settings and time zone the operator
-    starts the service with.
+  - `OperatorSettings`: the environment variables and throttle settings the operator starts the
+    service with.
 - **The daily collection is fired by hand**: `ManualTaskScheduler` replaces the `scheduled`
   `TaskScheduler`, records the fixed-delay job `@Scheduled` registers instead of starting it, and
   runs it when a step says the collection runs, through the same runnable the scheduler would
@@ -190,12 +189,17 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   service without the `test` environment, so `application.yml`'s throttle defaults hold and the
   secrets come from `OperatorSettings` through a property source with Micronaut's
   environment-variable convention, where a `Given` unsets or blanks one; the process's own
-  environment is left out. The zone the `TimezoneStartupValidator` checks is the settings' one
-  (`AcceptanceBeans` replaces `ApplicationFactory#effectiveZone`; default the JVM's). A start the
-  service refuses never reaches the server's start, so no port stays bound; Micronaut counts the
-  context as running only after its startup event, so the beans made before the refusal are left
-  undestroyed. `the service has been restarted since` closes the context and starts a new one on
-  the same SQLite file, with the run outcomes held in memory gone.
+  environment is left out.
+  - `the service's time zone is "<zone>"` sets the JVM's default zone, which an `@After` hook for
+    `@time-zone` restores.
+  - The step refuses a scenario not tagged `@time-zone`.
+  - `junit-platform.properties` maps `@time-zone` to JUnit's global exclusive resource, so no other
+    scenario runs beside one that changes the zone of the whole JVM.
+  - A start the service refuses never reaches the server's start, so no port stays bound.
+  - Micronaut counts the context as running only after its startup event, so the beans made before
+    a refusal are left undestroyed.
+  - `the service has been restarted since` closes the context and starts a new one on the same
+    SQLite file, with the run outcomes held in memory gone.
 - **Service work runs on a thread of its own** (`OwnThread`): Micronaut forks ForkJoin tasks while
   it starts, and on a worker of cucumber's parallel pool the join steals another scenario onto the
   same thread, which then shares the first one's world (measured: `Cannot stop. Current container
@@ -341,7 +345,7 @@ the **rename safety** of the JSON contract and the DB schema (`RenameSafetyTest`
 `TransferType`→German mapping (`toGermanString`) · `ApplicationExceptionHandler` exception→HTTP visitor dispatch + token-free logging + severity by mapped status +
 the reason phrase staying free of the requested value, through the real Netty write (`ApplicationExceptionHandlerHttpTest`) ·
 `RateLimitCounter` (no lost counts under 20 threads + deterministic expiry + the idle rule), the bound on the counter map (`RateLimitCountersTest`), the limit applying to every path, a head the server cannot read included (`RateLimitFilterTest`, `UnreadableHeadServerTest`, `UnreadableHeadReplacerTest`, `UnreadableHeadRescueTest`, `HeaderRescueTest`, `UnreadableRequestTest`, `UnreadableRequestFilterTest`), and the audit line for every request (`RequestAuditLogFilterTest`) ·
-`ApiTokenStartupValidator` (startup aborts on an unset/blank token, the unset one pinned through a real context boot), `RateLimitStartupValidator` (startup aborts on any rate-limit value that would disable the throttle), `CredentialsStartupValidator` (startup aborts on an unset/blank Evergore login, pinned through a real context boot) and `TimezoneStartupValidator` (startup aborts on a DST-observing effective zone) ·
+`ApiTokenStartupValidator` (startup aborts on an unset/blank token, the unset one pinned through a real context boot), `RateLimitStartupValidator` (startup aborts on any rate-limit value that would disable the throttle) and `CredentialsStartupValidator` (startup aborts on an unset/blank Evergore login, pinned through a real context boot) ·
 the SPA seam: history fallback vs. 404 in both directions (`SpaHistoryFallbackTest`, `SpaNavigationPathsTest`), bundle packaging (`SpaBundlePackagingTest`) and the bundled SPA painting real API data in a real browser (`DashboardBrowserSmokeTest`) ·
 `BankEntry`/`StorageEntry` value equality (load-bearing for the window dedup) ·
 `SeleniumPageSource`'s driver lifecycle (quit on success and failure, failure logging, deterministic wait timeout via injected clock/sleeper) and, in `EvergoreSession`, the sign-in both it and the catalog scrape use (the configured credentials reach the form, the consent banner is optional, the browser ends on the game; a failed login warns without leaking them) ·
