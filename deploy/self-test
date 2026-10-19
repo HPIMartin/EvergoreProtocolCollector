@@ -30,6 +30,7 @@ target=
 for argument in "$@"; do target=$argument; done
 sanitise() { printf '%s' "$1" | tr '/:' '__'; }
 fingerprint_format='{{json .RootFS.Layers}}|{{index .Config.Labels "org.opencontainers.image.version"}}|{{index .Config.Labels "org.opencontainers.image.revision"}}'
+version_format='{{index .Config.Labels "org.opencontainers.image.version"}}'
 
 case ${1:-} in
 	build) exit 0 ;;
@@ -97,7 +98,10 @@ case ${1:-} in
 							exit 0
 						fi
 						[ -n "${EPC_STUB_ROLLBACK_TAG_ID:-}" ] || exit 1
-						printf '%s\n' "$EPC_STUB_ROLLBACK_TAG_ID"
+						case $format in
+							"$version_format") [ -z "${EPC_STUB_ROLLBACK_LABELS_MISSING:-}" ] || exit 1; printf '%s\n' "$EPC_STUB_ROLLBACK_VERSION" ;;
+							*) printf '%s\n' "$EPC_STUB_ROLLBACK_TAG_ID" ;;
+						esac
 						exit 0 ;;
 				esac
 				[ -z "${EPC_STUB_REMOTE_IMAGE_MISSING:-}" ] || exit 1
@@ -290,7 +294,9 @@ new_case() {
 	EPC_STUB_NO_CURL=
 	EPC_STUB_SUDO_REFUSAL=
 	EPC_STUB_STOP_CREATES=
-	export EPC_STUB_SSH_REFUSAL EPC_STUB_NO_CURL EPC_STUB_SUDO_REFUSAL EPC_STUB_STOP_CREATES
+	EPC_STUB_ROLLBACK_VERSION=0.3.0
+	EPC_STUB_ROLLBACK_LABELS_MISSING=
+	export EPC_STUB_SSH_REFUSAL EPC_STUB_NO_CURL EPC_STUB_SUDO_REFUSAL EPC_STUB_STOP_CREATES EPC_STUB_ROLLBACK_VERSION EPC_STUB_ROLLBACK_LABELS_MISSING
 	export EPC_STUB_REVISION EPC_STUB_LOCAL_LAYERS EPC_STUB_REMOTE_LAYERS EPC_STUB_LOCAL_LABELS \
 		EPC_STUB_REMOTE_LABELS EPC_STUB_REMOTE_LAYERS_MISSING EPC_STUB_LOCAL_LAYERS_MISSING
 	export EPC_STUB_JOURNAL EPC_STUB_STATE EPC_STUB_EXPECT_TARGET EPC_STUB_CONTAINER \
@@ -798,6 +804,71 @@ printf 'an older snapshot worth restoring\n' > "$backup_path"
 run_rollback --backup "$(basename "$backup_path")" --yes
 if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
 check "a rollback to an image the home server does not have stops before the stop" "$r"
+
+new_case
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+EPC_STUB_STARTED_IMAGE=sha256:old
+EPC_STUB_ROLLBACK_VERSION=0.2.0
+run_rollback --backup "$(basename "$backup_path")" --yes
+if [ "$status" -ne 0 ] && nothing_destructive && database_intact && printf '%s' "$output" | grep -qF "'0.2.0'"; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a rollback onto an image labelled another line than its statement names stops before the stop" "$r"
+
+new_case
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+EPC_STUB_STARTED_IMAGE=sha256:old
+EPC_STUB_ROLLBACK_VERSION=
+run_rollback --backup "$(basename "$backup_path")" --yes
+if [ "$status" -ne 0 ] && nothing_destructive && database_intact; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a rollback onto an image without a version label stops before the stop" "$r"
+if printf '%s' "$output" | grep -qF "carries no version label"; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "and it says the image carries no version label" "$r"
+
+new_case
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+EPC_STUB_STARTED_IMAGE=sha256:old
+EPC_STUB_ROLLBACK_VERSION=0.3.0-rc1
+run_rollback --backup "$(basename "$backup_path")" --yes
+if [ "$status" -ne 0 ] && nothing_destructive && database_intact; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a label with a suffix after the line is refused" "$r"
+
+new_case
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+EPC_STUB_STARTED_IMAGE=sha256:old
+EPC_STUB_ROLLBACK_VERSION=0.3.01
+run_rollback --backup "$(basename "$backup_path")" --yes
+if [ "$status" -ne 0 ] && nothing_destructive && database_intact; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a label with one more digit than the line is refused" "$r"
+
+new_case
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+EPC_STUB_STARTED_IMAGE=sha256:old
+EPC_STUB_ROLLBACK_VERSION='0.3.0 '
+run_rollback --backup "$(basename "$backup_path")" --yes
+if [ "$status" -ne 0 ] && nothing_destructive && database_intact; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a label with a trailing space after the line is refused" "$r"
+
+new_case
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+EPC_STUB_STARTED_IMAGE=sha256:old
+EPC_STUB_ROLLBACK_VERSION='0.3.0|forged'
+run_rollback --backup "$(basename "$backup_path")" --yes
+if [ "$status" -ne 0 ] && nothing_destructive && database_intact; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a version label holding the separator is refused" "$r"
+
+new_case
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+EPC_STUB_STARTED_IMAGE=sha256:old
+EPC_STUB_ROLLBACK_LABELS_MISSING=1
+run_rollback --backup "$(basename "$backup_path")" --yes
+if [ "$status" -ne 0 ] && nothing_destructive && database_intact && printf '%s' "$output" | grep -qF 'cannot be read'; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a rollback onto an image whose labels cannot be read stops before the stop" "$r"
 
 new_case
 EPC_STUB_ROLLBACK_TAG_ID=sha256:old

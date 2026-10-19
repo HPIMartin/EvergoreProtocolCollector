@@ -808,6 +808,11 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      - The script prints both halves for the step from `0.4.0` to `0.3.0`.
      - That text holds for the rollback onto the `pre-0.4.0` tag only, the one step proven
        (decision 2026-10-11).
+     - So the script reads the `org.opencontainers.image.version` label of the image `--image`
+       names and refuses, before anything is stopped, one that is not exactly `0.3.0`.
+     - `rollback_line` in `cmd_rollback` holds that line and is set with the text at each release.
+     - A rollback to any other line, or onto an image without labels, follows the commands above
+       by hand.
      - The script will not act without `--yes`.
    - Restore the backup **before** starting the old image: the new version may have written entries
      or meta sums the old one does not expect, and that write is not reversible.

@@ -192,6 +192,7 @@ read_running_container() {
 }
 
 fingerprint_format='{{json .RootFS.Layers}}|{{index .Config.Labels "org.opencontainers.image.version"}}|{{index .Config.Labels "org.opencontainers.image.revision"}}'
+version_format='{{index .Config.Labels "org.opencontainers.image.version"}}'
 
 build_image() {
 	step "Build $image and read the layers and labels that must survive the transfer"
@@ -488,13 +489,14 @@ cmd_rollback() {
 	plain --backup "$backup_name"
 	segment --backup "$backup_name"
 	backup_path="$database_dir/$backup_name"
+	rollback_line=0.3.0
 	cat <<STATEMENT
 
 Rollback moves two things back, and they are not the same decision.
 
-  The image: going back to $image, the 0.3.0 line, is safe:
+  The image: going back to $image, the $rollback_line line, is safe:
   it starts on the database this release ran on.
-  This release added no migration, so the schema stays at V3, the newest migration the 0.3.0
+  This release added no migration, so the schema stays at V3, the newest migration the $rollback_line
   line carries, and both lines write the same tables.
 
   The database: if $backup_name is the copy this release's deploy took, restoring it
@@ -509,6 +511,10 @@ STATEMENT
 	read_running_container
 	require_ssh_user_access "$backup_path"
 	rolled_back_id=$(remote "$docker_remote inspect --type image -f '{{.Id}}' '$image' 2>/dev/null") || fail "$image is not on $host, so there is nothing to roll back to"
+	rolled_back_version=$(remote "$docker_remote inspect --type image -f '$version_format' '$image' 2>/dev/null") || fail "the labels of $image cannot be read on $host"
+	label_text="the version label '$rolled_back_version'"
+	[ -n "$rolled_back_version" ] || label_text="no version label"
+	[ "$rolled_back_version" = "$rollback_line" ] || fail "$image carries $label_text, and the statement above holds for the $rollback_line line only. Nothing was stopped; a rollback to another line is done by hand"
 
 	rollback_reference=$image
 	superseded_path="$database_path.superseded-$(date +%Y%m%d%H%M%S)"
