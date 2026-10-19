@@ -468,8 +468,9 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
   mount, and the write probe, which appends nothing. Every mutation is printed with its resolved
   arguments and skipped. The probe uses the image already on the host, since the release image has
   not been transferred.
-- **Order:** build with the labels → read the running container → transfer and compare layers and labels →
-  secure the rollback tag → mount pre-flight → prove the stop → back up → replace → verify.
+- **Order:** build with the labels → read the running container → check the ssh user's access to
+  the database → transfer and compare layers and labels → secure the rollback tag → mount
+  pre-flight → prove the stop → back up → replace → verify.
 - **Rollback** is `deploy/epc-deploy rollback … --image <the pre- tag> --backup <name> --yes`. The
   deploy prints that exact line both when it finishes and when it fails; the rollback prints what
   each of its two halves means (step 7) and refuses without `--yes`.
@@ -585,12 +586,14 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      ([architecture.md](architecture.md), "Lock waits").
    - One file is enough: the database runs in rollback-journal mode, so no `-wal`/`-shm` sidecar
      outlives a write and there is no second file to keep consistent with it.
-   - The script names the copy `<database>.bak-<yyyymmdd>`, verifies its size against the source,
-     and **refuses an existing file of that name** instead of overwriting it: a second run on the
+   - The copy is named `<database>.bak-<yyyymmdd>`.
+   - The script verifies its size against the source.
+   - It **refuses an existing file of that name** instead of overwriting it: a second run on the
      same day would otherwise replace the only pre-migration copy with an already migrated one.
-     The refusal comes right after the running container is read, **before** the transfer and the
-     stop, so a run that cannot proceed leaves the service up and moves no image (three reads
-     reach the host, nothing else). There is no option that skips the backup.
+   - The refusal comes right after the running container is read and the ssh user's access is
+     checked (step 3), **before** the transfer and the stop, so a run that cannot proceed leaves
+     the service up and moves no image (four reads reach the host, nothing else).
+   - There is no option that skips the backup.
    - The backup is created by the ssh user's `cp`, so it belongs to that user and carries its
      umask (`644` or `640`), not the database's owner and `660` (step 3).
      - The directory's `770` keeps it from other accounts either way.
@@ -649,6 +652,12 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      - Under such a mode that user's `test -e` reads a present file as absent.
      - The switch needs no restart: a running container keeps writing under the new owner, an
        open file included.
+     - So the script checks the ssh user's access right after reading the running container,
+       before the transfer and the stop.
+     - It refuses a directory that user cannot enter or write and a database that user cannot read
+       and write, and names the same commands.
+     - It refuses a missing database apart, without the commands, since ownership cannot fix it.
+     - The rollback also refuses a backup that is missing or that user cannot read.
    - **The redirection is `>>`, never `>`.** Both prove the same write permission, but `: >` opens
      the file with `O_TRUNC` and empties the live database **while printing `FILE-OK`**: the check
      would destroy exactly what it is run to protect, and the printed line would report success.

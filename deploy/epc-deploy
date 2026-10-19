@@ -325,6 +325,19 @@ copy_or_print() {
 	copy_database "$1" "$2" "$3"
 }
 
+require_ssh_user_access() {
+	backup_check=
+	[ -z "${1:-}" ] || backup_check="test -r '$1' || { echo NO-BACKUP; exit 1; }; "
+	access_answer=$(remote "test -x '$database_dir' && test -w '$database_dir' || { echo NO-DIRECTORY; exit 1; }; test -e '$database_path' || { echo NO-DATABASE; exit 1; }; test -r '$database_path' && test -w '$database_path' || { echo NO-DATABASE-ACCESS; exit 1; }; ${backup_check}echo ACCESS-OK" 2>&1) || true
+	case $access_answer in
+		*ACCESS-OK*) ;;
+		*NO-DIRECTORY*|*NO-DATABASE-ACCESS*) fail "$ssh_user needs to read and write $database_path and to write inside $database_dir, or the backup or the restore fails after the stop. Nothing was transferred or stopped. On $host, $ownership_remedy" ;;
+		*NO-DATABASE*) fail "$database_path does not exist on $host, so there is no database to back up or to restore over. Nothing was transferred or stopped" ;;
+		*NO-BACKUP*) fail "$1 does not exist on $host, or $ssh_user cannot read it, so the restore would fail after the stop. Nothing was stopped" ;;
+		*) fail "the access check did not run on $host, so nothing was transferred or stopped: ${access_answer:-no answer}" ;;
+	esac
+}
+
 refuse_existing_backup() {
 	if remote "test -e '$backup_path'"; then
 		fail "$backup_path already exists. Overwriting it would replace the only pre-migration copy with an already migrated database, so move it aside and run again. Nothing was transferred and the container is still running"
@@ -441,6 +454,7 @@ cmd_deploy() {
 	require_remote_tools
 	build_image
 	read_running_container
+	require_ssh_user_access
 	refuse_existing_backup
 	transfer_image
 	secure_rollback_tag
@@ -485,6 +499,7 @@ STATEMENT
 	resolve_secrets
 	require_remote_tools
 	read_running_container
+	require_ssh_user_access "$backup_path"
 	rolled_back_id=$(remote "$docker_remote inspect --type image -f '{{.Id}}' '$image' 2>/dev/null") || fail "$image is not on $host, so there is nothing to roll back to"
 
 	rollback_reference=$image

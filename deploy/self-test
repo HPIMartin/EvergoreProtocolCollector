@@ -181,6 +181,11 @@ if [ "$1" != "$EPC_STUB_EXPECT_TARGET" ]; then
 	printf 'fake-ssh: wrong target %s\n' "$1" >&2
 	exit 98
 fi
+case $2 in
+	*"${EPC_STUB_SSH_DROP:-no drop configured}"*)
+		printf 'Connection to host closed by remote host.\n' >&2
+		exit 255 ;;
+esac
 printf 'remote %s\n' "$2" >> "$EPC_STUB_JOURNAL"
 EPC_STUB_SIDE=remote
 export EPC_STUB_SIDE
@@ -254,6 +259,8 @@ new_case() {
 	EPC_STUB_REMOTE_LABELS=$EPC_STUB_LOCAL_LABELS
 	EPC_STUB_REMOTE_LAYERS_MISSING=
 	EPC_STUB_LOCAL_LAYERS_MISSING=
+	EPC_STUB_SSH_DROP=
+	export EPC_STUB_SSH_DROP
 	export EPC_STUB_REVISION EPC_STUB_LOCAL_LAYERS EPC_STUB_REMOTE_LAYERS EPC_STUB_LOCAL_LABELS \
 		EPC_STUB_REMOTE_LABELS EPC_STUB_REMOTE_LAYERS_MISSING EPC_STUB_LOCAL_LAYERS_MISSING
 	export EPC_STUB_JOURNAL EPC_STUB_STATE EPC_STUB_EXPECT_TARGET EPC_STUB_CONTAINER \
@@ -409,6 +416,8 @@ rm "$database_dir/temp.sqlite"
 run_deploy
 if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
 check "a mount without the database in it is refused before anything starts" "$r"
+if printf '%s' "$output" | grep -qF "$database_dir/temp.sqlite does not exist" && ! printf '%s' "$output" | grep -qF 'chown'; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "and the refusal names the missing database, not an ownership that cannot fix it" "$r"
 
 new_case
 EPC_STUB_PROBE_SUPPRESS=DIR-OK
@@ -425,6 +434,75 @@ if [ "$status" -ne 0 ] && nothing_destructive && database_intact; then r=0; else
 check "a database file the runtime user cannot write is refused" "$r"
 if names_ownership_remedy; then r=0; else r=1; printf '%s\n' "$output"; fi
 check "and that refusal names the same remedy" "$r"
+
+new_case
+chmod 555 "$database_dir"
+run_deploy
+chmod 755 "$database_dir"
+if [ "$status" -ne 0 ] && nothing_destructive && ! journal_has 'docker load' && printf '%s' "$output" | grep -qF "$ssh_account needs" && names_ownership_remedy; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "an ssh user who cannot write inside the mount directory stops the deploy before the transfer and the stop" "$r"
+
+new_case
+chmod 600 "$database_dir"
+run_deploy
+chmod 755 "$database_dir"
+if [ "$status" -ne 0 ] && nothing_destructive && printf '%s' "$output" | grep -qF "$ssh_account needs" && names_ownership_remedy && ! printf '%s' "$output" | grep -qF 'does not exist'; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a directory the ssh user cannot enter is an ownership problem, not a missing database" "$r"
+
+new_case
+chmod 444 "$database_dir/temp.sqlite"
+run_deploy
+chmod 644 "$database_dir/temp.sqlite"
+if [ "$status" -ne 0 ] && nothing_destructive && ! journal_has 'docker load' && printf '%s' "$output" | grep -qF "$ssh_account needs" && names_ownership_remedy; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "an ssh user who cannot write the database, as a restore must, stops the deploy there too" "$r"
+
+new_case
+chmod 200 "$database_dir/temp.sqlite"
+run_deploy
+chmod 644 "$database_dir/temp.sqlite"
+if [ "$status" -ne 0 ] && nothing_destructive && ! journal_has 'docker load' && printf '%s' "$output" | grep -qF "$ssh_account needs" && names_ownership_remedy; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "an ssh user who cannot read the database, as a backup must, stops the deploy there too" "$r"
+
+new_case
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+EPC_STUB_STARTED_IMAGE=sha256:old
+chmod 444 "$database_dir/temp.sqlite"
+run_rollback --backup "$(basename "$backup_path")" --yes
+chmod 644 "$database_dir/temp.sqlite"
+if [ "$status" -ne 0 ] && nothing_destructive && database_intact && printf '%s' "$output" | grep -qF "$ssh_account needs" && names_ownership_remedy; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a rollback whose ssh user cannot write the database stops before the stop" "$r"
+
+new_case
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+EPC_STUB_STARTED_IMAGE=sha256:old
+chmod 000 "$backup_path"
+run_rollback --backup "$(basename "$backup_path")" --yes
+chmod 644 "$backup_path"
+if [ "$status" -ne 0 ] && nothing_destructive && database_intact && printf '%s' "$output" | grep -qF "$backup_path"; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a rollback whose ssh user cannot read the backup stops before the stop" "$r"
+
+new_case
+chmod 555 "$database_dir"
+run_deploy --dry-run
+chmod 755 "$database_dir"
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "$ssh_account needs" && names_ownership_remedy; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a rehearsal checks the ssh user's access as the deploy does" "$r"
+
+new_case
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+chmod 444 "$database_dir/temp.sqlite"
+run_rollback --backup temp.sqlite.bak-19700101 --yes --dry-run
+chmod 644 "$database_dir/temp.sqlite"
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "$ssh_account needs" && names_ownership_remedy; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a rollback rehearsal checks it too" "$r"
+
+new_case
+EPC_STUB_SSH_DROP="test -x '$database_dir'"
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive && printf '%s' "$output" | grep -qF 'Connection to host closed by remote host.' && ! printf '%s' "$output" | grep -qF 'chown'; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a connection lost during the access check is not reported as missing access" "$r"
 
 new_case
 EPC_STUB_STOP_SILENT=1
@@ -635,6 +713,8 @@ EPC_STUB_ROLLBACK_TAG_ID=sha256:old
 run_rollback --backup temp.sqlite.bak-nosuchday --yes
 if [ "$status" -ne 0 ] && database_intact; then r=0; else r=1; fi
 check "a rollback naming a backup that is not there leaves the live database alone" "$r"
+if nothing_destructive; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "and it stops before the stop, so the service stays up" "$r"
 
 new_case
 outside_dir="$case_dir/outside-the-mount"
