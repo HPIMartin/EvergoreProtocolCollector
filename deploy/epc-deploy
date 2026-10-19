@@ -297,7 +297,7 @@ copy_database() {
 	guard_target="test ! -e '$copy_target' || { echo TARGET-EXISTS; exit 1; }; "
 	[ "$3" = refuse-existing ] || guard_target=
 	copy_failed=
-	copy_output=$(remote "${guard_target}test -e '$copy_source' || { echo NO-SOURCE; exit 1; }; cp '$copy_source' '$copy_target'; printf '%s %s' \"\$(wc -c < '$copy_source')\" \"\$(wc -c < '$copy_target')\"") || copy_failed=1
+	copy_output=$(remote "${guard_target}test -e '$copy_source' || { echo NO-SOURCE; exit 1; }; cp '$copy_source' '$copy_target' && printf '%s %s' \"\$(wc -c < '$copy_source')\" \"\$(wc -c < '$copy_target')\"") || copy_failed=1
 	case ${copy_output:-} in
 		*TARGET-EXISTS*) fail "$copy_target already exists. Overwriting it would replace the only pre-migration copy with an already migrated database, so move it aside and run again" ;;
 		*NO-SOURCE*) fail "$copy_source does not exist on $host" ;;
@@ -305,6 +305,7 @@ copy_database() {
 	[ -z "$copy_failed" ] || fail "copying $copy_source to $copy_target failed: ${copy_output:-no output}"
 	source_size=${copy_output% *}
 	target_size=${copy_output#* }
+	[ -n "$source_size" ] && [ -n "$target_size" ] || fail "the sizes of $copy_source and $copy_target could not be read after the copy"
 	[ "$source_size" = "$target_size" ] || fail "$copy_target is $target_size bytes against the $source_size bytes of $copy_source"
 	note "copied $copy_source to $copy_target, $target_size bytes"
 }

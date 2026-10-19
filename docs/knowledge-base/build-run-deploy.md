@@ -586,6 +586,8 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      ([architecture.md](architecture.md), "Lock waits").
    - One file is enough: the database runs in rollback-journal mode, so no `-wal`/`-shm` sidecar
      outlives a write and there is no second file to keep consistent with it.
+   - The script stops when the `cp` of any copy fails.
+   - The script stops when the size of either file cannot be read.
    - The copy is named `<database>.bak-<yyyymmdd>`.
    - The script verifies its size against the source.
    - It **refuses an existing file of that name** instead of overwriting it: a second run on the

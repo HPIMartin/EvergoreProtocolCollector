@@ -192,7 +192,19 @@ export EPC_STUB_SIDE
 exec sh -c "$2"
 SSH_STUB
 
-chmod +x "$stub_bin/docker" "$stub_bin/curl" "$stub_bin/git" "$stub_bin/fake-ssh"
+cat > "$stub_bin/cp" <<'CP_STUB'
+#!/bin/sh
+[ -z "${EPC_STUB_CP_LOSES_SOURCE:-}" ] || chmod 000 "$1"
+exec /bin/cp "$@"
+CP_STUB
+
+cat > "$stub_bin/wc" <<'WC_STUB'
+#!/bin/sh
+[ -z "${EPC_STUB_WC_FAILS:-}" ] || exit 127
+exec /usr/bin/wc "$@"
+WC_STUB
+
+chmod +x "$stub_bin/docker" "$stub_bin/curl" "$stub_bin/git" "$stub_bin/fake-ssh" "$stub_bin/cp" "$stub_bin/wc"
 
 host_name=example.invalid
 ssh_account=deployer
@@ -260,7 +272,9 @@ new_case() {
 	EPC_STUB_REMOTE_LAYERS_MISSING=
 	EPC_STUB_LOCAL_LAYERS_MISSING=
 	EPC_STUB_SSH_DROP=
-	export EPC_STUB_SSH_DROP
+	EPC_STUB_CP_LOSES_SOURCE=
+	EPC_STUB_WC_FAILS=
+	export EPC_STUB_SSH_DROP EPC_STUB_CP_LOSES_SOURCE EPC_STUB_WC_FAILS
 	export EPC_STUB_REVISION EPC_STUB_LOCAL_LAYERS EPC_STUB_REMOTE_LAYERS EPC_STUB_LOCAL_LABELS \
 		EPC_STUB_REMOTE_LABELS EPC_STUB_REMOTE_LAYERS_MISSING EPC_STUB_LOCAL_LAYERS_MISSING
 	export EPC_STUB_JOURNAL EPC_STUB_STATE EPC_STUB_EXPECT_TARGET EPC_STUB_CONTAINER \
@@ -509,6 +523,19 @@ EPC_STUB_STOP_SILENT=1
 run_deploy
 if [ "$status" -ne 0 ] && [ ! -f "$backup_path" ] && database_intact; then r=0; else r=1; fi
 check "a stop that echoed nothing leaves the database uncopied" "$r"
+
+new_case
+EPC_STUB_CP_LOSES_SOURCE=1
+run_deploy
+chmod 644 "$database_dir/temp.sqlite"
+if [ "$status" -ne 0 ] && ! grep -qF -- 'docker run -d' "$journal" && ! printf '%s' "$output" | grep -qF 'copied' && printf '%s' "$output" | grep -qF "copying $database_dir/temp.sqlite to $backup_path failed"; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a backup cp that fails stops the deploy, even when both sizes then read as nothing" "$r"
+
+new_case
+EPC_STUB_WC_FAILS=1
+run_deploy
+if [ "$status" -ne 0 ] && ! grep -qF -- 'docker run -d' "$journal" && ! printf '%s' "$output" | grep -qF 'copied' && printf '%s' "$output" | grep -qF 'could not be read after the copy'; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a backup whose sizes cannot be read after a good cp stops the deploy too" "$r"
 
 new_case
 EPC_STUB_STOP_ECHO=Error
