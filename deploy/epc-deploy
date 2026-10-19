@@ -24,8 +24,8 @@ Read from the caller's environment, never placed in any command line:
   EVERGORE_SECURITY_API_TOKEN, EVERGORE_CREDENTIALS_USERNAME, EVERGORE_CREDENTIALS_PASSWORD
 
 Also read from the environment, with defaults:
-  EPC_DEPLOY_HEALTH_TIMEOUT   seconds to wait for the first UP, default 900, because the V2 table
-                              rebuild can take minutes on a slow mount
+  EPC_DEPLOY_HEALTH_TIMEOUT   seconds to wait for the first UP, default 900, because a schema
+                              migration on the first start can take minutes on a slow mount
   EPC_DEPLOY_HEALTH_INTERVAL  seconds between health polls, default 10, well under the rate limit
   EPC_DEPLOY_SSH              the ssh command itself, default ssh
 USAGE
@@ -299,7 +299,7 @@ copy_database() {
 	copy_failed=
 	copy_output=$(remote "${guard_target}test -e '$copy_source' || { echo NO-SOURCE; exit 1; }; cp '$copy_source' '$copy_target' && printf '%s %s' \"\$(wc -c < '$copy_source')\" \"\$(wc -c < '$copy_target')\"") || copy_failed=1
 	case ${copy_output:-} in
-		*TARGET-EXISTS*) fail "$copy_target already exists. Overwriting it would replace the only pre-migration copy with an already migrated database, so move it aside and run again" ;;
+		*TARGET-EXISTS*) fail "$copy_target already exists, and this run does not overwrite a copy it did not take, so move it aside and run again" ;;
 		*NO-SOURCE*) fail "$copy_source does not exist on $host" ;;
 	esac
 	[ -z "$copy_failed" ] || fail "copying $copy_source to $copy_target failed: ${copy_output:-no output}"
@@ -341,7 +341,7 @@ require_ssh_user_access() {
 
 refuse_existing_backup() {
 	if remote "test -e '$backup_path'"; then
-		fail "$backup_path already exists. Overwriting it would replace the only pre-migration copy with an already migrated database, so move it aside and run again. Nothing was transferred and the container is still running"
+		fail "$backup_path already exists, and it may be the only copy from before this release first ran. Overwriting it would replace that copy with a database this release has already written to, so move it aside and run again. Nothing was transferred and the container is still running"
 	fi
 }
 

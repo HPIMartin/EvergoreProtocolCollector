@@ -41,6 +41,7 @@ case ${1:-} in
 		printf '%s' "$2" > "$EPC_STUB_STATE/tagged-$(sanitise "$target")"
 		exit 0 ;;
 	stop)
+		[ -z "${EPC_STUB_STOP_CREATES:-}" ] || printf 'appeared during the stop\n' > "$EPC_STUB_STOP_CREATES"
 		if [ -n "${EPC_STUB_STOP_ECHO:-}" ]; then
 			printf '%s\n' "$EPC_STUB_STOP_ECHO"
 		elif [ -z "${EPC_STUB_STOP_SILENT:-}" ]; then
@@ -288,7 +289,8 @@ new_case() {
 	EPC_STUB_SSH_REFUSAL=
 	EPC_STUB_NO_CURL=
 	EPC_STUB_SUDO_REFUSAL=
-	export EPC_STUB_SSH_REFUSAL EPC_STUB_NO_CURL EPC_STUB_SUDO_REFUSAL
+	EPC_STUB_STOP_CREATES=
+	export EPC_STUB_SSH_REFUSAL EPC_STUB_NO_CURL EPC_STUB_SUDO_REFUSAL EPC_STUB_STOP_CREATES
 	export EPC_STUB_REVISION EPC_STUB_LOCAL_LAYERS EPC_STUB_REMOTE_LAYERS EPC_STUB_LOCAL_LABELS \
 		EPC_STUB_REMOTE_LABELS EPC_STUB_REMOTE_LAYERS_MISSING EPC_STUB_LOCAL_LAYERS_MISSING
 	export EPC_STUB_JOURNAL EPC_STUB_STATE EPC_STUB_EXPECT_TARGET EPC_STUB_CONTAINER \
@@ -567,14 +569,29 @@ new_case
 printf 'an earlier backup from today\n' > "$backup_path"
 run_deploy
 if [ "$status" -ne 0 ] && [ "$(cat "$backup_path")" = 'an earlier backup from today' ]; then r=0; else r=1; fi
-check "today's existing backup is not replaced by an already migrated database" "$r"
+check "today's existing backup is not replaced" "$r"
 if nothing_destructive && ! journal_has 'docker load'; then r=0; else r=1; fi
 check "and the refusal comes before the stop and the transfer, so the service is not taken down for a run that cannot proceed" "$r"
+if printf '%s' "$output" | grep -qi 'migrat'; then r=1; printf '%s\n' "$output"; else r=0; fi
+check "and the refusal names no migration, which a release need not carry" "$r"
+
+new_case
+EPC_STUB_STOP_CREATES=$backup_path
+run_deploy
+if [ "$status" -ne 0 ] && [ "$(cat "$backup_path")" = 'appeared during the stop' ] && database_intact; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a backup that appears between the first look and the copy is not overwritten either" "$r"
+if printf '%s' "$output" | grep -qi 'migrat'; then r=1; printf '%s\n' "$output"; else r=0; fi
+check "and that refusal names no migration either" "$r"
+
+new_case
+run_epc
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF EPC_DEPLOY_HEALTH_TIMEOUT && ! printf '%s' "$output" | grep -qE 'V2|rebuild'; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "the usage text names no table rebuild that a release need not carry" "$r"
 
 new_case
 run_deploy --skip-backup
 if [ "$status" -ne 0 ] && nothing_destructive; then r=0; else r=1; fi
-check "there is no option that skips the backup the table rebuild makes mandatory" "$r"
+check "there is no option that skips the backup" "$r"
 
 new_case
 EPC_STUB_HEALTH='{"status":"UNKNOWN"}'

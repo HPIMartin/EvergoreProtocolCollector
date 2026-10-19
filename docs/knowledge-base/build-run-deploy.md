@@ -594,7 +594,8 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    - The copy is named `<database>.bak-<yyyymmdd>`.
    - The script verifies its size against the source.
    - It **refuses an existing file of that name** instead of overwriting it: a second run on the
-     same day would otherwise replace the only pre-migration copy with an already migrated one.
+     same day would otherwise replace the only copy from before the release first ran with a
+     database the release has already written to, migrated or not.
    - The refusal comes right after the running container is read and the ssh user's access is
      checked (step 3), **before** the transfer and the stop, so a run that cannot proceed leaves
      the service up and moves no image.
