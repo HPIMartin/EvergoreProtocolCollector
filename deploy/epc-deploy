@@ -442,6 +442,13 @@ resolve_secrets() {
 }
 
 require_remote_tools() {
+	ssh_status=0
+	ssh_answer=$(remote true 2>&1) || ssh_status=$?
+	case $ssh_status in
+		0) ;;
+		255) fail "ssh could not run a command on $ssh_target, so nothing on $host was read or changed. ssh said: ${ssh_answer:-nothing}" ;;
+		*) fail "ssh signed in to $ssh_target, but its first command failed with exit $ssh_status, as a refused sudo ticket does, so nothing on $host was read or changed: ${ssh_answer:-no output}" ;;
+	esac
 	remote 'command -v curl >/dev/null' || fail "no curl on $host, so the deploy could not verify itself"
 }
 

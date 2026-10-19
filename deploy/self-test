@@ -186,7 +186,17 @@ case $2 in
 		printf 'Connection to host closed by remote host.\n' >&2
 		exit 255 ;;
 esac
+if [ -n "${EPC_STUB_SSH_REFUSAL:-}" ]; then
+	printf '%s\n' "$EPC_STUB_SSH_REFUSAL" >&2
+	exit 255
+fi
 printf 'remote %s\n' "$2" >> "$EPC_STUB_JOURNAL"
+if [ -n "${EPC_STUB_NO_CURL:-}" ] && [ "$2" = 'command -v curl >/dev/null' ]; then
+	exit 1
+fi
+if [ -n "${EPC_STUB_SUDO_REFUSAL:-}" ]; then
+	exit "$EPC_STUB_SUDO_REFUSAL"
+fi
 EPC_STUB_SIDE=remote
 export EPC_STUB_SIDE
 exec sh -c "$2"
@@ -275,6 +285,10 @@ new_case() {
 	EPC_STUB_CP_LOSES_SOURCE=
 	EPC_STUB_WC_FAILS=
 	export EPC_STUB_SSH_DROP EPC_STUB_CP_LOSES_SOURCE EPC_STUB_WC_FAILS
+	EPC_STUB_SSH_REFUSAL=
+	EPC_STUB_NO_CURL=
+	EPC_STUB_SUDO_REFUSAL=
+	export EPC_STUB_SSH_REFUSAL EPC_STUB_NO_CURL EPC_STUB_SUDO_REFUSAL
 	export EPC_STUB_REVISION EPC_STUB_LOCAL_LAYERS EPC_STUB_REMOTE_LAYERS EPC_STUB_LOCAL_LABELS \
 		EPC_STUB_REMOTE_LABELS EPC_STUB_REMOTE_LAYERS_MISSING EPC_STUB_LOCAL_LAYERS_MISSING
 	export EPC_STUB_JOURNAL EPC_STUB_STATE EPC_STUB_EXPECT_TARGET EPC_STUB_CONTAINER \
@@ -670,6 +684,39 @@ EPC_STUB_EXPECT_TARGET="somebodyelse@$host_name"
 run_deploy
 if [ "$status" -ne 0 ]; then r=0; else r=1; fi
 check "the ssh target is composed from the passed user and host" "$r"
+
+new_case
+EPC_STUB_SSH_REFUSAL='Host key verification failed.'
+run_deploy
+if [ "$status" -ne 0 ] && [ ! -s "$journal" ] && printf '%s' "$output" | grep -qF 'Host key verification failed.' && ! printf '%s' "$output" | grep -qF 'no curl' && printf '%s' "$output" | grep -qF 'ssh could not run a command' && ! printf '%s' "$output" | grep -qF 'signed in'; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a connection ssh refuses is reported with ssh's own reason, not as a missing curl" "$r"
+
+new_case
+EPC_STUB_NO_CURL=1
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive && printf '%s' "$output" | grep -qF "no curl on $host_name"; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a host without curl is still named as one" "$r"
+
+new_case
+EPC_STUB_SUDO_REFUSAL=1
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive && printf '%s' "$output" | grep -qF "ssh signed in to $ssh_account@$host_name" && ! printf '%s' "$output" | grep -qF 'ssh could not' && printf '%s' "$output" | grep -qF 'exit 1,'; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a first command refused after ssh signed in, as a refused sudo ticket is, is not reported as a failed connection" "$r"
+
+new_case
+EPC_STUB_SUDO_REFUSAL=127
+run_deploy
+if [ "$status" -ne 0 ] && nothing_destructive && printf '%s' "$output" | grep -qF "ssh signed in to $ssh_account@$host_name" && printf '%s' "$output" | grep -qF 'exit 127,'; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a first command that fails with another status names that status" "$r"
+
+new_case
+printf 'an older snapshot worth restoring\n' > "$backup_path"
+EPC_STUB_ROLLBACK_TAG_ID=sha256:old
+EPC_STUB_STARTED_IMAGE=sha256:old
+EPC_STUB_SSH_REFUSAL='Host key verification failed.'
+run_rollback --backup "$(basename "$backup_path")" --yes
+if [ "$status" -ne 0 ] && [ ! -s "$journal" ] && database_intact && printf '%s' "$output" | grep -qF 'Host key verification failed.' && ! printf '%s' "$output" | grep -qE 'no curl|no container named' && printf '%s' "$output" | grep -qF 'ssh could not run a command' && ! printf '%s' "$output" | grep -qF 'signed in'; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a rollback over a connection ssh refuses names ssh's own reason" "$r"
 
 new_case
 printf 'an older snapshot worth restoring\n' > "$backup_path"

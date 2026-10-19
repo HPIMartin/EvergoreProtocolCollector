@@ -501,7 +501,12 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
   compare the fingerprint with `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server.
   - The devcontainer's `~/.ssh` does not survive a rebuild, so the key is pinned again after one.
   - Until then every run stops at its first remote command.
-  - The script reports that stop as a missing curl (backlog **F20**).
+  - The script reports that stop with ssh's own reason (`Host key verification failed.`), before
+    it probes the host for curl.
+  - Any other connection that fails is reported the same way.
+    - A missing `EPC_DEPLOY_SSH` sends plain `ssh` to port 22.
+  - A first command that fails after ssh signed in is reported as such, with its exit status.
+    - ssh's own failures exit 255; a refused sudo ticket does not.
 - **The parameters live in `deploy.local.env`** (gitignored by `*.local.*`, mode 600 because it
   holds the password): every `EPC_DEPLOY_*` variable from the usage text plus the API token; the
   game login stays in `credentials.local.env`. Export both into the environment and the script
@@ -592,7 +597,8 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      same day would otherwise replace the only pre-migration copy with an already migrated one.
    - The refusal comes right after the running container is read and the ssh user's access is
      checked (step 3), **before** the transfer and the stop, so a run that cannot proceed leaves
-     the service up and moves no image (four reads reach the host, nothing else).
+     the service up and moves no image.
+     - Up to this refusal the run sends five commands to the host, and nothing else.
    - There is no option that skips the backup.
    - The backup is created by the ssh user's `cp`, so it belongs to that user and carries its
      umask (`644` or `640`), not the database's owner and `660` (step 3).
