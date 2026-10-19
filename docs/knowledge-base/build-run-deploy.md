@@ -18,8 +18,8 @@
 - **Build performance (`gradle.properties`):** `org.gradle.caching` and `org.gradle.parallel` are on,
   with `org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=768m` for the daemon that parallel execution
   needs. The local build cache (`~/.gradle/caches/build-cache-1`) is **shared by every worktree**:
-  both compute the same cache key, so entries are portable, not path-bound. Verified 2026-08-01: a
-  fresh worktree at an already-built commit builds green in **11s** with `compileJava`,
+  both compute the same cache key, so entries are portable, not path-bound. A fresh worktree at an
+  already-built commit builds green in **11s** with `compileJava`,
   `checkstyle*`, `spotless*`, the `:frontend` tasks, `test` and `jacocoTestReport` all `FROM-CACHE`.
   Gradle stores an entry only when a task really *executes*, so a task that has stayed UP-TO-DATE
   since caching was enabled has nothing stored yet: the **first** cold worktree still runs it and
@@ -405,8 +405,8 @@ any push.
   machine-specific, so this is the contract it implements:
 
   ```sh
-  docker build -t evergore-protocol-collector:0.1.0 \
-    --label org.opencontainers.image.version=0.1.0 \
+  docker build -t evergore-protocol-collector:<version> \
+    --label org.opencontainers.image.version=<version> \
     --label org.opencontainers.image.revision=$(git rev-parse HEAD) .
   ```
 
@@ -533,8 +533,6 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
      deploy's pre-flight matches. `epc-old` does not bother the next deploy, which only touches
      `epc`; remove it once the new directory has run for a while.
 - **The home server's database directory lives on the system disk.**
-- **A stopped `epc-old` container may still exist on the home server**; the next deploy leaves it
-  alone (step 5 above).
 - **The repository and the work machine hold the authoritative copies of the release files.**
 
 **Rehearsing on the work machine** (repeat before every release; nothing on the home server is
@@ -683,7 +681,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      -e EVERGORE_SECURITY_API_TOKEN=<token> \
      -e EVERGORE_CREDENTIALS_USERNAME=<evergore login> \
      -e EVERGORE_CREDENTIALS_PASSWORD=<evergore password> -e TZ=UTC \
-     -v "<host>/database:/database" evergore-protocol-collector:0.1.0
+     -v "<host>/database:/database" evergore-protocol-collector:<version>
    ```
 
    - The token is **mandatory**: a blank or unset value makes the app refuse to boot
@@ -1196,8 +1194,8 @@ runner"). Test-only; the production scrape keeps its own browser.
   them and serve stale values**, frozen at the last run before the upgrade. Clear them by hand if a
   rollback is ever kept rather than reverted.
 - Scraping depends on live evergore.de markup/selectors and a valid login → brittle by nature.
-- Bundled `gecko-*-win.exe` drivers are Windows-only and version-pinned (recently upgraded in the
-  working tree); the container uses its own Firefox/driver. Consider Selenium Manager / WebDriverManager.
+- Bundled `gecko-*-win.exe` drivers are Windows-only and version-pinned; the container uses its
+  own Firefox/driver. Consider Selenium Manager / WebDriverManager.
 - A login that is *present but wrong* (typo, rotated password) still passes the startup check, which
   only tests for a value. It then fails at scrape time: the login wait times out, `tryToLogin` logs
   one `warn` naming the login, and the outer wait fails the run with `Failed to scrape Evergore`.
