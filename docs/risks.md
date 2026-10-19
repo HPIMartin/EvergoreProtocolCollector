@@ -11,6 +11,7 @@
 |------|---|---|----------------|
 | The game serves only ~30 days of logs; DB loss or a >30-day scrape outage is irreversible | M | H | The author's monthly manual backup, whose restore re-scrapes the 30-day window ([open-questions.md](open-questions.md), 2026-07-17); every migration is proven row for row before its deploy ([build-run-deploy.md](knowledge-base/build-run-deploy.md), "Schema migrations (Flyway)") |
 | The production DB file is named `temp.sqlite`, inviting careless deletion | L | H | Rename once config is really bindable (backlog C1); until then a known trap |
+| A database directory open to every account lets any account on the host rewrite or delete the history | M | H | The ownership and mode of release step 3 ([build-run-deploy.md](knowledge-base/build-run-deploy.md)) (backlog F21) |
 
 ## External dependency: the game
 

@@ -519,8 +519,9 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
   against a typo mounting an empty directory. A move is therefore its own manual step, done with
   the release that is already running (so the same-tag refusal above does not apply, and the image
   and its `pre-` tag stay as they are):
-  1. `docker stop epc`, then copy the directory whole with modes kept (`rsync -a <old>/ <new>/`),
-     so the backups and superseded copies come along and uid 1200 can still write (release step 3).
+  1. `docker stop epc`, then copy the directory whole with owners and modes kept
+     (`sudo rsync -a <old>/ <new>/`), so the backups and superseded copies come along and uid 1200
+     can still write (release step 3); only `sudo` keeps an owner other than the copying user.
   2. `docker rename epc epc-old && docker update --restart no epc-old`: the old container stays as
      the rollback to the old directory, and nothing starts it by itself.
   3. Recreate `epc` with exactly the parameters `epc-deploy` uses (release step 5: image, `-p 80:8080`,
@@ -545,6 +546,10 @@ touched):
   From the devcontainer that is `/run/desktop/mnt/host/<drive>/<path>` (Docker Desktop's view of the
   Windows drive; symlink the same path inside the devcontainer onto `/workspaces/...`), `chmod 777`
   on the directory and `666` on the copy, and the modes stick.
+  - The open mode stays on the work machine (decision 2026-10-19): the copy is a throwaway on a
+    single-user machine, so no other account is there to keep out.
+  - Whether ownership by uid 1200 holds on the Windows drive is not measured; the agent seat
+    rehearses the home server's ownership and mode (below).
 - Both sides run on one daemon, so the rehearsal cannot show what differs between the work
   machine's Docker and the host's, such as the image store each one uses.
 - `EPC_DEPLOY_SSH` points at a shim that drops the target and runs the command locally with `sh -c`,
@@ -562,6 +567,9 @@ touched):
   under the agent container's own path and publishes on its `localhost`.
   - So neither the `/run/desktop/mnt/host` path nor the `host.docker.internal` rewrite applies
     there, and the shim only drops the target.
+  - The bind mount lies on a Linux filesystem, so the copy gets the home server's ownership and
+    mode (release step 3); the seat has no `sudo`, so a throwaway container running as root sets
+    them.
 
 Runs against the Docker host daemon, from a host shell or from the devcontainer, whose `docker`
 CLI targets that same daemon; on the agent seat against its own daemon (above). Steps 1–3 must be done **before** the running container is replaced.
@@ -583,9 +591,11 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      The refusal comes right after the running container is read, **before** the transfer and the
      stop, so a run that cannot proceed leaves the service up and moves no image (three reads
      reach the host, nothing else). There is no option that skips the backup.
-   - The backup is created by the ssh user's `cp`, so it carries that user's umask (`644`), not the
-     database's `666`; the restore copies onto the existing file and keeps `666`, so this only
-     matters for a restore that has to create the file.
+   - The backup is created by the ssh user's `cp`, so it belongs to that user and carries its
+     umask (`644` or `640`), not the database's owner and `660` (step 3).
+     - The directory's `770` keeps it from other accounts either way.
+     - The restore copies onto the existing file and keeps its owner and `660`, so this only
+       matters for a restore that has to create the file.
 2. **Secure the rollback target:** confirm the currently running image carries a tag you can start
    again (`docker inspect --type container -f '{{.Config.Image}}' epc`). If it is untagged,
    `<none>`, or a tag the next build overwrites, tag it now; the tag goes into the **repository the
@@ -621,8 +631,24 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    - `temp.sqlite` must be **listed**. An empty listing means the mount source did not resolve (see
      the devcontainer trap above) and the app would start on an empty database.
    - `DIR-OK` and `FILE-OK` must both appear. Without them the runtime user (`seluser`, uid 1200)
-     cannot write and SQLite fails; fix the mode on the host (`chmod 777 database`,
-     `chmod 666 database/temp.sqlite`) rather than starting the app to find out.
+     cannot write and SQLite fails; fix the ownership on the host rather than starting the app to
+     find out, and the script's refusal names the same commands:
+
+     ```sh
+     sudo chown 1200:<the ssh user's group> database database/temp.sqlite
+     sudo chmod 770 database
+     sudo chmod 660 database/temp.sqlite
+     ```
+
+     - uid 1200 owns both, so the app writes as their owner.
+     - The group is the ssh user's own (its primary group), because the script's backup,
+       superseded copy and restore run as that user's `cp`, without `sudo`.
+     - Nothing is left for other accounts: a mode open to everyone (`777`, `666`) lets every
+       account on the host rewrite or delete the only history.
+     - A mode that shuts the ssh user out (`700`, `600`) breaks the backup and the restore.
+     - Under such a mode that user's `test -e` reads a present file as absent.
+     - The switch needs no restart: a running container keeps writing under the new owner, an
+       open file included.
    - **The redirection is `>>`, never `>`.** Both prove the same write permission, but `: >` opens
      the file with `O_TRUNC` and empties the live database **while printing `FILE-OK`**: the check
      would destroy exactly what it is run to protect, and the printed line would report success.
@@ -772,9 +798,11 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    - The script copies the database it is about to overwrite to
      `<database>.superseded-<yyyymmddHHMMSS>` first. Those rows are in no backup, and a rollback
      decided in a hurry is exactly when they get lost.
-   - `cp` onto an existing `temp.sqlite` keeps that file's mode, but a `cp` that *creates* the file
-     takes the backup's mode, which can be non-writable for uid 1200 again; re-run the step 3 check
-     after restoring.
+   - `cp` onto an existing `temp.sqlite` keeps that file's owner and mode, but a `cp` that
+     *creates* the file makes it the ssh user's, with the backup's mode, which uid 1200 cannot
+     write.
+   - Give such a file back to uid 1200 as step 3 says, and re-run the step 3 check after
+     restoring.
    - The restored state is only observable in the **first 30 seconds**: the collection then runs
      again and writes the restored database forward. Verify `/api/v1/admin/status`'s `lastUpdated`
      right after startup.

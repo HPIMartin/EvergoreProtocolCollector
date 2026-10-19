@@ -288,6 +288,12 @@ database_intact() { [ "$(cat "$database_dir/temp.sqlite")" = "$seed_text" ]; }
 nothing_destructive() {
 	! grep -qE 'docker (stop|rm|run -d)' "$journal" && ! grep -qF -- 'cp ' "$journal"
 }
+names_ownership_remedy() {
+	printf '%s' "$output" | grep -qF "sudo chown 1200:<the group of $ssh_account> '$database_dir' '$database_dir/temp.sqlite'" &&
+		printf '%s' "$output" | grep -qF "sudo chmod 770 '$database_dir'" &&
+		printf '%s' "$output" | grep -qF "sudo chmod 660 '$database_dir/temp.sqlite'" &&
+		! printf '%s' "$output" | grep -oE 'chmod [^ ]+' | grep -qvxE 'chmod (770|660)'
+}
 
 printf 'deploy self-test\n'
 
@@ -409,12 +415,16 @@ EPC_STUB_PROBE_SUPPRESS=DIR-OK
 run_deploy
 if [ "$status" -ne 0 ] && nothing_destructive && database_intact; then r=0; else r=1; fi
 check "a mount directory the runtime user cannot write is refused" "$r"
+if names_ownership_remedy; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "and the refusal names ownership by uid 1200 with mode 770 and 660 as the remedy, never a mode open to everyone" "$r"
 
 new_case
 EPC_STUB_PROBE_SUPPRESS=FILE-OK
 run_deploy
 if [ "$status" -ne 0 ] && nothing_destructive && database_intact; then r=0; else r=1; fi
 check "a database file the runtime user cannot write is refused" "$r"
+if names_ownership_remedy; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "and that refusal names the same remedy" "$r"
 
 new_case
 EPC_STUB_STOP_SILENT=1

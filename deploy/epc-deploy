@@ -123,6 +123,7 @@ docker_remote=docker
 health_timeout=${EPC_DEPLOY_HEALTH_TIMEOUT:-900}
 health_interval=${EPC_DEPLOY_HEALTH_INTERVAL:-10}
 database_path="$database_dir/$database_file"
+ownership_remedy="give the directory and the database to the runtime user and to the group of $ssh_user, never to everyone: sudo chown 1200:<the group of $ssh_user> '$database_dir' '$database_path', sudo chmod 770 '$database_dir', sudo chmod 660 '$database_path'"
 
 remote() { $ssh_command "$ssh_target" "$1"; }
 
@@ -273,11 +274,11 @@ probe_mount() {
 	esac
 	case $probe_output in
 		*DIR-OK*) ;;
-		*) fail "the runtime user cannot write inside the mount directory" ;;
+		*) fail "the runtime user (uid 1200) cannot write inside the mount directory. On $host, $ownership_remedy" ;;
 	esac
 	case $probe_output in
 		*FILE-OK*) ;;
-		*) fail "the runtime user cannot write $database_file" ;;
+		*) fail "the runtime user (uid 1200) cannot write $database_file. On $host, $ownership_remedy" ;;
 	esac
 	note "listed, DIR-OK and FILE-OK, database untouched"
 }
