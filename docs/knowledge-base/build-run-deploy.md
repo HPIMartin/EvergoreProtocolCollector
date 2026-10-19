@@ -297,9 +297,9 @@ any push.
 - **Target:** the repository variable `LAND_TARGET`, `claude/land-probe` or `main`; any other value,
   or none, refuses. `claude/land-probe` is the probe: with `LAND_TARGET` set to it, a pull request
   based on it proves the workflow end to end without touching `main`.
-- **The owner's comments pass the app check** from the browser and from GitHub Mobile: both carry
-  an empty `performed_via_github_app` (measured 2026-10-08 on the probe target). GitHub marks a pull
-  request landed this way as merged.
+- **The owner's comments pass the app check** from the browser and from GitHub Mobile.
+  - Both carry an empty `performed_via_github_app`.
+- GitHub marks a pull request landed this way as merged.
 - **Credential:** a token minted by `actions/create-github-app-token` (pinned by commit) from an
   author-owned GitHub App, repository variable `LAND_APP_CLIENT_ID` and secret
   `LAND_APP_PRIVATE_KEY`, both in the environment `landing`, whose deployment branch rule admits
@@ -668,8 +668,7 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    - **The redirection is `>>`, never `>`.** Both prove the same write permission, but `: >` opens
      the file with `O_TRUNC` and empties the live database **while printing `FILE-OK`**: the check
      would destroy exactly what it is run to protect, and the printed line would report success.
-     Measured 2026-08-16 (23 bytes → 0); the version of this step carrying `>` was never run against
-     a populated database. `: >>` opens for append and writes nothing: size and mtime stay put.
+     `: >>` opens for append and writes nothing: size and mtime stay put.
 4. **Build the image and get it onto the host.** The script builds on the work machine with the tag
    and labels from "Versioning & release tags", ships it with `docker save | ssh … docker load`, and
    then compares the layer digests and the version and revision labels the host reports for that tag
@@ -1010,8 +1009,8 @@ between exceeding its budget and being blocked, and no request lands on an alrea
 A **malformed request target** (an invalid percent-escape such as `/overview%zz`) reaches the filters
 and is answered **400** only afterwards: the invalid escape breaks the request URI, so no path-based
 decision can be made and the token filter never gets to answer 401. Neither the audit log nor the rate
-limiter reads the path, which is why both still see the request. That it is **counted** is measured
-(2026-08-14) and pinned by `RateLimitFilterTest`; that it is **logged** follows from filter order (the
+limiter reads the path, which is why both still see the request. That it is **counted** is pinned
+by `RateLimitFilterTest`; that it is **logged** follows from filter order (the
 audit filter sits at order 1, ahead of the counter that demonstrably runs) plus the audit line being
 built from client IP and user-agent only, pinned literally by `RequestAuditLogFilterTest`. A framework
 upgrade that answers such a target ahead of the filter chain turns that test red.
