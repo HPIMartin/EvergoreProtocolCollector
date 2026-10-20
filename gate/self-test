@@ -2772,6 +2772,252 @@ if (flock 7 && evidenced) 7< "$repo/gate.local.d"; then r=1
 elif [ ! -e gate.local.d/bdd.log ] && ! grep -q '^bdd ' "$GATE_BUILDS"; then r=0; else r=1; fi
 check "tip evidence refuses while another run on the strand holds its dossier" "$r"
 
+scenario_check="$gate_dir/scenario-check"
+
+new_scenario_gate() {
+	repo="$work/$1"
+	mkdir -p "$repo"
+	cd "$repo"
+	git init -q -b main .
+	git config user.email gate@example.com
+	git config user.name Gate
+	git config core.autocrlf false
+	write_file .gitignore '*.local.*'
+	write_file src/test/resources/features/ledger.feature 'Feature: Sorting the tables' '' \
+		'  Scenario: Sorting a ledger orders the whole ledger' '    Given a ledger'
+	commit_all 'Add the ledger feature'
+	write_file 'src/test/resources/features/members/log in.feature' 'Feature: Logging in' '' \
+		'  Scenario: A member logs in' '    Given a member'
+}
+
+fingerprint_lines() {
+	for feature in src/test/resources/features/ledger.feature 'src/test/resources/features/members/log in.feature'; do
+		printf 'fingerprint: %s %s\n' "$(git hash-object -- "$feature")" "$feature"
+	done
+}
+
+scenario_report() {
+	mkdir -p gate.local.d/scenario
+	{ printf '%s\n' '- `soundSpec: yes`' '- findings: none' '- fingerprints:'; fingerprint_lines; } > "gate.local.d/scenario/$1"
+}
+
+falsifier_reports() {
+	scenario_report falsifier-scenario.md
+	scenario_report falsifier-stakeholder.md
+}
+
+scenario_checked() { "$scenario_check" "$repo" > "$work/out" 2>&1; }
+
+scenario_refuses_for() {
+	if scenario_checked; then return 1; fi
+	grep -q "^refused \[$1\]: .*$2" "$work/out"
+}
+
+new_scenario_gate scenario_complete
+falsifier_reports
+if scenario_checked && grep -q '^scenario-check: PASS' "$work/out"; then r=0; else r=1; fi
+check "the scenario check passes two falsifier reports that name every feature as it is now" "$r"
+
+new_scenario_gate scenario_fingerprints
+"$scenario_check" --fingerprints "$repo" > "$work/out" 2>&1 || true
+fingerprint_lines > "$work/expected"
+if cmp -s "$work/expected" "$work/out"; then r=0; else r=1; fi
+check "the scenario check prints each feature's git hash-object, an uncommitted draft included" "$r"
+
+new_scenario_gate scenario_usage
+"$scenario_check" "$repo" extra > "$work/out" 2>&1 && status=0 || status=$?
+if [ "$status" -eq 2 ]; then r=0; else r=1; fi
+check "the scenario check exits 2 on a wrong argument count" "$r"
+
+new_scenario_gate scenario_carried
+falsifier_reports
+scenario_checked || true
+fingerprint_lines > "$work/expected"
+grep '^fingerprint: ' "$work/out" > "$work/printed" || true
+if cmp -s "$work/expected" "$work/printed"; then r=0; else r=1; fi
+check "the scenario check prints the fingerprints it compared, for the reviewer's report to carry" "$r"
+
+for report in falsifier-scenario.md falsifier-stakeholder.md; do
+	new_scenario_gate "scenario_missing_${report%.md}"
+	falsifier_reports
+	mv "gate.local.d/scenario/$report" gate.local.d/scenario/earlier.txt
+	if scenario_refuses_for report "$report"; then r=0; else r=1; fi
+	check "the scenario check refuses a gate without $report" "$r"
+done
+
+new_scenario_gate scenario_bare
+falsifier_reports
+write_file gate.local.d/scenario/falsifier-scenario.md '- `soundSpec: yes`' '- findings: none'
+if scenario_refuses_for fingerprint 'falsifier-scenario.md names no fingerprint'; then r=0; else r=1; fi
+check "the scenario check refuses a falsifier report that names no fingerprint" "$r"
+
+new_scenario_gate scenario_folded
+falsifier_reports
+printf '%s\n' '    Then the ledger is sorted' >> src/test/resources/features/ledger.feature
+if scenario_refuses_for fingerprint 'falsifier-stakeholder.md names src/test/resources/features/ledger.feature at '; then r=0; else r=1; fi
+check "the scenario check refuses a falsifier report on a feature folded since" "$r"
+
+new_scenario_gate scenario_unread
+falsifier_reports
+write_file src/test/resources/features/usage.feature 'Feature: Usage data' '' '  Scenario: An admin reads usage' '    Given an admin'
+if scenario_refuses_for fingerprint 'falsifier-scenario.md does not name src/test/resources/features/usage.feature'; then r=0; else r=1; fi
+check "the scenario check refuses a falsifier report that does not name a feature present now" "$r"
+
+new_scenario_gate scenario_gone
+falsifier_reports
+mv src/test/resources/features/ledger.feature src/test/resources/features/ledger.txt
+if scenario_refuses_for fingerprint 'falsifier-scenario.md names src/test/resources/features/ledger.feature, which is gone'; then r=0; else r=1; fi
+check "the scenario check refuses a falsifier report naming a feature that is gone" "$r"
+
+new_scenario_gate scenario_folded_once
+falsifier_reports
+printf '%s\n' '    Then the ledger is sorted' >> src/test/resources/features/ledger.feature
+scenario_checked || true
+if [ "$(grep -c '^refused .*falsifier-scenario.md' "$work/out")" -eq 1 ]; then r=0; else r=1; fi
+check "the scenario check refuses a folded feature once per report, not also as unnamed" "$r"
+
+new_scenario_gate scenario_no_reviewer
+falsifier_reports
+if scenario_checked && grep -q '^scenario-check: PASS on 2 feature(s); no reviewer.md yet$' "$work/out"; then r=0; else r=1; fi
+check "the scenario check's pass says when no reviewer verdict is there yet" "$r"
+
+new_scenario_gate scenario_reviewed
+falsifier_reports
+scenario_report reviewer.md
+if scenario_checked && grep -q '^scenario-check: PASS on 2 feature(s); reviewer.md judged the same$' "$work/out"; then r=0; else r=1; fi
+check "the scenario check passes a reviewer verdict on the features the falsifiers read" "$r"
+
+new_scenario_gate scenario_reviewer_stale
+scenario_report reviewer.md
+printf '%s\n' '    Then the ledger is sorted' >> src/test/resources/features/ledger.feature
+falsifier_reports
+if scenario_refuses_for fingerprint 'reviewer.md names src/test/resources/features/ledger.feature at '; then r=0; else r=1; fi
+check "the scenario check refuses a reviewer verdict on other features than the falsifiers read" "$r"
+
+new_scenario_gate scenario_reviewer_bare
+falsifier_reports
+write_file gate.local.d/scenario/reviewer.md '- `verdict: PASS`' '- findings: none'
+if scenario_refuses_for fingerprint 'reviewer.md names no fingerprint'; then r=0; else r=1; fi
+check "the scenario check refuses a reviewer verdict that names no fingerprint" "$r"
+
+new_scenario_gate scenario_crlf
+falsifier_reports
+awk '{ printf "%s\r\n", $0 }' gate.local.d/scenario/falsifier-scenario.md > gate.local.d/scenario/crlf
+mv gate.local.d/scenario/crlf gate.local.d/scenario/falsifier-scenario.md
+if scenario_checked; then r=0; else r=1; fi
+check "the scenario check reads a report saved with CRLF line ends" "$r"
+
+new_scenario_gate scenario_indented
+falsifier_reports
+sed 's/^fingerprint: /  fingerprint: /' gate.local.d/scenario/falsifier-stakeholder.md > gate.local.d/scenario/indented
+mv gate.local.d/scenario/indented gate.local.d/scenario/falsifier-stakeholder.md
+if scenario_checked; then r=0; else r=1; fi
+check "the scenario check reads fingerprints indented under a report's list" "$r"
+
+new_scenario_gate scenario_fingerprints_usage
+"$scenario_check" --fingerprints "$repo" extra > "$work/out" 2>&1 && status=0 || status=$?
+if [ "$status" -eq 2 ]; then r=0; else r=1; fi
+check "the scenario check's fingerprint listing exits 2 on a wrong argument count" "$r"
+
+new_scenario_gate scenario_counted
+write_file src/test/resources/features/usage/usage.feature 'Feature: Usage data' '' '  Scenario: An admin reads usage' '    Given an admin'
+mkdir -p src/test/resources/features/drafts.feature
+write_file src/test/resources/features/notes.txt 'a note beside the features'
+falsifier_reports
+printf 'fingerprint: %s %s\n' "$(git hash-object -- src/test/resources/features/usage/usage.feature)" \
+	src/test/resources/features/usage/usage.feature | tee -a gate.local.d/scenario/falsifier-scenario.md \
+	>> gate.local.d/scenario/falsifier-stakeholder.md
+if scenario_checked && grep -q '^scenario-check: PASS on 3 feature(s);' "$work/out"; then r=0; else r=1; fi
+check "the scenario check counts every feature file and nothing else beside them" "$r"
+
+new_scenario_gate scenario_skipped_after_fold
+falsifier_reports
+printf '%s\n' '    Then the ledger is sorted' >> src/test/resources/features/ledger.feature
+grep -v 'ledger.feature$' gate.local.d/scenario/falsifier-stakeholder.md > gate.local.d/scenario/skipped
+mv gate.local.d/scenario/skipped gate.local.d/scenario/falsifier-stakeholder.md
+if scenario_refuses_for fingerprint 'falsifier-stakeholder.md does not name src/test/resources/features/ledger.feature'; then r=0; else r=1; fi
+check "the scenario check refuses a report that skips a feature another report read before its fold" "$r"
+
+new_scenario_gate scenario_quoted
+falsifier_reports
+{ printf '%s\n' '- `soundSpec: yes`' '- the earlier round read:'; fingerprint_lines | sed 's/^/> /'; } \
+	> gate.local.d/scenario/falsifier-scenario.md
+if scenario_refuses_for fingerprint 'falsifier-scenario.md names no fingerprint'; then r=0; else r=1; fi
+check "the scenario check counts no fingerprint quoted from an earlier report" "$r"
+
+new_scenario_gate scenario_placeholder
+falsifier_reports
+write_file gate.local.d/scenario/falsifier-scenario.md '- `soundSpec: yes`' '- fingerprints:' \
+	"fingerprint: $(git hash-object -- src/test/resources/features/ledger.feature | cut -c1-7) src/test/resources/features/ledger.feature"
+if scenario_refuses_for fingerprint 'falsifier-scenario.md names no fingerprint'; then r=0; else r=1; fi
+check "the scenario check counts no fingerprint line without a full hash" "$r"
+
+new_scenario_gate scenario_missing_once
+falsifier_reports
+mv gate.local.d/scenario/falsifier-scenario.md gate.local.d/scenario/earlier.txt
+scenario_checked || true
+if [ "$(grep -c '^refused .*falsifier-scenario.md' "$work/out")" -eq 1 ]; then r=0; else r=1; fi
+check "the scenario check refuses a missing report once" "$r"
+
+new_scenario_gate scenario_bare_once
+falsifier_reports
+write_file gate.local.d/scenario/falsifier-scenario.md '- `soundSpec: yes`' '- findings: none'
+scenario_checked || true
+if [ "$(grep -c '^refused .*falsifier-scenario.md' "$work/out")" -eq 1 ]; then r=0; else r=1; fi
+check "the scenario check refuses a report without fingerprints once" "$r"
+
+new_scenario_gate scenario_longer_name
+write_file src/test/resources/features/ledger.feature.feature 'Feature: Sorting the ledgers' '' \
+	'  Scenario: Sorting every ledger' '    Given a ledger'
+falsifier_reports
+printf 'fingerprint: %s %s\n' "$(git hash-object -- src/test/resources/features/ledger.feature.feature)" \
+	src/test/resources/features/ledger.feature.feature | tee -a gate.local.d/scenario/falsifier-scenario.md \
+	>> gate.local.d/scenario/falsifier-stakeholder.md
+printf '%s\n' '    Then the ledgers are sorted' >> src/test/resources/features/ledger.feature.feature
+grep -v 'ledger.feature$' gate.local.d/scenario/falsifier-scenario.md > gate.local.d/scenario/skipped
+mv gate.local.d/scenario/skipped gate.local.d/scenario/falsifier-scenario.md
+if scenario_refuses_for fingerprint 'falsifier-scenario.md does not name src/test/resources/features/ledger.feature,'; then r=0; else r=1; fi
+check "the scenario check tells a feature from a folded one whose name it begins" "$r"
+
+new_scenario_gate scenario_hashes_named
+falsifier_reports
+before=$(git hash-object -- src/test/resources/features/ledger.feature)
+printf '%s\n' '    Then the ledger is sorted' >> src/test/resources/features/ledger.feature
+after=$(git hash-object -- src/test/resources/features/ledger.feature)
+if scenario_refuses_for fingerprint "ledger.feature at $before, which now reads $after,"; then r=0; else r=1; fi
+check "the scenario check names the fingerprint a report read and the one the feature has now" "$r"
+
+new_scenario_gate scenario_twice
+falsifier_reports
+fingerprint_lines >> gate.local.d/scenario/falsifier-scenario.md
+if scenario_checked; then r=0; else r=1; fi
+check "the scenario check reads a fingerprint a report lists twice as one" "$r"
+
+new_scenario_gate scenario_linked
+mv src/test/resources/features src/test/resources/all-features
+ln -s all-features src/test/resources/features
+falsifier_reports
+if scenario_checked && grep -q '^scenario-check: PASS on 2 feature(s);' "$work/out"; then r=0; else r=1; fi
+check "the scenario check follows a features directory that is a link" "$r"
+
+new_scenario_gate scenario_no_arguments
+"$scenario_check" > "$work/out" 2>&1 && status=0 || status=$?
+if [ "$status" -eq 2 ] && grep -q '^usage: gate/scenario-check' "$work/out"; then r=0; else r=1; fi
+check "the scenario check prints its usage for no argument" "$r"
+
+new_scenario_gate scenario_fingerprints_no_worktree
+"$scenario_check" --fingerprints > "$work/out" 2>&1 && status=0 || status=$?
+if [ "$status" -eq 2 ] && grep -q '^usage: gate/scenario-check' "$work/out"; then r=0; else r=1; fi
+check "the scenario check's fingerprint listing prints its usage without a worktree" "$r"
+
+new_scenario_gate scenario_fail_line
+falsifier_reports
+printf '%s\n' '    Then the ledger is sorted' >> src/test/resources/features/ledger.feature
+scenario_checked && status=0 || status=$?
+if [ "$status" -eq 1 ] && grep -q "^scenario-check: FAIL, 2 refusal(s); the reviewer's scenario verdict does not stand$" "$work/out"
+then r=0; else r=1; fi
+check "the scenario check exits 1 and counts its refusals when a verdict does not stand" "$r"
+
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'
 else

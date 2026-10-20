@@ -400,6 +400,35 @@ says where each piece of evidence lives.
     - It reads `@wip` through `gate/dossier-check --wip <worktree> <commit>`, which prints the
       `@wip` scenarios as the check reads them and refuses a commit it cannot read.
 
+## The scenario-gate dossier
+
+A scenario gate's reports, held so a check can tell which features each agent read.
+`gate/scenario-check` judges them; its proof is `gate/self-test`.
+
+- **Location:** `<strand worktree>/gate.local.d/scenario/`.
+  - The feature gate's check reads no file under `scenario/`, so the two dossiers do not mix.
+- **Reports:** `falsifier-scenario.md`, `falsifier-stakeholder.md` and `reviewer.md`, each the
+  agent's final message verbatim.
+  - An earlier round's reports move to `scenario/round<n>/`.
+- **Fingerprints:** `<abs worktree>/gate/scenario-check --fingerprints <abs worktree>` prints one
+  `fingerprint: <git hash-object> <path>` line per `.feature` under `src/test/resources/features/`.
+  - It hashes the working tree, so an uncommitted draft counts.
+- **`<abs worktree>/gate/scenario-check <abs worktree>`** compares each report's fingerprints with
+  the features as they are now. It refuses:
+  - a missing falsifier report;
+  - a report with no fingerprint line;
+  - a report naming a feature at another fingerprint than the feature has now;
+  - a report naming a feature that is gone;
+  - a report that does not name a feature present now;
+  - a `reviewer.md`, where there is one, that breaks any of these.
+- **What counts as a fingerprint line:** one that opens with `fingerprint:` and a full hash, after
+  indentation.
+  - A quoted or abbreviated one counts for nothing.
+- **Its output:** the fingerprints it compared, then a last line.
+  - A pass ends on `scenario-check: PASS on <n> feature(s);`.
+  - Without a `reviewer.md` the pass line goes on `no reviewer.md yet`.
+  - With one it goes on `reviewer.md judged the same`.
+
 ## Environment gotchas (tell every agent)
 
 - **Sessions share the machine.** Every build goes through `./verify`, in a gate agent's worktree

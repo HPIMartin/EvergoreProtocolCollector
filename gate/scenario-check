@@ -1,0 +1,81 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	printf 'usage: gate/scenario-check <strand worktree>\n' >&2
+	printf '       gate/scenario-check --fingerprints <strand worktree>\n' >&2
+	exit 2
+}
+
+fingerprints() {
+	find "$1/src/test/resources/features/" -type f -name '*.feature' | LC_ALL=C sort | while IFS= read -r file; do
+		feature=${file#"$1"/}
+		printf 'fingerprint: %s %s\n' "$(git -C "$1" hash-object -- "$feature")" "$feature"
+	done
+}
+
+if [ "${1:-}" = --fingerprints ]; then
+	[ $# -eq 2 ] || usage
+	fingerprints "$2"
+	exit 0
+fi
+
+[ $# -eq 1 ] || usage
+worktree=$1
+dossier="$worktree/gate.local.d/scenario"
+refusals=0
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
+
+refuse() {
+	printf 'refused [%s]: %s\n' "$1" "$2"
+	refusals=$((refusals + 1))
+}
+
+judge() {
+	report="$dossier/$1"
+	: > "$scratch/changed"
+	if [ ! -f "$report" ]; then
+		refuse report "$1 is missing from gate.local.d/scenario/ (playbook, The scenario-gate dossier)"
+		return
+	fi
+	tr -d '\r' < "$report" | sed 's/^[[:space:]]*//' | grep -E '^fingerprint: [0-9a-f]{40} ' | LC_ALL=C sort -u > "$scratch/named" || true
+	if [ ! -s "$scratch/named" ]; then
+		refuse fingerprint "$1 names no fingerprint, so nothing shows which features it read (playbook, The scenario-gate dossier)"
+		return
+	fi
+	LC_ALL=C comm -13 "$scratch/now" "$scratch/named" > "$scratch/stale"
+	LC_ALL=C comm -23 "$scratch/now" "$scratch/named" > "$scratch/unnamed"
+	while IFS= read -r line; do
+		named=${line#fingerprint: }
+		feature=${named#* }
+		if [ -f "$worktree/$feature" ]; then
+			printf '%s\n' "$feature" >> "$scratch/changed"
+			refuse fingerprint "$1 names $feature at ${named%% *}, which now reads $(git -C "$worktree" hash-object -- "$feature"), so it judged an earlier fold (handbook §9)"
+		else
+			refuse fingerprint "$1 names $feature, which is gone (handbook §9)"
+		fi
+	done < "$scratch/stale"
+	while IFS= read -r line; do
+		named=${line#fingerprint: }
+		feature=${named#* }
+		grep -Fqx -- "$feature" "$scratch/changed" && continue
+		refuse fingerprint "$1 does not name $feature, so it did not read it (handbook §9)"
+	done < "$scratch/unnamed"
+}
+
+fingerprints "$worktree" > "$scratch/listed"
+cat "$scratch/listed"
+LC_ALL=C sort "$scratch/listed" > "$scratch/now"
+judge falsifier-scenario.md
+judge falsifier-stakeholder.md
+reviewed='no reviewer.md yet'
+if [ -f "$dossier/reviewer.md" ]; then
+	judge reviewer.md
+	reviewed='reviewer.md judged the same'
+fi
+if [ "$refusals" -ne 0 ]; then
+	printf 'scenario-check: FAIL, %s refusal(s); the reviewer'"'"'s scenario verdict does not stand\n' "$refusals"
+	exit 1
+fi
+printf 'scenario-check: PASS on %s feature(s); %s\n' "$(wc -l < "$scratch/now" | tr -d ' ')" "$reviewed"
