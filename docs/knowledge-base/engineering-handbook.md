@@ -732,6 +732,9 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - At the scenario gate, `falsifier-scenario`, `falsifier-stakeholder` and the reviewer re-run in
     full on every re-gate, with no delta and no "already decided" list, since a draft `.feature`
     is small and reread whole anyway.
+  - The reviewer's verdict stands only on the features both falsifiers read, which
+    `gate/scenario-check` proves by their fingerprints
+    ([multi-agent-playbook.md](multi-agent-playbook.md), "The scenario-gate dossier").
 
 - **Older doc debt in a touched doc is a finding in rounds 1 and 2 only** (author decision
   2026-10-15):

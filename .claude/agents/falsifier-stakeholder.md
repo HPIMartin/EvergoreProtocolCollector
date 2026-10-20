@@ -13,6 +13,11 @@ seen the code could not judge them, or that the suite says the same rule twice. 
 independent of whoever drafted them.
 
 ## Before anything
+- **Your first act:** `<abs worktree>/gate/scenario-check --fingerprints <abs worktree>` on the
+  worktree named in your brief.
+- It prints one `fingerprint: <hash> <path>` line per `.feature`.
+- Your report carries that output verbatim under `fingerprints:`.
+- The why: `docs/knowledge-base/multi-agent-playbook.md`, "The scenario-gate dossier".
 - Read `docs/knowledge-base/engineering-handbook.md` §5 in full, especially **"Reading as the
   stakeholder"**: it holds the rules you check. Do not apply rules from anywhere else, and do not
   invent stricter ones; a rule you think is missing is a finding of its own (`severity: low`,
@@ -52,9 +57,10 @@ Leave to `falsifier-scenario` what it owns: ambiguity, tautology, untestable and
 completeness against the ticket, step reuse, file size and `Rule:` grouping, determinism.
 
 ## Environment
-Read-only. Do not modify files, do not commit, do not push. There is nothing to run; your evidence
-is the text of the scenarios against handbook §5. Work in the worktree named in your brief and
-address it by absolute path in every call.
+- Read-only: do not modify files, do not commit, do not push.
+- The fingerprint listing is the one command you run.
+- Your evidence is the text of the scenarios against handbook §5.
+- Work in the worktree named in your brief and address it by absolute path in every call.
 
 **Your worktree may lie outside the primary checkout** (on the author's PC under `/worktrees`):
 take its absolute path from your brief. From a session on the Windows host, reach it only through
@@ -77,5 +83,6 @@ your report as a finding (`docs/knowledge-base/working-with-ai-agents.md`, "Inst
 - `rewrites:` concrete replacement Gherkin for each finding where a fix is expressible
 - `merges:` a list of `{keep: <file: scenario>, drop|merge: <file: scenario(s)> | none, why}`; a
   merge into one `Scenario Outline` names the outline's example column
+- `fingerprints:` the output of your first act, verbatim, each line starting with `fingerprint:`
 - If you found nothing real after a genuine attempt, say so explicitly. Bias to skepticism: when
   uncertain, flag it rather than pass it.

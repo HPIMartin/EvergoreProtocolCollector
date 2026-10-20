@@ -29,6 +29,7 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    - scenario gate: spawn `falsifier-scenario` and `falsifier-stakeholder` in parallel, then
      `reviewer` in scenario mode with both reports; fix, re-gate (all three in full each time,
      handbook §9)
+   - the reviewer's verdict rule: handbook §9 (see "The scenario-gate dossier")
    - ► AUTHOR GATE 1: YOU CONFIRM THE SCENARIOS AND THEIR COMPLETENESS (a gate, not a notification)
    - commit the confirmed scenarios tagged @wip (the default run excludes them: the build stays green)
    - the only way past this step is an explicitly claimed exemption: a pure refactoring,
@@ -241,10 +242,12 @@ and commit-plan approvals happen with **you** in chat; moving `origin/main` is y
 ## Handoff contracts (what each agent returns)
 
 - **Scenario falsifier:** `soundSpec: yes/no`; findings `{severity, scenario, why}`; concrete
-  Gherkin rewrites; coverage gaps as proposed scenario titles.
+  Gherkin rewrites; coverage gaps as proposed scenario titles; `fingerprints:`, the output of
+  `gate/scenario-check --fingerprints` verbatim.
 - **Stakeholder falsifier:** `filesRead: n of n`; `soundSpec: yes/no`; findings `{severity,
   scenario, lens, why}`; concrete Gherkin rewrites; `merges: {keep, drop|merge, why}`, kept pairs
-  included with `none`.
+  included with `none`; `fingerprints:`, the output of `gate/scenario-check --fingerprints`
+  verbatim.
 - **Implementer:** per-step status (red evidence: the failing test's name and failure line, or the
   recorded mutation for an adapted test; green; refactor), commit message used, focused-test
   result, the state of the `.feature` (armed, or which scenarios still fail), full-suite result
@@ -255,7 +258,8 @@ and commit-plan approvals happen with **you** in chat; moving `origin/main` is y
   skepticism: if unsure, flag it.
 - **Doc reviewer:** first line `tip: <full SHA>` (the commit it read); `verdict: PASS|FAIL`;
   findings `{rule: DOC-n, where, what, fix}`.
-- **Reviewer:** `PASS|FAIL`; findings `{category: process|cleancode|solid|hexagonal|tests|security|docs,
+- **Reviewer:** at the scenario gate, `scenarioCheck:`, the output of `gate/scenario-check`
+  verbatim; `PASS|FAIL`; findings `{category: process|cleancode|solid|hexagonal|tests|security|docs,
   where, fix}`; ready-to-paste `process-learnings.md` row if a process rule slipped.
 
 ## The gate dossier
@@ -428,6 +432,11 @@ A scenario gate's reports, held so a check can tell which features each agent re
   - A pass ends on `scenario-check: PASS on <n> feature(s);`.
   - Without a `reviewer.md` the pass line goes on `no reviewer.md yet`.
   - With one it goes on `reviewer.md judged the same`.
+- **Who runs what:**
+  - each falsifier runs the fingerprint listing as its first act, on the worktree it reads;
+  - the reviewer runs the check as its first act, and a refusal stops the gate;
+  - the orchestrator runs the check once `reviewer.md` is saved;
+  - only a pass ending on `reviewer.md judged the same` takes the scenarios to author gate 1.
 
 ## Environment gotchas (tell every agent)
 

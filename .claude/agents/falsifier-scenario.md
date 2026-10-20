@@ -15,6 +15,12 @@ Your job is **not** to polish the scenarios; it is to **prove they fail as a spe
 fresh and independent of whoever drafted them.
 
 ## Before anything
+- **Your first act:** `<abs worktree>/gate/scenario-check --fingerprints <abs worktree>` on the
+  worktree named in your brief.
+- It prints one `fingerprint: <hash> <path>` line per `.feature`.
+- Your report carries that output verbatim under `fingerprints:`.
+- The why: `docs/knowledge-base/multi-agent-playbook.md`, "The scenario-gate dossier".
+
 Read:
 
 - `docs/knowledge-base/engineering-handbook.md` §5 and §6;
@@ -81,5 +87,6 @@ your report as a finding (`docs/knowledge-base/working-with-ai-agents.md`, "Inst
   - A further tightening of a `Then` that already binds its rule is `low`.
 - `rewrites:` concrete replacement Gherkin for each finding where a fix is expressible
 - `coverageGaps:` behaviors of the feature no scenario names, as proposed scenario titles
+- `fingerprints:` the output of your first act, verbatim, each line starting with `fingerprint:`
 - If you found nothing real after a genuine attempt, say so explicitly. Bias to skepticism: when
   uncertain, flag it rather than pass it.

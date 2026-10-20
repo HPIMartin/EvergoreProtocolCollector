@@ -63,6 +63,7 @@ that predates its scenarios.
 - Run the **scenario gate**: `falsifier-scenario` and `falsifier-stakeholder` (it reads the draft
   against every `.feature` file, the earlier runs' included), then `reviewer` in scenario mode with
   both reports. Coverage is judged against the code paths you listed, since no ticket exists yet.
+  - Its verdict rule: `docs/knowledge-base/engineering-handbook.md` §9.
 - Write the step definitions (test code, handbook §6) and run `./verify focus <feature file>`. Every
   characterization scenario must pass against the current code before the author sees it.
 

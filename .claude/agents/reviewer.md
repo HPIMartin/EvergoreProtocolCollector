@@ -22,6 +22,12 @@ The task brief says which gate you are at:
   falsifier's merges as yours unless you concretely refute them. A missing report, or a stakeholder
   report that read fewer `.feature` files than the suite holds, stops the gate: say so. There is no diff yet:
   skip the process and code sections below and run no build. Return the same PASS/FAIL shape.
+  - Your first act is `<abs strand worktree>/gate/scenario-check <abs strand worktree>`, which
+    compares the falsifiers' fingerprints with the features as they are now
+    (`docs/knowledge-base/multi-agent-playbook.md`, "The scenario-gate dossier").
+  - A refusal stops the gate: say so, quoting it.
+  - Your report opens with `scenarioCheck:` and the check's output verbatim, its `fingerprint:`
+    lines included, so your verdict names the features it judged.
 - **Feature gate**: everything below.
 
 ## Before anything
@@ -145,6 +151,7 @@ earlier findings:
 
 ## Return (your final message = data for the orchestrator)
 
+- at the scenario gate, first `scenarioCheck:` with the output of `gate/scenario-check` verbatim
 - `verdict: PASS | FAIL`
 - findings: list of `{category: process|cleancode|solid|hexagonal|tests|security|docs, where: file:line, fix}`
 - if FAIL: the minimal set of changes required to reach PASS
