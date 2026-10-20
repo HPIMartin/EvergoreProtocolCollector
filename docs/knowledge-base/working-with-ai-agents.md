@@ -271,10 +271,13 @@ command) inside guardrails. Two files:
   - The settings carry no allow rule for these shapes: a rule with a `*` admits more than the shape.
   - Where the hook is missing, the shapes fall back to the classifier.
 - **The gate helpers and a worktree's build auto-allow** (once trusted), so a gate runs unattended:
-  `gate/walk`, `gate/tip-evidence`, `gate/dossier-check`, `gate/scenario-check` and
-  `sh gate/self-test`, each by absolute path into a worktree under
+  `gate/walk`, `gate/tip-evidence`, `gate/dossier-check`, `gate/scenario-check`,
+  `gate/lens-request` and `sh gate/self-test`, each by absolute path into a worktree under
   `/workspaces/EvergoreProtocolCollector/.claude/worktrees/`, and `<abs worktree>/verify …` for
   such a worktree.
+  - `gate/lens-request` is the security lens's one way to send an HTTP request.
+    - It fixes the host (`localhost` on the agent seat, else `host.docker.internal`), so the
+      auto-allow never reaches another host.
   - A relative form of a gate helper is not allowed, since the working directory can wander.
   - A `..` that climbs out of the worktree root is denied (`worktrees/..*`, `worktrees/*/..*`;
     author decision 2026-10-17); a single leading `..` operand passes.

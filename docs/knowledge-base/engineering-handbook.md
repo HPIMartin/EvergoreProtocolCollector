@@ -829,6 +829,8 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - It also runs when a panel finding was rejected rather than fixed or filed, to judge the
     rejection.
   - The dossier check traces the lens and doc-reviewer findings, not the reviewer's.
+- **The security lens joins the panel** (author decision 2026-10-15), since no other lens reads the
+  app as an attacker; when and how: [multi-agent-playbook.md](multi-agent-playbook.md), "Cadence".
 - **The gate verifies the claim, not the intent.** Every claimed fix is stated with the evidence
   that it landed on the branch (`git show <sha> -- <file>`, produced from the strand's worktree with
   `git -C`, never from an inherited working directory), and the reviewer ticks off each of its own

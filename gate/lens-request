@@ -1,0 +1,71 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	printf 'usage: gate/lens-request <port> <METHOD> <path> [--header '\''Name: Value'\'']... [--body-file <file>]\n' >&2
+	exit 2
+}
+
+refuse() {
+	printf 'refused: %s\n' "$1" >&2
+	exit 2
+}
+
+[ $# -ge 3 ] || usage
+port=$1
+method=$2
+path=$3
+shift 3
+
+case "$port" in
+	'' | *[!0-9]*) refuse "port '$port' is not a number" ;;
+esac
+[ "$port" -ge 1024 ] && [ "$port" -le 65535 ] || refuse "port $port is outside 1024-65535"
+
+case "$method" in
+	GET | POST | PUT | DELETE | HEAD | OPTIONS) ;;
+	*) refuse "method '$method' is not one of GET POST PUT DELETE HEAD OPTIONS" ;;
+esac
+
+case "$path" in
+	/*) ;;
+	*) refuse "path '$path' does not begin with /" ;;
+esac
+
+host=host.docker.internal
+[ "${EPC_SEAT:-}" = agent-machine ] && host=localhost
+
+remaining=$#
+while [ "$remaining" -gt 0 ]; do
+	opt=$1
+	shift
+	remaining=$((remaining - 1))
+	case "$opt" in
+		--header)
+			[ "$remaining" -gt 0 ] || refuse "--header needs a value"
+			value=$1
+			shift
+			remaining=$((remaining - 1))
+			case "$value" in
+				@*) refuse "header '$value' starts with @, which curl reads as a file" ;;
+				*': '*) ;;
+				*) refuse "header '$value' is not a Name: Value pair" ;;
+			esac
+			cleaned=$(printf '%s' "$value" | tr -d '[:cntrl:]')
+			[ "$cleaned" = "$value" ] || refuse "header '$value' holds a control character"
+			set -- "$@" -H "$value"
+			;;
+		--body-file)
+			[ "$remaining" -gt 0 ] || refuse "--body-file needs a value"
+			file=$1
+			shift
+			remaining=$((remaining - 1))
+			[ -f "$file" ] || refuse "body file '$file' does not exist"
+			set -- "$@" --data-binary "@$file"
+			;;
+		*)
+			refuse "unknown option '$opt'" ;;
+	esac
+done
+
+exec curl -q -s -i --globoff --path-as-is --noproxy '*' --max-time 15 -X "$method" "$@" "http://$host:$port$path"

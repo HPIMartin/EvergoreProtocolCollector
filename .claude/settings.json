@@ -61,6 +61,7 @@
 			"Bash(/workspaces/EvergoreProtocolCollector/.claude/worktrees/*/gate/tip-evidence:*)",
 			"Bash(/workspaces/EvergoreProtocolCollector/.claude/worktrees/*/gate/dossier-check:*)",
 			"Bash(/workspaces/EvergoreProtocolCollector/.claude/worktrees/*/gate/scenario-check:*)",
+			"Bash(/workspaces/EvergoreProtocolCollector/.claude/worktrees/*/gate/lens-request:*)",
 			"Bash(sh /workspaces/EvergoreProtocolCollector/.claude/worktrees/*/gate/self-test)",
 			"Bash(sh hooks/*)",
 			"Bash(sh -n hooks/*)",

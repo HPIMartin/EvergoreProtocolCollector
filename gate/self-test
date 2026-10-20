@@ -3018,6 +3018,186 @@ if [ "$status" -eq 1 ] && grep -q "^scenario-check: FAIL, 2 refusal(s); the revi
 then r=0; else r=1; fi
 check "the scenario check exits 1 and counts its refusals when a verdict does not stand" "$r"
 
+lens_request="$gate_dir/lens-request"
+
+cat > "$work/listener.py" <<'PY'
+import http.server, socketserver, sys
+rec = sys.argv[1]
+class H(http.server.BaseHTTPRequestHandler):
+	def handle_one(self):
+		n = int(self.headers.get('Content-Length', 0) or 0)
+		body = self.rfile.read(n) if n else b''
+		with open(rec, 'w') as f:
+			f.write(self.command + '\n')
+			f.write(self.path + '\n')
+			f.write((self.headers.get('X-Probe') or '') + '\n')
+			f.write(body.decode('latin1') + '\n')
+		if self.path == '/redir':
+			self.send_response(302)
+			self.send_header('Location', '/dest')
+			self.end_headers()
+			return
+		self.send_response(200)
+		self.send_header('Content-Type', 'text/plain')
+		self.end_headers()
+		if self.command != 'HEAD':
+			self.wfile.write(b'ok')
+	do_GET = handle_one
+	do_POST = handle_one
+	do_PUT = handle_one
+	do_DELETE = handle_one
+	do_OPTIONS = handle_one
+	do_HEAD = handle_one
+	def log_message(self, *a):
+		pass
+srv = socketserver.TCPServer(('127.0.0.1', 0), H)
+with open(rec + '.port', 'w') as f:
+	f.write(str(srv.server_address[1]))
+srv.serve_forever()
+PY
+
+listener_pid=''
+start_listener() {
+	rec="$work/req"
+	rm -f "$rec" "$rec.port"
+	python3 "$work/listener.py" "$rec" &
+	listener_pid=$!
+	i=0
+	while [ ! -f "$rec.port" ] && [ "$i" -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
+	port=$(cat "$rec.port" 2>/dev/null || true)
+}
+stop_listener() {
+	[ -n "$listener_pid" ] || return 0
+	kill "$listener_pid" 2>/dev/null || true
+	wait "$listener_pid" 2>/dev/null || true
+	listener_pid=''
+}
+
+lr() { "$lens_request" "$@" > "$work/out" 2>&1; }
+
+lr 8080 && status=0 || status=$?
+if [ "$status" -eq 2 ] && grep -q '^usage: gate/lens-request' "$work/out"; then r=0; else r=1; fi
+check "the lens request prints its usage for too few arguments" "$r"
+
+lr 500 GET /health && status=0 || status=$?
+if [ "$status" -eq 2 ] && grep -q '^refused' "$work/out"; then r=0; else r=1; fi
+check "the lens request refuses a port below 1024" "$r"
+
+lr 70000 GET /health && status=0 || status=$?
+if [ "$status" -eq 2 ]; then r=0; else r=1; fi
+check "the lens request refuses a port above 65535" "$r"
+
+lr abc GET /health && status=0 || status=$?
+if [ "$status" -eq 2 ] && grep -q 'is not a number' "$work/out"; then r=0; else r=1; fi
+check "the lens request refuses a non-numeric port" "$r"
+
+lr 8080 FETCH /health && status=0 || status=$?
+if [ "$status" -eq 2 ]; then r=0; else r=1; fi
+check "the lens request refuses an unknown method" "$r"
+
+lr 8080 GET health && status=0 || status=$?
+if [ "$status" -eq 2 ]; then r=0; else r=1; fi
+check "the lens request refuses a path without a leading slash" "$r"
+
+lr 8080 GET /health --header NoColonHere && status=0 || status=$?
+if [ "$status" -eq 2 ]; then r=0; else r=1; fi
+check "the lens request refuses a header that is no Name: Value pair" "$r"
+
+lr 8080 GET /health --resolve example.com:8080:10.0.0.1 && status=0 || status=$?
+if [ "$status" -eq 2 ]; then r=0; else r=1; fi
+check "the lens request refuses an option that is not --header or --body-file" "$r"
+
+lr 8080 POST /usage --body-file "$work/no-such-body" && status=0 || status=$?
+if [ "$status" -eq 2 ]; then r=0; else r=1; fi
+check "the lens request refuses a body file that does not exist" "$r"
+
+start_listener
+EPC_SEAT=agent-machine lr "$port" GET '/a/../b' && status=0 || status=$?
+stop_listener
+if [ "$status" -eq 0 ] && [ "$(sed -n 1p "$rec")" = GET ] && [ "$(sed -n 2p "$rec")" = '/a/../b' ] \
+	&& grep -q ' 200' "$work/out"; then r=0; else r=1; fi
+check "the lens request sends a GET with the raw path and reaches localhost on the agent seat" "$r"
+
+start_listener
+printf 'payload' > "$work/body"
+EPC_SEAT=agent-machine lr "$port" POST /usage --header 'X-Probe: seen' --body-file "$work/body" && status=0 || status=$?
+stop_listener
+if [ "$status" -eq 0 ] && [ "$(sed -n 1p "$rec")" = POST ] && [ "$(sed -n 3p "$rec")" = seen ] \
+	&& [ "$(sed -n 4p "$rec")" = payload ]; then r=0; else r=1; fi
+check "the lens request sends a POST with a header and a body file" "$r"
+
+start_listener
+EPC_SEAT=agent-machine lr "$port" PUT /member && status=0 || status=$?
+stop_listener
+if [ "$status" -eq 0 ] && [ "$(sed -n 1p "$rec")" = PUT ]; then r=0; else r=1; fi
+check "the lens request sends the method it is given" "$r"
+
+start_listener
+EPC_SEAT=agent-machine lr "$port" GET '/a[1-3]' && status=0 || status=$?
+stop_listener
+if [ "$status" -eq 0 ] && [ "$(sed -n 2p "$rec")" = '/a[1-3]' ]; then r=0; else r=1; fi
+check "the lens request sends a bracket path once, not globbed into many" "$r"
+
+start_listener
+http_proxy=http://127.0.0.1:1 EPC_SEAT=agent-machine lr "$port" GET /health && status=0 || status=$?
+stop_listener
+if [ "$status" -eq 0 ] && [ -f "$rec" ]; then r=0; else r=1; fi
+check "the lens request ignores an http_proxy in the environment" "$r"
+
+start_listener
+printf 'connect-to = "::127.0.0.1:1"\n' > "$work/.curlrc"
+HOME="$work" EPC_SEAT=agent-machine lr "$port" GET /health && status=0 || status=$?
+stop_listener
+if [ "$status" -eq 0 ] && [ -f "$rec" ]; then r=0; else r=1; fi
+check "the lens request ignores a .curlrc that redirects the connection" "$r"
+
+start_listener
+EPC_SEAT=agent-machine lr "$port" GET /redir && status=0 || status=$?
+stop_listener
+if [ "$status" -eq 0 ] && [ "$(sed -n 2p "$rec")" = /redir ] && grep -q ' 302' "$work/out"; then r=0; else r=1; fi
+check "the lens request does not follow a redirect" "$r"
+
+control_header=$(printf 'X-Probe: a\nInjected: b')
+lr 8080 GET /health --header "$control_header" && status=0 || status=$?
+if [ "$status" -eq 2 ]; then r=0; else r=1; fi
+check "the lens request refuses a header with a control character" "$r"
+
+lr 8080 GET /health --header '@/etc/hostname: x' && status=0 || status=$?
+if [ "$status" -eq 2 ]; then r=0; else r=1; fi
+check "the lens request refuses a header that curl would read from a file" "$r"
+
+lr 8080 GET /health --header && status=0 || status=$?
+if [ "$status" -eq 2 ] && grep -q 'needs a value' "$work/out"; then r=0; else r=1; fi
+check "the lens request refuses --header without a value" "$r"
+
+lr 8080 POST /usage --body-file && status=0 || status=$?
+if [ "$status" -eq 2 ] && grep -q 'needs a value' "$work/out"; then r=0; else r=1; fi
+check "the lens request refuses --body-file without a value" "$r"
+
+start_listener
+EPC_SEAT=agent-machine lr "$port" DELETE /d && status=0 || status=$?
+stop_listener
+if [ "$status" -eq 0 ] && [ "$(sed -n 1p "$rec")" = DELETE ]; then r=0; else r=1; fi
+check "the lens request sends a DELETE" "$r"
+
+start_listener
+EPC_SEAT=agent-machine lr "$port" OPTIONS /o && status=0 || status=$?
+stop_listener
+if [ "$status" -eq 0 ] && [ "$(sed -n 1p "$rec")" = OPTIONS ]; then r=0; else r=1; fi
+check "the lens request sends an OPTIONS" "$r"
+
+start_listener
+EPC_SEAT=agent-machine lr "$port" HEAD /h && status=0 || status=$?
+stop_listener
+if [ "$status" -eq 0 ] && [ "$(sed -n 1p "$rec")" = HEAD ]; then r=0; else r=1; fi
+check "the lens request sends a HEAD" "$r"
+
+start_listener
+EPC_SEAT='' lr "$port" GET /health && status=0 || status=$?
+stop_listener
+if [ ! -f "$rec" ]; then r=0; else r=1; fi
+check "the lens request off the agent seat does not reach the localhost listener" "$r"
+
 if [ "$failures" -eq 0 ]; then
 	printf 'gate self-test: all cases pass\n'
 else

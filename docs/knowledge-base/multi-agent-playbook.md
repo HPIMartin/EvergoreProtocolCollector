@@ -12,7 +12,7 @@ independent agents try to break it and gate the commit.** Part of the project's 
 | **Scenario falsifier** | `falsifier-scenario` (`model: sonnet`) | Yes (fresh) | A draft `.feature`, before implementation → skeptical verdict on it as a specification against its ticket + concrete Gherkin rewrites |
 | **Stakeholder falsifier** | `falsifier-stakeholder` (`model: opus`) | Yes (fresh) | A draft `.feature` (or the whole suite) read against every `.feature` file → verdict on actor, product-owner readability, time, numbers + rewrites + merge proposals for overlaps |
 | **Implementer** | `implementer` (frontmatter `model: sonnet`) | Yes | Approved plan → red→green→refactor per step, commits each locally, arms the scenarios → summary |
-| **Falsifier panel** | `falsifier-domain` · `falsifier-robustness` · `falsifier-frontend` (each `model: sonnet`); spawned per touched surface (see cadence) | Yes (fresh) | Feature diff/commits → adversarial verdicts (domain math · test honesty/robustness · SPA behavior) + counter-tests |
+| **Falsifier panel** | `falsifier-domain` · `falsifier-robustness` · `falsifier-frontend` · `falsifier-security` (each `model: sonnet`); spawned per touched surface (see cadence) | Yes (fresh) | Feature diff/commits → adversarial verdicts (domain math · test honesty/robustness · SPA behavior · a way in through the authentication surface) + counter-tests |
 | **Doc reviewer** | `doc-reviewer` (`model: haiku`; round 1 of a large docs-only strand: handbook §9) | Yes (fresh) | Feature diff/commits → PASS/FAIL against the KB README's DOC checklist + findings with rule IDs |
 | **Reviewer / Gate** | `reviewer` (`model: opus`) | Yes (fresh, per gate) | Scenario gate: the draft `.feature` + both scenario-gate falsifiers' reports → PASS/FAIL. Feature gate: feature commits, from round 2 on also the earlier rounds' panel and doc-reviewer reports → PASS/FAIL + findings + proposed `process-learnings.md` entry |
 
@@ -59,6 +59,8 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    - robustness lens: fake-green tests, edges, time/concurrency/resources, boundaries, secrets
    - frontend lens: fake-green component tests, user paths, async determinism, layer boundaries,
      API contract, the browser-driven scenarios
+   - security lens: a way in through the authentication surface, by few targeted requests against
+     a container of the tip
    - each returns verdict + counter-tests, and ends with the diff of the production tree against
      HEAD in its worktree (a left-behind probe is its own finding)
    - doc-reviewer: docs hygiene per the DOC checklist, task-scoped, plus a stateless
@@ -146,6 +148,14 @@ falsifier panel + review gate run **at the feature commit**, not per micro-commi
 - **Spawn only the lenses the change can break:** backend-only → `falsifier-domain` +
   `falsifier-robustness`; frontend-only → `falsifier-frontend` + `falsifier-robustness`; full-stack
   → all three. Spawning a lens that cannot see the change buys a confident PASS that means nothing.
+- **`falsifier-security` joins wherever the diff touches the authentication surface** (author
+  decision 2026-10-15): `rest/filter`, the security configuration, login, cookie and JWT, roles,
+  passwords, the rate limit, deploy secrets.
+  - It works a fixed attack list, only the classes the diff touches (author decision 2026-10-20).
+  - Budget: at most 10 requests per attack idea and 120 per run (author decision 2026-10-20).
+  - It starts the tip as a container of its own on a free port, never the home server.
+  - It does no brute force, no fuzzing loops, no load and no dependency CVE scan (that is
+    `vulnScan`).
 - **One detached worktree per lens** (`git worktree add <root>/<name> <sha> --detach`, under the
   worktree root of handbook §7) at the tip under review, named in the brief by its absolute path,
   so two lenses cannot collide with each other or with the planner. Every lens that writes a probe
@@ -236,7 +246,8 @@ and lands through the gateway; no commit is made on `main`
 
 Orchestrator = the main session (me), via the `Agent` tool: `subagent_type` = `implementer` /
 `falsifier-scenario` / `falsifier-stakeholder` / `falsifier-domain` / `falsifier-robustness` /
-`falsifier-frontend` / `doc-reviewer` / `reviewer` (defined in `.claude/agents/`). Planner phase
+`falsifier-frontend` / `falsifier-security` / `doc-reviewer` / `reviewer` (defined in
+`.claude/agents/`). Planner phase
 and commit-plan approvals happen with **you** in chat; moving `origin/main` is yours.
 
 ## Handoff contracts (what each agent returns)
@@ -256,6 +267,10 @@ and commit-plan approvals happen with **you** in chat; moving `origin/main` is y
   `robust: yes/no`; weaknesses `{severity, where (file:line), why}`; concrete counter-test
   snippets; `treeDiff`, the production-tree diff against `HEAD` in its worktree, taken last. Bias to
   skepticism: if unsure, flag it.
+- **Security falsifier:** the code lens's fields, and beside them `requests: <n> of 120`; each
+  weakness with the requests that proved it; `notTouched:`, the attack classes the diff does not
+  reach; `notExercised:`, the touched classes it could only read in the code; a counter-test per
+  weakness that fails today at the HTTP boundary.
 - **Doc reviewer:** first line `tip: <full SHA>` (the commit it read); `verdict: PASS|FAIL`;
   findings `{rule: DOC-n, where, what, fix}`.
 - **Reviewer:** at the scenario gate, `scenarioCheck:`, the output of `gate/scenario-check`
@@ -338,6 +353,10 @@ says where each piece of evidence lives.
   `frontend/` adds `lens-frontend.md` (→ Cadence). A docs-only strand needs the doc-reviewer alone.
   - A renamed path counts at both its ends, so code renamed into the docs still needs its lenses.
   - A name git quotes counts without its quotes.
+  - `lens-security.md`, where a round spawned the security lens, is checked like any lens report
+    and its findings traced as `security-<n>`.
+  - No path requires it yet: that comes with the reviewer's report item (G65).
+  - It stands only at the tip it names.
 - **`red/`:** one record per commit that changes a test path (`src/test/`, `*.test.[jt]s(x)`, a
   `self-test`, `release/test_*.py`), whatever its tag, opening with `commit: <its subject>` (stable
   across rebases) and holding the failing run, or an `exempt: <reason>` line for a test refactoring.

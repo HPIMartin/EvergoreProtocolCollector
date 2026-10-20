@@ -34,7 +34,8 @@ The task brief says which gate you are at:
 
 Read `CLAUDE.md`, `docs/knowledge-base/engineering-handbook.md` (esp. §1–§9), the feature's
 `.feature`, the commits/diff, and the reports of the **falsifier panel** (`falsifier-domain` +
-`falsifier-robustness`, plus `falsifier-frontend` where the SPA was touched) and the
+`falsifier-robustness`, plus `falsifier-frontend` where the SPA was touched and
+`falsifier-security` where the diff touches the authentication surface) and the
 **`doc-reviewer`** of earlier rounds:
 
 - in round 1 you run beside the panel, so no earlier verdict exists;
