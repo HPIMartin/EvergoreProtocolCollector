@@ -39,6 +39,8 @@ Check:
    - Older debt in a touched doc is a finding in rounds 1 and 2 only.
    - From round 3 on, list older debt for the doc-debt row (G18) or the bare-shortcode row (G21).
    - From round 3 on, older debt does not FAIL the gate (author decision 2026-10-15).
+   - From round 3 on, a DOC-1 residue in a line an earlier round of this panel had split is a
+     low: list it, it does not FAIL the gate (author decision 2026-10-19).
 2. **Docs that SHOULD have been touched but weren't:**
    - behavior/config changed → relevant KB doc updated? (DOC-6)
    - backlog item completed → row and all shortcode references removed? (DOC-5; `git grep` the ID)

@@ -728,6 +728,13 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - what remains then goes to the doc-debt row (G18) or the bare-shortcode row (G21), so it never
     drives the time of the strand at hand.
 
+- **From round 3 on, a DOC-1 residue in a line an earlier round of the same panel had split is a
+  low** (author decision 2026-10-19):
+  - it goes onto the passing round's lows row instead of into another fold;
+  - it does not fail the doc-reviewer's round;
+  - the why: each fold of such a residue seeds the next round ([open-questions.md](../open-questions.md),
+    2026-10-19).
+
 - **A delta round re-runs only what the fold concerns** (author decision 2026-10-12), since a full
   panel after every tip change was the largest cost of a strand:
   - from round 2 on, every lens whose read paths the fold touches runs again, fresh (author
