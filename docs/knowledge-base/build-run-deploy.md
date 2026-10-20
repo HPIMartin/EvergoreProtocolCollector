@@ -1155,6 +1155,9 @@ answered (measured on Micronaut 4.10.9).
   as one grouped pull request, a major alone) and
   `.github/rulesets/`, a reconstruction of the three live rulesets ([git-state.md](git-state.md),
   "What GitHub enforces").
+- **The `npm` ecosystem ignores a semver-major `@types/node`** until the Node runtime's major
+  rises (`nodeVersion` in `gradle.properties`): types for a higher major allow APIs the pinned
+  runtime lacks.
 - `.devcontainer/`: Java dev container (digest-pinned bookworm base + apt tools, `java` feature with
   **JDK 25**, Maven off, Gradle via the wrapper); see [dev-environment.md](dev-environment.md).
   Dev only. `.devcontainer/agent/` builds the agent machine's image on top of it (same doc, "The
