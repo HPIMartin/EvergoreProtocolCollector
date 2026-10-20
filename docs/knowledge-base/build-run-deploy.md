@@ -538,6 +538,7 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
      deploy's pre-flight matches. `epc-old` does not bother the next deploy, which only touches
      `epc`; remove it once the new directory has run for a while.
 - **The home server's database directory lives on the system disk.**
+  - Its ownership and mode are those of release step 3.
 - **The repository and the work machine hold the authoritative copies of the release files.**
 
 **Rehearsing on the work machine** (repeat before every release; nothing on the home server is
