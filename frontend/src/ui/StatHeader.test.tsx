@@ -34,9 +34,9 @@ describe('StatHeader', () => {
   it('shows every figure it is given', () => {
     renderStats([BANK, { ...BANK, key: 'donation', label: 'Gildenspende' }])
 
-    expect(
-      screen.getByTestId('stat-header').querySelectorAll('dd'),
-    ).toHaveLength(2)
+    const figures = screen.getByTestId('stat-header').querySelectorAll('dd')
+
+    expect(figures).toHaveLength(2)
   })
 
   it('reads a negative figure as a debit', () => {

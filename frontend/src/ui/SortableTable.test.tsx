@@ -208,7 +208,9 @@ describe('SortableTable', () => {
   it('renders the rows in their given order when no sort is asked for', () => {
     renderTable()
 
-    expect(cellsOf('name')).toEqual(['Zoe', 'Ärger', 'alessia', 'Bambor'])
+    const cells = cellsOf('name')
+
+    expect(cells).toEqual(['Zoe', 'Ärger', 'alessia', 'Bambor'])
   })
 })
 
@@ -220,7 +222,9 @@ describe('SortableTable cells', () => {
       rows: [{ name: 'Fugger', deposited: 1234567, lastActivity: null }],
     })
 
-    expect(cellsOf('deposited')).toEqual(['1.234.567'])
+    const cells = cellsOf('deposited')
+
+    expect(cells).toEqual(['1.234.567'])
   })
 
   it('renders a timestamp as Berlin wall-clock time', () => {
@@ -234,7 +238,9 @@ describe('SortableTable cells', () => {
       ],
     })
 
-    expect(cellsOf('lastActivity')).toEqual(['10.07.2022 14:23'])
+    const cells = cellsOf('lastActivity')
+
+    expect(cells).toEqual(['10.07.2022 14:23'])
   })
 
   it.each(['deposited', 'lastActivity'])(
@@ -244,7 +250,9 @@ describe('SortableTable cells', () => {
         rows: [{ name: 'Aargh', deposited: null, lastActivity: null }],
       })
 
-      expect(cellsOf(columnKey)).toEqual(['–'])
+      const cells = cellsOf(columnKey)
+
+      expect(cells).toEqual(['–'])
     },
   )
 
@@ -264,7 +272,9 @@ describe('SortableTable cells', () => {
         rows: [{ name: 'Fugger', deposited: value, lastActivity: null }],
       })
 
-      expect(tonesOf('deposited')).toEqual([expected])
+      const tones = tonesOf('deposited')
+
+      expect(tones).toEqual([expected])
     },
   )
 
@@ -274,7 +284,9 @@ describe('SortableTable cells', () => {
       rows: [{ name: 'Aargh', deposited: null, lastActivity: null }],
     })
 
-    expect(tonesOf('deposited')).toEqual(['neutral'])
+    const tones = tonesOf('deposited')
+
+    expect(tones).toEqual(['neutral'])
   })
 })
 
@@ -317,7 +329,9 @@ describe('SortableTable ordering', () => {
     ({ columnKey, direction, expected }) => {
       renderTable({ initialSort: { columnKey, direction } })
 
-      expect(cellsOf('name')).toEqual(expected)
+      const cells = cellsOf('name')
+
+      expect(cells).toEqual(expected)
     },
   )
 
@@ -333,7 +347,9 @@ describe('SortableTable ordering', () => {
       initialSort: { columnKey: 'deposited', direction: 'ascending' },
     })
 
-    expect(cellsOf('name')).toEqual(['Zoe', 'Ärger', 'Bambor'])
+    const cells = cellsOf('name')
+
+    expect(cells).toEqual(['Zoe', 'Ärger', 'Bambor'])
   })
 
   it('rejects a sort on a column it does not have', () => {
@@ -354,7 +370,9 @@ describe('SortableTable sorting by click', () => {
 
     fireEvent.click(headerOf('Eingezahlt'))
 
-    expect(cellsOf('name')).toEqual(['Ärger', 'Zoe', 'Bambor', 'alessia'])
+    const cells = cellsOf('name')
+
+    expect(cells).toEqual(['Ärger', 'Zoe', 'Bambor', 'alessia'])
   })
 
   it('reverses the order when the same header is clicked again', () => {
@@ -363,7 +381,9 @@ describe('SortableTable sorting by click', () => {
     fireEvent.click(headerOf('Eingezahlt'))
     fireEvent.click(headerOf('Eingezahlt'))
 
-    expect(cellsOf('name')).toEqual(['Bambor', 'Zoe', 'Ärger', 'alessia'])
+    const cells = cellsOf('name')
+
+    expect(cells).toEqual(['Bambor', 'Zoe', 'Ärger', 'alessia'])
   })
 
   it('starts ascending when another header is clicked', () => {
@@ -371,7 +391,9 @@ describe('SortableTable sorting by click', () => {
 
     fireEvent.click(headerOf('Eingezahlt'))
 
-    expect(cellsOf('name')).toEqual(['Ärger', 'Zoe', 'Bambor', 'alessia'])
+    const cells = cellsOf('name')
+
+    expect(cells).toEqual(['Ärger', 'Zoe', 'Bambor', 'alessia'])
   })
 
   it('marks the sorted column and leaves the others unsorted', () => {
@@ -421,7 +443,9 @@ describe('SortableTable ordered by its source', () => {
 
     fireEvent.click(headerOf('Eingezahlt'))
 
-    expect(cellsOf('name')).toEqual(['Zoe', 'Ärger', 'alessia', 'Bambor'])
+    const cells = cellsOf('name')
+
+    expect(cells).toEqual(['Zoe', 'Ärger', 'alessia', 'Bambor'])
   })
 
   it('asks its source for the ascending order of a column it is not sorted by', () => {
@@ -443,7 +467,9 @@ describe('SortableTable ordered by its source', () => {
   it('keeps the rows in the order they were delivered in, whatever sort they name', () => {
     chosenIn({ columnKey: 'name', direction: 'ascending' })
 
-    expect(cellsOf('name')).toEqual(['Zoe', 'Ärger', 'alessia', 'Bambor'])
+    const cells = cellsOf('name')
+
+    expect(cells).toEqual(['Zoe', 'Ärger', 'alessia', 'Bambor'])
   })
 
   it('does not sort its rows by an initial sort while its source orders them', () => {
@@ -452,7 +478,9 @@ describe('SortableTable ordered by its source', () => {
       deliveredOrder: { sort: null, choose: () => undefined },
     })
 
-    expect(cellsOf('name')).toEqual(['Zoe', 'Ärger', 'alessia', 'Bambor'])
+    const cells = cellsOf('name')
+
+    expect(cells).toEqual(['Zoe', 'Ärger', 'alessia', 'Bambor'])
   })
 
   it('marks the column its rows were delivered sorted by', () => {
@@ -531,7 +559,9 @@ describe('SortableTable timestamp links', () => {
 
     fireEvent.click(headerOf('Letzte Aktivität'))
 
-    expect(cellsOf('lastActivity')).toStrictEqual([
+    const cells = cellsOf('lastActivity')
+
+    expect(cells).toStrictEqual([
       '10.07.2022 12:00',
       '10.07.2022 14:00',
       '10.07.2022 16:00',
@@ -590,7 +620,9 @@ describe('SortableTable total row', () => {
   it("marks the label of the total row as that row's header", () => {
     renderTable({ total: { label: 'Gilde', row: guild } })
 
-    expect(screen.getByTestId('total-name').getAttribute('scope')).toBe('row')
+    const scope = screen.getByTestId('total-name').getAttribute('scope')
+
+    expect(scope).toBe('row')
   })
 
   it('renders the given total below the rows, formatted like a cell', () => {
@@ -606,10 +638,10 @@ describe('SortableTable total row', () => {
 
     fireEvent.click(headerOf('Avatar'))
 
-    expect({
-      rows: cellsOf('name'),
-      total: screen.getByTestId('total-name').textContent,
-    }).toStrictEqual({
+    const rows = cellsOf('name')
+    const total = screen.getByTestId('total-name').textContent
+
+    expect({ rows, total }).toStrictEqual({
       rows: ['alessia', 'Ärger', 'Bambor', 'Zoe'],
       total: 'Gilde',
     })
@@ -700,7 +732,9 @@ describe('SortableTable link columns', () => {
 
     fireEvent.click(headerOf('Avatar'))
 
-    expect(cellsOf('name')).toStrictEqual(['alessia', 'Ärger', 'Bambor', 'Zoe'])
+    const cells = cellsOf('name')
+
+    expect(cells).toStrictEqual(['alessia', 'Ärger', 'Bambor', 'Zoe'])
   })
 })
 
@@ -715,18 +749,22 @@ describe('SortableTable row marks', () => {
   it('marks only the rows the mark answers a text for', () => {
     renderTable({ mark: markOfStaleMembers })
 
-    expect(
-      screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
-    ).toEqual([undefined, 'true', undefined, undefined])
+    const staleFlags = screen
+      .getAllByTestId('data-row')
+      .map((row) => row.dataset.stale)
+
+    expect(staleFlags).toEqual([undefined, 'true', undefined, undefined])
   })
 
   it('leaves every row unmarked when no mark is given', () => {
     renderTable()
 
+    const staleFlags = screen
+      .getAllByTestId('data-row')
+      .map((row) => row.dataset.stale)
+
     expect(screen.queryByTestId('row-mark')).toBeNull()
-    expect(
-      screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
-    ).toEqual([undefined, undefined, undefined, undefined])
+    expect(staleFlags).toEqual([undefined, undefined, undefined, undefined])
   })
 
   it('reads the mark before the text the first cell already shows', () => {
@@ -757,11 +795,11 @@ describe('SortableTable row marks', () => {
       .getAllByTestId('cell-name')
       .find((cell) => cell.textContent?.includes('Ärger'))
 
-    expect(
-      Array.from(marked?.children ?? []).map(
-        (child) => child.getAttribute('data-testid') ?? child.tagName,
-      ),
-    ).toEqual(['row-mark', 'A'])
+    const order = Array.from(marked?.children ?? []).map(
+      (child) => child.getAttribute('data-testid') ?? child.tagName,
+    )
+
+    expect(order).toEqual(['row-mark', 'A'])
   })
 
   it('marks every stale row, not only the first of them', () => {
@@ -770,19 +808,23 @@ describe('SortableTable row marks', () => {
         member.name === 'Ärger' || member.name === 'Zoe' ? staleNote : null,
     })
 
+    const staleFlags = screen
+      .getAllByTestId('data-row')
+      .map((row) => row.dataset.stale)
+
     expect(screen.getAllByTestId('row-mark')).toHaveLength(2)
-    expect(
-      screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
-    ).toEqual(['true', 'true', undefined, undefined])
+    expect(staleFlags).toEqual(['true', 'true', undefined, undefined])
   })
 
   it('treats a blank mark as no mark rather than an empty note', () => {
     renderTable({ mark: () => '   ' })
 
+    const staleFlags = screen
+      .getAllByTestId('data-row')
+      .map((row) => row.dataset.stale)
+
     expect(screen.queryByTestId('row-mark')).toBeNull()
-    expect(
-      screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
-    ).toEqual([undefined, undefined, undefined, undefined])
+    expect(staleFlags).toEqual([undefined, undefined, undefined, undefined])
   })
 
   it('treats a blank total mark as no mark either', () => {
@@ -803,8 +845,11 @@ describe('SortableTable row marks', () => {
 
     const mark = screen.getByTestId('row-mark')
 
-    expect(mark.getAttribute('tabindex')).toBe('0')
-    expect(mark.getAttribute('role')).toBe('note')
+    const tabindex = mark.getAttribute('tabindex')
+    const role = mark.getAttribute('role')
+
+    expect(tabindex).toBe('0')
+    expect(role).toBe('note')
   })
 
   it('marks the total row with a text of its own', () => {

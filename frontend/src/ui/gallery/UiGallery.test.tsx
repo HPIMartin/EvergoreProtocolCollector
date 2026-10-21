@@ -45,7 +45,9 @@ describe('UiGallery', () => {
   it('shows the overview with the columns of the guild sheet', () => {
     render(<UiGallery />)
 
-    expect(headersOf('gallery-overview')).toEqual([
+    const headers = headersOf('gallery-overview')
+
+    expect(headers).toEqual([
       'Avatar',
       'Bank-Einzahlung',
       'Bank-Auszahlung',
@@ -64,9 +66,9 @@ describe('UiGallery', () => {
       'stat-header',
     )
 
-    expect(
-      Array.from(stats.children).map((stat) => stat.textContent),
-    ).toStrictEqual([
+    const figures = Array.from(stats.children).map((stat) => stat.textContent)
+
+    expect(figures).toStrictEqual([
       'Gildenbank119.334.247',
       'Gildenlagerwert20.231.794',
       'Gildenspende104.597.124',
@@ -103,13 +105,9 @@ describe('UiGallery', () => {
   it('sorts the overview by avatar', () => {
     render(<UiGallery />)
 
-    expect(ownTextsOf('gallery-overview', 'avatar')).toEqual([
-      'Aargh',
-      'Alessia',
-      'Bambor',
-      'Evildead',
-      'Fugger',
-    ])
+    const texts = ownTextsOf('gallery-overview', 'avatar')
+
+    expect(texts).toEqual(['Aargh', 'Alessia', 'Bambor', 'Evildead', 'Fugger'])
   })
 
   it('shows a row whose sums the last collection did not refresh', () => {
@@ -120,8 +118,10 @@ describe('UiGallery', () => {
       .getAllByTestId('data-row')
       .filter((row) => row.dataset.stale === 'true')
 
+    const markText = overview.getByTestId('row-mark').textContent
+
     expect(marked).toHaveLength(1)
-    expect(overview.getByTestId('row-mark').textContent).toContain(
+    expect(markText).toContain(
       'Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom',
     )
   })
@@ -129,7 +129,9 @@ describe('UiGallery', () => {
   it('values the overview in German gold notation', () => {
     render(<UiGallery />)
 
-    expect(cellsOf('gallery-overview', 'guildValue')).toEqual([
+    const cells = cellsOf('gallery-overview', 'guildValue')
+
+    expect(cells).toEqual([
       '!Kein Wert: für diese Zeile noch nicht berechnet.–',
       '-97.550',
       '1.170',
@@ -154,7 +156,9 @@ describe('UiGallery', () => {
   it('shows the ledger with its newest entry first', () => {
     render(<UiGallery />)
 
-    expect(cellsOf('gallery-ledger', 'occurredAt')).toEqual([
+    const cells = cellsOf('gallery-ledger', 'occurredAt')
+
+    expect(cells).toEqual([
       '10.07.2022 14:23',
       '10.07.2022 09:41',
       '09.07.2022 22:07',

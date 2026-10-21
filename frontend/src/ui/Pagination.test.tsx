@@ -14,10 +14,12 @@ describe('Pagination', () => {
       />,
     )
 
-    expect({
-      previous: screen.getByTestId('pagination-previous').getAttribute('href'),
-      next: screen.getByTestId('pagination-next').getAttribute('href'),
-    }).toStrictEqual({
+    const previous = screen
+      .getByTestId('pagination-previous')
+      .getAttribute('href')
+    const next = screen.getByTestId('pagination-next').getAttribute('href')
+
+    expect({ previous, next }).toStrictEqual({
       previous: '/avatars/Calix/bank?token=a-test-token',
       next: '/avatars/Calix/bank?token=a-test-token&page=2',
     })

@@ -34,10 +34,9 @@ describe('Link', () => {
     )
 
     const link = screen.getByRole('link', { name: 'Bank' })
+    const href = link.getAttribute('href')
 
-    expect(link.getAttribute('href')).toBe(
-      '/avatars/Calix/bank?token=a-test-token',
-    )
+    expect(href).toBe('/avatars/Calix/bank?token=a-test-token')
   })
 
   it('reports a plain click instead of letting the browser reload the shell', () => {

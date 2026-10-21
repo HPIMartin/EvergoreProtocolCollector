@@ -60,9 +60,9 @@ describe('PageFrame', () => {
   it('names its navigation landmark', () => {
     renderFrame()
 
-    expect(screen.getByRole('navigation').getAttribute('aria-label')).toBe(
-      'Hauptnavigation',
-    )
+    const label = screen.getByRole('navigation').getAttribute('aria-label')
+
+    expect(label).toBe('Hauptnavigation')
   })
 
   it('renders its children into the content region', () => {

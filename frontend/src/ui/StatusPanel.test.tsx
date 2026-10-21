@@ -19,7 +19,9 @@ describe('StatusPanel', () => {
   ] as const)('announces the $variant state as $role', ({ variant, role }) => {
     render(<StatusPanel variant={variant} message="Text" />)
 
-    expect(screen.getByTestId('status-panel').getAttribute('role')).toBe(role)
+    const announced = screen.getByTestId('status-panel').getAttribute('role')
+
+    expect(announced).toBe(role)
   })
 
   it.each(['loading', 'empty', 'error'] as const)(
