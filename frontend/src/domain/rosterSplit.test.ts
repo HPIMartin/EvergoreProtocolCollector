@@ -42,7 +42,10 @@ describe('the roster split behind the overview', () => {
 
     const split = rosterSplitOf([newest, recent, old])
 
-    expect([namesOf(split.active), namesOf(split.dormant)]).toStrictEqual([
+    const activeNames = namesOf(split.active)
+    const dormantNames = namesOf(split.dormant)
+
+    expect([activeNames, dormantNames]).toStrictEqual([
       ['Newest', 'Recent'],
       ['Old'],
     ])
@@ -56,7 +59,9 @@ describe('the roster split behind the overview', () => {
       onTheBoundary,
     ])
 
-    expect(namesOf(split.active)).toStrictEqual(['Newest', 'Grenzfall'])
+    const activeNames = namesOf(split.active)
+
+    expect(activeNames).toStrictEqual(['Newest', 'Grenzfall'])
   })
 
   it('counts a row one millisecond before the boundary as dormant', () => {
@@ -67,7 +72,10 @@ describe('the roster split behind the overview', () => {
       justOutside,
     ])
 
-    expect([namesOf(split.active), namesOf(split.dormant)]).toStrictEqual([
+    const activeNames = namesOf(split.active)
+    const dormantNames = namesOf(split.dormant)
+
+    expect([activeNames, dormantNames]).toStrictEqual([
       ['Newest'],
       ['Grenzfall'],
     ])
@@ -99,10 +107,10 @@ describe('the roster split behind the overview', () => {
 
     const split = rosterSplitOf([alone])
 
-    expect([namesOf(split.active), namesOf(split.dormant)]).toStrictEqual([
-      ['Allein'],
-      [],
-    ])
+    const activeNames = namesOf(split.active)
+    const dormantNames = namesOf(split.dormant)
+
+    expect([activeNames, dormantNames]).toStrictEqual([['Allein'], []])
   })
 
   it('counts a row that never appeared in either ledger as dormant', () => {
@@ -110,7 +118,10 @@ describe('the roster split behind the overview', () => {
 
     const split = rosterSplitOf([summaryOf('Newest', null, NEWEST), neverSeen])
 
-    expect([namesOf(split.active), namesOf(split.dormant)]).toStrictEqual([
+    const activeNames = namesOf(split.active)
+    const dormantNames = namesOf(split.dormant)
+
+    expect([activeNames, dormantNames]).toStrictEqual([
       ['Newest'],
       ['Namenlos'],
     ])
@@ -122,7 +133,10 @@ describe('the roster split behind the overview', () => {
       summaryOf('Zweiter', null, null),
     ])
 
-    expect([namesOf(split.active), namesOf(split.dormant)]).toStrictEqual([
+    const activeNames = namesOf(split.active)
+    const dormantNames = namesOf(split.dormant)
+
+    expect([activeNames, dormantNames]).toStrictEqual([
       ['Erster', 'Zweiter'],
       [],
     ])
@@ -146,7 +160,10 @@ describe('the roster split behind the overview', () => {
 
     const split = rosterSplitOf([dormantOne, activeOne, dormantTwo, activeTwo])
 
-    expect([namesOf(split.active), namesOf(split.dormant)]).toStrictEqual([
+    const activeNames = namesOf(split.active)
+    const dormantNames = namesOf(split.dormant)
+
+    expect([activeNames, dormantNames]).toStrictEqual([
       ['Bea', 'Dane'],
       ['Aaron', 'Cara'],
     ])

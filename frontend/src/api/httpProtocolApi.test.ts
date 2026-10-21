@@ -257,8 +257,9 @@ describe('the HTTP protocol API', () => {
     const tested = httpProtocolApi(fetched.get, TOKEN)
 
     const ledger = await tested.bankEntries('Calix', FIRST_PAGE)
+    const described = ledger.accept(describingVisitor<BankEntry>())
 
-    expect(ledger.accept(describingVisitor<BankEntry>())).toBe('1 entries')
+    expect(described).toBe('1 entries')
   })
 
   it('reads a storage ledger as the entries of a known avatar', async () => {
@@ -266,8 +267,9 @@ describe('the HTTP protocol API', () => {
     const tested = httpProtocolApi(fetched.get, TOKEN)
 
     const ledger = await tested.storageEntries('Calix', FIRST_PAGE)
+    const described = ledger.accept(describingVisitor<StorageEntry>())
 
-    expect(ledger.accept(describingVisitor<StorageEntry>())).toBe('1 entries')
+    expect(described).toBe('1 entries')
   })
 
   it('tells an empty ledger of a known avatar apart from an unknown avatar', async () => {
@@ -275,8 +277,9 @@ describe('the HTTP protocol API', () => {
     const tested = httpProtocolApi(fetched.get, TOKEN)
 
     const ledger = await tested.storageEntries('Calix', FIRST_PAGE)
+    const described = ledger.accept(describingVisitor<StorageEntry>())
 
-    expect(ledger.accept(describingVisitor<StorageEntry>())).toBe('0 entries')
+    expect(described).toBe('0 entries')
   })
 
   it('reads a 404 on the bank route as an unknown avatar', async () => {
@@ -284,10 +287,9 @@ describe('the HTTP protocol API', () => {
     const tested = httpProtocolApi(fetched.get, TOKEN)
 
     const ledger = await tested.bankEntries('Nobody', FIRST_PAGE)
+    const described = ledger.accept(describingVisitor<BankEntry>())
 
-    expect(ledger.accept(describingVisitor<BankEntry>())).toBe(
-      'unknown avatar Nobody',
-    )
+    expect(described).toBe('unknown avatar Nobody')
   })
 
   it('reads a 404 on the storage route as an unknown avatar', async () => {
@@ -295,10 +297,9 @@ describe('the HTTP protocol API', () => {
     const tested = httpProtocolApi(fetched.get, TOKEN)
 
     const ledger = await tested.storageEntries('Nobody', FIRST_PAGE)
+    const described = ledger.accept(describingVisitor<StorageEntry>())
 
-    expect(ledger.accept(describingVisitor<StorageEntry>())).toBe(
-      'unknown avatar Nobody',
-    )
+    expect(described).toBe('unknown avatar Nobody')
   })
 
   it('refuses a 404 on the overview, where no avatar was named', async () => {

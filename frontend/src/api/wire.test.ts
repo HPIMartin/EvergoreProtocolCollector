@@ -194,13 +194,9 @@ describe('the overview wire shape', () => {
     })
 
     const row = overview.items[0]
-    expect(SUMS.map((field) => row?.[field])).toStrictEqual([
-      null,
-      null,
-      null,
-      null,
-      null,
-    ])
+    const sums = SUMS.map((field) => row?.[field])
+
+    expect(sums).toStrictEqual([null, null, null, null, null])
   })
 
   it('reads a page that holds the whole guild with one row not yet computed beside totals without sums', () => {
@@ -210,7 +206,9 @@ describe('the overview wire shape', () => {
       items: [overviewBody.items[0], { ...overviewBody.items[1], ...NO_SUMS }],
     })
 
-    expect(overview.items.map((row) => row.net)).toStrictEqual([2500, null])
+    const nets = overview.items.map((row) => row.net)
+
+    expect(nets).toStrictEqual([2500, null])
     expect(overview.totals.net).toBeNull()
   })
 
@@ -382,13 +380,9 @@ describe('the overview wire shape', () => {
     })
 
     const totals = overview.totals
-    expect(SUMS.map((field) => totals[field])).toStrictEqual([
-      null,
-      null,
-      null,
-      null,
-      null,
-    ])
+    const sums = SUMS.map((field) => totals[field])
+
+    expect(sums).toStrictEqual([null, null, null, null, null])
   })
 
   it.each(['donation', 'craftSubsidy', 'balance', 'storageValue'])(
