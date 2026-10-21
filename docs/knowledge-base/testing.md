@@ -939,11 +939,11 @@ date, **per line**, so a later partial re-scrape re-dates only the rows it touch
   selections auto-paged, `market_all_articles&selection=0&pos=1..N` named explicitly (the check only
   auto-pages `stock_out`), and `academy_craft&selection=51..67`.
 
-### The game's message form
+## The game's message form
 
-Read on 2026-10-21 in the author's browser, signed in as `Alessia` on the world `zyrthania`. The
-admin sends every password the app issues through this form, together with an agent (the password
-delivery item, **C15**); no code reads it, so this section is the only record.
+Read on 2026-10-21, signed in as `Alessia` on the world `zyrthania`. The admin sends every password
+the app issues through this form, together with an agent (the password delivery item, **C15**); no
+code reads it, so this section is the only record.
 
 - **Where:** `?page=msg_new` under the game's URL, the link "Neue Nachricht" on `?page=msg`.
   - The folders: "Eingang" `?page=msg`, "Ausgang" `?page=msg&fid=2`, "Einstellungen"
@@ -956,39 +956,56 @@ delivery item, **C15**); no code reads it, so this section is the only record.
   | Empfänger | `input[name=recipient]` | `type=text`, `maxlength=50`, `autocomplete=off`, no suggestion list |
   | Betreff | `input[name=subject]` | `maxlength=50` |
   | Inhalt | `textarea[name=content]` | no `maxlength`; a line break arrives as one |
-  | Senden | `input[type=submit][name=btn]` | value `Senden` |
+  | Senden | `input[type=submit][value=Senden]` | no `name`; its class is `btn` |
   | Nachricht als gesendet speichern | `input[type=checkbox][name=save]` | checked when the page opens |
   | Nachricht als Vorschau anzeigen, nicht versenden | `input[type=checkbox][name=preview]` | unchecked when the page opens |
 
 - **Hidden fields:** `page=msg_new`, `action=msg_new`, `reply_id=0` and a `token` the page renders,
   so a message is sent by filling the rendered form, never by a hand-built post.
-- **The outcome stands in `div.eg-notes` above the folders:** an error as `font.CR` (red), a notice
-  as `font.CB` (blue).
-  - The same box also carries unrelated notices, such as the avatar's current work.
-- **Sent:** "Die Nachricht wurde abgeschickt." (`font.CB`); the page turns to "Eingang", and the
-  count beside "Ausgang" rises by one.
-- **Unknown recipient:** "Der Empfänger existiert nicht." (`font.CR`); nothing is sent, and the
-  form comes back filled under a "Vorschau" box of the text.
+- **The outcome stands in `div.eg-notes`:** an error as `font.CR` (red), a notice as `font.CB`
+  (blue).
+  - The same box carries unrelated notices in `font.CB` too, such as the avatar's current work.
+  - So only the exact text "Die Nachricht wurde abgeschickt." proves a send; any other line, red
+    or blue, or none, means not sent.
+- **Sent:** "Die Nachricht wurde abgeschickt." (`font.CB`).
+  - The page then turns to "Eingang".
+  - With `save` checked, the count beside "Ausgang" rises by one; with `save` unchecked it stays,
+    so the count is no signal for a password message.
+- **Unknown recipient:** "Der Empfänger existiert nicht." (`font.CR`).
+  - No copy reaches "Ausgang", whose count stays.
+  - The form comes back filled under a "Vorschau" box of the text.
 - **The sender's own avatar as recipient:** "Ihr könnt keine Nachricht an euch selbst schreiben."
-  (`font.CR`), returned the same way; a test message from `Alessia` therefore needs another
-  recipient, told in advance.
+  (`font.CR`).
+  - The form comes back the same way.
+  - A test message from `Alessia` therefore needs another recipient, told in advance.
 - **A preview checks no recipient:** with `preview` checked, an unknown name shows its text under
   "Vorschau" without an error, so only a real send proves a name.
-- **After a preview or an error, `preview` is unchecked and every field still filled:** the next
-  click on "Senden" sends, so the recipient is checked before every click.
-- **Lengths:** recipient and subject stop at 50 characters in the browser; a preview of 20,000
-  characters of text came back whole.
-  - The limit of a real send is not established; a password message is far below either.
-- **Sending a password:** uncheck `save`, or the password stands in clear text in `Alessia`'s
-  "Ausgang".
-  - The copy in the member's "Eingang" stays; the forced change at the next login makes it
-    worthless.
+- **After a preview, the form comes back armed:** the text fields stay filled, `preview` is
+  unchecked and `save` is checked again, even when it was unchecked before.
+  - The next click on "Senden" sends, and files a copy in "Ausgang".
+  - The state after an error was not read separately; it is treated the same way.
+- **Lengths:** recipient and subject stop at 50 characters in the browser.
+  - Previews of 4,995 and 20,000 characters of text came back whole.
+  - The limit of a real send is not established; a password message is a few dozen characters.
+- **Sending a password:**
+  - The recipient is pasted from the same row of the app that shows this password, never typed: a
+    misspelt name that belongs to another avatar is delivered without a warning.
+  - The password goes into "Inhalt" only, never into "Betreff".
+  - `save` is unchecked right before every click on "Senden"; unchecked, the message is still sent
+    and no copy reaches `Alessia`'s "Ausgang".
+  - The password passes through the agent's session transcript in clear text; no screenshot of the
+    filled form is kept.
+  - The page is not reloaded after a send, which could post the form again.
+  - At the first line other than "Die Nachricht wurde abgeschickt." the batch stops until the box
+    is read.
+- **The copy in the member's "Eingang" stays:** it is a live credential until the member's first
+  login, whose forced change makes it worthless.
 - **A member can ignore a sender** ("Nachrichten (Absender) Ignorieren" under "Einstellungen").
-  - Whether the sender then sees an error is not established, so a member whose password never
-    arrives is asked about that list first.
-- **Not established either:** any limit on messages sent (six submissions within ten minutes met
-  none, one of them delivered), and whether a recipient's name matches regardless of case; a name
-  is sent as the member list writes it.
+  - Whether the sender then sees an error is not established.
+  - A member whose password never arrives is asked about that list outside the game.
+- **Not established either:**
+  - any limit on messages sent: none was met in a short burst of sends;
+  - whether a recipient's name matches regardless of case.
 
 ## Test execution model (one JVM)
 
