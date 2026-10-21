@@ -5,6 +5,13 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
+const expectCall =
+  ":matches(CallExpression[callee.name='expect'], CallExpression[callee.object.name='expect'][callee.property.name=/^(soft|poll)$/])"
+const notATestingLibraryQuery =
+  ":not([callee.object.name='screen']):not([callee.object.callee.name='within']):not([callee.name='within'])"
+const actInAssertionMessage =
+  'Name the act as a value before expect(…): a call never sits inside the assertion, only Testing Library queries (screen.…, within(…).…) may.'
+
 export default tseslint.config(
   {
     ignores: ['build/**', '.gradle/**'],
@@ -37,6 +44,22 @@ export default tseslint.config(
             { target: './src/api', from: ['./src/ui', './src/app'] },
             { target: './src/ui', from: ['./src/api', './src/app'] },
           ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: `${expectCall} :matches(CallExpression${notATestingLibraryQuery}, NewExpression, TaggedTemplateExpression, ImportExpression)`,
+          message: actInAssertionMessage,
+        },
+        {
+          selector: `${expectCall} > :matches(ArrowFunctionExpression, FunctionExpression)`,
+          message: actInAssertionMessage,
         },
       ],
     },

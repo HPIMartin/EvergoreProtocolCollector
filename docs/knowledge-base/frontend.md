@@ -48,6 +48,18 @@ Four top-level folders under `frontend/src/`:
 - **TDD for TypeScript too:** a component/behavior starts with a failing Vitest test.
 - Tests are **deterministic and data-driven** where inputs vary (no wall-clock waits, no logic buried
   in loops); see `testing.md` for the backend rules, which apply in spirit here.
+- **The act-as-named-value rule of `testing.md` is a lint rule here:** in
+  `src/**/*.test.{ts,tsx}`, ESLint refuses any call inside the argument of `expect(…)`,
+  `expect.soft(…)` or `expect.poll(…)`, however deep, and a function passed to them directly,
+  so a thrower is bound to a name first.
+- A `new`, a tagged template and an `import()` inside that argument are refused too.
+- A Testing Library query (`screen.…`, `within(…).…`) may stand inside an `expect(…)`.
+  - Its own arguments must be plain: a call or `new` there is refused.
+- The rule keys on the names `expect`, `screen` and `within`; outside it are:
+  - an alias of `expect`, and `expect['soft']`;
+  - a call in a matcher argument, and other assertion APIs;
+  - a `screen` method that is no query;
+  - an assignment, `++`, `--` or `delete` inside the argument.
 - Components expose a stable **`data-testid`** instead of brittle text/CSS selectors (e.g.
   `App.test.tsx` asserts on `screen.getByTestId('app-title')`).
 - Tables render **semantic HTML** (`<table>`/`<thead>`/`<tbody>`/`<th>`/`<td>`), not div-grids,
