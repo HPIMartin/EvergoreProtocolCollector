@@ -611,7 +611,9 @@ describe('App', () => {
   it('shows the overview at the address the shell is served from', async () => {
     await shellAt(`/?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(rowTexts()).toStrictEqual([
+    const rows = rowTexts()
+
+    expect(rows).toStrictEqual([
       'Calix3.4001.2005002002.50005.08.2026 12:1504.08.2026 11:30',
       'Erde-Eibenlanze5020000-15031.07.2026 23:05–',
     ])
@@ -623,9 +625,11 @@ describe('App', () => {
       alwaysServing(200, OVERVIEW_BODY_WITH_A_STALE_ROW),
     )
 
-    expect(
-      screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
-    ).toStrictEqual([undefined, 'true'])
+    const staleFlags = screen
+      .getAllByTestId('data-row')
+      .map((row) => row.dataset.stale)
+
+    expect(staleFlags).toStrictEqual([undefined, 'true'])
     expect(screen.getByTestId('row-mark').textContent).toContain(
       'Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom 30.07.2026 03:12.',
     )
@@ -716,13 +720,15 @@ describe('App', () => {
     const marks = screen
       .getAllByTestId('row-mark')
       .map((mark) => mark.textContent)
+    const staleFlags = screen
+      .getAllByTestId('data-row')
+      .map((row) => row.dataset.stale)
+
     expect(marks).toStrictEqual([
       '!Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom 30.07.2026 03:12.',
       '!Noch nicht berechnet.',
     ])
-    expect(
-      screen.getAllByTestId('data-row').map((row) => row.dataset.stale),
-    ).toStrictEqual(['true', 'true'])
+    expect(staleFlags).toStrictEqual(['true', 'true'])
   })
 
   it('shows no figure in the five number columns of a row not yet computed, rather than zeros', async () => {
@@ -734,7 +740,9 @@ describe('App', () => {
     const cells = Array.from(
       screen.getAllByTestId('data-row')[1]?.querySelectorAll('td') ?? [],
     ).map((cell) => cell.textContent)
-    expect(cells.slice(1, 6)).toStrictEqual(['–', '–', '–', '–', '–'])
+    const numberCells = cells.slice(1, 6)
+
+    expect(numberCells).toStrictEqual(['–', '–', '–', '–', '–'])
   })
 
   it('keeps the activity of a row not yet computed beside its dashes', async () => {
@@ -746,7 +754,9 @@ describe('App', () => {
     const cells = Array.from(
       screen.getAllByTestId('data-row')[1]?.querySelectorAll('td') ?? [],
     ).map((cell) => cell.textContent)
-    expect(cells.slice(6)).toStrictEqual(['–', '05.08.2026 11:58'])
+    const activityCells = cells.slice(6)
+
+    expect(activityCells).toStrictEqual(['–', '05.08.2026 11:58'])
   })
 
   it('shows no figure in the guild row while a member is not yet computed, rather than a total without him', async () => {
@@ -851,10 +861,10 @@ describe('App', () => {
       alwaysServing(200, ROSTER_ON_THE_BOUNDARY),
     )
 
-    expect([
-      rowNamesIn('active-roster'),
-      rowNamesIn('dormant-roster'),
-    ]).toStrictEqual([
+    const activeNames = rowNamesIn('active-roster')
+    const dormantNames = rowNamesIn('dormant-roster')
+
+    expect([activeNames, dormantNames]).toStrictEqual([
       ['Aktiv', 'Grenzfall'],
       ['Knappdaneben', 'Ruhend'],
     ])
@@ -866,10 +876,13 @@ describe('App', () => {
       alwaysServing(200, ROSTER_OF_A_STALLED_COLLECTION),
     )
 
-    expect([
-      rowNamesIn('active-roster'),
-      rowNamesIn('dormant-roster'),
-    ]).toStrictEqual([['Letzter', 'Vorletzter'], ['Weit-Zurueck']])
+    const activeNames = rowNamesIn('active-roster')
+    const dormantNames = rowNamesIn('dormant-roster')
+
+    expect([activeNames, dormantNames]).toStrictEqual([
+      ['Letzter', 'Vorletzter'],
+      ['Weit-Zurueck'],
+    ])
   })
 
   it('keeps the name order of the response inside each of the two tables', async () => {
@@ -878,10 +891,10 @@ describe('App', () => {
       alwaysServing(200, ROSTER_INTERLEAVED_BY_NAME),
     )
 
-    expect([
-      rowNamesIn('active-roster'),
-      rowNamesIn('dormant-roster'),
-    ]).toStrictEqual([
+    const activeNames = rowNamesIn('active-roster')
+    const dormantNames = rowNamesIn('dormant-roster')
+
+    expect([activeNames, dormantNames]).toStrictEqual([
       ['Anna', 'Cara'],
       ['Bert', 'Dora'],
     ])
@@ -893,9 +906,9 @@ describe('App', () => {
       alwaysServing(200, ROSTER_ON_THE_BOUNDARY),
     )
 
-    expect(headerTextsIn('dormant-roster')).toStrictEqual(
-      headerTextsIn('active-roster'),
-    )
+    const headers = headerTextsIn('dormant-roster')
+
+    expect(headers).toStrictEqual(headerTextsIn('active-roster'))
   })
 
   it('states the guild total under the active table and nowhere else', async () => {
@@ -904,25 +917,30 @@ describe('App', () => {
       alwaysServing(200, ROSTER_ON_THE_BOUNDARY),
     )
 
-    expect([
-      totalRowsIn('active-roster'),
-      totalRowsIn('dormant-roster'),
-    ]).toStrictEqual([1, 0])
+    const activeTotals = totalRowsIn('active-roster')
+    const dormantTotals = totalRowsIn('dormant-roster')
+
+    expect([activeTotals, dormantTotals]).toStrictEqual([1, 0])
   })
 
   it('says so in the second table while no member is dormant', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect([
-      rowNamesIn('dormant-roster'),
-      statusIn('dormant-roster'),
-    ]).toStrictEqual([[], 'Kein Avatar ruht.'])
+    const dormantNames = rowNamesIn('dormant-roster')
+    const dormantStatus = statusIn('dormant-roster')
+
+    expect([dormantNames, dormantStatus]).toStrictEqual([
+      [],
+      'Kein Avatar ruht.',
+    ])
   })
 
   it('names the overview columns in German', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(headerTextsIn('active-roster')).toStrictEqual([
+    const headers = headerTextsIn('active-roster')
+
+    expect(headers).toStrictEqual([
       'Avatar',
       'Bank-Einzahlung',
       'Bank-Auszahlung',
@@ -937,7 +955,9 @@ describe('App', () => {
   it('states each figure under its own name, in the order the header reads', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(statTexts()).toStrictEqual([
+    const stats = statTexts()
+
+    expect(stats).toStrictEqual([
       'Gildenbank2.050',
       'Gildenlagerwert600',
       'Gildenspende400',
@@ -955,7 +975,9 @@ describe('App', () => {
       alwaysServing(200, JSON.stringify(body)),
     )
 
-    expect(statTexts()[1]).toBe('Gildenlagerwert599')
+    const stats = statTexts()
+
+    expect(stats[1]).toBe('Gildenlagerwert599')
   })
 
   it('tones the bank as a credit and leaves the subsidy untoned', async () => {
@@ -1017,7 +1039,9 @@ describe('App', () => {
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
-    expect(headerTextsIn('active-roster')).toStrictEqual([
+    const headers = headerTextsIn('active-roster')
+
+    expect(headers).toStrictEqual([
       'Avatar',
       'Bank-Einzahlung',
       'Bank-Auszahlung',
@@ -1087,7 +1111,9 @@ describe('App', () => {
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
-    expect(tonesOf('figure')).toStrictEqual(['neutral', 'debit'])
+    const tones = tonesOf('figure')
+
+    expect(tones).toStrictEqual(['neutral', 'debit'])
   })
 
   it('says why a row has no figure before the deductions instead of leaving a bare dash', async () => {
@@ -1135,7 +1161,9 @@ describe('App', () => {
       alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS),
     )
 
-    expect(statTexts()).toStrictEqual([
+    const stats = statTexts()
+
+    expect(stats).toStrictEqual([
       'Gildenbank2.050',
       'GildenlagerwertNoch nicht berechnet.',
       'GildenspendeNoch nicht berechnet.',
@@ -1149,7 +1177,9 @@ describe('App', () => {
       alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
     )
 
-    expect(statTexts()).toStrictEqual([
+    const stats = statTexts()
+
+    expect(stats).toStrictEqual([
       'GildenbankNoch nicht berechnet.',
       'GildenlagerwertNoch nicht berechnet.',
       'GildenspendeNoch nicht berechnet.',
@@ -1161,30 +1191,29 @@ describe('App', () => {
   it('tones each of the four figures the way its meaning asks for', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(statTonesOf()).toStrictEqual([
-      'credit',
-      'credit',
-      'credit',
-      'neutral',
-    ])
+    const statTones = statTonesOf()
+
+    expect(statTones).toStrictEqual(['credit', 'credit', 'credit', 'neutral'])
   })
 
   it('names what the switch controls, which is its only accessible name', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(
-      screen.getByTestId('switch-figure').querySelector('legend')?.textContent,
-    ).toBe('Letzte Spalte')
+    const legend = screen
+      .getByTestId('switch-figure')
+      .querySelector('legend')?.textContent
+
+    expect(legend).toBe('Letzte Spalte')
   })
 
   it('offers the figure after the deductions before the one before them', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(
-      screen
-        .getAllByRole('radio')
-        .map((radio) => radio.parentElement?.textContent),
-    ).toStrictEqual(['Nach Abzügen', 'Vor Abzügen'])
+    const switchLabels = screen
+      .getAllByRole('radio')
+      .map((radio) => radio.parentElement?.textContent)
+
+    expect(switchLabels).toStrictEqual(['Nach Abzügen', 'Vor Abzügen'])
   })
 
   it('carries no hint on a row whose figure before the deductions is known', async () => {
@@ -1200,13 +1229,17 @@ describe('App', () => {
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
-    expect(rowTexts()[0]).toContain('2.800')
+    const rows = rowTexts()
+
+    expect(rows[0]).toContain('2.800')
   })
 
   it('keeps the figure after the deductions while the switch stays on it', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(rowTexts()[0]).toContain('2.500')
+    const rows = rowTexts()
+
+    expect(rows[0]).toContain('2.500')
   })
 
   it('keeps the table usable when the reader sorts the sixth column and then switches it', async () => {
@@ -1215,7 +1248,9 @@ describe('App', () => {
     fireEvent.click(sortButtonIn('active-roster', /Nach Abzügen/))
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
-    expect(rowTexts().join(' ')).toContain('2.800')
+    const shownRows = rowTexts().join(' ')
+
+    expect(shownRows).toContain('2.800')
   })
 
   it('keeps a sort on the sixth column when the switch changes what it shows', async () => {
@@ -1224,7 +1259,9 @@ describe('App', () => {
     fireEvent.click(sortButtonIn('active-roster', /Nach Abzügen/))
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
-    expect(rowTexts()[0]).toContain('Erde-Eibenlanze')
+    const rows = rowTexts()
+
+    expect(rows[0]).toContain('Erde-Eibenlanze')
   })
 
   it('does not widen the table when the switch changes the last column', async () => {
@@ -1232,7 +1269,9 @@ describe('App', () => {
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
-    expect(headerTextsIn('active-roster')).toHaveLength(8)
+    const headers = headerTextsIn('active-roster')
+
+    expect(headers).toHaveLength(8)
   })
 
   it('names the bank ledger columns in German', async () => {
@@ -1241,12 +1280,9 @@ describe('App', () => {
       alwaysServing(200, BANK_BODY),
     )
 
-    expect(headerTexts()).toStrictEqual([
-      'Zeitpunkt',
-      'Avatar',
-      'Betrag',
-      'Vorgang',
-    ])
+    const headers = headerTexts()
+
+    expect(headers).toStrictEqual(['Zeitpunkt', 'Avatar', 'Betrag', 'Vorgang'])
   })
 
   it('names the storage ledger columns in German', async () => {
@@ -1255,7 +1291,9 @@ describe('App', () => {
       alwaysServing(200, STORAGE_BODY),
     )
 
-    expect(headerTexts()).toStrictEqual([
+    const headers = headerTexts()
+
+    expect(headers).toStrictEqual([
       'Zeitpunkt',
       'Avatar',
       'Menge',
@@ -1268,11 +1306,16 @@ describe('App', () => {
   it('tells what an avatar took out from what it put in, per ledger', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
+    const bankWithdrawn = tonesOf('bankWithdrawn')
+    const bankDeposited = tonesOf('bankDeposited')
+    const storageWithdrawn = tonesOf('storageWithdrawn')
+    const storageDeposited = tonesOf('storageDeposited')
+
     expect({
-      bankWithdrawn: tonesOf('bankWithdrawn'),
-      bankDeposited: tonesOf('bankDeposited'),
-      storageWithdrawn: tonesOf('storageWithdrawn'),
-      storageDeposited: tonesOf('storageDeposited'),
+      bankWithdrawn,
+      bankDeposited,
+      storageWithdrawn,
+      storageDeposited,
     }).toStrictEqual({
       bankWithdrawn: ['debit', 'debit'],
       bankDeposited: ['credit', 'credit'],
@@ -1292,17 +1335,19 @@ describe('App', () => {
   it('says when an avatar never used one of the two ledgers', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(
-      screen
-        .getAllByTestId('cell-lastBankActivity')
-        .map((cell) => cell.textContent),
-    ).toStrictEqual(['04.08.2026 11:30', '–'])
+    const lastBankActivities = screen
+      .getAllByTestId('cell-lastBankActivity')
+      .map((cell) => cell.textContent)
+
+    expect(lastBankActivities).toStrictEqual(['04.08.2026 11:30', '–'])
   })
 
   it('marks a negative guild value as taken from the guild', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(tonesOf('figure')).toStrictEqual(['neutral', 'debit'])
+    const tones = tonesOf('figure')
+
+    expect(tones).toStrictEqual(['neutral', 'debit'])
   })
 
   it('carries the token of the deep link into every request', async () => {
@@ -1326,10 +1371,13 @@ describe('App', () => {
 
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, body))
 
-    expect([
-      statusIn('active-roster'),
-      statusIn('dormant-roster'),
-    ]).toStrictEqual(['Noch kein Avatar erfasst.', 'Kein Avatar ruht.'])
+    const activeStatus = statusIn('active-roster')
+    const dormantStatus = statusIn('dormant-roster')
+
+    expect([activeStatus, dormantStatus]).toStrictEqual([
+      'Noch kein Avatar erfasst.',
+      'Kein Avatar ruht.',
+    ])
   })
 
   it('counts each half against the whole guild, not against the loaded page', async () => {
@@ -1338,10 +1386,10 @@ describe('App', () => {
       alwaysServing(200, ROSTER_OF_ONE_LOADED_PAGE),
     )
 
-    expect([
-      captionOf('active-roster'),
-      captionOf('dormant-roster'),
-    ]).toStrictEqual([
+    const activeCaption = captionOf('active-roster')
+    const dormantCaption = captionOf('dormant-roster')
+
+    expect([activeCaption, dormantCaption]).toStrictEqual([
       'Aktiv (30 Tage vor dem letzten Vorgang): 1 von 42 Avataren',
       'Ruhend: 1 von 42 Avataren',
     ])
@@ -1353,7 +1401,9 @@ describe('App', () => {
       alwaysServing(200, BANK_BODY),
     )
 
-    expect(rowTexts()).toStrictEqual(['05.08.2026 12:15Calix500Einzahlung'])
+    const rows = rowTexts()
+
+    expect(rows).toStrictEqual(['05.08.2026 12:15Calix500Einzahlung'])
   })
 
   it('shows the storage ledger the path names', async () => {
@@ -1362,7 +1412,9 @@ describe('App', () => {
       alwaysServing(200, STORAGE_BODY),
     )
 
-    expect(rowTexts()).toStrictEqual([
+    const rows = rowTexts()
+
+    expect(rows).toStrictEqual([
       '05.08.2026 12:15Calix3Erde-Eibenlanze7Entnahme',
     ])
   })
@@ -1383,7 +1435,9 @@ describe('App', () => {
       alwaysServing(200, EMPTY_LEDGER_BODY),
     )
 
-    expect(shownStatus()).toBe('Für Calix ist hier kein Vorgang gespeichert.')
+    const status = shownStatus()
+
+    expect(status).toBe('Für Calix ist hier kein Vorgang gespeichert.')
   })
 
   it('says that an avatar is unknown, which is not the same as an empty ledger', async () => {
@@ -1392,13 +1446,17 @@ describe('App', () => {
       alwaysServing(404, null),
     )
 
-    expect(shownStatus()).toBe('Kein Avatar mit dem Namen Nobody.')
+    const status = shownStatus()
+
+    expect(status).toBe('Kein Avatar mit dem Namen Nobody.')
   })
 
   it('shows a refused token instead of an empty page', async () => {
     await shellAt('/overview?token=a-wrong-token', alwaysServing(401, null))
 
-    expect(shownStatus()).toBe(
+    const status = shownStatus()
+
+    expect(status).toBe(
       'Kein gültiges Token: der Link braucht ein token in der Adresse.',
     )
   })
@@ -1408,7 +1466,9 @@ describe('App', () => {
 
     await shellAt('/overview', server)
 
-    expect({ askedFor: server.askedFor, shown: shownStatus() }).toStrictEqual({
+    const shown = shownStatus()
+
+    expect({ askedFor: server.askedFor, shown }).toStrictEqual({
       askedFor: ['/api/v1/avatars?page=0&size=100'],
       shown: 'Kein gültiges Token: der Link braucht ein token in der Adresse.',
     })
@@ -1424,7 +1484,9 @@ describe('App', () => {
 
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, body))
 
-    expect(shownStatus()).toBe(
+    const status = shownStatus()
+
+    expect(status).toBe(
       'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
     )
   })
@@ -1432,7 +1494,9 @@ describe('App', () => {
   it('says in German that the API could not be loaded, without its status', async () => {
     await shellAt(`/overview?token=${TOKEN}`, alwaysServing(500, null))
 
-    expect(shownStatus()).toBe(
+    const status = shownStatus()
+
+    expect(status).toBe(
       'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
     )
   })
@@ -1445,10 +1509,10 @@ describe('App', () => {
     render(<App get={unreachable} />)
     await act(async () => undefined)
 
-    expect({
-      shown: shownStatus(),
-      english: document.body.textContent.includes('Failed to fetch'),
-    }).toStrictEqual({
+    const shown = shownStatus()
+    const english = document.body.textContent.includes('Failed to fetch')
+
+    expect({ shown, english }).toStrictEqual({
       shown:
         'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
       english: false,
@@ -1458,11 +1522,11 @@ describe('App', () => {
   it('says in German that the admin status could not be loaded when it answers 400, without the status or its English', async () => {
     await shellAt('/admin', alwaysServing(400, '{"message":"Bad Request"}'))
 
-    expect({
-      shown: shownStatus(),
-      status: document.body.textContent.includes('400'),
-      english: document.body.textContent.includes('Bad Request'),
-    }).toStrictEqual({
+    const shown = shownStatus()
+    const status = document.body.textContent.includes('400')
+    const english = document.body.textContent.includes('Bad Request')
+
+    expect({ shown, status, english }).toStrictEqual({
       shown:
         'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
       status: false,
@@ -1476,11 +1540,11 @@ describe('App', () => {
       alwaysServing(500, '{"message":"Internal Server Error"}'),
     )
 
-    expect({
-      shown: shownStatus(),
-      status: document.body.textContent.includes('500'),
-      english: document.body.textContent.includes('Internal Server Error'),
-    }).toStrictEqual({
+    const shown = shownStatus()
+    const status = document.body.textContent.includes('500')
+    const english = document.body.textContent.includes('Internal Server Error')
+
+    expect({ shown, status, english }).toStrictEqual({
       shown:
         'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
       status: false,
@@ -1494,7 +1558,9 @@ describe('App', () => {
       alwaysServing(401, null),
     )
 
-    expect(shownStatus()).toBe(
+    const status = shownStatus()
+
+    expect(status).toBe(
       'Kein gültiges Token: der Link braucht ein token in der Adresse.',
     )
   })
@@ -1505,7 +1571,9 @@ describe('App', () => {
 
     render(<App get={server.get} />)
 
-    expect(shownStatus()).toBe('Wird geladen…')
+    const status = shownStatus()
+
+    expect(status).toBe('Wird geladen…')
   })
 
   it('shows the admin status page at its own address, without a token', async () => {
@@ -1532,7 +1600,9 @@ describe('App', () => {
   it('says in German that the admin status could not be loaded, without its status', async () => {
     await shellAt('/admin', alwaysServing(500, null))
 
-    expect(shownStatus()).toBe(
+    const status = shownStatus()
+
+    expect(status).toBe(
       'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
     )
   })
@@ -1590,7 +1660,9 @@ describe('App', () => {
   it('has no view for a path it does not know', async () => {
     await shellAt(`/nonsense?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
 
-    expect(shownStatus()).toBe('Für /nonsense gibt es keine Ansicht.')
+    const status = shownStatus()
+
+    expect(status).toBe('Für /nonsense gibt es keine Ansicht.')
   })
 
   it('asks again with the token of the address the browser moved to', async () => {
@@ -1650,10 +1722,12 @@ describe('App', () => {
       server,
     )
 
+    const rows = rowTexts()
+
     expect({
       askedFor: server.askedFor,
       heading: screen.getByTestId('view-title').textContent,
-      rows: rowTexts(),
+      rows,
     }).toStrictEqual({
       askedFor: [
         '/api/v1/avatars/%C3%96de%2FGr%C3%BC%C3%9Fe/storage?token=a-test-token&page=0&size=100',
@@ -1674,8 +1748,10 @@ describe('App', () => {
     )
     await act(async () => undefined)
 
+    const rows = rowTexts().length
+
     expect({
-      rows: rowTexts().length,
+      rows,
       tables: screen.getAllByRole('table').length,
     }).toStrictEqual({ rows: 2, tables: 2 })
   })
@@ -1725,9 +1801,11 @@ describe('App', () => {
       alwaysServing(200, body),
     )
 
+    const next = screen.getByTestId('pagination-next').getAttribute('href')
+
     expect({
       previous: screen.queryByTestId('pagination-previous'),
-      next: screen.getByTestId('pagination-next').getAttribute('href'),
+      next,
     }).toStrictEqual({
       previous: null,
       next: '/avatars/Calix/bank?token=a-test-token&page=1',
@@ -1754,8 +1832,12 @@ describe('App', () => {
       alwaysServing(200, body),
     )
 
+    const previous = screen
+      .getByTestId('pagination-previous')
+      .getAttribute('href')
+
     expect({
-      previous: screen.getByTestId('pagination-previous').getAttribute('href'),
+      previous,
       next: screen.queryByTestId('pagination-next'),
     }).toStrictEqual({
       previous: '/avatars/Calix/bank?token=a-test-token&page=2',
@@ -1825,10 +1907,13 @@ describe('App', () => {
       fireEvent.click(screen.getByTestId('pagination-next'))
     })
 
+    const shown = rowTexts()
+    const lastAsked = server.askedFor.at(-1)
+
     expect({
-      shown: rowTexts(),
+      shown,
       address: window.location.pathname + window.location.search,
-      lastAsked: server.askedFor.at(-1),
+      lastAsked,
     }).toStrictEqual({
       shown: ['05.08.2026 12:15Calix700Entnahme'],
       address: '/avatars/Calix/bank?token=a-test-token&page=1',
@@ -1849,10 +1934,13 @@ describe('App', () => {
       fireEvent.click(screen.getAllByRole('link', { name: 'Calix' })[0])
     })
 
+    const shown = rowTexts()
+    const lastAsked = server.askedFor.at(-1)
+
     expect({
-      shown: rowTexts(),
+      shown,
       address: window.location.pathname + window.location.search,
-      lastAsked: server.askedFor.at(-1),
+      lastAsked,
     }).toStrictEqual({
       shown: ['05.08.2026 12:15Calix500Einzahlung'],
       address: '/avatars/Calix/bank?token=a-test-token',
@@ -1875,10 +1963,13 @@ describe('App', () => {
       )
     })
 
+    const shown = rowTexts()
+    const lastAsked = server.askedFor.at(-1)
+
     expect({
-      shown: rowTexts(),
+      shown,
       address: window.location.pathname + window.location.search,
-      lastAsked: server.askedFor.at(-1),
+      lastAsked,
     }).toStrictEqual({
       shown: ['05.08.2026 12:15Calix3Erde-Eibenlanze7Entnahme'],
       address: '/avatars/Calix/storage?token=a-test-token',
@@ -1917,8 +2008,10 @@ describe('App', () => {
       fireEvent.click(screen.getByRole('link', { name: 'Übersicht' }))
     })
 
+    const rows = rowTexts().length
+
     expect({
-      rows: rowTexts().length,
+      rows,
       address: window.location.pathname + window.location.search,
     }).toStrictEqual({ rows: 2, address: '/overview?token=a-test-token' })
   })
@@ -1954,8 +2047,10 @@ describe('App', () => {
       server,
     )
 
+    const shown = shownStatus()
+
     expect({
-      shown: shownStatus(),
+      shown,
       askedFor: server.askedFor,
     }).toStrictEqual({
       shown: 'Diese Seite gibt es nicht.',
@@ -1973,8 +2068,10 @@ describe('App', () => {
       server,
     )
 
+    const shown = shownStatus()
+
     expect({
-      shown: shownStatus(),
+      shown,
       askedFor: server.askedFor,
     }).toStrictEqual({
       shown: 'Diese Seite gibt es nicht.',
@@ -1992,9 +2089,11 @@ describe('App', () => {
       fireEvent.click(screen.getByRole('button', { name: /Menge/ }))
     })
 
+    const lastAsked = server.askedFor.at(-1)
+
     expect({
       address: window.location.pathname + window.location.search,
-      lastAsked: server.askedFor.at(-1),
+      lastAsked,
     }).toStrictEqual({
       address:
         '/avatars/Calix/storage?token=a-test-token&sort=quantity&direction=ascending',
@@ -2076,7 +2175,9 @@ describe('App', () => {
         fireEvent.click(screen.getByRole('button', { name: header }))
       })
 
-      expect(server.askedFor.at(-1)).toContain(`&sort=${wireName}&`)
+      const lastRequest = server.askedFor.at(-1)
+
+      expect(lastRequest).toContain(`&sort=${wireName}&`)
     },
   )
 
@@ -2119,7 +2220,9 @@ describe('App', () => {
       alwaysServing(200, body),
     )
 
-    expect(screen.getByTestId('pagination-next').getAttribute('href')).toBe(
+    const nextHref = screen.getByTestId('pagination-next').getAttribute('href')
+
+    expect(nextHref).toBe(
       '/avatars/Calix/bank?token=a-test-token&page=1&sort=amount&direction=ascending',
     )
   })
@@ -2158,12 +2261,11 @@ describe('App', () => {
 
     await shellAt(`/avatars/Calix/bank?token=${TOKEN}&sort=amount`, server)
 
-    expect({
-      askedFor: server.askedFor,
-      marks: screen
-        .getAllByRole('columnheader')
-        .map((header) => header.getAttribute('aria-sort')),
-    }).toStrictEqual({
+    const marks = screen
+      .getAllByRole('columnheader')
+      .map((header) => header.getAttribute('aria-sort'))
+
+    expect({ askedFor: server.askedFor, marks }).toStrictEqual({
       askedFor: [
         '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100&sort=amount&direction=descending',
       ],
@@ -2214,9 +2316,11 @@ describe('App', () => {
       fireEvent.click(screen.getByRole('button', { name: /Gegenstand/ }))
     })
 
-    expect(
-      screen.getAllByTestId('cell-name').map((cell) => cell.textContent),
-    ).toStrictEqual(['Stahlbarren', 'Stahl-Rüstung'])
+    const names = screen
+      .getAllByTestId('cell-name')
+      .map((cell) => cell.textContent)
+
+    expect(names).toStrictEqual(['Stahlbarren', 'Stahl-Rüstung'])
   })
 
   it('keeps the sort in the links to the next and the previous page', async () => {
@@ -2232,10 +2336,12 @@ describe('App', () => {
       alwaysServing(200, body),
     )
 
-    expect({
-      previous: screen.getByTestId('pagination-previous').getAttribute('href'),
-      next: screen.getByTestId('pagination-next').getAttribute('href'),
-    }).toStrictEqual({
+    const previous = screen
+      .getByTestId('pagination-previous')
+      .getAttribute('href')
+    const next = screen.getByTestId('pagination-next').getAttribute('href')
+
+    expect({ previous, next }).toStrictEqual({
       previous:
         '/avatars/Calix/storage?token=a-test-token&sort=quantity&direction=descending',
       next: '/avatars/Calix/storage?token=a-test-token&page=2&sort=quantity&direction=descending',
@@ -2248,7 +2354,9 @@ describe('App', () => {
       alwaysServing(200, EMPTY_LEDGER_BODY),
     )
 
-    expect(shownStatus()).toBe('Für Calix ist hier kein Vorgang gespeichert.')
+    const status = shownStatus()
+
+    expect(status).toBe('Für Calix ist hier kein Vorgang gespeichert.')
   })
 
   it('says in German that an unclamped invalid page does not exist', async () => {
@@ -2257,8 +2365,10 @@ describe('App', () => {
 
     await shellAt(`/avatars/Calix/bank?token=${TOKEN}&page=-1`, server)
 
+    const shown = shownStatus()
+
     expect({
-      shown: shownStatus(),
+      shown,
       askedFor: server.askedFor,
     }).toStrictEqual({
       shown: 'Diese Seite gibt es nicht.',
@@ -2276,7 +2386,9 @@ describe('App', () => {
       alwaysServing(400, body),
     )
 
-    expect(shownStatus()).toBe('Diese Seite gibt es nicht.')
+    const status = shownStatus()
+
+    expect(status).toBe('Diese Seite gibt es nicht.')
   })
 
   it('passes a blank page value through to the API unchanged, not defaulted', async () => {
@@ -2294,8 +2406,10 @@ describe('App', () => {
 
     await shellAt(`/avatars/Calix/bank?token=${TOKEN}&page=zwei`, server)
 
+    const shown = shownStatus()
+
     expect({
-      shown: shownStatus(),
+      shown,
       askedFor: server.askedFor,
     }).toStrictEqual({
       shown: 'Diese Seite gibt es nicht.',
@@ -2312,12 +2426,12 @@ describe('App', () => {
       name: 'Wie entstehen diese Zahlen?',
     })
 
-    expect({
-      href: link.getAttribute('href'),
-      afterThePosition:
-        screen.getByTestId('stat-header').compareDocumentPosition(link) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    }).toStrictEqual({
+    const href = link.getAttribute('href')
+    const afterThePosition =
+      screen.getByTestId('stat-header').compareDocumentPosition(link) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+
+    expect({ href, afterThePosition }).toStrictEqual({
       href: '/explanation?token=a-test-token',
       afterThePosition: Node.DOCUMENT_POSITION_FOLLOWING,
     })
@@ -2354,14 +2468,17 @@ describe('App', () => {
   it('heads each group one level below the page and each question one level below its group', async () => {
     await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
 
+    const groups = new Set(
+      screen.getAllByTestId('group-title').map((title) => title.tagName),
+    )
+    const questions = new Set(
+      screen.getAllByTestId('question').map((question) => question.tagName),
+    )
+
     expect({
       page: screen.getByTestId('view-title').tagName,
-      groups: new Set(
-        screen.getAllByTestId('group-title').map((title) => title.tagName),
-      ),
-      questions: new Set(
-        screen.getAllByTestId('question').map((question) => question.tagName),
-      ),
+      groups,
+      questions,
     }).toStrictEqual({
       page: 'H2',
       groups: new Set(['H3']),
@@ -2372,9 +2489,11 @@ describe('App', () => {
   it('introduces the invented members and the market stall before the first question', async () => {
     await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
 
-    expect(
-      screen.getAllByTestId('legend-entry').map((entry) => entry.textContent),
-    ).toStrictEqual([
+    const legend = screen
+      .getAllByTestId('legend-entry')
+      .map((entry) => entry.textContent)
+
+    expect(legend).toStrictEqual([
       'Mira Mitglied ist ein Mitglied wie ihr: Sie zahlt ein, lagert ein, nimmt heraus und stellt die Übersicht um.',
       'Hanna Handwerk fertigt Waren für die Gilde aus Zutaten aus dem Gildenlager.',
       'Gero Gildenhändler handelt für die Gilde: Er nimmt Waren zum Verkauf heraus und legt Gekauftes ein.',
@@ -2385,14 +2504,14 @@ describe('App', () => {
   it('asks its questions under their groups', async () => {
     await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
 
-    expect(
-      screen
-        .getAllByTestId('explanation-group')
-        .map((group) => [
-          within(group).getByTestId('group-title').textContent,
-          within(group).getAllByTestId('question').length,
-        ]),
-    ).toStrictEqual([
+    const groups = screen
+      .getAllByTestId('explanation-group')
+      .map((group) => [
+        within(group).getByTestId('group-title').textContent,
+        within(group).getAllByTestId('question').length,
+      ])
+
+    expect(groups).toStrictEqual([
       ['Was zählt', 4],
       ['Eure Zahl', 2],
       ['Die Gilde', 7],
@@ -2405,6 +2524,12 @@ describe('App', () => {
     await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
 
     const answer = screen.getAllByTestId('answer')[0]
+    const calculations =
+      answer === undefined
+        ? []
+        : within(answer)
+            .getAllByTestId('calculation')
+            .map((line) => line.textContent)
 
     expect(
       answer === undefined
@@ -2413,9 +2538,7 @@ describe('App', () => {
             question: within(answer).getByTestId('question').textContent,
             rule: within(answer).getByTestId('rule').textContent,
             example: within(answer).getByTestId('example-intro').textContent,
-            calculations: within(answer)
-              .getAllByTestId('calculation')
-              .map((line) => line.textContent),
+            calculations,
             why: within(answer).getByTestId('why').textContent,
           },
     ).toStrictEqual({
@@ -2457,12 +2580,14 @@ describe('App', () => {
       .getAllByRole('navigation')[0]
       ?.querySelectorAll('a')
 
-    expect(
-      [...(navigation ?? [])].map(
-        (link) =>
-          `${link.textContent} ${link.getAttribute('href') ?? ''} ${link.getAttribute('aria-current') ?? 'not current'}`,
-      ),
-    ).toStrictEqual(['Übersicht /overview?token=a-test-token not current'])
+    const offered = [...(navigation ?? [])].map(
+      (link) =>
+        `${link.textContent} ${link.getAttribute('href') ?? ''} ${link.getAttribute('aria-current') ?? 'not current'}`,
+    )
+
+    expect(offered).toStrictEqual([
+      'Übersicht /overview?token=a-test-token not current',
+    ])
   })
 
   it('offers the ledgers of the avatar it shows in its navigation', async () => {

@@ -24,7 +24,9 @@ describe('useLoad', () => {
   it('is loading until the answer arrives', () => {
     const load = renderHook(() => useLoad(neverAnswering, 'a-key'))
 
-    expect(load.result.current.accept(describingVisitor)).toBe('still loading')
+    const outcome = load.result.current.accept(describingVisitor)
+
+    expect(outcome).toBe('still loading')
   })
 
   it('shows the value once it has arrived', async () => {
@@ -34,9 +36,9 @@ describe('useLoad', () => {
 
     await act(async () => undefined)
 
-    expect(load.result.current.accept(describingVisitor)).toBe(
-      'loaded the overview',
-    )
+    const outcome = load.result.current.accept(describingVisitor)
+
+    expect(outcome).toBe('loaded the overview')
   })
 
   it('reports a refused token as its own outcome', async () => {
@@ -46,9 +48,9 @@ describe('useLoad', () => {
 
     await act(async () => undefined)
 
-    expect(load.result.current.accept(describingVisitor)).toBe(
-      'the token was refused',
-    )
+    const outcome = load.result.current.accept(describingVisitor)
+
+    expect(outcome).toBe('the token was refused')
   })
 
   it('reports a page that does not exist as its own outcome', async () => {
@@ -58,9 +60,9 @@ describe('useLoad', () => {
 
     await act(async () => undefined)
 
-    expect(load.result.current.accept(describingVisitor)).toBe(
-      'the page does not exist',
-    )
+    const outcome = load.result.current.accept(describingVisitor)
+
+    expect(outcome).toBe('the page does not exist')
   })
 
   it('reports any other failure as a failed load', async () => {
@@ -70,9 +72,9 @@ describe('useLoad', () => {
 
     await act(async () => undefined)
 
-    expect(load.result.current.accept(describingVisitor)).toBe(
-      'the load failed',
-    )
+    const outcome = load.result.current.accept(describingVisitor)
+
+    expect(outcome).toBe('the load failed')
   })
 
   it('reports a rejection that is not an error at all', async () => {
@@ -82,9 +84,9 @@ describe('useLoad', () => {
 
     await act(async () => undefined)
 
-    expect(load.result.current.accept(describingVisitor)).toBe(
-      'the load failed',
-    )
+    const outcome = load.result.current.accept(describingVisitor)
+
+    expect(outcome).toBe('the load failed')
   })
 
   it('loads again when the request key changes', async () => {
@@ -98,9 +100,9 @@ describe('useLoad', () => {
     load.rerender({ key: 'second' })
     await act(async () => undefined)
 
-    expect(load.result.current.accept(describingVisitor)).toBe(
-      'loaded the second view',
-    )
+    const outcome = load.result.current.accept(describingVisitor)
+
+    expect(outcome).toBe('loaded the second view')
   })
 
   it('does not load again while the request key stays the same', async () => {
@@ -114,9 +116,9 @@ describe('useLoad', () => {
     load.rerender({ key: 'first' })
     await act(async () => undefined)
 
-    expect(load.result.current.accept(describingVisitor)).toBe(
-      'loaded the first view',
-    )
+    const outcome = load.result.current.accept(describingVisitor)
+
+    expect(outcome).toBe('loaded the first view')
   })
 
   it('ignores the answer to a request its key has already replaced', async () => {
@@ -138,8 +140,8 @@ describe('useLoad', () => {
       answerFirst('the first view')
     })
 
-    expect(load.result.current.accept(describingVisitor)).toBe(
-      'loaded the second view',
-    )
+    const outcome = load.result.current.accept(describingVisitor)
+
+    expect(outcome).toBe('loaded the second view')
   })
 })

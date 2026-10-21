@@ -28,9 +28,9 @@ describe('useRouting', () => {
 
     const routing = renderHook(() => useRouting())
 
-    expect(routing.result.current.route.accept(describingVisitor)).toBe(
-      'the bank of Calix',
-    )
+    const shownRoute = routing.result.current.route.accept(describingVisitor)
+
+    expect(shownRoute).toBe('the bank of Calix')
   })
 
   it('shows the followed view without asking the server for a page', () => {
@@ -40,9 +40,9 @@ describe('useRouting', () => {
       routing.result.current.follow('/avatars/Calix/storage?token=a-test-token')
     })
 
-    expect(routing.result.current.route.accept(describingVisitor)).toBe(
-      'the storage of Calix',
-    )
+    const shownRoute = routing.result.current.route.accept(describingVisitor)
+
+    expect(shownRoute).toBe('the storage of Calix')
   })
 
   it('leaves the browser at the followed address', () => {
@@ -65,9 +65,9 @@ describe('useRouting', () => {
       window.dispatchEvent(new PopStateEvent('popstate'))
     })
 
-    expect(routing.result.current.route.accept(describingVisitor)).toBe(
-      'the bank of Calix',
-    )
+    const shownRoute = routing.result.current.route.accept(describingVisitor)
+
+    expect(shownRoute).toBe('the bank of Calix')
   })
 
   it('stops listening to history once the shell is gone', () => {

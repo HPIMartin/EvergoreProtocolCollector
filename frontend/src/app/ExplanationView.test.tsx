@@ -51,7 +51,9 @@ describe('ExplanationView', () => {
   it('shows exactly the text the author approved', () => {
     render(<ExplanationView />)
 
-    expect(pageText()).toBe(approved)
+    const shown = pageText()
+
+    expect(shown).toBe(approved)
   })
 
   it('shows nothing besides the approved text, in its order', () => {
