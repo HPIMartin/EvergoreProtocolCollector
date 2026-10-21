@@ -21,6 +21,7 @@
 | Welt / Server (z.B. "zyrthania") | Game world / server shard |
 | Zugang | Access / login credentials (the game account the scraper signs in with) |
 | Impressum | "Imprint": page footer; used by the parser as an end-of-content marker |
+| Nachricht (Empfänger, Betreff, Inhalt) | In-game message between avatars (recipient, subject, text); "Eingang" is the inbox, "Ausgang" the sent folder |
 
 ## Transactions
 

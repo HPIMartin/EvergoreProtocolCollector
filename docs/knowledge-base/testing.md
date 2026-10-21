@@ -939,6 +939,57 @@ date, **per line**, so a later partial re-scrape re-dates only the rows it touch
   selections auto-paged, `market_all_articles&selection=0&pos=1..N` named explicitly (the check only
   auto-pages `stock_out`), and `academy_craft&selection=51..67`.
 
+### The game's message form
+
+Read on 2026-10-21 in the author's browser, signed in as `Alessia` on the world `zyrthania`. The
+admin sends every password the app issues through this form, together with an agent (the password
+delivery item, **C15**); no code reads it, so this section is the only record.
+
+- **Where:** `?page=msg_new` under the game's URL, the link "Neue Nachricht" on `?page=msg`.
+  - The folders: "Eingang" `?page=msg`, "Ausgang" `?page=msg&fid=2`, "Einstellungen"
+    `?page=msg_settings`.
+- **The form** is the page's only `form`, `method="post"` with no `action`, so it posts to the page
+  itself:
+
+  | Label | Selector | Recorded |
+  |-------|----------|----------|
+  | Empfänger | `input[name=recipient]` | `type=text`, `maxlength=50`, `autocomplete=off`, no suggestion list |
+  | Betreff | `input[name=subject]` | `maxlength=50` |
+  | Inhalt | `textarea[name=content]` | no `maxlength`; a line break arrives as one |
+  | Senden | `input[type=submit][name=btn]` | value `Senden` |
+  | Nachricht als gesendet speichern | `input[type=checkbox][name=save]` | checked when the page opens |
+  | Nachricht als Vorschau anzeigen, nicht versenden | `input[type=checkbox][name=preview]` | unchecked when the page opens |
+
+- **Hidden fields:** `page=msg_new`, `action=msg_new`, `reply_id=0` and a `token` the page renders,
+  so a message is sent by filling the rendered form, never by a hand-built post.
+- **The outcome stands in `div.eg-notes` above the folders:** an error as `font.CR` (red), a notice
+  as `font.CB` (blue).
+  - The same box also carries unrelated notices, such as the avatar's current work.
+- **Sent:** "Die Nachricht wurde abgeschickt." (`font.CB`); the page turns to "Eingang", and the
+  count beside "Ausgang" rises by one.
+- **Unknown recipient:** "Der Empfänger existiert nicht." (`font.CR`); nothing is sent, and the
+  form comes back filled under a "Vorschau" box of the text.
+- **The sender's own avatar as recipient:** "Ihr könnt keine Nachricht an euch selbst schreiben."
+  (`font.CR`), returned the same way; a test message from `Alessia` therefore needs another
+  recipient, told in advance.
+- **A preview checks no recipient:** with `preview` checked, an unknown name shows its text under
+  "Vorschau" without an error, so only a real send proves a name.
+- **After a preview or an error, `preview` is unchecked and every field still filled:** the next
+  click on "Senden" sends, so the recipient is checked before every click.
+- **Lengths:** recipient and subject stop at 50 characters in the browser; a preview of 20,000
+  characters of text came back whole.
+  - The limit of a real send is not established; a password message is far below either.
+- **Sending a password:** uncheck `save`, or the password stands in clear text in `Alessia`'s
+  "Ausgang".
+  - The copy in the member's "Eingang" stays; the forced change at the next login makes it
+    worthless.
+- **A member can ignore a sender** ("Nachrichten (Absender) Ignorieren" under "Einstellungen").
+  - Whether the sender then sees an error is not established, so a member whose password never
+    arrives is asked about that list first.
+- **Not established either:** any limit on messages sent (six submissions within ten minutes met
+  none, one of them delivered), and whether a recipient's name matches regardless of case; a name
+  is sent as the member list writes it.
+
 ## Test execution model (one JVM)
 
 The whole suite runs in a **single test JVM**. `tasks.test` sets no `forkEvery`, and a
