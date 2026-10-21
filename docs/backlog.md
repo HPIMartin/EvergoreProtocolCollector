@@ -53,8 +53,8 @@ once, the author schedules the agent seat's two sessions, landings stay serializ
 1. 0.5.0 (plan of 2026-10-15), in waves by blocker:
    - now, each lane a chain:
      - the server edge: the unreadable-head test (**B47**);
-     - the frontend tooling: Dependabot's updates with the React hook rules (**B24**) and the
-       act-in-assertion check's TypeScript half (**G84**);
+     - the frontend tooling: the React hook rules (**B24**) and the act-in-assertion check's
+       TypeScript half (**G84**);
      - the game's message form (**C14**), on the PC;
    - accounts, login and JWT (**C11**):
      - its implementation after the server edge and the frontend tooling;
