@@ -7,8 +7,11 @@
 
 - **React 19** + **TypeScript**, built with **Vite** (`frontend/`, its own Gradle subproject).
 - **Vitest** + **React Testing Library** for component tests (`npm run test`, jsdom environment).
-- **ESLint** (`typescript-eslint`'s `strict` config, `eslint-plugin-import-x`) lints, **Prettier**
-  formats. **Spotless stays Java-only** (`src/**/*.java`), not `frontend/`.
+- **ESLint** (`typescript-eslint`'s `strict` config, `eslint-plugin-import-x`,
+  `eslint-plugin-react-hooks`) lints, **Prettier** formats.
+- **Spotless stays Java-only** (`src/**/*.java`), not `frontend/`.
+- `react-hooks/rules-of-hooks` and `react-hooks/exhaustive-deps` are errors over `src/`: a hook
+  called conditionally, or an effect missing a dependency, fails `npmLint`.
 - `import-x/no-restricted-paths` enforces the layer boundary below at lint time; the frontend's
   analog of the backend's `HexagonalArchitectureTest` (ArchUnit), via ESLint instead of a JVM test.
 

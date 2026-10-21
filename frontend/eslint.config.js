@@ -1,6 +1,7 @@
 import js from '@eslint/js'
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
 import importX from 'eslint-plugin-import-x'
+import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
@@ -18,11 +19,13 @@ export default tseslint.config(
   },
   {
     files: ['src/**/*.{ts,tsx}'],
-    plugins: { 'import-x': importX },
+    plugins: { 'import-x': importX, 'react-hooks': reactHooks },
     settings: {
       'import-x/resolver-next': [createTypeScriptImportResolver()],
     },
     rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'error',
       'import-x/no-restricted-paths': [
         'error',
         {
