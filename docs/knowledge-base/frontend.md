@@ -176,6 +176,9 @@ Four top-level folders under `frontend/src/`:
   failure shows one fixed German text and never the API's status or message. A ledger view
   additionally tells **"known avatar, no entries"** from **"unknown avatar"**, which is the client
   side of the 404 decision below.
+- **`useLoad` starts a request on its request key alone**, the key being the request's full
+  identity (`requestKeyOf`): it calls `load` through `useEffectEvent`, so a new `load` closure
+  starts no request.
 - **The token is read once from the address** (`?token=`) and carried into every request and every
   in-app link; it is kept nowhere else (no cookie, no `localStorage`), so a link is the whole
   credential and closing the tab ends the session.

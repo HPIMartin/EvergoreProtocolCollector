@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 
 import { NoSuchPage, Unauthorized } from '../api'
 
@@ -19,12 +19,13 @@ export function useLoad<T>(
   requestKey: string,
 ): Load<T> {
   const [outcome, setOutcome] = useState<Load<T>>(stillLoading())
+  const loadNow = useEffectEvent(load)
 
   useEffect(() => {
     let awaited = true
     setOutcome(stillLoading())
 
-    load().then(
+    loadNow().then(
       (value) => {
         if (awaited) {
           setOutcome(loadedWith(value))
