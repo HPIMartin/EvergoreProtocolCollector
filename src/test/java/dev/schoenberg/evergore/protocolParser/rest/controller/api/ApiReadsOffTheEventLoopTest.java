@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -35,7 +36,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.schoenberg.evergore.protocolParser.RawHttpClient;
+import dev.schoenberg.evergore.protocolParser.application.AccountRepository;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
+import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
@@ -63,6 +69,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ApiReadsOffTheEventLoopTest {
 	private static final Path WORKING_DB = Paths.get("build/tmp/apiReadsOffTheEventLoop/apiReadsOffTheEventLoop.sqlite");
 	private static final String AVATAR = "Aurora";
+	private static final String PASSWORD = "Sommer-2026!";
 	private static final String TOKEN = "?token=test-token";
 	private static final String BANK_ROUTE = "/api/v1/avatars/" + AVATAR + "/bank";
 	private static final int HANG_GUARD_MILLIS = 30_000;
@@ -78,6 +85,7 @@ class ApiReadsOffTheEventLoopTest {
 	}
 
 	private final List<Read> reads = new CopyOnWriteArrayList<>();
+	private final List<Work> loginWork = new CopyOnWriteArrayList<>();
 	private final ExecutorService waitingClients = Executors.newCachedThreadPool();
 	private final CountDownLatch readStarted = new CountDownLatch(1);
 	private final CountDownLatch lockReleased = new CountDownLatch(1);
@@ -101,6 +109,15 @@ class ApiReadsOffTheEventLoopTest {
 
 		assertThat(status).isEqualTo(OK.getCode());
 		assertThat(reads).isNotEmpty().noneMatch(Read::onAnEventLoop).noneMatch(read -> read.thread().isVirtual());
+	}
+
+	@Test
+	void readsTheAccountHashesThePasswordAndWritesTheLastLoginOnAPlatformThreadThatIsNoEventLoop() {
+		int status = new RawHttpClient(server.getPort()).statusOfRequest(loginRequest());
+
+		assertThat(status).isEqualTo(OK.getCode());
+		assertThat(loginWork).extracting(Work::what).containsExactly("findByNameKey", "verify", "recordLastLogin");
+		assertThat(loginWork).noneMatch(Work::onAnEventLoop).noneMatch(work -> work.thread().isVirtual());
 	}
 
 	@Test
@@ -140,6 +157,12 @@ class ApiReadsOffTheEventLoopTest {
 		assertThat(outcomes).containsOnly(String.valueOf(OK.getCode()));
 	}
 
+	private static String loginRequest() {
+		String body = "{\"name\":\"" + AVATAR + "\",\"password\":\"" + PASSWORD + "\"}";
+
+		return "POST /api/v1/login HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: " + body.length() + "\r\nConnection: close\r\n\r\n" + body;
+	}
+
 	private static boolean eventually(BooleanSupplier condition) {
 		long deadline = System.nanoTime() + MILLISECONDS.toNanos(HANG_GUARD_MILLIS);
 		while (!condition.getAsBoolean()) {
@@ -160,7 +183,55 @@ class ApiReadsOffTheEventLoopTest {
 		}
 	}
 
+	private void witnessLoginWork(String what) {
+		loginWork.add(new Work(what, Thread.currentThread(), ThreadExecutorMap.currentExecutor() != null));
+	}
+
 	private record Read(Thread thread, boolean onAnEventLoop) {}
+
+	private record Work(String what, Thread thread, boolean onAnEventLoop) {}
+
+	@MockBean(AccountRepository.class)
+	AccountRepository accountRepository() {
+		return new AccountRepository() {
+			private final Account account = new Account(AVATAR, "witnessed:" + PASSWORD, PasswordState.CHOSEN, Role.MEMBER, Optional.empty());
+
+			@Override
+			public Optional<Account> findByNameKey(String nameKey) {
+				witnessLoginWork("findByNameKey");
+				return Optional.of(account).filter(held -> held.nameKey().equals(nameKey));
+			}
+
+			@Override
+			public boolean addIfAbsent(Account toAdd) {
+				return false;
+			}
+
+			@Override
+			public void replacePassword(String nameKey, String passwordHash, PasswordState state) {}
+
+			@Override
+			public void recordLastLogin(String nameKey, Instant at) {
+				witnessLoginWork("recordLastLogin");
+			}
+		};
+	}
+
+	@MockBean(PasswordHasher.class)
+	PasswordHasher passwordHasher() {
+		return new PasswordHasher() {
+			@Override
+			public String hash(String clear) {
+				return "witnessed:" + clear;
+			}
+
+			@Override
+			public boolean verify(String clear, String encoded) {
+				witnessLoginWork("verify");
+				return encoded.equals("witnessed:" + clear);
+			}
+		};
+	}
 
 	@MockBean(BankRepository.class)
 	BankRepository bankRepository() {

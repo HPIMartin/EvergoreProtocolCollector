@@ -25,10 +25,12 @@ class FilterChainOrderTest {
 	private final PathCanonicalizer canonicalizer = new PathCanonicalizer();
 
 	@Test
-	void logsThenThrottlesThenAnswersAnUnreadableRequestThenChecksTheToken() {
-		List<Integer> orders = List.of(auditLogFilter().getOrder(), rateLimitFilter().getOrder(), new UnreadableRequestFilter().getOrder(), tokenValidationFilter().getOrder());
+	void logsThenThrottlesThenAnswersAnUnreadableRequestThenChecksTheTokenThenLimitsTheLoginBody() {
+		List<Integer> orders = List
+				.of(auditLogFilter().getOrder(), rateLimitFilter().getOrder(), new UnreadableRequestFilter().getOrder(), tokenValidationFilter().getOrder(),
+						new LoginBodyLimitFilter(canonicalizer).getOrder());
 
-		assertThat(orders).containsExactly(1, 2, 3, 4);
+		assertThat(orders).containsExactly(1, 2, 3, 4, 5);
 	}
 
 	private RequestAuditLogFilter auditLogFilter() {

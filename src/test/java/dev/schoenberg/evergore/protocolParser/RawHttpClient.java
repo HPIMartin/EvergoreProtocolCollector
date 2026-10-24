@@ -33,6 +33,18 @@ public class RawHttpClient {
 		});
 	}
 
+	public int statusOfRequest(byte[] request) {
+		return silentThrow(() -> {
+			try (Socket socket = new Socket("localhost", port)) {
+				socket.setSoTimeout(HANG_GUARD_MILLIS);
+				OutputStream out = socket.getOutputStream();
+				out.write(request);
+				out.flush();
+				return statusCodeOf(readStatusLine(socket));
+			}
+		});
+	}
+
 	public String answerToHalfClosedRequest(String request) {
 		return silentThrow(() -> {
 			try (Socket socket = new Socket("localhost", port)) {

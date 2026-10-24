@@ -15,6 +15,8 @@ import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.application.IssuedPasswords;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
+import dev.schoenberg.evergore.protocolParser.application.LogIn;
+import dev.schoenberg.evergore.protocolParser.application.LoginGenerations;
 import dev.schoenberg.evergore.protocolParser.application.PasswordGenerator;
 import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
 import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
@@ -132,6 +134,17 @@ public class ApplicationFactory {
 	public CreateAccounts createAccounts(KnownAvatars knownAvatars, AccountRepository accounts, PasswordGenerator passwordGenerator, PasswordHasher passwordHasher,
 			IssuedPasswords issuedPasswords, Logger logger) {
 		return new CreateAccounts(knownAvatars, accounts, passwordGenerator, passwordHasher, issuedPasswords, logger);
+	}
+
+	@Singleton
+	public LoginGenerations loginGenerations() {
+		return new LoginGenerations();
+	}
+
+	@Singleton
+	public LogIn logIn(AccountRepository accounts, PasswordHasher passwordHasher, SignedLogins signedLogins, LoginGenerations generations, Clock clock,
+			PasswordGenerator passwordGenerator) {
+		return new LogIn(accounts, passwordHasher, signedLogins, generations, clock, passwordHasher.hash(passwordGenerator.generate()));
 	}
 
 	@Singleton

@@ -2,7 +2,6 @@ package dev.schoenberg.evergore.protocolParser.helper.security;
 
 import java.security.SecureRandom;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,7 +18,6 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 
 public class JwtLogins implements SignedLogins {
-	private static final Duration LIFETIME = Duration.ofDays(7);
 	private static final int KEY_BYTES = 32;
 	private static final String ROLE = "role";
 	private static final String GENERATION = "gen";
@@ -49,7 +47,7 @@ public class JwtLogins implements SignedLogins {
 				.withClaim(GENERATION, generation)
 				.withJWTId(UUID.randomUUID().toString())
 				.withIssuedAt(made)
-				.withExpiresAt(made.plus(LIFETIME))
+				.withExpiresAt(made.plus(Login.LIFETIME))
 				.sign(algorithm);
 	}
 

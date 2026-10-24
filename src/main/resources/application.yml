@@ -45,6 +45,7 @@ evergore:
       - /favicon.ico
       - /admin
       - /api/v1/admin/status
+      - /api/v1/login
       - /health
       - /swagger/**
       - /swagger-ui/**

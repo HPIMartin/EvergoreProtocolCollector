@@ -36,7 +36,7 @@
         ▼
    PostCollectionHook   (no-op in prod; test seam, runs only after a successful recompute)
 
-Independent read path:  HTTP ▶ filters (audit log, rate limit, unreadable-request answer, token) ▶ AvatarSummariesController /
+Independent read path:  HTTP ▶ filters (audit log, rate limit, unreadable-request answer, token, login body limit) ▶ AvatarSummariesController /
                         AvatarEntriesController ▶ read MetaInformation / repositories
                         ▶ wire records ▶ JSON
 
@@ -63,7 +63,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 - **Application use-cases (framework-free):** `application/{EvergoreDataExtractor,EvergoreDataEvaluator}`
   (collect + evaluate coordinators) · `application/LastRunStatus` (monitoring seam: what the
   last run reached, see the pipeline above) · `application/CreateAccounts` (the account step of the
-  pipeline). Plain objects, wired in `ApplicationFactory`.
+  pipeline) · `application/LogIn` (a login by name and password, below). Plain objects, wired in
+  `ApplicationFactory`.
 - **Extraction pipeline:** `helper/selenium/{Browser,Driver,FileLoader}` ·
   `dataExtraction/website/SeleniumPageSource` (Selenium adapter: login, cookie banner, pagination;
   implements `PageSource`) · `PageContents` (DTO) · `parser/{EntityParser,EntryFactory}` (text ▶
@@ -98,7 +99,13 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
       - why: a deferred transaction that reads before it writes, such as the recompute's batch,
         fails at once there (SQLite answers `SQLITE_BUSY` without waiting);
     - only writes open a transaction;
-    - in-process no transaction waits on another, because the scheduled job is the only writer.
+    - the scheduled job and the login are the two writers in-process:
+      - the login writes the last login in one short transaction of its own, the password check
+        done before it begins;
+      - while the job's recompute batch or a ledger batch holds the write lock, that transaction
+        waits up to the 10 s bound and the login's answer waits with it;
+      - a batch longer than the bound fails the login with a 500, and the member tries again;
+      - the job's own transactions likewise wait behind a login's, which lasts one update.
   - `database/LedgerDatabaseRepository` is the one ledger base:
     - the seven ledger operations live here once, over the `LedgerDatabaseEntry` row (the columns
       both ledger rows share);
@@ -175,8 +182,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   (an avatar's account: its password hash and state, its role, its last login) · `account/Login`
   (what a signed login says: the account name, role, generation, id and its two instants) · `account/LoginName` (a typed name
   matches an avatar's regardless of capitals, folded with `Locale.ROOT`, so the JVM's default locale
-  never changes the key; the key is the name in NFC without surrounding space, so a decomposed umlaut
-  and a name typed with a blank at its end match, and `ß` and `SS` stay two names) · `Constants`.
+  never changes the key; the matching rule: [build-run-deploy.md](build-run-deploy.md), "The login
+  API") · `Constants`.
 - **Last activity comes from the ledgers, not from the meta store** (decision 2026-09-02):
   - both ledger ports answer `latestTimestampPerAvatar()` with **one grouped query** per ledger
     (`MAX(timeStampEpochMillis) GROUP BY avatar`), so the overview materializes one row per avatar instead of
@@ -206,7 +213,7 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 - **REST** (what each endpoint answers: [build-run-deploy.md](build-run-deploy.md), "HTTP
   endpoints"; the JSON contract: [frontend.md](frontend.md)):
   - `rest/controller/api/*` is the JSON API under `/api/v1`: `AvatarSummariesController`,
-    `AvatarEntriesController`, `AdminStatusController`;
+    `AvatarEntriesController`, `AdminStatusController`, `LoginController`;
   - `AdminStatusController` keeps the operator's facts apart from the token-protected member-facing
     overview;
   - `rest/controller/api/wire/*` holds the published contract types plus `TransferTypeWireNames`;
@@ -218,8 +225,15 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   - the filter `UnreadableRequestFilter` answers the stand-in request of a head the server cannot
     read;
   - the filter `TokenValidationFilter` checks `?token=`;
+  - the filter `LoginBodyLimitFilter` answers 413 to a body the login's paths do not take (what
+    it refuses: [build-run-deploy.md](build-run-deploy.md), "The login API");
   - `ApplicationExceptionHandler` dispatches via the `TransferType`/exception visitors, no
     `instanceof`;
+  - `BareErrorResponseProcessor` replaces Micronaut's `ErrorResponseProcessor`, so no error
+    answer carries a body, whichever exception or framework check raised it (the answers:
+    [build-run-deploy.md](build-run-deploy.md), "The login API"); a 5xx logs its cause at error
+    on the server, a 400 logs a warning, and `UndecodableBodyHandler` answers a body its declared
+    encoding does not decode with a quiet 400;
   - its mapped status picks the log severity, so an expected client error is one `info` line and
     only a server error logs its stack trace.
 - **Controllers run off the event loop** (author decisions 2026-10-16,
@@ -304,6 +318,19 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     that is no JWT, each as an empty answer rather than an exception;
   - the verifier does not check `iat` against the clock, so a step back of the clock logs no one
     out, and `exp` still bounds every login.
+- **Logging in:** `application/LogIn` checks a name and a password (what the endpoint answers:
+  [build-run-deploy.md](build-run-deploy.md), "The login API"):
+  - the account is looked up by the folded name key (`LoginName`);
+  - an unknown name is checked against a hash of no password, drawn once at the start, so it costs
+    the same Argon2id check as a wrong password;
+  - a right chosen password issues a signed login with the account's name and role and the
+    generation `application/LoginGenerations` holds for it, an in-memory count per account that
+    starts at 0, and records the last login with the `Clock`'s instant;
+  - the generation is read before the password check and the login is signed with it, so a login
+    that a change of the password overtakes during its check carries the old generation and ends
+    with that change;
+  - a right issued password issues nothing and asks for a new password;
+  - the password check runs before the last-login transaction, never inside it.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.

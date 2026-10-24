@@ -4,7 +4,8 @@ enum FilterOrder {
 	REQUEST_AUDIT_LOG(1),
 	RATE_LIMIT(2),
 	UNREADABLE_REQUEST(3),
-	TOKEN_VALIDATION(4);
+	TOKEN_VALIDATION(4),
+	LOGIN_BODY_LIMIT(5);
 
 	private final int position;
 
