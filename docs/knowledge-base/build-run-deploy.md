@@ -944,6 +944,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 | Auth token | `evergore.security.api-token`, **required**, env-injected as `EVERGORE_SECURITY_API_TOKEN` (bound by the `SecurityConfiguration` `@ConfigurationProperties` bean) | **Every** request needs `?token=<configured token>` except the configured public paths below. **Mandatory at startup**: a blank/unset token makes the app refuse to boot (`ApiTokenStartupValidator` logs an error naming the variable and throws; an unset variable binds as an empty `Optional` and reaches it). No token value lives in the repo. |
 | Public paths | `evergore.security.public-paths` in `application.yml`: `/`, `/index.html`, `/assets/**`, `/favicon.ico`, `/admin`, `/api/v1/admin/status`, `/health`, `/swagger/**`, `/swagger-ui/**`, `/redoc/**`, `/rapidoc/**` (same `SecurityConfiguration` bean) | The **only** token-free surface; Ant patterns, matched against the canonicalized path by `PublicPaths`. Everything not listed needs a token, so a new controller is protected by default. Empty or unset ⇒ everything is protected (fail closed), which makes a misconfiguration a visible 401 on `/` rather than a silent hole. |
 | Rate limit | `evergore.rate-limit.*`: `max-requests-per-interval` `30`, `interval` `10s`, `block-duration` `1m`, `max-tracked-clients` `10000` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `RateLimitFilter` (details: bullets below the table). |
+| Password hash | `evergore.password-hash.*`: `memory-kibibytes` `65536`, `iterations` `3`, `parallelism` `1`, `max-concurrent` `2` (bound by the `PasswordHashConfiguration` `@ConfigurationProperties` record, the defaults declared on the record, not in `application.yml`) | The Argon2id cost of `Argon2idPasswordHasher` (64 MiB, 3 iterations, one lane) and how many hashes or checks run at once: a further one waits for a permit and is never refused, so the heap holds at most `max-concurrent` times 64 MiB of them. A `max-concurrent` below `1` fails the start (`PasswordHashStartupValidator`), naming the property. The test profile sets `1024` and `1`. |
 
 - **The Evergore login is mandatory at startup:** either value unset or blank and the app refuses to
   boot (`CredentialsStartupValidator` logs an error naming the variable and throws; an unset variable
@@ -965,8 +966,8 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 - **Environment YAMLs hold overrides only** (author decision 2026-08-15). Micronaut merges the
   property sources, so `application-<env>.yml` is an overlay on `application.yml`, not a replacement:
   a key it repeats with the same value is duplication that silently rots when the base changes.
-  `application-test.yml` therefore carries the test token and the raised request budget,
-  `application-ratelimit.yml` the lowered one, and nothing else.
+  `application-test.yml` therefore carries the test token, the raised request budget and the small
+  password-hash cost, `application-ratelimit.yml` the lowered budget, and nothing else.
 - **`application.yml`** holds Micronaut concerns (app name, Swagger static routes, Netty
   `max-order: 3`) plus the **rate-limit defaults** (`evergore.rate-limit.*`, bound to
   `RateLimitConfiguration`) and the **public-path list** (`evergore.security.public-paths`, next to

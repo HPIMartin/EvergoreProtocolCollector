@@ -246,6 +246,17 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 - **Monitoring:** `monitoring/LastRunHealthIndicator` (adapter implementing `HealthIndicator`,
   exposed at `GET /health` via `micronaut-management`), fed by `application/LastRunStatus` (above);
   its verdict and details: [build-run-deploy.md](build-run-deploy.md), "HTTP endpoints".
+- **Password hashing:** the port `application/PasswordHasher` (`hash`, `verify`) with the adapter
+  `helper/security/Argon2idPasswordHasher` (Bouncy Castle):
+  - a random 16-byte salt per hash from `SecureRandom`, a 32-byte hash;
+  - the encoded form is `$argon2id$v=19$m=…,t=…,p=…$<salt>$<hash>`, so the parameters travel with
+    the hash and a later change of `evergore.password-hash.*` still verifies the old ones;
+  - the hashes are compared with `MessageDigest.isEqual`;
+  - a value that is not in that form verifies nothing;
+  - the password is brought to NFC (`businessLogic/account/NormalForm`) before it is hashed or
+    verified, so a decomposed and a composed umlaut are one password;
+  - a `Semaphore` of `evergore.password-hash.max-concurrent` permits (default 2) wraps each Argon2id
+    run, which allocates about 64 MiB: a further check waits and is never refused.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.
