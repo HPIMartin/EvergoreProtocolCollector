@@ -233,7 +233,8 @@ every scenario without asking a developer:
     (`Then the operator finds the client turned away for sending too many requests`).
   - A `Then` asserts only what that actor sees or knows on their own surface.
   - The member and the admin see it through the UI; the operator through the health check (REST
-    and JSON), the startup, the throttle and the log.
+    and JSON), the startup, the throttle, the log, the service's answer to a request and what it asks
+    the browser to keep.
   - An address, a status code or an internal name never stands in a member's or an admin's
     scenario; it belongs to the step definitions and the unit tests.
   - A description sentence starting "Today" may quote word for word what the actor sees today,
@@ -245,11 +246,13 @@ every scenario without asking a developer:
     scenario, or one is dropped.
   - The same rule on two surfaces (the admin page and the health report) is one
     `Scenario Outline` over the surface, each example row naming its own actor.
+  - A check the member's page makes and the service makes again, for a client that skips the page,
+    is two rules: each keeps its own scenario.
   - Different stakeholders seeing different consequences of one event (the game cannot be reached)
     stay apart, each asserting only what its stakeholder needs.
 - **Every outcome reads on its own**: a `Then` names the state it expects ("in descending order"),
   never one the reader must carry over from an earlier step ("again").
-- **Placeable time**: the "Points in time" rules below (TIME-1 to TIME-8).
+- **Placeable time**: the "Points in time" rules below (TIME-1 to TIME-9).
 - **Checkable numbers**: an expected figure follows by mental arithmetic from the scenario's data
   and the prices `valuation/` states, where alone the price-list step stands (quantity 1, round
   amounts; gold where the price is incidental).
@@ -263,8 +266,9 @@ the scenario text alone.
   scenario.
 - **TIME-2 One month:** dates fall in January, from 01.01. on, in the order things happen. Three
   exceptions, each only where the claim needs it: the newest movement moves to 15.02. when
-  something must lie clearly outside a 30-day window, 15.07. stands for summer time, and 31.12.
-  is a "now" long after every movement.
+  something must lie clearly outside a 30-day window or when a later collection must read a
+  movement after a newest one of 31.01., 15.07. stands for summer time, and 31.12. is a "now"
+  long after every movement.
 - **TIME-3 Windows start on a round moment:** the 30 days run from 01.01. to 31.01., the 48 hours
   from 01.01. 12:00 to 03.01. 12:00. January holds no clock change, so a window is its plain length.
 - **TIME-4 The time of day tells the role:** a movement at 12:00; the daily collection at 05:00 on
@@ -287,6 +291,11 @@ the scenario text alone.
   under `Given`, the present (`runs`) is the action under `When`, and a new time step takes one of
   the two and never appears under the other. A lasting state is no event: it stands under `Given` in the
   present (`the clocks read 31.12.2026 12:00`).
+- **TIME-9 A moment that is neither a movement nor a run is placed by an event:** a login or a
+  request stands relative to an event its step names (`7 days after logging in`, `9 seconds after
+  its first`), never at a clock time of its own. Where a login must still hold when a later
+  collection runs, the 30-day window may end on the day before the newest movement that collection
+  reads (30.01. before 31.01.), since a login lasts 7 days.
 
 **Completeness (what the author confirms).** The planner declares the scenario set to be the
 *whole* acceptance of the feature, checked against this list, and names what is deliberately out of
