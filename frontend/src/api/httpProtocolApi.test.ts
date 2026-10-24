@@ -44,6 +44,7 @@ const OVERVIEW_BODY = JSON.stringify({
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
+      active: true,
     },
   ],
 })

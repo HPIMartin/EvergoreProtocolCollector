@@ -179,6 +179,7 @@ function summaryFrom(item: unknown): AvatarSummary {
     lastBankActivity: optionalInstantFrom(summary, 'lastBankActivity'),
     lastStorageActivity: optionalInstantFrom(summary, 'lastStorageActivity'),
     staleSumsFrom: optionalInstantFrom(summary, 'staleSumsFrom'),
+    active: booleanFrom(summary, 'active'),
   }
 }
 

@@ -38,6 +38,7 @@ const overviewBody = {
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
+      active: true,
     },
     {
       avatar: 'Erde-Eibenlanze',
@@ -52,6 +53,7 @@ const overviewBody = {
       lastBankActivity: null,
       lastStorageActivity: '2026-07-31T21:05:00Z',
       staleSumsFrom: '2026-07-30T01:12:00Z',
+      active: false,
     },
   ],
 }
@@ -183,6 +185,7 @@ describe('the overview wire shape', () => {
       lastBankActivity: new Date('2026-08-04T09:30:00Z'),
       lastStorageActivity: new Date('2026-08-05T10:15:00Z'),
       staleSumsFrom: null,
+      active: true,
     })
   })
 
@@ -498,6 +501,24 @@ describe('the overview wire shape', () => {
     expect(overview.items[0]?.staleSumsFrom).toBeNull()
   })
 
+  it('reads the activity mark the service gave each row', () => {
+    const overview = overviewFrom(overviewBody)
+
+    const marks = overview.items.map((item) => item.active)
+
+    expect(marks).toStrictEqual([true, false])
+  })
+
+  it('refuses a summary whose activity mark is not a boolean', () => {
+    const reading = () =>
+      overviewFrom({
+        ...overviewBody,
+        items: [{ ...overviewBody.items[0], active: 'yes' }],
+      })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
   it('refuses totals that do not state whether they contain stale sums', () => {
     const { containsStaleSums, ...totalsWithoutTheFlag } = overviewBody.totals
     const reading = () =>
@@ -526,6 +547,7 @@ describe('the overview wire shape', () => {
     'lastBankActivity',
     'lastStorageActivity',
     'staleSumsFrom',
+    'active',
   ])('refuses a summary without its %s', (field) => {
     const reading = () =>
       overviewFrom({ ...overviewBody, items: [summaryWithout(field)] })

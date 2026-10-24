@@ -4,7 +4,6 @@ import type { ProtocolApi } from '../api'
 import { FIRST_PAGE } from '../api'
 import type { AvatarSummary, GuildTotals, Overview } from '../domain'
 import {
-  ACTIVITY_WINDOW_DAYS,
   GUILD_STALE_SUMS_NOTE,
   GUILD_UNCOMPUTED_SUMS_NOTE,
   UNCOMPUTED_BALANCE_NOTE,
@@ -124,7 +123,7 @@ function rosterTablesOf(overview: Overview): readonly RosterTable[] {
   return [
     {
       testId: 'active-roster',
-      caption: `Aktiv (${String(ACTIVITY_WINDOW_DAYS)} Tage vor dem letzten Vorgang): ${String(roster.active.length)} ${ofGuild}`,
+      caption: `Aktiv (30 Tage vor dem letzten Vorgang): ${String(roster.active.length)} ${ofGuild}`,
       rows: roster.active,
       emptyMessage: 'Noch kein Avatar erfasst.',
       total: guildTotalOf(overview.totals),
@@ -204,6 +203,7 @@ function guildRowOf(totals: GuildTotals): AvatarSummary {
     lastBankActivity: null,
     lastStorageActivity: null,
     staleSumsFrom: null,
+    active: true,
   }
 }
 

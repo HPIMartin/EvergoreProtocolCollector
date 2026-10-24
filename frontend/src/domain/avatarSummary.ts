@@ -13,6 +13,7 @@ export interface AvatarSummary {
   readonly lastBankActivity: Date | null
   readonly lastStorageActivity: Date | null
   readonly staleSumsFrom: Date | null
+  readonly active: boolean
 }
 
 export interface GuildTotals {

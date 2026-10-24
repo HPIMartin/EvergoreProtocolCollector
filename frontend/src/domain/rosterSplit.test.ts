@@ -1,19 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import type { AvatarSummary } from './avatarSummary.ts'
-import { ACTIVITY_WINDOW_DAYS, rosterSplitOf } from './rosterSplit.ts'
-
-const DAY = 24 * 60 * 60 * 1000
-
-const NEWEST = new Date('2026-07-31T21:05:00Z')
-
-const cutBy = (millis: number): Date =>
-  new Date(NEWEST.getTime() - ACTIVITY_WINDOW_DAYS * DAY + millis)
+import { rosterSplitOf } from './rosterSplit.ts'
 
 function summaryOf(
   avatar: string,
-  lastBankActivity: Date | null,
-  lastStorageActivity: Date | null,
+  active: boolean,
+  lastActivity: Date | null = null,
 ): AvatarSummary {
   return {
     avatar,
@@ -25,9 +18,10 @@ function summaryOf(
     donation: 0,
     craftSubsidy: 0,
     balance: 0,
-    lastBankActivity,
-    lastStorageActivity,
+    lastBankActivity: lastActivity,
+    lastStorageActivity: lastActivity,
     staleSumsFrom: null,
+    active,
   }
 }
 
@@ -35,12 +29,12 @@ const namesOf = (summaries: readonly AvatarSummary[]): string[] =>
   summaries.map((summary) => summary.avatar)
 
 describe('the roster split behind the overview', () => {
-  it('measures every row against the newest activity in the data, not against the clock', () => {
-    const newest = summaryOf('Newest', null, NEWEST)
-    const recent = summaryOf('Recent', new Date('2026-07-20T08:00:00Z'), null)
-    const old = summaryOf('Old', new Date('2026-05-02T08:00:00Z'), null)
-
-    const split = rosterSplitOf([newest, recent, old])
+  it('puts the rows the service marked active above and the rest below', () => {
+    const split = rosterSplitOf([
+      summaryOf('Newest', true),
+      summaryOf('Old', false),
+      summaryOf('Recent', true),
+    ])
 
     const activeNames = namesOf(split.active)
     const dormantNames = namesOf(split.dormant)
@@ -51,86 +45,33 @@ describe('the roster split behind the overview', () => {
     ])
   })
 
-  it('counts a row that moved exactly on the boundary as active', () => {
-    const onTheBoundary = summaryOf('Grenzfall', cutBy(0), null)
+  it('reads no date, so a row marked active stays active however old its activity', () => {
+    const marked = summaryOf('Alt', true, new Date('2020-01-01T00:00:00Z'))
 
     const split = rosterSplitOf([
-      summaryOf('Newest', null, NEWEST),
-      onTheBoundary,
+      summaryOf('Neu', true, new Date('2026-07-31T21:05:00Z')),
+      marked,
     ])
 
-    const activeNames = namesOf(split.active)
-
-    expect(activeNames).toStrictEqual(['Newest', 'Grenzfall'])
-  })
-
-  it('counts a row one millisecond before the boundary as dormant', () => {
-    const justOutside = summaryOf('Grenzfall', cutBy(-1), null)
-
-    const split = rosterSplitOf([
-      summaryOf('Newest', null, NEWEST),
-      justOutside,
-    ])
-
-    const activeNames = namesOf(split.active)
     const dormantNames = namesOf(split.dormant)
 
-    expect([activeNames, dormantNames]).toStrictEqual([
-      ['Newest'],
-      ['Grenzfall'],
-    ])
+    expect(dormantNames).toStrictEqual([])
   })
 
-  it('reads a row by the later of its two ledgers', () => {
-    const staleBankFreshStorage = summaryOf(
-      'Lagerer',
-      new Date('2026-05-02T08:00:00Z'),
-      cutBy(0),
-    )
-    const freshBankStaleStorage = summaryOf(
-      'Bankier',
-      cutBy(0),
-      new Date('2026-05-02T08:00:00Z'),
-    )
+  it('reads no date, so a row marked dormant stays dormant however recent its activity', () => {
+    const marked = summaryOf('Neu', false, new Date('2026-07-31T21:05:00Z'))
 
-    const split = rosterSplitOf([
-      summaryOf('Newest', null, NEWEST),
-      staleBankFreshStorage,
-      freshBankStaleStorage,
-    ])
+    const split = rosterSplitOf([marked, summaryOf('Alt', true)])
 
-    expect(split.dormant).toStrictEqual([])
-  })
-
-  it('never counts the only row of a roster as dormant against itself', () => {
-    const alone = summaryOf('Allein', new Date('2020-01-01T00:00:00Z'), null)
-
-    const split = rosterSplitOf([alone])
-
-    const activeNames = namesOf(split.active)
     const dormantNames = namesOf(split.dormant)
 
-    expect([activeNames, dormantNames]).toStrictEqual([['Allein'], []])
+    expect(dormantNames).toStrictEqual(['Neu'])
   })
 
-  it('counts a row that never appeared in either ledger as dormant', () => {
-    const neverSeen = summaryOf('Namenlos', null, null)
-
-    const split = rosterSplitOf([summaryOf('Newest', null, NEWEST), neverSeen])
-
-    const activeNames = namesOf(split.active)
-    const dormantNames = namesOf(split.dormant)
-
-    expect([activeNames, dormantNames]).toStrictEqual([
-      ['Newest'],
-      ['Namenlos'],
-    ])
-  })
-
-  it('leaves every row active while the data holds no activity to measure against', () => {
+  it('leaves every row active when the service marked every row active', () => {
     const split = rosterSplitOf([
-      summaryOf('Erster', null, null),
-      summaryOf('Zweiter', null, null),
+      summaryOf('Erster', true),
+      summaryOf('Zweiter', true),
     ])
 
     const activeNames = namesOf(split.active)
@@ -149,16 +90,12 @@ describe('the roster split behind the overview', () => {
   })
 
   it('keeps the order it was handed inside each half', () => {
-    const dormantOne = summaryOf(
-      'Aaron',
-      new Date('2026-01-01T00:00:00Z'),
-      null,
-    )
-    const activeOne = summaryOf('Bea', new Date('2026-07-20T08:00:00Z'), null)
-    const dormantTwo = summaryOf('Cara', new Date('2026-02-01T00:00:00Z'), null)
-    const activeTwo = summaryOf('Dane', null, NEWEST)
-
-    const split = rosterSplitOf([dormantOne, activeOne, dormantTwo, activeTwo])
+    const split = rosterSplitOf([
+      summaryOf('Aaron', false),
+      summaryOf('Bea', true),
+      summaryOf('Cara', false),
+      summaryOf('Dane', true),
+    ])
 
     const activeNames = namesOf(split.active)
     const dormantNames = namesOf(split.dormant)

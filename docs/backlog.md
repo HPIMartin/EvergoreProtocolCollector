@@ -43,8 +43,9 @@ a strand of its own from `main`, `(seat: PC)` when it needs the PC (handbook §9
   running release ([testing.md](knowledge-base/testing.md)).
 - The valuation follows the guild's 2020 announcement, with the departures recorded in
   [domain-model.md](knowledge-base/domain-model.md).
-- The overview stands in two tables, active and dormant, cut against the newest activity the loaded
-  rows carry rather than against the reader's clock ([frontend.md](knowledge-base/frontend.md)).
+- The overview stands in two tables, active and dormant, split by the service's `active` mark, cut
+  against the newest activity any avatar has rather than against the reader's clock
+  ([frontend.md](knowledge-base/frontend.md)).
 - Everything else about the built state: the [knowledge base](knowledge-base/README.md).
 
 **Next, in order** (decided 2026-10-13: each wave starts on its blocker, at most four strands at

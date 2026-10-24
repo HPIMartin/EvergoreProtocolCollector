@@ -45,6 +45,7 @@ const OVERVIEW_BODY = JSON.stringify({
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
+      active: true,
     },
     {
       avatar: 'Erde-Eibenlanze',
@@ -59,6 +60,7 @@ const OVERVIEW_BODY = JSON.stringify({
       lastBankActivity: null,
       lastStorageActivity: '2026-07-31T21:05:00Z',
       staleSumsFrom: null,
+      active: true,
     },
   ],
 })
@@ -93,6 +95,7 @@ const OVERVIEW_BODY_WITH_A_STALE_ROW = JSON.stringify({
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
+      active: true,
     },
     {
       avatar: 'Erde-Eibenlanze',
@@ -107,6 +110,7 @@ const OVERVIEW_BODY_WITH_A_STALE_ROW = JSON.stringify({
       lastBankActivity: '2026-08-05T09:58:00Z',
       lastStorageActivity: '2026-07-31T21:05:00Z',
       staleSumsFrom: '2026-07-30T01:12:00Z',
+      active: true,
     },
   ],
 })
@@ -141,6 +145,7 @@ const OVERVIEW_BODY_WHOSE_STALE_ROW_IS_OFF_THE_PAGE = JSON.stringify({
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
+      active: true,
     },
   ],
 })
@@ -175,6 +180,7 @@ const OVERVIEW_BODY_WITHOUT_THE_FLOWS = JSON.stringify({
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
+      active: true,
     },
   ],
 })
@@ -209,6 +215,7 @@ const TWO_ROWS_WITHOUT_FLOWS = JSON.stringify({
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: null,
+      active: true,
     },
     {
       avatar: 'Erde-Eibenlanze',
@@ -223,6 +230,7 @@ const TWO_ROWS_WITHOUT_FLOWS = JSON.stringify({
       lastBankActivity: null,
       lastStorageActivity: '2026-07-31T21:05:00Z',
       staleSumsFrom: null,
+      active: true,
     },
   ],
 })
@@ -257,6 +265,7 @@ const OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED = JSON.stringify({
       lastBankActivity: '2026-08-04T09:30:00Z',
       lastStorageActivity: '2026-08-05T10:15:00Z',
       staleSumsFrom: '2026-07-30T01:12:00Z',
+      active: true,
     },
     {
       avatar: 'Erde-Eibenlanze',
@@ -264,6 +273,7 @@ const OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED = JSON.stringify({
       lastBankActivity: '2026-08-05T09:58:00Z',
       lastStorageActivity: null,
       staleSumsFrom: null,
+      active: true,
     },
   ],
 })
@@ -279,6 +289,7 @@ const OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED_THAT_ALSO_STATES_AN_AGE =
         lastBankActivity: '2026-08-05T09:58:00Z',
         lastStorageActivity: null,
         staleSumsFrom: '2026-07-30T01:12:00Z',
+        active: true,
       },
     ],
   })
@@ -298,7 +309,7 @@ const NO_TOTALS = {
 
 interface RosterRow {
   readonly avatar: string
-  readonly lastBankActivity: string | null
+  readonly active: boolean
   readonly lastStorageActivity: string | null
 }
 
@@ -313,6 +324,7 @@ function rosterBodyOf(
     totals: NO_TOTALS,
     items: rows.map((row) => ({
       ...row,
+      lastBankActivity: null,
       bankWithdrawn: 0,
       bankDeposited: 0,
       storageWithdrawn: 0,
@@ -327,80 +339,39 @@ function rosterBodyOf(
 }
 
 const NEWEST_ACTIVITY = '2026-08-05T10:15:00Z'
-const THIRTY_DAYS_EARLIER = '2026-07-06T10:15:00Z'
 
-const ROSTER_ON_THE_BOUNDARY = rosterBodyOf([
-  {
-    avatar: 'Aktiv',
-    lastBankActivity: null,
-    lastStorageActivity: NEWEST_ACTIVITY,
-  },
-  {
-    avatar: 'Grenzfall',
-    lastBankActivity: THIRTY_DAYS_EARLIER,
-    lastStorageActivity: null,
-  },
-  {
-    avatar: 'Knappdaneben',
-    lastBankActivity: null,
-    lastStorageActivity: '2026-07-06T10:14:59.999Z',
-  },
-  { avatar: 'Ruhend', lastBankActivity: null, lastStorageActivity: null },
+const ROSTER_MARKED_BY_THE_SERVICE = rosterBodyOf([
+  { avatar: 'Aktiv', active: true, lastStorageActivity: NEWEST_ACTIVITY },
+  { avatar: 'Aktivin', active: true, lastStorageActivity: null },
+  { avatar: 'Ruhender', active: false, lastStorageActivity: null },
+  { avatar: 'Ruhend', active: false, lastStorageActivity: null },
 ])
 
-const ROSTER_OF_A_STALLED_COLLECTION = rosterBodyOf([
+const ROSTER_MARKED_AGAINST_ITS_DATES = rosterBodyOf([
   {
     avatar: 'Letzter',
-    lastBankActivity: null,
+    active: true,
     lastStorageActivity: '2021-03-01T10:00:00Z',
   },
   {
-    avatar: 'Vorletzter',
-    lastBankActivity: '2021-02-20T10:00:00Z',
-    lastStorageActivity: null,
-  },
-  {
     avatar: 'Weit-Zurueck',
-    lastBankActivity: '2020-01-01T10:00:00Z',
-    lastStorageActivity: null,
+    active: true,
+    lastStorageActivity: '2020-01-01T10:00:00Z',
   },
+  { avatar: 'Neu', active: false, lastStorageActivity: NEWEST_ACTIVITY },
 ])
 
 const ROSTER_INTERLEAVED_BY_NAME = rosterBodyOf([
-  {
-    avatar: 'Anna',
-    lastBankActivity: null,
-    lastStorageActivity: NEWEST_ACTIVITY,
-  },
-  {
-    avatar: 'Bert',
-    lastBankActivity: '2026-01-01T10:00:00Z',
-    lastStorageActivity: null,
-  },
-  {
-    avatar: 'Cara',
-    lastBankActivity: THIRTY_DAYS_EARLIER,
-    lastStorageActivity: null,
-  },
-  {
-    avatar: 'Dora',
-    lastBankActivity: null,
-    lastStorageActivity: '2026-02-01T10:00:00Z',
-  },
+  { avatar: 'Anna', active: true, lastStorageActivity: NEWEST_ACTIVITY },
+  { avatar: 'Bert', active: false, lastStorageActivity: null },
+  { avatar: 'Cara', active: true, lastStorageActivity: null },
+  { avatar: 'Dora', active: false, lastStorageActivity: null },
 ])
 
 const ROSTER_OF_ONE_LOADED_PAGE = rosterBodyOf(
   [
-    {
-      avatar: 'Anna',
-      lastBankActivity: null,
-      lastStorageActivity: NEWEST_ACTIVITY,
-    },
-    {
-      avatar: 'Bert',
-      lastBankActivity: '2026-01-01T10:00:00Z',
-      lastStorageActivity: null,
-    },
+    { avatar: 'Anna', active: true, lastStorageActivity: NEWEST_ACTIVITY },
+    { avatar: 'Bert', active: false, lastStorageActivity: null },
   ],
   42,
 )
@@ -855,33 +826,33 @@ describe('App', () => {
     )
   })
 
-  it('splits the roster into the members active in the window and the dormant rest', async () => {
+  it('splits the roster by the mark the service gave each member', async () => {
     await shellAt(
       `/overview?token=${TOKEN}`,
-      alwaysServing(200, ROSTER_ON_THE_BOUNDARY),
+      alwaysServing(200, ROSTER_MARKED_BY_THE_SERVICE),
     )
 
     const activeNames = rowNamesIn('active-roster')
     const dormantNames = rowNamesIn('dormant-roster')
 
     expect([activeNames, dormantNames]).toStrictEqual([
-      ['Aktiv', 'Grenzfall'],
-      ['Knappdaneben', 'Ruhend'],
+      ['Aktiv', 'Aktivin'],
+      ['Ruhender', 'Ruhend'],
     ])
   })
 
-  it('measures the cut against the data, so a stalled collection empties no roster', async () => {
+  it('draws no line of its own, so the mark decides whatever dates the rows carry', async () => {
     await shellAt(
       `/overview?token=${TOKEN}`,
-      alwaysServing(200, ROSTER_OF_A_STALLED_COLLECTION),
+      alwaysServing(200, ROSTER_MARKED_AGAINST_ITS_DATES),
     )
 
     const activeNames = rowNamesIn('active-roster')
     const dormantNames = rowNamesIn('dormant-roster')
 
     expect([activeNames, dormantNames]).toStrictEqual([
-      ['Letzter', 'Vorletzter'],
-      ['Weit-Zurueck'],
+      ['Letzter', 'Weit-Zurueck'],
+      ['Neu'],
     ])
   })
 
@@ -903,7 +874,7 @@ describe('App', () => {
   it('gives both tables the same columns', async () => {
     await shellAt(
       `/overview?token=${TOKEN}`,
-      alwaysServing(200, ROSTER_ON_THE_BOUNDARY),
+      alwaysServing(200, ROSTER_MARKED_BY_THE_SERVICE),
     )
 
     const headers = headerTextsIn('dormant-roster')
@@ -914,7 +885,7 @@ describe('App', () => {
   it('states the guild total under the active table and nowhere else', async () => {
     await shellAt(
       `/overview?token=${TOKEN}`,
-      alwaysServing(200, ROSTER_ON_THE_BOUNDARY),
+      alwaysServing(200, ROSTER_MARKED_BY_THE_SERVICE),
     )
 
     const activeTotals = totalRowsIn('active-roster')

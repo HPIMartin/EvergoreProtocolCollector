@@ -284,21 +284,13 @@ Four top-level folders under `frontend/src/`:
   it is the sum of neither half, so it keeps its `Gilde` label under the table a reader actually
   reads instead of stating the same guild-wide figure twice.
 - **The roster stands in two tables, active above and dormant below** (decision 2026-09-11):
-  - `domain/rosterSplit.ts` divides the loaded rows.
+  - `domain/rosterSplit.ts` divides the loaded rows by the `active` mark the service gave each of
+    them; the page draws no line of its own and reads no date for it.
   - Both tables render the **same** `Column` list.
   - Each keeps the German-collation order the API handed over, so the split reorders nothing.
-  - A row is active when the later of its two activity timestamps is no older than
-    `ACTIVITY_WINDOW_DAYS` before the **newest activity in the loaded rows themselves**.
-  - The reference is the data's, never the reader's clock: tied to the wall clock the whole roster
-    falls into "dormant" as soon as the scraper stalls, which is exactly when someone opens the
-    page, whereas the row holding the maximum is active by construction.
-  - With no activity anywhere there is no reference and every row stays active: the dormant table
-    is an exception list, and nothing moves into it without a measurable reason.
-  - The window is 30 calendar days rather than a calendar month, because subtracting a month
-    normalizes 31.07 to 01.07 and would change the window's length with the reference date.
-  - `lastUpdated` is deliberately **not** read for this: it lives on `/api/v1/admin/status`, and the
-    members' view does not reach into an operator surface for a presentation question.
-- **The split is client-side and therefore covers only the loaded page.**
+  - The rule behind the mark, the reference, the empty case and the window: the `active` bullet
+    under the endpoint table below.
+- **The two tables hold only the loaded page, while the `active` mark covers the whole guild.**
   - Both captions state their half against `totalCount`
     (`Aktiv (30 Tage vor dem letzten Vorgang): 24 von 42 Avataren`), so the two never claim to have
     sorted the whole guild.
@@ -410,8 +402,16 @@ service's only read surface.
 - **`active` is the service's own mark of the 30-day line** (`ActivityLine`, over every avatar the
   ledgers name, not over the served page): `true` when the later of the avatar's two last
   activities is at or after 30 calendar days on the Berlin clock before the newest activity of any
-  avatar, and `true` for every
-  avatar while the ledgers hold no activity at all.
+  avatar, and `true` for every avatar while the ledgers hold no activity at all:
+  - The reference is the data's, never the reader's clock: tied to the wall clock the whole roster
+    falls into "dormant" as soon as the scraper stalls, which is exactly when someone opens the
+    page, whereas the row holding the maximum is active by construction.
+  - With no activity anywhere there is no reference and every row stays active: the dormant table
+    is an exception list, and nothing moves into it without a measurable reason.
+  - The window is 30 calendar days rather than a calendar month, because subtracting a month
+    normalizes 31.07 to 01.07 and would change the window's length with the reference date.
+  - `lastUpdated` is deliberately **not** read for this: it lives on `/api/v1/admin/status`, and the
+    members' view does not reach into an operator surface for a presentation question.
 - **`/api/v1/admin/status`'s `lastUpdated: null`** means no collection run has completed. A sentinel
   instant is not an option: Java 25 throws when converting an extreme instant into
   `java.sql.Timestamp`.
