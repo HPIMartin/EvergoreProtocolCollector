@@ -8,4 +8,4 @@ public record AvatarSummary(@JsonProperty("avatar") String avatar, @JsonProperty
 		@JsonProperty("storageWithdrawn") Long storageWithdrawn, @JsonProperty("storageDeposited") Long storageDeposited, @JsonProperty("net") Long net,
 		@JsonProperty("donation") Long donation, @JsonProperty("craftSubsidy") Long craftSubsidy, @JsonProperty("balance") Long balance,
 		@JsonProperty("lastBankActivity") Instant lastBankActivity, @JsonProperty("lastStorageActivity") Instant lastStorageActivity,
-		@JsonProperty("staleSumsFrom") Instant staleSumsFrom) {}
+		@JsonProperty("staleSumsFrom") Instant staleSumsFrom, @JsonProperty("active") boolean active) {}

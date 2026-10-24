@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.contribution;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -119,7 +120,7 @@ class AvatarContributionsTest {
 
 		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
-		assertThat(all).containsExactly(new AvatarContribution("Aurora", Optional.of(new Contribution(1500, 200, 185.04, 300.0, Optional.empty())), null, null, null));
+		assertThat(all).containsExactly(new AvatarContribution("Aurora", Optional.of(new Contribution(1500, 200, 185.04, 300.0, Optional.empty())), null, null, null, true));
 	}
 
 	@Test
@@ -128,7 +129,7 @@ class AvatarContributionsTest {
 
 		List<AvatarContribution> all = tested.ofEveryKnownAvatar().avatars();
 
-		assertThat(all).containsExactly(new AvatarContribution("Brynja", Optional.empty(), null, null, null));
+		assertThat(all).containsExactly(new AvatarContribution("Brynja", Optional.empty(), null, null, null, true));
 	}
 
 	@ParameterizedTest(name = "answers no contribution while only the {0} of the four sums is missing")
@@ -222,6 +223,17 @@ class AvatarContributionsTest {
 
 		assertThat(brynja.lastBankActivity()).isNull();
 		assertThat(brynja.lastStorageActivity()).isEqualTo(EARLIER);
+	}
+
+	@Test
+	void marksAnAvatarDormantWhoseLastActivityLiesMoreThanThirtyDaysBeforeTheNewestOfTheGuild() {
+		bankRepo.seedAvatars(List.of("Aurora", "Calix"));
+		bankRepo.seedEntries("Aurora", List.of(new BankEntry(LATER, "Aurora", 100, EINLAGERUNG)));
+		storageRepo.seedEntries("Calix", List.of(new StorageEntry(LATER.plus(31, ChronoUnit.DAYS), "Calix", 1, "Kupfererz", 100, EINLAGERUNG)));
+
+		List<AvatarContribution> avatars = tested.ofEveryKnownAvatar().avatars();
+
+		assertThat(avatars).extracting(AvatarContribution::avatar, AvatarContribution::active).containsExactly(tuple("Aurora", false), tuple("Calix", true));
 	}
 
 	@Test

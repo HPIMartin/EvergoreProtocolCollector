@@ -74,7 +74,7 @@ public class AvatarSummariesController {
 		return new AvatarSummary(avatar.avatar(), figureOf(whole, WholeGoldContribution::bankWithdrawn), figureOf(whole, WholeGoldContribution::bankDeposited),
 				figureOf(whole, WholeGoldContribution::storageWithdrawn), figureOf(whole, WholeGoldContribution::storageDeposited), figureOf(whole, WholeGoldContribution::net),
 				shareOf(whole, WholeGoldShare::donation), shareOf(whole, WholeGoldShare::craftSubsidy), shareOf(whole, WholeGoldShare::balance), avatar.lastBankActivity(),
-				avatar.lastStorageActivity(), avatar.staleSumsFrom());
+				avatar.lastStorageActivity(), avatar.staleSumsFrom(), avatar.active());
 	}
 
 	private static Long figureOf(Optional<WholeGoldContribution> contribution, ToLongFunction<WholeGoldContribution> figure) {

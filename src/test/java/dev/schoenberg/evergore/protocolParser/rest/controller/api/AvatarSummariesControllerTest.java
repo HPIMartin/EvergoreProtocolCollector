@@ -63,7 +63,7 @@ class AvatarSummariesControllerTest {
 
 		AvatarSummaryPage page = tested.summaries(0, WHOLE_PAGE);
 
-		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", null, null, null, null, null, null, null, null, null, null, null));
+		assertThat(page.items()).containsExactly(new AvatarSummary("Brynja", null, null, null, null, null, null, null, null, null, null, null, true));
 	}
 
 	@Test

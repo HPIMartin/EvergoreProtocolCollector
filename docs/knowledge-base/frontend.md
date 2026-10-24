@@ -294,8 +294,8 @@ Four top-level folders under `frontend/src/`:
     page, whereas the row holding the maximum is active by construction.
   - With no activity anywhere there is no reference and every row stays active: the dormant table
     is an exception list, and nothing moves into it without a measurable reason.
-  - The window is 30 days rather than a calendar month, because subtracting a month normalizes
-    31.07 to 01.07 and would change the window's length with the reference date.
+  - The window is 30 calendar days rather than a calendar month, because subtracting a month
+    normalizes 31.07 to 01.07 and would change the window's length with the reference date.
   - `lastUpdated` is deliberately **not** read for this: it lives on `/api/v1/admin/status`, and the
     members' view does not reach into an operator surface for a presentation question.
 - **The split is client-side and therefore covers only the loaded page.**
@@ -331,7 +331,7 @@ service's only read surface.
 
 | Route | Answers |
 |-------|---------|
-| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, the two flows `donation` and `craftSubsidy`, `balance` (the figure before the guild's share), plus `lastBankActivity`, `lastStorageActivity` and `staleSumsFrom`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
+| `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, the two flows `donation` and `craftSubsidy`, `balance` (the figure before the guild's share), plus `lastBankActivity`, `lastStorageActivity`, `staleSumsFrom` and the boolean `active`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
 | `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first unless `sort` names another order. |
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first unless `sort` names another order. |
 | `GET /api/v1/admin/status` | Anonymous, `token`-exempt (same trust level as `/health`): `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, `roundTrips`, `roundTripAbstentions`, every key always rendered (the two round-trip arrays as `[]` rather than `null` when empty). The operator-facing facts; see below. |
@@ -407,6 +407,11 @@ service's only read surface.
   from the meta store, so they are as fresh as the last ingest instead of as fresh as the last
   evaluation; why they come from there is in [architecture.md](architecture.md) (decision
   2026-09-02).
+- **`active` is the service's own mark of the 30-day line** (`ActivityLine`, over every avatar the
+  ledgers name, not over the served page): `true` when the later of the avatar's two last
+  activities is at or after 30 calendar days on the Berlin clock before the newest activity of any
+  avatar, and `true` for every
+  avatar while the ledgers hold no activity at all.
 - **`/api/v1/admin/status`'s `lastUpdated: null`** means no collection run has completed. A sentinel
   instant is not an option: Java 25 throws when converting an extreme instant into
   `java.sql.Timestamp`.

@@ -38,6 +38,7 @@ public class AvatarContributions {
 		MetaInformationSnapshot recompute = metaRepo.snapshot();
 		Map<String, Instant> lastBankActivity = bankRepo.latestTimestampPerAvatar();
 		Map<String, Instant> lastStorageActivity = storageRepo.latestTimestampPerAvatar();
+		ActivityLine activityLine = ActivityLine.of(lastBankActivity, lastStorageActivity);
 		List<String> guild = knownAvatars.sortedByName();
 		Map<String, Contribution> computed = new LinkedHashMap<>();
 		guild.forEach(avatar -> recomputedContributionOf(recompute, avatar).ifPresent(contribution -> computed.put(avatar, contribution)));
@@ -46,17 +47,17 @@ public class AvatarContributions {
 		List<AvatarContribution> avatars = guild
 				.stream()
 				.map(avatar -> contributionOf(recompute, avatar, Optional.ofNullable(computed.get(avatar)), lastBankActivity.get(avatar), lastStorageActivity.get(avatar),
-						lastCollection))
+						lastCollection, activityLine))
 				.toList();
 
 		return new GuildContributions(recompute.get(getLastUpdatedAtKey()), avatars);
 	}
 
 	private static AvatarContribution contributionOf(MetaInformationSnapshot recompute, String avatar, Optional<Contribution> contribution, Instant lastBankActivity,
-			Instant lastStorageActivity, Optional<Instant> lastCollection) {
+			Instant lastStorageActivity, Optional<Instant> lastCollection, ActivityLine activityLine) {
 		Instant staleSumsFrom = contribution.isPresent() ? staleSumsFrom(recompute, avatar, lastCollection) : null;
 
-		return new AvatarContribution(avatar, contribution, lastBankActivity, lastStorageActivity, staleSumsFrom);
+		return new AvatarContribution(avatar, contribution, lastBankActivity, lastStorageActivity, staleSumsFrom, activityLine.isActive(avatar));
 	}
 
 	private static Optional<Contribution> recomputedContributionOf(MetaInformationSnapshot recompute, String avatar) {

@@ -165,6 +165,10 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   - both ledgers carry an index on `(avatar, timeStampEpochMillis)` (migration `V4`), which serves this query
     as a covering index and the per-avatar page and count as an index search, so none of the three
     scans the table;
+  - `contribution/ActivityLine` draws the overview's 30-day line from those two maps (the newest
+    activity of any avatar, less 30 calendar days on the Berlin clock, `Constants.APP_ZONE`, so a
+    change of summer time moves no one across the line) and answers per avatar whether it is active; the overview
+    serves the answer as `active`;
   - the domain types are real instants, so nothing here reintroduces
     `MetaInformationKey.DateTimeKey`'s ambiguity and the ledger times stay out of the meta store;
   - a ledger row stores its time twice, whatever the JVM's zone:

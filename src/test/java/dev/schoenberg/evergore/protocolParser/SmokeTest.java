@@ -114,7 +114,7 @@ class SmokeTest {
 		assertThat(response.getBody())
 				.contains(
 						"{\"avatar\":\"OverviewTestAvatar\",\"bankWithdrawn\":42,\"bankDeposited\":1337,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":1295,\"donation\":null,\"craftSubsidy\":null,\"balance\":null,"
-								+ "\"lastBankActivity\":\"1970-01-01T00:00:00Z\",\"lastStorageActivity\":null,\"staleSumsFrom\":null}");
+								+ "\"lastBankActivity\":\"1970-01-01T00:00:00Z\",\"lastStorageActivity\":null,\"staleSumsFrom\":null,\"active\":true}");
 	}
 
 	@Test
