@@ -293,9 +293,10 @@ the scenario text alone.
   present (`the clocks read 31.12.2026 12:00`).
 - **TIME-9 A moment that is neither a movement nor a run is placed by an event:** a login or a
   request stands relative to an event its step names (`7 days after logging in`, `9 seconds after
-  its first`), never at a clock time of its own. Where a login must still hold when a later
-  collection runs, the 30-day window may end on the day before the newest movement that collection
-  reads (30.01. before 31.01.), since a login lasts 7 days.
+  its first`), never at a clock time of its own.
+  - Where a login must still hold when a later collection runs, the 30-day window may end on the
+    day before the newest movement that collection reads (30.01. before 31.01.), since a login
+    lasts 7 days.
 
 **Completeness (what the author confirms).** The planner declares the scenario set to be the
 *whole* acceptance of the feature, checked against this list, and names what is deliberately out of
