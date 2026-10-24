@@ -10,7 +10,9 @@ import io.micronaut.context.annotation.Requires;
 
 import dev.schoenberg.evergore.protocolParser.ApplicationFactory;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.GameProtocols;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioPasswords;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
+import dev.schoenberg.evergore.protocolParser.application.IssuedPasswords;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageSource;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.website.SeleniumPageSource;
 
@@ -21,6 +23,12 @@ class AcceptanceBeans {
 	@Replaces(bean = Clock.class, factory = ApplicationFactory.class)
 	Clock clock(ScenarioTime time) {
 		return time.clock();
+	}
+
+	@Singleton
+	@Replaces(bean = IssuedPasswords.class, factory = ApplicationFactory.class)
+	IssuedPasswords issuedPasswords(ScenarioPasswords passwords) {
+		return passwords::record;
 	}
 
 	@Singleton

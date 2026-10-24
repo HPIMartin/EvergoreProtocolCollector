@@ -7,7 +7,9 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import jakarta.inject.Inject;
 
@@ -23,7 +25,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import dev.schoenberg.evergore.protocolParser.application.AccountRepository;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationRepository;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
@@ -84,6 +89,15 @@ class ProtocolEvaluationAcceptanceTest {
 								+ "\"lastBankActivity\":null,\"lastStorageActivity\":\"2024-02-06T09:00:00Z\",\"staleSumsFrom\":null,\"active\":true},"
 								+ "{\"avatar\":\"Calix\",\"bankWithdrawn\":300,\"bankDeposited\":0,\"storageWithdrawn\":0,\"storageDeposited\":0,\"net\":-300,\"donation\":0,\"craftSubsidy\":0,\"balance\":-300,"
 								+ "\"lastBankActivity\":\"2024-03-01T07:00:00Z\",\"lastStorageActivity\":null,\"staleSumsFrom\":null,\"active\":true}]");
+	}
+
+	@Test
+	void theCollectionGivesEveryKnownAvatarAnAccountThatBeginsWithAReset() {
+		AccountRepository accounts = server.getApplicationContext().getBean(AccountRepository.class);
+
+		List<Optional<Account>> found = Stream.of("aurora", "boreas", "brynja", "calix").map(accounts::findByNameKey).toList();
+
+		assertThat(found).allSatisfy(account -> assertThat(account).map(Account::passwordState).contains(PasswordState.ISSUED));
 	}
 
 	@Test

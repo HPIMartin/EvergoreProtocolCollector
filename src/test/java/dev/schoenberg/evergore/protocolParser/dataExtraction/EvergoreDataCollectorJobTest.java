@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
+import dev.schoenberg.evergore.protocolParser.application.CreateAccounts;
 import dev.schoenberg.evergore.protocolParser.application.EvaluationResult;
 import dev.schoenberg.evergore.protocolParser.application.EvaluationResultFixture;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
@@ -30,7 +31,9 @@ class EvergoreDataCollectorJobTest {
 	private LastRunStatus lastRunStatus;
 	private FailableExtractor extractor;
 	private FailableEvaluator evaluator;
+	private RecordingCreateAccounts accounts;
 	private AtomicInteger hookRunCount;
+	private LoggerSpy logger;
 	private EvergoreDataCollectorJob tested;
 
 	@BeforeEach
@@ -38,9 +41,66 @@ class EvergoreDataCollectorJobTest {
 		lastRunStatus = new LastRunStatus();
 		extractor = new FailableExtractor();
 		evaluator = new FailableEvaluator();
+		accounts = new RecordingCreateAccounts(evaluator);
 		hookRunCount = new AtomicInteger();
-		tested = new EvergoreDataCollectorJob(new ZeroDelayConfiguration(), extractor, evaluator, hookRunCount::incrementAndGet, lastRunStatus,
-				Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
+		logger = new LoggerSpy();
+		tested = new EvergoreDataCollectorJob(new ZeroDelayConfiguration(), extractor, evaluator, accounts, hookRunCount::incrementAndGet, lastRunStatus,
+				Clock.fixed(FIXED_NOW, ZoneOffset.UTC), logger);
+	}
+
+	@Test
+	void createsTheAccountsOfEveryKnownAvatarAfterTheRecompute() {
+		tested.scheduleEvery24Hours();
+
+		assertThat(accounts.runsAfterTheRecompute).isEqualTo(1);
+		assertThat(accounts.runsBeforeTheRecompute).isZero();
+	}
+
+	@Test
+	void createsTheAccountsAfterAFailedScrapeToo() {
+		extractor.failOnLoad = true;
+
+		tested.scheduleEvery24Hours();
+
+		assertThat(accounts.runsAfterTheRecompute).isEqualTo(1);
+	}
+
+	@Test
+	void keepsTheRecomputesOutcomeWhenCreatingTheAccountsFails() {
+		accounts.failOnCreate = true;
+
+		tested.scheduleEvery24Hours();
+
+		assertThat(lastRunStatus.snapshot().lastSuccessfulRecompute()).contains(FIXED_NOW);
+		assertThat(lastRunStatus.snapshot().lastRecomputeFailure()).isEmpty();
+	}
+
+	@Test
+	void runsTheHookWhenCreatingTheAccountsFails() {
+		accounts.failOnCreate = true;
+
+		tested.scheduleEvery24Hours();
+
+		assertThat(hookRunCount.get()).isEqualTo(1);
+	}
+
+	@Test
+	void logsTheFailureOfCreatingTheAccountsAsAnError() {
+		accounts.failOnCreate = true;
+
+		tested.scheduleEvery24Hours();
+
+		assertThat(logger.errorMessages()).containsExactly("Creating the accounts failed; the recompute stands.");
+		assertThat(logger.errorThrowables()).extracting(Throwable::getMessage).containsExactly("createAccounts failed");
+	}
+
+	@Test
+	void createsNoAccountsWhenTheRecomputeFails() {
+		evaluator.failOnEvaluate = true;
+
+		assertThatThrownBy(() -> tested.scheduleEvery24Hours()).isInstanceOf(RuntimeException.class);
+
+		assertThat(accounts.runsBeforeTheRecompute + accounts.runsAfterTheRecompute).isZero();
 	}
 
 	@Test
@@ -94,7 +154,7 @@ class EvergoreDataCollectorJobTest {
 
 	@Test
 	void restoresInterruptFlagWhenInitialDelayIsInterrupted() {
-		EvergoreDataCollectorJob interruptibleJob = new EvergoreDataCollectorJob(new PositiveDelayConfiguration(), extractor, evaluator, () -> {}, lastRunStatus,
+		EvergoreDataCollectorJob interruptibleJob = new EvergoreDataCollectorJob(new PositiveDelayConfiguration(), extractor, evaluator, accounts, () -> {}, lastRunStatus,
 				Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
 		Thread.currentThread().interrupt();
 		try {
@@ -151,6 +211,30 @@ class EvergoreDataCollectorJobTest {
 		public void loadData() {
 			if (failOnLoad) {
 				throw new RuntimeException("loadData failed");
+			}
+		}
+	}
+
+	private static class RecordingCreateAccounts extends CreateAccounts {
+		private final FailableEvaluator evaluator;
+		boolean failOnCreate;
+		int runsBeforeTheRecompute;
+		int runsAfterTheRecompute;
+
+		RecordingCreateAccounts(FailableEvaluator evaluator) {
+			super(null, null, null, null, null, null);
+			this.evaluator = evaluator;
+		}
+
+		@Override
+		public void forEveryKnownAvatar() {
+			if (evaluator.evaluateCalled) {
+				runsAfterTheRecompute++;
+			} else {
+				runsBeforeTheRecompute++;
+			}
+			if (failOnCreate) {
+				throw new RuntimeException("createAccounts failed");
 			}
 		}
 	}

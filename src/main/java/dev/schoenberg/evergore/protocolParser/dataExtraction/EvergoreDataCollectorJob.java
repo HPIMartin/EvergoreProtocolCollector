@@ -7,6 +7,7 @@ import jakarta.inject.Singleton;
 import io.micronaut.scheduling.annotation.Scheduled;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
+import dev.schoenberg.evergore.protocolParser.application.CreateAccounts;
 import dev.schoenberg.evergore.protocolParser.application.EvaluationResult;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
@@ -21,15 +22,17 @@ public class EvergoreDataCollectorJob {
 	private final Logger logger;
 	private final EvergoreDataExtractor dataExtractor;
 	private final EvergoreDataEvaluator evaluation;
+	private final CreateAccounts createAccounts;
 	private final PostCollectionHook hook;
 	private final LastRunStatus lastRunStatus;
 	private final Clock clock;
 
-	public EvergoreDataCollectorJob(Configuration config, EvergoreDataExtractor dataExtractor, EvergoreDataEvaluator evaluation, PostCollectionHook hook,
-			LastRunStatus lastRunStatus, Clock clock, Logger logger) {
+	public EvergoreDataCollectorJob(Configuration config, EvergoreDataExtractor dataExtractor, EvergoreDataEvaluator evaluation, CreateAccounts createAccounts,
+			PostCollectionHook hook, LastRunStatus lastRunStatus, Clock clock, Logger logger) {
 		this.config = config;
 		this.dataExtractor = dataExtractor;
 		this.evaluation = evaluation;
+		this.createAccounts = createAccounts;
 		this.hook = hook;
 		this.lastRunStatus = lastRunStatus;
 		this.clock = clock;
@@ -41,6 +44,7 @@ public class EvergoreDataCollectorJob {
 		initialDelay();
 		scrape();
 		recompute();
+		createAccounts();
 		hook.run();
 	}
 
@@ -65,6 +69,14 @@ public class EvergoreDataCollectorJob {
 		} catch (RuntimeException e) {
 			lastRunStatus.recordRecomputeFailure(clock.instant());
 			throw e;
+		}
+	}
+
+	private void createAccounts() {
+		try {
+			createAccounts.forEveryKnownAvatar();
+		} catch (RuntimeException e) {
+			logger.error("Creating the accounts failed; the recompute stands.", e);
 		}
 	}
 

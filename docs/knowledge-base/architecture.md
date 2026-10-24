@@ -31,6 +31,9 @@
    LastRunStatus.recordSuccessfulRecompute(when, EvaluationResult)  (one atomic snapshot)
    (recompute failure ▶ recordRecomputeFailure(...), rethrown)   (monitoring seam)
         ▼
+   CreateAccounts.forEveryKnownAvatar()   (an account for every avatar the stored ledgers name that has
+                                           none; a failure is logged and changes nothing above)
+        ▼
    PostCollectionHook   (no-op in prod; test seam, runs only after a successful recompute)
 
 Independent read path:  HTTP ▶ filters (audit log, rate limit, unreadable-request answer, token) ▶ AvatarSummariesController /
@@ -59,7 +62,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   an unmigrated database.
 - **Application use-cases (framework-free):** `application/{EvergoreDataExtractor,EvergoreDataEvaluator}`
   (collect + evaluate coordinators) · `application/LastRunStatus` (monitoring seam: what the
-  last run reached, see the pipeline above). Plain objects, wired in `ApplicationFactory`.
+  last run reached, see the pipeline above) · `application/CreateAccounts` (the account step of the
+  pipeline). Plain objects, wired in `ApplicationFactory`.
 - **Extraction pipeline:** `helper/selenium/{Browser,Driver,FileLoader}` ·
   `dataExtraction/website/SeleniumPageSource` (Selenium adapter: login, cookie banner, pagination;
   implements `PageSource`) · `PageContents` (DTO) · `parser/{EntityParser,EntryFactory}` (text ▶
@@ -271,6 +275,20 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     verified, so a decomposed and a composed umlaut are one password;
   - a `Semaphore` of `evergore.password-hash.max-concurrent` permits (default 2) wraps each Argon2id
     run, which allocates about 64 MiB: a further check waits and is never refused.
+- **Accounts for the members:** `application/CreateAccounts` gives every avatar `KnownAvatars` names
+  an account that begins with a reset, on the job's own thread:
+  - the password comes from the port `application/PasswordGenerator`
+    (`helper/security/RandomPasswordGenerator`: 16 characters from `SecureRandom`, always passing
+    `PasswordRule`);
+  - only its hash is stored, with the state `ISSUED`;
+  - the clear password goes to the port `application/IssuedPasswords`, whose production bean
+    discards it until the password delivery exists;
+  - an avatar that already has an account, whatever the capitals, is left as it is and is issued
+    nothing;
+  - an avatar whose folded name is `admin` gets none, and the service logs
+    `No account for the avatar <Avatar>: the name admin logs in with the admin key.`;
+  - an avatar whose hash or insert throws is logged with its name at error and the other avatars
+    still get their accounts.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.

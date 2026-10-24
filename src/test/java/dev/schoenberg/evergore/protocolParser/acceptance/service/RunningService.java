@@ -13,6 +13,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.world.GameProtocols;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.LedgerFaults;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.OperatorSettings;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioDatabase;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioPasswords;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
@@ -28,18 +29,21 @@ public class RunningService {
 	private final ScenarioDatabase database;
 	private final ServiceLog log;
 	private final OperatorSettings settings;
+	private final ScenarioPasswords passwords;
 	private ApplicationContext context;
 	private EmbeddedServer server;
 	private boolean asDeployed;
 	private int collectionsRun;
 
-	public RunningService(GameProtocols protocols, ScenarioTime time, LedgerFaults faults, ScenarioDatabase database, ServiceLog log, OperatorSettings settings) {
+	public RunningService(GameProtocols protocols, ScenarioTime time, LedgerFaults faults, ScenarioDatabase database, ServiceLog log, OperatorSettings settings,
+			ScenarioPasswords passwords) {
 		this.protocols = protocols;
 		this.time = time;
 		this.faults = faults;
 		this.database = database;
 		this.log = log;
 		this.settings = settings;
+		this.passwords = passwords;
 	}
 
 	public void start() {
@@ -87,7 +91,7 @@ public class RunningService {
 	}
 
 	private ApplicationContextBuilder builder() {
-		return ApplicationContext.builder().deduceEnvironment(false).properties(ACCEPTANCE_PROPERTIES).singletons(protocols, time, faults, database, log, settings);
+		return ApplicationContext.builder().deduceEnvironment(false).properties(ACCEPTANCE_PROPERTIES).singletons(protocols, time, faults, database, log, settings, passwords);
 	}
 
 	private void startHere(ApplicationContextBuilder builder) {

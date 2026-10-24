@@ -1,5 +1,6 @@
 package dev.schoenberg.evergore.protocolParser;
 
+import java.security.SecureRandom;
 import java.time.Clock;
 
 import jakarta.inject.Singleton;
@@ -8,9 +9,14 @@ import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import org.openqa.selenium.support.ui.Sleeper;
 
+import dev.schoenberg.evergore.protocolParser.application.AccountRepository;
+import dev.schoenberg.evergore.protocolParser.application.CreateAccounts;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
+import dev.schoenberg.evergore.protocolParser.application.IssuedPasswords;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
+import dev.schoenberg.evergore.protocolParser.application.PasswordGenerator;
+import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
@@ -23,13 +29,17 @@ import dev.schoenberg.evergore.protocolParser.dataExtraction.parser.EntityParser
 import dev.schoenberg.evergore.protocolParser.dataExtraction.parser.EntryFactory;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
 import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
+import dev.schoenberg.evergore.protocolParser.database.account.AccountDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
+import dev.schoenberg.evergore.protocolParser.helper.config.PasswordHashConfiguration;
 import dev.schoenberg.evergore.protocolParser.helper.fileLoader.AlternativeFileLoaderWrapper;
 import dev.schoenberg.evergore.protocolParser.helper.fileLoader.DiscFileLoader;
 import dev.schoenberg.evergore.protocolParser.helper.fileLoader.ResourceFileLoader;
+import dev.schoenberg.evergore.protocolParser.helper.security.Argon2idPasswordHasher;
+import dev.schoenberg.evergore.protocolParser.helper.security.RandomPasswordGenerator;
 import dev.schoenberg.evergore.protocolParser.helper.selenium.FileLoader;
 
 @Factory
@@ -89,6 +99,32 @@ public class ApplicationFactory {
 	@Singleton
 	public MetaInformationDatabaseRepository metaInformationDatabaseRepository(SqliteDatabase database) {
 		return new MetaInformationDatabaseRepository(database);
+	}
+
+	@Singleton
+	public AccountDatabaseRepository accountDatabaseRepository(SqliteDatabase database) {
+		return new AccountDatabaseRepository(database);
+	}
+
+	@Singleton
+	public PasswordHasher passwordHasher(PasswordHashConfiguration configuration) {
+		return new Argon2idPasswordHasher(configuration, new SecureRandom());
+	}
+
+	@Singleton
+	public PasswordGenerator passwordGenerator() {
+		return new RandomPasswordGenerator(new SecureRandom());
+	}
+
+	@Singleton
+	public IssuedPasswords issuedPasswords() {
+		return (avatar, password) -> {};
+	}
+
+	@Singleton
+	public CreateAccounts createAccounts(KnownAvatars knownAvatars, AccountRepository accounts, PasswordGenerator passwordGenerator, PasswordHasher passwordHasher,
+			IssuedPasswords issuedPasswords, Logger logger) {
+		return new CreateAccounts(knownAvatars, accounts, passwordGenerator, passwordHasher, issuedPasswords, logger);
 	}
 
 	@Singleton

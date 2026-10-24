@@ -1146,6 +1146,9 @@ answered (measured on Micronaut 4.10.9).
   step's own outcome in `LastRunStatus` (injected `Clock`) independently: a scrape failure is logged
   and does not stop the recompute that follows it, but a recompute failure is rethrown, so the
   `PostCollectionHook` only runs after a successful recompute.
+- After a successful recompute it runs `CreateAccounts.forEveryKnownAvatar()` in a `try`/`catch` of
+  its own: a failure there is logged as an error and neither stops the job nor changes what the
+  recompute recorded.
 - Tests set the delay to 0 via a `ZeroDelayConfiguration` subclass.
 
 ## CI / dev environment
