@@ -154,7 +154,10 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   ledger sums, their net and the guild total, assembled per known avatar) ·
   `account/{PasswordRule,PasswordRefusal}` (what a chosen password must hold, judged in the NFC form
   of `account/NormalForm`, where a special character is a punctuation or symbol code point, and why
-  a new one is refused: it breaks the rule, or it is the one it replaces) · `Constants`.
+  a new one is refused: it breaks the rule, or it is the one it replaces) · `account/LoginName` (a typed name
+  matches an avatar's regardless of capitals, folded with `Locale.ROOT`, so the JVM's default locale
+  never changes the key; the key is the name in NFC without surrounding space, so a decomposed umlaut
+  and a name typed with a blank at its end match, and `ß` and `SS` stay two names) · `Constants`.
 - **Last activity comes from the ledgers, not from the meta store** (decision 2026-09-02):
   - both ledger ports answer `latestTimestampPerAvatar()` with **one grouped query** per ledger
     (`MAX(timeStampEpochMillis) GROUP BY avatar`), so the overview materializes one row per avatar instead of
