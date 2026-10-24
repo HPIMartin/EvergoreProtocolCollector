@@ -10,6 +10,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.zip.GZIPOutputStream;
@@ -39,6 +40,7 @@ import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static io.micronaut.http.HttpStatus.BAD_REQUEST;
 import static io.micronaut.http.HttpStatus.OK;
 import static io.micronaut.http.HttpStatus.REQUEST_ENTITY_TOO_LARGE;
 import static io.micronaut.http.HttpStatus.UNAUTHORIZED;
@@ -228,12 +230,87 @@ class LoginEndpointTest {
 		return both;
 	}
 
+	@Test
+	void logsInWithTheNewPasswordChosenAfterTheIssuedOne() {
+		holdAccount("Dorian", ISSUED_PASSWORD, PasswordState.ISSUED, Role.MEMBER);
+
+		HttpResponse<String> response = chooseNewPassword("dorian", ISSUED_PASSWORD, CHOSEN_PASSWORD);
+
+		assertThat(response.getStatus()).isEqualTo(OK.getCode());
+		assertThat(response.getBody()).isEqualTo("{\"step\":\"logged-in\"}");
+		assertThat(response.getHeaders().getFirst(SET_COOKIE)).matches(SESSION_COOKIE);
+	}
+
+	@Test
+	void logsInWithTheChosenPasswordFromThenOn() {
+		holdAccount("Elara", ISSUED_PASSWORD, PasswordState.ISSUED, Role.MEMBER);
+		chooseNewPassword("Elara", ISSUED_PASSWORD, CHOSEN_PASSWORD);
+
+		HttpResponse<String> withTheNewPassword = logIn("Elara", CHOSEN_PASSWORD);
+		HttpResponse<String> withTheIssuedPassword = logIn("Elara", ISSUED_PASSWORD);
+
+		assertThat(withTheNewPassword.getBody()).isEqualTo("{\"step\":\"logged-in\"}");
+		assertThat(withTheIssuedPassword.getStatus()).isEqualTo(UNAUTHORIZED.getCode());
+	}
+
+	@Test
+	void refusesAWrongIssuedPasswordAnUnknownNameAndAChosenAccountWithTheAnswerOfAWrongPassword() {
+		HttpResponse<String> wrongIssued = chooseNewPassword("Boreas", "Winter-2026!", "Herbst-2026!");
+		HttpResponse<String> unknownName = chooseNewPassword("Zephyr", ISSUED_PASSWORD, "Herbst-2026!");
+		HttpResponse<String> alreadyChosen = chooseNewPassword("Aurora", CHOSEN_PASSWORD, "Herbst-2026!");
+
+		assertThat(List.of(wrongIssued.getStatus(), unknownName.getStatus(), alreadyChosen.getStatus())).containsOnly(UNAUTHORIZED.getCode());
+		assertThat(List.of(wrongIssued.getBody(), unknownName.getBody(), alreadyChosen.getBody())).containsOnly("{\"refusal\":\"wrong-name-or-password\"}");
+		assertThat(alreadyChosen.getHeaders().containsKey(SET_COOKIE)).isFalse();
+	}
+
+	@Test
+	void refusesANewPasswordThatBreaksTheRuleWith400() {
+		HttpResponse<String> response = chooseNewPassword("Boreas", ISSUED_PASSWORD, "Abc-123");
+
+		assertThat(response.getStatus()).isEqualTo(BAD_REQUEST.getCode());
+		assertThat(response.getBody()).isEqualTo("{\"refusal\":\"breaks-the-rule\"}");
+		assertThat(response.getHeaders().containsKey(SET_COOKIE)).isFalse();
+	}
+
+	@Test
+	void refusesTheIssuedPasswordAsTheNewOneWith400() {
+		HttpResponse<String> response = chooseNewPassword("Boreas", ISSUED_PASSWORD, ISSUED_PASSWORD);
+
+		assertThat(response.getStatus()).isEqualTo(BAD_REQUEST.getCode());
+		assertThat(response.getBody()).isEqualTo("{\"refusal\":\"same-as-before\"}");
+	}
+
+	@Test
+	void leavesTheIssuedPasswordValidAfterARefusedChoice() {
+		chooseNewPassword("Boreas", ISSUED_PASSWORD, "Abcd1234");
+
+		HttpResponse<String> response = logIn("Boreas", ISSUED_PASSWORD);
+
+		assertThat(response.getBody()).isEqualTo("{\"step\":\"choose-new-password\"}");
+	}
+
+	@Test
+	void refusesABodyOverFourKibibytesForTheNewPasswordWith413() {
+		HttpResponse<String> response = chooseNewPassword("Boreas", ISSUED_PASSWORD, "x".repeat(FIVE_KIBIBYTES));
+
+		assertThat(response.getStatus()).isEqualTo(REQUEST_ENTITY_TOO_LARGE.getCode());
+	}
+
 	private HttpResponse<String> logIn(String name, String password) {
-		return post(new JSONObject(Map.of("name", name, "password", password)).toString());
+		return post("/api/v1/login", new JSONObject(Map.of("name", name, "password", password)).toString());
+	}
+
+	private HttpResponse<String> chooseNewPassword(String name, String issuedPassword, String newPassword) {
+		return post("/api/v1/login/new-password", new JSONObject(Map.of("name", name, "issuedPassword", issuedPassword, "newPassword", newPassword)).toString());
 	}
 
 	private static HttpResponse<String> post(String body) {
-		return Unirest.post("/api/v1/login").header("Content-Type", "application/json").body(body).asString();
+		return post("/api/v1/login", body);
+	}
+
+	private static HttpResponse<String> post(String path, String body) {
+		return Unirest.post(path).header("Content-Type", "application/json").body(body).asString();
 	}
 
 	private static String valueOf(String setCookie) {

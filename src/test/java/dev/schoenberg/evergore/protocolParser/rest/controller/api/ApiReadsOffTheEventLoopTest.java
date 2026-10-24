@@ -70,6 +70,8 @@ class ApiReadsOffTheEventLoopTest {
 	private static final Path WORKING_DB = Paths.get("build/tmp/apiReadsOffTheEventLoop/apiReadsOffTheEventLoop.sqlite");
 	private static final String AVATAR = "Aurora";
 	private static final String PASSWORD = "Sommer-2026!";
+	private static final String ISSUED_AVATAR = "Boreas";
+	private static final String ISSUED_PASSWORD = "Issued-2026!";
 	private static final String TOKEN = "?token=test-token";
 	private static final String BANK_ROUTE = "/api/v1/avatars/" + AVATAR + "/bank";
 	private static final int HANG_GUARD_MILLIS = 30_000;
@@ -157,10 +159,23 @@ class ApiReadsOffTheEventLoopTest {
 		assertThat(outcomes).containsOnly(String.valueOf(OK.getCode()));
 	}
 
-	private static String loginRequest() {
-		String body = "{\"name\":\"" + AVATAR + "\",\"password\":\"" + PASSWORD + "\"}";
+	@Test
+	void checksTheIssuedPasswordHashesTheNewOneAndWritesBothOnAPlatformThreadThatIsNoEventLoop() {
+		String body = "{\"name\":\"" + ISSUED_AVATAR + "\",\"issuedPassword\":\"" + ISSUED_PASSWORD + "\",\"newPassword\":\"" + PASSWORD + "\"}";
 
-		return "POST /api/v1/login HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: " + body.length() + "\r\nConnection: close\r\n\r\n" + body;
+		int status = new RawHttpClient(server.getPort()).statusOfRequest(postRequest("/api/v1/login/new-password", body));
+
+		assertThat(status).isEqualTo(OK.getCode());
+		assertThat(loginWork).extracting(Work::what).containsExactly("findByNameKey", "verify", "hash", "replaceIssuedPassword", "recordLastLogin");
+		assertThat(loginWork).noneMatch(Work::onAnEventLoop).noneMatch(work -> work.thread().isVirtual());
+	}
+
+	private static String loginRequest() {
+		return postRequest("/api/v1/login", "{\"name\":\"" + AVATAR + "\",\"password\":\"" + PASSWORD + "\"}");
+	}
+
+	private static String postRequest(String path, String body) {
+		return "POST " + path + " HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: " + body.length() + "\r\nConnection: close\r\n\r\n" + body;
 	}
 
 	private static boolean eventually(BooleanSupplier condition) {
@@ -194,12 +209,14 @@ class ApiReadsOffTheEventLoopTest {
 	@MockBean(AccountRepository.class)
 	AccountRepository accountRepository() {
 		return new AccountRepository() {
-			private final Account account = new Account(AVATAR, "witnessed:" + PASSWORD, PasswordState.CHOSEN, Role.MEMBER, Optional.empty());
+			private final List<Account> accounts = List
+					.of(new Account(AVATAR, "witnessed:" + PASSWORD, PasswordState.CHOSEN, Role.MEMBER, Optional.empty()),
+							new Account(ISSUED_AVATAR, "witnessed:" + ISSUED_PASSWORD, PasswordState.ISSUED, Role.MEMBER, Optional.empty()));
 
 			@Override
 			public Optional<Account> findByNameKey(String nameKey) {
 				witnessLoginWork("findByNameKey");
-				return Optional.of(account).filter(held -> held.nameKey().equals(nameKey));
+				return accounts.stream().filter(held -> held.nameKey().equals(nameKey)).findFirst();
 			}
 
 			@Override
@@ -208,7 +225,15 @@ class ApiReadsOffTheEventLoopTest {
 			}
 
 			@Override
-			public void replacePassword(String nameKey, String passwordHash, PasswordState state) {}
+			public void replacePassword(String nameKey, String passwordHash, PasswordState state) {
+				witnessLoginWork("replacePassword");
+			}
+
+			@Override
+			public boolean replaceIssuedPassword(String nameKey, String passwordHash) {
+				witnessLoginWork("replaceIssuedPassword");
+				return true;
+			}
 
 			@Override
 			public void recordLastLogin(String nameKey, Instant at) {
@@ -222,6 +247,9 @@ class ApiReadsOffTheEventLoopTest {
 		return new PasswordHasher() {
 			@Override
 			public String hash(String clear) {
+				if (clear.equals(PASSWORD)) {
+					witnessLoginWork("hash");
+				}
 				return "witnessed:" + clear;
 			}
 

@@ -26,7 +26,8 @@ class LogInTest {
 	private final PrefixHasher hasher = new PrefixHasher(trail);
 	private final RecordingLogins logins = new RecordingLogins();
 	private final LoginGenerations generations = new LoginGenerations();
-	private final LogIn tested = new LogIn(accounts, hasher, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC), HASH_OF_NO_PASSWORD);
+	private final LogIn tested = new LogIn(new PasswordCheck(accounts, hasher, HASH_OF_NO_PASSWORD),
+			new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC)));
 
 	@Test
 	void logsInAChosenPasswordWithALoginNamedAfterTheAccount() {

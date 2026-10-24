@@ -63,8 +63,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 - **Application use-cases (framework-free):** `application/{EvergoreDataExtractor,EvergoreDataEvaluator}`
   (collect + evaluate coordinators) · `application/LastRunStatus` (monitoring seam: what the
   last run reached, see the pipeline above) · `application/CreateAccounts` (the account step of the
-  pipeline) · `application/LogIn` (a login by name and password, below). Plain objects, wired in
-  `ApplicationFactory`.
+  pipeline) · `application/{LogIn,ChooseNewPassword}` (a login by name and password, and its second
+  step after a reset, below). Plain objects, wired in `ApplicationFactory`.
 - **Extraction pipeline:** `helper/selenium/{Browser,Driver,FileLoader}` ·
   `dataExtraction/website/SeleniumPageSource` (Selenium adapter: login, cookie banner, pagination;
   implements `PageSource`) · `PageContents` (DTO) · `parser/{EntityParser,EntryFactory}` (text ▶
@@ -100,8 +100,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
         fails at once there (SQLite answers `SQLITE_BUSY` without waiting);
     - only writes open a transaction;
     - the scheduled job and the login are the two writers in-process:
-      - the login writes the last login in one short transaction of its own, the password check
-        done before it begins;
+      - the login writes the last login, and after a reset the new password's hash, each in one
+        short transaction of its own, every hash and check done before it begins;
       - while the job's recompute batch or a ledger batch holds the write lock, that transaction
         waits up to the 10 s bound and the login's answer waits with it;
       - a batch longer than the bound fails the login with a 500, and the member tries again;
@@ -318,19 +318,29 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     that is no JWT, each as an empty answer rather than an exception;
   - the verifier does not check `iat` against the clock, so a step back of the clock logs no one
     out, and `exp` still bounds every login.
-- **Logging in:** `application/LogIn` checks a name and a password (what the endpoint answers:
+- **Logging in:** `application/LogIn` checks a name and a password, `application/ChooseNewPassword`
+  takes the new password after a reset (what the endpoints answer:
   [build-run-deploy.md](build-run-deploy.md), "The login API"):
-  - the account is looked up by the folded name key (`LoginName`);
+  - both check the password through `application/PasswordCheck`, which looks the account up by the
+    folded name key (`LoginName`) and runs exactly one Argon2id check;
   - an unknown name is checked against a hash of no password, drawn once at the start, so it costs
-    the same Argon2id check as a wrong password;
-  - a right chosen password issues a signed login with the account's name and role and the
-    generation `application/LoginGenerations` holds for it, an in-memory count per account that
-    starts at 0, and records the last login with the `Clock`'s instant;
-  - the generation is read before the password check and the login is signed with it, so a login
-    that a change of the password overtakes during its check carries the old generation and ends
-    with that change;
-  - a right issued password issues nothing and asks for a new password;
-  - the password check runs before the last-login transaction, never inside it.
+    the same check as a wrong password;
+  - `application/LoginStart` records the last login with the `Clock`'s instant and issues a signed
+    login with the account's name and role and the generation `application/LoginGenerations` holds
+    for it, an in-memory count per account that starts at 0;
+  - `LogIn` and `ChooseNewPassword` read that generation before the password check and sign with
+    it, so a login that a change of the password overtakes during its check carries the old
+    generation and ends with that change;
+  - `LogIn` starts a login for a right chosen password; for a right issued password it starts none
+    and asks for a new password;
+  - `ChooseNewPassword` checks, in this order, that the account exists, holds an issued password
+    and that this password is right, then `PasswordRule`; only then it hashes the new password,
+    replaces the hash with the state `CHOSEN` and starts a login;
+  - the replacing is one update that holds only `WHERE` the state is still `ISSUED`
+    (`AccountRepository.replaceIssuedPassword`): of two requests that carry the issued password at
+    once, one wins and the other gets the answer of a wrong password and no login;
+  - a refused choice changes nothing, so the issued password stays valid;
+  - every hash and password check runs before the transactions, never inside them.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.

@@ -46,6 +46,7 @@ evergore:
       - /admin
       - /api/v1/admin/status
       - /api/v1/login
+      - /api/v1/login/new-password
       - /health
       - /swagger/**
       - /swagger-ui/**

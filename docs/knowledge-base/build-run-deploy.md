@@ -943,7 +943,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 | `evergoreFolder` | `c:\evergore` | Windows path; unused on the Linux container scrape path. |
 | DB path | `database/temp.sqlite` | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
 | Auth token | `evergore.security.api-token`, **required**, env-injected as `EVERGORE_SECURITY_API_TOKEN` (bound by the `SecurityConfiguration` `@ConfigurationProperties` bean) | **Every** request needs `?token=<configured token>` except the configured public paths below. **Mandatory at startup**: a blank/unset token makes the app refuse to boot (`ApiTokenStartupValidator` logs an error naming the variable and throws; an unset variable binds as an empty `Optional` and reaches it). No token value lives in the repo. |
-| Public paths | `evergore.security.public-paths` in `application.yml`: `/`, `/index.html`, `/assets/**`, `/favicon.ico`, `/admin`, `/api/v1/admin/status`, `/api/v1/login`, `/health`, `/swagger/**`, `/swagger-ui/**`, `/redoc/**`, `/rapidoc/**` (same `SecurityConfiguration` bean) | The **only** token-free surface; Ant patterns, matched against the canonicalized path by `PublicPaths`. Everything not listed needs a token, so a new controller is protected by default. Empty or unset ⇒ everything is protected (fail closed), which makes a misconfiguration a visible 401 on `/` rather than a silent hole. |
+| Public paths | `evergore.security.public-paths` in `application.yml`: `/`, `/index.html`, `/assets/**`, `/favicon.ico`, `/admin`, `/api/v1/admin/status`, `/api/v1/login`, `/api/v1/login/new-password`, `/health`, `/swagger/**`, `/swagger-ui/**`, `/redoc/**`, `/rapidoc/**` (same `SecurityConfiguration` bean) | The **only** token-free surface; Ant patterns, matched against the canonicalized path by `PublicPaths`. Everything not listed needs a token, so a new controller is protected by default. Empty or unset ⇒ everything is protected (fail closed), which makes a misconfiguration a visible 401 on `/` rather than a silent hole. |
 | Rate limit | `evergore.rate-limit.*`: `max-requests-per-interval` `30`, `interval` `10s`, `block-duration` `1m`, `max-tracked-clients` `10000` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `RateLimitFilter` (details: bullets below the table). |
 | Password hash | `evergore.password-hash.*`: `memory-kibibytes` `65536`, `iterations` `3`, `parallelism` `1`, `max-concurrent` `2` (bound by the `PasswordHashConfiguration` `@ConfigurationProperties` record, the defaults declared on the record, not in `application.yml`) | The Argon2id cost of `Argon2idPasswordHasher` (64 MiB, 3 iterations, one lane) and how many hashes or checks run at once: a further one waits for a permit and is never refused, so the heap holds at most `max-concurrent` times 64 MiB of them. A `max-concurrent` below `1` fails the start (`PasswordHashStartupValidator`), naming the property. The test profile sets `1024` and `1`. |
 
@@ -1104,7 +1104,7 @@ answered (measured on Micronaut 4.10.9).
 | `GET /favicon.ico` | Favicon: public, but rate-limited and logged like any other request. |
 | `GET /health` | Micronaut management health endpoint, token-exempt and anonymous: the liveness/last-run monitor hook (what it reports: bullets below the table). |
 | `GET /api/v1/admin/status` | JSON admin status, token-exempt and anonymous, same trust level as `/health` (keys and semantics: bullets below the table). |
-| `POST /api/v1/login` | A login by name and password: public, but rate-limited and logged (answers: "The login API" below). |
+| `POST /api/v1/login`, `POST /api/v1/login/new-password` | A login by name and password, and its second step after a reset: public, but rate-limited and logged (answers: "The login API" below). |
 | `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: public, but rate-limited and logged. |
 
 - **`/health`** reports:
@@ -1167,6 +1167,28 @@ case `LogIn`, [architecture.md](architecture.md), "Logging in"):
 - every error answer is a status with no body, so a malformed body is a bare **400** and an
   unexpected failure a bare **500** (`BareErrorResponseProcessor`); the cause stays in the log;
 - the password check runs on the IO pool, like every controller.
+
+`POST /api/v1/login/new-password` takes the JSON body
+`{"name": …, "issuedPassword": …, "newPassword": …}`, the second step after
+`choose-new-password` (`ChooseNewPassword`). Its checks run in this order:
+
+1. the account exists, still holds the password the service issued, and `issuedPassword` is it:
+   - otherwise **401** `{"refusal":"wrong-name-or-password"}`, the answer of a wrong password
+     above;
+   - the answer is the same for an account whose password was already chosen;
+2. the new password is judged:
+   - it keeps the password rule (at least 8 characters, among them a digit and a special
+     character), else **400** `{"refusal":"breaks-the-rule"}`;
+   - it differs from the issued one, else **400** `{"refusal":"same-as-before"}`;
+3. then it replaces the issued password, and only while it is still the issued one:
+   - the loser of two requests with the same issued password at once gets the answer of step 1;
+   - the winner is answered as a right chosen password is: **200** `{"step":"logged-in"}` and the
+     session cookie.
+
+- A refused choice changes nothing: the issued password still logs in to the second step.
+- The same 4 KiB limit holds here too.
+- The same IO pool holds here too.
+- A missing field counts as empty here too.
 
 ## Scheduled job
 

@@ -226,6 +226,11 @@ class CreateAccountsTest {
 		}
 
 		@Override
+		public boolean replaceIssuedPassword(String nameKey, String passwordHash) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
 		public void recordLastLogin(String nameKey, Instant at) {
 			throw new UnsupportedOperationException();
 		}

@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordRefusal;
+
 public sealed interface LogInOutcome {
 	<T> T accept(Visitor<T> visitor);
 
@@ -9,6 +11,8 @@ public sealed interface LogInOutcome {
 		T onChooseNewPassword();
 
 		T onRefused();
+
+		T onNewPasswordRefused(PasswordRefusal refusal);
 	}
 
 	record LoggedIn(String loginValue) implements LogInOutcome {
@@ -29,6 +33,13 @@ public sealed interface LogInOutcome {
 		@Override
 		public <T> T accept(Visitor<T> visitor) {
 			return visitor.onRefused();
+		}
+	}
+
+	record NewPasswordRefused(PasswordRefusal refusal) implements LogInOutcome {
+		@Override
+		public <T> T accept(Visitor<T> visitor) {
+			return visitor.onNewPasswordRefused(refusal);
 		}
 	}
 }

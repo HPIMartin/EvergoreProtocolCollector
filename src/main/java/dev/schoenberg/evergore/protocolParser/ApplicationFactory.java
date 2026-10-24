@@ -10,6 +10,7 @@ import io.micronaut.context.annotation.Factory;
 import org.openqa.selenium.support.ui.Sleeper;
 
 import dev.schoenberg.evergore.protocolParser.application.AccountRepository;
+import dev.schoenberg.evergore.protocolParser.application.ChooseNewPassword;
 import dev.schoenberg.evergore.protocolParser.application.CreateAccounts;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
@@ -17,11 +18,14 @@ import dev.schoenberg.evergore.protocolParser.application.IssuedPasswords;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 import dev.schoenberg.evergore.protocolParser.application.LogIn;
 import dev.schoenberg.evergore.protocolParser.application.LoginGenerations;
+import dev.schoenberg.evergore.protocolParser.application.LoginStart;
+import dev.schoenberg.evergore.protocolParser.application.PasswordCheck;
 import dev.schoenberg.evergore.protocolParser.application.PasswordGenerator;
 import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
 import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordRule;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContributions;
 import dev.schoenberg.evergore.protocolParser.businessLogic.metaInformation.MetaInformationRepository;
@@ -142,9 +146,23 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public LogIn logIn(AccountRepository accounts, PasswordHasher passwordHasher, SignedLogins signedLogins, LoginGenerations generations, Clock clock,
-			PasswordGenerator passwordGenerator) {
-		return new LogIn(accounts, passwordHasher, signedLogins, generations, clock, passwordHasher.hash(passwordGenerator.generate()));
+	public PasswordCheck passwordCheck(AccountRepository accounts, PasswordHasher passwordHasher, PasswordGenerator passwordGenerator) {
+		return new PasswordCheck(accounts, passwordHasher, passwordHasher.hash(passwordGenerator.generate()));
+	}
+
+	@Singleton
+	public LoginStart loginStart(AccountRepository accounts, SignedLogins signedLogins, LoginGenerations generations, Clock clock) {
+		return new LoginStart(accounts, signedLogins, generations, clock);
+	}
+
+	@Singleton
+	public LogIn logIn(PasswordCheck passwordCheck, LoginStart loginStart) {
+		return new LogIn(passwordCheck, loginStart);
+	}
+
+	@Singleton
+	public ChooseNewPassword chooseNewPassword(PasswordCheck passwordCheck, AccountRepository accounts, PasswordHasher passwordHasher, LoginStart loginStart) {
+		return new ChooseNewPassword(passwordCheck, accounts, passwordHasher, new PasswordRule(), loginStart);
 	}
 
 	@Singleton

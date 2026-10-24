@@ -10,22 +10,28 @@ import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Produces;
 
+import dev.schoenberg.evergore.protocolParser.application.ChooseNewPassword;
 import dev.schoenberg.evergore.protocolParser.application.LogIn;
 import dev.schoenberg.evergore.protocolParser.application.LogInOutcome;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordRefusal;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.LoginRefusal;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.LoginRequest;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.LoginStep;
+import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.NewPasswordRequest;
 
 import static io.micronaut.http.MediaType.APPLICATION_JSON;
 
 @Controller(LoginController.PATH)
 public class LoginController {
 	public static final String PATH = "/api/v1/login";
+	public static final String NEW_PASSWORD = "/new-password";
 
 	private final LogIn logIn;
+	private final ChooseNewPassword chooseNewPassword;
 
-	public LoginController(LogIn logIn) {
+	public LoginController(LogIn logIn, ChooseNewPassword chooseNewPassword) {
 		this.logIn = logIn;
+		this.chooseNewPassword = chooseNewPassword;
 	}
 
 	@Post
@@ -33,6 +39,15 @@ public class LoginController {
 	@Produces(APPLICATION_JSON)
 	public HttpResponse<?> logIn(@Body LoginRequest request) {
 		LogInOutcome outcome = logIn.with(textOf(request.name()), textOf(request.password()));
+
+		return outcome.accept(new Answer());
+	}
+
+	@Post(NEW_PASSWORD)
+	@Consumes(APPLICATION_JSON)
+	@Produces(APPLICATION_JSON)
+	public HttpResponse<?> chooseNewPassword(@Body NewPasswordRequest request) {
+		LogInOutcome outcome = chooseNewPassword.with(textOf(request.name()), textOf(request.issuedPassword()), textOf(request.newPassword()));
 
 		return outcome.accept(new Answer());
 	}
@@ -55,6 +70,11 @@ public class LoginController {
 		@Override
 		public HttpResponse<?> onRefused() {
 			return HttpResponse.status(HttpStatus.UNAUTHORIZED).body(LoginRefusal.WRONG_NAME_OR_PASSWORD);
+		}
+
+		@Override
+		public HttpResponse<?> onNewPasswordRefused(PasswordRefusal refusal) {
+			return HttpResponse.badRequest(LoginRefusal.of(refusal));
 		}
 	}
 }

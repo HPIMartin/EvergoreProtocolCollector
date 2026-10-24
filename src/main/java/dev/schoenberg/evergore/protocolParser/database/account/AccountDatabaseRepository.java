@@ -50,6 +50,21 @@ public class AccountDatabaseRepository implements AccountRepository {
 	}
 
 	@Override
+	public boolean replaceIssuedPassword(String nameKey, String passwordHash) {
+		return database.inTransaction(() -> {
+			UpdateBuilder<AccountEntry, String> update = accounts().updateBuilder();
+			update
+					.updateColumnValue(PASSWORD_HASH_COLUMN, passwordHash)
+					.updateColumnValue(PASSWORD_STATE_COLUMN, PasswordState.CHOSEN)
+					.where()
+					.eq(NAME_KEY_COLUMN, nameKey)
+					.and()
+					.eq(PASSWORD_STATE_COLUMN, PasswordState.ISSUED);
+			return update.update() > 0;
+		});
+	}
+
+	@Override
 	public void recordLastLogin(String nameKey, Instant at) {
 		database.inTransaction(() -> {
 			UpdateBuilder<AccountEntry, String> update = accounts().updateBuilder();
