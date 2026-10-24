@@ -65,7 +65,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   implements `PageSource`) · `PageContents` (DTO) · `parser/{EntityParser,EntryFactory}` (text ▶
   `Entry`, regex from `Constants`; `ApplicationFactory` builds the `EntityParser` around the `Logger` bean and injects it into the extractor). Coordinator `EvergoreDataExtractor` (delta filter) lives in
   `application`.
-- **Persistence:** three adapters implementing the businessLogic ports, all built on one database:
+- **Persistence:** four adapters implementing the businessLogic and application ports, all built on
+  one database:
   - `database/SqliteDatabase`, one per context, opens the file once and hands out pooled
     connections:
     - none to a second thread while one holds it;
@@ -146,6 +147,18 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     - a test records them through the registration it hands the source instead.
   - `database/metaInformation/*`, the meta store: a recompute's batch is written in one
     `SqliteDatabase` transaction.
+  - `database/account/*` implements the port `application/AccountRepository` over the `account`
+    table (migration `V5`), one row per avatar the ledgers name:
+    - columns: `id`, `avatar` (as the ledgers write it), `name_key` (the folded login name,
+      unique), `password_hash`, `password_state` (`ISSUED` or `CHOSEN`), `role` (`MEMBER` or
+      `ADMIN`, default `MEMBER`) and `last_login_epoch_millis`;
+    - the port holds what the login needs: find by name key, add if absent, replace the password
+      with its state, record the last login;
+    - every write is one `SqliteDatabase` transaction, a read stays on the pooled connection;
+    - `last_login_epoch_millis` is the one nullable column (handbook §3, strict data): the entity
+      holds it as a `Long` and the repository answers an `Optional<Instant>`, so a missing login
+      never reads as the epoch;
+    - instants are UTC epoch milliseconds, as the ledgers' instant column.
 - **Business logic (framework-free):** ports `BankRepository` and `StorageRepository` (each the
   generic `base/LedgerRepository` over its entry record, declaring nothing of its own),
   `MetaInformationRepository` · records `BankEntry`, `StorageEntry`, `MetaInformation` ·
@@ -154,7 +167,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   ledger sums, their net and the guild total, assembled per known avatar) ·
   `account/{PasswordRule,PasswordRefusal}` (what a chosen password must hold, judged in the NFC form
   of `account/NormalForm`, where a special character is a punctuation or symbol code point, and why
-  a new one is refused: it breaks the rule, or it is the one it replaces) · `account/LoginName` (a typed name
+  a new one is refused: it breaks the rule, or it is the one it replaces) · `account/{Account,Role,PasswordState}`
+  (an avatar's account: its password hash and state, its role, its last login) · `account/LoginName` (a typed name
   matches an avatar's regardless of capitals, folded with `Locale.ROOT`, so the JVM's default locale
   never changes the key; the key is the name in NFC without surrounding space, so a decomposed umlaut
   and a name typed with a blank at its end match, and `ß` and `SS` stay two names) · `Constants`.

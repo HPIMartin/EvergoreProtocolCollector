@@ -50,7 +50,7 @@ class DatabaseMigrationTest {
 	void createsEveryTableOnAnEmptyDatabase() {
 		migrate();
 
-		assertThat(tableNames()).contains("bankEntries", "storageEntries", "metaInformation");
+		assertThat(tableNames()).contains("account", "bankEntries", "storageEntries", "metaInformation");
 	}
 
 	@Test
@@ -179,7 +179,7 @@ class DatabaseMigrationTest {
 		migrate();
 
 		assertThat(indexColumns())
-				.containsExactly("bankEntries|bankEntries_avatar_timeStampEpochMillis_idx|0|avatar|",
+				.containsExactly("account|account_name_key_idx|0|name_key|", "bankEntries|bankEntries_avatar_timeStampEpochMillis_idx|0|avatar|",
 						"bankEntries|bankEntries_avatar_timeStampEpochMillis_idx|1|timeStampEpochMillis|", "bankEntries|bankEntries_avatar_timeStamp_idx|0|avatar|",
 						"bankEntries|bankEntries_avatar_timeStamp_idx|1|timeStamp|", "storageEntries|storageEntries_avatar_timeStampEpochMillis_idx|0|avatar|",
 						"storageEntries|storageEntries_avatar_timeStampEpochMillis_idx|1|timeStampEpochMillis|", "storageEntries|storageEntries_avatar_timeStamp_idx|0|avatar|",
@@ -200,7 +200,7 @@ class DatabaseMigrationTest {
 		migrate();
 
 		assertThat(indexColumns())
-				.containsExactly("bankEntries|bankEntries_avatar_timeStampEpochMillis_idx|0|avatar|",
+				.containsExactly("account|account_name_key_idx|0|name_key|", "bankEntries|bankEntries_avatar_timeStampEpochMillis_idx|0|avatar|",
 						"bankEntries|bankEntries_avatar_timeStampEpochMillis_idx|1|timeStampEpochMillis|", "bankEntries|bankEntries_avatar_timeStamp_idx|0|avatar|",
 						"bankEntries|bankEntries_avatar_timeStamp_idx|1|timeStamp|", "storageEntries|storageEntries_avatar_timeStampEpochMillis_idx|0|avatar|",
 						"storageEntries|storageEntries_avatar_timeStampEpochMillis_idx|1|timeStampEpochMillis|", "storageEntries|storageEntries_avatar_timeStamp_idx|0|avatar|",
@@ -328,7 +328,7 @@ class DatabaseMigrationTest {
 			return null;
 		});
 
-		assertThat(tableNames()).containsExactlyInAnyOrder("bankEntries", "flyway_schema_history", "metaInformation", "storageEntries");
+		assertThat(tableNames()).containsExactlyInAnyOrder("account", "bankEntries", "flyway_schema_history", "metaInformation", "storageEntries");
 		assertRejectsNullInEveryColumn("metaInformation", "key, value", List.of("'k'", "'v'"));
 	}
 
