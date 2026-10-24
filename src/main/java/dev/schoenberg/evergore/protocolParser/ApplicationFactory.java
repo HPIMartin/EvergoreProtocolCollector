@@ -17,6 +17,7 @@ import dev.schoenberg.evergore.protocolParser.application.IssuedPasswords;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 import dev.schoenberg.evergore.protocolParser.application.PasswordGenerator;
 import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
+import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
@@ -39,6 +40,7 @@ import dev.schoenberg.evergore.protocolParser.helper.fileLoader.AlternativeFileL
 import dev.schoenberg.evergore.protocolParser.helper.fileLoader.DiscFileLoader;
 import dev.schoenberg.evergore.protocolParser.helper.fileLoader.ResourceFileLoader;
 import dev.schoenberg.evergore.protocolParser.helper.security.Argon2idPasswordHasher;
+import dev.schoenberg.evergore.protocolParser.helper.security.JwtLogins;
 import dev.schoenberg.evergore.protocolParser.helper.security.RandomPasswordGenerator;
 import dev.schoenberg.evergore.protocolParser.helper.selenium.FileLoader;
 
@@ -119,6 +121,11 @@ public class ApplicationFactory {
 	@Singleton
 	public IssuedPasswords issuedPasswords() {
 		return (avatar, password) -> {};
+	}
+
+	@Singleton
+	public SignedLogins signedLogins(Clock clock) {
+		return JwtLogins.withARandomKey(new SecureRandom(), clock);
 	}
 
 	@Singleton

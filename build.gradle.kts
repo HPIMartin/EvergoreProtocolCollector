@@ -31,6 +31,7 @@ dependencies {
 	implementation("org.xerial:sqlite-jdbc:3.41.2.2")
 	implementation("org.flywaydb:flyway-core:11.20.3")
 	implementation("org.bouncycastle:bcprov-jdk18on:1.86")
+	implementation("com.auth0:java-jwt:4.6.2")
 
 	runtimeOnly("ch.qos.logback:logback-classic")
 	runtimeOnly("org.yaml:snakeyaml")

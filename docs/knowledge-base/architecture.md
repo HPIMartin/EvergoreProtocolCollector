@@ -172,7 +172,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   `account/{PasswordRule,PasswordRefusal}` (what a chosen password must hold, judged in the NFC form
   of `account/NormalForm`, where a special character is a punctuation or symbol code point, and why
   a new one is refused: it breaks the rule, or it is the one it replaces) · `account/{Account,Role,PasswordState}`
-  (an avatar's account: its password hash and state, its role, its last login) · `account/LoginName` (a typed name
+  (an avatar's account: its password hash and state, its role, its last login) · `account/Login`
+  (what a signed login says: the account name, role, generation, id and its two instants) · `account/LoginName` (a typed name
   matches an avatar's regardless of capitals, folded with `Locale.ROOT`, so the JVM's default locale
   never changes the key; the key is the name in NFC without surrounding space, so a decomposed umlaut
   and a name typed with a blank at its end match, and `ß` and `SS` stay two names) · `Constants`.
@@ -289,6 +290,20 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     `No account for the avatar <Avatar>: the name admin logs in with the admin key.`;
   - an avatar whose hash or insert throws is logged with its name at error and the other avatars
     still get their accounts.
+- **Signed logins:** the port `application/SignedLogins` (`issue(name, role, generation)`,
+  `read(value)` answering an `Optional<Login>`) with the adapter `helper/security/JwtLogins`
+  (Auth0 java-jwt):
+  - the value is a JWT signed with HMAC-SHA256;
+  - the key is 32 bytes `ApplicationFactory` draws from `SecureRandom` at every start;
+  - a restart ends every login, because the key is gone;
+  - the key is never configured and never logged;
+  - the claims are the name (`sub`), `role`, `gen` (the generation), a unique `jti`, and `iat` and
+    `exp` from the injected `Clock`, with `exp` exactly 7 days after `iat`;
+  - the verifier pins the algorithm and refuses a value signed with another key, with another
+    algorithm or with none, one whose claims were altered, one at or after its `exp`, and anything
+    that is no JWT, each as an empty answer rather than an exception;
+  - the verifier does not check `iat` against the clock, so a step back of the clock logs no one
+    out, and `exp` still bounds every login.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.
