@@ -7,7 +7,9 @@ Feature: The admin page: how the daily collection is going
   healthy or not is the health check's job. The run outcomes are kept only while the service runs;
   the figures' date is stored with the figures. All times are German wall-clock time, as the game
   shows them; the health report writes them in UTC, as "The service's health check: its verdict"
-  explains.
+  explains. Who may open the page is in "Accounts for the members, and the admin".
+  The operator asks for the health report with the admin key, as "The service's health check: its
+  verdict" says.
 
   Rule: The page dates the figures on show with the last recompute that succeeded
 
@@ -52,14 +54,6 @@ Feature: The admin page: how the daily collection is going
         | Letzter Scrape: noch kein Scrape gelaufen               |
         | Letzte Neuberechnung: noch keine Neuberechnung gelaufen |
       And the admin page lists no unknown item
-
-  Rule: The admin page opens without the guild's token
-    This holds until the admin gets a login of their own.
-
-    Scenario: The admin page opens without the guild's token
-      Given the daily collection ran at 02.01.2026 05:00
-      When the admin opens the admin page without the guild's token
-      Then the admin page reads "Stand: 02.01.2026 05:00"
 
   Rule: The admin page and the health report date each step of the daily collection
     The health check's verdict on the same runs is in "The service's health check: its verdict".

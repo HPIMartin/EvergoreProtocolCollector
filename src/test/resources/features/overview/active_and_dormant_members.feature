@@ -18,12 +18,24 @@ Feature: Active and dormant members
         | 31.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
       And the daily collection has run
 
-    Scenario: A member whose last movement lies within the 30 days before the newest one is active, from the window's first minute on
+    Scenario Outline: <who>, who moved <when> before the newest movement, <outcome> <where>
       Boreas moved gold exactly 30 days before Aurora's newest movement, Calix one minute earlier.
+      The same line decides whether a member's account rests ("Resting accounts"); every account
+      begins with a reset, so an account that does not rest asks for a new password.
 
-      When a member opens the overview
-      Then the active table lists "Aurora, Boreas, Brynja"
-      And the dormant table lists "Calix"
+      When <action>
+      Then <result>
+
+      Examples:
+        | who    | when                   | outcome                     | where           | action                      | result                              |
+        | Boreas | exactly 30 days        | stands in the active table  | in the overview | a member opens the overview | "Boreas" stands in the active table |
+        | Calix  | 30 days and one minute | stands in the dormant table | in the overview | a member opens the overview | "Calix" stands in the dormant table |
+
+      @wip
+      Examples: On the login page
+        | who    | when                   | outcome                     | where             | action                                                          | result                                                                                 |
+        | Boreas | exactly 30 days        | is asked for a new password | on the login page | a member logs in as "Boreas" with the password the reset issued | the page is headed "Neues Passwort wählen"                                             |
+        | Calix  | 30 days and one minute | is told the account rests   | on the login page | a member logs in as "Calix" with the password the reset issued  | the page says "Dein Konto ruht, bis das Protokoll wieder einen Vorgang von dir zeigt." |
 
     Scenario: The later of a member's two ledgers decides
       Brynja's last bank movement is more than 30 days old, her last storage movement is not.

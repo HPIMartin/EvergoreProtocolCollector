@@ -7,6 +7,8 @@ Feature: The health report: what the last recompute found
   found", the suspected round trips in "Suspected round trips of trader goods", and the pairs it
   could not judge in "Products of unread recipe". Where the admin page shows the same list, the
   rules below hold for it too.
+  The operator asks for the health report with the admin key, as "The service's health check: its
+  verdict" says.
 
   Rule: The report names what the last successful recompute found
 

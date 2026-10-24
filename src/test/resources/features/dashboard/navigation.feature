@@ -1,10 +1,11 @@
 Feature: Finding one's way through the dashboard
   The dashboard has the overview, a page explaining its figures and, for every member, a bank ledger
-  and a storage ledger. Every page carries a frame, the bar of links at its top; a page's own
-  content can hold further links. Every page can be bookmarked. The overview's content links, under
-  the guild's four figures, to the explanation page, and from a member's name and last-activity
-  dates to the ledgers behind them. No page of the dashboard links to the admin page; the admin
-  opens it directly.
+  and a storage ledger. Every page carries a frame at its top: the bar of links, the name the member
+  is logged in as, the button for changing the password, except under the admin key, and the logout
+  button; a page's own content can hold further links. Every page can be bookmarked. The overview's
+  content links, under the guild's four figures, to the explanation page, and from a member's name
+  and last-activity dates to the ledgers behind them. No page of the dashboard links to the admin
+  page; the admin opens it directly.
 
   Background:
     Given the guild bank ledger holds:
