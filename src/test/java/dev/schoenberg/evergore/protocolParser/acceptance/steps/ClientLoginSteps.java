@@ -19,6 +19,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.operator.LoginRequests;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.ServiceRequests;
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.HealthReport;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.OperatorSettings;
 import dev.schoenberg.evergore.protocolParser.rest.filter.AcceptanceClientIp;
 
@@ -37,6 +38,7 @@ public class ClientLoginSteps {
 	private static final int UNAUTHORIZED = 401;
 	private static final int BAD_REQUEST = 400;
 	private static final int FOUND = 302;
+	private static final int FORBIDDEN = 403;
 
 	private final LoginRequests logins;
 	private final ServiceRequests requests;
@@ -44,11 +46,14 @@ public class ClientLoginSteps {
 	private final ClientAnswer received;
 	private final OperatorSettings settings;
 	private final RunningService service;
+	private final HealthReport health;
 	private Answer earlierLoginAnswer;
 	private String issuedLogin;
 	private String returnTarget;
 
-	public ClientLoginSteps(LoginRequests logins, ServiceRequests requests, Accounts accounts, ClientAnswer received, OperatorSettings settings, RunningService service) {
+	public ClientLoginSteps(LoginRequests logins, ServiceRequests requests, Accounts accounts, ClientAnswer received, OperatorSettings settings, RunningService service,
+			HealthReport health) {
+		this.health = health;
 		this.logins = logins;
 		this.requests = requests;
 		this.accounts = accounts;
@@ -214,6 +219,21 @@ public class ClientLoginSteps {
 	@When("another client asks for {askedFor} with a login {alteredLogin}")
 	public void anotherClientAsksForWithAnAlteredLogin(List<String> addresses, UnaryOperator<String> alteration) {
 		received.remember(logins.asking(addresses.getFirst(), alteration.apply(issuedLogin)));
+	}
+
+	@When("the client asks for the admin's status figures with its login")
+	public void theClientAsksForTheAdminsStatusFiguresWithItsLogin() {
+		received.remember(logins.asking(ADMINS_STATUS_FIGURES, issuedLogin));
+	}
+
+	@When("the client asks the service for its health with its login")
+	public void theClientAsksTheServiceForItsHealthWithItsLogin() {
+		health.askWithTheLogin(issuedLogin);
+	}
+
+	@Then("the operator finds the request refused for lacking the admin's role")
+	public void theOperatorFindsTheRequestRefusedForLackingTheAdminsRole() {
+		assertThat(received.current().status()).isEqualTo(FORBIDDEN);
 	}
 
 	@Then("the operator finds the login the service issued to Aurora opening the overview's figures")

@@ -4,6 +4,12 @@ export class Unauthorized extends Error {
   }
 }
 
+export class Forbidden extends Error {
+  constructor() {
+    super('The API refused the role of the login')
+  }
+}
+
 export class RequestFailed extends Error {
   constructor(status: number) {
     super(`The API answered ${String(status)}`)

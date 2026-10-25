@@ -13,9 +13,11 @@ import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
 import dev.schoenberg.evergore.protocolParser.exceptions.NoElementFound;
 import dev.schoenberg.evergore.protocolParser.exceptions.ProtocolParserException;
 import dev.schoenberg.evergore.protocolParser.exceptions.ProtocolParserException.ExceptionResponseVisitor;
+import dev.schoenberg.evergore.protocolParser.exceptions.RoleMissing;
 import dev.schoenberg.evergore.protocolParser.exceptions.TooManyRequests;
 
 import static io.micronaut.http.HttpResponse.status;
+import static io.micronaut.http.HttpStatus.FORBIDDEN;
 import static io.micronaut.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static io.micronaut.http.HttpStatus.NOT_FOUND;
 import static io.micronaut.http.HttpStatus.TOO_MANY_REQUESTS;
@@ -61,6 +63,11 @@ public class ApplicationExceptionHandler implements ExceptionHandler<ProtocolPar
 	@Override
 	public HttpResponse<?> onNoElementFound(NoElementFound exception) {
 		return status(NOT_FOUND);
+	}
+
+	@Override
+	public HttpResponse<?> onRoleMissing(RoleMissing exception) {
+		return status(FORBIDDEN);
 	}
 
 	@Override

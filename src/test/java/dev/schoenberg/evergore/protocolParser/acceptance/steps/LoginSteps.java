@@ -38,6 +38,11 @@ public class LoginSteps {
 		logIn(name, password);
 	}
 
+	@Given("the admin has logged in as {string} with the password {string}")
+	public void theAdminHasLoggedInWithThePassword(String name, String password) {
+		logIn(name, password);
+	}
+
 	@Given("a member has logged in as {string} with the password {string} on two browsers")
 	public void aMemberHasLoggedInOnTwoBrowsers(String name, String password) {
 		logIn(name, password);

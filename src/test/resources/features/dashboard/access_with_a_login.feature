@@ -1,4 +1,3 @@
-@wip
 Feature: Access with a login
   The guild's figures are for its members only. A member logs in on the login page; once logged in,
   the member sees the dashboard, and every link the dashboard shows opens its page as well. Without

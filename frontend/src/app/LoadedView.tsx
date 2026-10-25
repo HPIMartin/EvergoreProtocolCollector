@@ -15,6 +15,12 @@ export function LoadedView<T>({ load, children }: LoadedViewProps<T>) {
     loading: () => <StatusPanel variant="loading" message="Wird geladen…" />,
     loaded: (value) => children(value),
     unauthorized: () => <LoginRequired />,
+    forbidden: () => (
+      <StatusPanel
+        variant="error"
+        message="Diese Seite ist dem Admin vorbehalten."
+      />
+    ),
     noSuchPage: () => (
       <StatusPanel variant="error" message="Diese Seite gibt es nicht." />
     ),

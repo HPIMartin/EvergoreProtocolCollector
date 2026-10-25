@@ -2,6 +2,7 @@ import type { Ledger, Page } from '../domain'
 import { entriesOf, unknownAvatar } from '../domain'
 
 import {
+  Forbidden,
   MalformedResponse,
   NoSuchPage,
   RequestFailed,
@@ -22,6 +23,7 @@ export type HttpGet = (url: string) => Promise<Response>
 const AVATARS = '/api/v1/avatars'
 const ADMIN_STATUS = '/api/v1/admin/status'
 const UNAUTHORIZED = 401
+const FORBIDDEN = 403
 const BAD_REQUEST = 400
 const NOT_FOUND = 404
 
@@ -45,6 +47,9 @@ export function httpProtocolApi(get: HttpGet): ProtocolApi {
   async function bodyOf(response: Response): Promise<unknown> {
     if (response.status === UNAUTHORIZED) {
       throw new Unauthorized()
+    }
+    if (response.status === FORBIDDEN) {
+      throw new Forbidden()
     }
     if (!response.ok) {
       throw new RequestFailed(response.status)

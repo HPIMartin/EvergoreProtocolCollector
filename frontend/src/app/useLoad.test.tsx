@@ -1,7 +1,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { NoSuchPage, RequestFailed, Unauthorized } from '../api'
+import { Forbidden, NoSuchPage, RequestFailed, Unauthorized } from '../api'
 
 import type { LoadVisitor } from './useLoad.ts'
 import { useLoad } from './useLoad.ts'
@@ -10,6 +10,7 @@ const describingVisitor: LoadVisitor<string, string> = {
   loading: () => 'still loading',
   loaded: (value) => `loaded ${value}`,
   unauthorized: () => 'the login was refused',
+  forbidden: () => 'the role was refused',
   noSuchPage: () => 'the page does not exist',
   failed: () => 'the load failed',
 }
@@ -51,6 +52,18 @@ describe('useLoad', () => {
     const outcome = load.result.current.accept(describingVisitor)
 
     expect(outcome).toBe('the login was refused')
+  })
+
+  it('reports a refused role as its own outcome', async () => {
+    const load = renderHook(() =>
+      useLoad(() => Promise.reject(new Forbidden()), 'a-key'),
+    )
+
+    await act(async () => undefined)
+
+    const outcome = load.result.current.accept(describingVisitor)
+
+    expect(outcome).toBe('the role was refused')
   })
 
   it('reports a page that does not exist as its own outcome', async () => {

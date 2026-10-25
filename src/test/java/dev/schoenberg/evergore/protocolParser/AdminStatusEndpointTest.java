@@ -79,6 +79,13 @@ class AdminStatusEndpointTest {
 	}
 
 	@Test
+	void adminStatusEndpointRefusesAMembersLoginWith403() {
+		HttpResponse<String> response = Unirest.get("/api/v1/admin/status").header("Cookie", LoginCookie.memberHeaderFor(server, "Aurora")).asString();
+
+		assertThat(response.getStatus()).isEqualTo(403);
+	}
+
+	@Test
 	void reportsTheStampAndBothSuccessfulOutcomesOfTheRunThatJustHappened() {
 		JSONObject body = adminStatus();
 

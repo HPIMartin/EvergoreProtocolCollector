@@ -7,6 +7,8 @@ public abstract class ProtocolParserException extends RuntimeException {
 
 		T onNoElementFound(NoElementFound exception);
 
+		T onRoleMissing(RoleMissing exception);
+
 		T onTooManyRequests(TooManyRequests exception);
 
 		T onUnknown(ProtocolParserException exception);

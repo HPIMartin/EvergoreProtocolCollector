@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
 import java.net.URLEncoder;
+import java.util.Optional;
 
 import jakarta.inject.Singleton;
 
@@ -18,7 +19,9 @@ import org.reactivestreams.Publisher;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
+import dev.schoenberg.evergore.protocolParser.exceptions.RoleMissing;
 import dev.schoenberg.evergore.protocolParser.rest.controller.LoginPageController;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -28,6 +31,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class AccessFilter implements HttpServerFilter {
 	private static final String LOCATION = "Location";
 	private static final String NEXT = "next";
+	private static final String ADMIN_PATH = "/api/v1/admin";
 
 	private final PathCanonicalizer canonicalizer;
 	private final PublicPaths publicPaths;
@@ -49,7 +53,14 @@ public class AccessFilter implements HttpServerFilter {
 	@Override
 	public Publisher<MutableHttpResponse<?>> doFilter(HttpRequest<?> request, ServerFilterChain chain) {
 		String path = canonicalizer.canonicalize(request.getPath());
-		if (publicPaths.contains(path) || hasALogin(request)) {
+		if (publicPaths.contains(path)) {
+			return chain.proceed(request);
+		}
+		Optional<Login> login = request.getAttribute(LoginAttribute.NAME, Login.class);
+		if (login.isPresent()) {
+			if (isTheAdminsPath(path) && login.get().role() != Role.ADMIN) {
+				throw new RoleMissing();
+			}
 			return chain.proceed(request);
 		}
 
@@ -71,7 +82,7 @@ public class AccessFilter implements HttpServerFilter {
 		return LoginPageController.PATH + "?" + NEXT + "=" + URLEncoder.encode(wayBack, UTF_8);
 	}
 
-	private static boolean hasALogin(HttpRequest<?> request) {
-		return request.getAttribute(LoginAttribute.NAME, Login.class).isPresent();
+	private static boolean isTheAdminsPath(String canonicalPath) {
+		return canonicalPath.equals(ADMIN_PATH) || canonicalPath.startsWith(ADMIN_PATH + "/");
 	}
 }

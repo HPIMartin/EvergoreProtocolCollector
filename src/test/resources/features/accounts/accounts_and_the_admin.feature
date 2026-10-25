@@ -1,4 +1,3 @@
-@wip
 Feature: Accounts for the members, and the admin
   Every avatar the guild ledgers name gets one account, after the daily collection that first reads
   it; the account begins with a reset, a random password of its own, and later collections leave it

@@ -21,6 +21,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginSource;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
+import dev.schoenberg.evergore.protocolParser.exceptions.RoleMissing;
 import dev.schoenberg.evergore.protocolParser.helper.config.SecurityConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,6 +32,8 @@ class AccessFilterTest {
 	private static final String OLD_TOKEN = "correct-horse-battery-staple";
 	private static final String PROTECTED_PATH = "/api/v1/avatars";
 	private static final Login AURORA = new Login("Aurora", Role.MEMBER, 0, LoginSource.ACCOUNT, "id", MADE, MADE.plus(Login.LIFETIME));
+
+	private static final Login CALIX = new Login("Calix", Role.ADMIN, 0, LoginSource.ACCOUNT, "admin-id", MADE, MADE.plus(Login.LIFETIME));
 
 	private final Publisher<MutableHttpResponse<?>> passedThrough = _ -> {};
 	private final List<HttpRequest<?>> reachedTheChain = new ArrayList<>();
@@ -61,6 +64,37 @@ class AccessFilterTest {
 
 		assertThat(reachedTheChain).containsExactly(request);
 		assertThat(filtered).isSameAs(passedThrough);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"/api/v1/admin/status", "/api/v1/admin", "/api/v1/admin/", "/assets/../api/v1/admin/status"})
+	void rejectsAMembersLoginOnTheAdminsPaths(String address) {
+		MutableHttpRequest<?> request = HttpRequest.GET(address);
+		request.setAttribute(LoginAttribute.NAME, AURORA);
+
+		assertThatThrownBy(() -> tested.doFilter(request, chain)).isInstanceOf(RoleMissing.class);
+		assertThat(reachedTheChain).isEmpty();
+	}
+
+	@Test
+	void passesAnAdminLoginOnTheAdminsPaths() {
+		MutableHttpRequest<?> request = HttpRequest.GET("/api/v1/admin/status");
+		request.setAttribute(LoginAttribute.NAME, CALIX);
+
+		Publisher<MutableHttpResponse<?>> filtered = tested.doFilter(request, chain);
+
+		assertThat(reachedTheChain).containsExactly(request);
+		assertThat(filtered).isSameAs(passedThrough);
+	}
+
+	@Test
+	void passesAMembersLoginOnAPathThatOnlyStartsLikeTheAdminsPaths() {
+		MutableHttpRequest<?> request = HttpRequest.GET("/api/v1/administrators");
+		request.setAttribute(LoginAttribute.NAME, AURORA);
+
+		tested.doFilter(request, chain);
+
+		assertThat(reachedTheChain).containsExactly(request);
 	}
 
 	@Test

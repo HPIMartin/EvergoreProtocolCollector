@@ -986,7 +986,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 - **`logback.xml`**: single colored STDOUT appender, root level `info`. Nothing logs a request URI's
   query string, so a credential in an address (the guild's old `?token=…` link) never reaches the log: `RequestAuditLogFilter` logs only
   client IP and user-agent, and the exception handler logs `request.getPath()`, which excludes the
-  query (pinned by `ApplicationExceptionHandlerTest`). An expected client error (401, 404, 429) is
+  query (pinned by `ApplicationExceptionHandlerTest`). An expected client error (401, 403, 404, 429) is
   one `info` line; only a server error logs at `error` with its stack trace, so probing the login
   cannot bury real errors in traces.
 
@@ -998,7 +998,9 @@ nothing:
 - `LoginReadingFilter` (order 2, ahead of the rate limit) reads the `epc_session` cookie through
   `ValidLogins`, which checks the signature and the in-memory generation of the account, and puts
   the login on the request;
-- `AccessFilter` (order 5) lets a public path or a request with a login through;
+- `AccessFilter` (order 5) lets a public path or a request with a login through, except `/api/v1/admin`
+  and below, which only a login with the admin role opens: a member's login is answered **403**
+  (`RoleMissing`);
 - every other request is answered **401**, except a browser navigation, a `GET` with
   `Accept: text/html` to a page of the dashboard (`SpaNavigationPaths.isSpaOwned`, so `/`, a page
   the dashboard does not have and the guild's old link included): it is answered **302** to
@@ -1117,7 +1119,7 @@ answered (measured on Micronaut 4.10.9).
 | `GET /favicon.ico` | Favicon: behind a login like the rest of the dashboard. |
 | `GET /login`, `/login/`, `/login/**` | The login page (`LoginPageController` serves its `login.html` at `/login` and `/login/`) and its own bundle under `/login/assets/`: public, but rate-limited and logged; an unknown path below `/login` keeps its 404, the dashboard's fallback never answers it. |
 | `GET /health` | Micronaut management health endpoint, open without a login: the liveness/last-run monitor hook, its details for an admin login only (what it reports and to whom: bullets below the table). |
-| `GET /api/v1/admin/status` | JSON admin status, behind a login (any login until the admin role gates it) (keys and semantics: bullets below the table). |
+| `GET /api/v1/admin/status` | JSON admin status, behind a login with the admin role (a member's login is answered 403) (keys and semantics: bullets below the table). |
 | `POST /api/v1/login`, `POST /api/v1/login/new-password` | A login by name and password, and its second step after a reset: public, but rate-limited and logged (answers: "The login API" below). |
 | `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: behind a login, rate-limited and logged. |
 

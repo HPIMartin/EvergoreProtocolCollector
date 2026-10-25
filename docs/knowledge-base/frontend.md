@@ -186,8 +186,9 @@ Five top-level folders under `frontend/src/`:
   its direct URL. The page and the endpoint it reads need a login.
 - The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
   malformed escape is "no view", not a crash.
-- **Every view that loads data passes through one of five outcomes** (`useLoad` + `LoadedView`):
-  loading, loaded, login refused, no such page (a ledger read the API answers 400), failed. A
+- **Every view that loads data passes through one of six outcomes** (`useLoad` + `LoadedView`):
+  loading, loaded, login refused, role refused (a 403, shown as „Diese Seite ist dem Admin
+  vorbehalten.“), no such page (a ledger read the API answers 400), failed. A
   failure shows one fixed German text and never the API's status or message. A 401 sends the
   browser to `/login?next=<the current path and query, URL-encoded>` (`LoginRequired`, which
   calls `App`'s `navigate` prop, the browser's `window.location.assign` by default), so a login
@@ -371,7 +372,7 @@ service's only read surface.
 | `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, the two flows `donation` and `craftSubsidy`, `balance` (the figure before the guild's share), plus `lastBankActivity`, `lastStorageActivity`, `staleSumsFrom` and the boolean `active`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
 | `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first unless `sort` names another order. |
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first unless `sort` names another order. |
-| `GET /api/v1/admin/status` | Behind a login: `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, `roundTrips`, `roundTripAbstentions`, every key always rendered (the two round-trip arrays as `[]` rather than `null` when empty). The operator-facing facts; see below. |
+| `GET /api/v1/admin/status` | Behind a login with the admin role (a member's login is answered 403, which the admin page shows as „Diese Seite ist dem Admin vorbehalten.“): `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, `roundTrips`, `roundTripAbstentions`, every key always rendered (the two round-trip arrays as `[]` rather than `null` when empty). The operator-facing facts; see below. |
 
 - **One envelope for every collection**: `page`, `size`, `totalCount`, `items`. `/api/v1/avatars`
   adds `totals`.

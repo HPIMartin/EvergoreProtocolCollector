@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { BankEntry, LedgerVisitor, StorageEntry } from '../domain'
 
 import {
+  Forbidden,
   MalformedResponse,
   NoSuchPage,
   RequestFailed,
@@ -306,6 +307,15 @@ describe('the HTTP protocol API', () => {
     const reading = tested.overview(FIRST_PAGE)
 
     await expect(reading).rejects.toBeInstanceOf(Unauthorized)
+  })
+
+  it('reports a refused role on the admin status route', async () => {
+    const fetched = answering(403, null)
+    const tested = httpProtocolApi(fetched.get)
+
+    const reading = tested.adminStatus()
+
+    await expect(reading).rejects.toBeInstanceOf(Forbidden)
   })
 
   it('reports a refused login on the bank route', async () => {

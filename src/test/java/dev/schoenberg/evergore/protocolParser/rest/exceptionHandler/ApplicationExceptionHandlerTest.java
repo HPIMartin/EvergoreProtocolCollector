@@ -9,6 +9,7 @@ import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
 import dev.schoenberg.evergore.protocolParser.exceptions.NoElementFound;
 import dev.schoenberg.evergore.protocolParser.exceptions.ProtocolParserException;
+import dev.schoenberg.evergore.protocolParser.exceptions.RoleMissing;
 import dev.schoenberg.evergore.protocolParser.exceptions.TooManyRequests;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,6 +28,20 @@ class ApplicationExceptionHandlerTest {
 		HttpResponse<?> response = handle(new AccessNotAllowed());
 
 		assertThat(response.getStatus().getCode()).isEqualTo(HttpStatus.UNAUTHORIZED.getCode());
+	}
+
+	@Test
+	void roleMissingMapsToForbidden() {
+		HttpResponse<?> response = handle(new RoleMissing());
+
+		assertThat(response.getStatus().getCode()).isEqualTo(HttpStatus.FORBIDDEN.getCode());
+	}
+
+	@Test
+	void roleMissingIsLoggedAsOneLineWithoutTheStackTrace() {
+		handle(new RoleMissing());
+
+		assertLoggedWithoutStackTrace("Exception while requesting: /test");
 	}
 
 	@Test

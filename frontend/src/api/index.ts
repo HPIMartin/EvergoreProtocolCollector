@@ -1,4 +1,5 @@
 export {
+  Forbidden,
   MalformedResponse,
   NoSuchPage,
   RequestFailed,
