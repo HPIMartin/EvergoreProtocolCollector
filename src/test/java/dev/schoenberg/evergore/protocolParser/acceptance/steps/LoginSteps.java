@@ -28,6 +28,11 @@ public class LoginSteps {
 		logIn(name, password);
 	}
 
+	@Given("the member has tried to log in as {string} with the password {string}")
+	public void theMemberHasTriedToLogInWithThePassword(String name, String password) {
+		logIn(name, password);
+	}
+
 	@Given("a/the member has logged in as {string} with the password {string}")
 	public void aMemberHasLoggedInWithThePassword(String name, String password) {
 		logIn(name, password);

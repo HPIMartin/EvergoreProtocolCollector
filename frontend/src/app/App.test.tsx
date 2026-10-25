@@ -491,9 +491,13 @@ function alwaysServing(status: number, body: string | null): FakeServer {
   return serving(() => ({ status, body }))
 }
 
-async function shellAt(address: string, server: FakeServer): Promise<void> {
+async function shellAt(
+  address: string,
+  server: FakeServer,
+  navigate: (target: string) => void = () => undefined,
+): Promise<void> {
   window.history.replaceState(null, '', address)
-  render(<App get={server.get} />)
+  render(<App get={server.get} navigate={navigate} />)
   await act(async () => undefined)
 }
 
@@ -1422,27 +1426,48 @@ describe('App', () => {
     expect(status).toBe('Kein Avatar mit dem Namen Nobody.')
   })
 
-  it('shows a refused token instead of an empty page', async () => {
-    await shellAt('/overview?token=a-wrong-token', alwaysServing(401, null))
+  it('sends the browser to the login page, with the overview as the way back, when the API refuses', async () => {
+    const navigated: string[] = []
+
+    await shellAt('/overview', alwaysServing(401, null), (target) =>
+      navigated.push(target),
+    )
+
+    expect(navigated).toStrictEqual(['/login?next=%2Foverview'])
+  })
+
+  it('keeps the page and the sort of a ledger in the way back to it', async () => {
+    const navigated: string[] = []
+
+    await shellAt(
+      '/avatars/Calix/bank?page=2&sort=amount&direction=ascending',
+      alwaysServing(401, null),
+      (target) => navigated.push(target),
+    )
+
+    expect(navigated).toStrictEqual([
+      '/login?next=%2Favatars%2FCalix%2Fbank%3Fpage%3D2%26sort%3Damount%26direction%3Dascending',
+    ])
+  })
+
+  it('does not go to the login page while the API answers', async () => {
+    const navigated: string[] = []
+
+    await shellAt(
+      `/overview?token=${TOKEN}`,
+      alwaysServing(200, OVERVIEW_BODY),
+      (target) => navigated.push(target),
+    )
+
+    expect(navigated).toStrictEqual([])
+  })
+
+  it('shows the way to the login page instead of an empty page while it goes there', async () => {
+    await shellAt('/overview', alwaysServing(401, null))
 
     const status = shownStatus()
 
-    expect(status).toBe(
-      'Kein gültiges Token: der Link braucht ein token in der Adresse.',
-    )
-  })
-
-  it('asks without a token when the address carries none, and says so', async () => {
-    const server = alwaysServing(401, null)
-
-    await shellAt('/overview', server)
-
-    const shown = shownStatus()
-
-    expect({ askedFor: server.askedFor, shown }).toStrictEqual({
-      askedFor: ['/api/v1/avatars?page=0&size=100'],
-      shown: 'Kein gültiges Token: der Link braucht ein token in der Adresse.',
-    })
+    expect(status).toBe('Weiter zur Anmeldung…')
   })
 
   it('says in German that a malformed overview body could not be loaded, not a blank page', async () => {
@@ -1523,17 +1548,18 @@ describe('App', () => {
     })
   })
 
-  it('says a storage ledger refused its token instead of calling it a failure', async () => {
+  it('sends a storage ledger the API refuses to the login page instead of calling it a failure', async () => {
+    const navigated: string[] = []
+
     await shellAt(
-      '/avatars/Calix/storage?token=a-wrong-token',
+      '/avatars/Calix/storage',
       alwaysServing(401, null),
+      (target) => navigated.push(target),
     )
 
-    const status = shownStatus()
-
-    expect(status).toBe(
-      'Kein gültiges Token: der Link braucht ein token in der Adresse.',
-    )
+    expect(navigated).toStrictEqual([
+      '/login?next=%2Favatars%2FCalix%2Fstorage',
+    ])
   })
 
   it('is loading before the first answer arrives', () => {

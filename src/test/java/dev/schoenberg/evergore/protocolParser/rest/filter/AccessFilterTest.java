@@ -6,10 +6,15 @@ import java.util.List;
 import java.util.Optional;
 
 import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpStatus;
+import io.micronaut.http.MediaType;
 import io.micronaut.http.MutableHttpRequest;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.filter.ServerFilterChain;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
@@ -36,7 +41,7 @@ class AccessFilterTest {
 	};
 	private final LoggerSpy logger = new LoggerSpy();
 	private final SecurityConfiguration configuration = new SecurityConfiguration(Optional.of(GUILD_TOKEN), List.of("/login", "/health", "/assets/**"));
-	private final AccessFilter tested = new AccessFilter(new PathCanonicalizer(), new PublicPaths(configuration), new GuildToken(configuration), logger);
+	private final AccessFilter tested = new AccessFilter(new PathCanonicalizer(), new PublicPaths(configuration), new GuildToken(configuration), new SpaNavigationPaths(), logger);
 
 	@Test
 	void passesARequestForAPublicPathWithoutALogin() {
@@ -98,6 +103,58 @@ class AccessFilterTest {
 		HttpRequest<?> request = HttpRequest.GET(PROTECTED_PATH);
 
 		assertThatThrownBy(() -> tested.doFilter(request, chain)).isInstanceOf(AccessNotAllowed.class);
+		assertThat(logger.infoMessages()).contains("Access rejected");
+	}
+
+	@ParameterizedTest
+	@CsvSource(delimiter = '|', value = {"/|/login?next=%2F", "/overview|/login?next=%2Foverview", "/this-page-does-not-exist|/login?next=%2Fthis-page-does-not-exist",
+			"/avatars/Aurora/bank?page=2&sort=amount|/login?next=%2Favatars%2FAurora%2Fbank%3Fpage%3D2%26sort%3Damount", "/assets/../overview|/login?next=%2Foverview",
+			"/overview?token=old|/login?next=%2Foverview%3Ftoken%3Dold"})
+	void sendsANavigationWithoutALoginToTheLoginPageWithThePageAsTheWayBack(String address, String expectedLocation) {
+		MutableHttpRequest<?> request = HttpRequest.GET(address).accept(MediaType.TEXT_HTML_TYPE);
+
+		MutableHttpResponse<?> answer = FirstAnswer.of(tested.doFilter(request, chain));
+
+		assertThat(answer.status().getCode()).isEqualTo(HttpStatus.FOUND.getCode());
+		assertThat(answer.getHeaders().get("Location")).isEqualTo(expectedLocation);
+		assertThat(reachedTheChain).isEmpty();
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"/api/v1/avatars", "/favicon.ico", "/swagger-ui/index.html"})
+	void rejectsAnAddressThatIsNoPageOfTheDashboardEvenWhenAskedForAsHtml(String address) {
+		HttpRequest<?> request = HttpRequest.GET(address).accept(MediaType.TEXT_HTML_TYPE);
+
+		assertThatThrownBy(() -> tested.doFilter(request, chain)).isInstanceOf(AccessNotAllowed.class);
+	}
+
+	@Test
+	void rejectsAPageOfTheDashboardAskedForWithoutAskingForHtml() {
+		HttpRequest<?> request = HttpRequest.GET("/overview").accept(MediaType.APPLICATION_JSON_TYPE);
+
+		assertThatThrownBy(() -> tested.doFilter(request, chain)).isInstanceOf(AccessNotAllowed.class);
+	}
+
+	@Test
+	void rejectsAPageOfTheDashboardAskedForWithoutAnyAcceptHeader() {
+		HttpRequest<?> request = HttpRequest.GET("/overview");
+
+		assertThatThrownBy(() -> tested.doFilter(request, chain)).isInstanceOf(AccessNotAllowed.class);
+	}
+
+	@Test
+	void rejectsAPostToAPageOfTheDashboardEvenWhenItAsksForHtml() {
+		HttpRequest<?> request = HttpRequest.POST("/overview", "").accept(MediaType.TEXT_HTML_TYPE);
+
+		assertThatThrownBy(() -> tested.doFilter(request, chain)).isInstanceOf(AccessNotAllowed.class);
+	}
+
+	@Test
+	void logsThatAccessWasRejectedForANavigationToo() {
+		MutableHttpRequest<?> request = HttpRequest.GET("/overview").accept(MediaType.TEXT_HTML_TYPE);
+
+		FirstAnswer.of(tested.doFilter(request, chain));
+
 		assertThat(logger.infoMessages()).contains("Access rejected");
 	}
 }

@@ -229,7 +229,10 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - Micronaut counts the context as running only after its startup event, so the beans made before
     a refusal are left undestroyed.
   - `the service has been restarted since` closes the context and starts a new one on the same
-    SQLite file, with the run outcomes held in memory gone.
+    SQLite file and the same port, with the run outcomes held in memory gone: a page that is open
+    keeps asking the address it came from, and its login, signed by the old context, ends.
+  - The old port is bound again once the old server has let go of it, which `RunningService` waits
+    for, up to 15 s.
 - **Service work runs on a thread of its own** (`OwnThread`): Micronaut forks ForkJoin tasks while
   it starts, and on a worker of cucumber's parallel pool the join steals another scenario onto the
   same thread, which then shares the first one's world (measured: `Cannot stop. Current container

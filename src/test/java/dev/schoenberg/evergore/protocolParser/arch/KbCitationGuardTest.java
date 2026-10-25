@@ -49,6 +49,7 @@ class KbCitationGuardTest {
 		references.add("frontend.md: LoginPage");
 		references.add("frontend.md: LoginAnswer");
 		references.add("frontend.md: NewPasswordStep");
+		references.add("frontend.md: LoginRequired");
 		return Collections.unmodifiableList(references);
 	}
 

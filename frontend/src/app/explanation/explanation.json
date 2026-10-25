@@ -1504,16 +1504,16 @@
         },
         {
           "question": "Kann ich mir eine Seite merken?",
-          "rule": "Jede Seite lässt sich als Lesezeichen merken. Sortierung und Seite eurer Vorgänge bleiben im Lesezeichen erhalten.",
+          "rule": "Jede Seite lässt sich als Lesezeichen merken. Sortierung und Seite eurer Vorgänge bleiben im Lesezeichen erhalten. Seid ihr nicht angemeldet, fragt das Lesezeichen erst nach Name und Passwort.",
           "example": {
-            "intro": "Gero Gildenhändler merkt sich Seite 2 seines Lagers, nach Menge sortiert; das Lesezeichen öffnet genau diese Seite.",
+            "intro": "Gero Gildenhändler merkt sich Seite 2 seines Lagers, nach Menge sortiert; nach der Anmeldung öffnet das Lesezeichen genau diese Seite.",
             "ledger": {
               "bank": [],
               "storage": []
             },
             "lines": []
           },
-          "why": "Warum? Der Link mit dem Gildenschlüssel ist euer Zugang; behaltet ihn für euch."
+          "why": "Warum? Euer Passwort ist euer Zugang; behaltet es für euch."
         }
       ]
     }

@@ -25,6 +25,7 @@ export { DEPOSIT, WITHDRAWAL, isTransferType } from './transferType.ts'
 export { GUILD_UNCOMPUTED_SUMS_NOTE, isUncomputed } from './uncomputedSums.ts'
 export type { Answer, AnswerGroup, CalculationLine } from './explanation.ts'
 export { calculationTexts, explanationFrom } from './explanation.ts'
+export { loginAddressFor } from './loginAddress.ts'
 export type {
   LoginAnswer,
   NewPasswordAnswer,

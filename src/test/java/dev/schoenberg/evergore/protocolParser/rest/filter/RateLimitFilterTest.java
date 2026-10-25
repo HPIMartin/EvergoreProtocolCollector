@@ -69,10 +69,10 @@ class RateLimitFilterTest {
 	}
 
 	@Test
-	void countsTokenlessRequestsToTheSpaShellRoot() {
+	void countsRequestsToTheSpaShellRootWithoutALoginThoughTheyAreRefused() {
 		List<Integer> statuses = statusesOfThreeRequestsTo("/");
 
-		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode(), TOO_MANY_REQUESTS.getCode());
+		assertThat(statuses).containsExactly(UNAUTHORIZED.getCode(), UNAUTHORIZED.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
 
 	@Test

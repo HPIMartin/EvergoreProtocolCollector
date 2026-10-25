@@ -8,6 +8,7 @@ import { PageFrame, StatusPanel } from '../ui'
 import { AdminView } from './AdminView.tsx'
 import { BankLedgerView } from './BankLedgerView.tsx'
 import { ExplanationView } from './ExplanationView.tsx'
+import { LoginNavigation } from './LoginRequired.tsx'
 import { OverviewView } from './OverviewView.tsx'
 import { StorageLedgerView } from './StorageLedgerView.tsx'
 import type { Route, RouteVisitor } from './route.ts'
@@ -19,9 +20,14 @@ const BRAND = 'Evergore Protocol Collector'
 
 export interface AppProps {
   readonly get: HttpGet
+  readonly navigate?: (target: string) => void
 }
 
-export function App({ get }: AppProps) {
+function navigateTheBrowser(target: string): void {
+  window.location.assign(target)
+}
+
+export function App({ get, navigate = navigateTheBrowser }: AppProps) {
   const { route, token, follow } = useRouting()
   const api = httpProtocolApi(get, token)
 
@@ -58,13 +64,15 @@ export function App({ get }: AppProps) {
   }
 
   return (
-    <PageFrame
-      brand={BRAND}
-      navigation={navigationOf(route, token)}
-      onFollow={follow}
-    >
-      {route.accept(view)}
-    </PageFrame>
+    <LoginNavigation value={navigate}>
+      <PageFrame
+        brand={BRAND}
+        navigation={navigationOf(route, token)}
+        onFollow={follow}
+      >
+        {route.accept(view)}
+      </PageFrame>
+    </LoginNavigation>
   )
 }
 

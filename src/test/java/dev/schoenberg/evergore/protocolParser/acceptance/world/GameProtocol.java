@@ -27,6 +27,10 @@ public class GameProtocol {
 		entries.add(new ProtocolEntry(minute, List.of(MINUTE.format(minute) + " " + avatar + " " + kind, line)));
 	}
 
+	public int movements() {
+		return entries.size();
+	}
+
 	public void show(List<String> lines) {
 		entries.clear();
 		text = List.copyOf(lines);

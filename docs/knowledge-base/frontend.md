@@ -183,13 +183,17 @@ Five top-level folders under `frontend/src/`:
   (`roundTripFrom`), as the server refuses to build one.
   It states facts only; the UP/DOWN verdict over them stays `/health`'s job.
   Deliberately not in `navigationOf`'s link set, so a guild member never sees it; reachable only by
-  its direct URL. Needs no token: the page and the endpoint it reads are both in
+  its direct URL. The page needs a login or the guild's token; the endpoint it reads is in
   `evergore.security.public-paths`, at the same trust level as `/health`.
 - The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
   malformed escape is "no view", not a crash.
 - **Every view that loads data passes through one of five outcomes** (`useLoad` + `LoadedView`):
-  loading, loaded, token refused, no such page (a ledger read the API answers 400), failed. A
-  failure shows one fixed German text and never the API's status or message. A ledger view
+  loading, loaded, login refused, no such page (a ledger read the API answers 400), failed. A
+  failure shows one fixed German text and never the API's status or message. A 401 sends the
+  browser to `/login?next=<the current path and query, URL-encoded>` (`LoginRequired`, which
+  calls `App`'s `navigate` prop, the browser's `window.location.assign` by default), so a login
+  that ends while a page is open leads back to that page after the next login; the page shows
+  „Weiter zur Anmeldung…“ meanwhile. A ledger view
   additionally tells **"known avatar, no entries"** from **"unknown avatar"**, which is the client
   side of the 404 decision below.
 - **`useLoad` starts a request on its request key alone**, the key being the request's full
@@ -474,9 +478,10 @@ service's only read surface.
   column and every `@DatabaseTable` its table. There is no JDK-standard annotation for this (JSON
   binding never landed in Java SE), so the Jackson annotation is deliberate and confined to the
   `wire` package.
-- **A tokenless deep link answers 401.** Of the SPA's paths only `/`, `/index.html` and `/admin` are
-  public (`evergore.security.public-paths`), so the shell loads from there and the client carries
-  `?token=` across its routes (see the SPA's views above).
+- **A deep link opened without a login is redirected to the login page.**
+  - What the service answers: [build-run-deploy.md](build-run-deploy.md), "HTTP endpoints".
+  - The client still carries `?token=` across its routes until the token goes (see the SPA's views
+    above).
 - **404 vs. empty page** (author decision 2026-08-05): a **404 means the avatar is unknown**, i.e. has
   no row in either ledger. A known avatar whose bank or storage ledger happens to be empty answers 200
   with `totalCount: 0` and `items: []`, like the overview does, so the SPA can tell "no storage

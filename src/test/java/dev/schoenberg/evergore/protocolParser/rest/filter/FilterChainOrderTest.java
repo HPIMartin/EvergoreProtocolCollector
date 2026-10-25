@@ -52,6 +52,6 @@ class FilterChainOrderTest {
 	private AccessFilter accessFilter() {
 		SecurityConfiguration configuration = new SecurityConfiguration(Optional.of("token"), List.of());
 
-		return new AccessFilter(canonicalizer, new PublicPaths(configuration), new GuildToken(configuration), logger);
+		return new AccessFilter(canonicalizer, new PublicPaths(configuration), new GuildToken(configuration), new SpaNavigationPaths(), logger);
 	}
 }

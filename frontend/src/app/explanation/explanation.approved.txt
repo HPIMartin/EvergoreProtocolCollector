@@ -185,6 +185,6 @@ Beispiel: Gero Gildenhändler hat 150 Vorgänge im Lager. Er sortiert nach Menge
 Warum? So findet ihr auch einen alten Vorgang, ohne alle Seiten durchzusehen.
 
 ### Kann ich mir eine Seite merken?
-Jede Seite lässt sich als Lesezeichen merken. Sortierung und Seite eurer Vorgänge bleiben im Lesezeichen erhalten.
-Beispiel: Gero Gildenhändler merkt sich Seite 2 seines Lagers, nach Menge sortiert; das Lesezeichen öffnet genau diese Seite.
-Warum? Der Link mit dem Gildenschlüssel ist euer Zugang; behaltet ihn für euch.
+Jede Seite lässt sich als Lesezeichen merken. Sortierung und Seite eurer Vorgänge bleiben im Lesezeichen erhalten. Seid ihr nicht angemeldet, fragt das Lesezeichen erst nach Name und Passwort.
+Beispiel: Gero Gildenhändler merkt sich Seite 2 seines Lagers, nach Menge sortiert; nach der Anmeldung öffnet das Lesezeichen genau diese Seite.
+Warum? Euer Passwort ist euer Zugang; behaltet es für euch.

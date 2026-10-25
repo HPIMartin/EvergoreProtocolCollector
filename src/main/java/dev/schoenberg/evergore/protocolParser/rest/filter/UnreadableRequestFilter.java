@@ -25,8 +25,13 @@ public class UnreadableRequestFilter implements HttpServerFilter {
 
 	@Override
 	public Publisher<MutableHttpResponse<?>> doFilter(HttpRequest<?> request, ServerFilterChain chain) {
-		if (request instanceof NettyHttpRequest<?> served && served.getNativeRequest() instanceof UnreadableRequest unreadable) {
-			return Publishers.just(HttpResponse.status(HttpStatus.valueOf(unreadable.status().code())));
+		if (request instanceof NettyHttpRequest<?> served) {
+			if (served.getNativeRequest() instanceof UnreadableRequest unreadable) {
+				return Publishers.just(HttpResponse.status(HttpStatus.valueOf(unreadable.status().code())));
+			}
+			if (served.getNativeRequest().headers().isEmpty()) {
+				return Publishers.just(HttpResponse.status(HttpStatus.BAD_REQUEST));
+			}
 		}
 
 		return chain.proceed(request);

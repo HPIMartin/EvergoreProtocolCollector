@@ -1,8 +1,15 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
+import java.net.URLEncoder;
+
 import jakarta.inject.Singleton;
 
+import io.micronaut.core.async.publisher.Publishers;
+import io.micronaut.http.HttpMethod;
 import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpResponse;
+import io.micronaut.http.HttpStatus;
+import io.micronaut.http.MediaType;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.annotation.Filter;
 import io.micronaut.http.filter.HttpServerFilter;
@@ -12,19 +19,27 @@ import org.reactivestreams.Publisher;
 import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
+import dev.schoenberg.evergore.protocolParser.rest.controller.LoginPageController;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Singleton
 @Filter("/**")
 public class AccessFilter implements HttpServerFilter {
+	private static final String LOCATION = "Location";
+	private static final String NEXT = "next";
+
 	private final PathCanonicalizer canonicalizer;
 	private final PublicPaths publicPaths;
 	private final GuildToken guildToken;
+	private final SpaNavigationPaths spaNavigationPaths;
 	private final Logger logger;
 
-	public AccessFilter(PathCanonicalizer canonicalizer, PublicPaths publicPaths, GuildToken guildToken, Logger logger) {
+	public AccessFilter(PathCanonicalizer canonicalizer, PublicPaths publicPaths, GuildToken guildToken, SpaNavigationPaths spaNavigationPaths, Logger logger) {
 		this.canonicalizer = canonicalizer;
 		this.publicPaths = publicPaths;
 		this.guildToken = guildToken;
+		this.spaNavigationPaths = spaNavigationPaths;
 		this.logger = logger;
 	}
 
@@ -35,12 +50,27 @@ public class AccessFilter implements HttpServerFilter {
 
 	@Override
 	public Publisher<MutableHttpResponse<?>> doFilter(HttpRequest<?> request, ServerFilterChain chain) {
-		if (publicPaths.contains(canonicalizer.canonicalize(request.getPath())) || hasALogin(request) || guildToken.opens(request)) {
+		String path = canonicalizer.canonicalize(request.getPath());
+		if (publicPaths.contains(path) || hasALogin(request) || guildToken.opens(request)) {
 			return chain.proceed(request);
 		}
 
 		logger.info("Access rejected");
+		if (isANavigation(request, path)) {
+			return Publishers.just(HttpResponse.status(HttpStatus.FOUND).header(LOCATION, loginAddressFor(path, request)));
+		}
 		throw new AccessNotAllowed();
+	}
+
+	private boolean isANavigation(HttpRequest<?> request, String canonicalPath) {
+		return request.getMethod() == HttpMethod.GET && spaNavigationPaths.isSpaOwned(canonicalPath) && request.accept().contains(MediaType.TEXT_HTML_TYPE);
+	}
+
+	private static String loginAddressFor(String canonicalPath, HttpRequest<?> request) {
+		String rawQuery = request.getUri().getRawQuery();
+		String wayBack = rawQuery == null ? canonicalPath : canonicalPath + "?" + rawQuery;
+
+		return LoginPageController.PATH + "?" + NEXT + "=" + URLEncoder.encode(wayBack, UTF_8);
 	}
 
 	private static boolean hasALogin(HttpRequest<?> request) {

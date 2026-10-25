@@ -1,12 +1,16 @@
 package dev.schoenberg.evergore.protocolParser.acceptance.service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.ApplicationContextBuilder;
 import io.micronaut.context.env.PropertySource;
+import io.micronaut.http.server.exceptions.ServerStartupException;
 import io.micronaut.runtime.server.EmbeddedServer;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.world.GameProtocols;
@@ -18,10 +22,15 @@ import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+
 public class RunningService {
 	private static final String TEST_ENVIRONMENT = "test";
 	private static final String OPERATOR_ENVIRONMENT = "the operator's environment variables";
-	private static final Map<String, Object> ACCEPTANCE_PROPERTIES = Map.of("micronaut.server.port", -1, "micronaut.health.monitor.enabled", false);
+	private static final String SERVER_PORT = "micronaut.server.port";
+	private static final Duration PORT_WAIT = Duration.ofSeconds(15);
+	private static final Duration PORT_RETRY = Duration.ofMillis(200);
+	private static final Map<String, Object> ACCEPTANCE_PROPERTIES = Map.of(SERVER_PORT, -1, "micronaut.health.monitor.enabled", false);
 
 	private final GameProtocols protocols;
 	private final ScenarioTime time;
@@ -51,11 +60,29 @@ public class RunningService {
 	}
 
 	public void restart() {
+		Map<String, Object> onTheSamePort = new HashMap<>(ACCEPTANCE_PROPERTIES);
+		onTheSamePort.put(SERVER_PORT, port());
 		stop();
 		if (asDeployed) {
-			OwnThread.run(() -> startHere(deployed()));
+			startOnceThePortIsFree(() -> deployed(onTheSamePort));
 		} else {
-			start();
+			startOnceThePortIsFree(() -> builder(onTheSamePort).environments(TEST_ENVIRONMENT, AcceptanceEnvironment.NAME));
+		}
+	}
+
+	private void startOnceThePortIsFree(Supplier<ApplicationContextBuilder> builder) {
+		Instant giveUp = Instant.now().plus(PORT_WAIT);
+		while (true) {
+			try {
+				OwnThread.run(() -> startHere(builder.get()));
+				return;
+			} catch (ServerStartupException portStillHeld) {
+				stop();
+				if (Instant.now().isAfter(giveUp)) {
+					throw portStillHeld;
+				}
+				silentThrow(() -> Thread.sleep(PORT_RETRY.toMillis()));
+			}
 		}
 	}
 
@@ -80,9 +107,13 @@ public class RunningService {
 	}
 
 	private ApplicationContextBuilder deployed() {
-		Map<String, Object> properties = new HashMap<>(ACCEPTANCE_PROPERTIES);
+		return deployed(ACCEPTANCE_PROPERTIES);
+	}
+
+	private ApplicationContextBuilder deployed(Map<String, Object> base) {
+		Map<String, Object> properties = new HashMap<>(base);
 		properties.putAll(settings.properties());
-		return builder()
+		return builder(base)
 				.environments(AcceptanceEnvironment.NAME)
 				.environmentPropertySource(false)
 				.properties(properties)
@@ -91,7 +122,11 @@ public class RunningService {
 	}
 
 	private ApplicationContextBuilder builder() {
-		return ApplicationContext.builder().deduceEnvironment(false).properties(ACCEPTANCE_PROPERTIES).singletons(protocols, time, faults, database, log, settings, passwords);
+		return builder(ACCEPTANCE_PROPERTIES);
+	}
+
+	private ApplicationContextBuilder builder(Map<String, Object> properties) {
+		return ApplicationContext.builder().deduceEnvironment(false).properties(properties).singletons(protocols, time, faults, database, log, settings, passwords);
 	}
 
 	private void startHere(ApplicationContextBuilder builder) {

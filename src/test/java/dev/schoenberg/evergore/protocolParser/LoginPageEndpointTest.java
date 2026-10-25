@@ -71,8 +71,16 @@ class LoginPageEndpointTest {
 	}
 
 	@Test
-	void keepsADashboardPageBehindTheToken() {
+	void sendsADashboardPageOpenedWithoutALoginOnToTheLoginPage() {
 		HttpResponse<String> response = navigateTo("/overview");
+
+		assertThat(response.getStatus()).isEqualTo(OK.getCode());
+		assertThat(response.getBody()).isEqualTo(bundledLoginPage());
+	}
+
+	@Test
+	void refusesAnApiRequestWithoutALoginInsteadOfSendingItOnToTheLoginPage() {
+		HttpResponse<String> response = Unirest.get("/api/v1/avatars").asString();
 
 		assertThat(response.getStatus()).isEqualTo(UNAUTHORIZED.getCode());
 	}

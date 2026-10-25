@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,6 +18,7 @@ import kong.unirest.Unirest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
@@ -125,6 +127,27 @@ class TokenScopeTest {
 	}
 
 	@ParameterizedTest
+	@CsvSource(delimiter = '|', value = {"/overview|%2Foverview", "//overview|%2Foverview", "/|%2F", "/this-page-does-not-exist|%2Fthis-page-does-not-exist",
+			"/avatars/Aurora/bank?page=2|%2Favatars%2FAurora%2Fbank%3Fpage%3D2", "/assets/../overview|%2Foverview", "/assets/%2e%2e/overview|%2Foverview"})
+	void sendsANavigationWithoutALoginToTheLoginPageWithThePageAsTheWayBack(String requestTarget, String wayBack) {
+		String answer = new RawHttpClient(server.getPort()).answerUntilTheServerCloses(navigationTo(requestTarget));
+
+		assertThat(answer).startsWith("HTTP/1.1 302");
+		assertThat(answer.toLowerCase(Locale.ROOT)).contains("location: /login?next=" + wayBack.toLowerCase(Locale.ROOT));
+	}
+
+	@Test
+	void rejectsAnApiRequestWithoutALoginEvenWhenItAsksForHtml() {
+		String answer = new RawHttpClient(server.getPort()).answerUntilTheServerCloses(navigationTo("/api/v1/avatars"));
+
+		assertThat(answer).startsWith("HTTP/1.1 401");
+	}
+
+	private static String navigationTo(String requestTarget) {
+		return "GET " + requestTarget + " HTTP/1.1\r\nHost: localhost\r\nAccept: text/html\r\nConnection: close\r\n\r\n";
+	}
+
+	@ParameterizedTest
 	@ValueSource(strings = {"/overview%zz", "/overview%", "/overview%2", "/api/v1/avatars%zz", "/avatars/Aurora%zz/bank"})
 	void answersAMalformedRequestTargetWith400InsteadOf401(String requestTarget) {
 		int status = new RawHttpClient(server.getPort()).statusOf(requestTarget);
@@ -140,8 +163,8 @@ class TokenScopeTest {
 	}
 
 	@Test
-	void servesTheSpaShellWithoutAToken() {
-		HttpResponse<String> response = getWithoutToken("/");
+	void servesTheSpaShellAtTheRootWithAValidToken() {
+		HttpResponse<String> response = Unirest.get("/?token=test-token").asString();
 
 		assertThat(response.getStatus()).isEqualTo(OK.getCode());
 		assertThat(response.getBody()).isEqualTo(bundledIndexHtml());

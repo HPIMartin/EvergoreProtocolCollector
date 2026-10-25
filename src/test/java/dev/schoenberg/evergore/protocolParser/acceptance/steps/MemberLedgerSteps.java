@@ -20,6 +20,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.world.Guild;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.BANK;
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.STORAGE;
+import static dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger.AMOUNT_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger.MINUTE_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger.QUANTITY_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
@@ -168,13 +169,20 @@ public class MemberLedgerSteps {
 
 	@Then("the ledger shows her movements {int} to {int}, counted from the newest")
 	public void theLedgerShowsHerMovementsCountedFromTheNewest(int from, int to) {
-		List<Integer> quantities = quantitiesShown();
-		assertThat(quantities).isEqualTo(descendingRange(movementsInTheStorageLedger - from + 1, movementsInTheStorageLedger - to + 1));
+		MemberLedger ledger = browser.ledger();
+		int movements = ledger.headers().contains(QUANTITY_COLUMN) ? movementsInTheStorageLedger : protocols.bank().movements();
+
+		List<Integer> figures = figuresShownIn(ledger);
+
+		assertThat(figures).isEqualTo(descendingRange(movements - from + 1, movements - to + 1));
 	}
 
 	private List<Integer> quantitiesShown() {
-		MemberLedger ledger = browser.ledger();
-		int column = ledger.columnOf(QUANTITY_COLUMN);
+		return figuresShownIn(browser.ledger());
+	}
+
+	private static List<Integer> figuresShownIn(MemberLedger ledger) {
+		int column = ledger.columnOf(ledger.headers().contains(QUANTITY_COLUMN) ? QUANTITY_COLUMN : AMOUNT_COLUMN);
 		return ledger.rows().stream().map(row -> Integer.parseInt(row.get(column))).toList();
 	}
 

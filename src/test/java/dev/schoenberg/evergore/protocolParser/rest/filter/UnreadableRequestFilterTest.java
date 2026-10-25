@@ -14,7 +14,11 @@ import io.micronaut.http.server.netty.NettyHttpRequest;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
@@ -57,6 +61,27 @@ class UnreadableRequestFilterTest {
 	}
 
 	@Test
+	void answersTheHeaderlessStandInOfAnUnreadableTargetWith400WithoutLettingItProceed() {
+		HttpRequest<?> request = served(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+
+		int answered = statusOf(tested.doFilter(request, chain));
+
+		assertThat(answered).isEqualTo(400);
+		assertThat(chain.proceeded()).isNull();
+	}
+
+	@Test
+	void letsARequestThatCarriesAHeaderProceed() {
+		DefaultHttpRequest nativeRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/overview");
+		nativeRequest.headers().set(HttpHeaderNames.HOST, "localhost");
+		HttpRequest<?> request = served(nativeRequest);
+
+		tested.doFilter(request, chain);
+
+		assertThat(chain.proceeded()).isSameAs(request);
+	}
+
+	@Test
 	void letsAnyOtherRequestProceed() {
 		HttpRequest<?> request = HttpRequest.GET("/bad-request");
 
@@ -65,10 +90,14 @@ class UnreadableRequestFilterTest {
 		assertThat(chain.proceeded()).isSameAs(request);
 	}
 
+	private HttpRequest<?> served(io.netty.handler.codec.http.HttpRequest nativeRequest) {
+		return new NettyHttpRequest<>(nativeRequest, NettyByteBodyFactory.empty(), channel.pipeline().firstContext(), ConversionService.SHARED, new HttpServerConfiguration());
+	}
+
 	private HttpRequest<?> unreadable(HttpResponseStatus status) {
 		UnreadableRequest nativeRequest = UnreadableRequests.standingInFor(status, new DefaultHttpHeaders());
 
-		return new NettyHttpRequest<>(nativeRequest, NettyByteBodyFactory.empty(), channel.pipeline().firstContext(), ConversionService.SHARED, new HttpServerConfiguration());
+		return served(nativeRequest);
 	}
 
 	private static int statusOf(Publisher<MutableHttpResponse<?>> answer) {

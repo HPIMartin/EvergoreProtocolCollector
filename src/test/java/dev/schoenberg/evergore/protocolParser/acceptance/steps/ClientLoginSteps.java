@@ -15,6 +15,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.operator.ServiceRequest
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
 import dev.schoenberg.evergore.protocolParser.rest.filter.AcceptanceClientIp;
 
+import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.BANK;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,6 +26,7 @@ public class ClientLoginSteps {
 	private static final String NOT_ISSUED = "Not-Issued-1!";
 	private static final int UNAUTHORIZED = 401;
 	private static final int BAD_REQUEST = 400;
+	private static final int FOUND = 302;
 
 	private final LoginRequests logins;
 	private final ServiceRequests requests;
@@ -75,6 +77,17 @@ public class ClientLoginSteps {
 	public void aClientSetsTheIssuedPasswordAsTheNewPassword(String avatar) {
 		String issued = accounts.issuedTo(avatar);
 		answer = logins.chooseNewPassword(avatar, issued, issued);
+	}
+
+	@When("a client without a login asks for the bank ledger of {string}")
+	public void aClientWithoutALoginAsksForTheBankLedgerOf(String avatar) {
+		answer = requests.get(BANK.pathOf(avatar), Map.of(AcceptanceClientIp.HEADER, A_CLIENT, "Accept", "text/html"));
+	}
+
+	@Then("the operator finds the client redirected to the login page, with the request to return to the bank ledger of {string}")
+	public void theOperatorFindsTheClientRedirectedToTheLoginPage(String avatar) {
+		assertThat(answer.status()).isEqualTo(FOUND);
+		assertThat(answer.header("Location")).contains("/login?next=" + encoded(BANK.pathOf(avatar)));
 	}
 
 	@Then("the operator finds the request refused for lacking a login")
