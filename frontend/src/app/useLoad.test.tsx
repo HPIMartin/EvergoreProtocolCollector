@@ -9,7 +9,7 @@ import { useLoad } from './useLoad.ts'
 const describingVisitor: LoadVisitor<string, string> = {
   loading: () => 'still loading',
   loaded: (value) => `loaded ${value}`,
-  unauthorized: () => 'the token was refused',
+  unauthorized: () => 'the login was refused',
   noSuchPage: () => 'the page does not exist',
   failed: () => 'the load failed',
 }
@@ -41,7 +41,7 @@ describe('useLoad', () => {
     expect(outcome).toBe('loaded the overview')
   })
 
-  it('reports a refused token as its own outcome', async () => {
+  it('reports a refused login as its own outcome', async () => {
     const load = renderHook(() =>
       useLoad(() => Promise.reject(new Unauthorized()), 'a-key'),
     )
@@ -50,7 +50,7 @@ describe('useLoad', () => {
 
     const outcome = load.result.current.accept(describingVisitor)
 
-    expect(outcome).toBe('the token was refused')
+    expect(outcome).toBe('the login was refused')
   })
 
   it('reports a page that does not exist as its own outcome', async () => {

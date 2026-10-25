@@ -43,7 +43,7 @@ class AdminStatusEmptyStateEndpointTest {
 
 	@Test
 	void anUncollectedDatabaseReportsNoFactsYet() {
-		String body = Unirest.get("/api/v1/admin/status").asString().getBody();
+		String body = Unirest.get("/api/v1/admin/status").header("Cookie", LoginCookie.headerFor(server)).asString().getBody();
 
 		assertThat(body)
 				.isEqualTo("{\"lastUpdated\":null,\"lastSuccessfulScrape\":null,\"lastScrapeFailure\":null,"

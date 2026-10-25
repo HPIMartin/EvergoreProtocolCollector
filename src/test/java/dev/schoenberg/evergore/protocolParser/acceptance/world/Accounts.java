@@ -1,5 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.acceptance.world;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.Answer;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.LoginRequests;
 
@@ -10,6 +13,7 @@ public class Accounts {
 
 	private final ScenarioPasswords passwords;
 	private final LoginRequests logins;
+	private final Map<String, String> chosen = new ConcurrentHashMap<>();
 
 	public Accounts(ScenarioPasswords passwords, LoginRequests logins) {
 		this.passwords = passwords;
@@ -20,9 +24,18 @@ public class Accounts {
 		return passwords.issuedTo(avatar).orElseThrow(() -> new AssertionError("No collection has issued a password to " + avatar));
 	}
 
-	public void choosePasswordInPlaceOfTheIssuedOne(String avatar, String password) {
-		Answer chosen = logins.chooseNewPassword(avatar, issuedTo(avatar), password);
+	public String chosenBy(String avatar) {
+		String password = chosen.get(avatar);
+		if (password == null) {
+			throw new AssertionError(avatar + " has chosen no password in this scenario");
+		}
+		return password;
+	}
 
-		assertThat(chosen.status()).as("the choice of %s's password: %s", avatar, chosen.body()).isEqualTo(SERVED);
+	public void choosePasswordInPlaceOfTheIssuedOne(String avatar, String password) {
+		Answer answer = logins.chooseNewPassword(avatar, issuedTo(avatar), password);
+
+		assertThat(answer.status()).as("the choice of %s's password: %s", avatar, answer.body()).isEqualTo(SERVED);
+		chosen.put(avatar, password);
 	}
 }

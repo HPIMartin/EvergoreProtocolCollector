@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.openqa.selenium.By;
+import org.openqa.selenium.Cookie;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -153,8 +154,15 @@ class DashboardBrowserSmokeTest {
 		return driver.findElements(By.cssSelector("[data-testid='active-roster'] [data-testid='column-label']")).stream().map(WebElement::getText).toList();
 	}
 
+	private void openLoggedIn(WebDriver driver, String clientRoute) {
+		String origin = "http://localhost:" + server.getPort();
+		driver.get(origin + "/login");
+		driver.manage().addCookie(new Cookie(LoginCookie.NAME, LoginCookie.valueFor(server)));
+		driver.get(origin + clientRoute);
+	}
+
 	private void openAndAwaitTheStatHeader(WebDriver driver, String clientRoute) {
-		driver.get("http://localhost:" + server.getPort() + clientRoute + "?token=test-token");
+		openLoggedIn(driver, clientRoute);
 		new WebDriverWait(driver, RENDER_GUARD).until(browser -> !browser.findElements(STAT_HEADER).isEmpty());
 	}
 
@@ -165,7 +173,7 @@ class DashboardBrowserSmokeTest {
 	private List<List<String>> renderedRowsOf(String clientRoute, By rowSelector) {
 		WebDriver driver = Browser.fromString(config.browser).getDriver(config);
 		try {
-			driver.get("http://localhost:" + server.getPort() + clientRoute + "?token=test-token");
+			openLoggedIn(driver, clientRoute);
 			new WebDriverWait(driver, RENDER_GUARD).until(browser -> !browser.findElements(rowSelector).isEmpty());
 
 			return driver.findElements(rowSelector).stream().map(DashboardBrowserSmokeTest::cellsOf).toList();

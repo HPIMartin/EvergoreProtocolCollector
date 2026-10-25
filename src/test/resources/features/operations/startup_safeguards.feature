@@ -22,7 +22,6 @@ Feature: The service refuses to start on a setting that would break it silently
 
   Rule: The service starts without the guild's old token
 
-    @wip
     Scenario: The old token is no setting the service needs any more
       Given EVERGORE_SECURITY_API_TOKEN is unset
       When the operator starts the service

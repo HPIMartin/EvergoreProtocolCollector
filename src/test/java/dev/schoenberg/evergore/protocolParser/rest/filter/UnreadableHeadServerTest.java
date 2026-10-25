@@ -61,11 +61,11 @@ class UnreadableHeadServerTest {
 	void answersARejectedHeadOnceAndNeitherAnswersNorCountsTheRequestPipelinedBehindIt() {
 		RawHttpClient rawClient = new RawHttpClient(server.getPort());
 		String rejectedHead = "GET /" + OVERSIZED_TARGET + " HTTP/1.1\r\nHost: localhost\r\nUser-Agent: first\r\n\r\n";
-		String pipelined = "GET /favicon.ico HTTP/1.1\r\nHost: localhost\r\n\r\n";
+		String pipelined = "GET /login HTTP/1.1\r\nHost: localhost\r\n\r\n";
 
 		String answer = rawClient.answerUntilTheServerCloses(rejectedHead + pipelined);
 		List<String> auditedAfterwards = auditLines();
-		int statusOfALaterRequest = rawClient.statusOf("/favicon.ico");
+		int statusOfALaterRequest = rawClient.statusOf("/login");
 
 		assertThat(answer).startsWith("HTTP/1.1 " + REQUEST_ENTITY_TOO_LARGE.getCode());
 		assertThat(answer).containsIgnoringCase("connection: close");
@@ -91,7 +91,7 @@ class UnreadableHeadServerTest {
 		String head = overBudgetHeadWithoutItsBlankLine();
 
 		List<String> answers = IntStream.range(0, 2).mapToObj(_ -> rawClient.answerUntilTheServerCloses(head)).toList();
-		int statusOfALaterRequest = rawClient.statusOf("/favicon.ico");
+		int statusOfALaterRequest = rawClient.statusOf("/login");
 
 		assertThat(answers).allMatch(answer -> answer.startsWith("HTTP/1.1 " + REQUEST_ENTITY_TOO_LARGE.getCode()));
 		assertThat(statusOfALaterRequest).isEqualTo(TOO_MANY_REQUESTS.getCode());
@@ -103,7 +103,7 @@ class UnreadableHeadServerTest {
 		String cutOffHead = "GET / HTTP/1.1\r\nHost: localhost\r\n";
 
 		String answer = rawClient.answerToHalfClosedRequest(cutOffHead);
-		List<Integer> statuses = IntStream.range(0, 2).mapToObj(_ -> rawClient.statusOf("/favicon.ico")).toList();
+		List<Integer> statuses = IntStream.range(0, 2).mapToObj(_ -> rawClient.statusOf("/login")).toList();
 
 		assertThat(answer).isEmpty();
 		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode());

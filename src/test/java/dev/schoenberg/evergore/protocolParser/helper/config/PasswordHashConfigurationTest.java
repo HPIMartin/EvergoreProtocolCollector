@@ -29,8 +29,7 @@ class PasswordHashConfigurationTest {
 
 	private static PasswordHashConfiguration configurationOfTheProductionDefaults() {
 		Map<String, Object> required = Map
-				.of("evergore.security.api-token", "token", "evergore.credentials.username", "user", "evergore.credentials.password", "secret", "micronaut.server.port", "-1",
-						THROWAWAY_DATABASE_PATH, THROWAWAY_DB_PATH);
+				.of("evergore.credentials.username", "user", "evergore.credentials.password", "secret", "micronaut.server.port", "-1", THROWAWAY_DATABASE_PATH, THROWAWAY_DB_PATH);
 
 		try (ApplicationContext context = ApplicationContext.builder().deduceEnvironment(false).environmentPropertySource(false).properties(required).start()) {
 			return context.getBean(PasswordHashConfiguration.class);

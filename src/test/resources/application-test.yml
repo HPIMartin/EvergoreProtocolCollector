@@ -1,6 +1,4 @@
 evergore:
-  security:
-    api-token: test-token
   credentials:
     username: test-username
     password: test-password

@@ -1,6 +1,6 @@
 export class Unauthorized extends Error {
   constructor() {
-    super('The API refused the token')
+    super('The API refused the login')
   }
 }
 

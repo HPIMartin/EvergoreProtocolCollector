@@ -357,12 +357,11 @@ class ProtocolEvaluationAcceptanceTest {
 		return Pattern.compile("\"name\":\"([^\"]*)\"").matcher(body).results().map(match -> match.group(1)).toList();
 	}
 
-	private static int statusOfGet(String endpoint) {
+	private int statusOfGet(String endpoint) {
 		return get(endpoint).getStatus();
 	}
 
-	private static HttpResponse<String> get(String endpoint) {
-		String separator = endpoint.contains("?") ? "&" : "?";
-		return Unirest.get(endpoint + separator + "token=test-token").asString();
+	private HttpResponse<String> get(String endpoint) {
+		return Unirest.get(endpoint).header("Cookie", LoginCookie.headerFor(server)).asString();
 	}
 }

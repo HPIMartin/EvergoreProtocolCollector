@@ -15,6 +15,7 @@ import kong.unirest.Unirest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import dev.schoenberg.evergore.protocolParser.LoginCookie;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
@@ -62,7 +63,7 @@ class ApplicationExceptionHandlerHttpTest {
 	}
 
 	private HttpResponse<String> requestBankPageOf(String avatar) {
-		return Unirest.get("/api/v1/avatars/" + avatar + "/bank?token=test-token").asString();
+		return Unirest.get("/api/v1/avatars/" + avatar + "/bank").header("Cookie", LoginCookie.headerFor(server)).asString();
 	}
 
 	@MockBean(Configuration.class)

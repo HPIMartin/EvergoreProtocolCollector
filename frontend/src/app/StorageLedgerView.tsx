@@ -12,7 +12,6 @@ import { useLoad } from './useLoad.ts'
 export interface StorageLedgerViewProps {
   readonly api: ProtocolApi
   readonly avatar: string
-  readonly token: string | null
   readonly page: number
   readonly sort: LedgerSort | null
   readonly onFollow: (href: string) => void
@@ -62,14 +61,13 @@ const columns: readonly Column<StorageEntry>[] = [
 export function StorageLedgerView({
   api,
   avatar,
-  token,
   page,
   sort,
   onFollow,
 }: StorageLedgerViewProps) {
   const load = useLoad(
     () => api.storageEntries(avatar, windowOf(page), sort),
-    requestKeyOf('storage', avatar, token, page, sort),
+    requestKeyOf('storage', avatar, page, sort),
   )
 
   return (
@@ -78,7 +76,6 @@ export function StorageLedgerView({
       avatar={avatar}
       load={load}
       columns={columns}
-      token={token}
       sort={sort}
       pathOf={storagePath}
       onFollow={onFollow}

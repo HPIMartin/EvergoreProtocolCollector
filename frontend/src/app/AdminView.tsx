@@ -10,10 +10,7 @@ export interface AdminViewProps {
 }
 
 export function AdminView({ api }: AdminViewProps) {
-  const load = useLoad(
-    () => api.adminStatus(),
-    requestKeyOf('admin', null, null),
-  )
+  const load = useLoad(() => api.adminStatus(), requestKeyOf('admin', null))
 
   return (
     <section>

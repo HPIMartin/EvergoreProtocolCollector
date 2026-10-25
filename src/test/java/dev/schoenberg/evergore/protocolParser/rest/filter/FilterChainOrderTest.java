@@ -3,7 +3,6 @@ package dev.schoenberg.evergore.protocolParser.rest.filter;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -50,8 +49,8 @@ class FilterChainOrderTest {
 	}
 
 	private AccessFilter accessFilter() {
-		SecurityConfiguration configuration = new SecurityConfiguration(Optional.of("token"), List.of());
+		SecurityConfiguration configuration = new SecurityConfiguration(List.of());
 
-		return new AccessFilter(canonicalizer, new PublicPaths(configuration), new GuildToken(configuration), new SpaNavigationPaths(), logger);
+		return new AccessFilter(canonicalizer, new PublicPaths(configuration), new SpaNavigationPaths(), logger);
 	}
 }

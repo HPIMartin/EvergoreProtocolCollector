@@ -31,14 +31,12 @@ public class AccessFilter implements HttpServerFilter {
 
 	private final PathCanonicalizer canonicalizer;
 	private final PublicPaths publicPaths;
-	private final GuildToken guildToken;
 	private final SpaNavigationPaths spaNavigationPaths;
 	private final Logger logger;
 
-	public AccessFilter(PathCanonicalizer canonicalizer, PublicPaths publicPaths, GuildToken guildToken, SpaNavigationPaths spaNavigationPaths, Logger logger) {
+	public AccessFilter(PathCanonicalizer canonicalizer, PublicPaths publicPaths, SpaNavigationPaths spaNavigationPaths, Logger logger) {
 		this.canonicalizer = canonicalizer;
 		this.publicPaths = publicPaths;
-		this.guildToken = guildToken;
 		this.spaNavigationPaths = spaNavigationPaths;
 		this.logger = logger;
 	}
@@ -51,7 +49,7 @@ public class AccessFilter implements HttpServerFilter {
 	@Override
 	public Publisher<MutableHttpResponse<?>> doFilter(HttpRequest<?> request, ServerFilterChain chain) {
 		String path = canonicalizer.canonicalize(request.getPath());
-		if (publicPaths.contains(path) || hasALogin(request) || guildToken.opens(request)) {
+		if (publicPaths.contains(path) || hasALogin(request)) {
 			return chain.proceed(request);
 		}
 

@@ -88,7 +88,7 @@ config        : Micronaut @Factory wiring + @ConfigurationProperties
 - **Immutable `record`s over getter/setter boilerplate** for value objects, DTOs, config
   (`BankEntry`, `StorageEntry`).
   - DTO public fields are fine.
-  - Record accessors (`config.apiToken()`, `BankEntry.amount()`) are not bean getters.
+  - Record accessors (`config.publicPaths()`, `BankEntry.amount()`) are not bean getters.
   - No `getX()`/`setX()` unless a framework strictly requires it (Micronaut binds
     `@ConfigurationProperties` to a record with no extra annotation).
   - Return `Optional`, not sentinels.

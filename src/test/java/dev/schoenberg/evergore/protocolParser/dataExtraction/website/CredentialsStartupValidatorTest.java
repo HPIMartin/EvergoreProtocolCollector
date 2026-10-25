@@ -92,8 +92,7 @@ class CredentialsStartupValidatorTest {
 
 	@Test
 	void anUnsetUsernameStopsTheApplicationContextFromStarting() {
-		Map<String, Object> unsetUsername = Map
-				.of("evergore.security.api-token", "token", "evergore.credentials.password", "secret", "micronaut.server.port", "-1", THROWAWAY_DATABASE_PATH, THROWAWAY_DB_PATH);
+		Map<String, Object> unsetUsername = Map.of("evergore.credentials.password", "secret", "micronaut.server.port", "-1", THROWAWAY_DATABASE_PATH, THROWAWAY_DB_PATH);
 
 		Throwable thrown = catchThrowable(() -> ApplicationContext.builder().deduceEnvironment(false).environmentPropertySource(false).properties(unsetUsername).start().close());
 
@@ -102,8 +101,7 @@ class CredentialsStartupValidatorTest {
 
 	@Test
 	void anUnsetPasswordStopsTheApplicationContextFromStarting() {
-		Map<String, Object> unsetPassword = Map
-				.of("evergore.security.api-token", "token", "evergore.credentials.username", "user", "micronaut.server.port", "-1", THROWAWAY_DATABASE_PATH, THROWAWAY_DB_PATH);
+		Map<String, Object> unsetPassword = Map.of("evergore.credentials.username", "user", "micronaut.server.port", "-1", THROWAWAY_DATABASE_PATH, THROWAWAY_DB_PATH);
 
 		Throwable thrown = catchThrowable(() -> ApplicationContext.builder().deduceEnvironment(false).environmentPropertySource(false).properties(unsetPassword).start().close());
 

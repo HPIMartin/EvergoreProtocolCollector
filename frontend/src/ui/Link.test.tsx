@@ -25,10 +25,7 @@ describe('Link', () => {
   it('offers the address as a real link so it can be bookmarked', () => {
     const recorder = recordingFollow()
     render(
-      <Link
-        href="/avatars/Calix/bank?token=a-test-token"
-        onFollow={recorder.follow}
-      >
+      <Link href="/avatars/Calix/bank" onFollow={recorder.follow}>
         Bank
       </Link>,
     )
@@ -36,13 +33,13 @@ describe('Link', () => {
     const link = screen.getByRole('link', { name: 'Bank' })
     const href = link.getAttribute('href')
 
-    expect(href).toBe('/avatars/Calix/bank?token=a-test-token')
+    expect(href).toBe('/avatars/Calix/bank')
   })
 
   it('reports a plain click instead of letting the browser reload the shell', () => {
     const recorder = recordingFollow()
     render(
-      <Link href="/overview?token=a-test-token" onFollow={recorder.follow}>
+      <Link href="/overview" onFollow={recorder.follow}>
         Overview
       </Link>,
     )
@@ -51,7 +48,7 @@ describe('Link', () => {
 
     expect({ notCancelled, followed: recorder.followed }).toStrictEqual({
       notCancelled: false,
-      followed: ['/overview?token=a-test-token'],
+      followed: ['/overview'],
     })
   })
 
@@ -64,7 +61,7 @@ describe('Link', () => {
   ])('leaves a click with $modifier to the browser', ({ click }) => {
     const recorder = recordingFollow()
     render(
-      <Link href="/overview?token=a-test-token" onFollow={recorder.follow}>
+      <Link href="/overview" onFollow={recorder.follow}>
         Overview
       </Link>,
     )

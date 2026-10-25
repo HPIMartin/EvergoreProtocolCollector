@@ -9,8 +9,8 @@ describe('Pagination', () => {
   it('offers both directions when there is a page before and after this one', () => {
     render(
       <Pagination
-        previousHref="/avatars/Calix/bank?token=a-test-token"
-        nextHref="/avatars/Calix/bank?token=a-test-token&page=2"
+        previousHref="/avatars/Calix/bank"
+        nextHref="/avatars/Calix/bank?page=2"
       />,
     )
 
@@ -20,17 +20,14 @@ describe('Pagination', () => {
     const next = screen.getByTestId('pagination-next').getAttribute('href')
 
     expect({ previous, next }).toStrictEqual({
-      previous: '/avatars/Calix/bank?token=a-test-token',
-      next: '/avatars/Calix/bank?token=a-test-token&page=2',
+      previous: '/avatars/Calix/bank',
+      next: '/avatars/Calix/bank?page=2',
     })
   })
 
   it('offers no way back from the first page', () => {
     render(
-      <Pagination
-        previousHref={null}
-        nextHref="/avatars/Calix/bank?token=a-test-token&page=1"
-      />,
+      <Pagination previousHref={null} nextHref="/avatars/Calix/bank?page=1" />,
     )
 
     expect(screen.queryByTestId('pagination-previous')).toBeNull()
@@ -38,10 +35,7 @@ describe('Pagination', () => {
 
   it('offers no way forward from the last page', () => {
     render(
-      <Pagination
-        previousHref="/avatars/Calix/bank?token=a-test-token&page=2"
-        nextHref={null}
-      />,
+      <Pagination previousHref="/avatars/Calix/bank?page=2" nextHref={null} />,
     )
 
     expect(screen.queryByTestId('pagination-next')).toBeNull()
@@ -51,8 +45,8 @@ describe('Pagination', () => {
     const followed: string[] = []
     render(
       <Pagination
-        previousHref="/avatars/Calix/bank?token=a-test-token"
-        nextHref="/avatars/Calix/bank?token=a-test-token&page=2"
+        previousHref="/avatars/Calix/bank"
+        nextHref="/avatars/Calix/bank?page=2"
         onFollow={(href) => {
           followed.push(href)
         }}
@@ -61,8 +55,6 @@ describe('Pagination', () => {
 
     fireEvent.click(screen.getByTestId('pagination-next'))
 
-    expect(followed).toStrictEqual([
-      '/avatars/Calix/bank?token=a-test-token&page=2',
-    ])
+    expect(followed).toStrictEqual(['/avatars/Calix/bank?page=2'])
   })
 })

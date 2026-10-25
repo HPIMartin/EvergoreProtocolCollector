@@ -60,7 +60,7 @@ public class LoginSteps {
 		logIn(name, password);
 	}
 
-	@Given("a member has entered the name {string} and the password the reset issued on the login page")
+	@Given("a/the member has entered the name {string} and the password the reset issued on the login page")
 	public void aMemberHasEnteredTheNameAndTheIssuedPassword(String name) {
 		logIn(name, accounts.issuedTo(name));
 

@@ -3,7 +3,6 @@ package dev.schoenberg.evergore.protocolParser.rest.filter;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
@@ -29,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AccessFilterTest {
 	private static final Instant MADE = Instant.parse("2026-01-05T10:00:00Z");
-	private static final String GUILD_TOKEN = "correct-horse-battery-staple";
+	private static final String OLD_TOKEN = "correct-horse-battery-staple";
 	private static final String PROTECTED_PATH = "/api/v1/avatars";
 	private static final Login AURORA = new Login("Aurora", Role.MEMBER, 0, LoginSource.ACCOUNT, "id", MADE, MADE.plus(Login.LIFETIME));
 
@@ -40,8 +39,8 @@ class AccessFilterTest {
 		return passedThrough;
 	};
 	private final LoggerSpy logger = new LoggerSpy();
-	private final SecurityConfiguration configuration = new SecurityConfiguration(Optional.of(GUILD_TOKEN), List.of("/login", "/health", "/assets/**"));
-	private final AccessFilter tested = new AccessFilter(new PathCanonicalizer(), new PublicPaths(configuration), new GuildToken(configuration), new SpaNavigationPaths(), logger);
+	private final SecurityConfiguration configuration = new SecurityConfiguration(List.of("/login", "/health", "/assets/**"));
+	private final AccessFilter tested = new AccessFilter(new PathCanonicalizer(), new PublicPaths(configuration), new SpaNavigationPaths(), logger);
 
 	@Test
 	void passesARequestForAPublicPathWithoutALogin() {
@@ -65,18 +64,7 @@ class AccessFilterTest {
 	}
 
 	@Test
-	void passesARequestCarryingTheGuildTokenWhileTheTokenStillOpens() {
-		MutableHttpRequest<?> request = HttpRequest.GET(PROTECTED_PATH);
-		request.getParameters().add("token", GUILD_TOKEN);
-
-		Publisher<MutableHttpResponse<?>> filtered = tested.doFilter(request, chain);
-
-		assertThat(reachedTheChain).containsExactly(request);
-		assertThat(filtered).isSameAs(passedThrough);
-	}
-
-	@Test
-	void rejectsARequestWithNeitherALoginNorTheGuildToken() {
+	void rejectsARequestWithoutALogin() {
 		HttpRequest<?> request = HttpRequest.GET(PROTECTED_PATH);
 
 		assertThatThrownBy(() -> tested.doFilter(request, chain)).isInstanceOf(AccessNotAllowed.class);
@@ -84,11 +72,12 @@ class AccessFilterTest {
 	}
 
 	@Test
-	void rejectsARequestCarryingAWrongGuildTokenAndNoLogin() {
+	void rejectsARequestCarryingTheGuildsOldTokenAndNoLogin() {
 		MutableHttpRequest<?> request = HttpRequest.GET(PROTECTED_PATH);
-		request.getParameters().add("token", "wrong");
+		request.getParameters().add("token", OLD_TOKEN);
 
 		assertThatThrownBy(() -> tested.doFilter(request, chain)).isInstanceOf(AccessNotAllowed.class);
+		assertThat(reachedTheChain).isEmpty();
 	}
 
 	@Test

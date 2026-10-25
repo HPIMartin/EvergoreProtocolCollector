@@ -15,7 +15,7 @@ const describingVisitor: RouteVisitor<string> = {
 
 describe('useRouting', () => {
   beforeEach(() => {
-    window.history.replaceState(null, '', '/?token=a-test-token')
+    window.history.replaceState(null, '', '/')
   })
 
   afterEach(() => {
@@ -37,7 +37,7 @@ describe('useRouting', () => {
     const routing = renderHook(() => useRouting())
 
     act(() => {
-      routing.result.current.follow('/avatars/Calix/storage?token=a-test-token')
+      routing.result.current.follow('/avatars/Calix/storage?page=2')
     })
 
     const shownRoute = routing.result.current.route.accept(describingVisitor)
@@ -49,11 +49,11 @@ describe('useRouting', () => {
     const routing = renderHook(() => useRouting())
 
     act(() => {
-      routing.result.current.follow('/avatars/Calix/storage?token=a-test-token')
+      routing.result.current.follow('/avatars/Calix/storage?page=2')
     })
 
     expect(window.location.pathname + window.location.search).toBe(
-      '/avatars/Calix/storage?token=a-test-token',
+      '/avatars/Calix/storage?page=2',
     )
   })
 
@@ -77,11 +77,5 @@ describe('useRouting', () => {
     routing.unmount()
 
     expect(removing).toHaveBeenCalledWith('popstate', expect.any(Function))
-  })
-
-  it('reads the token of the address the shell was loaded from', () => {
-    const routing = renderHook(() => useRouting())
-
-    expect(routing.result.current.token).toBe('a-test-token')
   })
 })

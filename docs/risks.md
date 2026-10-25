@@ -9,7 +9,7 @@
 
 | Risk | L | I | Countermeasure |
 |------|---|---|----------------|
-| The game serves only ~30 days of logs; DB loss or a >30-day scrape outage is irreversible | M | H | The author's monthly manual backup, whose restore re-scrapes the 30-day window ([open-questions.md](open-questions.md), 2026-07-17); every migration is proven row for row before its deploy ([build-run-deploy.md](knowledge-base/build-run-deploy.md), "Schema migrations (Flyway)") |
+| The game serves only ~30 days of logs; DB loss or a >30-day scrape outage is irreversible | M | H | The author's monthly manual backup, whose restore re-scrapes the 30-day window ([open-questions.md](open-questions.md), 2026-07-17); no scrape refills the accounts, so a restore brings back only those of the last copy: the next collection makes an account made since anew, with a new issued password, and a password chosen since is lost; every migration is proven row for row before its deploy ([build-run-deploy.md](knowledge-base/build-run-deploy.md), "Schema migrations (Flyway)") |
 | The production DB file is named `temp.sqlite`, inviting careless deletion | L | H | Rename once config is really bindable (backlog C1); until then a known trap |
 | A database directory open to every account lets any account on the host rewrite or delete the history | L | H | The ownership and mode of release step 3 ([build-run-deploy.md](knowledge-base/build-run-deploy.md)) |
 
@@ -19,7 +19,7 @@
 |------|---|---|----------------|
 | An Evergore HTML/layout change breaks parser or scraper; a silent failure burns the 30-day window | M | H | Fail-loud scraping stays in scope (backlog F1); no single malformed protocol line aborts the ingest, and every dropped block head is logged; a push/alert channel (backlog F3) would surface silence |
 | The login flow changes (bot protection) or the game shuts down | L | H | Accepted (hobby project): the DB remains as archive |
-| ToS/PII stance for scraping and storing other members' activity is undecided (open question D-11) | L | M | Decide and log before any exposure beyond the guild; data stays token-protected |
+| ToS/PII stance for scraping and storing other members' activity is undecided (open question D-11) | L | M | Decide and log before any exposure beyond the guild; data stays behind a login |
 
 ## Security
 

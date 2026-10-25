@@ -25,19 +25,13 @@ const UNAUTHORIZED = 401
 const BAD_REQUEST = 400
 const NOT_FOUND = 404
 
-export function httpProtocolApi(
-  get: HttpGet,
-  token: string | null,
-): ProtocolApi {
+export function httpProtocolApi(get: HttpGet): ProtocolApi {
   function urlOf(
     path: string,
     window: PageWindow,
     sort: LedgerSort | null = null,
   ): string {
     const parameters = new URLSearchParams()
-    if (token !== null) {
-      parameters.set('token', token)
-    }
     parameters.set('page', String(window.page))
     parameters.set('size', String(window.size))
     if (sort !== null) {

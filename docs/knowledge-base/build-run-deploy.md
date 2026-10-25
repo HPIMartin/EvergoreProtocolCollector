@@ -336,7 +336,7 @@ any push.
     openjdk-25), the distribution copied to `/opt/protocolParser`,
     `ENTRYPOINT /opt/protocolParser/bin/protocolParser`, `WORKDIR /` so the SQLite path
     `database/temp.sqlite` resolves against the mounted `/database`. The image holds **no secret**:
-    both the API token and the Evergore login arrive as environment variables at `docker run`.
+    the Evergore login arrives as environment variables at `docker run`.
   - `.dockerignore` keeps the build context lean: excludes DBs / the gitignored benchmark, plus
     `frontend/node_modules`, `frontend/build` and `frontend/.gradle`.
 - **`buildAndRun.bat`** (gitignored, machine-specific): `docker build` → `docker run -p 8080:8080
@@ -453,10 +453,16 @@ docker images evergore-protocol-collector    # which tags are available to roll 
 its specification: each check it carries is there because that step once failed silently.
 
 ```sh
-EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDENTIALS_PASSWORD=… \
+EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDENTIALS_PASSWORD=… \
+  EVERGORE_SECURITY_API_TOKEN=<any non-blank value> \
   deploy/epc-deploy deploy --host <host> --ssh-user <user> --container <name> \
   --database-dir <the directory mounted at /database> --image evergore-protocol-collector:<version>
 ```
+
+- **Until the release tooling speaks the login (F24) the script is stale on it:** it still demands
+  `EVERGORE_SECURITY_API_TOKEN` (any non-blank value) before it reaches a machine, passes the
+  guild's old token and checks the API with `?token=`, which 0.5.0 no longer reads, so its step 6
+  fails on 0.5.0.
 
 - **Nothing machine-specific is committed:** host, ssh user, container name, mount directory, image
   tag and the three secrets are parameters or environment variables, and a missing one stops the run
@@ -510,9 +516,10 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
   - A first command that fails after ssh signed in is reported as such, with its exit status.
     - ssh's own failures exit 255; a refused sudo ticket does not.
 - **The parameters live in `deploy.local.env`** (gitignored by `*.local.*`, mode 600 because it
-  holds the password): every `EPC_DEPLOY_*` variable from the usage text plus the API token; the
-  game login stays in `credentials.local.env`. Export both into the environment and the script
-  needs no option but `--image`.
+  holds the password): every `EPC_DEPLOY_*` variable from the usage text, plus
+  `EVERGORE_SECURITY_API_TOKEN`, any non-blank value, which the script demands until the release
+  tooling speaks the login (F24); the game login stays in `credentials.local.env`. Export both
+  into the environment and the script needs no option but `--image`.
 - **The image build runs the whole `check`, so any test that reads repository files outside `src/`
   needs them in the build context.** `KbCitationGuardTest` reads `docs/knowledge-base`; the
   Dockerfile copies it and `.dockerignore` lets exactly that directory through. Without it the image
@@ -535,7 +542,7 @@ EVERGORE_SECURITY_API_TOKEN=… EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDE
   3. Recreate `epc` with exactly the parameters `epc-deploy` uses (release step 5: image, `-p 80:8080`,
      `--restart unless-stopped`, the 0600 env file with the three secrets and `TZ=UTC`), only the
      `-v <new>:/database` changed.
-  4. Verify as in release step 6 (health `200`, an api call without a token `401`, `lastUpdated` current).
+  4. Verify as in release step 6 (health `200`, an api call without a login `401`).
   5. Set `EPC_DEPLOY_DATABASE_DIR` in `deploy.local.env` to the new directory, so the next
      deploy's pre-flight matches. `epc-old` does not bother the next deploy, which only touches
      `epc`; remove it once the new directory has run for a while.
@@ -687,26 +694,20 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    ```sh
    docker stop epc && docker rm epc
    docker run -d --name epc -p 80:8080 \
-     -e EVERGORE_SECURITY_API_TOKEN=<token> \
      -e EVERGORE_CREDENTIALS_USERNAME=<evergore login> \
      -e EVERGORE_CREDENTIALS_PASSWORD=<evergore password> -e TZ=UTC \
      -v "<host>/database:/database" evergore-protocol-collector:<version>
    ```
 
-   - The token is **mandatory**: a blank or unset value makes the app refuse to boot
-     (`ApiTokenStartupValidator`); an unset variable binds as an empty `Optional` and so reaches the
-     validator, which names the variable, instead of failing the property binding. Keeping the
-     value stable keeps existing bookmark URLs valid; but stability is not a reason to keep a
-     **known** value. The pre-`0.1.0` stand ran with
-     `secret_token`, the literal placeholder its own paging script shipped inside every detail page,
-     on an internet-reachable instance; it was rotated with this release (`openssl rand -hex 24`).
-     A token that appears in a served page is public, and the bookmarks are the cheaper loss.
+   - The service reads **no token**: a member logs in with the avatar's name and a
+     password of their own (the login API, below), and a variable `EVERGORE_SECURITY_API_TOKEN`
+     left over from an older stand is ignored, the service starts without it.
    - The **Evergore login is mandatory too**, and for the same reason: either variable unset or
      blank and the app refuses to boot (`CredentialsStartupValidator`), instead of starting healthy
      and scraping logged-out 30 seconds later. An unset variable binds as an empty `Optional` and
      so reaches the validator, which names the variable. Neither value has a default; both must be
      set explicitly, and they are the credentials of the game account the scraper signs in with.
-   - The three secrets are the **only** thing separating an image from a running stand. They are
+   - The two secrets are the **only** thing separating an image from a running stand. They are
      visible in `docker inspect` and in the shell history of this command, which is accepted here
      (single-admin home server); nothing writes them to the log. The script keeps them out of the
      shell history half of that by passing a 0600 `--env-file` instead of `-e VAR=value`, and
@@ -748,12 +749,11 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      `status` of its own, and several read `UP` while the service itself is still `UNKNOWN`. The
      script reads the **first**, top-level status only; a check that greps the whole body passes on
      a service that has not run once.
-6. **Verify**, in order (`<token>` is the same value passed in step 5):
+6. **Verify**, in order:
 
    ```sh
    curl -s -o /dev/null -w '%{http_code}\n' http://<host>/health          # 200
-   curl -s -o /dev/null -w '%{http_code}\n' http://<host>/                # 200, no token
-   curl -s -o /dev/null -w '%{http_code}\n' "http://<host>/api/v1/avatars?token=<token>"
+   curl -s -o /dev/null -w '%{http_code}\n' -H 'Accept: text/html' http://<host>/   # 302 to the login page
    curl -s -o /dev/null -w '%{http_code}\n' http://<host>/api/v1/avatars  # 401
    ```
 
@@ -773,15 +773,16 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      `RoundTripDetector` findings, and `roundTripAbstentionCount`/`roundTripAbstentions` (`"<avatar>: <item ingameName>"` lines, in the same order) carry the avatar/item pairs it could not judge because a
      deposited product's recipe is unread; both are omitted when empty, the same as every other
      `lastRun` detail pair.
-   - `/` serves the SPA shell without a token (~480 bytes, `text/html`, carrying `<div id="root">`
-     and the bundle `<script>`); the SPA then fetches the API with the token from its URL.
-   - `/api/v1/avatars?token=…` answers `{page, size, totalCount, items[]}` with
+   - `/` answers a browser navigation without a login with a 302 to `/login?next=%2F`; with a login it
+     serves the SPA shell (~480 bytes, `text/html`, carrying `<div id="root">` and the bundle
+     `<script>`); the SPA then fetches the API with the login's cookie.
+   - `/api/v1/avatars` with a login answers `{page, size, totalCount, items[]}` with
      `{avatar, bankDeposited, bankWithdrawn}` per item, `null` for a member no recompute has
      reached yet. Check `totalCount` against what the previous
      stand served, and `lastUpdated` from `/api/v1/admin/status`; that is the cheapest proof the
      mounted database is the intended one and not an empty new file.
    - **Rate limit:** 30 requests per 10 s per client IP, then a 1-minute block. Nothing is exempt,
-     so the four checks above cost **four** counted requests and fit in one window. A renewed burst
+     so the three checks above cost **three** counted requests and fit in one window. A renewed burst
      while blocked pushes the block out again, so back off after a 429 instead of retrying.
 7. **Rollback:** the previous release's tag (`docker images evergore-protocol-collector` lists the
    candidates; the pre-`0.1.0` predecessor lists under `evergore_protocol_collector`, see step 2):
@@ -790,7 +791,6 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    docker stop epc && docker rm epc
    cp database/temp.sqlite.bak-<yyyymmdd> database/temp.sqlite
    docker run -d --name epc -p 80:8080 \
-     -e EVERGORE_SECURITY_API_TOKEN=<token> \
      -e EVERGORE_CREDENTIALS_USERNAME=<evergore login> \
      -e EVERGORE_CREDENTIALS_PASSWORD=<evergore password> -e TZ=UTC \
      -v "<host>/database:/database" evergore-protocol-collector:<previous version>
@@ -944,8 +944,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 | Evergore login | `evergore.credentials.username` / `.password`, **both required**, env-injected as `EVERGORE_CREDENTIALS_USERNAME` / `EVERGORE_CREDENTIALS_PASSWORD` (bound by the `CredentialsConfiguration` `@ConfigurationProperties` record) | The game account `SeleniumPageSource.tryToLogin` signs in with (startup rule: bullets below the table). |
 | `evergoreFolder` | `c:\evergore` | Windows path; unused on the Linux container scrape path. |
 | DB path | `database/temp.sqlite` | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
-| Auth token | `evergore.security.api-token`, **required**, env-injected as `EVERGORE_SECURITY_API_TOKEN` (bound by the `SecurityConfiguration` `@ConfigurationProperties` bean) | **Every** request needs `?token=<configured token>` except the configured public paths below. **Mandatory at startup**: a blank/unset token makes the app refuse to boot (`ApiTokenStartupValidator` logs an error naming the variable and throws; an unset variable binds as an empty `Optional` and reaches it). No token value lives in the repo. |
-| Public paths | `evergore.security.public-paths` in `application.yml`: `/index.html`, `/assets/**`, `/favicon.ico`, `/login`, `/login/**`, `/api/v1/admin/status`, `/api/v1/login`, `/api/v1/login/new-password`, `/health`, `/swagger/**`, `/swagger-ui/**`, `/redoc/**`, `/rapidoc/**` (same `SecurityConfiguration` bean) | The **only** token-free surface; Ant patterns, matched against the canonicalized path by `PublicPaths`. Everything not listed needs a token, so a new controller is protected by default. Empty or unset ⇒ everything is protected (fail closed), which makes a misconfiguration a visible redirect to the login page on `/` rather than a silent hole. |
+| Public paths | `evergore.security.public-paths` in `application.yml`: `/login`, `/login/**`, `/api/v1/login`, `/api/v1/login/new-password`, `/health` (bound by the `SecurityConfiguration` `@ConfigurationProperties` record) | The **only** login-free surface; Ant patterns, matched against the canonicalized path by `PublicPaths`. Everything not listed needs a login, so a new controller is protected by default. Empty or unset ⇒ everything is protected (fail closed), which makes a misconfiguration a visible redirect to the login page on `/` rather than a silent hole. |
 | Rate limit | `evergore.rate-limit.*`: `max-requests-per-interval` `30`, `interval` `10s`, `block-duration` `1m`, `max-tracked-clients` `10000` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `RateLimitFilter` (details: bullets below the table). |
 | Password hash | `evergore.password-hash.*`: `memory-kibibytes` `65536`, `iterations` `3`, `parallelism` `1`, `max-concurrent` `2` (bound by the `PasswordHashConfiguration` `@ConfigurationProperties` record, the defaults declared on the record, not in `application.yml`) | The Argon2id cost of `Argon2idPasswordHasher` (64 MiB, 3 iterations, one lane) and how many hashes or checks run at once: a further one waits for a permit and is never refused, so the heap holds at most `max-concurrent` times 64 MiB of them. A `max-concurrent` below `1` fails the start (`PasswordHashStartupValidator`), naming the property. The test profile sets `1024` and `1`. |
 
@@ -969,48 +968,46 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 - **Environment YAMLs hold overrides only** (author decision 2026-08-15). Micronaut merges the
   property sources, so `application-<env>.yml` is an overlay on `application.yml`, not a replacement:
   a key it repeats with the same value is duplication that silently rots when the base changes.
-  `application-test.yml` therefore carries the test token, the raised request budget and the small
+  `application-test.yml` therefore carries the raised request budget and the small
   password-hash cost, `application-ratelimit.yml` the lowered budget, and nothing else.
 - **`application.yml`** holds Micronaut concerns (app name, Swagger static routes, Netty
   `max-order: 3`) plus the **rate-limit defaults** (`evergore.rate-limit.*`, bound to
-  `RateLimitConfiguration`) and the **public-path list** (`evergore.security.public-paths`, next to
-  the static-resource mappings it mirrors), **no `server.port`** → defaults to **8080**. The settings bound
-  from the *environment* are the three secrets: the **API token** (`evergore.security.api-token` ←
-  `EVERGORE_SECURITY_API_TOKEN`, via `SecurityConfiguration`) and the **Evergore login**
+  `RateLimitConfiguration`) and the **public-path list** (`evergore.security.public-paths`),
+  **no `server.port`** → defaults to **8080**. The settings bound
+  from the *environment* are the two secrets of the **Evergore login**
   (`evergore.credentials.username` / `.password` ← `EVERGORE_CREDENTIALS_USERNAME` /
-  `EVERGORE_CREDENTIALS_PASSWORD`, via `CredentialsConfiguration`). None of them has a value in
+  `EVERGORE_CREDENTIALS_PASSWORD`, via `CredentialsConfiguration`). Neither has a value in
   `application.yml`, so none lives in the repo; `application-test.yml` carries dummy values because
   every boot test would otherwise fail the startup validation.
   - It also sets the server's thread selection (`micronaut.server.thread-selection`) and the fixed
     IO pool (`micronaut.executors.io`), see [architecture.md](architecture.md), "Layers &
     responsibilities (condensed)".
 - **`logback.xml`**: single colored STDOUT appender, root level `info`. Nothing logs a request URI's
-  query string, so the `?token=…` credential never reaches the log: `RequestAuditLogFilter` logs only
+  query string, so a credential in an address (the guild's old `?token=…` link) never reaches the log: `RequestAuditLogFilter` logs only
   client IP and user-agent, and the exception handler logs `request.getPath()`, which excludes the
   query (pinned by `ApplicationExceptionHandlerTest`). An expected client error (401, 404, 429) is
-  one `info` line; only a server error logs at `error` with its stack trace, so probing the token
+  one `info` line; only a server error logs at `error` with its stack trace, so probing the login
   cannot bury real errors in traces.
 
 ## HTTP endpoints
 
-The access is **default-deny** (author decision 2026-08-04): a valid login or, while 0.5.0 is under
-way, a valid `?token=…` is required everywhere except the paths configured under
-`evergore.security.public-paths`:
+The access is **default-deny** (author decision 2026-08-04): a valid login is required everywhere
+except the paths configured under `evergore.security.public-paths`; a `?token=…` in an address opens
+nothing:
 - `LoginReadingFilter` (order 2, ahead of the rate limit) reads the `epc_session` cookie through
   `ValidLogins`, which checks the signature and the in-memory generation of the account, and puts
   the login on the request;
-- `AccessFilter` (order 5) lets a public path, a request with a login, or one with the guild token
-  (`GuildToken`) through;
+- `AccessFilter` (order 5) lets a public path or a request with a login through;
 - every other request is answered **401**, except a browser navigation, a `GET` with
   `Accept: text/html` to a page of the dashboard (`SpaNavigationPaths.isSpaOwned`, so `/`, a page
   the dashboard does not have and the guild's old link included): it is answered **302** to
   `/login?next=<canonical path and query, URL-encoded>`;
 - the decision is made on the **canonicalized** path (`PathCanonicalizer`), so `/assets/../overview`
   is protected like `/overview`;
-- consequence for the SPA: a deep link opened without a token or login answers **401**, the shell
-  loads from `/` and the client carries `?token=` across its routes.
+- consequence for the SPA: even its shell and files need a login; a page is reached through the login
+  page, and an API call whose login has ended answers **401**, which sends the SPA to the login page.
 
-**Public means token-free, nothing else** (author decision 2026-08-14): the rate limit and the
+**Public means login-free, nothing else** (author decision 2026-08-14): the rate limit and the
 audit log apply to every path, so `evergore.security.public-paths` is the *only* list of paths with
 a special status. There is no second, code-side list that could drift out of sync with it.
 
@@ -1024,7 +1021,9 @@ between exceeding its budget and being blocked, and no request lands on an alrea
 
 A **malformed request target** (an invalid percent-escape such as `/overview%zz`) reaches the filters
 and is answered **400** only afterwards: the invalid escape breaks the request URI, so no path-based
-decision can be made and the access filter never gets to answer 401. Neither the audit log nor the rate
+decision can be made, and Micronaut hands the filters a stand-in request without any header for it.
+`UnreadableRequestFilter` answers that stand-in **400** ahead of the access filter, so the root not being
+public cannot turn it into a 401 or a redirect. Neither the audit log nor the rate
 limiter reads the path, which is why both still see the request. That it is **counted** is pinned
 by `RateLimitFilterTest`; that it is **logged** follows from filter order (the
 audit filter sits at order 1, ahead of the counter that demonstrably runs) plus the audit line being
@@ -1049,7 +1048,7 @@ before any filter runs. `HeadLineSlicer` (ahead of the HTTP codec) and `Unreadab
 - a request pipelined behind a rejected head is not answered;
 - a request pipelined behind a rejected head is not counted;
 - the stand-in never carries the rejected target or its query;
-- no `?token=` reaches the log;
+- no query string reaches the log;
 - no client can send a stand-in, because the filter recognizes the native Netty type;
 - the audit line names the client's address;
 - the audit line names the browser for heads as browsers send them;
@@ -1112,14 +1111,14 @@ answered (measured on Micronaut 4.10.9).
 | `GET /api/v1/avatars` | JSON overview: per-avatar bank totals. Contract in [frontend.md](frontend.md). |
 | `GET /api/v1/avatars/{avatar}/bank?page=N&size=M&sort=C&direction=D` | JSON bank entries for one avatar, newest first unless sorted. |
 | `GET /api/v1/avatars/{avatar}/storage?page=N&size=M&sort=C&direction=D` | JSON storage entries for one avatar, newest first unless sorted. |
-| `GET /overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`, `/explanation`, `/admin` | SPA client routes. No controller owns them: `/overview`, `/explanation` and `/avatars/**` fall through to the shell with a login or a token, as does `/admin`; without either, a navigation to them is redirected to the login page, so a bookmark works once logged in. |
-| `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle: `/` needs a login or a token (a navigation (`GET`, `Accept: text/html`) to `/` or to any page of the dashboard without either is answered **302** to `/login?next=<path and query>` (`AccessFilter`), the old `?token=` link included), `/index.html` and `/assets/**` are **public** (no token) until the token goes, rate-limited and logged like any other request. An unknown navigation path **with a login or a token** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
-| `GET /favicon.ico` | Favicon: public, but rate-limited and logged like any other request. |
+| `GET /overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`, `/explanation`, `/admin` | SPA client routes. No controller owns them: `/overview`, `/explanation` and `/avatars/**` fall through to the shell with a login, as does `/admin`; without one, a navigation to them is redirected to the login page, so a bookmark works once logged in. |
+| `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle, all behind a login: a navigation (`GET`, `Accept: text/html`) to `/` or to any page of the dashboard without one is answered **302** to `/login?next=<path and query>` (`AccessFilter`), the guild's old `?token=` link included; a request for `/index.html` or a file under `/assets/` is answered 401. An unknown navigation path **with a login** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
+| `GET /favicon.ico` | Favicon: behind a login like the rest of the dashboard. |
 | `GET /login`, `/login/`, `/login/**` | The login page (`LoginPageController` serves its `login.html` at `/login` and `/login/`) and its own bundle under `/login/assets/`: public, but rate-limited and logged; an unknown path below `/login` keeps its 404, the dashboard's fallback never answers it. |
-| `GET /health` | Micronaut management health endpoint, token-exempt and anonymous: the liveness/last-run monitor hook (what it reports: bullets below the table). |
-| `GET /api/v1/admin/status` | JSON admin status, token-exempt and anonymous, same trust level as `/health` (keys and semantics: bullets below the table). |
+| `GET /health` | Micronaut management health endpoint, open without a login and anonymous: the liveness/last-run monitor hook (what it reports: bullets below the table). |
+| `GET /api/v1/admin/status` | JSON admin status, behind a login (any login until the admin role gates it) (keys and semantics: bullets below the table). |
 | `POST /api/v1/login`, `POST /api/v1/login/new-password` | A login by name and password, and its second step after a reset: public, but rate-limited and logged (answers: "The login API" below). |
-| `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: public, but rate-limited and logged. |
+| `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: behind a login, rate-limited and logged. |
 
 - **`/health`** reports:
   - UNKNOWN (no recompute attempted yet), UP (the latest recompute succeeded) or DOWN (the latest

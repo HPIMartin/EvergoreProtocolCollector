@@ -1,7 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -54,7 +53,7 @@ class PublicPathsTest {
 
 	@Test
 	void doesNotContainAnythingWhenNoPathIsConfigured() {
-		PublicPaths publicPaths = new PublicPaths(new SecurityConfiguration(Optional.of("token"), List.of()));
+		PublicPaths publicPaths = new PublicPaths(new SecurityConfiguration(List.of()));
 
 		boolean isPublic = publicPaths.contains("/");
 
@@ -63,7 +62,7 @@ class PublicPathsTest {
 
 	@Test
 	void doesNotContainAnythingWhenTheConfigurationIsMissing() {
-		PublicPaths publicPaths = new PublicPaths(new SecurityConfiguration(Optional.of("token"), null));
+		PublicPaths publicPaths = new PublicPaths(new SecurityConfiguration(null));
 
 		boolean isPublic = publicPaths.contains("/");
 
@@ -73,16 +72,16 @@ class PublicPathsTest {
 	private static void assertPublic(String canonicalPath) {
 		boolean isPublic = configuredPaths().contains(canonicalPath);
 
-		assertThat(isPublic).as(canonicalPath + " must be reachable without a token").isTrue();
+		assertThat(isPublic).as(canonicalPath + " must be reachable without a login").isTrue();
 	}
 
 	private static void assertNotPublic(String canonicalPath) {
 		boolean isPublic = configuredPaths().contains(canonicalPath);
 
-		assertThat(isPublic).as(canonicalPath + " must require a token").isFalse();
+		assertThat(isPublic).as(canonicalPath + " must require a login").isFalse();
 	}
 
 	private static PublicPaths configuredPaths() {
-		return new PublicPaths(new SecurityConfiguration(Optional.of("token"), CONFIGURED));
+		return new PublicPaths(new SecurityConfiguration(CONFIGURED));
 	}
 }

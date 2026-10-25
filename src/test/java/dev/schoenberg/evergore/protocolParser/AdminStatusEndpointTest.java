@@ -65,10 +65,17 @@ class AdminStatusEndpointTest {
 	}
 
 	@Test
-	void adminStatusEndpointIsAccessibleWithoutToken() {
-		HttpResponse<String> response = Unirest.get("/api/v1/admin/status").asString();
+	void adminStatusEndpointIsAccessibleWithALogin() {
+		HttpResponse<String> response = Unirest.get("/api/v1/admin/status").header("Cookie", LoginCookie.headerFor(server)).asString();
 
 		assertThat(response.getStatus()).isEqualTo(200);
+	}
+
+	@Test
+	void adminStatusEndpointRefusesARequestWithoutALogin() {
+		HttpResponse<String> response = Unirest.get("/api/v1/admin/status").asString();
+
+		assertThat(response.getStatus()).isEqualTo(401);
 	}
 
 	@Test
@@ -125,8 +132,8 @@ class AdminStatusEndpointTest {
 				.containsOnly(entry("avatar", "Zwerg"), entry("item", "Kristallat"));
 	}
 
-	private static JSONObject adminStatus() {
-		return new JSONObject(Unirest.get("/api/v1/admin/status").asString().getBody());
+	private JSONObject adminStatus() {
+		return new JSONObject(Unirest.get("/api/v1/admin/status").header("Cookie", LoginCookie.headerFor(server)).asString().getBody());
 	}
 
 	private static Map<String, Boolean> presenceOf(JSONObject body, String... fields) {

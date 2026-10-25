@@ -38,7 +38,7 @@ public class HealthReport {
 		askFor(HEALTH, Map.of("Cookie", LoginRequests.SESSION_COOKIE + "=" + login));
 	}
 
-	public void askWithoutToken() {
+	public void askWithoutALogin() {
 		askFor(HEALTH, Map.of());
 	}
 

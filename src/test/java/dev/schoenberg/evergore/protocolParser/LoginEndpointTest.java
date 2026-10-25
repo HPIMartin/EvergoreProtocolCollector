@@ -91,14 +91,14 @@ class LoginEndpointTest {
 	}
 
 	@Test
-	void letsALoginThroughWithoutTheGuildToken() {
+	void letsALoginThroughWithoutALogin() {
 		HttpResponse<String> response = logIn("Aurora", CHOSEN_PASSWORD);
 
 		assertThat(response.getStatus()).as("the login must be public").isEqualTo(OK.getCode());
 	}
 
 	@Test
-	void opensAProtectedPathWithTheLoginTheServiceIssuedAndWithoutTheGuildToken() {
+	void opensAProtectedPathWithTheLoginTheServiceIssued() {
 		String login = valueOf(logIn("Aurora", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
 
 		HttpResponse<String> response = Unirest.get(PROTECTED_PATH).header("Cookie", "epc_session=" + login).asString();

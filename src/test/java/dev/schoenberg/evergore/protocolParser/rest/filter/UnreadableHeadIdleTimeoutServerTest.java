@@ -54,7 +54,7 @@ class UnreadableHeadIdleTimeoutServerTest {
 
 		String answer = rawClient.answerUntilTheServerCloses(headWithoutItsBlankLine);
 		Duration waited = Duration.ofNanos(System.nanoTime() - startedAt);
-		List<Integer> statuses = IntStream.range(0, 2).mapToObj(_ -> rawClient.statusOf("/favicon.ico")).toList();
+		List<Integer> statuses = IntStream.range(0, 2).mapToObj(_ -> rawClient.statusOf("/login")).toList();
 
 		assertThat(answer).isEmpty();
 		assertThat(waited).isGreaterThanOrEqualTo(LESS_THAN_THE_IDLE_TIMEOUT);

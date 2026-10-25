@@ -28,9 +28,14 @@ public class HealthSteps {
 		return UNKNOWN_ITEM.equals(finding) ? "unknownItemCount" : "zeroValuedItemCount";
 	}
 
-	@When("the operator asks the service for its health without a token")
-	public void theOperatorAsksForItsHealthWithoutAToken() {
-		health.askWithoutToken();
+	@When("the operator asks the service for its health without a login")
+	public void theOperatorAsksForItsHealthWithoutALogin() {
+		health.askWithoutALogin();
+	}
+
+	@When("the operator asks the service for its health with the admin key")
+	public void theOperatorAsksForItsHealthWithTheAdminKey() {
+		health.ask();
 	}
 
 	@Then("the service reports its health as {string}")

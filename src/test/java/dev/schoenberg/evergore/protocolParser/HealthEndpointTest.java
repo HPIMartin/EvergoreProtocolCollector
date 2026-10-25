@@ -50,7 +50,7 @@ class HealthEndpointTest {
 	}
 
 	@Test
-	void healthEndpointIsAccessibleWithoutToken() {
+	void healthEndpointIsAccessibleWithoutALogin() {
 		HttpResponse<String> response = Unirest.get("/health").asString();
 
 		assertThat(response.getStatus()).isEqualTo(200);

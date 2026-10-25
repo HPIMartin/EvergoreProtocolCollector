@@ -13,8 +13,6 @@ import type { HttpGet } from '../api'
 
 import { App } from './App.tsx'
 
-const TOKEN = 'a-test-token'
-
 const OVERVIEW_BODY = JSON.stringify({
   page: 0,
   size: 100,
@@ -576,7 +574,7 @@ describe('App', () => {
   afterEach(cleanup)
 
   it('names the application', async () => {
-    await shellAt(`/?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/`, alwaysServing(200, OVERVIEW_BODY))
 
     expect(screen.getByTestId('page-brand').textContent).toBe(
       'Evergore Protocol Collector',
@@ -584,7 +582,7 @@ describe('App', () => {
   })
 
   it('shows the overview at the address the shell is served from', async () => {
-    await shellAt(`/?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/`, alwaysServing(200, OVERVIEW_BODY))
 
     const rows = rowTexts()
 
@@ -596,7 +594,7 @@ describe('App', () => {
 
   it('marks the row whose sums the last collection did not refresh', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITH_A_STALE_ROW),
     )
 
@@ -612,7 +610,7 @@ describe('App', () => {
 
   it('says on the guild row that it contains a row with stale sums', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITH_A_STALE_ROW),
     )
 
@@ -624,7 +622,7 @@ describe('App', () => {
 
   it('keeps showing the live activity of a marked row rather than hiding it', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITH_A_STALE_ROW),
     )
 
@@ -635,7 +633,7 @@ describe('App', () => {
   })
 
   it('marks no row and no total while the collection refreshed every row', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     expect(screen.queryByTestId('row-mark')).toBeNull()
     expect(screen.queryByTestId('total-mark')).toBeNull()
@@ -643,10 +641,7 @@ describe('App', () => {
   })
 
   it('marks no row and no guild row as not yet computed while only the guild share is unknown', async () => {
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS),
-    )
+    await shellAt(`/overview`, alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS))
 
     expect(screen.queryByTestId('row-mark')).toBeNull()
     expect(screen.queryByTestId('total-mark')).toBeNull()
@@ -665,17 +660,14 @@ describe('App', () => {
       storageDeposited: 0,
       net: 0,
     }
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, JSON.stringify(body)),
-    )
+    await shellAt(`/overview`, alwaysServing(200, JSON.stringify(body)))
 
     expect(screen.queryByTestId('row-mark')).toBeNull()
   })
 
   it('says the guild contains stale sums even when that row is off the page', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WHOSE_STALE_ROW_IS_OFF_THE_PAGE),
     )
 
@@ -688,7 +680,7 @@ describe('App', () => {
 
   it('marks a row no recompute has reached as not yet computed', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
     )
 
@@ -708,7 +700,7 @@ describe('App', () => {
 
   it('shows no figure in the five number columns of a row not yet computed, rather than zeros', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
     )
 
@@ -722,7 +714,7 @@ describe('App', () => {
 
   it('keeps the activity of a row not yet computed beside its dashes', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
     )
 
@@ -736,7 +728,7 @@ describe('App', () => {
 
   it('shows no figure in the guild row while a member is not yet computed, rather than a total without him', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
     )
 
@@ -752,7 +744,7 @@ describe('App', () => {
 
   it('keeps the mark of a row not yet computed and gives its figure before the deductions no note of its own', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
     )
 
@@ -771,7 +763,7 @@ describe('App', () => {
 
   it('gives the guild row no note before the deductions while a row is not yet computed', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
     )
 
@@ -791,10 +783,7 @@ describe('App', () => {
       items: body.items.slice(0, 1),
       totals: { ...body.totals, containsStaleSums: false },
     }
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, JSON.stringify(firstPage)),
-    )
+    await shellAt(`/overview`, alwaysServing(200, JSON.stringify(firstPage)))
 
     expect(screen.getByTestId('row-mark').textContent).toBe(
       '!Veraltete Zahlen. Letzte erfolgreiche Aktualisierung vom 30.07.2026 03:12.',
@@ -806,7 +795,7 @@ describe('App', () => {
 
   it('marks a row not yet computed as such even when it also states an age, because that mark wins', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(
         200,
         OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED_THAT_ALSO_STATES_AN_AGE,
@@ -820,7 +809,7 @@ describe('App', () => {
 
   it('says on the guild row that it contains a row not yet computed, ahead of the outdated rows it also contains', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
     )
 
@@ -831,10 +820,7 @@ describe('App', () => {
   })
 
   it('splits the roster by the mark the service gave each member', async () => {
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, ROSTER_MARKED_BY_THE_SERVICE),
-    )
+    await shellAt(`/overview`, alwaysServing(200, ROSTER_MARKED_BY_THE_SERVICE))
 
     const activeNames = rowNamesIn('active-roster')
     const dormantNames = rowNamesIn('dormant-roster')
@@ -847,7 +833,7 @@ describe('App', () => {
 
   it('draws no line of its own, so the mark decides whatever dates the rows carry', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, ROSTER_MARKED_AGAINST_ITS_DATES),
     )
 
@@ -861,10 +847,7 @@ describe('App', () => {
   })
 
   it('keeps the name order of the response inside each of the two tables', async () => {
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, ROSTER_INTERLEAVED_BY_NAME),
-    )
+    await shellAt(`/overview`, alwaysServing(200, ROSTER_INTERLEAVED_BY_NAME))
 
     const activeNames = rowNamesIn('active-roster')
     const dormantNames = rowNamesIn('dormant-roster')
@@ -876,10 +859,7 @@ describe('App', () => {
   })
 
   it('gives both tables the same columns', async () => {
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, ROSTER_MARKED_BY_THE_SERVICE),
-    )
+    await shellAt(`/overview`, alwaysServing(200, ROSTER_MARKED_BY_THE_SERVICE))
 
     const headers = headerTextsIn('dormant-roster')
 
@@ -887,10 +867,7 @@ describe('App', () => {
   })
 
   it('states the guild total under the active table and nowhere else', async () => {
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, ROSTER_MARKED_BY_THE_SERVICE),
-    )
+    await shellAt(`/overview`, alwaysServing(200, ROSTER_MARKED_BY_THE_SERVICE))
 
     const activeTotals = totalRowsIn('active-roster')
     const dormantTotals = totalRowsIn('dormant-roster')
@@ -899,7 +876,7 @@ describe('App', () => {
   })
 
   it('says so in the second table while no member is dormant', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     const dormantNames = rowNamesIn('dormant-roster')
     const dormantStatus = statusIn('dormant-roster')
@@ -911,7 +888,7 @@ describe('App', () => {
   })
 
   it('names the overview columns in German', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     const headers = headerTextsIn('active-roster')
 
@@ -928,7 +905,7 @@ describe('App', () => {
   })
 
   it('states each figure under its own name, in the order the header reads', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     const stats = statTexts()
 
@@ -945,10 +922,7 @@ describe('App', () => {
       totals: { storageValue: number }
     }
     body.totals.storageValue = 599
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, JSON.stringify(body)),
-    )
+    await shellAt(`/overview`, alwaysServing(200, JSON.stringify(body)))
 
     const stats = statTexts()
 
@@ -956,14 +930,14 @@ describe('App', () => {
   })
 
   it('tones the bank as a credit and leaves the subsidy untoned', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     expect(screen.getByTestId('stat-bank').dataset.tone).toBe('credit')
     expect(screen.getByTestId('stat-subsidy').dataset.tone).toBe('neutral')
   })
 
   it('names both flows in the header rather than netting them into one number shaped like a balance', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     expect(screen.getByText('Gildenspende')).toBeTruthy()
     expect(screen.getByText('Handwerkssubventionen')).toBeTruthy()
@@ -971,7 +945,7 @@ describe('App', () => {
 
   it('says the header cannot answer yet while no recompute has produced the flows', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITHOUT_THE_FLOWS),
     )
 
@@ -981,7 +955,7 @@ describe('App', () => {
 
   it('says a figure is not computed in words a reader cannot mistake for a number', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITHOUT_THE_FLOWS),
     )
 
@@ -993,7 +967,7 @@ describe('App', () => {
 
   it('leaves an absent figure untoned rather than painting it as a credit', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITHOUT_THE_FLOWS),
     )
 
@@ -1002,7 +976,7 @@ describe('App', () => {
 
   it('still states the measured bank while the flows are missing', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITHOUT_THE_FLOWS),
     )
 
@@ -1010,7 +984,7 @@ describe('App', () => {
   })
 
   it('switches the last column between the figure after and before the deductions', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
@@ -1029,7 +1003,7 @@ describe('App', () => {
   })
 
   it('reports the picked figure back through the switch', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
@@ -1042,7 +1016,7 @@ describe('App', () => {
   })
 
   it('keeps the two options in one radio group so the keyboard can switch them', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     const names = screen
       .getAllByRole('radio')
@@ -1054,10 +1028,7 @@ describe('App', () => {
   it("states the guild's figure before the deductions in the total row as the server rounded it", async () => {
     const body = JSON.parse(OVERVIEW_BODY) as { totals: { balance: number } }
     body.totals.balance = 2649
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, JSON.stringify(body)),
-    )
+    await shellAt(`/overview`, alwaysServing(200, JSON.stringify(body)))
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
@@ -1071,10 +1042,7 @@ describe('App', () => {
       throw new TypeError('The fixture lost its first row')
     }
     calix.balance = 2799
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, JSON.stringify(body)),
-    )
+    await shellAt(`/overview`, alwaysServing(200, JSON.stringify(body)))
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
@@ -1082,7 +1050,7 @@ describe('App', () => {
   })
 
   it('tones the switched column like the contribution it replaces', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
@@ -1093,7 +1061,7 @@ describe('App', () => {
 
   it('says why a row has no figure before the deductions instead of leaving a bare dash', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITHOUT_THE_FLOWS),
     )
 
@@ -1105,10 +1073,7 @@ describe('App', () => {
   })
 
   it('says it on every row that cannot answer, not only on one', async () => {
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS),
-    )
+    await shellAt(`/overview`, alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS))
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
@@ -1118,10 +1083,7 @@ describe('App', () => {
   })
 
   it('says it on the guild row as well, which sums rows that cannot answer', async () => {
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS),
-    )
+    await shellAt(`/overview`, alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS))
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
@@ -1131,10 +1093,7 @@ describe('App', () => {
   })
 
   it('states all four figures word for word while nothing is computed', async () => {
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS),
-    )
+    await shellAt(`/overview`, alwaysServing(200, TWO_ROWS_WITHOUT_FLOWS))
 
     const stats = statTexts()
 
@@ -1148,7 +1107,7 @@ describe('App', () => {
 
   it('states all four figures as not yet computed while a member is not yet computed, the bank included', async () => {
     await shellAt(
-      `/overview?token=${TOKEN}`,
+      `/overview`,
       alwaysServing(200, OVERVIEW_BODY_WITH_A_ROW_NOT_YET_COMPUTED),
     )
 
@@ -1164,7 +1123,7 @@ describe('App', () => {
   })
 
   it('tones each of the four figures the way its meaning asks for', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     const statTones = statTonesOf()
 
@@ -1172,7 +1131,7 @@ describe('App', () => {
   })
 
   it('names what the switch controls, which is its only accessible name', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     const legend = screen
       .getByTestId('switch-figure')
@@ -1182,7 +1141,7 @@ describe('App', () => {
   })
 
   it('offers the figure after the deductions before the one before them', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     const switchLabels = screen
       .getAllByRole('radio')
@@ -1192,7 +1151,7 @@ describe('App', () => {
   })
 
   it('carries no hint on a row whose figure before the deductions is known', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
@@ -1200,7 +1159,7 @@ describe('App', () => {
   })
 
   it("shows a row's figure before the deductions in the switched column", async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
@@ -1210,7 +1169,7 @@ describe('App', () => {
   })
 
   it('keeps the figure after the deductions while the switch stays on it', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     const rows = rowTexts()
 
@@ -1218,7 +1177,7 @@ describe('App', () => {
   })
 
   it('keeps the table usable when the reader sorts the sixth column and then switches it', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     fireEvent.click(sortButtonIn('active-roster', /Nach Abzügen/))
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
@@ -1229,7 +1188,7 @@ describe('App', () => {
   })
 
   it('keeps a sort on the sixth column when the switch changes what it shows', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     fireEvent.click(sortButtonIn('active-roster', /Nach Abzügen/))
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
@@ -1240,7 +1199,7 @@ describe('App', () => {
   })
 
   it('does not widen the table when the switch changes the last column', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     fireEvent.click(screen.getByLabelText('Vor Abzügen'))
 
@@ -1250,10 +1209,7 @@ describe('App', () => {
   })
 
   it('names the bank ledger columns in German', async () => {
-    await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}`,
-      alwaysServing(200, BANK_BODY),
-    )
+    await shellAt(`/avatars/Calix/bank`, alwaysServing(200, BANK_BODY))
 
     const headers = headerTexts()
 
@@ -1261,10 +1217,7 @@ describe('App', () => {
   })
 
   it('names the storage ledger columns in German', async () => {
-    await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}`,
-      alwaysServing(200, STORAGE_BODY),
-    )
+    await shellAt(`/avatars/Calix/storage`, alwaysServing(200, STORAGE_BODY))
 
     const headers = headerTexts()
 
@@ -1279,7 +1232,7 @@ describe('App', () => {
   })
 
   it('tells what an avatar took out from what it put in, per ledger', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     const bankWithdrawn = tonesOf('bankWithdrawn')
     const bankDeposited = tonesOf('bankDeposited')
@@ -1300,7 +1253,7 @@ describe('App', () => {
   })
 
   it('shows the guild-wide total row the server computed', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     expect(screen.getByTestId('total-row').textContent).toBe(
       'Gilde3.4501.4005002002.350––',
@@ -1308,7 +1261,7 @@ describe('App', () => {
   })
 
   it('says when an avatar never used one of the two ledgers', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     const lastBankActivities = screen
       .getAllByTestId('cell-lastBankActivity')
@@ -1318,21 +1271,19 @@ describe('App', () => {
   })
 
   it('marks a negative guild value as taken from the guild', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     const tones = tonesOf('figure')
 
     expect(tones).toStrictEqual(['neutral', 'debit'])
   })
 
-  it('carries the token of the deep link into every request', async () => {
+  it('asks the overview route for its first page', async () => {
     const server = alwaysServing(200, OVERVIEW_BODY)
 
-    await shellAt(`/overview?token=${TOKEN}`, server)
+    await shellAt(`/overview`, server)
 
-    expect(server.askedFor).toStrictEqual([
-      '/api/v1/avatars?token=a-test-token&page=0&size=100',
-    ])
+    expect(server.askedFor).toStrictEqual(['/api/v1/avatars?page=0&size=100'])
   })
 
   it('says that no avatar has been collected yet', async () => {
@@ -1344,7 +1295,7 @@ describe('App', () => {
       items: [],
     })
 
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, body))
+    await shellAt(`/overview`, alwaysServing(200, body))
 
     const activeStatus = statusIn('active-roster')
     const dormantStatus = statusIn('dormant-roster')
@@ -1356,10 +1307,7 @@ describe('App', () => {
   })
 
   it('counts each half against the whole guild, not against the loaded page', async () => {
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, ROSTER_OF_ONE_LOADED_PAGE),
-    )
+    await shellAt(`/overview`, alwaysServing(200, ROSTER_OF_ONE_LOADED_PAGE))
 
     const activeCaption = captionOf('active-roster')
     const dormantCaption = captionOf('dormant-roster')
@@ -1371,10 +1319,7 @@ describe('App', () => {
   })
 
   it('shows the bank ledger the path names', async () => {
-    await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}`,
-      alwaysServing(200, BANK_BODY),
-    )
+    await shellAt(`/avatars/Calix/bank`, alwaysServing(200, BANK_BODY))
 
     const rows = rowTexts()
 
@@ -1382,10 +1327,7 @@ describe('App', () => {
   })
 
   it('shows the storage ledger the path names', async () => {
-    await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}`,
-      alwaysServing(200, STORAGE_BODY),
-    )
+    await shellAt(`/avatars/Calix/storage`, alwaysServing(200, STORAGE_BODY))
 
     const rows = rowTexts()
 
@@ -1397,16 +1339,16 @@ describe('App', () => {
   it('asks the bank route of the avatar the path names', async () => {
     const server = alwaysServing(200, BANK_BODY)
 
-    await shellAt(`/avatars/Erde%2FEibe/bank?token=${TOKEN}`, server)
+    await shellAt(`/avatars/Erde%2FEibe/bank`, server)
 
     expect(server.askedFor).toStrictEqual([
-      '/api/v1/avatars/Erde%2FEibe/bank?token=a-test-token&page=0&size=100',
+      '/api/v1/avatars/Erde%2FEibe/bank?page=0&size=100',
     ])
   })
 
   it('says that a known avatar has no entries in this ledger', async () => {
     await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}`,
+      `/avatars/Calix/storage`,
       alwaysServing(200, EMPTY_LEDGER_BODY),
     )
 
@@ -1416,10 +1358,7 @@ describe('App', () => {
   })
 
   it('says that an avatar is unknown, which is not the same as an empty ledger', async () => {
-    await shellAt(
-      `/avatars/Nobody/storage?token=${TOKEN}`,
-      alwaysServing(404, null),
-    )
+    await shellAt(`/avatars/Nobody/storage`, alwaysServing(404, null))
 
     const status = shownStatus()
 
@@ -1453,10 +1392,8 @@ describe('App', () => {
   it('does not go to the login page while the API answers', async () => {
     const navigated: string[] = []
 
-    await shellAt(
-      `/overview?token=${TOKEN}`,
-      alwaysServing(200, OVERVIEW_BODY),
-      (target) => navigated.push(target),
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY), (target) =>
+      navigated.push(target),
     )
 
     expect(navigated).toStrictEqual([])
@@ -1478,7 +1415,7 @@ describe('App', () => {
       items: [],
     })
 
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, body))
+    await shellAt(`/overview`, alwaysServing(200, body))
 
     const status = shownStatus()
 
@@ -1488,7 +1425,7 @@ describe('App', () => {
   })
 
   it('says in German that the API could not be loaded, without its status', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(500, null))
+    await shellAt(`/overview`, alwaysServing(500, null))
 
     const status = shownStatus()
 
@@ -1501,7 +1438,7 @@ describe('App', () => {
     const unreachable: HttpGet = () =>
       Promise.reject(new TypeError('Failed to fetch'))
 
-    window.history.replaceState(null, '', `/overview?token=${TOKEN}`)
+    window.history.replaceState(null, '', `/overview`)
     render(<App get={unreachable} />)
     await act(async () => undefined)
 
@@ -1532,7 +1469,7 @@ describe('App', () => {
 
   it('says in German that a ledger could not be loaded when it answers 500, without the status or its English', async () => {
     await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}`,
+      `/avatars/Calix/bank`,
       alwaysServing(500, '{"message":"Internal Server Error"}'),
     )
 
@@ -1563,7 +1500,7 @@ describe('App', () => {
   })
 
   it('is loading before the first answer arrives', () => {
-    window.history.replaceState(null, '', `/overview?token=${TOKEN}`)
+    window.history.replaceState(null, '', `/overview`)
     const server = serving(() => ({ status: 200, body: OVERVIEW_BODY }))
 
     render(<App get={server.get} />)
@@ -1573,7 +1510,7 @@ describe('App', () => {
     expect(status).toBe('Wird geladen…')
   })
 
-  it('shows the admin status page at its own address, without a token', async () => {
+  it('shows the admin status page at its own address', async () => {
     const server = alwaysServing(200, ADMIN_STATUS_BODY)
 
     await shellAt('/admin', server)
@@ -1655,26 +1592,11 @@ describe('App', () => {
   })
 
   it('has no view for a path it does not know', async () => {
-    await shellAt(`/nonsense?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/nonsense`, alwaysServing(200, OVERVIEW_BODY))
 
     const status = shownStatus()
 
     expect(status).toBe('Für /nonsense gibt es keine Ansicht.')
-  })
-
-  it('asks again with the token of the address the browser moved to', async () => {
-    const server = alwaysServing(200, OVERVIEW_BODY)
-    await shellAt(`/overview?token=${TOKEN}`, server)
-
-    await act(async () => {
-      window.history.pushState(null, '', '/overview?token=another-token')
-      window.dispatchEvent(new PopStateEvent('popstate'))
-    })
-
-    expect(server.askedFor).toStrictEqual([
-      '/api/v1/avatars?token=a-test-token&page=0&size=100',
-      '/api/v1/avatars?token=another-token&page=0&size=100',
-    ])
   })
 
   it('shows the view the browser moves back to in its history', async () => {
@@ -1683,13 +1605,13 @@ describe('App', () => {
         ? { status: 200, body: OVERVIEW_BODY }
         : { status: 200, body: BANK_BODY },
     )
-    await shellAt(`/overview?token=${TOKEN}`, server)
+    await shellAt(`/overview`, server)
     await act(async () => {
       fireEvent.click(screen.getAllByRole('link', { name: 'Calix' })[0])
     })
 
     await act(async () => {
-      window.history.pushState(null, '', `/overview?token=${TOKEN}`)
+      window.history.pushState(null, '', `/overview`)
       window.dispatchEvent(new PopStateEvent('popstate'))
     })
 
@@ -1714,10 +1636,7 @@ describe('App', () => {
     })
     const server = alwaysServing(200, body)
 
-    await shellAt(
-      `/avatars/${encodeURIComponent('Öde/Grüße')}/storage?token=${TOKEN}`,
-      server,
-    )
+    await shellAt(`/avatars/${encodeURIComponent('Öde/Grüße')}/storage`, server)
 
     const rows = rowTexts()
 
@@ -1727,7 +1646,7 @@ describe('App', () => {
       rows,
     }).toStrictEqual({
       askedFor: [
-        '/api/v1/avatars/%C3%96de%2FGr%C3%BC%C3%9Fe/storage?token=a-test-token&page=0&size=100',
+        '/api/v1/avatars/%C3%96de%2FGr%C3%BC%C3%9Fe/storage?page=0&size=100',
       ],
       heading: 'Lager von Öde/Grüße',
       rows: ['05.08.2026 12:15Öde/Grüße1Magische Ätherbinde100Einlagerung'],
@@ -1736,7 +1655,7 @@ describe('App', () => {
 
   it('shows the data once even though StrictMode mounts the shell twice', async () => {
     const server = alwaysServing(200, OVERVIEW_BODY)
-    window.history.replaceState(null, '', `/overview?token=${TOKEN}`)
+    window.history.replaceState(null, '', `/overview`)
 
     render(
       <StrictMode>
@@ -1768,10 +1687,7 @@ describe('App', () => {
       ],
     })
 
-    await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}`,
-      alwaysServing(200, body),
-    )
+    await shellAt(`/avatars/Calix/bank`, alwaysServing(200, body))
 
     expect(
       screen.queryByRole('table', { name: '1 von 340 Einträgen' }),
@@ -1793,10 +1709,7 @@ describe('App', () => {
       ],
     })
 
-    await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}`,
-      alwaysServing(200, body),
-    )
+    await shellAt(`/avatars/Calix/bank`, alwaysServing(200, body))
 
     const next = screen.getByTestId('pagination-next').getAttribute('href')
 
@@ -1805,7 +1718,7 @@ describe('App', () => {
       next,
     }).toStrictEqual({
       previous: null,
-      next: '/avatars/Calix/bank?token=a-test-token&page=1',
+      next: '/avatars/Calix/bank?page=1',
     })
   })
 
@@ -1824,10 +1737,7 @@ describe('App', () => {
       ],
     })
 
-    await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}&page=3`,
-      alwaysServing(200, body),
-    )
+    await shellAt(`/avatars/Calix/bank?page=3`, alwaysServing(200, body))
 
     const previous = screen
       .getByTestId('pagination-previous')
@@ -1837,7 +1747,7 @@ describe('App', () => {
       previous,
       next: screen.queryByTestId('pagination-next'),
     }).toStrictEqual({
-      previous: '/avatars/Calix/bank?token=a-test-token&page=2',
+      previous: '/avatars/Calix/bank?page=2',
       next: null,
     })
   })
@@ -1857,10 +1767,7 @@ describe('App', () => {
       ],
     })
 
-    await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}&page=3`,
-      alwaysServing(200, body),
-    )
+    await shellAt(`/avatars/Calix/bank?page=3`, alwaysServing(200, body))
 
     expect(screen.queryByTestId('pagination-next')).toBeNull()
   })
@@ -1898,7 +1805,7 @@ describe('App', () => {
       return { status: 200, body }
     })
 
-    await shellAt(`/avatars/Calix/bank?token=${TOKEN}`, server)
+    await shellAt(`/avatars/Calix/bank`, server)
 
     await act(async () => {
       fireEvent.click(screen.getByTestId('pagination-next'))
@@ -1913,9 +1820,8 @@ describe('App', () => {
       lastAsked,
     }).toStrictEqual({
       shown: ['05.08.2026 12:15Calix700Entnahme'],
-      address: '/avatars/Calix/bank?token=a-test-token&page=1',
-      lastAsked:
-        '/api/v1/avatars/Calix/bank?token=a-test-token&page=1&size=100',
+      address: '/avatars/Calix/bank?page=1',
+      lastAsked: '/api/v1/avatars/Calix/bank?page=1&size=100',
     })
   })
 
@@ -1925,7 +1831,7 @@ describe('App', () => {
         ? { status: 200, body: OVERVIEW_BODY }
         : { status: 200, body: BANK_BODY },
     )
-    await shellAt(`/overview?token=${TOKEN}`, server)
+    await shellAt(`/overview`, server)
 
     await act(async () => {
       fireEvent.click(screen.getAllByRole('link', { name: 'Calix' })[0])
@@ -1940,9 +1846,8 @@ describe('App', () => {
       lastAsked,
     }).toStrictEqual({
       shown: ['05.08.2026 12:15Calix500Einzahlung'],
-      address: '/avatars/Calix/bank?token=a-test-token',
-      lastAsked:
-        '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100',
+      address: '/avatars/Calix/bank',
+      lastAsked: '/api/v1/avatars/Calix/bank?page=0&size=100',
     })
   })
 
@@ -1952,7 +1857,7 @@ describe('App', () => {
         ? { status: 200, body: OVERVIEW_BODY }
         : { status: 200, body: STORAGE_BODY },
     )
-    await shellAt(`/overview?token=${TOKEN}`, server)
+    await shellAt(`/overview`, server)
 
     await act(async () => {
       fireEvent.click(
@@ -1969,17 +1874,13 @@ describe('App', () => {
       lastAsked,
     }).toStrictEqual({
       shown: ['05.08.2026 12:15Calix3Erde-Eibenlanze7Entnahme'],
-      address: '/avatars/Calix/storage?token=a-test-token',
-      lastAsked:
-        '/api/v1/avatars/Calix/storage?token=a-test-token&page=0&size=100',
+      address: '/avatars/Calix/storage',
+      lastAsked: '/api/v1/avatars/Calix/storage?page=0&size=100',
     })
   })
 
   it('marks only the ledger it shows as the current page in the navigation', async () => {
-    await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}`,
-      alwaysServing(200, STORAGE_BODY),
-    )
+    await shellAt(`/avatars/Calix/storage`, alwaysServing(200, STORAGE_BODY))
 
     const marked = screen.getAllByRole('link').map((link) => ({
       name: link.textContent,
@@ -1999,7 +1900,7 @@ describe('App', () => {
         ? { status: 200, body: OVERVIEW_BODY }
         : { status: 200, body: BANK_BODY },
     )
-    await shellAt(`/avatars/Calix/bank?token=${TOKEN}`, server)
+    await shellAt(`/avatars/Calix/bank`, server)
 
     await act(async () => {
       fireEvent.click(screen.getByRole('link', { name: 'Übersicht' }))
@@ -2010,16 +1911,16 @@ describe('App', () => {
     expect({
       rows,
       address: window.location.pathname + window.location.search,
-    }).toStrictEqual({ rows: 2, address: '/overview?token=a-test-token' })
+    }).toStrictEqual({ rows: 2, address: '/overview' })
   })
 
   it('asks the bank route for the page the address names', async () => {
     const server = alwaysServing(200, BANK_BODY)
 
-    await shellAt(`/avatars/Calix/bank?token=${TOKEN}&page=1`, server)
+    await shellAt(`/avatars/Calix/bank?page=1`, server)
 
     expect(server.askedFor).toStrictEqual([
-      '/api/v1/avatars/Calix/bank?token=a-test-token&page=1&size=100',
+      '/api/v1/avatars/Calix/bank?page=1&size=100',
     ])
   })
 
@@ -2027,12 +1928,12 @@ describe('App', () => {
     const server = alwaysServing(200, STORAGE_BODY)
 
     await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}&page=1&sort=quantity&direction=descending`,
+      `/avatars/Calix/storage?page=1&sort=quantity&direction=descending`,
       server,
     )
 
     expect(server.askedFor).toStrictEqual([
-      '/api/v1/avatars/Calix/storage?token=a-test-token&page=1&size=100&sort=quantity&direction=descending',
+      '/api/v1/avatars/Calix/storage?page=1&size=100&sort=quantity&direction=descending',
     ])
   })
 
@@ -2040,7 +1941,7 @@ describe('App', () => {
     const server = alwaysServing(400, '{"message":"Bad Request"}')
 
     await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}&sort=Menge&direction=descending`,
+      `/avatars/Calix/storage?sort=Menge&direction=descending`,
       server,
     )
 
@@ -2052,7 +1953,7 @@ describe('App', () => {
     }).toStrictEqual({
       shown: 'Diese Seite gibt es nicht.',
       askedFor: [
-        '/api/v1/avatars/Calix/storage?token=a-test-token&page=0&size=100&sort=Menge&direction=descending',
+        '/api/v1/avatars/Calix/storage?page=0&size=100&sort=Menge&direction=descending',
       ],
     })
   })
@@ -2061,7 +1962,7 @@ describe('App', () => {
     const server = alwaysServing(400, '{"message":"Bad Request"}')
 
     await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}&sort=Betrag&direction=descending`,
+      `/avatars/Calix/bank?sort=Betrag&direction=descending`,
       server,
     )
 
@@ -2073,14 +1974,14 @@ describe('App', () => {
     }).toStrictEqual({
       shown: 'Diese Seite gibt es nicht.',
       askedFor: [
-        '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100&sort=Betrag&direction=descending',
+        '/api/v1/avatars/Calix/bank?page=0&size=100&sort=Betrag&direction=descending',
       ],
     })
   })
 
   it('asks the API for the whole ledger sorted when a column is chosen', async () => {
     const server = alwaysServing(200, STORAGE_BODY)
-    await shellAt(`/avatars/Calix/storage?token=${TOKEN}`, server)
+    await shellAt(`/avatars/Calix/storage`, server)
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Menge/ }))
@@ -2092,10 +1993,9 @@ describe('App', () => {
       address: window.location.pathname + window.location.search,
       lastAsked,
     }).toStrictEqual({
-      address:
-        '/avatars/Calix/storage?token=a-test-token&sort=quantity&direction=ascending',
+      address: '/avatars/Calix/storage?sort=quantity&direction=ascending',
       lastAsked:
-        '/api/v1/avatars/Calix/storage?token=a-test-token&page=0&size=100&sort=quantity&direction=ascending',
+        '/api/v1/avatars/Calix/storage?page=0&size=100&sort=quantity&direction=ascending',
     })
   })
 
@@ -2106,7 +2006,7 @@ describe('App', () => {
       totalCount: 340,
     })
     await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}&page=2`,
+      `/avatars/Calix/storage?page=2`,
       alwaysServing(200, thirdPage),
     )
 
@@ -2114,14 +2014,12 @@ describe('App', () => {
       fireEvent.click(screen.getByRole('button', { name: /Gegenstand/ }))
     })
 
-    expect(window.location.search).toBe(
-      '?token=a-test-token&sort=name&direction=ascending',
-    )
+    expect(window.location.search).toBe('?sort=name&direction=ascending')
   })
 
   it('asks for the other direction when the sorted column is chosen again', async () => {
     await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}&sort=quantity&direction=ascending`,
+      `/avatars/Calix/storage?sort=quantity&direction=ascending`,
       alwaysServing(200, STORAGE_BODY),
     )
 
@@ -2129,15 +2027,13 @@ describe('App', () => {
       fireEvent.click(screen.getByRole('button', { name: /Menge/ }))
     })
 
-    expect(window.location.search).toBe(
-      '?token=a-test-token&sort=quantity&direction=descending',
-    )
+    expect(window.location.search).toBe('?sort=quantity&direction=descending')
   })
 
   it('asks the bank route for the sort the address names and again for a chosen one', async () => {
     const server = alwaysServing(200, BANK_BODY)
     await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}&sort=amount&direction=descending`,
+      `/avatars/Calix/bank?sort=amount&direction=descending`,
       server,
     )
 
@@ -2146,8 +2042,8 @@ describe('App', () => {
     })
 
     expect(server.askedFor).toStrictEqual([
-      '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100&sort=amount&direction=descending',
-      '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100&sort=amount&direction=ascending',
+      '/api/v1/avatars/Calix/bank?page=0&size=100&sort=amount&direction=descending',
+      '/api/v1/avatars/Calix/bank?page=0&size=100&sort=amount&direction=ascending',
     ])
   })
 
@@ -2166,7 +2062,7 @@ describe('App', () => {
     'asks the %s ledger for its column when %s is chosen, by the wire name %s',
     async (ledger, header, wireName, body) => {
       const server = alwaysServing(200, body)
-      await shellAt(`/avatars/Calix/${ledger}?token=${TOKEN}`, server)
+      await shellAt(`/avatars/Calix/${ledger}`, server)
 
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: header }))
@@ -2180,7 +2076,7 @@ describe('App', () => {
 
   it('marks the column the address sorts the bank ledger by', async () => {
     await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}&sort=amount&direction=ascending`,
+      `/avatars/Calix/bank?sort=amount&direction=ascending`,
       alwaysServing(200, BANK_BODY),
     )
 
@@ -2193,7 +2089,7 @@ describe('App', () => {
 
   it('reverses the sort of the bank ledger when its column is chosen again', async () => {
     await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}&sort=amount&direction=ascending`,
+      `/avatars/Calix/bank?sort=amount&direction=ascending`,
       alwaysServing(200, BANK_BODY),
     )
 
@@ -2201,9 +2097,7 @@ describe('App', () => {
       fireEvent.click(screen.getByRole('button', { name: /Betrag/ }))
     })
 
-    expect(window.location.search).toBe(
-      '?token=a-test-token&sort=amount&direction=descending',
-    )
+    expect(window.location.search).toBe('?sort=amount&direction=descending')
   })
 
   it('keeps the sort of the bank ledger in the link to the next page', async () => {
@@ -2213,20 +2107,20 @@ describe('App', () => {
     })
 
     await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}&sort=amount&direction=ascending`,
+      `/avatars/Calix/bank?sort=amount&direction=ascending`,
       alwaysServing(200, body),
     )
 
     const nextHref = screen.getByTestId('pagination-next').getAttribute('href')
 
     expect(nextHref).toBe(
-      '/avatars/Calix/bank?token=a-test-token&page=1&sort=amount&direction=ascending',
+      '/avatars/Calix/bank?page=1&sort=amount&direction=ascending',
     )
   })
 
   it('marks no column when the address names a direction the table does not know', async () => {
     await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}&sort=quantity&direction=up`,
+      `/avatars/Calix/storage?sort=quantity&direction=up`,
       alwaysServing(200, STORAGE_BODY),
     )
 
@@ -2239,7 +2133,7 @@ describe('App', () => {
 
   it('links the bank and the storage ledger without the sort of the sorted address', async () => {
     await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}&sort=quantity&direction=descending`,
+      `/avatars/Calix/storage?sort=quantity&direction=descending`,
       alwaysServing(200, STORAGE_BODY),
     )
 
@@ -2248,15 +2142,15 @@ describe('App', () => {
     )
 
     expect(ledgers).toStrictEqual([
-      '/avatars/Calix/bank?token=a-test-token',
-      '/avatars/Calix/storage?token=a-test-token',
+      '/avatars/Calix/bank',
+      '/avatars/Calix/storage',
     ])
   })
 
   it('completes an address that names only its column with the descending direction, in the request and in the mark', async () => {
     const server = alwaysServing(200, BANK_BODY)
 
-    await shellAt(`/avatars/Calix/bank?token=${TOKEN}&sort=amount`, server)
+    await shellAt(`/avatars/Calix/bank?sort=amount`, server)
 
     const marks = screen
       .getAllByRole('columnheader')
@@ -2264,7 +2158,7 @@ describe('App', () => {
 
     expect({ askedFor: server.askedFor, marks }).toStrictEqual({
       askedFor: [
-        '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100&sort=amount&direction=descending',
+        '/api/v1/avatars/Calix/bank?page=0&size=100&sort=amount&direction=descending',
       ],
       marks: ['none', 'none', 'descending', 'none'],
     })
@@ -2272,7 +2166,7 @@ describe('App', () => {
 
   it('marks the column the address sorts the ledger by', async () => {
     await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}&sort=quantity&direction=descending`,
+      `/avatars/Calix/storage?sort=quantity&direction=descending`,
       alwaysServing(200, STORAGE_BODY),
     )
 
@@ -2306,7 +2200,7 @@ describe('App', () => {
     })
 
     await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}&sort=name&direction=descending`,
+      `/avatars/Calix/storage?sort=name&direction=descending`,
       alwaysServing(200, body),
     )
     await act(async () => {
@@ -2329,7 +2223,7 @@ describe('App', () => {
     })
 
     await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}&page=1&sort=quantity&direction=descending`,
+      `/avatars/Calix/storage?page=1&sort=quantity&direction=descending`,
       alwaysServing(200, body),
     )
 
@@ -2339,15 +2233,14 @@ describe('App', () => {
     const next = screen.getByTestId('pagination-next').getAttribute('href')
 
     expect({ previous, next }).toStrictEqual({
-      previous:
-        '/avatars/Calix/storage?token=a-test-token&sort=quantity&direction=descending',
-      next: '/avatars/Calix/storage?token=a-test-token&page=2&sort=quantity&direction=descending',
+      previous: '/avatars/Calix/storage?sort=quantity&direction=descending',
+      next: '/avatars/Calix/storage?page=2&sort=quantity&direction=descending',
     })
   })
 
   it('renders the empty state for a page past the end, not an error', async () => {
     await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}&page=50`,
+      `/avatars/Calix/bank?page=50`,
       alwaysServing(200, EMPTY_LEDGER_BODY),
     )
 
@@ -2360,7 +2253,7 @@ describe('App', () => {
     const body = '{"message":"page: must be at least 0"}'
     const server = alwaysServing(400, body)
 
-    await shellAt(`/avatars/Calix/bank?token=${TOKEN}&page=-1`, server)
+    await shellAt(`/avatars/Calix/bank?page=-1`, server)
 
     const shown = shownStatus()
 
@@ -2369,19 +2262,14 @@ describe('App', () => {
       askedFor: server.askedFor,
     }).toStrictEqual({
       shown: 'Diese Seite gibt es nicht.',
-      askedFor: [
-        '/api/v1/avatars/Calix/bank?token=a-test-token&page=-1&size=100',
-      ],
+      askedFor: ['/api/v1/avatars/Calix/bank?page=-1&size=100'],
     })
   })
 
   it('says in German that a storage ledger page does not exist', async () => {
     const body = '{"message":"page: must be at least 0"}'
 
-    await shellAt(
-      `/avatars/Calix/storage?token=${TOKEN}&page=-1`,
-      alwaysServing(400, body),
-    )
+    await shellAt(`/avatars/Calix/storage?page=-1`, alwaysServing(400, body))
 
     const status = shownStatus()
 
@@ -2391,17 +2279,17 @@ describe('App', () => {
   it('passes a blank page value through to the API unchanged, not defaulted', async () => {
     const server = alwaysServing(400, '{"message":"page: must not be null"}')
 
-    await shellAt(`/avatars/Calix/bank?token=${TOKEN}&page=`, server)
+    await shellAt(`/avatars/Calix/bank?page=`, server)
 
     expect(server.askedFor).toStrictEqual([
-      '/api/v1/avatars/Calix/bank?token=a-test-token&page=NaN&size=100',
+      '/api/v1/avatars/Calix/bank?page=NaN&size=100',
     ])
   })
 
   it('passes a page written as a word through to the API as no number and says the page does not exist', async () => {
     const server = alwaysServing(400, '{"message":"Bad Request"}')
 
-    await shellAt(`/avatars/Calix/bank?token=${TOKEN}&page=zwei`, server)
+    await shellAt(`/avatars/Calix/bank?page=zwei`, server)
 
     const shown = shownStatus()
 
@@ -2410,14 +2298,12 @@ describe('App', () => {
       askedFor: server.askedFor,
     }).toStrictEqual({
       shown: 'Diese Seite gibt es nicht.',
-      askedFor: [
-        '/api/v1/avatars/Calix/bank?token=a-test-token&page=NaN&size=100',
-      ],
+      askedFor: ['/api/v1/avatars/Calix/bank?page=NaN&size=100'],
     })
   })
 
   it("links from below the guild's position to the explanation of its figures", async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     const link = screen.getByRole('link', {
       name: 'Wie entstehen diese Zahlen?',
@@ -2429,13 +2315,13 @@ describe('App', () => {
       Node.DOCUMENT_POSITION_FOLLOWING
 
     expect({ href, afterThePosition }).toStrictEqual({
-      href: '/explanation?token=a-test-token',
+      href: '/explanation',
       afterThePosition: Node.DOCUMENT_POSITION_FOLLOWING,
     })
   })
 
   it('opens the explanation page when the member follows its link from the overview', async () => {
-    await shellAt(`/overview?token=${TOKEN}`, alwaysServing(200, OVERVIEW_BODY))
+    await shellAt(`/overview`, alwaysServing(200, OVERVIEW_BODY))
 
     fireEvent.click(
       screen.getByRole('link', { name: 'Wie entstehen diese Zahlen?' }),
@@ -2448,7 +2334,7 @@ describe('App', () => {
   })
 
   it('heads the explanation page at its own address', async () => {
-    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+    await shellAt(`/explanation`, alwaysServing(200, '{}'))
 
     expect(screen.getByTestId('view-title').textContent).toBe(
       'So entstehen eure Zahlen',
@@ -2457,13 +2343,13 @@ describe('App', () => {
 
   it('asks the server nothing for the explanation page', async () => {
     const server = alwaysServing(200, '{}')
-    await shellAt(`/explanation?token=${TOKEN}`, server)
+    await shellAt(`/explanation`, server)
 
     expect(server.askedFor).toStrictEqual([])
   })
 
   it('heads each group one level below the page and each question one level below its group', async () => {
-    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+    await shellAt(`/explanation`, alwaysServing(200, '{}'))
 
     const groups = new Set(
       screen.getAllByTestId('group-title').map((title) => title.tagName),
@@ -2484,7 +2370,7 @@ describe('App', () => {
   })
 
   it('introduces the invented members and the market stall before the first question', async () => {
-    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+    await shellAt(`/explanation`, alwaysServing(200, '{}'))
 
     const legend = screen
       .getAllByTestId('legend-entry')
@@ -2499,7 +2385,7 @@ describe('App', () => {
   })
 
   it('asks its questions under their groups', async () => {
-    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+    await shellAt(`/explanation`, alwaysServing(200, '{}'))
 
     const groups = screen
       .getAllByTestId('explanation-group')
@@ -2518,7 +2404,7 @@ describe('App', () => {
   })
 
   it('answers a question with its rule, its worked example and why', async () => {
-    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+    await shellAt(`/explanation`, alwaysServing(200, '{}'))
 
     const answer = screen.getAllByTestId('answer')[0]
     const calculations =
@@ -2552,7 +2438,7 @@ describe('App', () => {
   })
 
   it('lists the points of an answer that has them as part of its rule', async () => {
-    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+    await shellAt(`/explanation`, alwaysServing(200, '{}'))
 
     const answer = screen
       .getAllByTestId('answer')
@@ -2571,7 +2457,7 @@ describe('App', () => {
   })
 
   it("offers only the overview, not marked as current, in the explanation page's navigation", async () => {
-    await shellAt(`/explanation?token=${TOKEN}`, alwaysServing(200, '{}'))
+    await shellAt(`/explanation`, alwaysServing(200, '{}'))
 
     const navigation = screen
       .getAllByRole('navigation')[0]
@@ -2582,16 +2468,11 @@ describe('App', () => {
         `${link.textContent} ${link.getAttribute('href') ?? ''} ${link.getAttribute('aria-current') ?? 'not current'}`,
     )
 
-    expect(offered).toStrictEqual([
-      'Übersicht /overview?token=a-test-token not current',
-    ])
+    expect(offered).toStrictEqual(['Übersicht /overview not current'])
   })
 
   it('offers the ledgers of the avatar it shows in its navigation', async () => {
-    await shellAt(
-      `/avatars/Calix/bank?token=${TOKEN}`,
-      alwaysServing(200, BANK_BODY),
-    )
+    await shellAt(`/avatars/Calix/bank`, alwaysServing(200, BANK_BODY))
 
     const navigation = screen
       .getAllByRole('link')
@@ -2601,9 +2482,9 @@ describe('App', () => {
       )
 
     expect(navigation).toStrictEqual([
-      'Übersicht /overview?token=a-test-token',
-      'Bank /avatars/Calix/bank?token=a-test-token',
-      'Lager /avatars/Calix/storage?token=a-test-token',
+      'Übersicht /overview',
+      'Bank /avatars/Calix/bank',
+      'Lager /avatars/Calix/storage',
     ])
   })
 })

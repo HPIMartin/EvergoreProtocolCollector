@@ -1,4 +1,3 @@
-@wip
 Feature: Tricked and broken addresses do not open the guild's figures
   The dashboard's pages open only after a login. An address that tries to get around that check is
   answered like the same address without a trick: a page sends the browser to the login page, the

@@ -6,7 +6,6 @@ import io.cucumber.java.ParameterType;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.RosterName;
-import dev.schoenberg.evergore.protocolParser.acceptance.browser.TokenChoice;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.world.GameProtocol.MINUTE;
 
@@ -29,11 +28,6 @@ public class ParameterTypes {
 	@ParameterType("bank|storage")
 	public LedgerName ledger(String word) {
 		return LedgerName.of(word);
-	}
-
-	@ParameterType("without the token|with a wrong token")
-	public TokenChoice tokenChoice(String phrase) {
-		return TokenChoice.of(phrase);
 	}
 
 	@ParameterType("in the credit colour|in the debit colour|uncoloured")

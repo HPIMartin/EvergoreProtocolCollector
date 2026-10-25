@@ -2,28 +2,38 @@ package dev.schoenberg.evergore.protocolParser.acceptance.steps;
 
 import java.net.URLEncoder;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.UnaryOperator;
 
 import io.cucumber.java.ParameterType;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
+import dev.schoenberg.evergore.protocolParser.acceptance.operator.AlteredLogins;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.Answer;
+import dev.schoenberg.evergore.protocolParser.acceptance.operator.BundledFiles;
+import dev.schoenberg.evergore.protocolParser.acceptance.operator.ClientAnswer;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.LoginRequests;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.ServiceRequests;
+import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.OperatorSettings;
 import dev.schoenberg.evergore.protocolParser.rest.filter.AcceptanceClientIp;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.BANK;
+import static dev.schoenberg.evergore.protocolParser.acceptance.world.OperatorSettings.GUILD_TOKEN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class ClientLoginSteps {
 	private static final String OVERVIEWS_FIGURES = "/api/v1/avatars";
+	private static final String ADMINS_STATUS_FIGURES = "/api/v1/admin/status";
 	private static final String A_CLIENT = "198.51.100.1";
 	private static final String NOT_ISSUED = "Not-Issued-1!";
+	private static final int SERVED = 200;
 	private static final int UNAUTHORIZED = 401;
 	private static final int BAD_REQUEST = 400;
 	private static final int FOUND = 302;
@@ -31,12 +41,19 @@ public class ClientLoginSteps {
 	private final LoginRequests logins;
 	private final ServiceRequests requests;
 	private final Accounts accounts;
-	private Answer answer;
+	private final ClientAnswer received;
+	private final OperatorSettings settings;
+	private final RunningService service;
+	private Answer earlierLoginAnswer;
+	private String issuedLogin;
 
-	public ClientLoginSteps(LoginRequests logins, ServiceRequests requests, Accounts accounts) {
+	public ClientLoginSteps(LoginRequests logins, ServiceRequests requests, Accounts accounts, ClientAnswer received, OperatorSettings settings, RunningService service) {
 		this.logins = logins;
 		this.requests = requests;
 		this.accounts = accounts;
+		this.received = received;
+		this.settings = settings;
+		this.service = service;
 	}
 
 	@ParameterType("a password the reset did not issue|no password")
@@ -44,60 +61,166 @@ public class ClientLoginSteps {
 		return "no password".equals(phrase) ? "" : NOT_ISSUED;
 	}
 
+	@ParameterType("the login page|a file the login page loads|the overview's figures|the movements of the bank ledger of \"Aurora\"|the admin's status figures|a file the dashboard loads"
+			+ "|the change of a password with the current one|the descriptions of the service's interface for programs \\(Swagger, ReDoc and RapiDoc\\)"
+			+ "|an interface address the service does not serve")
+	public List<String> askedFor(String phrase) {
+		return switch (phrase) {
+			case "the login page" -> List.of("/login");
+			case "a file the login page loads" -> List.of(BundledFiles.aFileTheLoginPageLoads());
+			case "the overview's figures" -> List.of(OVERVIEWS_FIGURES);
+			case "the movements of the bank ledger of \"Aurora\"" -> List.of(OVERVIEWS_FIGURES + "/Aurora/bank");
+			case "the admin's status figures" -> List.of(ADMINS_STATUS_FIGURES);
+			case "a file the dashboard loads" -> List.of(BundledFiles.aFileTheDashboardLoads());
+			case "the change of a password with the current one" -> List.of("/api/v1/password");
+			case "an interface address the service does not serve" -> List.of("/api/v1/unknown");
+			default -> List.of("/swagger-ui/index.html", "/redoc/index.html", "/rapidoc/index.html");
+		};
+	}
+
+	@ParameterType("altered to claim the admin's role|altered to name another account|signed by someone other than the service|that carries no signature at all")
+	public UnaryOperator<String> alteredLogin(String kind) {
+		return switch (kind) {
+			case "altered to claim the admin's role" -> AlteredLogins::claimingTheAdminsRole;
+			case "altered to name another account" -> AlteredLogins::namingAnotherAccount;
+			case "signed by someone other than the service" -> AlteredLogins::signedBySomeoneOtherThanTheService;
+			default -> AlteredLogins::withoutASignature;
+		};
+	}
+
+	@When("a client without a login asks for {askedFor}")
+	public void aClientWithoutALoginAsksFor(List<String> addresses) {
+		Answer first = null;
+		for (String address : addresses) {
+			Answer answer = requests.get(address, Map.of(AcceptanceClientIp.HEADER, A_CLIENT));
+			first = first == null || answer.status() != UNAUTHORIZED ? answer : first;
+		}
+		received.remember(first);
+	}
+
+	@When("a client without a login asks for the bank ledger of {string}")
+	public void aClientWithoutALoginAsksForTheBankLedgerOf(String avatar) {
+		received.remember(requests.get(BANK.pathOf(avatar), Map.of(AcceptanceClientIp.HEADER, A_CLIENT, "Accept", "text/html")));
+	}
+
 	@When("a client gives the name {string} and the password the reset issued and asks for the overview's figures, skipping the login page")
 	public void aClientGivesTheNameAndTheIssuedPasswordInTheAddress(String name) {
-		Map<String, String> credentials = new LinkedHashMap<>();
-		credentials.put("name", name);
-		credentials.put("password", accounts.issuedTo(name));
-		String query = credentials.entrySet().stream().map(parameter -> parameter.getKey() + "=" + encoded(parameter.getValue())).collect(joining("&"));
+		askForTheOverviewsFiguresWith(Map.of("name", name, "password", accounts.issuedTo(name)));
+	}
 
-		answer = requests.get(OVERVIEWS_FIGURES + "?" + query, Map.of(AcceptanceClientIp.HEADER, A_CLIENT));
+	@When("a client asks for the overview's figures with the name {string} and the password {string} in the address")
+	public void aClientAsksForTheOverviewsFiguresWithTheNameAndThePasswordInTheAddress(String name, String password) {
+		askForTheOverviewsFiguresWith(Map.of("name", name, "password", password));
+	}
+
+	@When("a client asks for the overview's figures with the value of a login the service issued to {word} in the address")
+	public void aClientAsksForTheOverviewsFiguresWithTheValueOfALogin(String avatar) {
+		String value = LoginRequests.loginValueIn(logins.logIn(avatar, accounts.chosenBy(avatar)));
+		askForTheOverviewsFiguresWith(Map.of(LoginRequests.SESSION_COOKIE, value));
+	}
+
+	@Given("the guild's old token is still set among the service's settings")
+	public void theGuildsOldTokenIsStillSetAmongTheServicesSettings() {
+		settings.setVariable(OperatorSettings.GUILD_TOKEN_VARIABLE, GUILD_TOKEN);
+
+		service.restartAsDeployed().ifPresent(refused -> {
+			throw refused;
+		});
+	}
+
+	@When("a client asks for the overview's figures with the guild's old token in the address")
+	public void aClientAsksForTheOverviewsFiguresWithTheGuildsOldToken() {
+		askForTheOverviewsFiguresWith(Map.of("token", GUILD_TOKEN));
 	}
 
 	@Given("a client has tried to choose {string} as {word}'s new password, giving {givenPassword}")
 	public void aClientHasTriedToChooseTheNewPasswordGiving(String newPassword, String avatar, String issued) {
-		answer = logins.chooseNewPassword(avatar, issued, newPassword);
+		received.remember(logins.chooseNewPassword(avatar, issued, newPassword));
 
-		assertThat(answer.status()).as("the service's answer to the choice with a password it did not issue").isEqualTo(UNAUTHORIZED);
+		assertThat(received.current().status()).as("the service's answer to the choice with a password it did not issue").isEqualTo(UNAUTHORIZED);
 	}
 
 	@Given("a client has set {string} as {word}'s new password, giving the password the reset issued, skipping the page")
 	public void aClientHasSetTheNewPassword(String newPassword, String avatar) {
-		answer = logins.chooseNewPassword(avatar, accounts.issuedTo(avatar), newPassword);
+		received.remember(logins.chooseNewPassword(avatar, accounts.issuedTo(avatar), newPassword));
 
-		assertThat(answer.status()).as("the service's answer to the choice: " + answer.body()).isEqualTo(BAD_REQUEST);
+		assertThat(received.current().status()).as("the service's answer to the choice: " + received.current().body()).isEqualTo(BAD_REQUEST);
 	}
 
 	@When("a client sets {string} as {word}'s new password giving the password the reset issued, skipping the page")
 	public void aClientSetsTheNewPassword(String newPassword, String avatar) {
-		answer = logins.chooseNewPassword(avatar, accounts.issuedTo(avatar), newPassword);
+		received.remember(logins.chooseNewPassword(avatar, accounts.issuedTo(avatar), newPassword));
 	}
 
 	@When("a client sets the password the reset issued as {word}'s new password giving the password the reset issued, skipping the page")
 	public void aClientSetsTheIssuedPasswordAsTheNewPassword(String avatar) {
 		String issued = accounts.issuedTo(avatar);
-		answer = logins.chooseNewPassword(avatar, issued, issued);
+		received.remember(logins.chooseNewPassword(avatar, issued, issued));
 	}
 
-	@When("a client without a login asks for the bank ledger of {string}")
-	public void aClientWithoutALoginAsksForTheBankLedgerOf(String avatar) {
-		answer = requests.get(BANK.pathOf(avatar), Map.of(AcceptanceClientIp.HEADER, A_CLIENT, "Accept", "text/html"));
+	@Given("a client has asked to log in as {string} with the password {string}")
+	public void aClientHasAskedToLogIn(String name, String password) {
+		earlierLoginAnswer = logins.logIn(name, password);
+	}
+
+	@When("a client asks to log in as {string} with the password {string}")
+	public void aClientAsksToLogIn(String name, String password) {
+		received.remember(logins.logIn(name, password));
+	}
+
+	@Given("a client has logged in as {string} with the password {string}")
+	public void aClientHasLoggedIn(String name, String password) {
+		Answer answer = logins.logIn(name, password);
+
+		assertThat(answer.status()).as("the login: " + answer.body()).isEqualTo(SERVED);
+		issuedLogin = LoginRequests.loginValueIn(answer);
+	}
+
+	@Given("a client has logged in as {string} after choosing {string} in place of the password the reset issued")
+	public void aClientHasLoggedInAfterChoosing(String name, String password) {
+		accounts.choosePasswordInPlaceOfTheIssuedOne(name, password);
+		aClientHasLoggedIn(name, password);
+	}
+
+	@When("another client asks for {askedFor} with a login {alteredLogin}")
+	public void anotherClientAsksForWithAnAlteredLogin(List<String> addresses, UnaryOperator<String> alteration) {
+		received.remember(logins.asking(addresses.getFirst(), alteration.apply(issuedLogin)));
+	}
+
+	@Then("the operator finds the login the service issued to Aurora opening the overview's figures")
+	public void theOperatorFindsTheLoginTheServiceIssuedOpeningTheOverviewsFigures() {
+		Answer figures = logins.asking(OVERVIEWS_FIGURES, issuedLogin);
+
+		assertThat(figures.status()).isEqualTo(SERVED);
+	}
+
+	@Then("the operator finds the same status and message as for a login as {string} with a wrong password")
+	public void theOperatorFindsTheSameStatusAndMessage(String name) {
+		assertThat(received.current().status()).as("the status of a login as " + name + " with a wrong password").isEqualTo(earlierLoginAnswer.status());
+		assertThat(received.current().body()).isEqualTo(earlierLoginAnswer.body());
 	}
 
 	@Then("the operator finds the client redirected to the login page, with the request to return to the bank ledger of {string}")
 	public void theOperatorFindsTheClientRedirectedToTheLoginPage(String avatar) {
-		assertThat(answer.status()).isEqualTo(FOUND);
-		assertThat(answer.header("Location")).contains("/login?next=" + encoded(BANK.pathOf(avatar)));
+		assertThat(received.current().status()).isEqualTo(FOUND);
+		assertThat(received.current().header("Location")).contains("/login?next=" + encoded(BANK.pathOf(avatar)));
 	}
 
 	@Then("the operator finds the request refused for lacking a login")
 	public void theOperatorFindsTheRequestRefusedForLackingALogin() {
-		assertThat(answer.status()).isEqualTo(UNAUTHORIZED);
+		assertThat(received.current().status()).isEqualTo(UNAUTHORIZED);
 	}
 
 	@Then("the operator finds the request refused for breaking the password rule")
 	public void theOperatorFindsTheRequestRefusedForBreakingThePasswordRule() {
-		assertThat(answer.status()).isEqualTo(BAD_REQUEST);
+		assertThat(received.current().status()).isEqualTo(BAD_REQUEST);
+	}
+
+	private void askForTheOverviewsFiguresWith(Map<String, String> parameters) {
+		Map<String, String> inTheAddress = new LinkedHashMap<>(parameters);
+		String query = inTheAddress.entrySet().stream().map(parameter -> parameter.getKey() + "=" + encoded(parameter.getValue())).collect(joining("&"));
+
+		received.remember(requests.get(OVERVIEWS_FIGURES + "?" + query, Map.of(AcceptanceClientIp.HEADER, A_CLIENT)));
 	}
 
 	private static String encoded(String text) {

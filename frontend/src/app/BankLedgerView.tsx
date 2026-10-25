@@ -12,7 +12,6 @@ import { useLoad } from './useLoad.ts'
 export interface BankLedgerViewProps {
   readonly api: ProtocolApi
   readonly avatar: string
-  readonly token: string | null
   readonly page: number
   readonly sort: LedgerSort | null
   readonly onFollow: (href: string) => void
@@ -49,14 +48,13 @@ const columns: readonly Column<BankEntry>[] = [
 export function BankLedgerView({
   api,
   avatar,
-  token,
   page,
   sort,
   onFollow,
 }: BankLedgerViewProps) {
   const load = useLoad(
     () => api.bankEntries(avatar, windowOf(page), sort),
-    requestKeyOf('bank', avatar, token, page, sort),
+    requestKeyOf('bank', avatar, page, sort),
   )
 
   return (
@@ -65,7 +63,6 @@ export function BankLedgerView({
       avatar={avatar}
       load={load}
       columns={columns}
-      token={token}
       sort={sort}
       pathOf={bankPath}
       onFollow={onFollow}

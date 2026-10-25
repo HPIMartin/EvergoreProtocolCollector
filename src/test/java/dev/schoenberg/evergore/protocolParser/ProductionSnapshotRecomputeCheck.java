@@ -75,7 +75,7 @@ class ProductionSnapshotRecomputeCheck {
 
 	@Test
 	void recomputesTheProductionSnapshotAndKeepsServingTheSummaries() {
-		HttpResponse<String> response = Unirest.get("/api/v1/avatars?size=" + MAX_SIZE + "&token=test-token").asString();
+		HttpResponse<String> response = Unirest.get("/api/v1/avatars?size=" + MAX_SIZE).header("Cookie", LoginCookie.headerFor(server)).asString();
 
 		assertThat(response.getStatus()).isEqualTo(OK.getCode());
 		JSONObject summaries = new JSONObject(response.getBody());
@@ -87,7 +87,7 @@ class ProductionSnapshotRecomputeCheck {
 
 	@Test
 	void everyRowAndTheGuildTotalReconcileTheFourFiguresTheHeaderStates() {
-		JSONObject summaries = new JSONObject(Unirest.get("/api/v1/avatars?size=" + MAX_SIZE + "&token=test-token").asString().getBody());
+		JSONObject summaries = new JSONObject(Unirest.get("/api/v1/avatars?size=" + MAX_SIZE).header("Cookie", LoginCookie.headerFor(server)).asString().getBody());
 		JSONArray rows = summaries.getJSONArray("items");
 
 		assertThat(rows.length()).as("a snapshot with no avatar would make the reconciliation vacuous").isPositive();
@@ -115,7 +115,7 @@ class ProductionSnapshotRecomputeCheck {
 
 	@Test
 	void servesEveryFigureAsItsRecomputedExactValueRoundedOnceHalvesAwayFromZero() {
-		JSONObject summaries = new JSONObject(Unirest.get("/api/v1/avatars?size=" + MAX_SIZE + "&token=test-token").asString().getBody());
+		JSONObject summaries = new JSONObject(Unirest.get("/api/v1/avatars?size=" + MAX_SIZE).header("Cookie", LoginCookie.headerFor(server)).asString().getBody());
 		JSONArray rows = summaries.getJSONArray("items");
 		StoredMetaSums recomputed = StoredMetaSums.readFrom(WORKING_DB);
 		ExactFigures guild = ExactFigures.NOTHING;

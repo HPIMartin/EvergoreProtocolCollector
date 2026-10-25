@@ -63,7 +63,7 @@ class RateLimitFilterTest {
 
 	@Test
 	void blocksRequestsOnceTheConfiguredLimitIsExceeded() {
-		List<Integer> statuses = statusesOfThreeRequestsTo("/favicon.ico");
+		List<Integer> statuses = statusesOfThreeRequestsTo("/login");
 
 		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
@@ -76,19 +76,19 @@ class RateLimitFilterTest {
 	}
 
 	@Test
-	void countsTokenlessRequestsToIndexHtml() {
+	void countsRequestsToIndexHtmlWithoutALoginThoughTheyAreRefused() {
 		List<Integer> statuses = statusesOfThreeRequestsTo("/index.html");
 
-		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode(), TOO_MANY_REQUESTS.getCode());
+		assertThat(statuses).containsExactly(UNAUTHORIZED.getCode(), UNAUTHORIZED.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
 
 	@Test
-	void countsTokenlessRequestsToBundledAssets() {
+	void countsRequestsToBundledAssetsWithoutALoginThoughTheyAreRefused() {
 		String assetPath = bundledAssetPath();
 
 		List<Integer> statuses = statusesOfThreeRequestsTo(assetPath);
 
-		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode(), TOO_MANY_REQUESTS.getCode());
+		assertThat(statuses).containsExactly(UNAUTHORIZED.getCode(), UNAUTHORIZED.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
 
 	@Test
@@ -132,7 +132,7 @@ class RateLimitFilterTest {
 		String incompleteHead = "GET /" + "a".repeat(LONGER_THAN_A_REQUEST_LINE_MAY_BE) + " HTTP/1.1\r\nHost: localhost\r\n";
 
 		List<String> answers = IntStream.range(0, 2).mapToObj(_ -> rawClient.answerToHalfClosedRequest(incompleteHead)).toList();
-		List<Integer> statuses = IntStream.range(0, 2).mapToObj(_ -> rawClient.statusOf("/favicon.ico")).toList();
+		List<Integer> statuses = IntStream.range(0, 2).mapToObj(_ -> rawClient.statusOf("/login")).toList();
 
 		assertThat(answers).containsExactly("", "");
 		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode());

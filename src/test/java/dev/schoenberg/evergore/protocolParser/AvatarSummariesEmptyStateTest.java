@@ -42,7 +42,7 @@ class AvatarSummariesEmptyStateTest {
 
 	@Test
 	void theOverviewOfAnUncollectedDatabaseKeepsEveryContractFieldVisible() {
-		String body = Unirest.get("/api/v1/avatars?token=test-token").asString().getBody();
+		String body = Unirest.get("/api/v1/avatars").header("Cookie", LoginCookie.headerFor(server)).asString().getBody();
 
 		assertThat(body)
 				.isEqualTo("{\"page\":0,\"size\":100,\"totalCount\":0,"

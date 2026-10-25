@@ -13,7 +13,7 @@ import { OverviewView } from './OverviewView.tsx'
 import { StorageLedgerView } from './StorageLedgerView.tsx'
 import type { Route, RouteVisitor } from './route.ts'
 import { bankPath, overviewPath, storagePath } from './route.ts'
-import { hrefOf } from './token.ts'
+import { hrefOf } from './href.ts'
 import { useRouting } from './useRouting.ts'
 
 const BRAND = 'Evergore Protocol Collector'
@@ -28,18 +28,17 @@ function navigateTheBrowser(target: string): void {
 }
 
 export function App({ get, navigate = navigateTheBrowser }: AppProps) {
-  const { route, token, follow } = useRouting()
-  const api = httpProtocolApi(get, token)
+  const { route, follow } = useRouting()
+  const api = httpProtocolApi(get)
 
   const view: RouteVisitor<ReactNode> = {
-    overview: () => <OverviewView api={api} token={token} onFollow={follow} />,
+    overview: () => <OverviewView api={api} onFollow={follow} />,
     admin: () => <AdminView api={api} />,
     explanation: () => <ExplanationView />,
     bank: (avatar, page, sort) => (
       <BankLedgerView
         api={api}
         avatar={avatar}
-        token={token}
         page={page}
         sort={sort}
         onFollow={follow}
@@ -49,7 +48,6 @@ export function App({ get, navigate = navigateTheBrowser }: AppProps) {
       <StorageLedgerView
         api={api}
         avatar={avatar}
-        token={token}
         page={page}
         sort={sort}
         onFollow={follow}
@@ -67,7 +65,7 @@ export function App({ get, navigate = navigateTheBrowser }: AppProps) {
     <LoginNavigation value={navigate}>
       <PageFrame
         brand={BRAND}
-        navigation={navigationOf(route, token)}
+        navigation={navigationOf(route)}
         onFollow={follow}
       >
         {route.accept(view)}
@@ -76,13 +74,10 @@ export function App({ get, navigate = navigateTheBrowser }: AppProps) {
   )
 }
 
-function navigationOf(
-  route: Route,
-  token: string | null,
-): readonly NavigationLink[] {
+function navigationOf(route: Route): readonly NavigationLink[] {
   const overview: NavigationLink = {
     label: 'Übersicht',
-    href: hrefOf(overviewPath(), token),
+    href: hrefOf(overviewPath()),
     current: false,
   }
 
@@ -90,26 +85,25 @@ function navigationOf(
     overview: () => [{ ...overview, current: true }],
     admin: () => [overview],
     explanation: () => [overview],
-    bank: (avatar) => [overview, ...ledgersOf(avatar, token, 'bank')],
-    storage: (avatar) => [overview, ...ledgersOf(avatar, token, 'storage')],
+    bank: (avatar) => [overview, ...ledgersOf(avatar, 'bank')],
+    storage: (avatar) => [overview, ...ledgersOf(avatar, 'storage')],
     unknownPath: () => [overview],
   })
 }
 
 function ledgersOf(
   avatar: string,
-  token: string | null,
   shown: 'bank' | 'storage',
 ): readonly NavigationLink[] {
   return [
     {
       label: 'Bank',
-      href: hrefOf(bankPath(avatar), token),
+      href: hrefOf(bankPath(avatar)),
       current: shown === 'bank',
     },
     {
       label: 'Lager',
-      href: hrefOf(storagePath(avatar), token),
+      href: hrefOf(storagePath(avatar)),
       current: shown === 'storage',
     },
   ]

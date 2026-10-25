@@ -119,7 +119,7 @@ class SpaHistoryFallbackTest {
 	}
 
 	private HttpResponse<String> getHtml(String path) {
-		return Unirest.get(path + "?token=test-token").header("Accept", "text/html").asString();
+		return Unirest.get(path).header("Accept", "text/html").header("Cookie", LoginCookie.headerFor(server)).asString();
 	}
 
 	private String bundledIndexHtml() {

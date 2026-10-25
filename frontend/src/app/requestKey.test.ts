@@ -4,59 +4,52 @@ import { requestKeyOf } from './requestKey.ts'
 
 describe('requestKey', () => {
   it('tells two views apart', () => {
-    const bank = requestKeyOf('bank', 'Calix', 'a-test-token')
-    const storage = requestKeyOf('storage', 'Calix', 'a-test-token')
+    const bank = requestKeyOf('bank', 'Calix')
+    const storage = requestKeyOf('storage', 'Calix')
 
     expect(bank).not.toBe(storage)
   })
 
   it('tells two avatars apart', () => {
-    const calix = requestKeyOf('bank', 'Calix', 'a-test-token')
-    const nobody = requestKeyOf('bank', 'Nobody', 'a-test-token')
+    const calix = requestKeyOf('bank', 'Calix')
+    const nobody = requestKeyOf('bank', 'Nobody')
 
     expect(calix).not.toBe(nobody)
   })
 
-  it('tells two tokens apart, because they answer different data', () => {
-    const mine = requestKeyOf('overview', null, 'a-test-token')
-    const yours = requestKeyOf('overview', null, 'another-token')
+  it('tells a view without an avatar apart from one of an avatar', () => {
+    const overview = requestKeyOf('overview', null)
+    const ledger = requestKeyOf('overview', 'Calix')
 
-    expect(mine).not.toBe(yours)
-  })
-
-  it('tells a missing token apart from an empty one', () => {
-    const missing = requestKeyOf('overview', null, null)
-    const empty = requestKeyOf('overview', null, '')
-
-    expect(missing).not.toBe(empty)
+    expect(overview).not.toBe(ledger)
   })
 
   it('tells avatar names apart that only differ in where the parts end', () => {
-    const first = requestKeyOf('bank', 'Erde', 'Eibe')
-    const second = requestKeyOf('bank', 'Erde-Eibe', null)
+    const first = requestKeyOf('bank', 'Erde', 1)
+    const second = requestKeyOf('bank', 'Erde-1')
 
     expect(first).not.toBe(second)
   })
 
   it('names the same request the same way twice', () => {
-    const asked = requestKeyOf('bank', 'Calix', 'a-test-token')
+    const asked = requestKeyOf('bank', 'Calix')
 
-    expect(asked).toBe(requestKeyOf('bank', 'Calix', 'a-test-token'))
+    expect(asked).toBe(requestKeyOf('bank', 'Calix'))
   })
 
   it('tells two pages of the same ledger apart', () => {
-    const first = requestKeyOf('bank', 'Calix', 'a-test-token', 0)
-    const second = requestKeyOf('bank', 'Calix', 'a-test-token', 1)
+    const first = requestKeyOf('bank', 'Calix', 0)
+    const second = requestKeyOf('bank', 'Calix', 1)
 
     expect(first).not.toBe(second)
   })
 
   it('tells two sorts of the same page apart', () => {
-    const byQuantity = requestKeyOf('storage', 'Calix', 'a-test-token', 0, {
+    const byQuantity = requestKeyOf('storage', 'Calix', 0, {
       column: 'quantity',
       direction: 'descending',
     })
-    const byName = requestKeyOf('storage', 'Calix', 'a-test-token', 0, {
+    const byName = requestKeyOf('storage', 'Calix', 0, {
       column: 'name',
       direction: 'descending',
     })
@@ -65,11 +58,11 @@ describe('requestKey', () => {
   })
 
   it('tells the two directions of one column apart', () => {
-    const ascending = requestKeyOf('storage', 'Calix', 'a-test-token', 0, {
+    const ascending = requestKeyOf('storage', 'Calix', 0, {
       column: 'quantity',
       direction: 'ascending',
     })
-    const descending = requestKeyOf('storage', 'Calix', 'a-test-token', 0, {
+    const descending = requestKeyOf('storage', 'Calix', 0, {
       column: 'quantity',
       direction: 'descending',
     })
@@ -78,8 +71,8 @@ describe('requestKey', () => {
   })
 
   it('treats an omitted page as the first page', () => {
-    const omitted = requestKeyOf('bank', 'Calix', 'a-test-token')
-    const explicit = requestKeyOf('bank', 'Calix', 'a-test-token', 0)
+    const omitted = requestKeyOf('bank', 'Calix')
+    const explicit = requestKeyOf('bank', 'Calix', 0)
 
     expect(omitted).toBe(explicit)
   })

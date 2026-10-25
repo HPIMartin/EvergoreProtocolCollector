@@ -6,7 +6,7 @@ import type { Column, DeliveredOrder, Sort } from '../ui'
 import { Pagination, SortableTable, StatusPanel } from '../ui'
 
 import { LoadedView } from './LoadedView.tsx'
-import { hrefOf } from './token.ts'
+import { hrefOf } from './href.ts'
 import type { Load } from './useLoad.ts'
 
 export interface LedgerViewProps<E> {
@@ -14,7 +14,6 @@ export interface LedgerViewProps<E> {
   readonly avatar: string
   readonly load: Load<Ledger<E>>
   readonly columns: readonly Column<E>[]
-  readonly token: string | null
   readonly sort: LedgerSort | null
   readonly pathOf: (avatar: string) => string
   readonly onFollow: (href: string) => void
@@ -25,13 +24,12 @@ export function LedgerView<E>({
   avatar,
   load,
   columns,
-  token,
   sort,
   pathOf,
   onFollow,
 }: LedgerViewProps<E>) {
   const linkTo = (page: number, pageSort: LedgerSort | null): string =>
-    hrefOf(pathOf(avatar), token, page, pageSort)
+    hrefOf(pathOf(avatar), page, pageSort)
 
   return (
     <section>

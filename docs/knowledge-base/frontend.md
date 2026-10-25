@@ -158,8 +158,8 @@ Five top-level folders under `frontend/src/`:
   `/avatars/{avatar}/storage` show one avatar's ledger, and `/explanation` the explanation page
   (`ExplanationView.tsx`). Every other path renders "no view", so a typo in a bookmark says so
   instead of showing an empty page.
-- **`/explanation` loads no data**: it stays behind the guild's token because the server refuses a
-  deep link without it, not because a request of its own would fail (decision 2026-10-14).
+- **`/explanation` loads no data**: it stays behind a login because the server refuses a page
+  without one, not because a request of its own would fail (decisions 2026-10-14 and 2026-10-21).
   - Its frame offers the overview only.
   - Its content is one data file, `app/explanation/explanation.json`: the personas, the five
     groups and each answer's question, rule, points, example ledger, calculation lines and "why".
@@ -183,8 +183,7 @@ Five top-level folders under `frontend/src/`:
   (`roundTripFrom`), as the server refuses to build one.
   It states facts only; the UP/DOWN verdict over them stays `/health`'s job.
   Deliberately not in `navigationOf`'s link set, so a guild member never sees it; reachable only by
-  its direct URL. The page needs a login or the guild's token; the endpoint it reads is in
-  `evergore.security.public-paths`, at the same trust level as `/health`.
+  its direct URL. The page and the endpoint it reads need a login.
 - The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
   malformed escape is "no view", not a crash.
 - **Every view that loads data passes through one of five outcomes** (`useLoad` + `LoadedView`):
@@ -199,9 +198,10 @@ Five top-level folders under `frontend/src/`:
 - **`useLoad` starts a request on its request key alone**, the key being the request's full
   identity (`requestKeyOf`): it calls `load` through `useEffectEvent`, so a new `load` closure
   starts no request.
-- **The token is read once from the address** (`?token=`) and carried into every request and every
-  in-app link; it is kept nowhere else (no cookie, no `localStorage`), so a link is the whole
-  credential and closing the tab ends the session.
+- **The SPA carries no credential.**
+  - The login is the browser's `epc_session` cookie.
+  - The script of a page cannot read it.
+  - Every request of the SPA sends it by itself, so a link is an address and nothing more.
 - **Ledger paging is server-side and bookmarkable.**
   - A ledger view fetches `windowOf(page)` (`?page=&size=100`) and shows `items.length` of
     `totalCount`.
@@ -213,7 +213,7 @@ Five top-level folders under `frontend/src/`:
     `@Min(0)` violation answers 400 and the ledger says "Diese Seite gibt es nicht.".
   - Why unclamped: clamping it client-side would hide a bad link instead of showing it.
   - Only a ledger read maps a 400 that way, because the page number and the sort are the only
-    request values the client does not fix (the size is constant, a bad token answers 401).
+    request values the client does not fix (the size is constant, a missing login answers 401).
   - On the overview or the admin page a 400 is a plain failure.
 - **A ledger's sort is address state too** (decision 2026-10-05): `route.ts` reads `sort` and
   `direction` (`SORT`, `DIRECTION`), completes an address that names only one of them with the
@@ -375,7 +375,7 @@ service's only read surface.
 | `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, the two flows `donation` and `craftSubsidy`, `balance` (the figure before the guild's share), plus `lastBankActivity`, `lastStorageActivity`, `staleSumsFrom` and the boolean `active`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
 | `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first unless `sort` names another order. |
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first unless `sort` names another order. |
-| `GET /api/v1/admin/status` | Anonymous, `token`-exempt (same trust level as `/health`): `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, `roundTrips`, `roundTripAbstentions`, every key always rendered (the two round-trip arrays as `[]` rather than `null` when empty). The operator-facing facts; see below. |
+| `GET /api/v1/admin/status` | Behind a login: `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, `roundTrips`, `roundTripAbstentions`, every key always rendered (the two round-trip arrays as `[]` rather than `null` when empty). The operator-facing facts; see below. |
 
 - **One envelope for every collection**: `page`, `size`, `totalCount`, `items`. `/api/v1/avatars`
   adds `totals`.
@@ -478,10 +478,8 @@ service's only read surface.
   column and every `@DatabaseTable` its table. There is no JDK-standard annotation for this (JSON
   binding never landed in Java SE), so the Jackson annotation is deliberate and confined to the
   `wire` package.
-- **A deep link opened without a login is redirected to the login page.**
-  - What the service answers: [build-run-deploy.md](build-run-deploy.md), "HTTP endpoints".
-  - The client still carries `?token=` across its routes until the token goes (see the SPA's views
-    above).
+- **A deep link opened without a login is redirected to the login page.** What the service answers:
+  [build-run-deploy.md](build-run-deploy.md), "HTTP endpoints".
 - **404 vs. empty page** (author decision 2026-08-05): a **404 means the avatar is unknown**, i.e. has
   no row in either ledger. A known avatar whose bank or storage ledger happens to be empty answers 200
   with `totalCount: 0` and `items: []`, like the overview does, so the SPA can tell "no storage
@@ -489,7 +487,7 @@ service's only read surface.
   valid empty window. "Known" means **the avatar has a ledger row somewhere**, deliberately not "the
   meta information mentions it": today the evaluator only writes meta keys for avatars that have rows,
   so the two coincide, and pinning the contract to the ledgers keeps it true if that ever diverges.
-- **Errors carry no envelope**: 401 (missing or wrong token) and 404 answer with an empty body;
+- **Errors carry no envelope**: 401 (no valid login) and 404 answer with an empty body;
   400 (a paging constraint violated) and 405 answer with Micronaut's own JSON error shape. The SPA
   codes against the status, not against a body.
 - Both defaults that would silently break this are pinned in `application.yml`

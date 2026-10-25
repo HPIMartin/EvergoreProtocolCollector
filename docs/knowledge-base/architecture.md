@@ -36,15 +36,15 @@
         ▼
    PostCollectionHook   (no-op in prod; test seam, runs only after a successful recompute)
 
-Independent read path:  HTTP ▶ filters (audit log, rate limit, unreadable-request answer, token, login body limit) ▶ AvatarSummariesController /
+Independent read path:  HTTP ▶ filters (audit log, login reading, rate limit, unreadable-request answer, access, login body limit) ▶ AvatarSummariesController /
                         AvatarEntriesController ▶ read MetaInformation / repositories
                         ▶ wire records ▶ JSON
 
-Monitoring read path:   GET /health  (token-exempt, anonymous) ▶ Micronaut management
+Monitoring read path:   GET /health  (open without a login, anonymous) ▶ Micronaut management
                         ▶ LastRunHealthIndicator ▶ a verdict on the latest recompute + the lastRun
                         details, both read from LastRunStatus
 
-Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ AdminStatusController
+Admin read path:        GET /api/v1/admin/status  (behind a login) ▶ AdminStatusController
                         ▶ lastUpdated read from AvatarContributions/MetaInformationRepository
                         (persisted) + the last run's facts read from LastRunStatus (in-memory, the
                         source /health reads); it serves the facts, /health keeps the verdict
@@ -215,7 +215,7 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   endpoints"; the JSON contract: [frontend.md](frontend.md)):
   - `rest/controller/api/*` is the JSON API under `/api/v1`: `AvatarSummariesController`,
     `AvatarEntriesController`, `AdminStatusController`, `LoginController`;
-  - `AdminStatusController` keeps the operator's facts apart from the token-protected member-facing
+  - `AdminStatusController` keeps the operator's facts apart from the login-protected member-facing
     overview;
   - `rest/controller/api/wire/*` holds the published contract types plus `TransferTypeWireNames`;
   - `FaviconController` serves the favicon;
@@ -227,7 +227,7 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   - the filter `UnreadableRequestFilter` answers the stand-in request of a head the server cannot
     read;
   - the filter `LoginReadingFilter` puts the valid login of the `epc_session` cookie on the request;
-  - the filter `AccessFilter` lets a public path, a login or `GuildToken`'s `?token=` through;
+  - the filter `AccessFilter` lets a public path or a login through;
   - the filter `LoginBodyLimitFilter` answers 413 to a body the login's paths do not take (what
     it refuses: [build-run-deploy.md](build-run-deploy.md), "The login API");
   - `ApplicationExceptionHandler` dispatches via the `TransferType`/exception visitors, no
@@ -260,7 +260,7 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 - **The IO pool's threads are platform threads, not the virtual threads of
   `TaskExecutors.BLOCKING`** (author decision 2026-10-16, [open-questions.md](../open-questions.md)).
   - Why: SQLite waits for a lock in native code, which pins a virtual thread's carrier.
-- **The token scope is default-deny** (author decision 2026-08-04): every path needs a token except
+- **The access scope is default-deny** (author decision 2026-08-04): every path needs a login except
   the ones configured under `evergore.security.public-paths`.
   - Why: a new controller is protected the moment it exists, with no list to remember.
   - An empty or missing configuration protects everything (fail closed).
@@ -269,7 +269,7 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 - **Every path-based decision runs on the canonicalized path** (`PathCanonicalizer`).
   - Why: a `..` segment cannot make a protected path look public, and a leading `//` cannot be
     read as an authority.
-  - The token filter therefore stays mapped on `/**`: a narrower `@Filter` pattern is matched
+  - The access filter therefore stays mapped on `/**`: a narrower `@Filter` pattern is matched
     against the raw path and would never reach the canonicalizing code.
   - `PathCanonicalizer`, `PublicPaths` and `SpaNavigationPaths` are injected `@Singleton`s, not
     static utilities (handbook §1).

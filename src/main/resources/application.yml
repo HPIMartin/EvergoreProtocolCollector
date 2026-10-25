@@ -39,19 +39,11 @@ netty:
 evergore:
   security:
     public-paths:
-      - /index.html
-      - /assets/**
-      - /favicon.ico
       - /login
       - /login/**
-      - /api/v1/admin/status
       - /api/v1/login
       - /api/v1/login/new-password
       - /health
-      - /swagger/**
-      - /swagger-ui/**
-      - /redoc/**
-      - /rapidoc/**
   rate-limit:
     max-requests-per-interval: 30
     interval: 10s

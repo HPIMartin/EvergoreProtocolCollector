@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 
 import type { Route } from './route.ts'
 import { routeOf } from './route.ts'
-import { tokenIn } from './token.ts'
 
 interface Address {
   readonly path: string
@@ -11,7 +10,6 @@ interface Address {
 
 export interface Routing {
   readonly route: Route
-  readonly token: string | null
   readonly follow: (href: string) => void
 }
 
@@ -37,7 +35,6 @@ export function useRouting(): Routing {
 
   return {
     route: routeOf(address.path, address.search),
-    token: tokenIn(address.search),
     follow,
   }
 }

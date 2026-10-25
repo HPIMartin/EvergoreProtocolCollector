@@ -73,6 +73,11 @@ public class BookmarkSteps {
 		browser.openHref(path);
 	}
 
+	@When("the member opens a bookmark of the overview instead of choosing a new password")
+	public void theMemberOpensABookmarkOfTheOverviewInsteadOfChoosingANewPassword() {
+		browser.openHref(OVERVIEW);
+	}
+
 	@Given("a member who is not logged in has opened a bookmark of {bookmark}")
 	public void aMemberWhoIsNotLoggedInHasOpenedABookmarkOf(String path) {
 		browser.openHref(path);

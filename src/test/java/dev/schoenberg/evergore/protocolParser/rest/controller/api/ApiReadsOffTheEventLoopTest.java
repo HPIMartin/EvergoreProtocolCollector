@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import dev.schoenberg.evergore.protocolParser.LoginCookie;
 import dev.schoenberg.evergore.protocolParser.RawHttpClient;
 import dev.schoenberg.evergore.protocolParser.application.AccountRepository;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
@@ -72,7 +73,6 @@ class ApiReadsOffTheEventLoopTest {
 	private static final String PASSWORD = "Sommer-2026!";
 	private static final String ISSUED_AVATAR = "Boreas";
 	private static final String ISSUED_PASSWORD = "Issued-2026!";
-	private static final String TOKEN = "?token=test-token";
 	private static final String BANK_ROUTE = "/api/v1/avatars/" + AVATAR + "/bank";
 	private static final int HANG_GUARD_MILLIS = 30_000;
 
@@ -107,7 +107,7 @@ class ApiReadsOffTheEventLoopTest {
 	@ParameterizedTest
 	@ValueSource(strings = {AvatarSummariesController.PATH, BANK_ROUTE, "/api/v1/avatars/" + AVATAR + "/storage", AdminStatusController.PATH})
 	void readsTheDatabaseOnAPlatformThreadThatIsNoEventLoop(String route) {
-		int status = new RawHttpClient(server.getPort()).statusOf(route + TOKEN);
+		int status = statusWithALogin(route);
 
 		assertThat(status).isEqualTo(OK.getCode());
 		assertThat(reads).isNotEmpty().noneMatch(Read::onAnEventLoop).noneMatch(read -> read.thread().isVirtual());
@@ -125,7 +125,7 @@ class ApiReadsOffTheEventLoopTest {
 	@Test
 	void answersAnotherRequestWhileAReadWaitsOnALock() {
 		readsWaitOnALock = true;
-		CompletableFuture<Integer> waitingRead = CompletableFuture.supplyAsync(() -> new RawHttpClient(server.getPort()).statusOf(BANK_ROUTE + TOKEN), waitingClients);
+		CompletableFuture<Integer> waitingRead = CompletableFuture.supplyAsync(() -> statusWithALogin(BANK_ROUTE), waitingClients);
 		waitingRead.whenComplete((status, failure) -> readStarted.countDown());
 		boolean theReadIsWaiting = silentThrow(() -> readStarted.await(HANG_GUARD_MILLIS, MILLISECONDS)) && !waitingRead.isDone();
 
@@ -145,7 +145,7 @@ class ApiReadsOffTheEventLoopTest {
 		readsWaitOnALock = true;
 		List<CompletableFuture<Integer>> requests = IntStream
 				.rangeClosed(0, poolSize)
-				.mapToObj(_ -> CompletableFuture.supplyAsync(() -> new RawHttpClient(server.getPort()).statusOf(BANK_ROUTE + TOKEN), waitingClients))
+				.mapToObj(_ -> CompletableFuture.supplyAsync(() -> statusWithALogin(BANK_ROUTE), waitingClients))
 				.toList();
 
 		boolean theRestQueues = eventually(() -> waitingReads.get() == poolSize && !pool.getQueue().isEmpty());
@@ -168,6 +168,11 @@ class ApiReadsOffTheEventLoopTest {
 		assertThat(status).isEqualTo(OK.getCode());
 		assertThat(loginWork).extracting(Work::what).containsExactly("findByNameKey", "verify", "hash", "replaceIssuedPassword", "recordLastLogin");
 		assertThat(loginWork).noneMatch(Work::onAnEventLoop).noneMatch(work -> work.thread().isVirtual());
+	}
+
+	private int statusWithALogin(String route) {
+		return new RawHttpClient(server.getPort())
+				.statusOfRequest("GET " + route + " HTTP/1.1\r\nHost: localhost\r\nCookie: " + LoginCookie.headerFor(server) + "\r\nConnection: close\r\n\r\n");
 	}
 
 	private static String loginRequest() {

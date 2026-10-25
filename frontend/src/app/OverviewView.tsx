@@ -25,12 +25,11 @@ import {
 import { LoadedView } from './LoadedView.tsx'
 import { requestKeyOf } from './requestKey.ts'
 import { bankPath, explanationPath, storagePath } from './route.ts'
-import { hrefOf } from './token.ts'
+import { hrefOf } from './href.ts'
 import { useLoad } from './useLoad.ts'
 
 export interface OverviewViewProps {
   readonly api: ProtocolApi
-  readonly token: string | null
   readonly onFollow: (href: string) => void
 }
 
@@ -43,11 +42,11 @@ const FIGURES: readonly SwitchOption<Figure>[] = [
   { value: 'balance', label: 'Vor Abzügen' },
 ]
 
-export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
+export function OverviewView({ api, onFollow }: OverviewViewProps) {
   const [figure, setFigure] = useState<Figure>('contribution')
   const load = useLoad(
     () => api.overview(FIRST_PAGE),
-    requestKeyOf('overview', null, token),
+    requestKeyOf('overview', null),
   )
 
   return (
@@ -58,7 +57,7 @@ export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
           <>
             <StatHeader stats={statsOf(overview.totals)} />
             <p>
-              <Link href={hrefOf(explanationPath(), token)} onFollow={onFollow}>
+              <Link href={hrefOf(explanationPath())} onFollow={onFollow}>
                 Wie entstehen diese Zahlen?
               </Link>
             </p>
@@ -70,7 +69,7 @@ export function OverviewView({ api, token, onFollow }: OverviewViewProps) {
               selected={figure}
             />
             <RosterTables
-              columns={columnsLinkedWith(token, figure)}
+              columns={columnsLinkedWith(figure)}
               onFollow={onFollow}
               overview={overview}
             />
@@ -207,17 +206,14 @@ function guildRowOf(totals: GuildTotals): AvatarSummary {
   }
 }
 
-function columnsLinkedWith(
-  token: string | null,
-  figure: Figure,
-): readonly Column<AvatarSummary>[] {
+function columnsLinkedWith(figure: Figure): readonly Column<AvatarSummary>[] {
   return [
     {
       key: 'avatar',
       header: 'Avatar',
       kind: 'link',
       value: (summary) => summary.avatar,
-      href: (summary) => hrefOf(bankPath(summary.avatar), token),
+      href: (summary) => hrefOf(bankPath(summary.avatar)),
     },
     {
       key: 'bankDeposited',
@@ -253,14 +249,14 @@ function columnsLinkedWith(
       header: 'Letzte Lageraktivität',
       kind: 'timestamp',
       value: (summary) => summary.lastStorageActivity?.toISOString() ?? null,
-      href: (summary) => hrefOf(storagePath(summary.avatar), token),
+      href: (summary) => hrefOf(storagePath(summary.avatar)),
     },
     {
       key: 'lastBankActivity',
       header: 'Letzte Bankaktivität',
       kind: 'timestamp',
       value: (summary) => summary.lastBankActivity?.toISOString() ?? null,
-      href: (summary) => hrefOf(bankPath(summary.avatar), token),
+      href: (summary) => hrefOf(bankPath(summary.avatar)),
     },
   ]
 }

@@ -205,6 +205,6 @@ class SmokeTest {
 	}
 
 	private HttpResponse<String> get(String endpoint) {
-		return Unirest.get(endpoint + "?token=test-token").asString();
+		return Unirest.get(endpoint).header("Cookie", LoginCookie.headerFor(server)).asString();
 	}
 }

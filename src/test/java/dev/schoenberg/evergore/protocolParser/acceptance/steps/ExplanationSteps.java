@@ -10,14 +10,11 @@ import io.cucumber.java.en.When;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.ExplanationPage;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.ExplanationPage.Answer;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
-import dev.schoenberg.evergore.protocolParser.acceptance.browser.TokenChoice;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.EXPLANATION;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class ExplanationSteps {
-	private static final String START_PAGE = "/";
-	private static final String LINK_FROM_THE_OVERVIEW = "Wie entstehen diese Zahlen?";
 	private static final Pattern SENTENCE_END = Pattern.compile("(?<=[.!?])\\s+");
 
 	private final MemberBrowser browser;
@@ -29,17 +26,6 @@ public class ExplanationSteps {
 	@When("a member opens the explanation page")
 	public void aMemberOpensTheExplanationPage() {
 		browser.opening().open(EXPLANATION);
-	}
-
-	@When("a member opens a bookmark of the explanation page {tokenChoice}")
-	public void aMemberOpensABookmarkOfTheExplanationPage(TokenChoice choice) {
-		browser.opening().openADeepLinkBookmark(EXPLANATION, choice);
-	}
-
-	@When("a member follows the guild's link to the explanation page")
-	public void aMemberFollowsTheGuildsLinkToTheExplanationPage() {
-		browser.opening().open(START_PAGE);
-		browser.follow(LINK_FROM_THE_OVERVIEW);
 	}
 
 	@When("the member follows {string}")

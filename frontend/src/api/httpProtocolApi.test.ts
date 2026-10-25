@@ -12,8 +12,6 @@ import type { HttpGet } from './httpProtocolApi.ts'
 import { httpProtocolApi } from './httpProtocolApi.ts'
 import { FIRST_PAGE } from './pageWindow.ts'
 
-const TOKEN = 'a-test-token'
-
 const OVERVIEW_BODY = JSON.stringify({
   page: 0,
   size: 100,
@@ -123,42 +121,40 @@ function describingVisitor<E>(): LedgerVisitor<E, string> {
 }
 
 describe('the HTTP protocol API', () => {
-  it('asks the overview route for the requested window, carrying the token', async () => {
+  it('asks the overview route for the requested window', async () => {
     const fetched = answering(200, OVERVIEW_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     await tested.overview(FIRST_PAGE)
 
-    expect(fetched.urls).toStrictEqual([
-      '/api/v1/avatars?token=a-test-token&page=0&size=100',
-    ])
+    expect(fetched.urls).toStrictEqual(['/api/v1/avatars?page=0&size=100'])
   })
 
-  it('asks the bank route of one avatar, carrying the token', async () => {
+  it('asks the bank route of one avatar', async () => {
     const fetched = answering(200, BANK_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     await tested.bankEntries('Calix', FIRST_PAGE)
 
     expect(fetched.urls).toStrictEqual([
-      '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100',
+      '/api/v1/avatars/Calix/bank?page=0&size=100',
     ])
   })
 
-  it('asks the storage route of one avatar, carrying the token', async () => {
+  it('asks the storage route of one avatar', async () => {
     const fetched = answering(200, STORAGE_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     await tested.storageEntries('Calix', FIRST_PAGE)
 
     expect(fetched.urls).toStrictEqual([
-      '/api/v1/avatars/Calix/storage?token=a-test-token&page=0&size=100',
+      '/api/v1/avatars/Calix/storage?page=0&size=100',
     ])
   })
 
   it('asks the storage route for the sort it is given', async () => {
     const fetched = answering(200, STORAGE_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     await tested.storageEntries('Calix', FIRST_PAGE, {
       column: 'quantity',
@@ -166,13 +162,13 @@ describe('the HTTP protocol API', () => {
     })
 
     expect(fetched.urls).toStrictEqual([
-      '/api/v1/avatars/Calix/storage?token=a-test-token&page=0&size=100&sort=quantity&direction=descending',
+      '/api/v1/avatars/Calix/storage?page=0&size=100&sort=quantity&direction=descending',
     ])
   })
 
   it('asks the bank route for the sort it is given', async () => {
     const fetched = answering(200, BANK_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     await tested.bankEntries('Calix', FIRST_PAGE, {
       column: 'amount',
@@ -180,13 +176,13 @@ describe('the HTTP protocol API', () => {
     })
 
     expect(fetched.urls).toStrictEqual([
-      '/api/v1/avatars/Calix/bank?token=a-test-token&page=0&size=100&sort=amount&direction=ascending',
+      '/api/v1/avatars/Calix/bank?page=0&size=100&sort=amount&direction=ascending',
     ])
   })
 
   it('escapes a sort that would otherwise change the query', async () => {
     const fetched = answering(200, STORAGE_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     await tested.storageEntries('Calix', FIRST_PAGE, {
       column: 'quantity&size=1',
@@ -194,53 +190,44 @@ describe('the HTTP protocol API', () => {
     })
 
     expect(fetched.urls).toStrictEqual([
-      '/api/v1/avatars/Calix/storage?token=a-test-token&page=0&size=100&sort=quantity%26size%3D1&direction=descending',
+      '/api/v1/avatars/Calix/storage?page=0&size=100&sort=quantity%26size%3D1&direction=descending',
     ])
   })
 
   it('asks for the window it is given, not always the first one', async () => {
     const fetched = answering(200, BANK_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     await tested.bankEntries('Calix', { page: 3, size: 25 })
 
     expect(fetched.urls).toStrictEqual([
-      '/api/v1/avatars/Calix/bank?token=a-test-token&page=3&size=25',
+      '/api/v1/avatars/Calix/bank?page=3&size=25',
     ])
   })
 
   it('escapes an avatar name that would otherwise change the route', async () => {
     const fetched = answering(200, BANK_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
-    await tested.bankEntries('Erde/Eibe?token=stolen', FIRST_PAGE)
+    await tested.bankEntries('Erde/Eibe?page=9', FIRST_PAGE)
 
     expect(fetched.urls).toStrictEqual([
-      '/api/v1/avatars/Erde%2FEibe%3Ftoken%3Dstolen/bank?token=a-test-token&page=0&size=100',
+      '/api/v1/avatars/Erde%2FEibe%3Fpage%3D9/bank?page=0&size=100',
     ])
-  })
-
-  it('sends no token parameter at all when it has no token', async () => {
-    const fetched = answering(200, OVERVIEW_BODY)
-    const tested = httpProtocolApi(fetched.get, null)
-
-    await tested.overview(FIRST_PAGE)
-
-    expect(fetched.urls).toStrictEqual(['/api/v1/avatars?page=0&size=100'])
   })
 
   it('reads the overview of the guild', async () => {
     const fetched = answering(200, OVERVIEW_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const overview = await tested.overview(FIRST_PAGE)
 
     expect(overview.items[0]?.avatar).toBe('Calix')
   })
 
-  it('reads the admin status without asking for a token', async () => {
+  it('reads the admin status without any parameter', async () => {
     const fetched = answering(200, ADMIN_STATUS_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const status = await tested.adminStatus()
 
@@ -255,7 +242,7 @@ describe('the HTTP protocol API', () => {
 
   it('reads a bank ledger as the entries of a known avatar', async () => {
     const fetched = answering(200, BANK_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const ledger = await tested.bankEntries('Calix', FIRST_PAGE)
     const described = ledger.accept(describingVisitor<BankEntry>())
@@ -265,7 +252,7 @@ describe('the HTTP protocol API', () => {
 
   it('reads a storage ledger as the entries of a known avatar', async () => {
     const fetched = answering(200, STORAGE_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const ledger = await tested.storageEntries('Calix', FIRST_PAGE)
     const described = ledger.accept(describingVisitor<StorageEntry>())
@@ -275,7 +262,7 @@ describe('the HTTP protocol API', () => {
 
   it('tells an empty ledger of a known avatar apart from an unknown avatar', async () => {
     const fetched = answering(200, EMPTY_LEDGER_BODY)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const ledger = await tested.storageEntries('Calix', FIRST_PAGE)
     const described = ledger.accept(describingVisitor<StorageEntry>())
@@ -285,7 +272,7 @@ describe('the HTTP protocol API', () => {
 
   it('reads a 404 on the bank route as an unknown avatar', async () => {
     const fetched = answering(404, null)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const ledger = await tested.bankEntries('Nobody', FIRST_PAGE)
     const described = ledger.accept(describingVisitor<BankEntry>())
@@ -295,7 +282,7 @@ describe('the HTTP protocol API', () => {
 
   it('reads a 404 on the storage route as an unknown avatar', async () => {
     const fetched = answering(404, null)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const ledger = await tested.storageEntries('Nobody', FIRST_PAGE)
     const described = ledger.accept(describingVisitor<StorageEntry>())
@@ -305,34 +292,34 @@ describe('the HTTP protocol API', () => {
 
   it('refuses a 404 on the overview, where no avatar was named', async () => {
     const fetched = answering(404, null)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const reading = tested.overview(FIRST_PAGE)
 
     await expect(reading).rejects.toBeInstanceOf(RequestFailed)
   })
 
-  it('reports a rejected token on the overview route', async () => {
+  it('reports a refused login on the overview route', async () => {
     const fetched = answering(401, null)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const reading = tested.overview(FIRST_PAGE)
 
     await expect(reading).rejects.toBeInstanceOf(Unauthorized)
   })
 
-  it('reports a rejected token on the bank route', async () => {
+  it('reports a refused login on the bank route', async () => {
     const fetched = answering(401, null)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const reading = tested.bankEntries('Calix', FIRST_PAGE)
 
     await expect(reading).rejects.toBeInstanceOf(Unauthorized)
   })
 
-  it('reports a rejected token on the storage route', async () => {
+  it('reports a refused login on the storage route', async () => {
     const fetched = answering(401, null)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const reading = tested.storageEntries('Calix', FIRST_PAGE)
 
@@ -341,19 +328,19 @@ describe('the HTTP protocol API', () => {
 
   it('reports a page the bank ledger cannot have as a page that does not exist', async () => {
     const fetched = answering(400, '{"message":"page: must be at least 0"}')
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const reading = tested.bankEntries('Calix', { page: -1, size: 100 })
 
     await expect(reading).rejects.toBeInstanceOf(NoSuchPage)
     expect(fetched.urls).toStrictEqual([
-      '/api/v1/avatars/Calix/bank?token=a-test-token&page=-1&size=100',
+      '/api/v1/avatars/Calix/bank?page=-1&size=100',
     ])
   })
 
   it('reports a page the storage ledger cannot have as a page that does not exist', async () => {
     const fetched = answering(400, '{"message":"page: must be at least 0"}')
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const reading = tested.storageEntries('Calix', { page: -1, size: 100 })
 
@@ -362,7 +349,7 @@ describe('the HTTP protocol API', () => {
 
   it('keeps any other ledger failure a failed request with its status', async () => {
     const fetched = answering(500, null)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const reading = tested.bankEntries('Calix', FIRST_PAGE)
 
@@ -371,16 +358,16 @@ describe('the HTTP protocol API', () => {
 
   it('keeps a refused overview request a failed request with its status', async () => {
     const fetched = answering(400, '{"message":"page: must be at least 0"}')
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const reading = tested.overview({ page: -1, size: 100 })
 
     await expect(reading).rejects.toThrow('The API answered 400')
   })
 
-  it('keeps the token out of what it reports about a failure', async () => {
+  it('keeps the address out of what it reports about a failure', async () => {
     const fetched = answering(500, null)
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const failure = await tested
       .overview(FIRST_PAGE)
@@ -391,7 +378,7 @@ describe('the HTTP protocol API', () => {
 
   it('refuses a body that is not JSON', async () => {
     const fetched = answering(200, '<html lang="de">the login page</html>')
-    const tested = httpProtocolApi(fetched.get, TOKEN)
+    const tested = httpProtocolApi(fetched.get)
 
     const reading = tested.overview(FIRST_PAGE)
 
