@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
+import java.util.Optional;
+
 import jakarta.inject.Singleton;
 
 import io.micronaut.http.HttpRequest;
@@ -15,14 +17,16 @@ import dev.schoenberg.evergore.protocolParser.exceptions.TooManyRequests;
 @Singleton
 @Filter("/**")
 public class RateLimitFilter implements HttpServerFilter {
-	private final RateLimitCounters counters;
+	private final LoginPots loginPots;
 	private final AnonymousBuckets anonymousBuckets;
 	private final ClientIp clientIp;
+	private final PathCanonicalizer canonicalizer;
 
-	public RateLimitFilter(RateLimitCounters counters, AnonymousBuckets anonymousBuckets, ClientIp clientIp) {
+	public RateLimitFilter(LoginPots loginPots, AnonymousBuckets anonymousBuckets, ClientIp clientIp, PathCanonicalizer canonicalizer) {
+		this.loginPots = loginPots;
 		this.anonymousBuckets = anonymousBuckets;
-		this.counters = counters;
 		this.clientIp = clientIp;
+		this.canonicalizer = canonicalizer;
 	}
 
 	@Override
@@ -42,10 +46,11 @@ public class RateLimitFilter implements HttpServerFilter {
 	}
 
 	private boolean turnsAway(HttpRequest<?> request, String client) {
-		if (request.getAttribute(LoginAttribute.NAME, Login.class).isPresent()) {
-			return counters.blocks(client);
+		Optional<Login> login = request.getAttribute(LoginAttribute.NAME, Login.class);
+		if (login.isPresent() && !LoginPaths.isOfTheLogin(canonicalizer.canonicalize(request.getPath()))) {
+			return loginPots.turnsAway(client, login.get().accountName());
 		}
 
-		return !anonymousBuckets.admits(client);
+		return loginPots.turnsAwayAddress(client) || !anonymousBuckets.admits(client);
 	}
 }

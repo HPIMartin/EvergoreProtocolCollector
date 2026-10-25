@@ -79,7 +79,7 @@ public class LoginRequests {
 		return pair.substring(SESSION_COOKIE.length() + 1);
 	}
 
-	private static Map<String, String> withTheLogin(Map<String, String> headers, String loginValue) {
+	public static Map<String, String> withTheLogin(Map<String, String> headers, String loginValue) {
 		Map<String, String> withTheCookie = new HashMap<>(headers);
 		withTheCookie.put("Cookie", SESSION_COOKIE + "=" + loginValue);
 		return withTheCookie;

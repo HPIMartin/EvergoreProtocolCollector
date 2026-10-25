@@ -13,7 +13,6 @@ import io.micronaut.http.filter.HttpServerFilter;
 import io.micronaut.http.filter.ServerFilterChain;
 import org.reactivestreams.Publisher;
 
-import dev.schoenberg.evergore.protocolParser.rest.controller.api.LoginController;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.PasswordController;
 
 @Singleton
@@ -44,7 +43,7 @@ public class LoginBodyLimitFilter implements HttpServerFilter {
 	}
 
 	private static boolean takesAPasswordAt(String canonicalPath) {
-		return canonicalPath.equals(LoginController.PATH) || canonicalPath.startsWith(LoginController.PATH + "/") || canonicalPath.equals(PasswordController.PATH);
+		return LoginPaths.isOfTheLogin(canonicalPath) || canonicalPath.equals(PasswordController.PATH);
 	}
 
 	private static boolean hasADeclaredLengthWithinTheLimit(HttpRequest<?> request) {

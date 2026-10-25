@@ -233,8 +233,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - `SpaHistoryFallbackController` serves the SPA shell for unknown navigation paths;
   - `SpaNavigationPaths` decides which 404s it may answer;
   - the filter `RequestAuditLogFilter` writes one `info` line per request;
-  - the filter `RateLimitFilter` throttles per IP: a request with a login on the counters
-    `RateLimitCounters` holds, any other request on the buckets `AnonymousBuckets` holds;
+  - the filter `RateLimitFilter` throttles: a request with a login in the pots of IPs and accounts
+    `LoginPots` holds, any other request per IP in the buckets `AnonymousBuckets` holds;
   - the filter `UnreadableRequestFilter` answers the stand-in request of a head the server cannot
     read;
   - the filter `LoginReadingFilter` puts the valid login of the `epc_session` cookie on the request;
@@ -287,8 +287,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
 - **The audit log and the rate limit know no exception** (author decision 2026-08-14): both filters
   run for every path.
   - Why: the configured `public-paths` stay the one list of paths with a special status.
-- **`RateLimitCounters` owns the per-IP map;** a `RateLimitCounter` never leaves that class.
-  `AnonymousBuckets` owns the per-IP map of `AnonymousBucket`s the same way.
+- **`LoginPots` owns the maps of IPs and accounts to their pot;** a `LoginPot` never leaves that
+  class. `AnonymousBuckets` owns the per-IP map of `AnonymousBucket`s the same way.
   - How it bounds the map and why its decision cannot evict a client mid-block:
     [build-run-deploy.md](build-run-deploy.md), "HTTP endpoints".
 - **Monitoring:** `monitoring/LastRunHealthIndicator` (adapter implementing `HealthIndicator`,

@@ -49,7 +49,7 @@ class FilterChainOrderTest {
 		RateLimitConfiguration configuration = new RateLimitConfiguration(ONE_REQUEST_PER_INTERVAL, INTERVAL, BLOCK_DURATION, ONE_CLIENT, ONE_REQUEST_AT_ONCE, INTERVAL);
 		MutableClock clock = new MutableClock(START);
 
-		return new RateLimitFilter(new RateLimitCounters(configuration, clock, logger), new AnonymousBuckets(configuration, clock), clientIp);
+		return new RateLimitFilter(new LoginPots(configuration, clock, logger), new AnonymousBuckets(configuration, clock), clientIp, new PathCanonicalizer());
 	}
 
 	private AccessFilter accessFilter() {

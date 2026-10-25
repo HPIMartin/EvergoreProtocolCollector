@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.schoenberg.evergore.protocolParser.LoginCookie;
 import dev.schoenberg.evergore.protocolParser.RawHttpClient;
@@ -74,6 +75,32 @@ class RateLimitFilterTest {
 		statusesOfThreeRequestsTo("/login");
 
 		int status = statusOfHealthWithTheAdminKeysLogin();
+
+		assertThat(status).isEqualTo(OK.getCode());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"/api/v1/login", "/api/v1/login/new-password"})
+	void countsAPostToTheLoginInTheAddressesBucketWhateverCookieItCarries(String path) {
+		statusesOfThreeRequestsTo("/login");
+
+		int status = statusOfAPostToWithAMembersLogin(path);
+
+		assertThat(status).isEqualTo(TOO_MANY_REQUESTS.getCode());
+	}
+
+	@Test
+	void turnsAPostToTheLoginWithAMembersLoginAwayOnceTheAddressesBucketIsEmpty() {
+		List<Integer> statuses = IntStream.range(0, REQUESTS_PER_BURST).mapToObj(_ -> statusOfAPostToWithAMembersLogin("/api/v1/login")).toList();
+
+		assertThat(statuses).containsExactly(UNAUTHORIZED.getCode(), UNAUTHORIZED.getCode(), TOO_MANY_REQUESTS.getCode());
+	}
+
+	@Test
+	void keepsAPostToTheLoginWithAMembersLoginOutOfTheMembersPot() {
+		IntStream.range(0, REQUESTS_PER_BURST).forEach(_ -> statusOfAPostToWithAMembersLogin("/api/v1/login"));
+
+		int status = Unirest.get("/api/v1/avatars").header("Cookie", LoginCookie.memberHeaderFor(server, "Boreas")).asString().getStatus();
 
 		assertThat(status).isEqualTo(OK.getCode());
 	}
@@ -161,6 +188,16 @@ class RateLimitFilterTest {
 
 	private List<Integer> statusesOfThreeRequestsTo(String path) {
 		return IntStream.range(0, REQUESTS_PER_BURST).mapToObj(_ -> statusOf(path)).toList();
+	}
+
+	private int statusOfAPostToWithAMembersLogin(String path) {
+		return Unirest
+				.post(path)
+				.header("Content-Type", "application/json")
+				.header("Cookie", LoginCookie.memberHeaderFor(server, "Boreas"))
+				.body("{\"name\":\"Aurora\",\"password\":\"Wrong-guess-1!\",\"issuedPassword\":\"Wrong-guess-1!\",\"newPassword\":\"Wrong-guess-2!\"}")
+				.asString()
+				.getStatus();
 	}
 
 	private int statusOfHealthWithTheAdminKeysLogin() {

@@ -1,4 +1,3 @@
-@wip
 Feature: Request throttling with a login
   The operator needs the service to turn away a client that sends too many requests with a login
   too, whether it stays at one network address or not. Requests with a login count in pots: a pot
