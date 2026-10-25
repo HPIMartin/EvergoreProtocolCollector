@@ -226,7 +226,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   - the filter `RateLimitFilter` throttles per IP on counters `RateLimitCounters` holds;
   - the filter `UnreadableRequestFilter` answers the stand-in request of a head the server cannot
     read;
-  - the filter `TokenValidationFilter` checks `?token=`;
+  - the filter `LoginReadingFilter` puts the valid login of the `epc_session` cookie on the request;
+  - the filter `AccessFilter` lets a public path, a login or `GuildToken`'s `?token=` through;
   - the filter `LoginBodyLimitFilter` answers 413 to a body the login's paths do not take (what
     it refuses: [build-run-deploy.md](build-run-deploy.md), "The login API");
   - `ApplicationExceptionHandler` dispatches via the `TransferType`/exception visitors, no

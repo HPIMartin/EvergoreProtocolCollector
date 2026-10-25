@@ -24,6 +24,7 @@ import dev.schoenberg.evergore.protocolParser.application.PasswordCheck;
 import dev.schoenberg.evergore.protocolParser.application.PasswordGenerator;
 import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
 import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
+import dev.schoenberg.evergore.protocolParser.application.ValidLogins;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordRule;
@@ -144,6 +145,11 @@ public class ApplicationFactory {
 	@Singleton
 	public LoginGenerations loginGenerations() {
 		return new LoginGenerations();
+	}
+
+	@Singleton
+	public ValidLogins validLogins(SignedLogins signedLogins, LoginGenerations generations) {
+		return new ValidLogins(signedLogins, generations);
 	}
 
 	@Singleton

@@ -8,6 +8,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
+import dev.schoenberg.evergore.protocolParser.application.LoginGenerations;
+import dev.schoenberg.evergore.protocolParser.application.ValidLogins;
 import dev.schoenberg.evergore.protocolParser.helper.config.RateLimitConfiguration;
 import dev.schoenberg.evergore.protocolParser.helper.config.SecurityConfiguration;
 
@@ -25,16 +27,20 @@ class FilterChainOrderTest {
 	private final PathCanonicalizer canonicalizer = new PathCanonicalizer();
 
 	@Test
-	void logsThenThrottlesThenAnswersAnUnreadableRequestThenChecksTheTokenThenLimitsTheLoginBody() {
+	void logsThenReadsTheLoginThenThrottlesThenAnswersAnUnreadableRequestThenChecksTheAccessThenLimitsTheLoginBody() {
 		List<Integer> orders = List
-				.of(auditLogFilter().getOrder(), rateLimitFilter().getOrder(), new UnreadableRequestFilter().getOrder(), tokenValidationFilter().getOrder(),
+				.of(auditLogFilter().getOrder(), loginReadingFilter().getOrder(), rateLimitFilter().getOrder(), new UnreadableRequestFilter().getOrder(), accessFilter().getOrder(),
 						new LoginBodyLimitFilter(canonicalizer).getOrder());
 
-		assertThat(orders).containsExactly(1, 2, 3, 4, 5);
+		assertThat(orders).containsExactly(1, 2, 3, 4, 5, 6);
 	}
 
 	private RequestAuditLogFilter auditLogFilter() {
 		return new RequestAuditLogFilter(clientIp, logger);
+	}
+
+	private LoginReadingFilter loginReadingFilter() {
+		return new LoginReadingFilter(new ValidLogins(new NoSignedLogins(), new LoginGenerations()));
 	}
 
 	private RateLimitFilter rateLimitFilter() {
@@ -43,9 +49,9 @@ class FilterChainOrderTest {
 		return new RateLimitFilter(new RateLimitCounters(configuration, new MutableClock(START), logger), clientIp);
 	}
 
-	private TokenValidationFilter tokenValidationFilter() {
+	private AccessFilter accessFilter() {
 		SecurityConfiguration configuration = new SecurityConfiguration(Optional.of("token"), List.of());
 
-		return new TokenValidationFilter(configuration, canonicalizer, new PublicPaths(configuration), logger);
+		return new AccessFilter(canonicalizer, new PublicPaths(configuration), new GuildToken(configuration), logger);
 	}
 }

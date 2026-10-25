@@ -1,7 +1,9 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
@@ -9,6 +11,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 
 class RecordingLogins implements SignedLogins {
 	private final List<String> issued = new ArrayList<>();
+	private final Map<String, Login> readable = new HashMap<>();
 
 	List<String> issued() {
 		return issued;
@@ -28,8 +31,12 @@ class RecordingLogins implements SignedLogins {
 		return value;
 	}
 
+	void readAs(String value, Login login) {
+		readable.put(value, login);
+	}
+
 	@Override
 	public Optional<Login> read(String value) {
-		return Optional.empty();
+		return Optional.ofNullable(readable.get(value));
 	}
 }

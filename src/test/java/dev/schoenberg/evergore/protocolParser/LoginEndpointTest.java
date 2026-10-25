@@ -58,6 +58,7 @@ class LoginEndpointTest {
 	private static final String SESSION_COOKIE = "epc_session=[^;]+; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax";
 	private static final String SET_COOKIE = "Set-Cookie";
 	private static final int FIVE_KIBIBYTES = 5 * 1024;
+	private static final String PROTECTED_PATH = "/api/v1/avatars";
 
 	static {
 		silentThrow(() -> {
@@ -94,6 +95,22 @@ class LoginEndpointTest {
 		HttpResponse<String> response = logIn("Aurora", CHOSEN_PASSWORD);
 
 		assertThat(response.getStatus()).as("the login must be public").isEqualTo(OK.getCode());
+	}
+
+	@Test
+	void opensAProtectedPathWithTheLoginTheServiceIssuedAndWithoutTheGuildToken() {
+		String login = valueOf(logIn("Aurora", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+
+		HttpResponse<String> response = Unirest.get(PROTECTED_PATH).header("Cookie", "epc_session=" + login).asString();
+
+		assertThat(response.getStatus()).isEqualTo(OK.getCode());
+	}
+
+	@Test
+	void opensNothingProtectedWithALoginTheServiceDidNotIssue() {
+		HttpResponse<String> response = Unirest.get(PROTECTED_PATH).header("Cookie", "epc_session=forged").asString();
+
+		assertThat(response.getStatus()).isEqualTo(UNAUTHORIZED.getCode());
 	}
 
 	@Test

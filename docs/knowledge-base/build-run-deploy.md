@@ -953,7 +953,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
   boot (`CredentialsStartupValidator` logs an error naming the variable and throws; an unset variable
   binds as an empty `Optional` and reaches it), so a missing login cannot degrade into a silent
   logged-out scrape. No value lives in the repo or in the image.
-- **The rate limit** (`RateLimitFilter`, filter order 2, behind the audit log and ahead of the token
+- **The rate limit** (`RateLimitFilter`, filter order 3, behind the audit log and the login reading and ahead of the access
   filter):
   - exceeding the limit within `interval` blocks that IP for `block-duration` → **429**
     (`TooManyRequests`);
@@ -993,11 +993,18 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 
 ## HTTP endpoints
 
-The token scope is **default-deny** (author decision 2026-08-04): a valid `?token=…` is required
-everywhere except the paths configured under `evergore.security.public-paths`. The decision is made
-on the **canonicalized** path (`PathCanonicalizer`), so `/assets/../overview` is protected like
-`/overview`. Consequence for the SPA: a deep link opened without a token answers **401**, the shell
-loads from `/` and the client carries `?token=` across its routes.
+The access is **default-deny** (author decision 2026-08-04): a valid login or, while 0.5.0 is under
+way, a valid `?token=…` is required everywhere except the paths configured under
+`evergore.security.public-paths`:
+- `LoginReadingFilter` (order 2, ahead of the rate limit) reads the `epc_session` cookie through
+  `ValidLogins`, which checks the signature and the in-memory generation of the account, and puts
+  the login on the request;
+- `AccessFilter` (order 5) lets a public path, a request with a login, or one with the guild token
+  (`GuildToken`) through, and answers every other request **401**;
+- the decision is made on the **canonicalized** path (`PathCanonicalizer`), so `/assets/../overview`
+  is protected like `/overview`;
+- consequence for the SPA: a deep link opened without a token or login answers **401**, the shell
+  loads from `/` and the client carries `?token=` across its routes.
 
 **Public means token-free, nothing else** (author decision 2026-08-14): the rate limit and the
 audit log apply to every path, so `evergore.security.public-paths` is the *only* list of paths with
@@ -1013,7 +1020,7 @@ between exceeding its budget and being blocked, and no request lands on an alrea
 
 A **malformed request target** (an invalid percent-escape such as `/overview%zz`) reaches the filters
 and is answered **400** only afterwards: the invalid escape breaks the request URI, so no path-based
-decision can be made and the token filter never gets to answer 401. Neither the audit log nor the rate
+decision can be made and the access filter never gets to answer 401. Neither the audit log nor the rate
 limiter reads the path, which is why both still see the request. That it is **counted** is pinned
 by `RateLimitFilterTest`; that it is **logged** follows from filter order (the
 audit filter sits at order 1, ahead of the counter that demonstrably runs) plus the audit line being
@@ -1029,7 +1036,7 @@ before any filter runs. `HeadLineSlicer` (ahead of the HTTP codec) and `Unreadab
 
 - the audit log writes its line for it;
 - the rate limit counts it;
-- `UnreadableRequestFilter` (order 3, ahead of the token check) answers it after both;
+- `UnreadableRequestFilter` (order 4, ahead of the access check) answers it after both;
 - a blocked client gets 429;
 - a head over the limit is answered 413;
 - any other unreadable head is answered 400;
@@ -1166,7 +1173,7 @@ case `LogIn`, [architecture.md](architecture.md), "Logging in"):
   - a missing name or password counts as empty;
 - a body over 4 KiB, one whose length is not declared and one under any `Transfer-Encoding` or
   `Content-Encoding` is answered **413** before anything reads it (`LoginBodyLimitFilter`, filter
-  order 5): the limit is the size of the decoded body, and nothing here decodes;
+  order 6): the limit is the size of the decoded body, and nothing here decodes;
 - every error answer is a status with no body, so a malformed body is a bare **400** and an
   unexpected failure a bare **500** (`BareErrorResponseProcessor`); the cause stays in the log;
 - the password check runs on the IO pool, like every controller.
