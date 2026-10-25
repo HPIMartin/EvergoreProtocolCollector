@@ -8,17 +8,20 @@ import io.cucumber.java.BeforeAll;
 import dev.schoenberg.evergore.protocolParser.OrphanedBrowserSweep;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Browsers;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
+import dev.schoenberg.evergore.protocolParser.acceptance.browser.SecondBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioDatabase;
 
 public class ServiceHooks {
 	private final RunningService service;
 	private final MemberBrowser browser;
+	private final SecondBrowser secondBrowser;
 	private final ScenarioDatabase database;
 
-	public ServiceHooks(RunningService service, MemberBrowser browser, ScenarioDatabase database) {
+	public ServiceHooks(RunningService service, MemberBrowser browser, SecondBrowser secondBrowser, ScenarioDatabase database) {
 		this.service = service;
 		this.browser = browser;
+		this.secondBrowser = secondBrowser;
 		this.database = database;
 	}
 
@@ -36,7 +39,11 @@ public class ServiceHooks {
 	@After
 	public void stopTheService() {
 		try {
-			browser.leave();
+			try {
+				browser.leave();
+			} finally {
+				secondBrowser.browser().leave();
+			}
 		} finally {
 			service.stop();
 			database.delete();

@@ -17,13 +17,15 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class MemberBrowser {
 	static final Duration HANG_GUARD = Duration.ofSeconds(30);
-	private static final String SETTLED = "const content = document.querySelector('[data-testid=page-content]'); return content !== null && content.children.length > 0"
-			+ " && document.querySelector('[data-testid=status-panel][data-variant=loading]') === null";
+	private static final String SETTLED = "const content = document.querySelector('[data-testid=page-content]');"
+			+ " if (document.querySelector('main.login-page [data-testid=view-title]') !== null) { return true }"
+			+ " return content !== null && content.children.length > 0 && document.querySelector('[data-testid=status-panel][data-variant=loading]') === null";
 	private static final ObjectMapper JSON = new ObjectMapper();
 
 	private final RunningService service;
 	private final BrowserChoice choice;
 	private final TokenOpening tokenOpening;
+	private final LoginForm loginForm;
 	private final ShiftedClock shiftedClock;
 	private final TimeZoneBrowser timeZoneBrowser;
 	private final ComputedColours computedColours;
@@ -35,6 +37,7 @@ public final class MemberBrowser {
 		this.service = service;
 		this.choice = choice;
 		this.tokenOpening = new TokenOpening(this);
+		this.loginForm = new LoginForm(this);
 		this.shiftedClock = new ShiftedClock(() -> driver);
 		this.timeZoneBrowser = new TimeZoneBrowser(choice);
 		this.computedColours = new ComputedColours(this);
@@ -43,6 +46,10 @@ public final class MemberBrowser {
 
 	public TokenOpening tokenOpening() {
 		return tokenOpening;
+	}
+
+	public LoginForm loginForm() {
+		return loginForm;
 	}
 
 	public ShiftedClock clock() {
@@ -140,13 +147,23 @@ public final class MemberBrowser {
 		}
 		try {
 			shiftedClock.forget();
+			forgetTheLogin();
 			driver.get("about:blank");
-			driver.manage().deleteAllCookies();
 		} catch (RuntimeException | Error cleanupFailure) {
 			giveTheDriverBackKeeping(cleanupFailure);
 			throw cleanupFailure;
 		}
 		giveTheDriverBack(true);
+	}
+
+	private void forgetTheLogin() {
+		if (driver.getCurrentUrl().startsWith("about:")) {
+			return;
+		}
+		if (!driver.getCurrentUrl().startsWith(addressOf("/"))) {
+			driver.get(addressOf("/health"));
+		}
+		driver.manage().deleteAllCookies();
 	}
 
 	private void giveTheDriverBackKeeping(Throwable cleanupFailure) {
@@ -189,11 +206,11 @@ public final class MemberBrowser {
 		rememberTheReachedUrl();
 	}
 
-	private void rememberTheReachedUrl() {
+	void rememberTheReachedUrl() {
 		lastReachedUrl = driver().getCurrentUrl();
 	}
 
-	private void awaitSettled() {
+	void awaitSettled() {
 		new WebDriverWait(driver(), HANG_GUARD).until(browser -> Boolean.TRUE.equals(javascript(browser).executeScript(SETTLED)));
 	}
 
