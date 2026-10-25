@@ -16,6 +16,8 @@ public class RateLimitStartupValidator implements ApplicationEventListener<Start
 	private static final String INTERVAL = "evergore.rate-limit.interval";
 	private static final String BLOCK_DURATION = "evergore.rate-limit.block-duration";
 	private static final String MAX_TRACKED_CLIENTS = "evergore.rate-limit.max-tracked-clients";
+	private static final String ANONYMOUS_BURST = "evergore.rate-limit.anonymous-burst";
+	private static final String ANONYMOUS_REFILL_INTERVAL = "evergore.rate-limit.anonymous-refill-interval";
 
 	private final RateLimitConfiguration rateLimitConfiguration;
 	private final Logger logger;
@@ -31,10 +33,12 @@ public class RateLimitStartupValidator implements ApplicationEventListener<Start
 	}
 
 	void validateRateLimit() {
-		requireAtLeastOne(rateLimitConfiguration.maxRequestsPerInterval(), MAX_REQUESTS_PER_INTERVAL, "no request would ever be admitted");
+		requireAtLeastOne(rateLimitConfiguration.maxRequestsPerInterval(), MAX_REQUESTS_PER_INTERVAL, "no request with a login would ever be admitted");
 		requirePositive(rateLimitConfiguration.interval(), INTERVAL, "every request would start a fresh count");
 		requirePositive(rateLimitConfiguration.blockDuration(), BLOCK_DURATION, "a blocked client would be admitted again right away");
 		requireAtLeastOne(rateLimitConfiguration.maxTrackedClients(), MAX_TRACKED_CLIENTS, "no client could be counted");
+		requireAtLeastOne(rateLimitConfiguration.anonymousBurst(), ANONYMOUS_BURST, "no request without a login would ever be admitted");
+		requirePositive(rateLimitConfiguration.anonymousRefillInterval(), ANONYMOUS_REFILL_INTERVAL, "a client without a login would never be turned away");
 	}
 
 	private void requireAtLeastOne(long configured, String property, String consequence) {

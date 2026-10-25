@@ -1,3 +1,4 @@
 evergore:
   rate-limit:
     max-requests-per-interval: 2
+    anonymous-burst: 2

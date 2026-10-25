@@ -782,9 +782,13 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
      reached yet. Check `totalCount` against what the previous
      stand served, and `lastUpdated` from `/api/v1/admin/status`; that is the cheapest proof the
      mounted database is the intended one and not an empty new file.
-   - **Rate limit:** 30 requests per 10 s per client IP, then a 1-minute block. Nothing is exempt,
-     so the three checks above cost **three** counted requests and fit in one window. A renewed burst
-     while blocked pushes the block out again, so back off after a 429 instead of retrying.
+   - **Rate limit:**
+     - a request without a login draws from a bucket of 10 per client IP, which gains one every 10 s;
+     - a request with a login counts 30 per 10 s per client IP, then a 1-minute block;
+     - nothing is exempt, so the three checks above cost **three** counted requests and fit in
+       either;
+     - a renewed burst while blocked pushes the block out again, so back off after a 429 instead of
+       retrying.
 7. **Rollback:** the previous release's tag (`docker images evergore-protocol-collector` lists the
    candidates; the pre-`0.1.0` predecessor lists under `evergore_protocol_collector`, see step 2):
 
@@ -946,7 +950,7 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
 | `evergoreFolder` | `c:\evergore` | Windows path; unused on the Linux container scrape path. |
 | DB path | `database/temp.sqlite` | JDBC `jdbc:sqlite:database/temp.sqlite`; under Docker → mounted `/database/temp.sqlite`. |
 | Public paths | `evergore.security.public-paths` in `application.yml`: `/login`, `/login/**`, `/api/v1/login`, `/api/v1/login/new-password`, `/health` (bound by the `SecurityConfiguration` `@ConfigurationProperties` record) | The **only** login-free surface; Ant patterns, matched against the canonicalized path by `PublicPaths`. Everything not listed needs a login, so a new controller is protected by default. Empty or unset ⇒ everything is protected (fail closed), which makes a misconfiguration a visible redirect to the login page on `/` rather than a silent hole. |
-| Rate limit | `evergore.rate-limit.*`: `max-requests-per-interval` `30`, `interval` `10s`, `block-duration` `1m`, `max-tracked-clients` `10000` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `RateLimitFilter` (details: bullets below the table). |
+| Rate limit | `evergore.rate-limit.*`: `max-requests-per-interval` `30`, `interval` `10s`, `block-duration` `1m`, `max-tracked-clients` `10000`, `anonymous-burst` `10`, `anonymous-refill-interval` `10s` (bound by the `RateLimitConfiguration` `@ConfigurationProperties` record) | Per-client-IP request throttle in `RateLimitFilter` (details: bullets below the table). |
 | Password hash | `evergore.password-hash.*`: `memory-kibibytes` `65536`, `iterations` `3`, `parallelism` `1`, `max-concurrent` `2` (bound by the `PasswordHashConfiguration` `@ConfigurationProperties` record, the defaults declared on the record, not in `application.yml`) | The Argon2id cost of `Argon2idPasswordHasher` (64 MiB, 3 iterations, one lane) and how many hashes or checks run at once: a further one waits for a permit and is never refused, so the heap holds at most `max-concurrent` times 64 MiB of them. A `max-concurrent` below `1` fails the start (`PasswordHashStartupValidator`), naming the property. The test profile sets `1024` and `1`. |
 
 - **The Evergore login is mandatory at startup:** either value unset or blank and the app refuses to
@@ -955,22 +959,31 @@ Almost everything is hard-coded in `helper/config/Configuration.java` (⚠️ **
   logged-out scrape. No value lives in the repo or in the image.
 - **The rate limit** (`RateLimitFilter`, filter order 3, behind the audit log and the login reading and ahead of the access
   filter):
-  - exceeding the limit within `interval` blocks that IP for `block-duration` → **429**
-    (`TooManyRequests`);
+  - a request is anonymous when it has no valid login: none at all, an altered, ended or logged-out
+    one, or the login itself;
+  - an anonymous request draws from a token bucket of its IP (`AnonymousBuckets`, one
+    `AnonymousBucket` per IP):
+    - the bucket holds `anonymous-burst` requests at once;
+    - it gains one request every `anonymous-refill-interval`, counted from the IP's first request;
+    - it never saves up beyond the burst;
+    - an empty bucket answers **429** (`TooManyRequests`);
+  - a request with a login exceeding `max-requests-per-interval` within `interval` blocks that IP
+    for `block-duration` → **429**;
   - it applies to **every** path;
   - it carries a full page load (shell + bundle + favicon + API call ≈ 5 requests) several times
     over; below ~10 the SPA would throttle itself;
-  - `max-tracked-clients` bounds the counter map (see `RateLimitCounters` below);
+  - `max-tracked-clients` bounds both maps (see `RateLimitCounters` and `AnonymousBuckets` below);
   - `RateLimitStartupValidator` refuses to boot on any value that would silently disable the
-    throttle: a request budget or client budget below `1`, or a non-positive
-    `interval`/`block-duration`;
+    throttle: a request budget, an `anonymous-burst` or a client budget below `1`, or a
+    non-positive `interval`, `block-duration` or `anonymous-refill-interval`;
   - it is config-driven, with no hard-coded constants; the test profile raises the limit so the
     suite isn't throttled.
 - **Environment YAMLs hold overrides only** (author decision 2026-08-15). Micronaut merges the
   property sources, so `application-<env>.yml` is an overlay on `application.yml`, not a replacement:
   a key it repeats with the same value is duplication that silently rots when the base changes.
-  `application-test.yml` therefore carries the raised request budget and the small
-  password-hash cost, `application-ratelimit.yml` the lowered budget, and nothing else.
+  `application-test.yml` therefore carries the raised request budget and anonymous burst and the
+  small password-hash cost, `application-ratelimit.yml` the lowered budget and burst, and nothing
+  else.
 - **`application.yml`** holds Micronaut concerns (app name, Swagger static routes, Netty
   `max-order: 3`) plus the **rate-limit defaults** (`evergore.rate-limit.*`, bound to
   `RateLimitConfiguration`) and the **public-path list** (`evergore.security.public-paths`),
@@ -1021,6 +1034,17 @@ survives normally and yields only to the configured bound, which takes that many
 reach. Counters never leave the map, and `RateLimitFilter` asks a single question per request
 (`blocks(clientIp)`), which counts, blocks and answers under one lock: an offender cannot be evicted
 between exceeding its budget and being blocked, and no request lands on an already-evicted counter.
+
+`AnonymousBuckets` bounds its per-IP map without a sweep over the whole map:
+
+- whenever a new IP appears it forgets the buckets that are full again (a fresh one is identical)
+  from the least recently seen on and stops at the first that is not, so a new IP examines few
+  buckets however many are tracked;
+- once `max-tracked-clients` is reached the least recently seen client is dropped;
+- it asks one question per request, `admits(clientIp)`, under one lock;
+- a bucket never refills below nothing: when the clock steps back it refills nothing;
+- an empty bucket stays shut until the clock has caught up with the moment of its last refill and
+  an interval has passed.
 
 A **malformed request target** (an invalid percent-escape such as `/overview%zz`) reaches the filters
 and is answered **400** only afterwards: the invalid escape breaks the request URI, so no path-based

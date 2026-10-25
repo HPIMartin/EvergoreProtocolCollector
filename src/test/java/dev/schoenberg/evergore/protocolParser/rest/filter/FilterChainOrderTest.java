@@ -22,6 +22,7 @@ class FilterChainOrderTest {
 	private static final Duration BLOCK_DURATION = Duration.ofMinutes(1);
 	private static final long ONE_REQUEST_PER_INTERVAL = 1;
 	private static final int ONE_CLIENT = 1;
+	private static final int ONE_REQUEST_AT_ONCE = 1;
 
 	private final ClientIp clientIp = new ClientIp();
 	private final LoggerSpy logger = new LoggerSpy();
@@ -45,9 +46,10 @@ class FilterChainOrderTest {
 	}
 
 	private RateLimitFilter rateLimitFilter() {
-		RateLimitConfiguration configuration = new RateLimitConfiguration(ONE_REQUEST_PER_INTERVAL, INTERVAL, BLOCK_DURATION, ONE_CLIENT);
+		RateLimitConfiguration configuration = new RateLimitConfiguration(ONE_REQUEST_PER_INTERVAL, INTERVAL, BLOCK_DURATION, ONE_CLIENT, ONE_REQUEST_AT_ONCE, INTERVAL);
+		MutableClock clock = new MutableClock(START);
 
-		return new RateLimitFilter(new RateLimitCounters(configuration, new MutableClock(START), logger), clientIp);
+		return new RateLimitFilter(new RateLimitCounters(configuration, clock, logger), new AnonymousBuckets(configuration, clock), clientIp);
 	}
 
 	private AccessFilter accessFilter() {

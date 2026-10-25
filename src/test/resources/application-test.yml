@@ -4,6 +4,7 @@ evergore:
     password: test-password
   rate-limit:
     max-requests-per-interval: 100000
+    anonymous-burst: 100000
   password-hash:
     memory-kibibytes: 1024
     iterations: 1

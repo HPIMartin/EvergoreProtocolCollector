@@ -56,7 +56,6 @@ Feature: The service refuses to start on a setting that would break it silently
         | block-duration      | 0s    | must be a positive duration, otherwise a blocked client would be admitted again right away |
         | max-tracked-clients | 0     | must be at least 1, otherwise no client could be counted                                   |
 
-      @wip
       Examples: The settings the login brings or rewords
         | setting                   | value | requirement                                                                                |
         | max-requests-per-interval | 0     | must be at least 1, otherwise no request with a login would ever be admitted               |
@@ -75,7 +74,6 @@ Feature: The service refuses to start on a setting that would break it silently
         | block-duration            | 1s    |
         | max-tracked-clients       | 1     |
 
-      @wip
       Examples: The settings the login brings
         | setting                   | value |
         | anonymous-burst           | 1     |

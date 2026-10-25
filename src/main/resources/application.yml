@@ -49,3 +49,5 @@ evergore:
     interval: 10s
     block-duration: 1m
     max-tracked-clients: 10000
+    anonymous-burst: 10
+    anonymous-refill-interval: 10s

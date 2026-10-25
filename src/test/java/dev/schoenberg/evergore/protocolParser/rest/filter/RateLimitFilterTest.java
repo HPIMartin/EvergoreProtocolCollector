@@ -21,6 +21,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import dev.schoenberg.evergore.protocolParser.LoginCookie;
 import dev.schoenberg.evergore.protocolParser.RawHttpClient;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
@@ -64,6 +65,22 @@ class RateLimitFilterTest {
 	@Test
 	void blocksRequestsOnceTheConfiguredLimitIsExceeded() {
 		List<Integer> statuses = statusesOfThreeRequestsTo("/login");
+
+		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode(), TOO_MANY_REQUESTS.getCode());
+	}
+
+	@Test
+	void countsARequestWithALoginApartFromTheRequestsWithoutOne() {
+		statusesOfThreeRequestsTo("/login");
+
+		int status = statusOfHealthWithTheAdminKeysLogin();
+
+		assertThat(status).isEqualTo(OK.getCode());
+	}
+
+	@Test
+	void turnsARequestWithALoginAwayOnceTheLimitIsExceeded() {
+		List<Integer> statuses = IntStream.range(0, REQUESTS_PER_BURST).mapToObj(_ -> statusOfHealthWithTheAdminKeysLogin()).toList();
 
 		assertThat(statuses).containsExactly(OK.getCode(), OK.getCode(), TOO_MANY_REQUESTS.getCode());
 	}
@@ -144,6 +161,10 @@ class RateLimitFilterTest {
 
 	private List<Integer> statusesOfThreeRequestsTo(String path) {
 		return IntStream.range(0, REQUESTS_PER_BURST).mapToObj(_ -> statusOf(path)).toList();
+	}
+
+	private int statusOfHealthWithTheAdminKeysLogin() {
+		return Unirest.get("/health").header("Cookie", LoginCookie.headerFor(server)).asString().getStatus();
 	}
 
 	private int statusOf(String path) {

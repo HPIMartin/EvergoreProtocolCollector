@@ -8,6 +8,7 @@ import java.time.ZoneOffset;
 
 final class MutableClock extends Clock {
 	private Instant now;
+	private int reads;
 
 	MutableClock(Instant start) {
 		now = start;
@@ -15,7 +16,12 @@ final class MutableClock extends Clock {
 
 	@Override
 	public Instant instant() {
+		reads++;
 		return now;
+	}
+
+	int reads() {
+		return reads;
 	}
 
 	@Override

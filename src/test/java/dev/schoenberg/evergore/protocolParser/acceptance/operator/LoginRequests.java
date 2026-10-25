@@ -48,10 +48,12 @@ public class LoginRequests {
 		return requests.post(NEW_PASSWORD, json(Map.of("name", name, "issuedPassword", issuedPassword, "newPassword", newPassword)), fromAFreshAddress());
 	}
 
+	public Answer logInFrom(String client, String name, String password) {
+		return requests.post(LOGIN, json(Map.of("name", name, "password", password)), Map.of(AcceptanceClientIp.HEADER, client));
+	}
+
 	public Answer asking(String address, String loginValue) {
-		Map<String, String> headers = new HashMap<>(fromAFreshAddress());
-		headers.put("Cookie", SESSION_COOKIE + "=" + loginValue);
-		return requests.get(address, headers);
+		return requests.get(address, withTheLogin(fromAFreshAddress(), loginValue));
 	}
 
 	public Answer changePassword(String loginValue, Optional<String> currentPassword, String newPassword) {
@@ -75,6 +77,12 @@ public class LoginRequests {
 			throw new AssertionError("The service set another cookie than the login: " + cookie);
 		}
 		return pair.substring(SESSION_COOKIE.length() + 1);
+	}
+
+	private static Map<String, String> withTheLogin(Map<String, String> headers, String loginValue) {
+		Map<String, String> withTheCookie = new HashMap<>(headers);
+		withTheCookie.put("Cookie", SESSION_COOKIE + "=" + loginValue);
+		return withTheCookie;
 	}
 
 	private Map<String, String> fromAFreshAddress() {

@@ -16,6 +16,7 @@ class RateLimitCountersTest {
 	private static final Duration BLOCK_DURATION = Duration.ofMinutes(1);
 	private static final Instant START = Instant.parse("2026-01-01T00:00:00Z");
 	private static final long ONE_REQUEST_PER_INTERVAL = 1;
+	private static final int TEN_REQUESTS_AT_ONCE = 10;
 	private static final int TWO_CLIENTS = 2;
 	private static final int ONE_CLIENT = 1;
 	private static final int MANY_CLIENTS = 100;
@@ -176,6 +177,7 @@ class RateLimitCountersTest {
 	}
 
 	private RateLimitCounters countersFor(int maxTrackedClients, LoggerSpy logger) {
-		return new RateLimitCounters(new RateLimitConfiguration(ONE_REQUEST_PER_INTERVAL, INTERVAL, BLOCK_DURATION, maxTrackedClients), clock, logger);
+		return new RateLimitCounters(new RateLimitConfiguration(ONE_REQUEST_PER_INTERVAL, INTERVAL, BLOCK_DURATION, maxTrackedClients, TEN_REQUESTS_AT_ONCE, INTERVAL), clock,
+				logger);
 	}
 }
