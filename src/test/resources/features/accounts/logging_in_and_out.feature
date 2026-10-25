@@ -1,4 +1,3 @@
-@wip
 Feature: Logging in and out
   A member logs in on the login page with the name of their avatar and their own password; the name
   may be written in any mix of capital and small letters, umlauts included, the password only

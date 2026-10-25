@@ -30,6 +30,8 @@ public final class MemberBrowser {
 	private final DashboardOpening opening;
 	private final LoginForm loginForm;
 	private final PasswordChange passwordChange;
+	private final LoggingOut loggingOut;
+	private final RequestsWithoutALogin requestsWithoutALogin;
 	private final ShiftedClock shiftedClock;
 	private final TimeZoneBrowser timeZoneBrowser;
 	private final ComputedColours computedColours;
@@ -43,6 +45,8 @@ public final class MemberBrowser {
 		this.opening = new DashboardOpening(this);
 		this.loginForm = new LoginForm(this, log);
 		this.passwordChange = new PasswordChange(this);
+		this.loggingOut = new LoggingOut(this);
+		this.requestsWithoutALogin = new RequestsWithoutALogin(this);
 		this.shiftedClock = new ShiftedClock(() -> driver);
 		this.timeZoneBrowser = new TimeZoneBrowser(choice);
 		this.computedColours = new ComputedColours(this);
@@ -167,6 +171,14 @@ public final class MemberBrowser {
 		return passwordChange;
 	}
 
+	public LoggingOut loggingOut() {
+		return loggingOut;
+	}
+
+	public RequestsWithoutALogin requestsWithoutALogin() {
+		return requestsWithoutALogin;
+	}
+
 	void fillIn(String label, String text) {
 		WebElement field = driver().findElement(By.xpath("//label[normalize-space(.)='" + label + "']/input"));
 		field.clear();
@@ -250,6 +262,10 @@ public final class MemberBrowser {
 
 	Object execute(String script, Object... arguments) {
 		return javascript(driver()).executeScript(script, arguments);
+	}
+
+	void executeAsynchronously(String script, Object... arguments) {
+		javascript(driver()).executeAsyncScript(script, arguments);
 	}
 
 	Object executeResource(String resource, Object... arguments) {

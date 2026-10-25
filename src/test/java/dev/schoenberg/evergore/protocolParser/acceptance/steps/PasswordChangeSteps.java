@@ -88,7 +88,7 @@ public class PasswordChangeSteps {
 	}
 
 	private void openTheOverviewOn(MemberBrowser which) {
-		which.opening().open(OVERVIEW);
+		which.openHref(OVERVIEW);
 		viewed.lookAt(which);
 	}
 

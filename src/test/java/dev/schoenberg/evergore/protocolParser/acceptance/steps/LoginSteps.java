@@ -9,31 +9,44 @@ import io.cucumber.java.en.When;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.SecondBrowser;
+import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class LoginSteps {
 	private static final String CHOOSING_A_NEW_PASSWORD = "Neues Passwort wählen";
+	private static final String ONE_MINUTE_LESS_THAN = "one minute less than ";
+	private static final String LOGIN_PAGE = "/login";
+	private static final String REQUEST_LOGGED = "Client IP: ";
 
 	private final MemberBrowser browser;
 	private final SecondBrowser secondBrowser;
 	private final Accounts accounts;
 	private final ScenarioTime time;
+	private final RunningService service;
+	private final ServiceLog log;
 	private Instant loggedInAt;
+	private Instant firstRequest;
 	private String nameEntered;
 
-	public LoginSteps(MemberBrowser browser, SecondBrowser secondBrowser, Accounts accounts, ScenarioTime time) {
+	public LoginSteps(MemberBrowser browser, SecondBrowser secondBrowser, Accounts accounts, ScenarioTime time, RunningService service, ServiceLog log) {
+		this.service = service;
+		this.log = log;
 		this.time = time;
 		this.browser = browser;
 		this.secondBrowser = secondBrowser;
 		this.accounts = accounts;
 	}
 
-	@ParameterType("\\d+ days?")
+	@ParameterType("\\d+ days?|one minute less than \\d+ days")
 	public Duration loginAge(String age) {
+		if (age.startsWith(ONE_MINUTE_LESS_THAN)) {
+			return Duration.ofDays(Long.parseLong(age.substring(ONE_MINUTE_LESS_THAN.length()).split(" ")[0])).minusMinutes(1);
+		}
 		return Duration.ofDays(Long.parseLong(age.split(" ")[0]));
 	}
 
@@ -41,6 +54,34 @@ public class LoginSteps {
 	public void theMemberOpensTheOverviewAfterLoggingIn(Duration age) {
 		time.setTo(loggedInAt.plus(age));
 		browser.openHref(OVERVIEW);
+	}
+
+	@Given("the member has opened the overview {loginAge} after logging in")
+	public void theMemberHasOpenedTheOverviewAfterLoggingIn(Duration age) {
+		theMemberOpensTheOverviewAfterLoggingIn(age);
+	}
+
+	@Given("the member has logged out on the first browser")
+	public void theMemberHasLoggedOutOnTheFirstBrowser() {
+		browser.loggingOut().logOut();
+	}
+
+	@Given("the member's browser has spent the {int} requests without a login it may send at once, the login page among them")
+	public void theMembersBrowserHasSpentTheRequestsItMaySendAtOnce(int allowed) {
+		service.runAsDeployed();
+		firstRequest = time.now();
+		int loggedBefore = requestsLogged();
+		browser.openHref(LOGIN_PAGE);
+		int sentByThePage = requestsLogged() - loggedBefore;
+
+		assertThat(sentByThePage).as("the requests the login page itself took").isBetween(1, allowed);
+		browser.requestsWithoutALogin().send(allowed - sentByThePage);
+	}
+
+	@When("the member logs in as {string} with the password {string} {delay} after the first request")
+	public void theMemberLogsInAfterTheFirstRequest(String name, String password, Duration delay) {
+		time.setTo(firstRequest.plus(delay));
+		logIn(name, password);
 	}
 
 	@When("a/the member logs in as {string} with the password {string}")
@@ -106,6 +147,10 @@ public class LoginSteps {
 	public void theMemberChoosesTheIssuedPasswordAsTheNewPassword() {
 		String issued = accounts.issuedTo(nameEntered);
 		browser.loginForm().chooseTheNewPassword(issued, issued);
+	}
+
+	private int requestsLogged() {
+		return (int) log.lines().stream().filter(line -> line.startsWith(REQUEST_LOGGED)).count();
 	}
 
 	private void logIn(String name, String password) {

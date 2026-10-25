@@ -74,8 +74,7 @@ never use a real credential.
   evergore-protocol-collector:security-<short sha>`.
 - **Sessions come from throwaway data only:**
   - the admin key from `docker logs epc-security-<short sha>`;
-    - the app prints it at start only once the accounts and login item lands (C11);
-    - before that no admin key exists;
+    - the app prints it at every start;
   - a member account created through the app's own admin flow, where the tip has one;
   - a class that needs a session you cannot get this way goes under `notExercised:`.
 - Send every request through `<abs worktree>/gate/lens-request <port> <METHOD> <path> [--header
