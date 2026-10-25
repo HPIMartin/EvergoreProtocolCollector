@@ -383,6 +383,34 @@ Five top-level folders under `frontend/src/`:
   parameter of its own address with both steps and navigates to the `next` the service answers
   ([build-run-deploy.md](build-run-deploy.md), "The login API"), so the rule exists once.
 
+## The page to change the password
+
+- The page opens at `/password` from the frame's „Passwort ändern“.
+- It is headed „Passwort ändern“.
+- It asks for „Bisheriges Passwort“, „Neues Passwort“ and „Neues Passwort wiederholen“:
+  - the three labels are the page's own wording;
+  - the wording matches the login page's.
+- It saves with „Passwort speichern“.
+- It runs the same page checks as the new-password step (`refusalOfChoosing`, with the current
+  password as the one to differ from) and posts nothing for two different entries, a broken rule or
+  the current password again; the texts are shared (`PASSWORD_REFUSAL_TEXTS`, `ui`).
+- It posts `/api/v1/password` through `httpSessionApi`
+  ([build-run-deploy.md](build-run-deploy.md), "The login API"):
+  - a change leads to the overview; the service's new cookie keeps this browser logged in;
+  - a 401 (the login ended) sends the browser to `/login?next=%2Fpassword` like any other page;
+  - a 403 `no-account` (the console admin key's login) leads to the overview with no failure text,
+    and so does opening `/password` when `/api/v1/me` says `canChangePassword: false`;
+  - that leading away replaces the entry of `/password` in the history, so „Back“ is not trapped
+    there;
+  - the button „Passwort speichern“ is disabled while the request is on its way, and a second
+    submit posts nothing;
+  - a wrong current password says „Das bisherige Passwort stimmt nicht.“, the service's two other
+    refusals show the texts above;
+  - a 429 says „Zu viele Versuche. Bitte warte einen Moment.“ (`TOO_MANY_ATTEMPTS_MESSAGE`, `ui`,
+    shared with the login page);
+  - any other failure says „Die Daten konnten nicht geladen werden. Bitte später erneut
+    versuchen.“
+
 ## The JSON API the SPA reads
 
 Shape and field names decided 2026-08-04 (open-questions.md). The controllers live in
@@ -545,7 +573,7 @@ service's only read surface.
   - Micronaut serves the SPA as static resources, with a catch-all fallback to `index.html` for
     unknown navigation paths (client-side routing).
   - The client routes (`/overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`,
-    `/explanation`) are the SPA's.
+    `/explanation`, `/password`, `/admin`) are the SPA's.
 - **The login page is a second bundle** (`login.html`, `src/login/main.tsx`,
   `vite.login.config.ts`):
   - it is built with the base `/login/` into `build/dist/login`, so the jar carries it under

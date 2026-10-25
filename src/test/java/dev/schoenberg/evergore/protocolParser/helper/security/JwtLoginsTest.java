@@ -150,6 +150,30 @@ class JwtLoginsTest {
 	}
 
 	@Test
+	void endsALoginIssuedWithAnExpiryAtThatExpiry() {
+		Instant expiresAt = MADE.plus(Duration.ofDays(2));
+		String value = tested.issue("aurora", Role.MEMBER, 3, expiresAt);
+
+		Optional<Login> login = tested.read(value);
+
+		assertThat(login).hasValueSatisfying(read -> {
+			assertThat(read.expiresAt()).isEqualTo(expiresAt);
+			assertThat(read.issuedAt()).isEqualTo(MADE);
+			assertThat(read.generation()).isEqualTo(3);
+			assertThat(read.source()).isEqualTo(LoginSource.ACCOUNT);
+		});
+	}
+
+	@Test
+	void refusesALoginIssuedWithAnExpiryThatHasPassed() {
+		String value = tested.issue("aurora", Role.MEMBER, 0, MADE.minusSeconds(1));
+
+		Optional<Login> login = tested.read(value);
+
+		assertThat(login).isEmpty();
+	}
+
+	@Test
 	void takesTheTimeItWasMadeFromTheClock() {
 		String value = tested.issue("aurora", Role.MEMBER, 0);
 

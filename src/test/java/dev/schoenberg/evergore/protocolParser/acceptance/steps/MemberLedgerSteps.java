@@ -17,6 +17,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger;
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.GameProtocols;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Guild;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ViewedBrowser;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.BANK;
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.STORAGE;
@@ -32,12 +33,14 @@ public class MemberLedgerSteps {
 	private static final String WEITER = "Weiter";
 
 	private final MemberBrowser browser;
+	private final ViewedBrowser viewed;
 	private final GameProtocols protocols;
 	private final Guild guild;
 	private final RunningService service;
 	private int movementsInTheStorageLedger;
 
-	public MemberLedgerSteps(MemberBrowser browser, GameProtocols protocols, Guild guild, RunningService service) {
+	public MemberLedgerSteps(MemberBrowser browser, ViewedBrowser viewed, GameProtocols protocols, Guild guild, RunningService service) {
+		this.viewed = viewed;
 		this.browser = browser;
 		this.protocols = protocols;
 		this.guild = guild;
@@ -107,7 +110,7 @@ public class MemberLedgerSteps {
 
 	@Then("the page is headed {string}")
 	public void thePageIsHeaded(String heading) {
-		MemberLedger ledger = browser.ledger();
+		MemberLedger ledger = viewed.current().ledger();
 		assertThat(ledger.heading()).isEqualTo(heading);
 	}
 

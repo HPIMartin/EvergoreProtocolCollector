@@ -1,4 +1,3 @@
-@wip
 Feature: The admin key
   At every start the service names a new random admin key of 43 characters, too long to guess, in
   its log, so the operator of the machine always has an admin login. With the name "admin", in any

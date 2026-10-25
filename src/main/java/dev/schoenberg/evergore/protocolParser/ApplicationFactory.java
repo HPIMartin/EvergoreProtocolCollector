@@ -11,6 +11,7 @@ import org.openqa.selenium.support.ui.Sleeper;
 
 import dev.schoenberg.evergore.protocolParser.application.AccountRepository;
 import dev.schoenberg.evergore.protocolParser.application.AdminKey;
+import dev.schoenberg.evergore.protocolParser.application.ChangePassword;
 import dev.schoenberg.evergore.protocolParser.application.ChooseNewPassword;
 import dev.schoenberg.evergore.protocolParser.application.CreateAccounts;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
@@ -181,6 +182,12 @@ public class ApplicationFactory {
 	@Singleton
 	public ChooseNewPassword chooseNewPassword(PasswordCheck passwordCheck, AccountRepository accounts, PasswordHasher passwordHasher, LoginStart loginStart) {
 		return new ChooseNewPassword(passwordCheck, accounts, passwordHasher, new PasswordRule(), loginStart);
+	}
+
+	@Singleton
+	public ChangePassword changePassword(PasswordCheck passwordCheck, AccountRepository accounts, PasswordHasher passwordHasher, LoginGenerations generations,
+			SignedLogins signedLogins) {
+		return new ChangePassword(passwordCheck, accounts, passwordHasher, new PasswordRule(), generations, signedLogins);
 	}
 
 	@Singleton

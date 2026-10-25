@@ -45,7 +45,7 @@ class ChooseNewPasswordTest {
 	@Test
 	void givesTheLoginTheGenerationItSawBeforeTheCheckWhenTheGenerationMovesDuringIt() {
 		accounts.hold(issuedAccount("Boreas"));
-		hasher.runDuringTheNextVerification(() -> generations.bump("boreas"));
+		hasher.runDuringTheNextVerification(() -> generations.bumpWhileAt("boreas", 0, () -> {}));
 
 		LogInOutcome outcome = tested.with("Boreas", ISSUED, NEW_PASSWORD);
 

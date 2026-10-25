@@ -1,4 +1,3 @@
-@wip
 Feature: Choosing a password
   Every account begins with a reset: the service issues a new random password, and whoever logs in
   with it must choose a password of their own before anything opens; the login page then asks for it

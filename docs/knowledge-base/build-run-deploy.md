@@ -1121,7 +1121,7 @@ answered (measured on Micronaut 4.10.9).
 | `GET /health` | Micronaut management health endpoint, open without a login: the liveness/last-run monitor hook, its details for an admin login only (what it reports and to whom: bullets below the table). |
 | `GET /api/v1/admin/status` | JSON admin status, behind a login with the admin role (a member's login is answered 403) (keys and semantics: bullets below the table). |
 | `POST /api/v1/login`, `POST /api/v1/login/new-password` | A login by name and password, and its second step after a reset: public, but rate-limited and logged (answers: "The login API" below). |
-| `GET /api/v1/me`, `POST /api/v1/logout` | Who is logged in, and logging out: behind a login (answers: "The login API" below). |
+| `GET /api/v1/me`, `POST /api/v1/logout`, `POST /api/v1/password` | Who is logged in, logging out, and changing the password: behind a login (answers: "The login API" below). |
 | `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: behind a login, rate-limited and logged. |
 
 - **`/health`** shows its details to the admin role only:
@@ -1225,6 +1225,33 @@ second step after `choose-new-password` (`ChooseNewPassword`). Its checks run in
 - The same 4 KiB limit holds here too.
 - The same IO pool holds here too.
 - A missing field counts as empty here too.
+
+**Changing the password.** `POST /api/v1/password` takes `{"currentPassword": …, "newPassword": …}`
+under a login (`PasswordController`, the use case `ChangePassword`, [architecture.md](architecture.md),
+"Changing the password"):
+
+- a missing field counts as empty;
+- the same 4 KiB limit holds as for the login (`LoginBodyLimitFilter`);
+- the same IO pool holds as for the login.
+
+The checks run in this order:
+
+1. the login of the console admin key has no account: **403** `{"refusal":"no-account"}`;
+2. the service checks the current password again, for a client that skips the page: a wrong or
+   missing one is **400** `{"refusal":"wrong-current-password"}`;
+3. the new password keeps the rule, else **400** `{"refusal":"breaks-the-rule"}`, and differs from
+   the current one, else **400** `{"refusal":"same-as-before"}`;
+4. then it replaces the hash (state `CHOSEN`), ends every login of the account made before and
+   answers **204** with the cookie of a fresh login for this browser:
+   - the fresh login ends when the login it replaces ends;
+   - so the change keeps this browser logged in until then and ends the others;
+   - the fresh login keeps the role of the login it replaces;
+   - the change extends nothing and records no last login;
+   - a login that another change ended while this one was being checked answers **401**, like any
+     ended login;
+   - such a change changes nothing: the hash is replaced only while the account's generation is
+     still the login's;
+   - a refused change changes nothing.
 
 **Who is logged in, and logging out** (`SessionController`, both behind a login, else **401**):
 

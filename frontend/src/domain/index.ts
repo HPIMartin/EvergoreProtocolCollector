@@ -27,6 +27,7 @@ export type { Answer, AnswerGroup, CalculationLine } from './explanation.ts'
 export { calculationTexts, explanationFrom } from './explanation.ts'
 export { loginAddressFor } from './loginAddress.ts'
 export type {
+  ChangePasswordAnswer,
   LoggedIn,
   LoginAnswer,
   NewPasswordAnswer,

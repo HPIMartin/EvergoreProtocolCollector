@@ -14,6 +14,7 @@ import io.micronaut.http.filter.ServerFilterChain;
 import org.reactivestreams.Publisher;
 
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.LoginController;
+import dev.schoenberg.evergore.protocolParser.rest.controller.api.PasswordController;
 
 @Singleton
 @Filter("/**")
@@ -35,15 +36,15 @@ public class LoginBodyLimitFilter implements HttpServerFilter {
 
 	@Override
 	public Publisher<MutableHttpResponse<?>> doFilter(HttpRequest<?> request, ServerFilterChain chain) {
-		if (isALoginPath(canonicalizer.canonicalize(request.getPath())) && !hasADeclaredLengthWithinTheLimit(request)) {
+		if (takesAPasswordAt(canonicalizer.canonicalize(request.getPath())) && !hasADeclaredLengthWithinTheLimit(request)) {
 			return Publishers.just(HttpResponse.status(HttpStatus.REQUEST_ENTITY_TOO_LARGE));
 		}
 
 		return chain.proceed(request);
 	}
 
-	private static boolean isALoginPath(String canonicalPath) {
-		return canonicalPath.equals(LoginController.PATH) || canonicalPath.startsWith(LoginController.PATH + "/");
+	private static boolean takesAPasswordAt(String canonicalPath) {
+		return canonicalPath.equals(LoginController.PATH) || canonicalPath.startsWith(LoginController.PATH + "/") || canonicalPath.equals(PasswordController.PATH);
 	}
 
 	private static boolean hasADeclaredLengthWithinTheLimit(HttpRequest<?> request) {

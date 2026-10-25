@@ -5,6 +5,7 @@ const AVATARS = 'avatars'
 const OVERVIEW = 'overview'
 const ADMIN = 'admin'
 const EXPLANATION = 'explanation'
+const PASSWORD = 'password'
 const BANK = 'bank'
 const STORAGE = 'storage'
 const LEDGER_SEGMENT_COUNT = 3
@@ -20,6 +21,7 @@ export interface RouteVisitor<R> {
   overview: () => R
   admin: () => R
   explanation: () => R
+  password: () => R
   bank: (avatar: string, page: number, sort: LedgerSort | null) => R
   storage: (avatar: string, page: number, sort: LedgerSort | null) => R
   unknownPath: (path: string) => R
@@ -41,6 +43,10 @@ export function explanationPath(): string {
   return `${SEPARATOR}${EXPLANATION}`
 }
 
+export function passwordPath(): string {
+  return `${SEPARATOR}${PASSWORD}`
+}
+
 export function bankPath(avatar: string): string {
   return ledgerPath(avatar, BANK)
 }
@@ -60,6 +66,9 @@ export function routeOf(path: string, search: string): Route {
   if (onlyTheExplanationPage(segments)) {
     return EXPLANATION_ROUTE
   }
+  if (onlyThePasswordPage(segments)) {
+    return PASSWORD_ROUTE
+  }
 
   return (
     ledgerRouteOf(segments, pageIn(search), sortIn(search)) ??
@@ -69,6 +78,7 @@ export function routeOf(path: string, search: string): Route {
 
 const OVERVIEW_ROUTE: Route = { accept: (visitor) => visitor.overview() }
 const ADMIN_ROUTE: Route = { accept: (visitor) => visitor.admin() }
+const PASSWORD_ROUTE: Route = { accept: (visitor) => visitor.password() }
 const EXPLANATION_ROUTE: Route = {
   accept: (visitor) => visitor.explanation(),
 }
@@ -130,6 +140,10 @@ function onlyTheAdminStatusPage(segments: readonly string[]): boolean {
 
 function onlyTheExplanationPage(segments: readonly string[]): boolean {
   return segments.length === 1 && segments[0] === EXPLANATION
+}
+
+function onlyThePasswordPage(segments: readonly string[]): boolean {
+  return segments.length === 1 && segments[0] === PASSWORD
 }
 
 function ledgerRouteOf(

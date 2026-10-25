@@ -4,7 +4,12 @@ import { useState } from 'react'
 import type { LoginApi } from '../api'
 import type { ChoiceRefusal, NewPasswordAnswer } from '../domain'
 import { refusalOfChoosing } from '../domain'
-import { LOAD_FAILED_MESSAGE, StatusPanel } from '../ui'
+import {
+  LOAD_FAILED_MESSAGE,
+  PASSWORD_REFUSAL_TEXTS,
+  StatusPanel,
+  TOO_MANY_ATTEMPTS_MESSAGE,
+} from '../ui'
 
 export interface NewPasswordStepProps {
   readonly api: LoginApi
@@ -18,11 +23,8 @@ export interface NewPasswordStepProps {
 type Refusal = ChoiceRefusal | 'too-many-attempts' | 'unavailable'
 
 const REFUSAL_TEXTS: Readonly<Record<Refusal, string>> = {
-  'entries-differ': 'Die beiden Eingaben stimmen nicht überein.',
-  'breaks-the-rule':
-    'Das Passwort braucht mindestens 8 Zeichen, darunter eine Zahl und ein Sonderzeichen.',
-  'same-as-before': 'Das neue Passwort muss sich vom bisherigen unterscheiden.',
-  'too-many-attempts': 'Zu viele Versuche. Bitte warte einen Moment.',
+  ...PASSWORD_REFUSAL_TEXTS,
+  'too-many-attempts': TOO_MANY_ATTEMPTS_MESSAGE,
   unavailable: LOAD_FAILED_MESSAGE,
 }
 

@@ -8,6 +8,7 @@ const describingVisitor: RouteVisitor<string> = {
   overview: () => 'the overview',
   admin: () => 'the admin status page',
   explanation: () => 'the explanation page',
+  password: () => 'the password change page',
   bank: (avatar) => `the bank of ${avatar}`,
   storage: (avatar) => `the storage of ${avatar}`,
   unknownPath: (path) => `no view for ${path}`,
@@ -43,6 +44,20 @@ describe('useRouting', () => {
     const shownRoute = routing.result.current.route.accept(describingVisitor)
 
     expect(shownRoute).toBe('the storage of Calix')
+  })
+
+  it('replaces the address without adding a history entry', () => {
+    const routing = renderHook(() => useRouting())
+    const entriesBefore = window.history.length
+
+    act(() => {
+      routing.result.current.replace('/avatars/Calix/storage')
+    })
+
+    expect({
+      path: window.location.pathname,
+      entriesAdded: window.history.length - entriesBefore,
+    }).toStrictEqual({ path: '/avatars/Calix/storage', entriesAdded: 0 })
   })
 
   it('leaves the browser at the followed address', () => {

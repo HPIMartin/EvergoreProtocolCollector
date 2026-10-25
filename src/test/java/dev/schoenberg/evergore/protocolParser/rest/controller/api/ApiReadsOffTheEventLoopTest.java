@@ -61,6 +61,7 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType.EINLAGERUNG;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static io.micronaut.http.HttpStatus.NO_CONTENT;
 import static io.micronaut.http.HttpStatus.OK;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -71,6 +72,7 @@ class ApiReadsOffTheEventLoopTest {
 	private static final Path WORKING_DB = Paths.get("build/tmp/apiReadsOffTheEventLoop/apiReadsOffTheEventLoop.sqlite");
 	private static final String AVATAR = "Aurora";
 	private static final String PASSWORD = "Sommer-2026!";
+	private static final String CHANGED_PASSWORD = "Winter-2026!";
 	private static final String ISSUED_AVATAR = "Boreas";
 	private static final String ISSUED_PASSWORD = "Issued-2026!";
 	private static final String BANK_ROUTE = "/api/v1/avatars/" + AVATAR + "/bank";
@@ -170,6 +172,19 @@ class ApiReadsOffTheEventLoopTest {
 		assertThat(loginWork).noneMatch(Work::onAnEventLoop).noneMatch(work -> work.thread().isVirtual());
 	}
 
+	@Test
+	void checksTheCurrentPasswordHashesTheNewOneAndWritesItOnAPlatformThreadThatIsNoEventLoop() {
+		String body = "{\"currentPassword\":\"" + PASSWORD + "\",\"newPassword\":\"" + CHANGED_PASSWORD + "\"}";
+		String request = postRequest("/api/v1/password", body)
+				.replace("Content-Type: application/json", "Content-Type: application/json\r\nCookie: " + LoginCookie.memberHeaderFor(server, AVATAR));
+
+		int status = new RawHttpClient(server.getPort()).statusOfRequest(request);
+
+		assertThat(status).isEqualTo(NO_CONTENT.getCode());
+		assertThat(loginWork).extracting(Work::what).containsExactly("findByNameKey", "verify", "hash", "replacePassword");
+		assertThat(loginWork).noneMatch(Work::onAnEventLoop).noneMatch(work -> work.thread().isVirtual());
+	}
+
 	private int statusWithALogin(String route) {
 		return new RawHttpClient(server.getPort())
 				.statusOfRequest("GET " + route + " HTTP/1.1\r\nHost: localhost\r\nCookie: " + LoginCookie.headerFor(server) + "\r\nConnection: close\r\n\r\n");
@@ -252,7 +267,7 @@ class ApiReadsOffTheEventLoopTest {
 		return new PasswordHasher() {
 			@Override
 			public String hash(String clear) {
-				if (clear.equals(PASSWORD)) {
+				if (clear.equals(PASSWORD) || clear.equals(CHANGED_PASSWORD)) {
 					witnessLoginWork("hash");
 				}
 				return "witnessed:" + clear;

@@ -4,10 +4,11 @@ import type { SessionApi } from '../api'
 import { Unauthorized } from '../api'
 import type { PageFrameAccount } from '../ui'
 
+import { hrefOf } from './href.ts'
+import { passwordPath } from './route.ts'
 import { useLoad } from './useLoad.ts'
 
 const LOGIN_PAGE = '/login'
-const PASSWORD_PAGE = '/password'
 
 export function useAccount(
   session: SessionApi,
@@ -39,7 +40,7 @@ export function useAccount(
         )
       },
       onChangePassword: () => {
-        follow(PASSWORD_PAGE)
+        follow(hrefOf(passwordPath()))
       },
     }),
     unauthorized: () => undefined,

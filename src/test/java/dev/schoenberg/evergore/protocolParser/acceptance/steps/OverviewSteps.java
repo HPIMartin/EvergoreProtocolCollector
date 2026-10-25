@@ -15,6 +15,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview.Row;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview.Stat;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.RosterName;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Guild;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ViewedBrowser;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,9 +27,11 @@ public class OverviewSteps {
 			+ ".some((label) => label.textContent.trim() === arguments[0])";
 
 	private final MemberBrowser browser;
+	private final ViewedBrowser viewed;
 	private final Guild guild;
 
-	public OverviewSteps(MemberBrowser browser, Guild guild) {
+	public OverviewSteps(MemberBrowser browser, ViewedBrowser viewed, Guild guild) {
+		this.viewed = viewed;
 		this.browser = browser;
 		this.guild = guild;
 	}
@@ -169,7 +172,7 @@ public class OverviewSteps {
 
 	@Then("the page says {string}")
 	public void thePageSays(String message) {
-		Overview overview = browser.overview();
+		Overview overview = viewed.current().overview();
 
 		assertThat(overview.messages()).contains(message);
 	}

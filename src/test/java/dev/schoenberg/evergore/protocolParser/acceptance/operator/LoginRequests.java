@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser.acceptance.operator;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,6 +15,7 @@ public class LoginRequests {
 	private static final String LOGIN = "/api/v1/login";
 	private static final String NEW_PASSWORD = "/api/v1/login/new-password";
 	private static final String LOGOUT = "/api/v1/logout";
+	private static final String PASSWORD = "/api/v1/password";
 	private static final String SET_COOKIE = "Set-Cookie";
 	private static final String ADDRESS_PREFIX = "10.1.";
 	private static final int ADDRESSES_PER_BLOCK = 250;
@@ -50,6 +52,14 @@ public class LoginRequests {
 		Map<String, String> headers = new HashMap<>(fromAFreshAddress());
 		headers.put("Cookie", SESSION_COOKIE + "=" + loginValue);
 		return requests.get(address, headers);
+	}
+
+	public Answer changePassword(String loginValue, Optional<String> currentPassword, String newPassword) {
+		Map<String, String> fields = new HashMap<>(Map.of("newPassword", newPassword));
+		currentPassword.ifPresent(current -> fields.put("currentPassword", current));
+		Map<String, String> headers = new HashMap<>(fromAFreshAddress());
+		headers.put("Cookie", SESSION_COOKIE + "=" + loginValue);
+		return requests.post(PASSWORD, json(fields), headers);
 	}
 
 	public Answer logOut(String loginValue) {

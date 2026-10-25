@@ -30,6 +30,10 @@ function recordingPost(status: number): {
   }
 }
 
+function answeringPost(status: number, body: string | null): HttpPost {
+  return () => Promise.resolve(new Response(body, { status }))
+}
+
 const NEVER_POSTED = recordingPost(204).post
 const NEVER_GOT = answeringGet(500, null)
 
@@ -90,6 +94,103 @@ describe('the HTTP session API', () => {
     const loggingOut = tested.logOut()
 
     await expect(loggingOut).rejects.toBeInstanceOf(Unauthorized)
+  })
+
+  it('posts the current and the new password to change the password', async () => {
+    const service = recordingPost(204)
+    const tested = httpSessionApi(NEVER_GOT, service.post)
+
+    await tested.changePassword('Sommer-2026!', 'Winter-2026!')
+
+    expect(service.posted).toEqual([
+      {
+        url: '/api/v1/password',
+        body: JSON.stringify({
+          currentPassword: 'Sommer-2026!',
+          newPassword: 'Winter-2026!',
+        }),
+      },
+    ])
+  })
+
+  it('reports a change the service accepted', async () => {
+    const tested = httpSessionApi(NEVER_GOT, recordingPost(204).post)
+
+    const answer = await tested.changePassword('Sommer-2026!', 'Winter-2026!')
+
+    expect(answer).toBe('changed')
+  })
+
+  it.each([
+    ['a wrong current password', 'wrong-current-password'],
+    ['a new password that breaks the rule', 'breaks-the-rule'],
+    ['a new password that is the current one', 'same-as-before'],
+  ])('reports %s the service refused', async (_, refusal) => {
+    const tested = httpSessionApi(
+      NEVER_GOT,
+      answeringPost(400, JSON.stringify({ refusal })),
+    )
+
+    const answer = await tested.changePassword('Sommer-2026!', 'Winter-2026!')
+
+    expect(answer).toBe(refusal)
+  })
+
+  it('rejects a refusal it does not know', async () => {
+    const tested = httpSessionApi(
+      NEVER_GOT,
+      answeringPost(400, '{"refusal":"unheard-of"}'),
+    )
+
+    const changing = tested.changePassword('Sommer-2026!', 'Winter-2026!')
+
+    await expect(changing).rejects.toBeInstanceOf(MalformedResponse)
+  })
+
+  it('reports a change the service did not accept', async () => {
+    const tested = httpSessionApi(NEVER_GOT, answeringPost(500, null))
+
+    const changing = tested.changePassword('Sommer-2026!', 'Winter-2026!')
+
+    await expect(changing).rejects.toBeInstanceOf(RequestFailed)
+  })
+
+  it('reports a refused login on a change', async () => {
+    const tested = httpSessionApi(NEVER_GOT, answeringPost(401, null))
+
+    const changing = tested.changePassword('Sommer-2026!', 'Winter-2026!')
+
+    await expect(changing).rejects.toBeInstanceOf(Unauthorized)
+  })
+
+  it('reports a login that has no account to change the password of', async () => {
+    const tested = httpSessionApi(
+      NEVER_GOT,
+      answeringPost(403, '{"refusal":"no-account"}'),
+    )
+
+    const answer = await tested.changePassword('Sommer-2026!', 'Winter-2026!')
+
+    expect(answer).toBe('no-account')
+  })
+
+  it('reports a change the service throttled as too many attempts', async () => {
+    const tested = httpSessionApi(NEVER_GOT, answeringPost(429, null))
+
+    const answer = await tested.changePassword('Sommer-2026!', 'Winter-2026!')
+
+    expect(answer).toBe('too-many-attempts')
+  })
+
+  it('reports a refusal it does not know on a change as a failure', async () => {
+    const tested = httpSessionApi(
+      NEVER_GOT,
+      answeringPost(403, '{"refusal":"unheard-of"}'),
+    )
+
+    const changing = tested.changePassword('Sommer-2026!', 'Winter-2026!')
+
+    await expect(changing).rejects.toBeInstanceOf(RequestFailed)
   })
 
   it('reports a logout the service did not accept', async () => {

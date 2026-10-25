@@ -16,7 +16,11 @@ createRoot(rootElement).render(
     <App
       get={get}
       session={httpSessionApi(get, (url, body) =>
-        fetch(url, { method: 'POST', body }),
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        }),
       )}
     />
   </StrictMode>,

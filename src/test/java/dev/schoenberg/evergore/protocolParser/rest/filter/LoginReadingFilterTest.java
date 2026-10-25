@@ -78,7 +78,7 @@ class LoginReadingFilterTest {
 
 	@Test
 	void putsNoLoginOnARequestWhoseAccountHasMovedOnToANewGeneration() {
-		generations.bump("aurora");
+		generations.bumpWhileAt("aurora", 0, () -> {});
 		MutableHttpRequest<?> request = requestWithCookie(SESSION_COOKIE, SIGNED_VALUE);
 
 		tested.doFilter(request, chain);
@@ -107,6 +107,11 @@ class LoginReadingFilterTest {
 	private static final class SignsOnlyOneValue implements SignedLogins {
 		@Override
 		public String issue(String accountName, Role role, long generation) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public String issue(String accountName, Role role, long generation, Instant expiresAt) {
 			throw new UnsupportedOperationException();
 		}
 

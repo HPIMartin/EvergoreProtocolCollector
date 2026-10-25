@@ -11,5 +11,12 @@ export type LoginAnswer =
 
 export type PasswordRefusal = 'breaks-the-rule' | 'same-as-before'
 
+export type ChangePasswordAnswer =
+  | 'changed'
+  | 'wrong-current-password'
+  | 'no-account'
+  | 'too-many-attempts'
+  | PasswordRefusal
+
 export type NewPasswordAnswer =
   LoggedIn | 'wrong-name-or-password' | 'too-many-attempts' | PasswordRefusal

@@ -4,7 +4,11 @@ import { useState } from 'react'
 import type { HttpPost } from '../api'
 import { httpLoginApi } from '../api'
 import type { LoginAnswer } from '../domain'
-import { LOAD_FAILED_MESSAGE, StatusPanel } from '../ui'
+import {
+  LOAD_FAILED_MESSAGE,
+  StatusPanel,
+  TOO_MANY_ATTEMPTS_MESSAGE,
+} from '../ui'
 
 import { NewPasswordStep } from './NewPasswordStep.tsx'
 
@@ -20,7 +24,7 @@ type Refusal =
 
 const REFUSAL_TEXTS: Readonly<Record<Refusal, string>> = {
   'wrong-name-or-password': 'Name oder Passwort stimmt nicht.',
-  'too-many-attempts': 'Zu viele Versuche. Bitte warte einen Moment.',
+  'too-many-attempts': TOO_MANY_ATTEMPTS_MESSAGE,
   unavailable: LOAD_FAILED_MESSAGE,
 }
 

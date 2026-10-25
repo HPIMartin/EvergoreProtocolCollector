@@ -23,8 +23,12 @@ public class LoginStart {
 	}
 
 	public LogInOutcome startFor(Account account, long generationSeenBeforeTheCheck) {
+		return new LogInOutcome.LoggedIn(loginValueFor(account, generationSeenBeforeTheCheck));
+	}
+
+	private String loginValueFor(Account account, long generationSeenBeforeTheCheck) {
 		accounts.recordLastLogin(account.nameKey(), clock.instant());
-		return new LogInOutcome.LoggedIn(signedLogins.issue(account.avatar(), account.role(), generationSeenBeforeTheCheck));
+		return signedLogins.issue(account.avatar(), account.role(), generationSeenBeforeTheCheck);
 	}
 
 	public LogInOutcome startForTheAdminKey() {

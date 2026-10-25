@@ -48,6 +48,13 @@ Admin read path:        GET /api/v1/admin/status  (behind a login) ▶ AdminStat
                         ▶ lastUpdated read from AvatarContributions/MetaInformationRepository
                         (persisted) + the last run's facts read from LastRunStatus (in-memory, the
                         source /health reads); it serves the facts, /health keeps the verdict
+
+Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordController ▶ ChangePassword
+                        ▶ PasswordCheck (the current password) ▶ PasswordRule ▶ the new hash, state
+                        CHOSEN, through AccountRepository inside LoginGenerations.bumpWhileAt, which
+                        ends the account's other logins ▶ SignedLogins issues a fresh login for this browser with the
+                        expiry of the one it replaces; one of four write paths to the account table
+                        (with CreateAccounts, LoginStart and ChooseNewPassword)
 ```
 
 - Each endpoint's verdict and fields: [build-run-deploy.md](build-run-deploy.md), "HTTP endpoints".
@@ -100,11 +107,14 @@ Admin read path:        GET /api/v1/admin/status  (behind a login) ▶ AdminStat
         fails at once there (SQLite answers `SQLITE_BUSY` without waiting);
     - only writes open a transaction;
     - the scheduled job and the login are the two writers in-process:
-      - the login writes the last login, and after a reset the new password's hash, each in one
-        short transaction of its own, every hash and check done before it begins;
+      - the login writes the last login, and after a reset or a change the new password's hash, each
+        in one short transaction of its own, every hash and check done before it begins;
       - while the job's recompute batch or a ledger batch holds the write lock, that transaction
         waits up to the 10 s bound and the login's answer waits with it;
       - a batch longer than the bound fails the login with a 500, and the member tries again;
+      - a password change holds the in-memory lock of its own account while that transaction
+        runs, so a second change of the same account waits behind it, wait included;
+      - no other account's change and no read of a generation waits on that lock;
       - the job's own transactions likewise wait behind a login's, which lasts one update.
   - `database/LedgerDatabaseRepository` is the one ledger base:
     - the seven ledger operations live here once, over the `LedgerDatabaseEntry` row (the columns
@@ -316,7 +326,9 @@ Admin read path:        GET /api/v1/admin/status  (behind a login) ▶ AdminStat
   - the key is never configured and never logged;
   - the claims are the name (`sub`), `role`, `gen` (the generation), `src` (`ACCOUNT` or
     `ADMIN_KEY`, whether an account's password or the admin key made the login), a unique `jti`,
-    and `iat` and `exp` from the injected `Clock`, with `exp` exactly 7 days after `iat`;
+    and `iat` and `exp` from the injected `Clock`, with `exp` exactly 7 days after `iat` unless the
+    caller names the expiry (`issue(name, role, generation, expiresAt)`, which a change of the
+    password uses);
   - the admin key's login carries the name `admin`, the role `ADMIN` and the generation 0;
   - the verifier pins the algorithm and refuses a value signed with another key, with another
     algorithm or with none, one whose claims were altered, one at or after its `exp`, and anything
@@ -354,6 +366,16 @@ Admin read path:        GET /api/v1/admin/status  (behind a login) ▶ AdminStat
     - the key is compared with `MessageDigest.isEqual`;
     - the key's login records no last login;
     - `ChooseNewPassword` finds no account under that name and refuses.
+- **Changing the password:** `application/ChangePassword` takes the login the request carries
+  (what the endpoint answers and the order of its checks:
+  [build-run-deploy.md](build-run-deploy.md), "The login API"):
+  - the current password is checked through `PasswordCheck`;
+  - the new one is hashed before the transactions;
+  - `LoginGenerations.bumpWhileAt` replaces the hash and raises the account's generation as one
+    step, only while the generation is still the login's;
+  - a login another change ended meanwhile gets `LoginEnded` and changes nothing;
+  - `SignedLogins` issues the fresh login for the browser that changed it, with the generation
+    that step produced.
 - **Logging out:** `application/LogOut` keeps the `jti` of every login that logged out in memory
   until that login's own expiry and prunes the expired ones at each logout:
   - `application/ValidLogins` treats such a login as no login, so only that login ends: another

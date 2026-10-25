@@ -5,6 +5,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.Answer;
@@ -16,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class Accounts {
 	private static final int SERVED = 200;
+	private static final int NO_CONTENT = 204;
 	private static final int BUSY_MILLIS = 5000;
 
 	private final ScenarioPasswords passwords;
@@ -39,6 +41,18 @@ public class Accounts {
 			throw new AssertionError(avatar + " has chosen no password in this scenario");
 		}
 		return password;
+	}
+
+	public void changePassword(String avatar, String current, String replacement) {
+		String login = LoginRequests.loginValueIn(logins.logIn(avatar, current));
+		Answer answer = logins.changePassword(login, Optional.of(current), replacement);
+
+		assertThat(answer.status()).as("the change of %s's password: %s", avatar, answer.body()).isEqualTo(NO_CONTENT);
+		chosen.put(avatar, replacement);
+	}
+
+	public void rememberTheChange(String avatar, String replacement) {
+		chosen.put(avatar, replacement);
 	}
 
 	public void giveTheRole(String avatar, Role role) {

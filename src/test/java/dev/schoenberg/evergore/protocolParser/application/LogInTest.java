@@ -112,7 +112,7 @@ class LogInTest {
 	@Test
 	void givesTheLoginTheCurrentGenerationOfTheAccount() {
 		accounts.hold(account("Aurora", "Sommer-2026!", PasswordState.CHOSEN, Role.MEMBER));
-		generations.bump("aurora");
+		generations.bumpWhileAt("aurora", 0, () -> {});
 
 		LogInOutcome outcome = tested.with("Aurora", "Sommer-2026!");
 
@@ -124,7 +124,7 @@ class LogInTest {
 		accounts.hold(account("Aurora", "Sommer-2026!", PasswordState.CHOSEN, Role.MEMBER));
 		hasher.runDuringTheNextVerification(() -> {
 			accounts.replacePassword("aurora", "hashed:Herbst-2026!", PasswordState.CHOSEN);
-			generations.bump("aurora");
+			generations.bumpWhileAt("aurora", 0, () -> {});
 		});
 
 		LogInOutcome outcome = tested.with("Aurora", "Sommer-2026!");

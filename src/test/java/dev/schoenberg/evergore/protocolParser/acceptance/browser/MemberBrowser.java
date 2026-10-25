@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
@@ -28,6 +29,7 @@ public final class MemberBrowser {
 	private final BrowserChoice choice;
 	private final DashboardOpening opening;
 	private final LoginForm loginForm;
+	private final PasswordChange passwordChange;
 	private final ShiftedClock shiftedClock;
 	private final TimeZoneBrowser timeZoneBrowser;
 	private final ComputedColours computedColours;
@@ -40,6 +42,7 @@ public final class MemberBrowser {
 		this.choice = choice;
 		this.opening = new DashboardOpening(this);
 		this.loginForm = new LoginForm(this, log);
+		this.passwordChange = new PasswordChange(this);
 		this.shiftedClock = new ShiftedClock(() -> driver);
 		this.timeZoneBrowser = new TimeZoneBrowser(choice);
 		this.computedColours = new ComputedColours(this);
@@ -154,6 +157,22 @@ public final class MemberBrowser {
 
 	public Navigation navigation() {
 		return read("read-navigation.js", Navigation.class);
+	}
+
+	public Frame frame() {
+		return read("read-frame.js", Frame.class);
+	}
+
+	public PasswordChange passwordChange() {
+		return passwordChange;
+	}
+
+	void fillIn(String label, String text) {
+		WebElement field = driver().findElement(By.xpath("//label[normalize-space(.)='" + label + "']/input"));
+		field.clear();
+		if (!text.isEmpty()) {
+			field.sendKeys(text);
+		}
 	}
 
 	public void leave() {

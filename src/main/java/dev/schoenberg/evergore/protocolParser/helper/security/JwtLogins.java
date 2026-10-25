@@ -40,17 +40,20 @@ public class JwtLogins implements SignedLogins {
 
 	@Override
 	public String issue(String accountName, Role role, long generation) {
-		return signed(accountName, role, generation, LoginSource.ACCOUNT);
+		return issue(accountName, role, generation, clock.instant().plus(Login.LIFETIME));
+	}
+
+	@Override
+	public String issue(String accountName, Role role, long generation, Instant expiresAt) {
+		return signed(accountName, role, generation, LoginSource.ACCOUNT, expiresAt);
 	}
 
 	@Override
 	public String issueForTheAdminKey(String name) {
-		return signed(name, Role.ADMIN, 0, LoginSource.ADMIN_KEY);
+		return signed(name, Role.ADMIN, 0, LoginSource.ADMIN_KEY, clock.instant().plus(Login.LIFETIME));
 	}
 
-	private String signed(String name, Role role, long generation, LoginSource source) {
-		Instant made = clock.instant();
-
+	private String signed(String name, Role role, long generation, LoginSource source, Instant expiresAt) {
 		return JWT
 				.create()
 				.withSubject(name)
@@ -58,8 +61,8 @@ public class JwtLogins implements SignedLogins {
 				.withClaim(GENERATION, generation)
 				.withClaim(SOURCE, source.name())
 				.withJWTId(UUID.randomUUID().toString())
-				.withIssuedAt(made)
-				.withExpiresAt(made.plus(Login.LIFETIME))
+				.withIssuedAt(clock.instant())
+				.withExpiresAt(expiresAt)
 				.sign(algorithm);
 	}
 

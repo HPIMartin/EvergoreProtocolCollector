@@ -11,6 +11,7 @@ interface Address {
 export interface Routing {
   readonly route: Route
   readonly follow: (href: string) => void
+  readonly replace: (href: string) => void
 }
 
 export function useRouting(): Routing {
@@ -33,9 +34,15 @@ export function useRouting(): Routing {
     setAddress(addressInBrowser())
   }, [])
 
+  const replace = useCallback((href: string) => {
+    window.history.replaceState(null, '', href)
+    setAddress(addressInBrowser())
+  }, [])
+
   return {
     route: routeOf(address.path, address.search),
     follow,
+    replace,
   }
 }
 

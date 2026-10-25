@@ -53,7 +53,7 @@ class ValidLoginsTest {
 	@Test
 	void answersNothingForALoginOfAnEarlierGenerationOfItsAccount() {
 		signed.readAs(VALUE, accountLogin("Aurora", 0));
-		generations.bump("aurora");
+		generations.bumpWhileAt("aurora", 0, () -> {});
 
 		Optional<Login> valid = tested.behind(VALUE);
 
@@ -64,7 +64,7 @@ class ValidLoginsTest {
 	void keepsTheLoginOfAnAccountWhenAnotherAccountsGenerationMovedOn() {
 		Login login = accountLogin("Aurora", 0);
 		signed.readAs(VALUE, login);
-		generations.bump("boreas");
+		generations.bumpWhileAt("boreas", 0, () -> {});
 
 		Optional<Login> valid = tested.behind(VALUE);
 
@@ -74,7 +74,7 @@ class ValidLoginsTest {
 	@Test
 	void takesTheAccountNameInAnyCapitalsForTheSameAccount() {
 		signed.readAs(VALUE, accountLogin("AURORA", 0));
-		generations.bump("aurora");
+		generations.bumpWhileAt("aurora", 0, () -> {});
 
 		Optional<Login> valid = tested.behind(VALUE);
 
@@ -85,7 +85,7 @@ class ValidLoginsTest {
 	void answersTheAdminKeyLoginWhateverTheGenerationOfAnAccountNamedLikeIt() {
 		Login login = new Login("admin", Role.ADMIN, 0, LoginSource.ADMIN_KEY, "id", MADE, MADE.plus(Login.LIFETIME));
 		signed.readAs(VALUE, login);
-		generations.bump("admin");
+		generations.bumpWhileAt("admin", 0, () -> {});
 
 		Optional<Login> valid = tested.behind(VALUE);
 

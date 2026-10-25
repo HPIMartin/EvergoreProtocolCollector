@@ -7,9 +7,11 @@ import { PageFrame, StatusPanel } from '../ui'
 
 import { AdminView } from './AdminView.tsx'
 import { BankLedgerView } from './BankLedgerView.tsx'
+import { ChangePasswordView } from './ChangePasswordView.tsx'
 import { ExplanationView } from './ExplanationView.tsx'
 import { LoginNavigation } from './LoginRequired.tsx'
 import { OverviewView } from './OverviewView.tsx'
+import { Redirect } from './Redirect.tsx'
 import { StorageLedgerView } from './StorageLedgerView.tsx'
 import type { Route, RouteVisitor } from './route.ts'
 import { bankPath, overviewPath, storagePath } from './route.ts'
@@ -30,7 +32,7 @@ function navigateTheBrowser(target: string): void {
 }
 
 export function App({ get, session, navigate = navigateTheBrowser }: AppProps) {
-  const { route, follow } = useRouting()
+  const { route, follow, replace } = useRouting()
   const api = httpProtocolApi(get)
   const account = useAccount(session, navigate, follow)
 
@@ -38,6 +40,16 @@ export function App({ get, session, navigate = navigateTheBrowser }: AppProps) {
     overview: () => <OverviewView api={api} onFollow={follow} />,
     admin: () => <AdminView api={api} />,
     explanation: () => <ExplanationView />,
+    password: () =>
+      account?.canChangePassword === false ? (
+        <Redirect href={hrefOf(overviewPath())} replace={replace} />
+      ) : (
+        <ChangePasswordView
+          session={session}
+          onChanged={() => follow(hrefOf(overviewPath()))}
+          onNoAccount={() => follow(hrefOf(overviewPath()))}
+        />
+      ),
     bank: (avatar, page, sort) => (
       <BankLedgerView
         api={api}
@@ -89,6 +101,7 @@ function navigationOf(route: Route): readonly NavigationLink[] {
     overview: () => [{ ...overview, current: true }],
     admin: () => [overview],
     explanation: () => [overview],
+    password: () => [overview],
     bank: (avatar) => [overview, ...ledgersOf(avatar, 'bank')],
     storage: (avatar) => [overview, ...ledgersOf(avatar, 'storage')],
     unknownPath: () => [overview],

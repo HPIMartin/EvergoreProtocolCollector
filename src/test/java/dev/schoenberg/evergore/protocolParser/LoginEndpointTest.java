@@ -43,6 +43,7 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static io.micronaut.http.HttpStatus.BAD_REQUEST;
+import static io.micronaut.http.HttpStatus.FORBIDDEN;
 import static io.micronaut.http.HttpStatus.NO_CONTENT;
 import static io.micronaut.http.HttpStatus.OK;
 import static io.micronaut.http.HttpStatus.REQUEST_ENTITY_TOO_LARGE;
@@ -431,6 +432,111 @@ class LoginEndpointTest {
 		int status = new RawHttpClient(server.getPort()).statusOfRequest("POST /api/v1/logout HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
 
 		assertThat(status).isEqualTo(UNAUTHORIZED.getCode());
+	}
+
+	@Test
+	void changesThePasswordOfTheLoginAndAnswersWithAFreshLogin() {
+		holdAccount("Greta", CHOSEN_PASSWORD, PasswordState.CHOSEN, Role.MEMBER);
+		String login = valueOf(logIn("Greta", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+
+		HttpResponse<String> response = changePassword(login, CHOSEN_PASSWORD, "Winter-2026!");
+
+		assertThat(response.getStatus()).isEqualTo(NO_CONTENT.getCode());
+		assertThat(response.getHeaders().getFirst(SET_COOKIE)).matches(SESSION_COOKIE);
+		assertThat(logIn("Greta", "Winter-2026!").getBody()).isEqualTo("{\"step\":\"logged-in\",\"next\":\"/\"}");
+		assertThat(logIn("Greta", CHOSEN_PASSWORD).getStatus()).isEqualTo(UNAUTHORIZED.getCode());
+	}
+
+	@Test
+	void keepsTheLoginTheChangeAnsweredWithAndEndsTheOtherLoginsOfTheAccount() {
+		holdAccount("Hanna", CHOSEN_PASSWORD, PasswordState.CHOSEN, Role.MEMBER);
+		String first = valueOf(logIn("Hanna", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+		String second = valueOf(logIn("Hanna", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+
+		String fresh = valueOf(changePassword(first, CHOSEN_PASSWORD, "Winter-2026!").getHeaders().getFirst(SET_COOKIE));
+
+		assertThat(statusOfProtectedPathWith(fresh)).isEqualTo(OK.getCode());
+		assertThat(statusOfProtectedPathWith(first)).isEqualTo(UNAUTHORIZED.getCode());
+		assertThat(statusOfProtectedPathWith(second)).isEqualTo(UNAUTHORIZED.getCode());
+	}
+
+	@Test
+	void refusesAWrongCurrentPasswordWith400AndChangesNothing() {
+		holdAccount("Ida", CHOSEN_PASSWORD, PasswordState.CHOSEN, Role.MEMBER);
+		String login = valueOf(logIn("Ida", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+
+		HttpResponse<String> response = changePassword(login, "Herbst-2026!", "Winter-2026!");
+
+		assertThat(response.getStatus()).isEqualTo(BAD_REQUEST.getCode());
+		assertThat(response.getBody()).isEqualTo("{\"refusal\":\"wrong-current-password\"}");
+		assertThat(response.getHeaders().containsKey(SET_COOKIE)).isFalse();
+		assertThat(logIn("Ida", CHOSEN_PASSWORD).getStatus()).isEqualTo(OK.getCode());
+	}
+
+	@Test
+	void refusesAMissingCurrentPasswordAsAWrongOne() {
+		holdAccount("Jana", CHOSEN_PASSWORD, PasswordState.CHOSEN, Role.MEMBER);
+		String login = valueOf(logIn("Jana", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+
+		HttpResponse<String> response = postPassword(login, "{\"newPassword\":\"Winter-2026!\"}");
+
+		assertThat(response.getStatus()).isEqualTo(BAD_REQUEST.getCode());
+		assertThat(response.getBody()).isEqualTo("{\"refusal\":\"wrong-current-password\"}");
+	}
+
+	@Test
+	void refusesANewPasswordThatBreaksTheRuleOrIsTheCurrentOneWith400() {
+		holdAccount("Karla", CHOSEN_PASSWORD, PasswordState.CHOSEN, Role.MEMBER);
+		String login = valueOf(logIn("Karla", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+
+		HttpResponse<String> breaksTheRule = changePassword(login, CHOSEN_PASSWORD, "Abc-123");
+		HttpResponse<String> sameAsBefore = changePassword(login, CHOSEN_PASSWORD, CHOSEN_PASSWORD);
+
+		assertThat(List.of(breaksTheRule.getStatus(), sameAsBefore.getStatus())).containsOnly(BAD_REQUEST.getCode());
+		assertThat(breaksTheRule.getBody()).isEqualTo("{\"refusal\":\"breaks-the-rule\"}");
+		assertThat(sameAsBefore.getBody()).isEqualTo("{\"refusal\":\"same-as-before\"}");
+	}
+
+	@Test
+	void refusesTheLoginOfTheAdminKeyWith403ForLackingAnAccount() {
+		String login = valueOf(logIn("admin", FixedRandom.ADMIN_KEY_OF_ONES).getHeaders().getFirst(SET_COOKIE));
+
+		HttpResponse<String> response = changePassword(login, FixedRandom.ADMIN_KEY_OF_ONES, "Winter-2026!");
+
+		assertThat(response.getStatus()).isEqualTo(FORBIDDEN.getCode());
+		assertThat(response.getBody()).isEqualTo("{\"refusal\":\"no-account\"}");
+	}
+
+	@Test
+	void refusesAChangeWithoutALogin() {
+		String body = "{\"currentPassword\":\"" + CHOSEN_PASSWORD + "\",\"newPassword\":\"Winter-2026!\"}";
+		String request = "POST /api/v1/password HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: " + body.length() + "\r\nConnection: close\r\n\r\n"
+				+ body;
+
+		int status = new RawHttpClient(server.getPort()).statusOfRequest(request);
+
+		assertThat(status).isEqualTo(UNAUTHORIZED.getCode());
+	}
+
+	@Test
+	void refusesABodyOverFourKibibytesForAChangeWith413() {
+		String login = valueOf(logIn("Aurora", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+
+		HttpResponse<String> response = changePassword(login, CHOSEN_PASSWORD, "x".repeat(FIVE_KIBIBYTES));
+
+		assertThat(response.getStatus()).isEqualTo(REQUEST_ENTITY_TOO_LARGE.getCode());
+	}
+
+	private HttpResponse<String> changePassword(String login, String currentPassword, String newPassword) {
+		return postPassword(login, new JSONObject(Map.of("currentPassword", currentPassword, "newPassword", newPassword)).toString());
+	}
+
+	private static HttpResponse<String> postPassword(String login, String body) {
+		return Unirest.post("/api/v1/password").header("Cookie", "epc_session=" + login).header("Content-Type", "application/json").body(body).asString();
+	}
+
+	private static int statusOfProtectedPathWith(String login) {
+		return Unirest.get(PROTECTED_PATH).header("Cookie", "epc_session=" + login).asString().getStatus();
 	}
 
 	private HttpResponse<String> logIn(String name, String password, String next) {

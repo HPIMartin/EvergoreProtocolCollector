@@ -1,5 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +13,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 class RecordingLogins implements SignedLogins {
 	private final List<String> issued = new ArrayList<>();
 	private final Map<String, Login> readable = new HashMap<>();
+	private final List<Instant> expiries = new ArrayList<>();
 
 	List<String> issued() {
 		return issued;
@@ -22,6 +24,16 @@ class RecordingLogins implements SignedLogins {
 		String value = "login-" + accountName + "-" + role + "-" + generation;
 		issued.add(value);
 		return value;
+	}
+
+	@Override
+	public String issue(String accountName, Role role, long generation, Instant expiresAt) {
+		expiries.add(expiresAt);
+		return issue(accountName, role, generation);
+	}
+
+	Optional<Instant> lastExpiry() {
+		return expiries.stream().reduce((first, second) -> second);
 	}
 
 	@Override

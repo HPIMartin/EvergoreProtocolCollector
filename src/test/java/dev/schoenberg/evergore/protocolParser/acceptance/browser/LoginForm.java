@@ -4,7 +4,6 @@ import java.net.URI;
 import java.net.URLEncoder;
 
 import org.openqa.selenium.By;
-import org.openqa.selenium.WebElement;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
 
@@ -58,11 +57,7 @@ public final class LoginForm {
 	}
 
 	private void fillIn(String label, String text) {
-		WebElement field = browser.driver().findElement(By.xpath("//label[normalize-space(.)='" + label + "']/input"));
-		field.clear();
-		if (!text.isEmpty()) {
-			field.sendKeys(text);
-		}
+		browser.fillIn(label, text);
 	}
 
 	private void submit(String buttonLabel) {

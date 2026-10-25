@@ -4,6 +4,7 @@ import java.net.URLEncoder;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.UnaryOperator;
 
 import io.cucumber.java.ParameterType;
@@ -21,6 +22,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.HealthReport;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.OperatorSettings;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.rest.filter.AcceptanceClientIp;
 
@@ -49,13 +51,15 @@ public class ClientLoginSteps {
 	private final OperatorSettings settings;
 	private final RunningService service;
 	private final HealthReport health;
+	private final ServiceLog log;
 	private Answer earlierLoginAnswer;
 	private String issuedLogin;
 	private String copiedLogin;
 	private String returnTarget;
 
 	public ClientLoginSteps(LoginRequests logins, ServiceRequests requests, Accounts accounts, ClientAnswer received, OperatorSettings settings, RunningService service,
-			HealthReport health) {
+			HealthReport health, ServiceLog log) {
+		this.log = log;
 		this.health = health;
 		this.logins = logins;
 		this.requests = requests;
@@ -213,6 +217,11 @@ public class ClientLoginSteps {
 		issuedLogin = LoginRequests.loginValueIn(answer);
 	}
 
+	@Given("a client has logged in as {string} with the admin key the service's log names")
+	public void aClientHasLoggedInWithTheAdminKey(String name) {
+		aClientHasLoggedIn(name, log.adminKeyNamed());
+	}
+
 	@Given("a client has logged in as {string} after choosing {string} in place of the password the reset issued")
 	public void aClientHasLoggedInAfterChoosing(String name, String password) {
 		accounts.choosePasswordInPlaceOfTheIssuedOne(name, password);
@@ -222,6 +231,52 @@ public class ClientLoginSteps {
 	@When("another client asks for {askedFor} with a login {alteredLogin}")
 	public void anotherClientAsksForWithAnAlteredLogin(List<String> addresses, UnaryOperator<String> alteration) {
 		received.remember(logins.asking(addresses.getFirst(), alteration.apply(issuedLogin)));
+	}
+
+	@ParameterType("the current password \"[^\"]*\"|no current password|\"[^\"]*\"|the admin key")
+	public Optional<String> givenCurrent(String phrase) {
+		if ("no current password".equals(phrase)) {
+			return Optional.empty();
+		}
+		if ("the admin key".equals(phrase)) {
+			return Optional.of(log.adminKeyNamed());
+		}
+		return Optional.of(phrase.substring(phrase.indexOf('"') + 1, phrase.length() - 1));
+	}
+
+	@When("a client sets {string} as {word}'s new password with her login, giving {givenCurrent}, skipping the page")
+	public void aClientSetsTheNewPasswordWithHerLogin(String newPassword, String avatar, Optional<String> current) {
+		received.remember(logins.changePassword(issuedLogin, current, newPassword));
+	}
+
+	@When("a client sets {string} as the new password with its login, giving {givenCurrent}, skipping the page")
+	public void aClientSetsTheNewPasswordWithItsLogin(String newPassword, Optional<String> current) {
+		received.remember(logins.changePassword(issuedLogin, current, newPassword));
+	}
+
+	@Then("the operator finds the request refused for a wrong current password")
+	public void theOperatorFindsTheRequestRefusedForAWrongCurrentPassword() {
+		assertThat(received.current().status()).isEqualTo(BAD_REQUEST);
+		assertThat(received.current().body()).isEqualTo("{\"refusal\":\"wrong-current-password\"}");
+	}
+
+	@Then("the operator finds the request refused for lacking an account")
+	public void theOperatorFindsTheRequestRefusedForLackingAnAccount() {
+		assertThat(received.current().status()).isEqualTo(FORBIDDEN);
+		assertThat(received.current().body()).isEqualTo("{\"refusal\":\"no-account\"}");
+	}
+
+	@Then("the operator finds a login as {string} with the password {string} opening the overview's figures")
+	public void theOperatorFindsALoginOpeningTheOverviewsFigures(String name, String password) {
+		theOperatorFindsANewLoginOpeningTheOverviewsFigures(name, password);
+	}
+
+	@Then("the operator finds a login as {string} with the password {string} answered as a wrong password")
+	public void theOperatorFindsALoginAnsweredAsAWrongPassword(String name, String password) {
+		Answer answer = logins.logIn(name, password);
+
+		assertThat(answer.status()).isEqualTo(UNAUTHORIZED);
+		assertThat(answer.body()).isEqualTo("{\"refusal\":\"wrong-name-or-password\"}");
 	}
 
 	@When("a client logs in as {string} with the password {string}")

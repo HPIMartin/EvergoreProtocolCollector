@@ -10,8 +10,9 @@ import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import type { HttpGet, SessionApi } from '../api'
-import { Unauthorized } from '../api'
+import { httpSessionApi, Unauthorized } from '../api'
 import type { Me } from '../domain'
+import { LOAD_FAILED_MESSAGE } from '../ui'
 
 import { App } from './App.tsx'
 
@@ -494,6 +495,7 @@ function alwaysServing(status: number, body: string | null): FakeServer {
 const NO_SESSION: SessionApi = {
   me: () => new Promise<Me>(() => undefined),
   logOut: () => Promise.resolve(),
+  changePassword: () => Promise.resolve('changed'),
 }
 
 function sessionOf(me: Me, loggedOut: number[] = []): SessionApi {
@@ -504,7 +506,20 @@ function sessionOf(me: Me, loggedOut: number[] = []): SessionApi {
 
       return Promise.resolve()
     },
+    changePassword: () => Promise.resolve('changed'),
   }
+}
+
+function fillTheChangeOfThePassword(): void {
+  fireEvent.change(screen.getByLabelText('Bisheriges Passwort'), {
+    target: { value: 'Sommer-2026!' },
+  })
+  fireEvent.change(screen.getByLabelText('Neues Passwort'), {
+    target: { value: 'Winter-2026!' },
+  })
+  fireEvent.change(screen.getByLabelText('Neues Passwort wiederholen'), {
+    target: { value: 'Winter-2026!' },
+  })
 }
 
 async function shellAt(
@@ -2606,6 +2621,143 @@ describe('App account area', () => {
       navigatedTo: [],
       told: ['Die Abmeldung hat nicht geklappt. Bitte erneut versuchen.'],
     })
+  })
+
+  it('opens the page to change the password from Passwort ändern', async () => {
+    const session = sessionOf({ name: 'Aurora', canChangePassword: true })
+    await shellAt(
+      '/overview',
+      alwaysServing(200, OVERVIEW_BODY),
+      () => undefined,
+      session,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Passwort ändern' }))
+    await act(async () => undefined)
+
+    expect({
+      title: screen.getByTestId('view-title').textContent,
+      path: window.location.pathname,
+    }).toStrictEqual({ title: 'Passwort ändern', path: '/password' })
+  })
+
+  it('leads back to the overview once the password is changed', async () => {
+    const session = sessionOf({ name: 'Aurora', canChangePassword: true })
+    await shellAt(
+      '/password',
+      alwaysServing(200, OVERVIEW_BODY),
+      () => undefined,
+      session,
+    )
+    fillTheChangeOfThePassword()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Passwort speichern' }))
+    await act(async () => undefined)
+
+    expect(window.location.pathname).toBe('/overview')
+  })
+
+  it('leads the login of the admin key away from the page to change the password to the overview', async () => {
+    const session = sessionOf({ name: 'admin', canChangePassword: false })
+
+    await shellAt(
+      '/password',
+      alwaysServing(200, OVERVIEW_BODY),
+      () => undefined,
+      session,
+    )
+
+    expect(window.location.pathname).toBe('/overview')
+  })
+
+  it('replaces the page to change the password in the history when it leads the login of the admin key away', async () => {
+    const session = sessionOf({ name: 'admin', canChangePassword: false })
+    const entriesBefore = window.history.length
+
+    await shellAt(
+      '/password',
+      alwaysServing(200, OVERVIEW_BODY),
+      () => undefined,
+      session,
+    )
+
+    expect({
+      path: window.location.pathname,
+      entriesAdded: window.history.length - entriesBefore,
+    }).toStrictEqual({ path: '/overview', entriesAdded: 0 })
+  })
+
+  it('tells the member to wait when the service throttles the change of the password', async () => {
+    const session = httpSessionApi(
+      () =>
+        Promise.resolve(
+          new Response('{"name":"Aurora","canChangePassword":true}', {
+            status: 200,
+          }),
+        ),
+      () => Promise.resolve(new Response(null, { status: 429 })),
+    )
+    await shellAt(
+      '/password',
+      alwaysServing(200, OVERVIEW_BODY),
+      () => undefined,
+      session,
+    )
+    fillTheChangeOfThePassword()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Passwort speichern' }))
+    await act(async () => undefined)
+
+    const told = screen
+      .queryAllByTestId('status-panel')
+      .map((panel) => panel.textContent)
+    expect(told).toStrictEqual(['Zu viele Versuche. Bitte warte einen Moment.'])
+  })
+
+  it('leads a login the service knows no account for to the overview with no failure text', async () => {
+    const session: SessionApi = {
+      ...sessionOf({ name: 'Aurora', canChangePassword: true }),
+      changePassword: () => Promise.resolve('no-account'),
+    }
+    await shellAt(
+      '/password',
+      alwaysServing(200, OVERVIEW_BODY),
+      () => undefined,
+      session,
+    )
+    fillTheChangeOfThePassword()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Passwort speichern' }))
+    await act(async () => undefined)
+
+    const failures = screen
+      .queryAllByTestId('status-panel')
+      .map((panel) => panel.textContent)
+      .filter((text) => text === LOAD_FAILED_MESSAGE)
+    expect({ path: window.location.pathname, failures }).toStrictEqual({
+      path: '/overview',
+      failures: [],
+    })
+  })
+
+  it('sends a change of the password the service answers with an ended login to the login page', async () => {
+    const navigatedTo: string[] = []
+    const session: SessionApi = {
+      ...sessionOf({ name: 'Aurora', canChangePassword: true }),
+      changePassword: () => Promise.reject(new Unauthorized()),
+    }
+    await shellAt(
+      '/password',
+      alwaysServing(200, OVERVIEW_BODY),
+      (target) => navigatedTo.push(target),
+      session,
+    )
+    fillTheChangeOfThePassword()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Passwort speichern' }))
+    await act(async () => undefined)
+
+    expect(navigatedTo).toStrictEqual(['/login?next=%2Fpassword'])
   })
 
   it('logs out and leads to the login page', async () => {

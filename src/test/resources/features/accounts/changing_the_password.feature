@@ -1,4 +1,3 @@
-@wip
 Feature: Changing the password
   A member who is logged in changes their own password at any time, giving the current one first and
   the new one twice. The new password follows the rule of "Choosing a password", which also says

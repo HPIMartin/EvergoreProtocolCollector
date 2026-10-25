@@ -97,7 +97,7 @@ class LoginBodyLimitFilterTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"/api/v1/login", "/api/v1/login/new-password"})
+	@ValueSource(strings = {"/api/v1/login", "/api/v1/login/new-password", "/api/v1/password"})
 	void answers413ForABodyWithNoDeclaredLengthOnEveryLimitedPath(String path) {
 		HttpRequest<?> request = HttpRequest.POST(path, "body");
 
@@ -119,6 +119,16 @@ class LoginBodyLimitFilterTest {
 	@ParameterizedTest
 	@ValueSource(strings = {"/api/v1/login/new-password", "/api//v1/login", "/api/v1/./login", "/api/v1/login/"})
 	void limitsTheBodiesOfThePathsBelowTheLoginAndOfItsSpellingsToo(String path) {
+		HttpRequest<?> request = HttpRequest.POST(path, "body").contentLength(FOUR_KIBIBYTES + 1);
+
+		int answered = statusOf(tested.doFilter(request, chain));
+
+		assertThat(answered).isEqualTo(413);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"/api/v1/password", "/api//v1/password", "/api/v1/./password"})
+	void limitsTheBodyOfTheChangeOfAPasswordAndOfItsSpellingsToo(String path) {
 		HttpRequest<?> request = HttpRequest.POST(path, "body").contentLength(FOUR_KIBIBYTES + 1);
 
 		int answered = statusOf(tested.doFilter(request, chain));

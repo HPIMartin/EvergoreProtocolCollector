@@ -8,6 +8,7 @@ import {
   bankPath,
   explanationPath,
   overviewPath,
+  passwordPath,
   routeOf,
   storagePath,
 } from './route.ts'
@@ -20,6 +21,7 @@ const describingVisitor: RouteVisitor<string> = {
   overview: () => 'the overview',
   admin: () => 'the admin status page',
   explanation: () => 'the explanation page',
+  password: () => 'the password change page',
   bank: (avatar, page, sort) =>
     `the bank of ${avatar} at page ${String(page)}${sortedBy(sort)}`,
   storage: (avatar, page, sort) =>
@@ -50,6 +52,18 @@ describe('route', () => {
     const described = routeOf('/admin', '').accept(describingVisitor)
 
     expect(described).toBe('the admin status page')
+  })
+
+  it('shows the password change page at its own path', () => {
+    const described = routeOf('/password', '').accept(describingVisitor)
+
+    expect(described).toBe('the password change page')
+  })
+
+  it('names the path of the password change page', () => {
+    const path = passwordPath()
+
+    expect(path).toBe('/password')
   })
 
   it('shows the explanation page at its own path', () => {
