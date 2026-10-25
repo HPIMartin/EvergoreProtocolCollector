@@ -152,8 +152,8 @@ GitLens.
 
 - **The Claude Code VS Code extension can race the editor's own file-watcher:**
   - when it edits a file the IDE is watching (a worktree file, especially with a second Claude
-    session active), a read taken right after the edit may transiently show the old content, and a
-    follow-up edit may fail to find its target, though the write landed;
+    session active), a read taken right after the edit may transiently show the old content;
+  - a follow-up edit may fail to find its target, though the write landed;
   - it is a presentation race, not an external process rewriting the file (an idle file is stable;
     no `git restore` runs);
   - trust `git diff` / `git show` over a `grep` taken mid-edit;
@@ -164,10 +164,11 @@ GitLens.
 
 Sessions in parallel worktrees share the container: its CPU, memory, disk and Gradle user home.
 
-- **Build and test through `./verify`:** it queues the gate builds on one machine-wide lock and
-  keeps each worktree's Gradle daemons apart; nobody locks by hand or sets a registry (the
-  mechanics: [build-run-deploy.md](build-run-deploy.md), "The verify script (the one entry
-  point)").
+- **Build and test through `./verify`:**
+  - it queues the gate builds on one machine-wide lock;
+  - it keeps each worktree's Gradle daemons apart;
+  - nobody locks by hand or sets a registry (the mechanics:
+    [build-run-deploy.md](build-run-deploy.md), "The verify script (the one entry point)").
 - **A direct Gradle task or `npm` run takes neither**, so a direct test run loads the machine beside
   a gate build.
 - **Give a `./verify` call a timeout that covers the builds queued ahead of it**, or run it in the
@@ -191,8 +192,9 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
   - work that must run on the PC: a deploy, the home server, a browser login such as the game's;
   - the machines' current load never decides where a session runs.
 - **An agent on the PC holds the author's rights in practice**, through the credential and the
-  Docker socket in the table; accepted on purpose. What GitHub binds: [git-state.md](git-state.md),
-  "What GitHub enforces".
+  Docker socket in the table:
+  - this is accepted on purpose;
+  - what GitHub binds: [git-state.md](git-state.md), "What GitHub enforces".
 - **The agent machine's GitHub credentials:**
   - a deploy key with write access, `origin` over SSH;
   - for the API, the `epc-agent` App's key once the author has mounted it (below);
@@ -251,8 +253,9 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
   - every result names the snapshot it used;
   - a snapshot, or data drawn from one, is never committed or uploaded;
   - a pull request quotes only the small excerpts a finding needs;
-  - an agent cannot take a snapshot: when the newest is too old for the task, it says so and asks
-    the author.
+  - an agent cannot take a snapshot:
+    - when the newest is too old for the task, it says so;
+    - it asks the author.
 
 ### Docker on the agent seat
 
@@ -283,12 +286,15 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
 - **`Dockerfile`** is a layer on the devcontainer image, passed as `ARG BASE`, so the agent seat
   runs the toolchain the PC runs.
   - `ARG BASE` defaults to the image name `base-image-required-pass-build-arg-base`, which names
-    no image, so a build without the argument fails at `FROM`; `build` always passes it.
+    no image:
+    - a build without the argument fails at `FROM`;
+    - `build` always passes it.
   - It blanks the inherited `devcontainer.metadata` label, which names the host socket mount of
     `docker-outside-of-docker`, so no devcontainer tooling mounts the host's socket into the agent
     container (author decision 2026-10-12).
-  - It runs exactly two scripts, each bind-mounted for its step only: `provision` as root, then
-    `install-claude-code` as `vscode`, with `~/.local/bin` on the `PATH`.
+  - It runs exactly two scripts, each bind-mounted for its step only:
+    - `provision` runs as root, then `install-claude-code` as `vscode`;
+    - `~/.local/bin` is on the `PATH`.
 - **`provision`** adds, with every version and the key's fingerprint as constants in the script:
   - `tmux`, which keeps a session alive when its connection drops;
   - Docker Engine from Docker's Debian `bookworm` repository: `docker-ce`, `docker-ce-cli`,
@@ -307,11 +313,13 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
   - the mount points, owned by `vscode` so a volume or file the agent machine mounts there belongs
     to `vscode`: `/workspaces`, `~/.claude`, `~/.gradle`, `~/.npm`, `~/.local`, and `~/.ssh` with
     mode `0700`.
-- **`install-claude-code`** installs the Claude Code version pinned in it through the native
-  installer, fetched over HTTPS only, and fails unless `claude --version` then reports that
-  version (author decision 2026-10-12, [open-questions.md](../open-questions.md)).
-  - A bump is a one-line commit; Claude Code may still update itself at run time.
-  - A volume the agent machine mounts on `~/.local` hides the image's Claude Code: the seat then
+- **`install-claude-code`** (author decision 2026-10-12, [open-questions.md](../open-questions.md)):
+  - it installs the Claude Code version pinned in it through the native installer;
+  - the installer is fetched over HTTPS only;
+  - it fails unless `claude --version` then reports that version;
+  - a bump is a one-line commit;
+  - Claude Code may still update itself at run time;
+  - a volume the agent machine mounts on `~/.local` hides the image's Claude Code: the seat then
     runs the volume's version, not the pin.
 - **It ends as `vscode` in `/workspaces` with `CMD ["sleep", "infinity"]` and no entrypoint;** the
   agent machine starts it as root with a command of its own (`dockerd`, then the Remote Control
@@ -324,8 +332,9 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
   - a tag outside Docker's reference grammar is refused before any call;
   - the devcontainer image first, through `npx --yes @devcontainers/cli@<pinned>` with
     `--frozen-lockfile`, under a temporary tag;
-  - then the agent layer on top of it, tagged as asked; the temporary tag is removed, and a run
-    that cannot check whether it is gone fails;
+  - then the agent layer on top of it, tagged as asked;
+  - the temporary tag is removed;
+  - a run that cannot check whether the temporary tag is gone fails;
   - labels, each a full 40-character hash where it names a commit:
     `org.opencontainers.image.revision` (`HEAD`), `epc.devcontainer.revision` (the last commit
     that changed `.devcontainer/`) and `org.opencontainers.image.source` (the repository's URL);
@@ -340,9 +349,9 @@ Sessions in parallel worktrees share the container: its CPU, memory, disk and Gr
 - **The agent machine's update runs it** from a fresh clone of `main` at a detached commit, as root
   in a throwaway container from the current agent image, against the machine's own Docker daemon.
 - **On the PC it runs from the devcontainer** through `docker-outside-of-docker`:
-  `.devcontainer/agent/build --tag epc-agent:test`, then `docker image inspect epc-agent:test`
-  for the labels; what that proves of a `.devcontainer/` change: "The devcontainer
-  (`.devcontainer/`)", above.
+  - `.devcontainer/agent/build --tag epc-agent:test`, then `docker image inspect epc-agent:test`
+    for the labels;
+  - what that proves of a `.devcontainer/` change: "The devcontainer (`.devcontainer/`)", above.
 - **`self-test`** proves all three scripts with their outside commands stubbed
   ([build-run-deploy.md](build-run-deploy.md), "Git hooks (local enforcement)"):
   - `build` against a throwaway repository: the interface, the three labels, the temporary tag's
@@ -372,11 +381,9 @@ The Java version stands in places that must stay in sync:
 4. `gradle/gradle-daemon-jvm.properties` → `toolchainVersion`, the Gradle daemon's JVM, a file the
    `updateDaemonJvm` task generates.
 
-- The **Gradle** version is pinned separately in `gradle/wrapper/gradle-wrapper.properties`,
-  together with `distributionSha256Sum`, so the wrapper refuses a tampered or swapped
-  distribution.
-  - **On a version bump both must change**: take the new sum from `<distributionUrl>.sha256`
-    (Gradle publishes one per distribution).
+- The **Gradle** version is pinned separately in `gradle/wrapper/gradle-wrapper.properties`
+  (the sum that guards the distribution and the bump of both: [build-run-deploy.md](build-run-deploy.md),
+  "Wrapper integrity").
   - A Java bump may need a newer Gradle (Java 25 needs Gradle 9.1 or newer).
 - The build toolchain JDK is auto-provisioned by the foojay resolver, so a host/devcontainer JDK
   mismatch self-heals.

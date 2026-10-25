@@ -25,9 +25,12 @@
   since caching was enabled has nothing stored yet: the **first** cold worktree still runs it and
   only the next one hits. `~/.gradle` sits on a named Docker
   volume, so it survives devcontainer rebuilds (see [dev-environment.md](dev-environment.md)).
-- **Wrapper integrity:** `gradle-wrapper.properties` carries `distributionSha256Sum` next to
-  `distributionUrl`; the wrapper aborts if the downloaded distribution does not match. Bump both
-  together on a Gradle upgrade.
+- **Wrapper integrity:**
+  - `gradle-wrapper.properties` carries `distributionSha256Sum` next to `distributionUrl`;
+  - the wrapper aborts if the downloaded distribution does not match, so a tampered or swapped
+    distribution is refused;
+  - bump both together on a Gradle upgrade;
+  - take the new sum from `<distributionUrl>.sha256`, which Gradle publishes per distribution.
 - **Warnings are errors:** every `JavaCompile` runs `-Xlint:all` and `-Werror`, except the throwaway
   probes' compile (below), so any compiler/lint warning fails the build. Excluded deliberately:
   `-serial` (obsolete `serialVersionUID` ceremony)

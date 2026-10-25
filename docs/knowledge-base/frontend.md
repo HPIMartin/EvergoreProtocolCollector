@@ -511,8 +511,8 @@ service's only read surface.
   - `lastUpdated` is deliberately **not** read for this: it lives on `/api/v1/admin/status`, and the
     members' view does not reach into an operator surface for a presentation question.
 - **`/api/v1/admin/status`'s `lastUpdated: null`** means no collection run has completed. A sentinel
-  instant is not an option: Java 25 throws when converting an extreme instant into
-  `java.sql.Timestamp`.
+  instant is not an option, because of how Java 25 converts an extreme instant
+  ([dev-environment.md](dev-environment.md), "JDK version (upgrade procedure)").
 - **`/api/v1/admin/status`'s `lastUpdated` is the recompute's instant cut to the minute**, also
   inside the hour the clocks go back.
   - After a release before `V4` recomputed in the second pass of that hour, the start fills it with

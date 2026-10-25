@@ -14,7 +14,7 @@ All domain types live framework-free under `…/domain` and `…/businessLogic`.
 | **BankEntry** | `businessLogic/banking/BankEntry(date, avatar, int amount, TransferType)` | A bank (gold) transaction. |
 | **StorageEntry** | `businessLogic/storage/StorageEntry(date, avatar, quantity, name, quality, TransferType)` | A storage (item) transaction. |
 | **EvergoreItem** | enum `domain/EvergoreItem` | The **item catalog** (see below). The heart of the value logic. |
-| **MetaInformation / MetaInformationKey** | `businessLogic/metaInformation/*` | Typed key/value store for computed results & the display-only `last_updated` timestamp. |
+| **MetaInformation / MetaInformationKey** | `businessLogic/metaInformation/*` | Typed key/value store for computed results & the collection timestamp (`last_updated_at`, with its Berlin-text twin `last_updated`). |
 
 ## Parser characterization pins (author-confirmed)
 
@@ -91,20 +91,26 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   and it carries none of the `Mystisch*` quest consumables the ledger holds. `Einfacher Wollverband`
   (`32`, on both the market and in the storage) and `Luft-Spiralstab` (`16300`, on the market) are
   read from the game and agree with the catalog, so neither rests on the wiki.
-- **It is no authority for spelling, so the name is the game's.** Those six are the raw stones,
-  which it writes `Marmorstein`, `Granitstein` and `Schieferstein`, and the three essences, which
-  it writes in the plural; all six carry the value it gives them, so only the name differs. The
-  game's blueprints, its `Steine` page and the ledger itself say `Marmor`, `Granit` and
-  `Schiefer`. A name only the wiki uses matches no ledger row, so it values every movement of a
-  real item at zero and says nothing.
-- **One item, several spellings.** A name is resolved against the catalog exactly first, then with
-  a trailing magic affix (`des`/`der <X>`) stripped. The affix is normalised away because its space is
-  open, every base item times every affix, and because the game prices `Streitaxt des Wegelagerers`
-  at exactly `Streitaxt`s `1800`. A second **fixed** spelling, such as the ` [2H]` the ledger adds to
-  `Obsidian-Pike` but not to `Obsidian-Kriegshammer`, is recorded as an alternative name on the entry
-  itself. Deriving it by toggling the suffix instead would price 35 names the catalog has never
-  seen, `Kriegshammer` and `Sense` among them, off their two-handed twin and drop them out of the
-  unknown-name report (34 against the catalog as it now stands), which is the signal the rest of the catalog work depends on.
+- **The wiki is no authority for spelling, so the name is the game's.** Six catalog names differ
+  from the wiki's:
+  - the three raw stones, which it writes `Marmorstein`, `Granitstein` and `Schieferstein`;
+  - the three essences, which it writes in the plural;
+  - all six carry the value it gives them, so only the name differs;
+  - the game's blueprints, its `Steine` page and the ledger itself say `Marmor`, `Granit` and
+    `Schiefer`;
+  - a name only the wiki uses matches no ledger row, so it values every movement of a real item at
+    zero and says nothing.
+- **One item, several spellings.**
+  - A name is resolved against the catalog exactly first, then with a trailing magic affix
+    (`des`/`der <X>`) stripped.
+  - The affix is normalised away because its space is open, every base item times every affix, and
+    because the game prices `Streitaxt des Wegelagerers` at exactly `Streitaxt`s `1800`.
+  - A second **fixed** spelling, such as the ` [2H]` the ledger adds to `Obsidian-Pike` but not to
+    `Obsidian-Kriegshammer`, is recorded as an alternative name on the entry itself.
+  - Deriving it by toggling the suffix instead would price 35 names the catalog has never seen,
+    `Kriegshammer` and `Sense` among them, off their two-handed twin.
+  - It would also drop them out of the unknown-name report (34 against the catalog as it now
+    stands), which is the signal the rest of the catalog work depends on.
 - **Two families are catalogued at zero on purpose.** `Übungsstück-*` trains a craft without
   spending materials and sells only at the market stall for almost nothing; `Mystisch*` items are quest
   rewards. They are entries rather than gaps so a catalog hole stays distinguishable from a
@@ -150,21 +156,25 @@ EvergoreItem(String ingameName, int marketValue, Category category, Recipe recip
   carry `UNKNOWN_RECIPE`, including `Achat-Lederbeinlinge` and `Achat-Lederstulpen`, whose
   ingredient lists the catalog once asserted and no source supports.
 - **Practice pieces carry the recipes the academy states, and are meant to come out worthless.**
-  All 55 `Übungsstück-*` entries name what they consume, read from the academy's own
-  `Lehrlingsbausatz` blueprints; `Übungsstück-Adamantaxt` is 2 `ADAMANTBARREN` + 1 `SCHMIEDEOEL` +
-  2 `SCHLEIFSTEIN` and is worth `0`. That is the point of the family: it trains a craft by spending
-  material on something with no value: `Übungsstück-Kupferschwert` consumes material worth `200` and
-  returns nothing, so withdrawing that material charges its apprentice `120` and the craft gives
-  none of it back.
+  - All 55 `Übungsstück-*` entries name what they consume, read from the academy's own
+    `Lehrlingsbausatz` blueprints.
+  - `Übungsstück-Adamantaxt` is 2 `ADAMANTBARREN` + 1 `SCHMIEDEOEL` + 2 `SCHLEIFSTEIN` and is worth
+    `0`.
+  - That is the point of the family: it trains a craft by spending material on something with no
+    value.
+  - `Übungsstück-Kupferschwert` consumes material worth `200` and returns nothing, so withdrawing
+    that material charges its apprentice `120` and the craft gives none of it back.
 - **Two independent sources agree on the whole production graph** (measured 2026-09-13): the
   academy's 424 blueprints and the catalog's 424 recipes are the **same** 424, name for name, yield
-  for yield and quantity for quantity. The 369 that predate the practice pieces were transcribed
-  from the wiki on 2026-09-10, before the academy was ever scraped, and match it exactly, so the
-  agreement is corroboration rather than circularity. The list reaches well past what the scraping
-  character could make: its blueprints require craft `Stufe` up to `24` while that character stands
-  at `Level 3`. The 2026-09-22 read finds the same 424 blueprints, and `GameFactsGuardTest` holds
-  every one of them against the catalog's recipe for that item, yield and quantities included,
-  rather than against a cardinality.
+  for yield and quantity for quantity.
+  - The 369 that predate the practice pieces were transcribed from the wiki on 2026-09-10, before
+    the academy was ever scraped, and match it exactly, so the agreement is corroboration rather
+    than circularity.
+  - The list reaches well past what the scraping character could make: its blueprints require craft
+    `Stufe` up to `24` while that character stands at `Level 3`.
+  - The 2026-09-22 read finds the same 424 blueprints.
+  - `GameFactsGuardTest` holds every one of them against the catalog's recipe for that item, yield
+    and quantities included, rather than against a cardinality.
 - **No item whose value is meant to reflect its inputs is worth less than the ingredients its
   recipe consumes** (`EvergoreItemTest`): a product priced under its own inputs means one of the
   two numbers is wrong. The rule names the deliberate-zero families it excludes, `Übungsstück-*`
@@ -322,19 +332,23 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   `EvaluationResult` as `roundTrips` and `roundTripAbstentions`, per run, over the full recompute,
   the same way an unknown item or a failed avatar is. An avatar whose ledger read throws contributes
   neither, because the throw precedes both the valuation and the detection.
-- **A deposit is valued twice**, and the gap is split into the two flows it is made of: into
-  `placement` with what it credits the member, and, against `getWithdrawlValue()` as the guild's own
-  price for the same goods, into **`donation`** where the credit falls short of that price (mined,
-  hunted and gem deposits, which credit nothing) and into **`craftSubsidy`** where it exceeds it
-  (trader goods and the ammunition the market stall sells, credited at 100 % of a price the
-  guild values at 60 %). Exactly one of the two can
-  be non-zero per deposit. A withdrawal counts into `withdrawl` alone.
+- **A deposit is valued twice**, and the gap is split into the two flows it is made of:
+  - into `placement` with what it credits the member;
+  - against `getWithdrawlValue()` as the guild's own price for the same goods, into **`donation`**
+    where the credit falls short of that price (mined, hunted and gem deposits, which credit
+    nothing);
+  - and into **`craftSubsidy`** where it exceeds it (trader goods and the ammunition the market
+    stall sells, credited at 100 % of a price the guild values at 60 %);
+  - exactly one of the two can be non-zero per deposit;
+  - a withdrawal counts into `withdrawl` alone.
 - Results are keyed per avatar (`getBankPlacement(avatar)`, `getBankWithdrawl`,
-  `getStoragePlacement`, `getStorageWithdrawl`, `getStorageDonation`, `getStorageCraftSubsidy`) and handed to `MetaInformationRepository.add` as
-  **one batch for the whole run**, which the adapter writes in **one transaction**: a reader can
-  see the state before the recompute or the state after it, never a mixture of both. The run
-  computes first and writes last, so the transaction spans the write alone and no reader is blocked
-  for the duration of the aggregation.
+  `getStoragePlacement`, `getStorageWithdrawl`, `getStorageDonation`, `getStorageCraftSubsidy`):
+  - they are handed to `MetaInformationRepository.add` as **one batch for the whole run**, which
+    the adapter writes in **one transaction**;
+  - a reader can see the state before the recompute or the state after it, never a mixture of
+    both;
+  - the run computes first and writes last, so the transaction spans the write alone and no reader
+    is blocked for the duration of the aggregation.
 - **One avatar's failure costs that avatar, not the guild** (decision 2026-09-03): a repository call
   that throws while an avatar is being recomputed is caught per avatar, logged at `error`, and the
   avatar's name is collected into the `EvaluationResult` and surfaced via `/health`'s `lastRun`
@@ -362,7 +376,8 @@ per avatar, sums start at **zero** and aggregate over **every stored entry** for
   an avatar failed: a scrape happened either way. It is an operator's datum rather than a per-row
   freshness claim; "how current is this member's row" is answered by that row's own
   `sums_recomputed_at_<avatar>` instant, and "when did the member last move something" by its two
-  **last-activity** columns. It is served by `/api/v1/admin/status`, not by the overview.
+  **last-activity** columns. Its instant twin `last_updated_at` is what `/api/v1/admin/status`
+  serves (below), not the overview.
 - That moment is stored twice, and every run writes both:
   - `last_updated_at`, the run's instant cut to the minute as epoch millis, which the admin status
     serves;
@@ -407,7 +422,7 @@ from them on any partial recompute.
 
 The read side takes **one `MetaInformationSnapshot` per response** (`MetaInformationRepository.snapshot()`,
 one statement over the whole store) and answers every avatar's four sums, the derived net, the
-guild-wide total **and** `last_updated` out of it. Together with the recompute's single transaction
+guild-wide total **and** `last_updated_at`, which only the admin status serves, out of it. Together with the recompute's single transaction
 this makes the **computed sums** one consistent state of the meta store rather than up to four reads
 per avatar that a concurrent recompute could interleave (decision 2026-09-03). There is deliberately
 **no** per-key read on the port, so no read can tear a recompute. The scope of that
