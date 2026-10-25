@@ -39,10 +39,18 @@ export default tseslint.config(
           zones: [
             {
               target: './src/domain',
-              from: ['./src/api', './src/ui', './src/app'],
+              from: ['./src/api', './src/ui', './src/app', './src/login'],
             },
-            { target: './src/api', from: ['./src/ui', './src/app'] },
-            { target: './src/ui', from: ['./src/api', './src/app'] },
+            {
+              target: './src/api',
+              from: ['./src/ui', './src/app', './src/login'],
+            },
+            {
+              target: './src/ui',
+              from: ['./src/api', './src/app', './src/login'],
+            },
+            { target: './src/app', from: './src/login' },
+            { target: './src/login', from: './src/app' },
           ],
         },
       ],

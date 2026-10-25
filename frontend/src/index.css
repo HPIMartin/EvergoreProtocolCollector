@@ -479,3 +479,37 @@ a:hover {
 .explanation__why {
   color: var(--color-text-muted);
 }
+
+.login-page {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+.login-page__form {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+}
+
+.login-page__field {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+}
+
+.login-page__field input,
+.login-page__form button {
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background-color: var(--color-surface-raised);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.login-page__form button {
+  justify-self: start;
+  color: var(--color-accent-strong);
+  cursor: pointer;
+}

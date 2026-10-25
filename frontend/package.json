@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && vite build --config vite.login.config.ts",
     "lint": "eslint . --output-file build/reports/eslint/results.txt && prettier --check .",
     "preview": "vite preview",
     "test": "vitest run"

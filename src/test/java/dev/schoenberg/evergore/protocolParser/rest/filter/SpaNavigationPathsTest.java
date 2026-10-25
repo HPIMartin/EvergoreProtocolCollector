@@ -72,6 +72,21 @@ class SpaNavigationPathsTest {
 		assertNotOwnedBySpa("/health/does-not-exist");
 	}
 
+	@Test
+	void doesNotOwnTheLoginPage() {
+		assertNotOwnedBySpa("/login");
+	}
+
+	@Test
+	void doesNotOwnAPathBelowTheLoginPage() {
+		assertNotOwnedBySpa("/login/unknown");
+	}
+
+	@Test
+	void ownsAPathThatOnlyStartsWithTheLettersOfTheLoginPage() {
+		assertOwnedBySpa("/loginhelp");
+	}
+
 	private void assertOwnedBySpa(String canonicalPath) {
 		boolean isSpaOwned = navigationPaths.isSpaOwned(canonicalPath);
 

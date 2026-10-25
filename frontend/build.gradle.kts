@@ -24,10 +24,10 @@ configurations {
 
 val npmBuild = tasks.register<NpmTask>("npmBuild") {
 	group = "build"
-	description = "Builds the SPA with vite into build/dist."
+	description = "Builds the SPA and the login page with vite into build/dist and build/dist/login."
 	dependsOn(tasks.npmInstall)
 	npmCommand.set(listOf("run", "build"))
-	inputs.files("package.json", "package-lock.json", "vite.config.ts", "index.html").withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.files("package.json", "package-lock.json", "vite.config.ts", "vite.login.config.ts", "index.html", "login.html").withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.files(fileTree(".") { include("tsconfig*.json") }).withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.dir("src").withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.files(fileTree("public")).withPathSensitivity(PathSensitivity.RELATIVE)
@@ -62,8 +62,8 @@ val npmLint = tasks.register<NpmTask>("npmLint") {
 	inputs.files("package.json", "package-lock.json", "eslint.config.js", ".prettierrc.json", ".prettierignore")
 		.withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.files(fileTree(".") { include("tsconfig*.json") }).withPathSensitivity(PathSensitivity.RELATIVE)
-	inputs.file("vite.config.ts").withPathSensitivity(PathSensitivity.RELATIVE)
-	inputs.file("index.html").withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.files("vite.config.ts", "vite.login.config.ts").withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.files("index.html", "login.html").withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.dir("src").withPathSensitivity(PathSensitivity.RELATIVE)
 	outputs.file(layout.buildDirectory.file("reports/eslint/results.txt"))
 	outputs.cacheIf { true }

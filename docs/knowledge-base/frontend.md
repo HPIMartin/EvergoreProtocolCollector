@@ -17,14 +17,15 @@
 
 ## Structure & the dependency rule
 
-Four top-level folders under `frontend/src/`:
+Five top-level folders under `frontend/src/`:
 
 | Folder | May import from | Purpose |
 |--------|------------------|---------|
 | `domain` | (nothing under `src/`) | Framework-free types/logic; the core, like the backend's `domain`/`businessLogic`. |
 | `api` | `domain` | Talks to the backend JSON API; translates wire shapes to domain types. |
 | `ui` | `domain` | Presentational React components; no direct `api` or `app` imports. |
-| `app` | `domain`, `api`, `ui` | The composition root: wires `api` implementations into `ui`, routing, the app shell. |
+| `app` | `domain`, `api`, `ui` | The dashboard's composition root: wires `api` implementations into `ui`, routing, the app shell. |
+| `login` | `domain`, `api`, `ui` | The login page's composition root, a bundle of its own (below); `app` and `login` never import each other. |
 
 - Enforced per the table above (no sideways/upward imports); mirrors the backend's inward-only
   rule (`application` depends only inward, never on adapters/config).
@@ -147,7 +148,7 @@ Four top-level folders under `frontend/src/`:
   neutral, a negative value is a debit, and a positive value takes the tone its caller declares.
 - **The gallery**: `gallery.html` plus `src/ui/gallery/` shows every primitive with fixture rows modeled
   on the guild sheet's columns ([google-sheet.md](google-sheet.md)). `npm run dev` serves it at
-  `/gallery.html`; `vite build` ignores it, because `index.html` is the only build input, so it never
+  `/gallery.html`; the builds ignore it, because `index.html` and `login.html` are their only inputs, so it never
   reaches the jar. It replaces a Storybook dependency: pure props-in components need no second toolchain.
 - `tsconfig.app.json` lists the `node` types because `theme.test.ts` reads the stylesheet from disk.
 
@@ -315,6 +316,27 @@ Four top-level folders under `frontend/src/`:
   roster tables apart through `active-roster` / `dormant-roster`, and its fixture is from 2024, so a
   cut against the reader's clock would empty its active table.
 
+## The login page
+
+- `LoginPage` is headed „Anmeldung“.
+- It asks for the name and the password.
+- It posts both through `httpLoginApi` (`api`, the `HttpPost` seam the tests fake) to
+  `/api/v1/login` ([build-run-deploy.md](build-run-deploy.md), "The login API").
+- The button „Anmelden“ is disabled while the request is on its way and a second submit posts
+  nothing, so a double click spends one of the address's requests, not two.
+- The service's answer becomes a `LoginAnswer` (`domain`):
+  - `logged-in` navigates to the return target;
+  - a refused login (401) says „Name oder Passwort stimmt nicht.“ and stays;
+  - a turned-away request (429) says „Zu viele Versuche. Bitte warte einen Moment.“;
+  - `choose-new-password` turns the page to the step „Neues Passwort wählen“.
+- **The return target** (`returnTarget`, `domain`) takes the `next` query parameter and returns it
+  only when it is a path of this service:
+  - it starts with exactly one `/`, a backslash counting as a slash, both as written and after
+    one percent-decoding;
+  - it carries no control character, and it resolves to this service's own origin;
+  - anything else, a full address, `//…`, `/\…` and their percent-encoded forms included, and a
+    missing `next` return `/`, the overview.
+
 ## The JSON API the SPA reads
 
 Shape and field names decided 2026-08-04 (open-questions.md). The controllers live in
@@ -455,7 +477,9 @@ service's only read surface.
   `package-lock.json` versions.
 - Three Gradle tasks wrap the npm scripts, each with explicit `inputs`/`outputs` for
   skip-when-unchanged (`UP-TO-DATE`/`FROM-CACHE`):
-  - `npmBuild` (`vite build` into `frontend/build/dist`); wired into `assemble`.
+  - `npmBuild` (`vite build` of the dashboard into `frontend/build/dist`, then `vite build --config
+    vite.login.config.ts` of the login page into `frontend/build/dist/login`); wired into
+    `assemble`.
   - `npmTest` (`vitest run`) and `npmLint` (`eslint` + `prettier --check`); wired into `check`.
 - **`npmTest` never runs while the Java suite runs** (`mustRunAfter(":test")`).
   - Why: almost every test file boots its own jsdom, and beside Gradle's parallel `:test` the fork
@@ -477,6 +501,15 @@ service's only read surface.
     unknown navigation paths (client-side routing).
   - The client routes (`/overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`,
     `/explanation`) are the SPA's.
+- **The login page is a second bundle** (`login.html`, `src/login/main.tsx`,
+  `vite.login.config.ts`):
+  - it is built with the base `/login/` into `build/dist/login`, so the jar carries it under
+    `static/ui/login/` and its files load from `/login/assets/…`;
+  - it is a build of its own, so it shares no chunk with the dashboard: its files can be public
+    while the dashboard's need not be;
+  - the public paths list `/login` and `/login/**`, and no file of the dashboard's bundle;
+  - `LoginPageController` serves `login.html` at `/login` and `/login/`; `SpaNavigationPaths`
+    reserves `/login`, so the dashboard's fallback never answers below it.
 - **Docker**: the image build gates on the frontend's tests and lint too; its build command:
   [build-run-deploy.md](build-run-deploy.md), "Run via Docker (primary path)".
 - **Vulnerability scanning**:

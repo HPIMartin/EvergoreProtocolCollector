@@ -219,6 +219,7 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     overview;
   - `rest/controller/api/wire/*` holds the published contract types plus `TransferTypeWireNames`;
   - `FaviconController` serves the favicon;
+  - `LoginPageController` serves the login page's own bundle at `/login`;
   - `SpaHistoryFallbackController` serves the SPA shell for unknown navigation paths;
   - `SpaNavigationPaths` decides which 404s it may answer;
   - the filter `RequestAuditLogFilter` writes one `info` line per request;

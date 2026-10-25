@@ -7,7 +7,7 @@ import jakarta.inject.Singleton;
 
 @Singleton
 public class SpaNavigationPaths {
-	private static final List<String> RESERVED_PREFIXES = List.of("/api", "/assets", "/health", "/rapidoc", "/redoc", "/swagger", "/swagger-ui");
+	private static final List<String> RESERVED_PREFIXES = List.of("/api", "/assets", "/health", "/login", "/rapidoc", "/redoc", "/swagger", "/swagger-ui");
 	private static final Pattern LOWERCASE_FILE_EXTENSION = Pattern.compile("\\.[a-z0-9]{1,8}$");
 	private static final char SEPARATOR = '/';
 

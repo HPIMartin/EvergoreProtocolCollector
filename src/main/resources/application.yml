@@ -43,6 +43,8 @@ evergore:
       - /index.html
       - /assets/**
       - /favicon.ico
+      - /login
+      - /login/**
       - /admin
       - /api/v1/admin/status
       - /api/v1/login
