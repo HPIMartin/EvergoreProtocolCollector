@@ -90,11 +90,18 @@ Five top-level folders under `frontend/src/`:
 
 | Component | Renders |
 |-----------|---------|
-| `PageFrame` | Banner with brand and navigation (`aria-current="page"` marks the current link), `<main>` for the view. |
+| `PageFrame` | Banner with brand and navigation (`aria-current="page"` marks the current link), `<main>` for the view. Its optional `account` prop adds an account area after the navigation (below). |
 | `Link` | An `<a href>` that reports a **plain** click to its `onFollow` and leaves a modified or middle click to the browser, so in-app navigation costs no reload while bookmarking and open-in-new-tab keep working. `PageFrame` and a `link` column render through it. |
 | `SortableTable<Row>` | Semantic `<table>` whose header click sorts and whose second click reverses; its columns, `deliveredOrder`, `total` and `mark` are in the bullets below. |
 | `StatusPanel` | The `loading` / `empty` / `error` states; `role="alert"` for the error, `role="status"` otherwise. |
 
+- **The account area of the page frame** (`data-testid="account-area"`):
+  - it says „Angemeldet als <name>“ (`logged-in-as`);
+  - it offers the button „Abmelden“;
+  - it offers the button „Passwort ändern“ unless the login is the admin key's;
+  - they are buttons, not anchors, so the navigation reader collects none of them;
+  - the area holds no `p[data-testid]`, which the admin page reader collects;
+  - only after a failed logout it holds the `status-panel` that says so.
 - **The sortable table's columns**: a column is `text`, `number`, `timestamp` or `link`.
   - A `timestamp` may carry an `href` and then links what it shows.
 - **A `deliveredOrder`** makes the table sort nothing itself: it hands the chosen sort to its
@@ -187,15 +194,17 @@ Five top-level folders under `frontend/src/`:
 - The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
   malformed escape is "no view", not a crash.
 - **Every view that loads data passes through one of six outcomes** (`useLoad` + `LoadedView`):
-  loading, loaded, login refused, role refused (a 403, shown as „Diese Seite ist dem Admin
-  vorbehalten.“), no such page (a ledger read the API answers 400), failed. A
-  failure shows one fixed German text and never the API's status or message. A 401 sends the
-  browser to `/login?next=<the current path and query, URL-encoded>` (`LoginRequired`, which
-  calls `App`'s `navigate` prop, the browser's `window.location.assign` by default), so a login
-  that ends while a page is open leads back to that page after the next login; the page shows
-  „Weiter zur Anmeldung…“ meanwhile. A ledger view
-  additionally tells **"known avatar, no entries"** from **"unknown avatar"**, which is the client
-  side of the 404 decision below.
+  loading, loaded, login refused, role refused, no such page, failed:
+  - a role refused is a 403, shown as „Diese Seite ist dem Admin vorbehalten.“;
+  - no such page is a ledger read the API answers 400;
+  - a failure shows one fixed German text and never the API's status or message;
+  - a 401 sends the browser to `/login?next=<the current path and query, URL-encoded>`
+    (`LoginRequired`, which calls `App`'s `navigate` prop, the browser's `window.location.assign`
+    by default);
+  - so a login that ends while a page is open leads back to that page after the next login, and
+    the page shows „Weiter zur Anmeldung…“ meanwhile;
+  - a ledger view additionally tells **"known avatar, no entries"** from **"unknown avatar"**,
+    which is the client side of the 404 decision below.
 - **`useLoad` starts a request on its request key alone**, the key being the request's full
   identity (`requestKeyOf`): it calls `load` through `useEffectEvent`, so a new `load` closure
   starts no request.
@@ -311,6 +320,16 @@ Five top-level folders under `frontend/src/`:
   each of them reports on, so every column head sorts something real instead of offering a sort on a
   column of identical words. A cell without a timestamp links nowhere: nothing happened there to
   open. All of it goes through `Link`, so the shell is never reloaded.
+- **The account area is fed by the session** (`useAccount`, `App`'s `session` prop, built by
+  `httpSessionApi`):
+  - it reads `GET /api/v1/me`;
+  - it shows nothing while that is loading or failed, so the page's own load decides about a login
+    that has ended;
+  - „Abmelden“ posts `/api/v1/logout` and then navigates to `/login`;
+  - a logout the service answers 401 navigates to `/login` too, because the login had ended
+    already (after a restart or the 7 days);
+  - any other failure leaves the page where it is and shows „Die Abmeldung hat nicht geklappt.
+    Bitte erneut versuchen.“ in the account area until the next click on „Abmelden“.
 - **Tests reach no network.** The faked seam is `HttpGet`, answering a real `Response`, so status
   handling and URL building are exercised for real. Asynchronous assertions flush microtasks with
   `act`; no test uses a timer, a `waitFor` poll or a wall-clock wait.
@@ -357,6 +376,9 @@ Five top-level folders under `frontend/src/`:
   - `logged-in` navigates to the `next` the answer names;
   - the issued password lives only in the page's component state, never in the browser's storage
     or the address.
+- **A server error, an answer the page cannot read or a request that never arrived** shows „Die
+  Daten konnten nicht geladen werden. Bitte später erneut versuchen.“ (`LOAD_FAILED_MESSAGE`,
+  `ui`, the text of the dashboard's failed load) in both steps and stays (decision 2026-10-25).
 - **The return target is the service's rule**, not the page's: the page sends the `next` query
   parameter of its own address with both steps and navigates to the `next` the service answers
   ([build-run-deploy.md](build-run-deploy.md), "The login API"), so the rule exists once.

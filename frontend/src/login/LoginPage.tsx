@@ -4,7 +4,7 @@ import { useState } from 'react'
 import type { HttpPost } from '../api'
 import { httpLoginApi } from '../api'
 import type { LoginAnswer } from '../domain'
-import { StatusPanel } from '../ui'
+import { LOAD_FAILED_MESSAGE, StatusPanel } from '../ui'
 
 import { NewPasswordStep } from './NewPasswordStep.tsx'
 
@@ -14,14 +14,14 @@ export interface LoginPageProps {
   readonly navigate: (target: string) => void
 }
 
-type Refusal = Extract<
-  LoginAnswer,
-  'wrong-name-or-password' | 'too-many-attempts'
->
+type Refusal =
+  | Extract<LoginAnswer, 'wrong-name-or-password' | 'too-many-attempts'>
+  | 'unavailable'
 
 const REFUSAL_TEXTS: Readonly<Record<Refusal, string>> = {
   'wrong-name-or-password': 'Name oder Passwort stimmt nicht.',
   'too-many-attempts': 'Zu viele Versuche. Bitte warte einen Moment.',
+  unavailable: LOAD_FAILED_MESSAGE,
 }
 
 const NEXT = 'next'
@@ -43,15 +43,25 @@ export function LoginPage({ search, post, navigate }: LoginPageProps) {
     setRefusal('wrong-name-or-password')
   }
 
+  async function answerOfLoggingIn(): Promise<LoginAnswer | null> {
+    try {
+      return await api.logIn(name, password, next)
+    } catch {
+      return null
+    }
+  }
+
   async function logIn(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     if (loggingIn) {
       return
     }
     setLoggingIn(true)
-    const answer = await api.logIn(name, password, next)
+    const answer = await answerOfLoggingIn()
     setLoggingIn(false)
-    if (typeof answer === 'object') {
+    if (answer === null) {
+      setRefusal('unavailable')
+    } else if (typeof answer === 'object') {
       navigate(answer.next)
     } else if (answer === 'choose-new-password') {
       setRefusal(null)

@@ -3,6 +3,7 @@ package dev.schoenberg.evergore.protocolParser.acceptance.browser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.net.URLEncoder;
 import java.time.Duration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -89,6 +90,15 @@ public final class MemberBrowser {
 	public void follow(String linkText) {
 		String before = driver().getCurrentUrl();
 		driver().findElement(By.linkText(linkText)).click();
+		awaitTheMoveFrom(before);
+	}
+
+	public void followALinkFromAnotherSite(String href) {
+		String page = "<a id=\"across\" href=\"" + addressOf(href) + "\">to the dashboard</a>";
+		String anotherSite = "data:text/html;charset=utf-8," + URLEncoder.encode(page, UTF_8).replace("+", "%20");
+		driver().get(anotherSite);
+		String before = driver().getCurrentUrl();
+		driver().findElement(By.id("across")).click();
 		awaitTheMoveFrom(before);
 	}
 

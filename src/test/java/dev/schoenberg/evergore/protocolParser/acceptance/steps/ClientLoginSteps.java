@@ -21,6 +21,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.HealthReport;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.OperatorSettings;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.rest.filter.AcceptanceClientIp;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.BANK;
@@ -39,6 +40,7 @@ public class ClientLoginSteps {
 	private static final int BAD_REQUEST = 400;
 	private static final int FOUND = 302;
 	private static final int FORBIDDEN = 403;
+	private static final int NO_CONTENT = 204;
 
 	private final LoginRequests logins;
 	private final ServiceRequests requests;
@@ -49,6 +51,7 @@ public class ClientLoginSteps {
 	private final HealthReport health;
 	private Answer earlierLoginAnswer;
 	private String issuedLogin;
+	private String copiedLogin;
 	private String returnTarget;
 
 	public ClientLoginSteps(LoginRequests logins, ServiceRequests requests, Accounts accounts, ClientAnswer received, OperatorSettings settings, RunningService service,
@@ -221,6 +224,69 @@ public class ClientLoginSteps {
 		received.remember(logins.asking(addresses.getFirst(), alteration.apply(issuedLogin)));
 	}
 
+	@When("a client logs in as {string} with the password {string}")
+	public void aClientLogsInAs(String name, String password) {
+		received.remember(logins.logIn(name, password));
+	}
+
+	@Given("another client has taken a copy of that login")
+	public void anotherClientHasTakenACopyOfThatLogin() {
+		copiedLogin = issuedLogin;
+	}
+
+	@Given("the first client has logged out")
+	public void theFirstClientHasLoggedOut() {
+		Answer answer = logins.logOut(issuedLogin);
+
+		assertThat(answer.status()).as("the logout: " + answer.body()).isEqualTo(NO_CONTENT);
+	}
+
+	@When("the client logs out")
+	public void theClientLogsOut() {
+		received.remember(logins.logOut(issuedLogin));
+	}
+
+	@When("the other client asks for the overview's figures with the copied login")
+	public void theOtherClientAsksForTheOverviewsFiguresWithTheCopiedLogin() {
+		received.remember(logins.asking(OVERVIEWS_FIGURES, copiedLogin));
+	}
+
+	@Then("the operator finds a new login as {string} with the password {string} opening the overview's figures")
+	public void theOperatorFindsANewLoginOpeningTheOverviewsFigures(String name, String password) {
+		String login = LoginRequests.loginValueIn(logins.logIn(name, password));
+
+		Answer figures = logins.asking(OVERVIEWS_FIGURES, login);
+
+		assertThat(figures.status()).isEqualTo(SERVED);
+	}
+
+	@Then("the operator finds the login kept for 7 days counted from its arrival in the browser, whatever date the service's clock reads")
+	public void theOperatorFindsTheLoginKeptForSevenDays() {
+		String cookie = setCookie();
+
+		assertThat(cookie).contains("Max-Age=" + Login.LIFETIME.toSeconds()).doesNotContainIgnoringCase("Expires");
+	}
+
+	@Then("the operator finds the login out of reach of the page's scripts")
+	public void theOperatorFindsTheLoginOutOfReachOfTheScripts() {
+		assertThat(setCookie()).contains("HttpOnly");
+	}
+
+	@Then("the operator finds the login not sent along with what another site's page sends on its own")
+	public void theOperatorFindsTheLoginNotSentWithWhatAnotherSiteSends() {
+		assertThat(setCookie()).contains("SameSite=Lax");
+	}
+
+	@Then("the operator finds the login not marked for HTTPS only, since the service still runs over plain HTTP")
+	public void theOperatorFindsTheLoginNotMarkedForHttpsOnly() {
+		assertThat(setCookie()).doesNotContainIgnoringCase("Secure");
+	}
+
+	@Then("the operator finds the login cleared from the client's browser")
+	public void theOperatorFindsTheLoginClearedFromTheClientsBrowser() {
+		assertThat(setCookie()).startsWith(LoginRequests.SESSION_COOKIE + "=;").contains("Max-Age=0");
+	}
+
 	@When("the client asks for the admin's status figures with its login")
 	public void theClientAsksForTheAdminsStatusFiguresWithItsLogin() {
 		received.remember(logins.asking(ADMINS_STATUS_FIGURES, issuedLogin));
@@ -263,6 +329,10 @@ public class ClientLoginSteps {
 	@Then("the operator finds the request refused for breaking the password rule")
 	public void theOperatorFindsTheRequestRefusedForBreakingThePasswordRule() {
 		assertThat(received.current().status()).isEqualTo(BAD_REQUEST);
+	}
+
+	private String setCookie() {
+		return received.current().header("Set-Cookie").orElseThrow(() -> new AssertionError("The service set no cookie, it answered " + received.current().status()));
 	}
 
 	private void askForTheOverviewsFiguresWith(Map<String, String> parameters) {

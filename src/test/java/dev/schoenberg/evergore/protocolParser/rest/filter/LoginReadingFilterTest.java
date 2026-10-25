@@ -1,5 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +15,7 @@ import io.micronaut.http.simple.SimpleHttpRequestFactory;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 
+import dev.schoenberg.evergore.protocolParser.application.LogOut;
 import dev.schoenberg.evergore.protocolParser.application.LoginGenerations;
 import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
 import dev.schoenberg.evergore.protocolParser.application.ValidLogins;
@@ -36,7 +38,7 @@ class LoginReadingFilterTest {
 		return passedThrough;
 	};
 	private final LoginGenerations generations = new LoginGenerations();
-	private final LoginReadingFilter tested = new LoginReadingFilter(new ValidLogins(new SignsOnlyOneValue(), generations));
+	private final LoginReadingFilter tested = new LoginReadingFilter(new ValidLogins(new SignsOnlyOneValue(), generations, new LogOut(Clock.systemUTC())));
 
 	@Test
 	void putsTheLoginOfTheSessionCookieOnTheRequest() {

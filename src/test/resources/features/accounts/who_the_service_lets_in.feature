@@ -1,4 +1,3 @@
-@wip
 Feature: Who the service lets in
   This is the operator's security requirement. Without a login the service answers only the login
   page with its own files, and the health check with its verdict alone, as "The service's health

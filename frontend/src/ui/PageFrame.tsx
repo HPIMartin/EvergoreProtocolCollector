@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 
 import { Link } from './Link.tsx'
+import { LOG_OUT_FAILED_MESSAGE } from './logOutFailedMessage.ts'
+import { StatusPanel } from './StatusPanel.tsx'
 
 export type NavigationLink = {
   readonly label: string
@@ -8,9 +10,18 @@ export type NavigationLink = {
   readonly current: boolean
 }
 
+export type PageFrameAccount = {
+  readonly name: string
+  readonly canChangePassword: boolean
+  readonly logOutFailed: boolean
+  readonly onLogOut: () => void
+  readonly onChangePassword: () => void
+}
+
 export type PageFrameProps = {
   readonly brand: string
   readonly navigation: readonly NavigationLink[]
+  readonly account?: PageFrameAccount
   readonly onFollow?: (href: string) => void
   readonly children: ReactNode
 }
@@ -18,6 +29,7 @@ export type PageFrameProps = {
 export function PageFrame({
   brand,
   navigation,
+  account,
   onFollow,
   children,
 }: PageFrameProps) {
@@ -43,10 +55,30 @@ export function PageFrame({
             ))}
           </ul>
         </nav>
+        {account === undefined ? null : <AccountArea account={account} />}
       </header>
       <main className="page-frame__content" data-testid="page-content">
         {children}
       </main>
+    </div>
+  )
+}
+
+function AccountArea({ account }: { readonly account: PageFrameAccount }) {
+  return (
+    <div className="page-frame__account" data-testid="account-area">
+      <span data-testid="logged-in-as">{`Angemeldet als ${account.name}`}</span>
+      <button type="button" onClick={account.onLogOut}>
+        Abmelden
+      </button>
+      {account.canChangePassword ? (
+        <button type="button" onClick={account.onChangePassword}>
+          Passwort ändern
+        </button>
+      ) : null}
+      {account.logOutFailed ? (
+        <StatusPanel variant="error" message={LOG_OUT_FAILED_MESSAGE} />
+      ) : null}
     </div>
   )
 }

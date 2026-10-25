@@ -1,5 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.rest.filter;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -7,6 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
+import dev.schoenberg.evergore.protocolParser.application.LogOut;
 import dev.schoenberg.evergore.protocolParser.application.LoginGenerations;
 import dev.schoenberg.evergore.protocolParser.application.ValidLogins;
 import dev.schoenberg.evergore.protocolParser.helper.config.RateLimitConfiguration;
@@ -39,7 +41,7 @@ class FilterChainOrderTest {
 	}
 
 	private LoginReadingFilter loginReadingFilter() {
-		return new LoginReadingFilter(new ValidLogins(new NoSignedLogins(), new LoginGenerations()));
+		return new LoginReadingFilter(new ValidLogins(new NoSignedLogins(), new LoginGenerations(), new LogOut(Clock.systemUTC())));
 	}
 
 	private RateLimitFilter rateLimitFilter() {

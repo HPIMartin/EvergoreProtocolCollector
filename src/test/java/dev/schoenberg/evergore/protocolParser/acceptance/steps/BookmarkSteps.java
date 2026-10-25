@@ -88,6 +88,11 @@ public class BookmarkSteps {
 		browser.openHref(LOGIN_PAGE + "?next=" + URLEncoder.encode(target, UTF_8));
 	}
 
+	@When("the member follows a link to the overview from a page of another site")
+	public void theMemberFollowsALinkToTheOverviewFromAPageOfAnotherSite() {
+		browser.followALinkFromAnotherSite(OVERVIEW);
+	}
+
 	@When("the member opens {bookmark}")
 	public void theMemberOpens(String path) {
 		browser.opening().open(path);

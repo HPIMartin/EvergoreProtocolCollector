@@ -9,7 +9,9 @@ import {
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import type { HttpGet } from '../api'
+import type { HttpGet, SessionApi } from '../api'
+import { Unauthorized } from '../api'
+import type { Me } from '../domain'
 
 import { App } from './App.tsx'
 
@@ -489,13 +491,30 @@ function alwaysServing(status: number, body: string | null): FakeServer {
   return serving(() => ({ status, body }))
 }
 
+const NO_SESSION: SessionApi = {
+  me: () => new Promise<Me>(() => undefined),
+  logOut: () => Promise.resolve(),
+}
+
+function sessionOf(me: Me, loggedOut: number[] = []): SessionApi {
+  return {
+    me: () => Promise.resolve(me),
+    logOut: () => {
+      loggedOut.push(1)
+
+      return Promise.resolve()
+    },
+  }
+}
+
 async function shellAt(
   address: string,
   server: FakeServer,
   navigate: (target: string) => void = () => undefined,
+  session: SessionApi = NO_SESSION,
 ): Promise<void> {
   window.history.replaceState(null, '', address)
-  render(<App get={server.get} navigate={navigate} />)
+  render(<App get={server.get} session={session} navigate={navigate} />)
   await act(async () => undefined)
 }
 
@@ -1439,7 +1458,7 @@ describe('App', () => {
       Promise.reject(new TypeError('Failed to fetch'))
 
     window.history.replaceState(null, '', `/overview`)
-    render(<App get={unreachable} />)
+    render(<App get={unreachable} session={NO_SESSION} />)
     await act(async () => undefined)
 
     const shown = shownStatus()
@@ -1503,7 +1522,7 @@ describe('App', () => {
     window.history.replaceState(null, '', `/overview`)
     const server = serving(() => ({ status: 200, body: OVERVIEW_BODY }))
 
-    render(<App get={server.get} />)
+    render(<App get={server.get} session={NO_SESSION} />)
 
     const status = shownStatus()
 
@@ -1659,7 +1678,7 @@ describe('App', () => {
 
     render(
       <StrictMode>
-        <App get={server.get} />
+        <App get={server.get} session={NO_SESSION} />
       </StrictMode>,
     )
     await act(async () => undefined)
@@ -2486,5 +2505,129 @@ describe('App', () => {
       'Bank /avatars/Calix/bank',
       'Lager /avatars/Calix/storage',
     ])
+  })
+})
+
+describe('App account area', () => {
+  afterEach(cleanup)
+
+  it('says who is logged in', async () => {
+    const session = sessionOf({ name: 'Aurora', canChangePassword: true })
+
+    await shellAt(
+      '/overview',
+      alwaysServing(200, OVERVIEW_BODY),
+      () => undefined,
+      session,
+    )
+
+    expect(screen.getByTestId('logged-in-as').textContent).toBe(
+      'Angemeldet als Aurora',
+    )
+  })
+
+  it('offers the buttons for a login of an account', async () => {
+    const session = sessionOf({ name: 'Aurora', canChangePassword: true })
+
+    await shellAt(
+      '/overview',
+      alwaysServing(200, OVERVIEW_BODY),
+      () => undefined,
+      session,
+    )
+
+    const buttons = within(screen.getByTestId('account-area'))
+      .getAllByRole('button')
+      .map((button) => button.textContent)
+    expect(buttons).toEqual(['Abmelden', 'Passwort ändern'])
+  })
+
+  it('offers no change of a password to the login of the admin key', async () => {
+    const session = sessionOf({ name: 'admin', canChangePassword: false })
+
+    await shellAt(
+      '/overview',
+      alwaysServing(200, OVERVIEW_BODY),
+      () => undefined,
+      session,
+    )
+
+    const buttons = within(screen.getByTestId('account-area'))
+      .getAllByRole('button')
+      .map((button) => button.textContent)
+    expect(buttons).toEqual(['Abmelden'])
+  })
+
+  it('shows no account area while it does not know who is logged in', async () => {
+    await shellAt('/overview', alwaysServing(200, OVERVIEW_BODY))
+
+    expect(screen.queryByTestId('account-area')).toBeNull()
+  })
+
+  it('leads to the login page when the logout finds the login ended already', async () => {
+    const navigatedTo: string[] = []
+    const session: SessionApi = {
+      ...sessionOf({ name: 'Aurora', canChangePassword: true }),
+      logOut: () => Promise.reject(new Unauthorized()),
+    }
+    await shellAt(
+      '/overview',
+      alwaysServing(200, OVERVIEW_BODY),
+      (target) => navigatedTo.push(target),
+      session,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abmelden' }))
+    await act(async () => undefined)
+
+    expect(navigatedTo).toStrictEqual(['/login'])
+  })
+
+  it('stays on the page and tells the member when the logout fails for any other reason', async () => {
+    const navigatedTo: string[] = []
+    const session: SessionApi = {
+      ...sessionOf({ name: 'Aurora', canChangePassword: true }),
+      logOut: () => Promise.reject(new Error('Failed to fetch')),
+    }
+    await shellAt(
+      '/overview',
+      alwaysServing(200, OVERVIEW_BODY),
+      (target) => navigatedTo.push(target),
+      session,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abmelden' }))
+    await act(async () => undefined)
+
+    const told = within(screen.getByTestId('account-area'))
+      .queryAllByTestId('status-panel')
+      .map((panel) => panel.textContent)
+    expect({ navigatedTo, told }).toStrictEqual({
+      navigatedTo: [],
+      told: ['Die Abmeldung hat nicht geklappt. Bitte erneut versuchen.'],
+    })
+  })
+
+  it('logs out and leads to the login page', async () => {
+    const loggedOut: number[] = []
+    const navigatedTo: string[] = []
+    const session = sessionOf(
+      { name: 'Aurora', canChangePassword: true },
+      loggedOut,
+    )
+    await shellAt(
+      '/overview',
+      alwaysServing(200, OVERVIEW_BODY),
+      (target) => navigatedTo.push(target),
+      session,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abmelden' }))
+    await act(async () => undefined)
+
+    expect({ loggedOut, navigatedTo }).toStrictEqual({
+      loggedOut: [1],
+      navigatedTo: ['/login'],
+    })
   })
 })

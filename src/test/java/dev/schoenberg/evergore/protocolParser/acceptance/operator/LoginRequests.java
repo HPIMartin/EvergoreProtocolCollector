@@ -13,6 +13,7 @@ public class LoginRequests {
 
 	private static final String LOGIN = "/api/v1/login";
 	private static final String NEW_PASSWORD = "/api/v1/login/new-password";
+	private static final String LOGOUT = "/api/v1/logout";
 	private static final String SET_COOKIE = "Set-Cookie";
 	private static final String ADDRESS_PREFIX = "10.1.";
 	private static final int ADDRESSES_PER_BLOCK = 250;
@@ -49,6 +50,12 @@ public class LoginRequests {
 		Map<String, String> headers = new HashMap<>(fromAFreshAddress());
 		headers.put("Cookie", SESSION_COOKIE + "=" + loginValue);
 		return requests.get(address, headers);
+	}
+
+	public Answer logOut(String loginValue) {
+		Map<String, String> headers = new HashMap<>(fromAFreshAddress());
+		headers.put("Cookie", SESSION_COOKIE + "=" + loginValue);
+		return requests.post(LOGOUT, "", headers);
 	}
 
 	public static String loginValueIn(Answer answer) {

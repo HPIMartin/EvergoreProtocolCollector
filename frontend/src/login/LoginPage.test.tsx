@@ -206,6 +206,52 @@ describe('LoginPage', () => {
     expect(shown.navigatedTo).toEqual([])
   })
 
+  it.each([
+    ['a server error', { status: 500, body: null }],
+    ['an answer it cannot read', { status: 200, body: 'not JSON' }],
+    ['an answer without a step it knows', { status: 200, body: '{}' }],
+  ])(
+    'says in German that the data could not be loaded after %s and stays',
+    async (_, answer) => {
+      const shown = loginPageAt('', answering(answer))
+
+      await logIn('Aurora', CHOSEN)
+
+      const messages = shownMessages()
+      expect(messages).toEqual([
+        'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
+      ])
+      expect(shown.navigatedTo).toEqual([])
+    },
+  )
+
+  it('says the same after a request that never arrived', async () => {
+    const unreachable: FakeService = {
+      posted: [],
+      post: () => Promise.reject(new TypeError('Failed to fetch')),
+    }
+    loginPageAt('', unreachable)
+
+    await logIn('Aurora', CHOSEN)
+
+    const messages = shownMessages()
+    expect(messages).toEqual([
+      'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
+    ])
+  })
+
+  it('says the same after a server error on the choice of a new password', async () => {
+    loginPageAt('', afterTheIssuedPassword({ status: 500, body: null }))
+    await logIn('Boreas', ISSUED)
+
+    await chooseNewPassword(CHOSEN)
+
+    const messages = shownMessages()
+    expect(messages).toEqual([
+      'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
+    ])
+  })
+
   it('asks to wait after too many attempts', async () => {
     const shown = loginPageAt('', answering(TOO_MANY_REQUESTS))
 

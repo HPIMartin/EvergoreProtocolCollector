@@ -18,6 +18,7 @@ import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.application.IssuedPasswords;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 import dev.schoenberg.evergore.protocolParser.application.LogIn;
+import dev.schoenberg.evergore.protocolParser.application.LogOut;
 import dev.schoenberg.evergore.protocolParser.application.LoginGenerations;
 import dev.schoenberg.evergore.protocolParser.application.LoginStart;
 import dev.schoenberg.evergore.protocolParser.application.PasswordCheck;
@@ -148,8 +149,13 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public ValidLogins validLogins(SignedLogins signedLogins, LoginGenerations generations) {
-		return new ValidLogins(signedLogins, generations);
+	public LogOut logOut(Clock clock) {
+		return new LogOut(clock);
+	}
+
+	@Singleton
+	public ValidLogins validLogins(SignedLogins signedLogins, LoginGenerations generations, LogOut logOut) {
+		return new ValidLogins(signedLogins, generations, logOut);
 	}
 
 	@Singleton

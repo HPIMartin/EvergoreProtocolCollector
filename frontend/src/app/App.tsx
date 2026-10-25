@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import type { HttpGet } from '../api'
+import type { HttpGet, SessionApi } from '../api'
 import { httpProtocolApi } from '../api'
 import type { NavigationLink } from '../ui'
 import { PageFrame, StatusPanel } from '../ui'
@@ -14,12 +14,14 @@ import { StorageLedgerView } from './StorageLedgerView.tsx'
 import type { Route, RouteVisitor } from './route.ts'
 import { bankPath, overviewPath, storagePath } from './route.ts'
 import { hrefOf } from './href.ts'
+import { useAccount } from './useAccount.ts'
 import { useRouting } from './useRouting.ts'
 
 const BRAND = 'Evergore Protocol Collector'
 
 export interface AppProps {
   readonly get: HttpGet
+  readonly session: SessionApi
   readonly navigate?: (target: string) => void
 }
 
@@ -27,9 +29,10 @@ function navigateTheBrowser(target: string): void {
   window.location.assign(target)
 }
 
-export function App({ get, navigate = navigateTheBrowser }: AppProps) {
+export function App({ get, session, navigate = navigateTheBrowser }: AppProps) {
   const { route, follow } = useRouting()
   const api = httpProtocolApi(get)
+  const account = useAccount(session, navigate, follow)
 
   const view: RouteVisitor<ReactNode> = {
     overview: () => <OverviewView api={api} onFollow={follow} />,
@@ -66,6 +69,7 @@ export function App({ get, navigate = navigateTheBrowser }: AppProps) {
       <PageFrame
         brand={BRAND}
         navigation={navigationOf(route)}
+        account={account}
         onFollow={follow}
       >
         {route.accept(view)}

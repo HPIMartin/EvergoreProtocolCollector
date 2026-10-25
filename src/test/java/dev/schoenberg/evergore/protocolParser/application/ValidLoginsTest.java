@@ -1,6 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -17,7 +19,8 @@ class ValidLoginsTest {
 
 	private final RecordingLogins signed = new RecordingLogins();
 	private final LoginGenerations generations = new LoginGenerations();
-	private final ValidLogins tested = new ValidLogins(signed, generations);
+	private final LogOut logOut = new LogOut(Clock.fixed(MADE, ZoneOffset.UTC));
+	private final ValidLogins tested = new ValidLogins(signed, generations, logOut);
 
 	@Test
 	void answersTheLoginOfAnAccountWhoseGenerationHasNotMovedOn() {
@@ -27,6 +30,17 @@ class ValidLoginsTest {
 		Optional<Login> valid = tested.behind(VALUE);
 
 		assertThat(valid).contains(login);
+	}
+
+	@Test
+	void answersNothingForALoginThatLoggedOut() {
+		Login login = accountLogin("Aurora", 0);
+		signed.readAs(VALUE, login);
+		logOut.of(login);
+
+		Optional<Login> valid = tested.behind(VALUE);
+
+		assertThat(valid).isEmpty();
 	}
 
 	@Test

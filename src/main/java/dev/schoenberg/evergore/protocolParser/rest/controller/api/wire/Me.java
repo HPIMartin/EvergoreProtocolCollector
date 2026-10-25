@@ -1,0 +1,5 @@
+package dev.schoenberg.evergore.protocolParser.rest.controller.api.wire;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public record Me(@JsonProperty("name") String name, @JsonProperty("canChangePassword") boolean canChangePassword) {}

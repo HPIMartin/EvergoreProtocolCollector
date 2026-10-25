@@ -1,6 +1,13 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
+import type { PageFrameAccount } from './PageFrame.tsx'
 import { PageFrame } from './PageFrame.tsx'
 
 const navigation = [
@@ -71,6 +78,111 @@ describe('PageFrame', () => {
     expect(screen.getByTestId('page-content').textContent).toBe(
       'Der Inhalt der Seite',
     )
+  })
+})
+
+interface Clicked {
+  readonly loggedOut: number[]
+  readonly passwordChanges: number[]
+}
+
+function renderFrameOf(account: Partial<PageFrameAccount>): Clicked {
+  const clicked: Clicked = { loggedOut: [], passwordChanges: [] }
+  render(
+    <PageFrame
+      brand="Gildenbank"
+      navigation={navigation}
+      account={{
+        name: 'Aurora',
+        canChangePassword: true,
+        logOutFailed: false,
+        onLogOut: () => clicked.loggedOut.push(1),
+        onChangePassword: () => clicked.passwordChanges.push(1),
+        ...account,
+      }}
+    >
+      <p>Der Inhalt der Seite</p>
+    </PageFrame>,
+  )
+
+  return clicked
+}
+
+describe('PageFrame account area', () => {
+  afterEach(cleanup)
+
+  it('shows no account area without an account', () => {
+    renderFrame()
+
+    expect(screen.queryByTestId('account-area')).toBeNull()
+  })
+
+  it('says who is logged in', () => {
+    renderFrameOf({ name: 'Ärger' })
+
+    expect(screen.getByTestId('logged-in-as').textContent).toBe(
+      'Angemeldet als Ärger',
+    )
+  })
+
+  it('offers the buttons to log out and to change the password', () => {
+    renderFrameOf({})
+
+    const buttons = screen
+      .getAllByRole('button')
+      .map((button) => button.textContent)
+
+    expect(buttons).toEqual(['Abmelden', 'Passwort ändern'])
+  })
+
+  it('offers no change of a password to a login that has none', () => {
+    renderFrameOf({ canChangePassword: false })
+
+    const buttons = screen
+      .getAllByRole('button')
+      .map((button) => button.textContent)
+
+    expect(buttons).toEqual(['Abmelden'])
+  })
+
+  it.each([
+    [true, ['Die Abmeldung hat nicht geklappt. Bitte erneut versuchen.']],
+    [false, []],
+  ])(
+    'shows the failure of a logout in the account area only when the logout failed: %s',
+    (logOutFailed, shown) => {
+      renderFrameOf({ logOutFailed })
+
+      const texts = within(screen.getByTestId('account-area'))
+        .queryAllByTestId('status-panel')
+        .map((panel) => panel.textContent)
+
+      expect(texts).toStrictEqual(shown)
+    },
+  )
+
+  it('keeps the account area out of the navigation links', () => {
+    renderFrameOf({})
+
+    const labels = screen.getAllByRole('link').map((link) => link.textContent)
+
+    expect(labels).toEqual(['Übersicht', 'Bank', 'Lager'])
+  })
+
+  it('reports a click on Abmelden', () => {
+    const clicked = renderFrameOf({})
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abmelden' }))
+
+    expect(clicked).toStrictEqual({ loggedOut: [1], passwordChanges: [] })
+  })
+
+  it('reports a click on Passwort ändern', () => {
+    const clicked = renderFrameOf({})
+
+    fireEvent.click(screen.getByRole('button', { name: 'Passwort ändern' }))
+
+    expect(clicked).toStrictEqual({ loggedOut: [], passwordChanges: [1] })
   })
 })
 

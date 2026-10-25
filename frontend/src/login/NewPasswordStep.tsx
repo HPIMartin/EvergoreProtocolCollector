@@ -2,9 +2,9 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 
 import type { LoginApi } from '../api'
-import type { ChoiceRefusal } from '../domain'
+import type { ChoiceRefusal, NewPasswordAnswer } from '../domain'
 import { refusalOfChoosing } from '../domain'
-import { StatusPanel } from '../ui'
+import { LOAD_FAILED_MESSAGE, StatusPanel } from '../ui'
 
 export interface NewPasswordStepProps {
   readonly api: LoginApi
@@ -15,7 +15,7 @@ export interface NewPasswordStepProps {
   readonly onRefused: () => void
 }
 
-type Refusal = ChoiceRefusal | 'too-many-attempts'
+type Refusal = ChoiceRefusal | 'too-many-attempts' | 'unavailable'
 
 const REFUSAL_TEXTS: Readonly<Record<Refusal, string>> = {
   'entries-differ': 'Die beiden Eingaben stimmen nicht überein.',
@@ -23,6 +23,7 @@ const REFUSAL_TEXTS: Readonly<Record<Refusal, string>> = {
     'Das Passwort braucht mindestens 8 Zeichen, darunter eine Zahl und ein Sonderzeichen.',
   'same-as-before': 'Das neue Passwort muss sich vom bisherigen unterscheiden.',
   'too-many-attempts': 'Zu viele Versuche. Bitte warte einen Moment.',
+  unavailable: LOAD_FAILED_MESSAGE,
 }
 
 export function NewPasswordStep({
@@ -38,6 +39,19 @@ export function NewPasswordStep({
   const [refusal, setRefusal] = useState<Refusal | null>(null)
   const [saving, setSaving] = useState(false)
 
+  async function answerOfChoosing(): Promise<NewPasswordAnswer | null> {
+    try {
+      return await api.chooseNewPassword(
+        name,
+        issuedPassword,
+        newPassword,
+        next,
+      )
+    } catch {
+      return null
+    }
+  }
+
   async function choose(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     if (saving) {
@@ -49,14 +63,11 @@ export function NewPasswordStep({
       return
     }
     setSaving(true)
-    const answer = await api.chooseNewPassword(
-      name,
-      issuedPassword,
-      newPassword,
-      next,
-    )
+    const answer = await answerOfChoosing()
     setSaving(false)
-    if (typeof answer === 'object') {
+    if (answer === null) {
+      setRefusal('unavailable')
+    } else if (typeof answer === 'object') {
       onLoggedIn(answer.next)
     } else if (answer === 'wrong-name-or-password') {
       onRefused()

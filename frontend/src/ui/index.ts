@@ -1,12 +1,18 @@
 export { formatCount, formatGold, formatTimestamp } from './format.ts'
 export { describeAbstention, describeRoundTrip } from './roundTripText.ts'
+export { LOAD_FAILED_MESSAGE } from './loadFailedMessage.ts'
+export { LOG_OUT_FAILED_MESSAGE } from './logOutFailedMessage.ts'
 export { Link } from './Link.tsx'
 export { Pagination } from './Pagination.tsx'
 export type { PaginationProps } from './Pagination.tsx'
 export { OptionSwitch } from './OptionSwitch.tsx'
 export type { SwitchOption } from './OptionSwitch.tsx'
 export { PageFrame } from './PageFrame.tsx'
-export type { NavigationLink, PageFrameProps } from './PageFrame.tsx'
+export type {
+  NavigationLink,
+  PageFrameAccount,
+  PageFrameProps,
+} from './PageFrame.tsx'
 export { SortableTable } from './SortableTable.tsx'
 export type {
   Column,

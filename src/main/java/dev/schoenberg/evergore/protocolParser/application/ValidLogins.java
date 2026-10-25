@@ -9,10 +9,12 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginSource;
 public class ValidLogins {
 	private final SignedLogins signedLogins;
 	private final LoginGenerations generations;
+	private final LogOut logOut;
 
-	public ValidLogins(SignedLogins signedLogins, LoginGenerations generations) {
+	public ValidLogins(SignedLogins signedLogins, LoginGenerations generations, LogOut logOut) {
 		this.signedLogins = signedLogins;
 		this.generations = generations;
+		this.logOut = logOut;
 	}
 
 	public Optional<Login> behind(String value) {
@@ -20,6 +22,10 @@ public class ValidLogins {
 	}
 
 	private boolean isCurrent(Login login) {
+		return !logOut.hasEnded(login) && isOfTheCurrentGeneration(login);
+	}
+
+	private boolean isOfTheCurrentGeneration(Login login) {
 		return login.source() == LoginSource.ADMIN_KEY || login.generation() == generations.of(new LoginName(login.accountName()).key());
 	}
 }

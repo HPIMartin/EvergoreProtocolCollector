@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { StatusPanel } from '../ui'
+import { LOAD_FAILED_MESSAGE, StatusPanel } from '../ui'
 
 import { LoginRequired } from './LoginRequired.tsx'
 import type { Load } from './useLoad.ts'
@@ -24,11 +24,6 @@ export function LoadedView<T>({ load, children }: LoadedViewProps<T>) {
     noSuchPage: () => (
       <StatusPanel variant="error" message="Diese Seite gibt es nicht." />
     ),
-    failed: () => (
-      <StatusPanel
-        variant="error"
-        message="Die Daten konnten nicht geladen werden. Bitte später erneut versuchen."
-      />
-    ),
+    failed: () => <StatusPanel variant="error" message={LOAD_FAILED_MESSAGE} />,
   })
 }

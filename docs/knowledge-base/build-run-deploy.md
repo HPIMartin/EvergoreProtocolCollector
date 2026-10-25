@@ -1121,6 +1121,7 @@ answered (measured on Micronaut 4.10.9).
 | `GET /health` | Micronaut management health endpoint, open without a login: the liveness/last-run monitor hook, its details for an admin login only (what it reports and to whom: bullets below the table). |
 | `GET /api/v1/admin/status` | JSON admin status, behind a login with the admin role (a member's login is answered 403) (keys and semantics: bullets below the table). |
 | `POST /api/v1/login`, `POST /api/v1/login/new-password` | A login by name and password, and its second step after a reset: public, but rate-limited and logged (answers: "The login API" below). |
+| `GET /api/v1/me`, `POST /api/v1/logout` | Who is logged in, and logging out: behind a login (answers: "The login API" below). |
 | `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: behind a login, rate-limited and logged. |
 
 - **`/health`** shows its details to the admin role only:
@@ -1224,6 +1225,18 @@ second step after `choose-new-password` (`ChooseNewPassword`). Its checks run in
 - The same 4 KiB limit holds here too.
 - The same IO pool holds here too.
 - A missing field counts as empty here too.
+
+**Who is logged in, and logging out** (`SessionController`, both behind a login, else **401**):
+
+- `GET /api/v1/me` answers `{"name":"Aurora","canChangePassword":true}`: the account's name as the
+  login names it and whether it can change a password, which the console admin key's login
+  (`{"name":"admin","canChangePassword":false}`) cannot;
+- `POST /api/v1/logout` answers **204**:
+  - the cookie is cleared, `epc_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax`;
+  - that login ends at once: the service remembers its `jti` in memory until its expiry
+    (`LogOut`);
+  - so a copy of it opens nothing;
+  - another login of the same account stays valid.
 
 **The console admin key.** At every start the service logs exactly one line
 

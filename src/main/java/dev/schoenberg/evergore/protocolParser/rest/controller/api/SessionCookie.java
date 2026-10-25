@@ -9,6 +9,10 @@ public final class SessionCookie {
 
 	private SessionCookie() {}
 
+	static String cleared() {
+		return NAME + "=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax";
+	}
+
 	static String holding(String loginValue) {
 		return NAME + "=" + loginValue + "; Max-Age=" + Login.LIFETIME.toSeconds() + "; Path=/; HttpOnly; SameSite=Lax";
 	}

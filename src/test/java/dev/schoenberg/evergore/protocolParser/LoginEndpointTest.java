@@ -43,6 +43,7 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static io.micronaut.http.HttpStatus.BAD_REQUEST;
+import static io.micronaut.http.HttpStatus.NO_CONTENT;
 import static io.micronaut.http.HttpStatus.OK;
 import static io.micronaut.http.HttpStatus.REQUEST_ENTITY_TOO_LARGE;
 import static io.micronaut.http.HttpStatus.UNAUTHORIZED;
@@ -366,6 +367,70 @@ class LoginEndpointTest {
 		HttpResponse<String> response = logIn("Boreas", ISSUED_PASSWORD, "/overview");
 
 		assertThat(response.getBody()).isEqualTo("{\"step\":\"choose-new-password\"}");
+	}
+
+	@Test
+	void namesTheAccountOfALoginAndSaysItCanChangeItsPassword() {
+		String login = valueOf(logIn("aurora", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+
+		HttpResponse<String> response = Unirest.get("/api/v1/me").header("Cookie", "epc_session=" + login).asString();
+
+		assertThat(response.getStatus()).isEqualTo(OK.getCode());
+		assertThat(response.getBody()).isEqualTo("{\"name\":\"Aurora\",\"canChangePassword\":true}");
+	}
+
+	@Test
+	void namesTheAdminKeysLoginAndSaysItCannotChangeAPassword() {
+		String login = valueOf(logIn("ADMIN", FixedRandom.ADMIN_KEY_OF_ONES).getHeaders().getFirst(SET_COOKIE));
+
+		HttpResponse<String> response = Unirest.get("/api/v1/me").header("Cookie", "epc_session=" + login).asString();
+
+		assertThat(response.getBody()).isEqualTo("{\"name\":\"admin\",\"canChangePassword\":false}");
+	}
+
+	@Test
+	void namesNoOneWithoutALogin() {
+		int status = new RawHttpClient(server.getPort()).statusOfRequest("GET /api/v1/me HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+
+		assertThat(status).isEqualTo(UNAUTHORIZED.getCode());
+	}
+
+	@Test
+	void clearsTheCookieOfALoginThatLogsOut() {
+		String login = valueOf(logIn("Aurora", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+
+		HttpResponse<String> response = Unirest.post("/api/v1/logout").header("Cookie", "epc_session=" + login).asString();
+
+		assertThat(response.getStatus()).isEqualTo(NO_CONTENT.getCode());
+		assertThat(response.getHeaders().getFirst(SET_COOKIE)).isEqualTo("epc_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax");
+	}
+
+	@Test
+	void opensNothingMoreWithTheLoginThatLoggedOut() {
+		String login = valueOf(logIn("Aurora", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+		Unirest.post("/api/v1/logout").header("Cookie", "epc_session=" + login).asString();
+
+		HttpResponse<String> response = Unirest.get(PROTECTED_PATH).header("Cookie", "epc_session=" + login).asString();
+
+		assertThat(response.getStatus()).isEqualTo(UNAUTHORIZED.getCode());
+	}
+
+	@Test
+	void keepsAnotherLoginOfTheSameAccountOpenWhenOneLogsOut() {
+		String first = valueOf(logIn("Aurora", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+		String second = valueOf(logIn("Aurora", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
+		Unirest.post("/api/v1/logout").header("Cookie", "epc_session=" + first).asString();
+
+		HttpResponse<String> response = Unirest.get(PROTECTED_PATH).header("Cookie", "epc_session=" + second).asString();
+
+		assertThat(response.getStatus()).isEqualTo(OK.getCode());
+	}
+
+	@Test
+	void refusesALogoutWithoutALogin() {
+		int status = new RawHttpClient(server.getPort()).statusOfRequest("POST /api/v1/logout HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+
+		assertThat(status).isEqualTo(UNAUTHORIZED.getCode());
 	}
 
 	private HttpResponse<String> logIn(String name, String password, String next) {

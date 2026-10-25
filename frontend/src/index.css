@@ -134,6 +134,24 @@ a:hover {
   border-bottom: 2px solid var(--color-accent);
 }
 
+.page-frame__account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+}
+
+.page-frame__account button {
+  padding: var(--space-1) var(--space-3);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background-color: var(--color-surface-raised);
+  color: var(--color-accent-strong);
+  font: inherit;
+  cursor: pointer;
+}
+
 .page-frame__content {
   padding-top: var(--space-5);
 }

@@ -354,6 +354,12 @@ Admin read path:        GET /api/v1/admin/status  (behind a login) ▶ AdminStat
     - the key is compared with `MessageDigest.isEqual`;
     - the key's login records no last login;
     - `ChooseNewPassword` finds no account under that name and refuses.
+- **Logging out:** `application/LogOut` keeps the `jti` of every login that logged out in memory
+  until that login's own expiry and prunes the expired ones at each logout:
+  - `application/ValidLogins` treats such a login as no login, so only that login ends: another
+    login of the same account, on another browser, stays;
+  - what `/api/v1/me` and `/api/v1/logout` answer: [build-run-deploy.md](build-run-deploy.md),
+    "The login API".
 - **The admin key:** `application/AdminKey` is drawn by `ApplicationFactory` from `SecureRandom`:
   - `helper/security/AdminKeyAnnouncement` writes it on the `StartupEvent` through `Logger`;
   - its format, the log line and its lifetime: [build-run-deploy.md](build-run-deploy.md), "The

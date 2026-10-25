@@ -32,5 +32,6 @@ export type {
   NewPasswordAnswer,
   PasswordRefusal,
 } from './loginAnswer.ts'
+export type { Me } from './me.ts'
 export type { ChoiceRefusal } from './passwordRule.ts'
 export { refusalOfChoosing } from './passwordRule.ts'
