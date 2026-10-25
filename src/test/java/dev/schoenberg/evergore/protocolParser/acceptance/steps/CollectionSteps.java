@@ -51,6 +51,12 @@ public class CollectionSteps {
 		}
 	}
 
+	@Given("a recompute failed at {moment}")
+	public void aRecomputeFailedAt(LocalDateTime moment) {
+		faults.refuseToSaveFigures();
+		theDailyCollectionRanAt(moment);
+	}
+
 	@Given("no collection has ever run")
 	public void noCollectionHasEverRun() {
 		int collections = service.collectionsRun();

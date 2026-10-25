@@ -40,7 +40,7 @@ Independent read path:  HTTP ▶ filters (audit log, login reading, rate limit, 
                         AvatarEntriesController ▶ read MetaInformation / repositories
                         ▶ wire records ▶ JSON
 
-Monitoring read path:   GET /health  (open without a login, anonymous) ▶ Micronaut management
+Monitoring read path:   GET /health  (open without a login; the details for the admin role) ▶ Micronaut management
                         ▶ LastRunHealthIndicator ▶ a verdict on the latest recompute + the lastRun
                         details, both read from LastRunStatus
 

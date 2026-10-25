@@ -42,6 +42,16 @@ public class HealthReport {
 		askFor(HEALTH, Map.of());
 	}
 
+	public void askWithTheLogin(String loginValue) {
+		askFor(HEALTH, Map.of("Cookie", LoginRequests.SESSION_COOKIE + "=" + loginValue));
+	}
+
+	public List<String> namesBesidesTheVerdict() {
+		List<String> names = new ArrayList<>();
+		report().propertyStream().filter(property -> !"status".equals(property.getKey())).forEach(property -> names.add(property.getKey()));
+		return names;
+	}
+
 	public String status() {
 		return report().path("status").asText();
 	}

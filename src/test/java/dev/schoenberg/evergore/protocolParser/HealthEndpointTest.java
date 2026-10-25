@@ -57,8 +57,8 @@ class HealthEndpointTest {
 	}
 
 	@Test
-	void healthEndpointBodyContainsLastRunDetail() {
-		HttpResponse<String> response = Unirest.get("/health").asString();
+	void healthEndpointBodyContainsLastRunDetailForTheAdminKeysLogin() {
+		HttpResponse<String> response = Unirest.get("/health").header("Cookie", LoginCookie.headerFor(server)).asString();
 
 		assertThat(response.getBody()).contains("lastRun");
 		assertThat(response.getBody()).contains("lastSuccessfulRecompute");

@@ -4,8 +4,13 @@ import io.cucumber.java.ParameterType;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
+import dev.schoenberg.evergore.protocolParser.acceptance.operator.AlteredLogins;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.HealthFacts;
+import dev.schoenberg.evergore.protocolParser.acceptance.operator.LoginRequests;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.HealthReport;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.operator.FindingList.UNKNOWN_ITEMS;
 import static dev.schoenberg.evergore.protocolParser.acceptance.operator.FindingList.WORTHLESS_ITEMS;
@@ -18,9 +23,15 @@ public class HealthSteps {
 	private static final int UNAVAILABLE = 503;
 
 	private final HealthReport health;
+	private final LoginRequests logins;
+	private final Accounts accounts;
+	private final ScenarioTime time;
 
-	public HealthSteps(HealthReport health) {
+	public HealthSteps(HealthReport health, LoginRequests logins, Accounts accounts, ScenarioTime time) {
 		this.health = health;
+		this.logins = logins;
+		this.accounts = accounts;
+		this.time = time;
 	}
 
 	@ParameterType("unknown item|item worth nothing")
@@ -36,6 +47,34 @@ public class HealthSteps {
 	@When("the operator asks the service for its health with the admin key")
 	public void theOperatorAsksForItsHealthWithTheAdminKey() {
 		health.ask();
+	}
+
+	@When("a client logged in as {string} with the password {string} asks the service for its health")
+	public void aClientLoggedInAsAsksForItsHealth(String name, String password) {
+		health.askWithTheLogin(loginOf(name, password));
+	}
+
+	@When("a client logged in as {string} asks the service for its health with its login altered to claim the admin's role")
+	public void aClientLoggedInAsAsksForItsHealthWithAnAlteredLogin(String avatar) {
+		health.askWithTheLogin(AlteredLogins.claimingTheAdminsRole(loginOf(avatar, accounts.chosenBy(avatar))));
+	}
+
+	@When("a client asks the service for its health with a login that names {string} but is signed by someone other than the service")
+	public void aClientAsksForItsHealthWithAForgedLogin(String avatar) {
+		health.askWithTheLogin(AlteredLogins.signedBySomeoneOtherThanTheService(loginOf(avatar, accounts.chosenBy(avatar))));
+	}
+
+	@When("a client asks the service for its health with a login of {string} that has run its 7 days")
+	public void aClientAsksForItsHealthWithAnEndedLogin(String avatar) {
+		String login = loginOf(avatar, accounts.chosenBy(avatar));
+		time.passes(Login.LIFETIME.plusSeconds(1));
+		health.askWithTheLogin(login);
+	}
+
+	@Then("the operator finds the answer holding its verdict and nothing else")
+	public void theOperatorFindsTheAnswerHoldingItsVerdictAndNothingElse() {
+		assertThat(health.status()).as("the health report " + health).isNotEmpty();
+		assertThat(health.namesBesidesTheVerdict()).as("what the health report holds besides its verdict: " + health).isEmpty();
 	}
 
 	@Then("the service reports its health as {string}")
@@ -57,6 +96,10 @@ public class HealthSteps {
 	@Then("the health report counts {int} {countedFinding}")
 	public void theHealthReportCounts(int count, String countKey) {
 		assertThat(facts().count(countKey)).contains(count);
+	}
+
+	private String loginOf(String name, String password) {
+		return LoginRequests.loginValueIn(logins.logIn(name, password));
 	}
 
 	private HealthFacts facts() {

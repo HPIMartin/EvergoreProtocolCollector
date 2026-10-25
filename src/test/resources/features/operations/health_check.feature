@@ -15,7 +15,6 @@ Feature: The service's health check: its verdict
 
   Rule: The verdict follows the last recompute of the guild's figures
 
-    @wip
     Scenario Outline: Asked <how> after <state>, the service reports its health as "<verdict>"
       Given <state>
       When <asking>
@@ -74,7 +73,6 @@ Feature: The service's health check: its verdict
   Rule: Without the admin's login, the health check names its verdict and nothing else
     What an account with the admin role sees is in "Accounts for the members, and the admin".
 
-    @wip
     Scenario Outline: Asked <how> after a recompute that found an unknown item, the health check names its verdict and nothing else
       Given the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |

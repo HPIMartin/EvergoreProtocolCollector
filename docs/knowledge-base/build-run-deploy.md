@@ -757,9 +757,10 @@ CLI targets that same daemon; on the agent seat against its own daemon (above). 
    curl -s -o /dev/null -w '%{http_code}\n' http://<host>/api/v1/avatars  # 401
    ```
 
-   - `/health` is anonymous. It reports `UNKNOWN` until a recompute is first attempted, `UP` once
+   - `/health` is open without a login, and the verdict alone is all it gives without the admin's
+     login. It reports `UNKNOWN` until a recompute is first attempted, `UP` once
      the latest recompute succeeded, and `DOWN` if the latest recompute failed (even after an
-     earlier success); the recompute's timestamp sits at
+     earlier success); with an admin login the recompute's timestamp sits at
      **`details.lastRun.details.lastSuccessfulRecompute`**, next to
      `unknownItemCount` and `unknownItemNames`. Neither is an error: they are the catalog gap
      (testing.md). **Every count of names is the number of distinct names in the list beside it**,
@@ -1115,11 +1116,22 @@ answered (measured on Micronaut 4.10.9).
 | `GET /`, `/index.html`, `/assets/**` | The SPA shell and its bundle, all behind a login: a navigation (`GET`, `Accept: text/html`) to `/` or to any page of the dashboard without one is answered **302** to `/login?next=<path and query>` (`AccessFilter`), the guild's old `?token=` link included; a request for `/index.html` or a file under `/assets/` is answered 401. An unknown navigation path **with a login** falls back to the shell; a missing asset and an unknown `/api` path keep their 404. |
 | `GET /favicon.ico` | Favicon: behind a login like the rest of the dashboard. |
 | `GET /login`, `/login/`, `/login/**` | The login page (`LoginPageController` serves its `login.html` at `/login` and `/login/`) and its own bundle under `/login/assets/`: public, but rate-limited and logged; an unknown path below `/login` keeps its 404, the dashboard's fallback never answers it. |
-| `GET /health` | Micronaut management health endpoint, open without a login and anonymous: the liveness/last-run monitor hook (what it reports: bullets below the table). |
+| `GET /health` | Micronaut management health endpoint, open without a login: the liveness/last-run monitor hook, its details for an admin login only (what it reports and to whom: bullets below the table). |
 | `GET /api/v1/admin/status` | JSON admin status, behind a login (any login until the admin role gates it) (keys and semantics: bullets below the table). |
 | `POST /api/v1/login`, `POST /api/v1/login/new-password` | A login by name and password, and its second step after a reset: public, but rate-limited and logged (answers: "The login API" below). |
 | `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: behind a login, rate-limited and logged. |
 
+- **`/health`** shows its details to the admin role only:
+  - an admin login, an account with the admin role or the console admin key's, sees everything
+    below;
+  - every other caller, with no login, a member's login, a forged one or an ended one, gets the
+    verdict alone: `{"status":"UP"}`;
+  - the verdict carries no `name` and no `details` key, not even as null;
+  - `HealthReportJsonModule` leaves out what is null and puts `status` first, `details` second;
+  - the mechanism is Micronaut's `endpoints.health.details-visible: AUTHENTICATED`, fed by
+    `AdminPrincipalBinder`, which binds the endpoint's `Principal` argument only for a login with
+    the admin role, since the service has no micronaut-security to supply one;
+  - the deploy script reads the first top-level `status`, which the verdict alone keeps.
 - **`/health`** reports:
   - UNKNOWN (no recompute attempted yet), UP (the latest recompute succeeded) or DOWN (the latest
     recompute failed, even after an earlier success), plus the `lastSuccessfulRecompute` timestamp;
