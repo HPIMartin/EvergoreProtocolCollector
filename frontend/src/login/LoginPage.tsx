@@ -6,6 +6,7 @@ import { httpLoginApi } from '../api'
 import type { LoginAnswer } from '../domain'
 import {
   LOAD_FAILED_MESSAGE,
+  RESTING_MESSAGE,
   StatusPanel,
   TOO_MANY_ATTEMPTS_MESSAGE,
 } from '../ui'
@@ -19,12 +20,16 @@ export interface LoginPageProps {
 }
 
 type Refusal =
-  | Extract<LoginAnswer, 'wrong-name-or-password' | 'too-many-attempts'>
+  | Extract<
+      LoginAnswer,
+      'wrong-name-or-password' | 'too-many-attempts' | 'resting'
+    >
   | 'unavailable'
 
 const REFUSAL_TEXTS: Readonly<Record<Refusal, string>> = {
   'wrong-name-or-password': 'Name oder Passwort stimmt nicht.',
   'too-many-attempts': TOO_MANY_ATTEMPTS_MESSAGE,
+  resting: RESTING_MESSAGE,
   unavailable: LOAD_FAILED_MESSAGE,
 }
 

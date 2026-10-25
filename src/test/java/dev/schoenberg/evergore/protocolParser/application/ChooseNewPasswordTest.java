@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -16,6 +17,10 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordRefu
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordRule;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,7 +36,9 @@ class ChooseNewPasswordTest {
 	private final RecordingLogins logins = new RecordingLogins();
 	private final LoginGenerations generations = new LoginGenerations();
 	private final LoginStart loginStart = new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC));
-	private final ChooseNewPassword tested = new ChooseNewPassword(new PasswordCheck(accounts, hasher, HASH_OF_NO_PASSWORD), accounts, hasher, new PasswordRule(), loginStart);
+	private final BankRepositoryStub bank = new BankRepositoryStub();
+	private final ChooseNewPassword tested = new ChooseNewPassword(new PasswordCheck(accounts, hasher, HASH_OF_NO_PASSWORD), accounts, hasher, new PasswordRule(), loginStart,
+			new RestingAccounts(bank, new StorageRepositoryStub()));
 
 	@Test
 	void logsInWithTheNewPasswordAfterTheRightIssuedOne() {
@@ -155,12 +162,26 @@ class ChooseNewPasswordTest {
 			}
 		};
 		ChooseNewPassword loser = new ChooseNewPassword(new PasswordCheck(accounts, hasher, HASH_OF_NO_PASSWORD), accounts, hasherWhoseHashIsOvertaken, new PasswordRule(),
-				loginStart);
+				loginStart, new RestingAccounts(bank, new StorageRepositoryStub()));
 
 		LogInOutcome outcome = loser.with("Boreas", ISSUED, NEW_PASSWORD);
 
 		assertThat(outcome).isEqualTo(new LogInOutcome.Refused());
 		assertThat(accounts.held("boreas")).isEqualTo(winner);
+		assertThat(logins.issued()).isEmpty();
+	}
+
+	@Test
+	void tellsAnAccountThatRestsSoAndLeavesItsIssuedPasswordValid() {
+		accounts.hold(issuedAccount("Boreas"));
+		Instant newest = Instant.parse("2026-01-31T12:00:00Z");
+		bank.seedEntries("Boreas", List.of(new BankEntry(newest.minus(Duration.ofDays(31)), "Boreas", 300, TransferType.ENTNAHME)));
+		bank.seedEntries("Aurora", List.of(new BankEntry(newest, "Aurora", 1000, TransferType.EINLAGERUNG)));
+
+		LogInOutcome outcome = tested.with("Boreas", ISSUED, NEW_PASSWORD);
+
+		assertThat(outcome).isEqualTo(new LogInOutcome.Resting());
+		assertThat(accounts.held("boreas")).isEqualTo(issuedAccount("Boreas"));
 		assertThat(logins.issued()).isEmpty();
 	}
 

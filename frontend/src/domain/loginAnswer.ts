@@ -8,6 +8,7 @@ export type LoginAnswer =
   | 'choose-new-password'
   | 'wrong-name-or-password'
   | 'too-many-attempts'
+  | 'resting'
 
 export type PasswordRefusal = 'breaks-the-rule' | 'same-as-before'
 
@@ -19,4 +20,8 @@ export type ChangePasswordAnswer =
   | PasswordRefusal
 
 export type NewPasswordAnswer =
-  LoggedIn | 'wrong-name-or-password' | 'too-many-attempts' | PasswordRefusal
+  | LoggedIn
+  | 'wrong-name-or-password'
+  | 'too-many-attempts'
+  | 'resting'
+  | PasswordRefusal

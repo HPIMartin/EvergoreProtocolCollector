@@ -1197,6 +1197,11 @@ answered (measured on Micronaut 4.10.9).
 - an unknown name and a wrong password both answer **401** `{"refusal":"wrong-name-or-password"}`:
   - they take the same time, so the answer does not tell which names have an account;
   - a missing name or password counts as empty;
+- a right password of an account that rests answers **403** `{"refusal":"resting"}` and sets no
+  cookie (`RestingAccounts`, "Resting accounts" in the feature files):
+  - the answer is the same for the chosen and for the issued password;
+  - only the right password is told so, a wrong one gets the answer above;
+  - a login made before the account came to rest stays valid until it ends;
 - a body over 4 KiB, one whose length is not declared and one under any `Transfer-Encoding` or
   `Content-Encoding` is answered **413** before anything reads it (`LoginBodyLimitFilter`, filter
   order 6): the limit is the size of the decoded body, and nothing here decodes;
@@ -1212,6 +1217,8 @@ second step after `choose-new-password` (`ChooseNewPassword`). Its checks run in
    - otherwise **401** `{"refusal":"wrong-name-or-password"}`, the answer of a wrong password
      above;
    - the answer is the same for an account whose password was already chosen;
+   - an account that rests is refused here before the new password is judged: **403**
+     `{"refusal":"resting"}`, the issued password staying valid;
 2. the new password is judged:
    - it keeps the password rule (at least 8 characters, among them a digit and a special
      character), else **400** `{"refusal":"breaks-the-rule"}`;

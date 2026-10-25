@@ -352,6 +352,8 @@ Five top-level folders under `frontend/src/`:
   - `logged-in` navigates to the `next` the answer names;
   - a refused login (401) says „Name oder Passwort stimmt nicht.“ and stays;
   - a turned-away request (429) says „Zu viele Versuche. Bitte warte einen Moment.“;
+  - an account that rests (403) says „Dein Konto ruht, bis das Protokoll wieder einen Vorgang von
+    dir zeigt.“ (`RESTING_MESSAGE`, `ui`), in the new-password step too;
   - `choose-new-password` turns the page to the step „Neues Passwort wählen“ (`NewPasswordStep`).
 - **The new-password step** asks for the new password and its repetition:
   - the page checks first and posts nothing for:

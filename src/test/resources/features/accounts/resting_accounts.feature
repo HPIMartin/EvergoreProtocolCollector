@@ -1,4 +1,3 @@
-@wip
 Feature: Resting accounts
   An account rests while its member stands in the overview's dormant table, that is while the
   member's last movement lies more than 30 days before the newest movement the guild ledgers hold;

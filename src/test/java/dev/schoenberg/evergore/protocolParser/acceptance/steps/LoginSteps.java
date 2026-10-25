@@ -1,12 +1,18 @@
 package dev.schoenberg.evergore.protocolParser.acceptance.steps;
 
+import java.time.Duration;
+import java.time.Instant;
+
+import io.cucumber.java.ParameterType;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.SecondBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
 
+import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class LoginSteps {
@@ -15,12 +21,26 @@ public class LoginSteps {
 	private final MemberBrowser browser;
 	private final SecondBrowser secondBrowser;
 	private final Accounts accounts;
+	private final ScenarioTime time;
+	private Instant loggedInAt;
 	private String nameEntered;
 
-	public LoginSteps(MemberBrowser browser, SecondBrowser secondBrowser, Accounts accounts) {
+	public LoginSteps(MemberBrowser browser, SecondBrowser secondBrowser, Accounts accounts, ScenarioTime time) {
+		this.time = time;
 		this.browser = browser;
 		this.secondBrowser = secondBrowser;
 		this.accounts = accounts;
+	}
+
+	@ParameterType("\\d+ days?")
+	public Duration loginAge(String age) {
+		return Duration.ofDays(Long.parseLong(age.split(" ")[0]));
+	}
+
+	@When("the member opens the overview {loginAge} after logging in")
+	public void theMemberOpensTheOverviewAfterLoggingIn(Duration age) {
+		time.setTo(loggedInAt.plus(age));
+		browser.openHref(OVERVIEW);
 	}
 
 	@When("a/the member logs in as {string} with the password {string}")
@@ -49,7 +69,7 @@ public class LoginSteps {
 		secondBrowser.browser().loginForm().logIn(name, password);
 	}
 
-	@When("a/the member logs in as {string} with the password the (first collection's )reset issued")
+	@When("a/the member/admin logs in as {string} with the password the (first collection's )reset issued")
 	public void aMemberLogsInWithThePasswordTheResetIssued(String name) {
 		logIn(name, accounts.issuedTo(name));
 	}
@@ -90,6 +110,7 @@ public class LoginSteps {
 
 	private void logIn(String name, String password) {
 		nameEntered = name;
+		loggedInAt = time.now();
 		browser.loginForm().logIn(name, password);
 	}
 }

@@ -9,8 +9,10 @@ public class LogIn {
 	private final PasswordCheck passwordCheck;
 	private final LoginStart loginStart;
 	private final AdminKey adminKey;
+	private final RestingAccounts restingAccounts;
 
-	public LogIn(PasswordCheck passwordCheck, LoginStart loginStart, AdminKey adminKey) {
+	public LogIn(PasswordCheck passwordCheck, LoginStart loginStart, AdminKey adminKey, RestingAccounts restingAccounts) {
+		this.restingAccounts = restingAccounts;
 		this.passwordCheck = passwordCheck;
 		this.loginStart = loginStart;
 		this.adminKey = adminKey;
@@ -24,6 +26,9 @@ public class LogIn {
 		Optional<Account> account = passwordCheck.accountWith(name, password);
 		if (account.isEmpty()) {
 			return new LogInOutcome.Refused();
+		}
+		if (restingAccounts.rest(account.get())) {
+			return new LogInOutcome.Resting();
 		}
 		if (account.get().passwordState() == PasswordState.ISSUED) {
 			return new LogInOutcome.ChooseNewPassword();

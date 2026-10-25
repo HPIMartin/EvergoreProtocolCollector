@@ -37,6 +37,9 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginSource;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
@@ -435,6 +438,37 @@ class LoginEndpointTest {
 	}
 
 	@Test
+	void refusesTheRightPasswordOfAnAccountThatRestsWith403AndNoLogin() {
+		holdARestingAccount("Mira", CHOSEN_PASSWORD, PasswordState.CHOSEN);
+
+		HttpResponse<String> response = logIn("Mira", CHOSEN_PASSWORD);
+
+		assertThat(response.getStatus()).isEqualTo(FORBIDDEN.getCode());
+		assertThat(response.getBody()).isEqualTo("{\"refusal\":\"resting\"}");
+		assertThat(response.getHeaders().containsKey(SET_COOKIE)).isFalse();
+	}
+
+	@Test
+	void refusesTheChoiceOfANewPasswordForAnAccountThatRestsWith403() {
+		holdARestingAccount("Nora", ISSUED_PASSWORD, PasswordState.ISSUED);
+
+		HttpResponse<String> response = chooseNewPassword("Nora", ISSUED_PASSWORD, CHOSEN_PASSWORD);
+
+		assertThat(response.getStatus()).isEqualTo(FORBIDDEN.getCode());
+		assertThat(response.getBody()).isEqualTo("{\"refusal\":\"resting\"}");
+		assertThat(logIn("Nora", ISSUED_PASSWORD).getStatus()).isEqualTo(FORBIDDEN.getCode());
+	}
+
+	@Test
+	void givesAWrongPasswordOnAnAccountThatRestsTheAnswerOfAnyWrongPassword() {
+		holdARestingAccount("Olga", CHOSEN_PASSWORD, PasswordState.CHOSEN);
+
+		HttpResponse<String> response = logIn("Olga", "Winter-2026!");
+
+		assertThat(response.getStatus()).isEqualTo(UNAUTHORIZED.getCode());
+	}
+
+	@Test
 	void changesThePasswordOfTheLoginAndAnswersWithAFreshLogin() {
 		holdAccount("Greta", CHOSEN_PASSWORD, PasswordState.CHOSEN, Role.MEMBER);
 		String login = valueOf(logIn("Greta", CHOSEN_PASSWORD).getHeaders().getFirst(SET_COOKIE));
@@ -563,8 +597,16 @@ class LoginEndpointTest {
 		return setCookie.substring(setCookie.indexOf('=') + 1, setCookie.indexOf(';'));
 	}
 
+	private void holdARestingAccount(String avatar, String password, PasswordState state) {
+		accounts().addIfAbsent(new Account(avatar, context.getBean(PasswordHasher.class).hash(password), state, Role.MEMBER, Optional.empty()));
+		context.getBean(BankRepository.class).add(List.of(new BankEntry(NOW.minus(Duration.ofDays(31)), avatar, 1, TransferType.EINLAGERUNG)));
+	}
+
 	private void holdAccount(String avatar, String password, PasswordState state, Role role) {
-		accounts().addIfAbsent(new Account(avatar, context.getBean(PasswordHasher.class).hash(password), state, role, Optional.empty()));
+		boolean added = accounts().addIfAbsent(new Account(avatar, context.getBean(PasswordHasher.class).hash(password), state, role, Optional.empty()));
+		if (added) {
+			context.getBean(BankRepository.class).add(List.of(new BankEntry(NOW, avatar, 1, TransferType.EINLAGERUNG)));
+		}
 	}
 
 	private AccountRepository accounts() {

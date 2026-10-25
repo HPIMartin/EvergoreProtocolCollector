@@ -13,8 +13,11 @@ public class ChooseNewPassword {
 	private final PasswordHasher passwordHasher;
 	private final PasswordRule passwordRule;
 	private final LoginStart loginStart;
+	private final RestingAccounts restingAccounts;
 
-	public ChooseNewPassword(PasswordCheck passwordCheck, AccountRepository accounts, PasswordHasher passwordHasher, PasswordRule passwordRule, LoginStart loginStart) {
+	public ChooseNewPassword(PasswordCheck passwordCheck, AccountRepository accounts, PasswordHasher passwordHasher, PasswordRule passwordRule, LoginStart loginStart,
+			RestingAccounts restingAccounts) {
+		this.restingAccounts = restingAccounts;
 		this.passwordCheck = passwordCheck;
 		this.accounts = accounts;
 		this.passwordHasher = passwordHasher;
@@ -27,6 +30,9 @@ public class ChooseNewPassword {
 		Optional<Account> account = passwordCheck.accountWith(name, issuedPassword).filter(found -> found.passwordState() == PasswordState.ISSUED);
 		if (account.isEmpty()) {
 			return new LogInOutcome.Refused();
+		}
+		if (restingAccounts.rest(account.get())) {
+			return new LogInOutcome.Resting();
 		}
 		Optional<PasswordRefusal> refusal = passwordRule.refusalOfReplacing(issuedPassword, newPassword);
 		if (refusal.isPresent()) {

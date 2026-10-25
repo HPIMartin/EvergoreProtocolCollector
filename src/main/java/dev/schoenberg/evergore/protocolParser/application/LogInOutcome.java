@@ -12,6 +12,8 @@ public sealed interface LogInOutcome {
 
 		T onRefused();
 
+		T onResting();
+
 		T onNewPasswordRefused(PasswordRefusal refusal);
 	}
 
@@ -33,6 +35,13 @@ public sealed interface LogInOutcome {
 		@Override
 		public <T> T accept(Visitor<T> visitor) {
 			return visitor.onRefused();
+		}
+	}
+
+	record Resting() implements LogInOutcome {
+		@Override
+		public <T> T accept(Visitor<T> visitor) {
+			return visitor.onResting();
 		}
 	}
 

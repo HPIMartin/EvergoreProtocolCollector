@@ -7,6 +7,7 @@ import { refusalOfChoosing } from '../domain'
 import {
   LOAD_FAILED_MESSAGE,
   PASSWORD_REFUSAL_TEXTS,
+  RESTING_MESSAGE,
   StatusPanel,
   TOO_MANY_ATTEMPTS_MESSAGE,
 } from '../ui'
@@ -20,11 +21,12 @@ export interface NewPasswordStepProps {
   readonly onRefused: () => void
 }
 
-type Refusal = ChoiceRefusal | 'too-many-attempts' | 'unavailable'
+type Refusal = ChoiceRefusal | 'too-many-attempts' | 'resting' | 'unavailable'
 
 const REFUSAL_TEXTS: Readonly<Record<Refusal, string>> = {
   ...PASSWORD_REFUSAL_TEXTS,
   'too-many-attempts': TOO_MANY_ATTEMPTS_MESSAGE,
+  resting: RESTING_MESSAGE,
   unavailable: LOAD_FAILED_MESSAGE,
 }
 

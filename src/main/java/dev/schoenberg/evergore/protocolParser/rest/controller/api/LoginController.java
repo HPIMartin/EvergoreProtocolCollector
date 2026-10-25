@@ -79,6 +79,11 @@ public class LoginController {
 		}
 
 		@Override
+		public HttpResponse<?> onResting() {
+			return HttpResponse.status(HttpStatus.FORBIDDEN).body(LoginRefusal.RESTING);
+		}
+
+		@Override
 		public HttpResponse<?> onNewPasswordRefused(PasswordRefusal refusal) {
 			return HttpResponse.badRequest(LoginRefusal.of(refusal));
 		}

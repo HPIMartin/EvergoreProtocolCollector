@@ -303,6 +303,7 @@ class ApiReadsOffTheEventLoopTest {
 		};
 		bank.seedAvatars(List.of(AVATAR));
 		bank.seedEntries(AVATAR, List.of(new BankEntry(Instant.parse("2026-01-10T10:00:00Z"), AVATAR, 1000, EINLAGERUNG)));
+		bank.seedEntries(ISSUED_AVATAR, List.of(new BankEntry(Instant.parse("2026-01-10T10:00:00Z"), ISSUED_AVATAR, 1, EINLAGERUNG)));
 		return bank;
 	}
 

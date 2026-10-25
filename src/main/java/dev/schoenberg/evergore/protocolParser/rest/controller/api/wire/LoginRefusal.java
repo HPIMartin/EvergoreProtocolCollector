@@ -8,6 +8,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordRefu
 public record LoginRefusal(@JsonProperty("refusal") String refusal) {
 	public static final LoginRefusal WRONG_NAME_OR_PASSWORD = new LoginRefusal("wrong-name-or-password");
 	public static final LoginRefusal WRONG_CURRENT_PASSWORD = new LoginRefusal("wrong-current-password");
+	public static final LoginRefusal RESTING = new LoginRefusal("resting");
 	public static final LoginRefusal NO_ACCOUNT = new LoginRefusal("no-account");
 	public static final LoginRefusal BREAKS_THE_RULE = new LoginRefusal("breaks-the-rule");
 	public static final LoginRefusal SAME_AS_BEFORE = new LoginRefusal("same-as-before");

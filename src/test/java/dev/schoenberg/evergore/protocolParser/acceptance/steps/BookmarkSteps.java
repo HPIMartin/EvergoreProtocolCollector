@@ -93,6 +93,13 @@ public class BookmarkSteps {
 		browser.followALinkFromAnotherSite(OVERVIEW);
 	}
 
+	@Then("a bookmark of the overview opened afterwards shows the login page")
+	public void aBookmarkOfTheOverviewOpenedAfterwardsShowsTheLoginPage() {
+		browser.openHref(OVERVIEW);
+
+		assertThat(browser.ledger().heading()).isEqualTo(LOGIN);
+	}
+
 	@When("the member opens {bookmark}")
 	public void theMemberOpens(String path) {
 		browser.opening().open(path);

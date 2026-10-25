@@ -339,7 +339,7 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     names no role or no source, is refused the same way: the read checks each claim, it catches no
     `NullPointerException`.
 - **Logging in:** `application/LogIn` checks a name and a password, `application/ChooseNewPassword`
-  takes the new password after a reset (what the endpoints answer:
+  takes the new password after a reset (what the endpoints answer and the order of their checks:
   [build-run-deploy.md](build-run-deploy.md), "The login API"):
   - both check the password through `application/PasswordCheck`, which looks the account up by the
     folded name key (`LoginName`) and runs exactly one Argon2id check;
@@ -353,13 +353,16 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     generation and ends with that change;
   - `LogIn` starts a login for a right chosen password; for a right issued password it starts none
     and asks for a new password;
-  - `ChooseNewPassword` checks, in this order, that the account exists, holds an issued password
-    and that this password is right, then `PasswordRule`; only then it hashes the new password,
-    replaces the hash with the state `CHOSEN` and starts a login;
+  - `ChooseNewPassword` hashes the new password, replaces the hash with the state `CHOSEN` and
+    starts a login;
   - the replacing is one update that holds only `WHERE` the state is still `ISSUED`
-    (`AccountRepository.replaceIssuedPassword`): of two requests that carry the issued password at
-    once, one wins and the other gets the answer of a wrong password and no login;
-  - a refused choice changes nothing, so the issued password stays valid;
+    (`AccountRepository.replaceIssuedPassword`);
+  - both ask `application/RestingAccounts` after the right password and before the rest:
+    - it reads the newest movement of each ledger;
+    - it puts the account's avatar to the same `ActivityLine` the overview splits its roster with;
+    - an account whose member stands in the dormant table rests and gets no login, not even for
+      its issued password;
+    - a login made before the account came to rest stays valid until it ends;
   - every hash and password check runs before the transactions, never inside them;
   - a name that folds to `admin` is the admin key's (`application/AdminKey`), never an account's:
     - `LogIn` starts the key's login only for the exact key;

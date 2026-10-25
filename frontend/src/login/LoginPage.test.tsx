@@ -38,6 +38,9 @@ const WRONG_NAME_OR_PASSWORD: Answer = {
   body: '{"refusal":"wrong-name-or-password"}',
 }
 const TOO_MANY_REQUESTS: Answer = { status: 429, body: null }
+const RESTING: Answer = { status: 403, body: '{"refusal":"resting"}' }
+const RESTING_TEXT =
+  'Dein Konto ruht, bis das Protokoll wieder einen Vorgang von dir zeigt.'
 
 function answering(answer: Answer): FakeService {
   return answeringIn(() => answer)
@@ -250,6 +253,27 @@ describe('LoginPage', () => {
     expect(messages).toEqual([
       'Die Daten konnten nicht geladen werden. Bitte später erneut versuchen.',
     ])
+  })
+
+  it('says the account rests and stays', async () => {
+    const shown = loginPageAt('', answering(RESTING))
+
+    await logIn('Calix', CHOSEN)
+
+    const messages = shownMessages()
+    expect(messages).toEqual([RESTING_TEXT])
+    expect(shown.navigatedTo).toEqual([])
+  })
+
+  it('says the account rests when the choice of a new password is refused for it', async () => {
+    const shown = loginPageAt('', afterTheIssuedPassword(RESTING))
+    await logIn('Calix', ISSUED)
+
+    await chooseNewPassword(CHOSEN)
+
+    const messages = shownMessages()
+    expect(messages).toEqual([RESTING_TEXT])
+    expect(shown.navigatedTo).toEqual([])
   })
 
   it('asks to wait after too many attempts', async () => {

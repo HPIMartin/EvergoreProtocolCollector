@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -15,6 +16,10 @@ import dev.schoenberg.evergore.protocolParser.FixedRandom;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
+import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
+import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
+import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,6 +27,7 @@ class LogInTest {
 	private static final Instant NOW = Instant.parse("2026-01-05T10:00:00Z");
 	private static final String HASH_OF_NO_PASSWORD = "hashed:a password nobody holds";
 	private static final String ADMIN_KEY = FixedRandom.ADMIN_KEY_OF_ONES;
+	private static final int DAYS_BEFORE_THE_NEWEST_MOVEMENT = 30;
 
 	private final List<String> trail = new ArrayList<>();
 	private final InMemoryAccounts accounts = new InMemoryAccounts(trail);
@@ -29,8 +35,9 @@ class LogInTest {
 	private final RecordingLogins logins = new RecordingLogins();
 	private final LoginGenerations generations = new LoginGenerations();
 	private final AdminKey adminKey = AdminKey.drawn(new FixedRandom());
+	private final BankRepositoryStub bank = new BankRepositoryStub();
 	private final LogIn tested = new LogIn(new PasswordCheck(accounts, hasher, HASH_OF_NO_PASSWORD),
-			new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC)), adminKey);
+			new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC)), adminKey, new RestingAccounts(bank, new StorageRepositoryStub()));
 
 	@ParameterizedTest
 	@CsvSource({"admin", "ADMIN", "Admin"})
@@ -217,6 +224,65 @@ class LogInTest {
 
 		assertThat(emptyName).isEqualTo(new LogInOutcome.Refused());
 		assertThat(emptyPassword).isEqualTo(new LogInOutcome.Refused());
+	}
+
+	@ParameterizedTest
+	@CsvSource({"CHOSEN", "ISSUED"})
+	void tellsAnAccountThatRestsSoAfterTheRightPasswordWithoutALoginOrALastLogin(PasswordState state) {
+		accounts.hold(account("Calix", "Sommer-2026!", state, Role.MEMBER));
+		movedOn("Calix", DAYS_BEFORE_THE_NEWEST_MOVEMENT + 1);
+
+		LogInOutcome outcome = tested.with("Calix", "Sommer-2026!");
+
+		assertThat(outcome).isEqualTo(new LogInOutcome.Resting());
+		assertThat(logins.issued()).isEmpty();
+		assertThat(accounts.held("calix").lastLogin()).isEmpty();
+	}
+
+	@Test
+	void tellsAnAccountWithTheAdminRoleThatItRestsToo() {
+		accounts.hold(account("Calix", "Sommer-2026!", PasswordState.CHOSEN, Role.ADMIN));
+		movedOn("Calix", DAYS_BEFORE_THE_NEWEST_MOVEMENT + 1);
+
+		LogInOutcome outcome = tested.with("Calix", "Sommer-2026!");
+
+		assertThat(outcome).isEqualTo(new LogInOutcome.Resting());
+	}
+
+	@Test
+	void logsInAnAccountWhoseLastMovementLiesExactlyThirtyDaysBeforeTheNewest() {
+		accounts.hold(account("Calix", "Sommer-2026!", PasswordState.CHOSEN, Role.MEMBER));
+		movedOn("Calix", DAYS_BEFORE_THE_NEWEST_MOVEMENT);
+
+		LogInOutcome outcome = tested.with("Calix", "Sommer-2026!");
+
+		assertThat(outcome).isEqualTo(new LogInOutcome.LoggedIn("login-Calix-MEMBER-0"));
+	}
+
+	@Test
+	void givesAWrongPasswordOnARestingAccountTheAnswerOfAnyWrongPassword() {
+		accounts.hold(account("Calix", "Sommer-2026!", PasswordState.CHOSEN, Role.MEMBER));
+		movedOn("Calix", DAYS_BEFORE_THE_NEWEST_MOVEMENT + 1);
+
+		LogInOutcome outcome = tested.with("Calix", "Winter-2026!");
+
+		assertThat(outcome).isEqualTo(new LogInOutcome.Refused());
+	}
+
+	@Test
+	void logsInTheAdminKeyWhateverAccountsRest() {
+		accounts.hold(account("Calix", "Sommer-2026!", PasswordState.CHOSEN, Role.ADMIN));
+		movedOn("Calix", DAYS_BEFORE_THE_NEWEST_MOVEMENT + 1);
+
+		LogInOutcome outcome = tested.with("admin", ADMIN_KEY);
+
+		assertThat(outcome).isEqualTo(new LogInOutcome.LoggedIn("admin-key-login-admin"));
+	}
+
+	private void movedOn(String avatar, int daysBeforeTheNewestMovement) {
+		Instant newest = Instant.parse("2026-01-31T12:00:00Z");
+		bank.seedEntries(avatar, List.of(new BankEntry(newest.minus(Duration.ofDays(daysBeforeTheNewestMovement)), avatar, 300, TransferType.ENTNAHME)));
+		bank.seedEntries("Aurora", List.of(new BankEntry(newest, "Aurora", 1000, TransferType.EINLAGERUNG)));
 	}
 
 	private static Account account(String avatar, String password, PasswordState state, Role role) {

@@ -28,6 +28,7 @@ const LOGIN = '/api/v1/login'
 const NEW_PASSWORD = '/api/v1/login/new-password'
 const BAD_REQUEST = 400
 const UNAUTHORIZED = 401
+const FORBIDDEN = 403
 const TOO_MANY_REQUESTS = 429
 const CHOOSE_NEW_PASSWORD = 'choose-new-password'
 const PASSWORD_REFUSALS: readonly PasswordRefusal[] = [
@@ -35,7 +36,7 @@ const PASSWORD_REFUSALS: readonly PasswordRefusal[] = [
   'same-as-before',
 ]
 
-type Refused = 'wrong-name-or-password' | 'too-many-attempts'
+type Refused = 'wrong-name-or-password' | 'too-many-attempts' | 'resting'
 
 export function httpLoginApi(post: HttpPost): LoginApi {
   return {
@@ -81,6 +82,9 @@ function refusalOf(response: Response): Refused | null {
   }
   if (response.status === TOO_MANY_REQUESTS) {
     return 'too-many-attempts'
+  }
+  if (response.status === FORBIDDEN) {
+    return 'resting'
   }
 
   return null

@@ -25,6 +25,7 @@ import dev.schoenberg.evergore.protocolParser.application.LoginStart;
 import dev.schoenberg.evergore.protocolParser.application.PasswordCheck;
 import dev.schoenberg.evergore.protocolParser.application.PasswordGenerator;
 import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
+import dev.schoenberg.evergore.protocolParser.application.RestingAccounts;
 import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
 import dev.schoenberg.evergore.protocolParser.application.ValidLogins;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
@@ -170,8 +171,13 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public LogIn logIn(PasswordCheck passwordCheck, LoginStart loginStart, AdminKey adminKey) {
-		return new LogIn(passwordCheck, loginStart, adminKey);
+	public RestingAccounts restingAccounts(BankRepository bankRepository, StorageRepository storageRepository) {
+		return new RestingAccounts(bankRepository, storageRepository);
+	}
+
+	@Singleton
+	public LogIn logIn(PasswordCheck passwordCheck, LoginStart loginStart, AdminKey adminKey, RestingAccounts restingAccounts) {
+		return new LogIn(passwordCheck, loginStart, adminKey, restingAccounts);
 	}
 
 	@Singleton
@@ -180,8 +186,9 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public ChooseNewPassword chooseNewPassword(PasswordCheck passwordCheck, AccountRepository accounts, PasswordHasher passwordHasher, LoginStart loginStart) {
-		return new ChooseNewPassword(passwordCheck, accounts, passwordHasher, new PasswordRule(), loginStart);
+	public ChooseNewPassword chooseNewPassword(PasswordCheck passwordCheck, AccountRepository accounts, PasswordHasher passwordHasher, LoginStart loginStart,
+			RestingAccounts restingAccounts) {
+		return new ChooseNewPassword(passwordCheck, accounts, passwordHasher, new PasswordRule(), loginStart, restingAccounts);
 	}
 
 	@Singleton

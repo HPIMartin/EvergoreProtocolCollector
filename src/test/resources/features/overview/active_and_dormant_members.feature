@@ -31,7 +31,6 @@ Feature: Active and dormant members
         | Boreas | exactly 30 days        | stands in the active table  | in the overview | a member opens the overview | "Boreas" stands in the active table |
         | Calix  | 30 days and one minute | stands in the dormant table | in the overview | a member opens the overview | "Calix" stands in the dormant table |
 
-      @wip
       Examples: On the login page
         | who    | when                   | outcome                     | where             | action                                                          | result                                                                                 |
         | Boreas | exactly 30 days        | is asked for a new password | on the login page | a member logs in as "Boreas" with the password the reset issued | the page is headed "Neues Passwort wählen"                                             |

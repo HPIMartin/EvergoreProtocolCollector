@@ -279,6 +279,16 @@ public class ClientLoginSteps {
 		assertThat(answer.body()).isEqualTo("{\"refusal\":\"wrong-name-or-password\"}");
 	}
 
+	@When("a client gives the name {string} and the password the reset issued and chooses {string} as the new password, skipping the login page")
+	public void aClientChoosesTheNewPasswordSkippingTheLoginPage(String name, String newPassword) {
+		Answer chosen = logins.chooseNewPassword(name, accounts.issuedTo(name), newPassword);
+		Answer figures = chosen.header("Set-Cookie").isPresent()
+				? logins.asking(OVERVIEWS_FIGURES, LoginRequests.loginValueIn(chosen))
+				: requests.get(OVERVIEWS_FIGURES, Map.of(AcceptanceClientIp.HEADER, A_CLIENT));
+
+		received.remember(figures);
+	}
+
 	@When("a client logs in as {string} with the password {string}")
 	public void aClientLogsInAs(String name, String password) {
 		received.remember(logins.logIn(name, password));
