@@ -22,6 +22,13 @@ class RecordingLogins implements SignedLogins {
 	}
 
 	@Override
+	public String issueForTheAdminKey(String name) {
+		String value = "admin-key-login-" + name;
+		issued.add(value);
+		return value;
+	}
+
+	@Override
 	public Optional<Login> read(String value) {
 		return Optional.empty();
 	}

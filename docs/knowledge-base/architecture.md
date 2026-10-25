@@ -63,8 +63,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
 - **Application use-cases (framework-free):** `application/{EvergoreDataExtractor,EvergoreDataEvaluator}`
   (collect + evaluate coordinators) · `application/LastRunStatus` (monitoring seam: what the
   last run reached, see the pipeline above) · `application/CreateAccounts` (the account step of the
-  pipeline) · `application/{LogIn,ChooseNewPassword}` (a login by name and password, and its second
-  step after a reset, below). Plain objects, wired in `ApplicationFactory`.
+  pipeline) · `application/{LogIn,ChooseNewPassword,AdminKey}` (a login by name and password, its
+  second step after a reset, and the console's admin key, below). Plain objects, wired in `ApplicationFactory`.
 - **Extraction pipeline:** `helper/selenium/{Browser,Driver,FileLoader}` ·
   `dataExtraction/website/SeleniumPageSource` (Selenium adapter: login, cookie banner, pagination;
   implements `PageSource`) · `PageContents` (DTO) · `parser/{EntityParser,EntryFactory}` (text ▶
@@ -180,7 +180,8 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
   of `account/NormalForm`, where a special character is a punctuation or symbol code point, and why
   a new one is refused: it breaks the rule, or it is the one it replaces) · `account/{Account,Role,PasswordState}`
   (an avatar's account: its password hash and state, its role, its last login) · `account/Login`
-  (what a signed login says: the account name, role, generation, id and its two instants) · `account/LoginName` (a typed name
+  (what a signed login says: the account name, role, generation, its `account/LoginSource`, id and
+  its two instants) · `account/LoginName` (a typed name
   matches an avatar's regardless of capitals, folded with `Locale.ROOT`, so the JVM's default locale
   never changes the key; the matching rule: [build-run-deploy.md](build-run-deploy.md), "The login
   API") · `Constants`.
@@ -304,20 +305,25 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     `No account for the avatar <Avatar>: the name admin logs in with the admin key.`;
   - an avatar whose hash or insert throws is logged with its name at error and the other avatars
     still get their accounts.
-- **Signed logins:** the port `application/SignedLogins` (`issue(name, role, generation)`,
-  `read(value)` answering an `Optional<Login>`) with the adapter `helper/security/JwtLogins`
-  (Auth0 java-jwt):
+- **Signed logins:** the port `application/SignedLogins` (`issue(name, role, generation)` for an
+  account, `issueForTheAdminKey(name)` for the admin key, `read(value)` answering an
+  `Optional<Login>`) with the adapter `helper/security/JwtLogins` (Auth0 java-jwt):
   - the value is a JWT signed with HMAC-SHA256;
   - the key is 32 bytes `ApplicationFactory` draws from `SecureRandom` at every start;
   - a restart ends every login, because the key is gone;
   - the key is never configured and never logged;
-  - the claims are the name (`sub`), `role`, `gen` (the generation), a unique `jti`, and `iat` and
-    `exp` from the injected `Clock`, with `exp` exactly 7 days after `iat`;
+  - the claims are the name (`sub`), `role`, `gen` (the generation), `src` (`ACCOUNT` or
+    `ADMIN_KEY`, whether an account's password or the admin key made the login), a unique `jti`,
+    and `iat` and `exp` from the injected `Clock`, with `exp` exactly 7 days after `iat`;
+  - the admin key's login carries the name `admin`, the role `ADMIN` and the generation 0;
   - the verifier pins the algorithm and refuses a value signed with another key, with another
     algorithm or with none, one whose claims were altered, one at or after its `exp`, and anything
     that is no JWT, each as an empty answer rather than an exception;
   - the verifier does not check `iat` against the clock, so a step back of the clock logs no one
-    out, and `exp` still bounds every login.
+    out, and `exp` still bounds every login;
+  - a value signed with the right key whose `role`, `src` or `gen` claim is of the wrong kind, or
+    names no role or no source, is refused the same way: the read checks each claim, it catches no
+    `NullPointerException`.
 - **Logging in:** `application/LogIn` checks a name and a password, `application/ChooseNewPassword`
   takes the new password after a reset (what the endpoints answer:
   [build-run-deploy.md](build-run-deploy.md), "The login API"):
@@ -340,7 +346,16 @@ Admin read path:        GET /api/v1/admin/status  (token-exempt, anonymous) ▶ 
     (`AccountRepository.replaceIssuedPassword`): of two requests that carry the issued password at
     once, one wins and the other gets the answer of a wrong password and no login;
   - a refused choice changes nothing, so the issued password stays valid;
-  - every hash and password check runs before the transactions, never inside them.
+  - every hash and password check runs before the transactions, never inside them;
+  - a name that folds to `admin` is the admin key's (`application/AdminKey`), never an account's:
+    - `LogIn` starts the key's login only for the exact key;
+    - the key is compared with `MessageDigest.isEqual`;
+    - the key's login records no last login;
+    - `ChooseNewPassword` finds no account under that name and refuses.
+- **The admin key:** `application/AdminKey` is drawn by `ApplicationFactory` from `SecureRandom`:
+  - `helper/security/AdminKeyAnnouncement` writes it on the `StartupEvent` through `Logger`;
+  - its format, the log line and its lifetime: [build-run-deploy.md](build-run-deploy.md), "The
+    console admin key".
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.

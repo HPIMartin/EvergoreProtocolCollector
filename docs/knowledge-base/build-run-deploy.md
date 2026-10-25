@@ -1190,6 +1190,31 @@ case `LogIn`, [architecture.md](architecture.md), "Logging in"):
 - The same IO pool holds here too.
 - A missing field counts as empty here too.
 
+**The console admin key.** At every start the service logs exactly one line
+
+```
+Console admin key, valid until the next restart: <key>
+```
+
+with a new random key of 43 characters (32 bytes, Base64url without padding), so the machine's
+operator always has an admin login, also before any account holds the admin role:
+
+- the operator reads the line from the container's log (`docker logs <container>`) and logs in
+  through `POST /api/v1/login` with the name `admin`, in any capitals, and the key as the password,
+  answered like a right chosen password (**200** `{"step":"logged-in"}` and the cookie);
+- the key must be typed exactly, its capitals included; under any other name, or with any other
+  password under `admin`, the answer is the wrong-password one above;
+- the key's login has the admin role and no account, so it has no password to change:
+  `/api/v1/login/new-password` refuses the name `admin` as a wrong password;
+- the key lives in memory only:
+  - it is never written anywhere but that line;
+  - the next restart draws a new one;
+  - the old key logs in no more;
+- a member's account gets the admin role by hand on the production database, after the first
+  collection has created the accounts:
+  - the statement is `UPDATE account SET role = 'ADMIN' WHERE name_key = '<the folded name>'`;
+  - the role is a claim of the signed login, so it takes effect at that member's next login.
+
 ## Scheduled job
 
 - `EvergoreDataCollectorJob`: `@Scheduled(fixedDelay = "24h")`, configurable initial delay

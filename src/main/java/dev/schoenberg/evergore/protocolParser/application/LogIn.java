@@ -8,13 +8,18 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordStat
 public class LogIn {
 	private final PasswordCheck passwordCheck;
 	private final LoginStart loginStart;
+	private final AdminKey adminKey;
 
-	public LogIn(PasswordCheck passwordCheck, LoginStart loginStart) {
+	public LogIn(PasswordCheck passwordCheck, LoginStart loginStart, AdminKey adminKey) {
 		this.passwordCheck = passwordCheck;
 		this.loginStart = loginStart;
+		this.adminKey = adminKey;
 	}
 
 	public LogInOutcome with(String name, String password) {
+		if (adminKey.isNamedBy(name)) {
+			return adminKey.opens(name, password) ? loginStart.startForTheAdminKey() : new LogInOutcome.Refused();
+		}
 		long generation = loginStart.generationSeenBeforeTheCheckOf(name);
 		Optional<Account> account = passwordCheck.accountWith(name, password);
 		if (account.isEmpty()) {

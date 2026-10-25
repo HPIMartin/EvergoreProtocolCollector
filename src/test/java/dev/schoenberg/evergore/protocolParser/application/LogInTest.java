@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import dev.schoenberg.evergore.protocolParser.FixedRandom;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
@@ -20,14 +21,56 @@ import static org.assertj.core.api.Assertions.assertThat;
 class LogInTest {
 	private static final Instant NOW = Instant.parse("2026-01-05T10:00:00Z");
 	private static final String HASH_OF_NO_PASSWORD = "hashed:a password nobody holds";
+	private static final String ADMIN_KEY = FixedRandom.ADMIN_KEY_OF_ONES;
 
 	private final List<String> trail = new ArrayList<>();
 	private final InMemoryAccounts accounts = new InMemoryAccounts(trail);
 	private final PrefixHasher hasher = new PrefixHasher(trail);
 	private final RecordingLogins logins = new RecordingLogins();
 	private final LoginGenerations generations = new LoginGenerations();
+	private final AdminKey adminKey = AdminKey.drawn(new FixedRandom());
 	private final LogIn tested = new LogIn(new PasswordCheck(accounts, hasher, HASH_OF_NO_PASSWORD),
-			new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC)));
+			new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC)), adminKey);
+
+	@ParameterizedTest
+	@CsvSource({"admin", "ADMIN", "Admin"})
+	void logsInTheAdminKeyUnderTheNameAdminInAnyCapitalsAsTheAdminKey(String name) {
+		LogInOutcome outcome = tested.with(name, ADMIN_KEY);
+
+		assertThat(outcome).isEqualTo(new LogInOutcome.LoggedIn("admin-key-login-admin"));
+	}
+
+	@Test
+	void writesNoLastLoginAndChecksNoAccountForTheAdminKey() {
+		tested.with("admin", ADMIN_KEY);
+
+		assertThat(trail).isEmpty();
+	}
+
+	@Test
+	void refusesAnyOtherPasswordUnderTheNameAdmin() {
+		LogInOutcome outcome = tested.with("admin", "Sommer-2026!");
+
+		assertThat(outcome).isEqualTo(new LogInOutcome.Refused());
+		assertThat(logins.issued()).isEmpty();
+	}
+
+	@ParameterizedTest
+	@CsvSource({"Aurora", "Zephyr"})
+	void refusesTheAdminKeyUnderAnyOtherName(String name) {
+		accounts.hold(account("Aurora", "Sommer-2026!", PasswordState.CHOSEN, Role.ADMIN));
+
+		LogInOutcome outcome = tested.with(name, ADMIN_KEY);
+
+		assertThat(outcome).isEqualTo(new LogInOutcome.Refused());
+	}
+
+	@Test
+	void refusesTheAdminKeyWrittenInOtherCapitals() {
+		LogInOutcome outcome = tested.with("admin", ADMIN_KEY.toLowerCase());
+
+		assertThat(outcome).isEqualTo(new LogInOutcome.Refused());
+	}
 
 	@Test
 	void logsInAChosenPasswordWithALoginNamedAfterTheAccount() {

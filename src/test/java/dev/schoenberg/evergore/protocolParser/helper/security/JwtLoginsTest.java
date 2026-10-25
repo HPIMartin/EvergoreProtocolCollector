@@ -18,6 +18,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginSource;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,6 +44,109 @@ class JwtLoginsTest {
 			assertThat(read.role()).isEqualTo(Role.ADMIN);
 			assertThat(read.generation()).isEqualTo(7);
 		});
+	}
+
+	@Test
+	void saysThatTheLoginOfAnAccountComesFromAnAccount() {
+		String value = tested.issue("aurora", Role.ADMIN, 0);
+
+		Optional<LoginSource> source = tested.read(value).map(Login::source);
+
+		assertThat(source).contains(LoginSource.ACCOUNT);
+	}
+
+	@Test
+	void issuesTheAdminKeyALoginWithTheAdminRoleThatSaysItComesFromTheKey() {
+		String value = tested.issueForTheAdminKey("admin");
+
+		Optional<Login> login = tested.read(value);
+
+		assertThat(login).hasValueSatisfying(read -> {
+			assertThat(read.accountName()).isEqualTo("admin");
+			assertThat(read.role()).isEqualTo(Role.ADMIN);
+			assertThat(read.source()).isEqualTo(LoginSource.ADMIN_KEY);
+		});
+	}
+
+	@Test
+	void refusesALoginWhoseSourceWasAltered() {
+		String signed = tested.issue("aurora", Role.ADMIN, 0);
+
+		Optional<Login> login = tested.read(withPayloadReplaced(signed, "\"src\":\"ACCOUNT\"", "\"src\":\"ADMIN_KEY\""));
+
+		assertThat(login).isEmpty();
+	}
+
+	@Test
+	void refusesALoginSignedByTheRightKeyThatSaysNothingOfItsSource() {
+		String value = JWT
+				.create()
+				.withSubject("aurora")
+				.withClaim("role", "ADMIN")
+				.withClaim("gen", 0L)
+				.withJWTId("an-id")
+				.withIssuedAt(MADE)
+				.withExpiresAt(MADE.plus(Duration.ofDays(7)))
+				.sign(Algorithm.HMAC256(KEY));
+
+		Optional<Login> login = tested.read(value);
+
+		assertThat(login).isEmpty();
+	}
+
+	@Test
+	void refusesALoginSignedByTheRightKeyWhoseRoleIsNoString() {
+		String value = claimsOfAValidLogin().withClaim("role", 5).withClaim("src", "ACCOUNT").sign(Algorithm.HMAC256(KEY));
+
+		Optional<Login> login = tested.read(value);
+
+		assertThat(login).isEmpty();
+	}
+
+	@Test
+	void refusesALoginSignedByTheRightKeyWhoseSourceIsNoString() {
+		String value = claimsOfAValidLogin().withClaim("role", "ADMIN").withClaim("src", 5).sign(Algorithm.HMAC256(KEY));
+
+		Optional<Login> login = tested.read(value);
+
+		assertThat(login).isEmpty();
+	}
+
+	@Test
+	void refusesALoginSignedByTheRightKeyWhoseGenerationIsNoNumber() {
+		String value = JWT
+				.create()
+				.withSubject("aurora")
+				.withClaim("role", "ADMIN")
+				.withClaim("gen", "zero")
+				.withClaim("src", "ACCOUNT")
+				.withJWTId("an-id")
+				.withIssuedAt(MADE)
+				.withExpiresAt(MADE.plus(Duration.ofDays(7)))
+				.sign(Algorithm.HMAC256(KEY));
+
+		Optional<Login> login = tested.read(value);
+
+		assertThat(login).isEmpty();
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"ROOT", "admin", ""})
+	void refusesALoginSignedByTheRightKeyWhoseRoleNamesNoRole(String role) {
+		String value = claimsOfAValidLogin().withClaim("role", role).withClaim("src", "ACCOUNT").sign(Algorithm.HMAC256(KEY));
+
+		Optional<Login> login = tested.read(value);
+
+		assertThat(login).isEmpty();
+	}
+
+	@Test
+	void refusesALoginSignedByTheRightKeyWhoseSourceNamesNoSource() {
+		String value = claimsOfAValidLogin().withClaim("role", "ADMIN").withClaim("src", "SOMEWHERE").sign(Algorithm.HMAC256(KEY));
+
+		Optional<Login> login = tested.read(value);
+
+		assertThat(login).isEmpty();
 	}
 
 	@Test
@@ -236,42 +340,6 @@ class JwtLoginsTest {
 		long pushedOut = MADE.plus(Duration.ofDays(70)).getEpochSecond();
 
 		Optional<Login> login = tested.read(withPayloadReplaced(signed, "\"exp\":" + MADE.plus(Duration.ofDays(7)).getEpochSecond(), "\"exp\":" + pushedOut));
-
-		assertThat(login).isEmpty();
-	}
-
-	@Test
-	void refusesALoginSignedByTheRightKeyWhoseRoleIsNoString() {
-		String value = claimsOfAValidLogin().withClaim("role", 5).sign(Algorithm.HMAC256(KEY));
-
-		Optional<Login> login = tested.read(value);
-
-		assertThat(login).isEmpty();
-	}
-
-	@Test
-	void refusesALoginSignedByTheRightKeyWhoseGenerationIsNoNumber() {
-		String value = JWT
-				.create()
-				.withSubject("aurora")
-				.withClaim("role", "ADMIN")
-				.withClaim("gen", "zero")
-				.withJWTId("an-id")
-				.withIssuedAt(MADE)
-				.withExpiresAt(MADE.plus(Duration.ofDays(7)))
-				.sign(Algorithm.HMAC256(KEY));
-
-		Optional<Login> login = tested.read(value);
-
-		assertThat(login).isEmpty();
-	}
-
-	@ParameterizedTest
-	@ValueSource(strings = {"ROOT", "admin", ""})
-	void refusesALoginSignedByTheRightKeyWhoseRoleNamesNoRole(String role) {
-		String value = claimsOfAValidLogin().withClaim("role", role).sign(Algorithm.HMAC256(KEY));
-
-		Optional<Login> login = tested.read(value);
 
 		assertThat(login).isEmpty();
 	}

@@ -20,9 +20,9 @@ import kong.unirest.Unirest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.RawHttpClient;
+import dev.schoenberg.evergore.protocolParser.SpiedLoggerFactory;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
@@ -31,8 +31,9 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@MicronautTest
+@MicronautTest(rebuildContext = true)
 @Property(name = "evergore.security.public-paths", value = "/api/v1/login,/api/v1/boom,/api/v1/echo")
+@Property(name = SpiedLoggerFactory.SPIED_LOGGER, value = "true")
 class BareErrorAnswersTest {
 	private static final Path WORKING_DB = Paths.get("build/tmp/bareErrorAnswers/bareErrorAnswers.sqlite");
 	private static final String BOOM_PATH = "/api/v1/boom";
@@ -51,7 +52,7 @@ class BareErrorAnswersTest {
 		});
 	}
 
-	private final LoggerSpy logger = new LoggerSpy();
+	private @Inject LoggerSpy logger;
 
 	private @Inject EmbeddedServer server;
 
@@ -124,11 +125,6 @@ class BareErrorAnswersTest {
 		String echo(@Body String body) {
 			return body;
 		}
-	}
-
-	@MockBean(Logger.class)
-	Logger loggerMock() {
-		return logger;
 	}
 
 	@MockBean(Configuration.class)

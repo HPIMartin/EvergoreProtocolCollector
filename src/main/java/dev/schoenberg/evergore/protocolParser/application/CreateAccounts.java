@@ -10,8 +10,6 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordStat
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 
 public class CreateAccounts {
-	private static final String ADMIN_KEY_NAME = "admin";
-
 	private final KnownAvatars knownAvatars;
 	private final AccountRepository accounts;
 	private final PasswordGenerator passwordGenerator;
@@ -43,7 +41,7 @@ public class CreateAccounts {
 
 	private void createAccountFor(String avatar) {
 		String nameKey = new LoginName(avatar).key();
-		if (nameKey.equals(ADMIN_KEY_NAME)) {
+		if (nameKey.equals(AdminKey.NAME)) {
 			logger.info("No account for the avatar " + avatar + ": the name admin logs in with the admin key.");
 			return;
 		}

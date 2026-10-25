@@ -18,6 +18,7 @@ import java.util.zip.GZIPOutputStream;
 import jakarta.inject.Inject;
 
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.context.annotation.Property;
 import io.micronaut.runtime.server.EmbeddedServer;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -33,6 +34,7 @@ import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
 import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginSource;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
@@ -47,6 +49,7 @@ import static io.micronaut.http.HttpStatus.UNAUTHORIZED;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @MicronautTest
+@Property(name = FixedAdminKeyFactory.FIXED_ADMIN_KEY, value = "true")
 class LoginEndpointTest {
 	private static final Path WORKING_DB = Paths.get("build/tmp/login/login.sqlite");
 	private static final Instant NOW = Instant.parse("2026-01-05T10:00:00Z");
@@ -295,6 +298,26 @@ class LoginEndpointTest {
 		HttpResponse<String> response = chooseNewPassword("Boreas", ISSUED_PASSWORD, "x".repeat(FIVE_KIBIBYTES));
 
 		assertThat(response.getStatus()).isEqualTo(REQUEST_ENTITY_TOO_LARGE.getCode());
+	}
+
+	@Test
+	void logsInTheAdminKeyUnderTheNameAdminWithALoginOfTheKey() {
+		HttpResponse<String> response = logIn("ADMIN", FixedRandom.ADMIN_KEY_OF_ONES);
+
+		Optional<Login> login = signedLogins().read(valueOf(response.getHeaders().getFirst(SET_COOKIE)));
+
+		assertThat(response.getBody()).isEqualTo("{\"step\":\"logged-in\"}");
+		assertThat(login).map(Login::accountName).contains("admin");
+		assertThat(login).map(Login::role).contains(Role.ADMIN);
+		assertThat(login).map(Login::source).contains(LoginSource.ADMIN_KEY);
+	}
+
+	@Test
+	void refusesTheSecondStepForTheNameAdminWithTheAnswerOfAWrongPassword() {
+		HttpResponse<String> response = chooseNewPassword("admin", FixedRandom.ADMIN_KEY_OF_ONES, "Winter-2026!");
+
+		assertThat(response.getStatus()).isEqualTo(UNAUTHORIZED.getCode());
+		assertThat(response.getBody()).isEqualTo("{\"refusal\":\"wrong-name-or-password\"}");
 	}
 
 	private HttpResponse<String> logIn(String name, String password) {

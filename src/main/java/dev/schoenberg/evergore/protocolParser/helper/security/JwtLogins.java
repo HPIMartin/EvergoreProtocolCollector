@@ -15,12 +15,14 @@ import com.auth0.jwt.interfaces.Verification;
 
 import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginSource;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 
 public class JwtLogins implements SignedLogins {
 	private static final int KEY_BYTES = 32;
 	private static final String ROLE = "role";
 	private static final String GENERATION = "gen";
+	private static final String SOURCE = "src";
 
 	private final Algorithm algorithm;
 	private final Clock clock;
@@ -38,13 +40,23 @@ public class JwtLogins implements SignedLogins {
 
 	@Override
 	public String issue(String accountName, Role role, long generation) {
+		return signed(accountName, role, generation, LoginSource.ACCOUNT);
+	}
+
+	@Override
+	public String issueForTheAdminKey(String name) {
+		return signed(name, Role.ADMIN, 0, LoginSource.ADMIN_KEY);
+	}
+
+	private String signed(String name, Role role, long generation, LoginSource source) {
 		Instant made = clock.instant();
 
 		return JWT
 				.create()
-				.withSubject(accountName)
+				.withSubject(name)
 				.withClaim(ROLE, role.name())
 				.withClaim(GENERATION, generation)
+				.withClaim(SOURCE, source.name())
 				.withJWTId(UUID.randomUUID().toString())
 				.withIssuedAt(made)
 				.withExpiresAt(made.plus(Login.LIFETIME))
@@ -66,6 +78,7 @@ public class JwtLogins implements SignedLogins {
 				.withClaimPresence("sub")
 				.withClaimPresence(ROLE)
 				.withClaimPresence(GENERATION)
+				.withClaimPresence(SOURCE)
 				.withClaimPresence("jti")
 				.withClaimPresence("iat")
 				.withClaimPresence("exp")
@@ -76,10 +89,13 @@ public class JwtLogins implements SignedLogins {
 
 	private static Optional<Login> loginOf(DecodedJWT decoded) {
 		String role = decoded.getClaim(ROLE).asString();
+		String source = decoded.getClaim(SOURCE).asString();
 		Long generation = decoded.getClaim(GENERATION).asLong();
-		if (role == null || generation == null) {
+		if (role == null || source == null || generation == null) {
 			return Optional.empty();
 		}
-		return Optional.of(new Login(decoded.getSubject(), Role.valueOf(role), generation, decoded.getId(), decoded.getIssuedAtAsInstant(), decoded.getExpiresAtAsInstant()));
+		return Optional
+				.of(new Login(decoded.getSubject(), Role.valueOf(role), generation, LoginSource.valueOf(source), decoded.getId(), decoded.getIssuedAtAsInstant(),
+						decoded.getExpiresAtAsInstant()));
 	}
 }

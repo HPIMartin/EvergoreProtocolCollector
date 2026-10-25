@@ -10,6 +10,7 @@ import io.micronaut.context.annotation.Factory;
 import org.openqa.selenium.support.ui.Sleeper;
 
 import dev.schoenberg.evergore.protocolParser.application.AccountRepository;
+import dev.schoenberg.evergore.protocolParser.application.AdminKey;
 import dev.schoenberg.evergore.protocolParser.application.ChooseNewPassword;
 import dev.schoenberg.evergore.protocolParser.application.CreateAccounts;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
@@ -156,8 +157,13 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public LogIn logIn(PasswordCheck passwordCheck, LoginStart loginStart) {
-		return new LogIn(passwordCheck, loginStart);
+	public LogIn logIn(PasswordCheck passwordCheck, LoginStart loginStart, AdminKey adminKey) {
+		return new LogIn(passwordCheck, loginStart, adminKey);
+	}
+
+	@Singleton
+	public AdminKey adminKey() {
+		return AdminKey.drawn(new SecureRandom());
 	}
 
 	@Singleton

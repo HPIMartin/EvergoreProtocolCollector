@@ -26,4 +26,8 @@ public class LoginStart {
 		accounts.recordLastLogin(account.nameKey(), clock.instant());
 		return new LogInOutcome.LoggedIn(signedLogins.issue(account.avatar(), account.role(), generationSeenBeforeTheCheck));
 	}
+
+	public LogInOutcome startForTheAdminKey() {
+		return new LogInOutcome.LoggedIn(signedLogins.issueForTheAdminKey(AdminKey.NAME));
+	}
 }

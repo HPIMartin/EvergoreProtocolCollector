@@ -12,14 +12,15 @@ import java.util.stream.Stream;
 
 import jakarta.inject.Inject;
 
+import io.micronaut.context.annotation.Property;
 import io.micronaut.runtime.server.EmbeddedServer;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import org.junit.jupiter.api.Test;
 
-import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.RawHttpClient;
+import dev.schoenberg.evergore.protocolParser.SpiedLoggerFactory;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PostCollectionHook;
 import dev.schoenberg.evergore.protocolParser.database.PreDatabaseConnectionHook;
@@ -32,6 +33,7 @@ import static io.micronaut.http.HttpStatus.TOO_MANY_REQUESTS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @MicronautTest(environments = "ratelimit", rebuildContext = true)
+@Property(name = SpiedLoggerFactory.SPIED_LOGGER, value = "true")
 class UnreadableHeadServerTest {
 
 	private static final Path WORKING_DB = Paths.get("build/tmp/unreadableHead/unreadableHead.sqlite");
@@ -51,7 +53,7 @@ class UnreadableHeadServerTest {
 		});
 	}
 
-	private final LoggerSpy logger = new LoggerSpy();
+	private @Inject LoggerSpy logger;
 
 	private @Inject EmbeddedServer server;
 
@@ -128,11 +130,6 @@ class UnreadableHeadServerTest {
 
 	private List<String> auditLines() {
 		return logger.infoMessages().stream().filter(line -> line.startsWith(AUDIT_LINE_START)).toList();
-	}
-
-	@MockBean(Logger.class)
-	Logger loggerSpy() {
-		return logger;
 	}
 
 	@MockBean(Configuration.class)
