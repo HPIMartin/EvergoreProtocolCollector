@@ -42,8 +42,7 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
 2. IMPLEMENT (spawn `implementer`) with the approved plan
    - per step: red (failing test) → ./verify focus → green (minimal code) → refactor
      → commit locally with the message the plan names; the scenarios run via ./verify bdd
-   - ARM: when every scenario of the feature passes, one commit removes @wip, the last TDD step;
-     from here ./verify all runs the scenarios on every commit and at every gate
+   - ARM: per handbook §5 step 5
    - REFACTOR the feature under the armed net: no behavior change, each step its own green commit
    - the feature is done when the armed scenarios pass, not when the steps are ticked off
    - never pushes; domain/businessLogic/application stay framework-free
@@ -66,7 +65,7 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
    - doc-reviewer: docs hygiene per the DOC checklist, task-scoped, plus a stateless
      rotating one-doc sweep (pick = commit count mod doc count; see the agent definition)
    - reviewer: process adherence (scenario gate and author gate 1 honored? real
-     red→green→refactor with red evidence? arming commit the last TDD step, refactor commits
+     red→green→refactor with red evidence? arming per handbook §5 step 5? refactor commits
      behavior-free? whitespace separate? commit-msg rules?) + code criteria; from round 2 on it
      integrates the earlier rounds' reports, all of which are in its brief
 4. REVIEW GATE, once per FEATURE commit: the round closes on a green
@@ -509,9 +508,9 @@ A scenario gate's reports, held so a check can tell which features each agent re
    quality. Drafted as a `.feature`, gated by the scenario gate, **confirmed by the author as
    complete**, committed `@wip`.
 2. **Plan:** test list for `EvergoreDataEvaluator` storage calc: ① place value = Σ storageValue·qty·quality/100 ② withdraw value uses withdrawlValue ③ unknown item → UNDEFINED+log ④ watermark advances. Messages approved.
-3. **Implement:** four red→green→refactor micro-commits with those messages; when the scenario
-   passes, one commit arms it (removes `@wip`), and a refactor commit tidies the evaluator under
-   that net.
+3. **Implement:** four red→green→refactor micro-commits with those messages; the one that turns
+   the scenario green also removes `@wip`, and a refactor commit tidies the evaluator under that
+   net.
 4. **Falsify and review, one round side by side:** domain lens recomputes ① ② by hand; robustness lens: does ③ assert the log? quality=0 edge? is green real if the production line is reverted? → counter-tests; doc-reviewer: `domain-model.md`/`testing.md` updated, backlog row removed?; reviewer: boundaries clean, messages one-line verb-first? → PASS once the dossier check passes.
 5. **You, author gate 2:** the rebased tip with its compare range on your review; you land it
    with `/land <tip>` on its pull request (agent seat) or `git push origin <tip>:refs/heads/main`.

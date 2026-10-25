@@ -323,15 +323,15 @@ set goes back to the author before that behavior is written.
    built on them.
 3. **Commit the confirmed scenarios tagged `@wip`**: the default run excludes `@wip`
    (`junit-platform.properties`), so the build stays green while intent is captured. The tag stays
-   committed until step 5.
+   committed until the arming commit (step 5).
 4. **Drive them green with §4 TDD cycles**: step definitions and production code, one committed
    cycle at a time. The scenarios run through `./verify bdd` (every `@wip` scenario) or
    `./verify focus <feature file>`; removing the tag locally to run them is a fallback and is never
-   committed. A scenario that turns out to be wrong goes **back to the author** as a changed
-   scenario; it is never quietly reinterpreted to match what the code now does.
-5. **Arm the scenarios**, the last TDD step: when every scenario of the feature passes, remove
-   `@wip` in its own commit (`Arm the <feature> scenarios`). From here `./verify all` runs them on
-   every commit and at every gate.
+   committed before the arming commit. A scenario that turns out to be wrong goes **back to the
+   author** as a changed scenario; it is never quietly reinterpreted to match what the code now does.
+5. **Arm the scenarios** in the last TDD cycle of step 4: that commit also removes `@wip`, and no
+   commit of its own only removes the tag (author decision 2026-10-25). From here `./verify all`
+   runs them on every commit and at every gate.
 6. **Refactor the feature** under the armed net: improve the design across the feature with the
    scenarios and unit tests green, one green commit per step, behavior unchanged. A change that
    needs new behavior or a new port is not a refactoring; it goes back to planning.

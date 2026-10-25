@@ -53,11 +53,11 @@ section's bullet "The reviewer runs the check as its first act" says.
 ## Process checks (the author cares about these)
 
 - **Were the scenario gate and author gate 1 honored?** The `.feature` committed tagged `@wip`
-  *before* the implementation commits, confirmed by the author as the complete acceptance, armed by
-  its own commit as the last TDD step, and passing now under `./verify all`? Refactor-phase commits
-  change no behavior? A feature with observable behavior and no confirmed `.feature` is a FAIL
-  (handbook §5). An exemption (pure refactoring, `[doc]`, build/infra) must be explicit in the plan, not
-  inferred.
+  *before* the implementation commits, confirmed by the author as the complete acceptance, armed in
+  the commit that turns its last scenario green (no tag-only commit), and passing now under
+  `./verify all`? Refactor-phase commits change no behavior? A feature with observable behavior and
+  no confirmed `.feature` is a FAIL (handbook §5). An exemption (pure refactoring, `[doc]`,
+  build/infra) must be explicit in the plan, not inferred.
 - Real **red→green→refactor**? Commit sequence + messages reflect small steps, not one big dump?
   **One full cycle per commit**, and each commit green **on its own** (walk them; the tip's
   greenness says nothing about its predecessors). **Every cycle carries red evidence** in the

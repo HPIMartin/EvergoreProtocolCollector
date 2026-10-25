@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: Executes an approved TDD plan for one feature (red→green→refactor per step) inside its author-confirmed @wip scenarios, committing each micro-step locally with the message its plan names and arming the scenarios as the last step. Never pushes. Use for hands-on implementation of a planned backlog item.
+description: Executes an approved TDD plan for one feature (red→green→refactor per step) inside its author-confirmed @wip scenarios, committing each micro-step locally with the message its plan names and arming the scenarios in the commit that turns the last one green. Never pushes. Use for hands-on implementation of a planned backlog item.
 model: sonnet
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
@@ -48,10 +48,10 @@ and report only on scope or ambiguity, not wording.
 4. **Commit:** `git add` the relevant files, commit with the **exact message the plan names**. **One
    full cycle = one commit**: red and green stay uncommitted steps inside it, only the refactored
    green result is committed. **Never `git push`.** Keep whitespace/format churn out of the commit.
-5. **Arm**, once, as the last TDD step: when every scenario of the feature passes, remove `@wip`
-   from the `.feature` in its own commit (`Arm the <feature> scenarios`) and confirm `./verify all`
-   runs them green. The plan's feature-level refactor steps follow under that net, each a green
-   commit that changes no behavior.
+5. **Arm** in the last cycle: the commit that turns the feature's last scenario green also removes
+   `@wip` from the `.feature`; confirm `./verify bdd` runs the scenarios green before that commit.
+   Never a commit of its own that only removes the tag. The plan's feature-level refactor steps
+   follow under that net, each a green commit that changes no behavior.
 
 ## Rules
 
