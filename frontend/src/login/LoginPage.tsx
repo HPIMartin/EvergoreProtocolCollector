@@ -7,6 +7,8 @@ import type { LoginAnswer } from '../domain'
 import { returnTarget } from '../domain'
 import { StatusPanel } from '../ui'
 
+import { NewPasswordStep } from './NewPasswordStep.tsx'
+
 export interface LoginPageProps {
   readonly search: string
   readonly post: HttpPost
@@ -29,17 +31,30 @@ export function LoginPage({ search, post, navigate }: LoginPageProps) {
   const [choosingANewPassword, setChoosingANewPassword] = useState(false)
   const [loggingIn, setLoggingIn] = useState(false)
 
+  const api = httpLoginApi(post)
+
+  function returnToTheTarget(): void {
+    navigate(returnTarget(new URLSearchParams(search).get(NEXT)))
+  }
+
+  function backToTheLogin(): void {
+    setChoosingANewPassword(false)
+    setPassword('')
+    setRefusal('wrong-name-or-password')
+  }
+
   async function logIn(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     if (loggingIn) {
       return
     }
     setLoggingIn(true)
-    const answer = await httpLoginApi(post).logIn(name, password)
+    const answer = await api.logIn(name, password)
     setLoggingIn(false)
     if (answer === 'logged-in') {
-      navigate(returnTarget(new URLSearchParams(search).get(NEXT)))
+      returnToTheTarget()
     } else if (answer === 'choose-new-password') {
+      setRefusal(null)
       setChoosingANewPassword(true)
     } else {
       setRefusal(answer)
@@ -48,9 +63,13 @@ export function LoginPage({ search, post, navigate }: LoginPageProps) {
 
   if (choosingANewPassword) {
     return (
-      <main className="login-page">
-        <h2 data-testid="view-title">Neues Passwort wählen</h2>
-      </main>
+      <NewPasswordStep
+        api={api}
+        name={name}
+        issuedPassword={password}
+        onLoggedIn={returnToTheTarget}
+        onRefused={backToTheLogin}
+      />
     )
   }
 

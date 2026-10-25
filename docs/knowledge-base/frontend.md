@@ -328,7 +328,30 @@ Five top-level folders under `frontend/src/`:
   - `logged-in` navigates to the return target;
   - a refused login (401) says „Name oder Passwort stimmt nicht.“ and stays;
   - a turned-away request (429) says „Zu viele Versuche. Bitte warte einen Moment.“;
-  - `choose-new-password` turns the page to the step „Neues Passwort wählen“.
+  - `choose-new-password` turns the page to the step „Neues Passwort wählen“ (`NewPasswordStep`).
+- **The new-password step** asks for the new password and its repetition:
+  - the page checks first and posts nothing for:
+    - two different entries: „Die beiden Eingaben stimmen nicht überein.“;
+    - a broken password rule: „Das Passwort braucht mindestens 8 Zeichen, darunter eine Zahl und
+      ein Sonderzeichen.“;
+    - the issued password repeated: „Das neue Passwort muss sich vom bisherigen unterscheiden.“;
+  - the rule is `refusalOfChoosing` (`domain`), the page's own copy of the service's
+    `PasswordRule`: handbook §5 counts the page's check and the service's as two rules;
+  - the button „Passwort speichern“ is disabled while the request is on its way and a second
+    submit posts nothing;
+  - both copies judge the NFC form of what was typed;
+  - both count a code point of a Unicode punctuation (`P*`) or symbol (`S*`) category as the
+    special character, so no space of any kind (no-break and zero-width ones included), control,
+    lone surrogate or combining mark is one;
+  - a parity table of twelve verdicts stands in `passwordRule.test.ts` and in the service's
+    `PasswordRuleTest`;
+  - otherwise it posts `/api/v1/login/new-password` with the name and the issued password of the
+    first step and the new password;
+  - the service's two refusals (400) show the same two texts, a 429 the waiting text;
+  - a 401 goes back to the first step with „Name oder Passwort stimmt nicht.“;
+  - `logged-in` navigates to the return target;
+  - the issued password lives only in the page's component state, never in the browser's storage
+    or the address.
 - **The return target** (`returnTarget`, `domain`) takes the `next` query parameter and returns it
   only when it is a path of this service:
   - it starts with exactly one `/`, a backslash counting as a slash, both as written and after

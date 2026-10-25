@@ -36,16 +36,38 @@ const WRONG_NAME_OR_PASSWORD: Answer = {
 const TOO_MANY_REQUESTS: Answer = { status: 429, body: null }
 
 function answering(answer: Answer): FakeService {
+  return answeringIn(() => answer)
+}
+
+function answeringIn(answerFor: (url: string) => Answer): FakeService {
   const posted: Posted[] = []
 
   return {
     posted,
     post: (url, body) => {
       posted.push({ url, body: JSON.parse(body) })
+      const answer = answerFor(url)
 
       return Promise.resolve(new Response(answer.body, answer))
     },
   }
+}
+
+function afterTheIssuedPassword(newPasswordAnswer: Answer): FakeService {
+  return answeringIn((url) =>
+    url === '/api/v1/login' ? CHOOSE_NEW_PASSWORD : newPasswordAnswer,
+  )
+}
+
+async function chooseNewPassword(newPassword: string): Promise<void> {
+  fireEvent.change(screen.getByLabelText('Neues Passwort'), {
+    target: { value: newPassword },
+  })
+  fireEvent.change(screen.getByLabelText('Neues Passwort wiederholen'), {
+    target: { value: newPassword },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Passwort speichern' }))
+  await act(async () => undefined)
 }
 
 interface Shown {
@@ -233,5 +255,63 @@ describe('LoginPage', () => {
       'Neues Passwort wählen',
     )
     expect(shown.navigatedTo).toEqual([])
+  })
+
+  it('chooses the new password with the name and the issued password of the first step', async () => {
+    const service = afterTheIssuedPassword(LOGGED_IN)
+    loginPageAt('', service)
+    await logIn('Boreas', ISSUED)
+
+    await chooseNewPassword(CHOSEN)
+
+    const lastPosted = service.posted.at(-1)
+    expect(lastPosted).toEqual({
+      url: '/api/v1/login/new-password',
+      body: { name: 'Boreas', issuedPassword: ISSUED, newPassword: CHOSEN },
+    })
+  })
+
+  it('returns to the page the member opened before once the new password is chosen', async () => {
+    const shown = loginPageAt(
+      '?next=%2Favatars%2FBoreas%2Fbank',
+      afterTheIssuedPassword(LOGGED_IN),
+    )
+    await logIn('Boreas', ISSUED)
+
+    await chooseNewPassword(CHOSEN)
+
+    expect(shown.navigatedTo).toEqual(['/avatars/Boreas/bank'])
+  })
+
+  it('goes back to the login and says the name or the password is wrong when the service refuses the issued password', async () => {
+    const shown = loginPageAt(
+      '',
+      afterTheIssuedPassword(WRONG_NAME_OR_PASSWORD),
+    )
+    await logIn('Boreas', ISSUED)
+
+    await chooseNewPassword(CHOSEN)
+
+    const messages = shownMessages()
+    expect(screen.getByTestId('view-title')).toHaveProperty(
+      'textContent',
+      'Anmeldung',
+    )
+    expect(messages).toEqual(['Name oder Passwort stimmt nicht.'])
+    expect(shown.navigatedTo).toEqual([])
+  })
+
+  it('keeps the issued password out of the address and the browser storage', async () => {
+    window.history.replaceState(null, '', '/login')
+    loginPageAt('', afterTheIssuedPassword(LOGGED_IN))
+
+    await logIn('Boreas', ISSUED)
+
+    const stored = [
+      ...Object.values({ ...window.localStorage }),
+      ...Object.values({ ...window.sessionStorage }),
+    ]
+    expect(window.location.href).not.toContain(ISSUED)
+    expect(stored).not.toContain(ISSUED)
   })
 })
