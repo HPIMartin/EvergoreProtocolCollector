@@ -46,6 +46,7 @@ public class ClientLoginSteps {
 	private final RunningService service;
 	private Answer earlierLoginAnswer;
 	private String issuedLogin;
+	private String returnTarget;
 
 	public ClientLoginSteps(LoginRequests logins, ServiceRequests requests, Accounts accounts, ClientAnswer received, OperatorSettings settings, RunningService service) {
 		this.logins = logins;
@@ -86,6 +87,34 @@ public class ClientLoginSteps {
 			case "signed by someone other than the service" -> AlteredLogins::signedBySomeoneOtherThanTheService;
 			default -> AlteredLogins::withoutASignature;
 		};
+	}
+
+	@ParameterType("by its full address|behind a doubled slash|behind a slash and a backslash")
+	public String awayTarget(String how) {
+		return switch (how) {
+			case "by its full address" -> "https://evil.example/overview";
+			case "behind a doubled slash" -> "//evil.example/overview";
+			default -> "/\\evil.example/overview";
+		};
+	}
+
+	@Given("a client has asked for the login page with the request to return to another site {awayTarget}")
+	public void aClientHasAskedForTheLoginPageWithTheRequestToReturnToAnotherSite(String target) {
+		Answer page = requests.get("/login?next=" + encoded(target), Map.of(AcceptanceClientIp.HEADER, A_CLIENT));
+
+		assertThat(page.status()).as("the login page asked for with a return target").isEqualTo(SERVED);
+		returnTarget = target;
+	}
+
+	@When("the client logs in as {string} with the password {string}")
+	public void theClientLogsInAs(String name, String password) {
+		received.remember(logins.logIn(name, password, returnTarget));
+	}
+
+	@Then("the operator finds the login's answer leading to the overview")
+	public void theOperatorFindsTheLoginsAnswerLeadingToTheOverview() {
+		assertThat(received.current().status()).as("the login: " + received.current().body()).isEqualTo(SERVED);
+		assertThat(LoginRequests.nextIn(received.current())).isEqualTo("/");
 	}
 
 	@When("a client without a login asks for {askedFor}")

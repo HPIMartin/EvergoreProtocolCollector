@@ -24,7 +24,11 @@ const CHOSEN = 'Sommer-2026!'
 const ANOTHER = 'Winter-2026!'
 const ISSUED = 'Issued-2026!'
 
-const LOGGED_IN: Answer = { status: 200, body: '{"step":"logged-in"}' }
+function loggedInTo(next: string): Answer {
+  return { status: 200, body: JSON.stringify({ step: 'logged-in', next }) }
+}
+
+const LOGGED_IN: Answer = loggedInTo('/')
 const CHOOSE_NEW_PASSWORD: Answer = {
   status: 200,
   body: '{"step":"choose-new-password"}',
@@ -163,31 +167,33 @@ describe('LoginPage', () => {
     ])
   })
 
-  it('returns to the page the member opened before', async () => {
+  it('sends the next of its own address with the login', async () => {
+    const service = answering(LOGGED_IN)
+    loginPageAt('?next=%2Favatars%2FAurora%2Fstorage', service)
+
+    await logIn('Aurora', CHOSEN)
+
+    expect(service.posted).toEqual([
+      {
+        url: '/api/v1/login',
+        body: {
+          name: 'Aurora',
+          password: CHOSEN,
+          next: '/avatars/Aurora/storage',
+        },
+      },
+    ])
+  })
+
+  it('navigates to what the service answered', async () => {
     const shown = loginPageAt(
-      '?next=%2Favatars%2FAurora%2Fstorage',
-      answering(LOGGED_IN),
+      '?next=%2F%2Fevil.example',
+      answering(loggedInTo('/avatars/Aurora/storage')),
     )
 
     await logIn('Aurora', CHOSEN)
 
     expect(shown.navigatedTo).toEqual(['/avatars/Aurora/storage'])
-  })
-
-  it('opens the overview after a login without a page to return to', async () => {
-    const shown = loginPageAt('', answering(LOGGED_IN))
-
-    await logIn('Aurora', CHOSEN)
-
-    expect(shown.navigatedTo).toEqual(['/'])
-  })
-
-  it('opens the overview instead of an address of another site', async () => {
-    const shown = loginPageAt('?next=%2F%2Fevil.example', answering(LOGGED_IN))
-
-    await logIn('Aurora', CHOSEN)
-
-    expect(shown.navigatedTo).toEqual(['/'])
   })
 
   it('says that the name or the password is wrong and stays', async () => {
@@ -271,10 +277,29 @@ describe('LoginPage', () => {
     })
   })
 
-  it('returns to the page the member opened before once the new password is chosen', async () => {
+  it('sends the next of its own address with the new password', async () => {
+    const service = afterTheIssuedPassword(LOGGED_IN)
+    loginPageAt('?next=%2Favatars%2FBoreas%2Fbank', service)
+    await logIn('Boreas', ISSUED)
+
+    await chooseNewPassword(CHOSEN)
+
+    const lastPosted = service.posted.at(-1)
+    expect(lastPosted).toEqual({
+      url: '/api/v1/login/new-password',
+      body: {
+        name: 'Boreas',
+        issuedPassword: ISSUED,
+        newPassword: CHOSEN,
+        next: '/avatars/Boreas/bank',
+      },
+    })
+  })
+
+  it('navigates to what the service answered once the new password is chosen', async () => {
     const shown = loginPageAt(
-      '?next=%2Favatars%2FBoreas%2Fbank',
-      afterTheIssuedPassword(LOGGED_IN),
+      '?next=%2F%2Fevil.example',
+      afterTheIssuedPassword(loggedInTo('/avatars/Boreas/bank')),
     )
     await logIn('Boreas', ISSUED)
 

@@ -40,7 +40,7 @@ public class LoginController {
 	public HttpResponse<?> logIn(@Body LoginRequest request) {
 		LogInOutcome outcome = logIn.with(textOf(request.name()), textOf(request.password()));
 
-		return outcome.accept(new Answer());
+		return outcome.accept(new Answer(ReturnTarget.of(request.next())));
 	}
 
 	@Post(NEW_PASSWORD)
@@ -49,7 +49,7 @@ public class LoginController {
 	public HttpResponse<?> chooseNewPassword(@Body NewPasswordRequest request) {
 		LogInOutcome outcome = chooseNewPassword.with(textOf(request.name()), textOf(request.issuedPassword()), textOf(request.newPassword()));
 
-		return outcome.accept(new Answer());
+		return outcome.accept(new Answer(ReturnTarget.of(request.next())));
 	}
 
 	private static String textOf(String field) {
@@ -57,9 +57,15 @@ public class LoginController {
 	}
 
 	private static final class Answer implements LogInOutcome.Visitor<HttpResponse<?>> {
+		private final String next;
+
+		Answer(String next) {
+			this.next = next;
+		}
+
 		@Override
 		public HttpResponse<?> onLoggedIn(String loginValue) {
-			return HttpResponse.ok(LoginStep.LOGGED_IN).header(SessionCookie.HEADER, SessionCookie.holding(loginValue));
+			return HttpResponse.ok(LoginStep.loggedInTo(next)).header(SessionCookie.HEADER, SessionCookie.holding(loginValue));
 		}
 
 		@Override

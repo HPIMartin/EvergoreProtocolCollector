@@ -87,7 +87,7 @@ class LoginEndpointTest {
 		HttpResponse<String> response = logIn("Aurora", CHOSEN_PASSWORD);
 
 		assertThat(response.getStatus()).isEqualTo(OK.getCode());
-		assertThat(response.getBody()).isEqualTo("{\"step\":\"logged-in\"}");
+		assertThat(response.getBody()).isEqualTo("{\"step\":\"logged-in\",\"next\":\"/\"}");
 	}
 
 	@Test
@@ -257,7 +257,7 @@ class LoginEndpointTest {
 		HttpResponse<String> response = chooseNewPassword("dorian", ISSUED_PASSWORD, CHOSEN_PASSWORD);
 
 		assertThat(response.getStatus()).isEqualTo(OK.getCode());
-		assertThat(response.getBody()).isEqualTo("{\"step\":\"logged-in\"}");
+		assertThat(response.getBody()).isEqualTo("{\"step\":\"logged-in\",\"next\":\"/\"}");
 		assertThat(response.getHeaders().getFirst(SET_COOKIE)).matches(SESSION_COOKIE);
 	}
 
@@ -269,7 +269,7 @@ class LoginEndpointTest {
 		HttpResponse<String> withTheNewPassword = logIn("Elara", CHOSEN_PASSWORD);
 		HttpResponse<String> withTheIssuedPassword = logIn("Elara", ISSUED_PASSWORD);
 
-		assertThat(withTheNewPassword.getBody()).isEqualTo("{\"step\":\"logged-in\"}");
+		assertThat(withTheNewPassword.getBody()).isEqualTo("{\"step\":\"logged-in\",\"next\":\"/\"}");
 		assertThat(withTheIssuedPassword.getStatus()).isEqualTo(UNAUTHORIZED.getCode());
 	}
 
@@ -323,7 +323,7 @@ class LoginEndpointTest {
 
 		Optional<Login> login = signedLogins().read(valueOf(response.getHeaders().getFirst(SET_COOKIE)));
 
-		assertThat(response.getBody()).isEqualTo("{\"step\":\"logged-in\"}");
+		assertThat(response.getBody()).isEqualTo("{\"step\":\"logged-in\",\"next\":\"/\"}");
 		assertThat(login).map(Login::accountName).contains("admin");
 		assertThat(login).map(Login::role).contains(Role.ADMIN);
 		assertThat(login).map(Login::source).contains(LoginSource.ADMIN_KEY);
@@ -335,6 +335,41 @@ class LoginEndpointTest {
 
 		assertThat(response.getStatus()).isEqualTo(UNAUTHORIZED.getCode());
 		assertThat(response.getBody()).isEqualTo("{\"refusal\":\"wrong-name-or-password\"}");
+	}
+
+	@Test
+	void answersTheLoginWithThePageOfThisServiceItWasAskedToReturnTo() {
+		HttpResponse<String> response = logIn("Aurora", CHOSEN_PASSWORD, "/avatars/Aurora/bank?page=2");
+
+		assertThat(response.getBody()).isEqualTo("{\"step\":\"logged-in\",\"next\":\"/avatars/Aurora/bank?page=2\"}");
+	}
+
+	@Test
+	void answersTheLoginWithTheOverviewWhenAskedToReturnToAnotherSite() {
+		HttpResponse<String> response = logIn("Aurora", CHOSEN_PASSWORD, "//evil.example/overview");
+
+		assertThat(response.getBody()).isEqualTo("{\"step\":\"logged-in\",\"next\":\"/\"}");
+	}
+
+	@Test
+	void answersTheNewPasswordWithThePageOfThisServiceItWasAskedToReturnTo() {
+		holdAccount("Fenja", ISSUED_PASSWORD, PasswordState.ISSUED, Role.MEMBER);
+
+		HttpResponse<String> response = post("/api/v1/login/new-password",
+				new JSONObject(Map.of("name", "Fenja", "issuedPassword", ISSUED_PASSWORD, "newPassword", CHOSEN_PASSWORD, "next", "/avatars/Fenja/storage")).toString());
+
+		assertThat(response.getBody()).isEqualTo("{\"step\":\"logged-in\",\"next\":\"/avatars/Fenja/storage\"}");
+	}
+
+	@Test
+	void asksForANewPasswordWithoutAnAddressToReturnTo() {
+		HttpResponse<String> response = logIn("Boreas", ISSUED_PASSWORD, "/overview");
+
+		assertThat(response.getBody()).isEqualTo("{\"step\":\"choose-new-password\"}");
+	}
+
+	private HttpResponse<String> logIn(String name, String password, String next) {
+		return post("/api/v1/login", new JSONObject(Map.of("name", name, "password", password, "next", next)).toString());
 	}
 
 	private HttpResponse<String> logIn(String name, String password) {

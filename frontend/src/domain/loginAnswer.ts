@@ -1,5 +1,10 @@
+export interface LoggedIn {
+  readonly step: 'logged-in'
+  readonly next: string
+}
+
 export type LoginAnswer =
-  | 'logged-in'
+  | LoggedIn
   | 'choose-new-password'
   | 'wrong-name-or-password'
   | 'too-many-attempts'
@@ -7,4 +12,4 @@ export type LoginAnswer =
 export type PasswordRefusal = 'breaks-the-rule' | 'same-as-before'
 
 export type NewPasswordAnswer =
-  'logged-in' | 'wrong-name-or-password' | 'too-many-attempts' | PasswordRefusal
+  LoggedIn | 'wrong-name-or-password' | 'too-many-attempts' | PasswordRefusal

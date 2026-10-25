@@ -4,7 +4,6 @@ import { useState } from 'react'
 import type { HttpPost } from '../api'
 import { httpLoginApi } from '../api'
 import type { LoginAnswer } from '../domain'
-import { returnTarget } from '../domain'
 import { StatusPanel } from '../ui'
 
 import { NewPasswordStep } from './NewPasswordStep.tsx'
@@ -15,7 +14,10 @@ export interface LoginPageProps {
   readonly navigate: (target: string) => void
 }
 
-type Refusal = Exclude<LoginAnswer, 'logged-in' | 'choose-new-password'>
+type Refusal = Extract<
+  LoginAnswer,
+  'wrong-name-or-password' | 'too-many-attempts'
+>
 
 const REFUSAL_TEXTS: Readonly<Record<Refusal, string>> = {
   'wrong-name-or-password': 'Name oder Passwort stimmt nicht.',
@@ -33,9 +35,7 @@ export function LoginPage({ search, post, navigate }: LoginPageProps) {
 
   const api = httpLoginApi(post)
 
-  function returnToTheTarget(): void {
-    navigate(returnTarget(new URLSearchParams(search).get(NEXT)))
-  }
+  const next = new URLSearchParams(search).get(NEXT)
 
   function backToTheLogin(): void {
     setChoosingANewPassword(false)
@@ -49,10 +49,10 @@ export function LoginPage({ search, post, navigate }: LoginPageProps) {
       return
     }
     setLoggingIn(true)
-    const answer = await api.logIn(name, password)
+    const answer = await api.logIn(name, password, next)
     setLoggingIn(false)
-    if (answer === 'logged-in') {
-      returnToTheTarget()
+    if (typeof answer === 'object') {
+      navigate(answer.next)
     } else if (answer === 'choose-new-password') {
       setRefusal(null)
       setChoosingANewPassword(true)
@@ -67,7 +67,8 @@ export function LoginPage({ search, post, navigate }: LoginPageProps) {
         api={api}
         name={name}
         issuedPassword={password}
-        onLoggedIn={returnToTheTarget}
+        next={next}
+        onLoggedIn={navigate}
         onRefused={backToTheLogin}
       />
     )

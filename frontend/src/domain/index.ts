@@ -27,10 +27,10 @@ export type { Answer, AnswerGroup, CalculationLine } from './explanation.ts'
 export { calculationTexts, explanationFrom } from './explanation.ts'
 export { loginAddressFor } from './loginAddress.ts'
 export type {
+  LoggedIn,
   LoginAnswer,
   NewPasswordAnswer,
   PasswordRefusal,
 } from './loginAnswer.ts'
 export type { ChoiceRefusal } from './passwordRule.ts'
 export { refusalOfChoosing } from './passwordRule.ts'
-export { returnTarget } from './returnTarget.ts'

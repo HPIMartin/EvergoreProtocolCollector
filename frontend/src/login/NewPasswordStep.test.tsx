@@ -22,7 +22,7 @@ interface FakeService {
 }
 
 interface Shown {
-  readonly loggedIn: number[]
+  readonly loggedIn: string[]
   readonly refused: number[]
 }
 
@@ -34,7 +34,10 @@ const RULE =
 const SAME = 'Das neue Passwort muss sich vom bisherigen unterscheiden.'
 const TOO_MANY = 'Zu viele Versuche. Bitte warte einen Moment.'
 
-const LOGGED_IN: Answer = { status: 200, body: '{"step":"logged-in"}' }
+const LOGGED_IN: Answer = {
+  status: 200,
+  body: '{"step":"logged-in","next":"/avatars/Boreas/bank"}',
+}
 
 function answering(answer: Answer): FakeService {
   const posted: Posted[] = []
@@ -50,14 +53,15 @@ function answering(answer: Answer): FakeService {
 }
 
 function stepFor(service: FakeService): Shown {
-  const loggedIn: number[] = []
+  const loggedIn: string[] = []
   const refused: number[] = []
   render(
     <NewPasswordStep
       api={httpLoginApi(service.post)}
       name="Boreas"
       issuedPassword={ISSUED}
-      onLoggedIn={() => loggedIn.push(1)}
+      next={null}
+      onLoggedIn={(next) => loggedIn.push(next)}
       onRefused={() => refused.push(1)}
     />,
   )
@@ -177,12 +181,12 @@ describe('NewPasswordStep', () => {
     expect(way.service.posted).toHaveLength(1)
   })
 
-  it('reports the login the new password opened', async () => {
+  it('reports where the login the new password opened leads', async () => {
     const shown = stepFor(answering(LOGGED_IN))
 
     await choose(CHOSEN, CHOSEN)
 
-    expect(shown.loggedIn).toEqual([1])
+    expect(shown.loggedIn).toEqual(['/avatars/Boreas/bank'])
   })
 
   it.each([

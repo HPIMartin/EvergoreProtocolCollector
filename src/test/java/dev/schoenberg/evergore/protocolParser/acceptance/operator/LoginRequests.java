@@ -29,6 +29,18 @@ public class LoginRequests {
 		return requests.post(LOGIN, json(Map.of("name", name, "password", password)), fromAFreshAddress());
 	}
 
+	public Answer logIn(String name, String password, String next) {
+		return requests.post(LOGIN, json(Map.of("name", name, "password", password, "next", next)), fromAFreshAddress());
+	}
+
+	public static String nextIn(Answer answer) {
+		try {
+			return JSON.readTree(answer.body()).path("next").asText();
+		} catch (JsonProcessingException e) {
+			throw new AssertionError("The login's answer is not JSON: " + answer.body(), e);
+		}
+	}
+
 	public Answer chooseNewPassword(String name, String issuedPassword, String newPassword) {
 		return requests.post(NEW_PASSWORD, json(Map.of("name", name, "issuedPassword", issuedPassword, "newPassword", newPassword)), fromAFreshAddress());
 	}

@@ -1154,8 +1154,8 @@ answered (measured on Micronaut 4.10.9).
 
 ## The login API
 
-`POST /api/v1/login` takes the JSON body `{"name": …, "password": …}` (`LoginController`, the use
-case `LogIn`, [architecture.md](architecture.md), "Logging in"):
+`POST /api/v1/login` takes the JSON body `{"name": …, "password": …, "next": …}` with an optional
+`next` (`LoginController`, the use case `LogIn`, [architecture.md](architecture.md), "Logging in"):
 
 - the name matches the avatar's:
   - in any capitals;
@@ -1163,7 +1163,15 @@ case `LogIn`, [architecture.md](architecture.md), "Logging in"):
   - after both are brought to Unicode NFC, so a decomposed umlaut matches the composed one, while
     `ß` and `SS` stay two names;
 - the password is brought to NFC too and then matches only exactly;
-- a right chosen password answers **200** `{"step":"logged-in"}` and sets the session cookie
+- **the return target** (`ReturnTarget`) is the one rule where the member goes after the login: it
+  answers `next` only when it is a path and query of this service, else `/`, the overview:
+  - it starts with exactly one `/`, a backslash counting as a slash, both as written and after
+    one percent-decoding;
+  - it carries no control character;
+  - anything else, a full address, `//…`, `/\…` and their percent-encoded forms included, and a
+    missing `next`, give `/`;
+- a right chosen password answers **200** `{"step":"logged-in","next":"<target>"}` and sets the
+  session cookie
   `epc_session=<login>; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax`:
   - the value is the signed login, which ends exactly 7 days after it was made;
   - `Max-Age` is relative, so no `Expires` is sent and the browser keeps the cookie whatever the
@@ -1182,8 +1190,8 @@ case `LogIn`, [architecture.md](architecture.md), "Logging in"):
 - the password check runs on the IO pool, like every controller.
 
 `POST /api/v1/login/new-password` takes the JSON body
-`{"name": …, "issuedPassword": …, "newPassword": …}`, the second step after
-`choose-new-password` (`ChooseNewPassword`). Its checks run in this order:
+`{"name": …, "issuedPassword": …, "newPassword": …, "next": …}` with an optional `next`, the
+second step after `choose-new-password` (`ChooseNewPassword`). Its checks run in this order:
 
 1. the account exists, still holds the password the service issued, and `issuedPassword` is it:
    - otherwise **401** `{"refusal":"wrong-name-or-password"}`, the answer of a wrong password
@@ -1195,8 +1203,8 @@ case `LogIn`, [architecture.md](architecture.md), "Logging in"):
    - it differs from the issued one, else **400** `{"refusal":"same-as-before"}`;
 3. then it replaces the issued password, and only while it is still the issued one:
    - the loser of two requests with the same issued password at once gets the answer of step 1;
-   - the winner is answered as a right chosen password is: **200** `{"step":"logged-in"}` and the
-     session cookie.
+   - the winner is answered as a right chosen password is: **200**
+     `{"step":"logged-in","next":"<target>"}` and the session cookie.
 
 - A refused choice changes nothing: the issued password still logs in to the second step.
 - The same 4 KiB limit holds here too.
@@ -1214,7 +1222,8 @@ operator always has an admin login, also before any account holds the admin role
 
 - the operator reads the line from the container's log (`docker logs <container>`) and logs in
   through `POST /api/v1/login` with the name `admin`, in any capitals, and the key as the password,
-  answered like a right chosen password (**200** `{"step":"logged-in"}` and the cookie);
+  answered like a right chosen password (**200** `{"step":"logged-in","next":"<target>"}` and the
+  cookie);
 - the key must be typed exactly, its capitals included; under any other name, or with any other
   password under `admin`, the answer is the wrong-password one above;
 - the key's login has the admin role and no account, so it has no password to change:

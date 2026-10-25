@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import { loginAddressFor } from './loginAddress.ts'
-import { returnTarget } from './returnTarget.ts'
 
 describe('loginAddressFor', () => {
   it.each([
@@ -16,23 +15,5 @@ describe('loginAddressFor', () => {
     const login = loginAddressFor(address)
 
     expect(login).toBe(expected)
-  })
-
-  it.each([
-    ['the overview', '/overview'],
-    [
-      'a ledger with its page and sort',
-      '/avatars/Aurora/bank?page=2&sort=amount',
-    ],
-    ['an encoded avatar name', '/avatars/%C3%84rger/bank'],
-  ])('leads the login page back to %s', (_, address) => {
-    const search = new URL(
-      loginAddressFor(address),
-      'http://this-service.invalid',
-    ).search
-
-    const target = returnTarget(new URLSearchParams(search).get('next'))
-
-    expect(target).toBe(address)
   })
 })

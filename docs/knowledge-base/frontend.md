@@ -329,7 +329,7 @@ Five top-level folders under `frontend/src/`:
 - The button „Anmelden“ is disabled while the request is on its way and a second submit posts
   nothing, so a double click spends one of the address's requests, not two.
 - The service's answer becomes a `LoginAnswer` (`domain`):
-  - `logged-in` navigates to the return target;
+  - `logged-in` navigates to the `next` the answer names;
   - a refused login (401) says „Name oder Passwort stimmt nicht.“ and stays;
   - a turned-away request (429) says „Zu viele Versuche. Bitte warte einen Moment.“;
   - `choose-new-password` turns the page to the step „Neues Passwort wählen“ (`NewPasswordStep`).
@@ -353,16 +353,12 @@ Five top-level folders under `frontend/src/`:
     first step and the new password;
   - the service's two refusals (400) show the same two texts, a 429 the waiting text;
   - a 401 goes back to the first step with „Name oder Passwort stimmt nicht.“;
-  - `logged-in` navigates to the return target;
+  - `logged-in` navigates to the `next` the answer names;
   - the issued password lives only in the page's component state, never in the browser's storage
     or the address.
-- **The return target** (`returnTarget`, `domain`) takes the `next` query parameter and returns it
-  only when it is a path of this service:
-  - it starts with exactly one `/`, a backslash counting as a slash, both as written and after
-    one percent-decoding;
-  - it carries no control character, and it resolves to this service's own origin;
-  - anything else, a full address, `//…`, `/\…` and their percent-encoded forms included, and a
-    missing `next` return `/`, the overview.
+- **The return target is the service's rule**, not the page's: the page sends the `next` query
+  parameter of its own address with both steps and navigates to the `next` the service answers
+  ([build-run-deploy.md](build-run-deploy.md), "The login API"), so the rule exists once.
 
 ## The JSON API the SPA reads
 

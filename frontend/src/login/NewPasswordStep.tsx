@@ -10,7 +10,8 @@ export interface NewPasswordStepProps {
   readonly api: LoginApi
   readonly name: string
   readonly issuedPassword: string
-  readonly onLoggedIn: () => void
+  readonly next: string | null
+  readonly onLoggedIn: (next: string) => void
   readonly onRefused: () => void
 }
 
@@ -28,6 +29,7 @@ export function NewPasswordStep({
   api,
   name,
   issuedPassword,
+  next,
   onLoggedIn,
   onRefused,
 }: NewPasswordStepProps) {
@@ -51,10 +53,11 @@ export function NewPasswordStep({
       name,
       issuedPassword,
       newPassword,
+      next,
     )
     setSaving(false)
-    if (answer === 'logged-in') {
-      onLoggedIn()
+    if (typeof answer === 'object') {
+      onLoggedIn(answer.next)
     } else if (answer === 'wrong-name-or-password') {
       onRefused()
     } else {
