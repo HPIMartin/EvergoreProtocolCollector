@@ -72,6 +72,7 @@
 | `AdminKeyAnnouncementTest` | The announcement logs the key once when the service starts, through the `LoggerSpy`. | pure unit |
 | `AdminKeyAtStartTest` | Starts a real application context with the `LoggerSpy` and finds exactly one admin key line of 43 characters in the log before anything asked for the key. | adapter |
 | `LoginPageEndpointTest` | Boots the server on its own fixture DB copy: the login page and its own files are served with no login, a dashboard page opened without a login is sent on to the login page, an API request without a login is refused with 401 instead, and an unknown path below the login page answers without the dashboard. | `@MicronautTest` integration |
+| `ServiceLogTest` | Pure unit tests of the acceptance world's reader of the service's log: it names the admin key the service announced, the key of the latest start when the service was started more than once, and fails when the service named no key. | pure unit |
 | `ApplicationExceptionHandlerTest` | Unit tests asserting each `ProtocolParserException` subclass maps to its HTTP status via the visitor, plus the `onUnknown` branch, plus that the logged path carries **no** token query parameter, plus the log severity per mapped status (client error → one `info` line, server error → `error` with the exception) and that a failing response mapping is still logged with its trace before it propagates. `accept` is `abstract`, so a new exception subclass is a compile error rather than a silent fallback. | pure unit |
 | `ApplicationExceptionHandlerHttpTest` | Boots the server against its own fixture DB copy and drives the not-found path through the **real Netty write**, which the pure unit test cannot reach: an unknown avatar answers 404 with the default `Not Found` reason phrase (no echo of the requested name), and an unknown avatar whose percent-encoded name carries `CRLF` still answers 404, where a control character in the reason phrase would answer 500. | `@MicronautTest` integration |
 | `ApiReadsOffTheEventLoopTest` | Boots the server with one event-loop thread and stub repositories that record each read's thread: every `/api/v1` route reads on a platform thread that is no event loop, `GET /health` answers while a bank read waits on a latch standing in for a writer's lock, and a request beyond the IO pool waits in the pool's queue. | `@MicronautTest` integration |
@@ -282,14 +283,16 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - The admin reads through the same `MemberBrowser`.
   - No separate pool exists per actor (handbook §5).
 - **`MemberBrowser` hands out its parts** through accessors.
-  - `tokenOpening()`: `TokenOpening`, the token and deep-link opening the acceptance browser uses.
+  - `opening()`: `DashboardOpening`, which opens a page logged in with the admin key from the
+    service's log (`ServiceLog.adminKeyNamed`) unless the browser already holds a login.
+  - `loginForm()`: `LoginForm`, which logs in and chooses a password through the login page.
   - `clock()`: `ShiftedClock`.
   - `timeZone()`: `TimeZoneBrowser`.
   - `colours()`: `ComputedColours`.
   - `notes()`: `ShownNotes`.
   - `MemberBrowser` itself keeps the driver's lifecycle and the navigation.
 - **The operator reads over HTTP, not the browser** (handbook §5): `HealthReport`
-  (`acceptance.world`) `GET`s `/health` on the running service's port, with the guild's token
+  (`acceptance.world`) `GET`s `/health` on the running service's port, with the admin key's login
   unless the step says without, and parses the `lastRun` indicator's `details`, so a step comparing
   "the admin page" against "the health report" (`{surface}`, `acceptance.steps.Surface`) reads
   each the way its actor really would; `AdminReport` and `HealthFacts` (`acceptance.operator`) read

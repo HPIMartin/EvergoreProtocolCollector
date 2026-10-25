@@ -49,12 +49,12 @@ public class DashboardSortingSteps {
 
 	@Given("a member has opened the storage ledger of {string}")
 	public void aMemberHasOpenedTheStorageLedgerOf(String avatar) {
-		browser.tokenOpening().open(STORAGE.pathOf(avatar));
+		browser.opening().open(STORAGE.pathOf(avatar));
 	}
 
 	@Given("a member has sorted the storage ledger of {string} by {string} in {direction} order")
 	public void aMemberHasSortedTheStorageLedgerOfBy(String avatar, String header, String direction) {
-		browser.tokenOpening().open(STORAGE.pathOf(avatar));
+		browser.opening().open(STORAGE.pathOf(avatar));
 		sortLedgerBy(header, direction);
 	}
 
@@ -83,7 +83,7 @@ public class DashboardSortingSteps {
 
 	@Given("a member has sorted the {roster} table by {string} in {direction} order")
 	public void aMemberHasSortedTheTableBy(RosterName roster, String header, String direction) {
-		browser.tokenOpening().open(OVERVIEW);
+		browser.opening().open(OVERVIEW);
 		sortRosterBy(roster, header, direction);
 	}
 

@@ -4,36 +4,42 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 
+import dev.schoenberg.evergore.protocolParser.acceptance.operator.LoginRequests;
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 
-import static dev.schoenberg.evergore.protocolParser.acceptance.world.OperatorSettings.GUILD_TOKEN;
-
 public class HealthReport {
+	private static final String ADMIN = "admin";
 	private static final ObjectMapper JSON = new ObjectMapper();
 	private static final String HEALTH = "/health";
 	private static final int OK = 200;
 	private static final int UNAVAILABLE = 503;
 
 	private final RunningService service;
+	private final LoginRequests logins;
+	private final ServiceLog log;
 	private JsonNode report;
 	private int httpStatus;
 
-	public HealthReport(RunningService service) {
+	public HealthReport(RunningService service, LoginRequests logins, ServiceLog log) {
 		this.service = service;
+		this.logins = logins;
+		this.log = log;
 	}
 
 	public void ask() {
-		askFor(HEALTH + "?token=" + GUILD_TOKEN);
+		String login = LoginRequests.loginValueIn(logins.logIn(ADMIN, log.adminKeyNamed()));
+		askFor(HEALTH, Map.of("Cookie", LoginRequests.SESSION_COOKIE + "=" + login));
 	}
 
 	public void askWithoutToken() {
-		askFor(HEALTH);
+		askFor(HEALTH, Map.of());
 	}
 
 	public String status() {
@@ -57,8 +63,8 @@ public class HealthReport {
 		return textsAt("roundTripAbstentions");
 	}
 
-	private void askFor(String address) {
-		HttpResponse<String> response = Unirest.get("http://localhost:" + service.port() + address).asString();
+	private void askFor(String address, Map<String, String> headers) {
+		HttpResponse<String> response = Unirest.get("http://localhost:" + service.port() + address).headers(headers).asString();
 		if (response.getStatus() != OK && response.getStatus() != UNAVAILABLE) {
 			throw new AssertionError("The health check answered " + response.getStatus() + ": " + response.getBody());
 		}

@@ -12,6 +12,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -24,7 +25,7 @@ public final class MemberBrowser {
 
 	private final RunningService service;
 	private final BrowserChoice choice;
-	private final TokenOpening tokenOpening;
+	private final DashboardOpening opening;
 	private final LoginForm loginForm;
 	private final ShiftedClock shiftedClock;
 	private final TimeZoneBrowser timeZoneBrowser;
@@ -33,19 +34,19 @@ public final class MemberBrowser {
 	private WebDriver driver;
 	private String lastReachedUrl;
 
-	public MemberBrowser(RunningService service, BrowserChoice choice) {
+	public MemberBrowser(RunningService service, BrowserChoice choice, ServiceLog log) {
 		this.service = service;
 		this.choice = choice;
-		this.tokenOpening = new TokenOpening(this);
-		this.loginForm = new LoginForm(this);
+		this.opening = new DashboardOpening(this);
+		this.loginForm = new LoginForm(this, log);
 		this.shiftedClock = new ShiftedClock(() -> driver);
 		this.timeZoneBrowser = new TimeZoneBrowser(choice);
 		this.computedColours = new ComputedColours(this);
 		this.shownNotes = new ShownNotes(this);
 	}
 
-	public TokenOpening tokenOpening() {
-		return tokenOpening;
+	public DashboardOpening opening() {
+		return opening;
 	}
 
 	public LoginForm loginForm() {
@@ -73,6 +74,10 @@ public final class MemberBrowser {
 		awaitSettled();
 		shiftedClock.assertIsShown();
 		rememberTheReachedUrl();
+	}
+
+	boolean hasALogin() {
+		return driver().getCurrentUrl().startsWith("http") && driver().manage().getCookieNamed("epc_session") != null;
 	}
 
 	public void reload() {

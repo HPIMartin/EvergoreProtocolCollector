@@ -2,18 +2,20 @@ package dev.schoenberg.evergore.protocolParser.acceptance.browser;
 
 import java.net.URI;
 
-public class TokenOpening {
-	private static final String TOKEN = "test-token";
-
+public class DashboardOpening {
 	private final MemberBrowser browser;
 	private String requestedDeepLink;
 
-	TokenOpening(MemberBrowser browser) {
+	DashboardOpening(MemberBrowser browser) {
 		this.browser = browser;
 	}
 
 	public void open(String path) {
-		browser.openHref(path + tokenParameterSeparator(path) + "token=" + TOKEN);
+		if (browser.hasALogin()) {
+			browser.openHref(path);
+		} else {
+			browser.loginForm().logInWithTheAdminKeyToOpen(path);
+		}
 	}
 
 	public void openTheStartPage(TokenChoice tokenChoice) {

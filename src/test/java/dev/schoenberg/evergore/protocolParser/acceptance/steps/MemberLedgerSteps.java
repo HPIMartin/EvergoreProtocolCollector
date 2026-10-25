@@ -53,40 +53,40 @@ public class MemberLedgerSteps {
 
 	@When("a member opens the bank ledger of {string}")
 	public void aMemberOpensTheBankLedgerOf(String avatar) {
-		browser.tokenOpening().open(BANK.pathOf(avatar));
+		browser.opening().open(BANK.pathOf(avatar));
 	}
 
 	@When("a member opens the storage ledger of {string}")
 	public void aMemberOpensTheStorageLedgerOf(String avatar) {
-		browser.tokenOpening().open(STORAGE.pathOf(avatar));
+		browser.opening().open(STORAGE.pathOf(avatar));
 	}
 
 	@When("a member opens the bank ledger and the storage ledger of {string}")
 	public void aMemberOpensBothLedgersOf(String member) {
-		browser.tokenOpening().open(BANK.pathOf(member));
-		browser.tokenOpening().open(STORAGE.pathOf(member));
+		browser.opening().open(BANK.pathOf(member));
+		browser.opening().open(STORAGE.pathOf(member));
 	}
 
 	@When("a member opens the storage ledgers of {string} and {string}")
 	public void aMemberOpensTheStorageLedgersOf(String first, String second) {
-		browser.tokenOpening().open(STORAGE.pathOf(first));
-		browser.tokenOpening().open(STORAGE.pathOf(second));
+		browser.opening().open(STORAGE.pathOf(first));
+		browser.opening().open(STORAGE.pathOf(second));
 	}
 
 	@When("a member opens the overview and the storage ledger of {string}")
 	public void aMemberOpensTheOverviewAndTheStorageLedgerOf(String member) {
-		browser.tokenOpening().open(STORAGE.pathOf(member));
-		browser.tokenOpening().open(OVERVIEW);
+		browser.opening().open(STORAGE.pathOf(member));
+		browser.opening().open(OVERVIEW);
 	}
 
 	@When("a member opens page {int} of the storage ledger of {string}")
 	public void aMemberOpensPageOfTheStorageLedgerOf(int page, String avatar) {
-		browser.tokenOpening().open(STORAGE.pathOf(avatar) + "?page=" + (page - 1));
+		browser.opening().open(STORAGE.pathOf(avatar) + "?page=" + (page - 1));
 	}
 
 	@Given("a member has followed {string} in the storage ledger of {string}")
 	public void aMemberHasFollowedInTheStorageLedgerOf(String link, String avatar) {
-		browser.tokenOpening().open(STORAGE.pathOf(avatar));
+		browser.opening().open(STORAGE.pathOf(avatar));
 		browser.follow(link);
 	}
 
@@ -101,7 +101,7 @@ public class MemberLedgerSteps {
 
 	@When("a member opens a bookmark of page {word} of the bank ledger of {string}")
 	public void aMemberOpensABookmarkOfPageOfTheBankLedgerOf(String page, String avatar) {
-		browser.tokenOpening().open(BANK.pathOf(avatar) + "?page=" + queryPageOf(page));
+		browser.opening().open(BANK.pathOf(avatar) + "?page=" + queryPageOf(page));
 	}
 
 	@Then("the page is headed {string}")
@@ -122,7 +122,7 @@ public class MemberLedgerSteps {
 
 	@Then("the {ledger} ledger of {string} says {string}")
 	public void theNamedLedgerSays(LedgerName namedLedger, String member, String message) {
-		browser.tokenOpening().open(namedLedger.pathOf(member));
+		browser.opening().open(namedLedger.pathOf(member));
 		MemberLedger ledger = browser.ledger();
 
 		assertThat(ledger.emptyMessage()).isEqualTo(message);
@@ -183,7 +183,7 @@ public class MemberLedgerSteps {
 	}
 
 	private void assertLedgerShowsExactly(String avatar, LedgerName ledgerName, DataTable expected) {
-		browser.tokenOpening().open(ledgerName.pathOf(avatar));
+		browser.opening().open(ledgerName.pathOf(avatar));
 		MemberLedger ledger = browser.ledger();
 		assertThat(ledger.heading()).contains(avatar);
 		List<String> headers = expected.row(0);

@@ -49,38 +49,38 @@ public class DashboardAccessSteps {
 
 	@When("a member opens the guild's link")
 	public void aMemberOpensTheGuildsLink() {
-		browser.tokenOpening().open(START_PAGE);
+		browser.opening().open(START_PAGE);
 	}
 
 	@When("a member opens the dashboard's start page {tokenChoice}")
 	public void aMemberOpensTheDashboardsStartPage(TokenChoice choice) {
-		browser.tokenOpening().openTheStartPage(choice);
+		browser.opening().openTheStartPage(choice);
 	}
 
 	@When("a member opens a bookmark of the overview {tokenChoice}")
 	public void aMemberOpensABookmarkOfTheOverview(TokenChoice choice) {
-		browser.tokenOpening().openADeepLinkBookmark(OVERVIEW, choice);
+		browser.opening().openADeepLinkBookmark(OVERVIEW, choice);
 	}
 
 	@When("a member opens a bookmark of the bank ledger of {string} {tokenChoice}")
 	public void aMemberOpensABookmarkOfTheBankLedgerOf(String avatar, TokenChoice choice) {
-		browser.tokenOpening().openADeepLinkBookmark(BANK.pathOf(avatar), choice);
+		browser.opening().openADeepLinkBookmark(BANK.pathOf(avatar), choice);
 	}
 
 	@When("a member opens a bookmark of the storage ledger of {string} {tokenChoice}")
 	public void aMemberOpensABookmarkOfTheStorageLedgerOf(String avatar, TokenChoice choice) {
-		browser.tokenOpening().openADeepLinkBookmark(STORAGE.pathOf(avatar), choice);
+		browser.opening().openADeepLinkBookmark(STORAGE.pathOf(avatar), choice);
 	}
 
 	@When("a member opens a bookmark of a page the dashboard does not have {tokenChoice}")
 	public void aMemberOpensABookmarkOfAPageTheDashboardDoesNotHave(TokenChoice choice) {
-		browser.tokenOpening().openADeepLinkBookmark(UNKNOWN, choice);
+		browser.opening().openADeepLinkBookmark(UNKNOWN, choice);
 	}
 
 	@Then("the browser shows no page of the dashboard")
 	public void theBrowserShowsNoPageOfTheDashboard() {
-		boolean atRequestedDeepLink = browser.tokenOpening().isAtTheRequestedDeepLink();
-		boolean noPageBrand = browser.tokenOpening().showsNoPageBrand();
+		boolean atRequestedDeepLink = browser.opening().isAtTheRequestedDeepLink();
+		boolean noPageBrand = browser.opening().showsNoPageBrand();
 
 		assertThat(atRequestedDeepLink).as("the browser stayed at the requested deep link").isTrue();
 		assertThat(noPageBrand).as("the dashboard shows no page brand").isTrue();
@@ -88,12 +88,12 @@ public class DashboardAccessSteps {
 
 	@When("a member follows the guild's link to the overview")
 	public void aMemberFollowsTheGuildsLinkToTheOverview() {
-		browser.tokenOpening().open(START_PAGE);
+		browser.opening().open(START_PAGE);
 	}
 
 	@When("a member follows the guild's link to the bank ledger of {string}")
 	public void aMemberFollowsTheGuildsLinkToTheBankLedgerOf(String avatar) {
-		browser.tokenOpening().open(START_PAGE);
+		browser.opening().open(START_PAGE);
 		browser.follow(avatar);
 	}
 

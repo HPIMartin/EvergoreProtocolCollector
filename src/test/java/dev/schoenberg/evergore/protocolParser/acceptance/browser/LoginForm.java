@@ -1,12 +1,18 @@
 package dev.schoenberg.evergore.protocolParser.acceptance.browser;
 
 import java.net.URI;
+import java.net.URLEncoder;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public final class LoginForm {
 	private static final String LOGIN_PAGE = "/login";
+	private static final String ADMIN = "admin";
 	private static final String NAME = "Name";
 	private static final String PASSWORD = "Passwort";
 	private static final String NEW_PASSWORD = "Neues Passwort";
@@ -20,9 +26,16 @@ public final class LoginForm {
 			+ SERVED + " || " + TITLE + " !== arguments[1]))";
 
 	private final MemberBrowser browser;
+	private final ServiceLog log;
 
-	LoginForm(MemberBrowser browser) {
+	LoginForm(MemberBrowser browser, ServiceLog log) {
 		this.browser = browser;
+		this.log = log;
+	}
+
+	void logInWithTheAdminKeyToOpen(String path) {
+		browser.openHref(LOGIN_PAGE + "?next=" + URLEncoder.encode(path, UTF_8));
+		logIn(ADMIN, log.adminKeyNamed());
 	}
 
 	public void logIn(String name, String password) {
