@@ -157,12 +157,10 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   - The Gradle daemons' memory under parallel strands (H13).
   - The other gate, agent-tool and doc rows of Epic G, pulled when a gate meets one.
   - After 0.5.0, the gate mechanics (G51 with G32, G40, G65).
-- **Request handling at the edge:** the browser lost for a target with a broken escape (F18).
 - **Deploy and environment:** the browser grid on the agent seat (H14).
 - **Test-suite hygiene:** the test debt two feature gates
-  left (B34, B38), the release comparison's remaining edges (B42, B43, B44, B45), style
-  alignment (B8), the shared boot fixture (B18), the parser's residual shapes (B22), deterministic
-  fixture ids (B23), the unexplained load-sensitive failure (B20).
+  left (B34, B38), the release comparison's report (B43), style alignment (B8), the shared boot
+  fixture (B18), the parser's residual shapes (B22), deterministic fixture ids (B23).
 - **Docs & code hygiene:** the doc-debt row's remaining false findings (G18), exception/logging
   hygiene and dead code (D11).
 - **Craftsmanship, when a gap allows:** catalog refactor (D6), full repackaging (D3) last, on top

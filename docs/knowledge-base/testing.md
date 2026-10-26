@@ -1089,10 +1089,12 @@ of the Gradle command are load-bearing:
   A run counts only when the lines for `:test` and `:frontend:npmTest` stand **bare** (no
   `FROM-CACHE`, no `UP-TO-DATE` marker) and the XML count under `build/test-results/test/` is read
   alongside them.
-- **Why it matters beyond bookkeeping:** the load-sensitive failures (the Vitest worker starvation in
-  [frontend.md](frontend.md), backlog **B20**) only appear when the suites really run, and a cache
-  hit hides exactly that class reliably. Two consecutive runs stay the bar for a load-sensitive
-  change, and a cached second run is not one of them.
+- **Why it matters beyond bookkeeping:**
+  - the load-sensitive failures (the Vitest worker starvation in [frontend.md](frontend.md)) only
+    appear when the suites really run;
+  - a cache hit hides exactly that class reliably;
+  - two consecutive runs stay the bar for a load-sensitive change;
+  - a cached second run is not one of them.
 
 ## Testing direction for the rebuild (TDD/BDD)
 
