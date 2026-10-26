@@ -623,7 +623,7 @@ its last bit and moves no shown figure.
 
 The meta sums are recomputed from all stored entries instead of being accumulated behind a
 watermark, so the first run on a long-lived database corrects accumulated drift. Measured on the
-production snapshot via the gitignored harness described below:
+production snapshot via the opt-in harness described below, whose snapshot stays gitignored:
 
 - **Bank:** 31 of 41 avatars change their deposit total, 2 their withdrawal total. Every changed
   value moves **down**, never up: the old accumulator over-counted by 5.24 % of deposits.

@@ -133,8 +133,8 @@ reaches its current major.
 
 - [ ] The bundled webdriver binaries and the local-browser machinery are gone (backlog F1).
   - The author's history rewrite follows, once **no** worktree is open, no pushed `claude/` branch
-    or open pull request remains, both machines clone afresh, and the author moves the protected
-    tags `v0.1.0`, `v0.2.0` and `v0.3.0`.
+    or open pull request remains, and both machines clone afresh.
+  - The author moves every protected release tag.
 - [ ] Dependabot covers all three ecosystems and one refresh pass has run (backlog H11).
 - [ ] `Configuration` is real and immutable (C1); `vulnScan` is at zero and gated (C8).
 - [ ] Every pull request head is built by CI, and the landing refuses a head without its green named
