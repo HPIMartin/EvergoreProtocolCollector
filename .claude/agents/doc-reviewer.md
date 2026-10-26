@@ -37,8 +37,12 @@ Check:
 1. **Touched docs, whole file** (drift concentrates where docs get edited), against every DOC rule.
    - What the strand caused, or what stands in lines it edits, is a finding of the gate.
    - Older debt in a touched doc is a finding in rounds 1 and 2 only.
-   - From round 3 on, list older debt for the doc-debt row (G18) or the bare-shortcode row (G21)
-     (filing rule: handbook §9).
+     - Only where it is false: DOC-2, DOC-6, a pointer to nothing, DOC-8 or DOC-9.
+   - Older DOC-1, DOC-3 and DOC-4 debt in lines the strand does not write is no finding (author
+     decision 2026-10-25).
+   - From round 3 on, list older debt (filing rule: handbook §9):
+     - false text, for a backlog row;
+     - a bare shortcode, for the bare-shortcode row (G21).
    - From round 3 on, older debt does not FAIL the gate (author decision 2026-10-15).
    - From round 3 on, a DOC-1 residue in a line an earlier round of this panel had split is a
      low: list it, it does not FAIL the gate (author decision 2026-10-19).
@@ -66,6 +70,7 @@ echo "$docs" | sed -n "$((i+1))p"
 Nobody has to remember to schedule sweeps; the commit count rotates through every doc over time.
 Report sweep findings separately:
 
+- they report only what item 1 calls false, never DOC-1, DOC-3 or DOC-4 debt (handbook §9);
 - they are pre-existing debt, not this feature's fault;
 - they don't FAIL the gate;
 - they get listed for the author.

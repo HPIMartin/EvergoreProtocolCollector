@@ -746,13 +746,19 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
     `gate/scenario-check` proves by their fingerprints
     ([multi-agent-playbook.md](multi-agent-playbook.md), "The scenario-gate dossier").
 
-- **Older doc debt in a touched doc is a finding in rounds 1 and 2 only** (author decision
-  2026-10-15):
-  - the strand tries twice to clear it, so old debt is cleared along the way when it can be;
-  - what remains then goes to the doc-debt row (G18) or the bare-shortcode row (G21), so it never
-    drives the time of the strand at hand;
+- **Older doc debt in a touched doc is a finding in rounds 1 and 2 only, and only where it is
+  false** (author decisions 2026-10-15 and 2026-10-25):
+  - false means a claim the code or the repository contradicts (DOC-2, DOC-6), a pointer to
+    nothing, a bare shortcode (DOC-8) or a wording error (DOC-9);
+  - older style debt (DOC-1, DOC-3, DOC-4) in lines the strand does not write is no finding and is
+    filed nowhere, since filing it grew one backlog row past anyone's reading;
+  - the strand tries twice to clear what is false, so it is cleared along the way when it can be;
+  - what remains then goes to a backlog row, a bare shortcode to the bare-shortcode row (G21), so
+    it never drives the time of the strand at hand;
   - the strand files what a doc-reviewer lists there in its own last fold, without a question to
     the author (author decision 2026-10-17).
+- **The doc-reviewer's rotating sweep reports only older text that is false** in the sense above,
+  never DOC-1, DOC-3 or DOC-4 debt (author decision 2026-10-25).
 
 - **From round 3 on, a DOC-1 residue in a line an earlier round of the same panel had split is a
   low** (author decision 2026-10-19):

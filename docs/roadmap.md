@@ -155,7 +155,7 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
     analysis.
   - The SessionStart hook that injects the lessons deterministically (G10).
   - The Gradle daemons' memory under parallel strands (H13).
-  - The gate, agent-tool and doc rows (from G21 on), pulled when a gate meets one.
+  - The other gate, agent-tool and doc rows of Epic G, pulled when a gate meets one.
   - After 0.5.0, the gate mechanics (G51 with G32, G40, G65).
 - **Request handling at the edge:** the browser lost for a target with a broken escape (F18).
 - **Deploy and environment:** the browser grid on the agent seat (H14).
@@ -163,7 +163,8 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   left (B34, B38), the release comparison's remaining edges (B42, B43, B44, B45), style
   alignment (B8), the shared boot fixture (B18), the parser's residual shapes (B22), deterministic
   fixture ids (B23), the unexplained load-sensitive failure (B20).
-- **Docs & code hygiene:** the doc-debt collection row (G18), exception/logging hygiene and dead code (D11).
+- **Docs & code hygiene:** the doc-debt row's remaining false findings (G18), exception/logging
+  hygiene and dead code (D11).
 - **Craftsmanship, when a gap allows:** catalog refactor (D6), full repackaging (D3) last, on top
   of a tested core.
 - **Creative:** weekly guild report / delivery channel (F3).
