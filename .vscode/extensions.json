@@ -1,6 +1,9 @@
 {
     "recommendations": [
+        "Anthropic.claude-code",
         "vscjava.vscode-java-pack",
-        "shengchen.vscode-checkstyle"
+        "shengchen.vscode-checkstyle",
+        "SonarSource.sonarlint-vscode",
+        "eamodio.gitlens"
     ]
 }
