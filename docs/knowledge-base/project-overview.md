@@ -45,7 +45,8 @@
 
 ## Open questions that shape scope
 
-See [../open-questions.md](../open-questions.md). Biggest unknowns, driving backlog priority:
+[../open-questions.md](../open-questions.md) settles the questions that drove backlog priority:
 
-- Is the game/guild still active (production vs. learning project)?
-- How far does "replace the sheet" extend (data collector vs. full dashboard with feature parity)?
+- The game is live.
+- The project is primarily a learning project, without production pressure.
+- Replacing the sheet means a dashboard with feature parity.

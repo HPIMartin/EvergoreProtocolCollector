@@ -57,9 +57,9 @@ Each row: avatar name plus 11 value columns. Headers are merged/German; mapping 
 
 | Sheet concept | Software status |
 |---------------|-----------------|
-| Bank-Einzahlung / -Auszahlung (col1/2) | ✅ Computed by `EvergoreDataEvaluator` (bank placement / withdrawl), stored in `MetaInformation`, shown in `/overview`. |
-| Entnahme value (col4) | ✅ Computed by `EvergoreDataEvaluator` (storage withdrawl, quality-scaled), stored in `MetaInformation`, served as `storageWithdrawn`, on the sheet's own rule of 60 % of market value. |
-| Einlagerung value (col3) | ⚠️ Computed and served as `storageDeposited`, on the same category rule the sheet was built on, with **two deliberate divergences** (author decisions 2026-09-10, see [open-questions.md](../open-questions.md)): goods bought at the market stall (`HANDWERKSMATERIAL`) credit 100 % of market value rather than 60 %, so a trader's own gold is not confiscated, and boards and bars (`VERARBEITETE_ROHSTOFFE`) credit 60 % rather than nothing, because the sheet excluded them for want of treating them separately. The rule itself is in [domain-model.md](domain-model.md). |
+| Bank-Einzahlung / -Auszahlung (col1/2) | ✅ Computed by `EvergoreDataEvaluator` (bank placement / withdrawal), stored in `MetaInformation`, shown in `/overview`. |
+| Entnahme value (col4) | ✅ Computed by `EvergoreDataEvaluator` (storage withdrawal, quality-scaled), stored in `MetaInformation`, served as `storageWithdrawn`, on the sheet's own rule of 60 % of market value. |
+| Einlagerung value (col3) | ⚠️ Computed and served as `storageDeposited`, on the same category rule the sheet was built on, with **three deliberate divergences** (author decisions 2026-09-10 and 2026-09-27, see [open-questions.md](../open-questions.md)): goods bought at the market stall (`HANDWERKSMATERIAL`) credit 100 % of market value rather than 60 %, so a trader's own gold is not confiscated; the ammunition the market stall sells (`PFEILE`, `BOLZEN`, `MAGIEESSENZ`) credits 100 % rather than 60 %, for the same reason; and boards and bars (`VERARBEITETE_ROHSTOFFE`) credit 60 % rather than nothing, because the sheet excluded them for want of treating them separately. The rule itself is in [domain-model.md](domain-model.md). |
 | erzeugter Gildenmehrwert (col5) | ✅ Derived per request by `Contribution.net()` over the four sums and served as `net`, shown as *Nach Abzügen*; stored nowhere, so it cannot drift from its summands. |
 | (no sheet column) | ➕ `donation` and `craftSubsidy`, what a member gave for nothing and what the guild credited above its own price, plus the *Vor Abzügen* figure the overview switches to. The sheet had no column for either: together they are the gap its col5 silently carried. |
 | geschätzte Jagdeinlagerungen + % (col6/7/8) | ❌ Not implemented. `EvergoreItem` *has* a `JAGDBEUTEN` (hunt-loot) category, so the data exists to compute it. |
@@ -68,7 +68,7 @@ Each row: avatar name plus 11 value columns. Headers are merged/German; mapping 
 | Date-range filter (Datum von/bis) | ❌ Software recomputes sums from all stored entries each run; no arbitrary date-range reporting yet. |
 
 **Bottom line:** software reproduces the sheet's columns 1, 2, 4, 5 and 10/11 exactly, per avatar
-and as a guild-wide total row, and column 3 on the sheet's own rule save the two divergences named
+and as a guild-wide total row, and column 3 on the sheet's own rule save the divergences named
 above. Full parity = hunt-loot estimates (col6/7/8), the still unexplained count (col9) and
 date-range queries.
 

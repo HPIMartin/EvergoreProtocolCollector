@@ -9,7 +9,8 @@
 - **Vitest** + **React Testing Library** for component tests (`npm run test`, jsdom environment).
 - **ESLint** (`typescript-eslint`'s `strict` config, `eslint-plugin-import-x`,
   `eslint-plugin-react-hooks`) lints, **Prettier** formats.
-- **Spotless stays Java-only** (`src/**/*.java`), not `frontend/`.
+- **Spotless formats no TypeScript**: Java and the Gradle scripts only
+  ([build-run-deploy.md](build-run-deploy.md), "Build").
 - `react-hooks/rules-of-hooks` and `react-hooks/exhaustive-deps` are errors over `src/`: a hook
   called conditionally, or an effect missing a dependency, fails `npmLint`.
 - `import-x/no-restricted-paths` enforces the layer boundary below at lint time; the frontend's
@@ -29,8 +30,10 @@ Five top-level folders under `frontend/src/`:
 
 - Enforced per the table above (no sideways/upward imports); mirrors the backend's inward-only
   rule (`application` depends only inward, never on adapters/config).
-- Each folder has an `index.ts` as its **public surface**; cross-layer imports go through it, inside
-  a layer modules import each other directly.
+- Each of `domain`, `api`, `ui` and `app` has an `index.ts` as its **public surface**; cross-layer
+  imports go through it.
+  - Inside a layer modules import each other directly.
+  - `login` has no `index.ts`: `main.tsx` is its entry.
 - Responsibilities, so a reader knows which folder to open:
   - `domain`: the wire contract's concepts as types, plus the framework-free logic over them (the
     `Ledger` visitor, the German and Berlin-local wording).
@@ -62,7 +65,7 @@ Five top-level folders under `frontend/src/`:
   - a `screen` method that is no query;
   - an assignment, `++`, `--` or `delete` inside the argument.
 - Components expose a stable **`data-testid`** instead of brittle text/CSS selectors (e.g.
-  `App.test.tsx` asserts on `screen.getByTestId('app-title')`).
+  `App.test.tsx` asserts on `screen.getByTestId('page-brand')`).
 - Tables render **semantic HTML** (`<table>`/`<thead>`/`<tbody>`/`<th>`/`<td>`), not div-grids,
   for accessibility and testability.
 
@@ -163,8 +166,10 @@ Five top-level folders under `frontend/src/`:
 
 - **Client routes:** `/` and `/overview` show the guild overview, `/avatars/{avatar}/bank` and
   `/avatars/{avatar}/storage` show one avatar's ledger, and `/explanation` the explanation page
-  (`ExplanationView.tsx`). Every other path renders "no view", so a typo in a bookmark says so
-  instead of showing an empty page.
+  (`ExplanationView.tsx`).
+  - `/admin` and `/password` are below.
+  - Every path not named here renders the notice `Für <path> gibt es keine Ansicht.`, so a typo in
+    a bookmark says so instead of showing an empty page.
 - **`/explanation` loads no data**: it stays behind a login because the server refuses a page
   without one, not because a request of its own would fail (decisions 2026-10-14 and 2026-10-21).
   - Its frame offers the overview only.
@@ -429,7 +434,7 @@ service's only read surface.
 - **One envelope for every collection**: `page`, `size`, `totalCount`, `items`. `/api/v1/avatars`
   adds `totals`.
 - **`totals` sums every known avatar, not the served page** (decision 2026-09-02), the reading
-  `totalCount` already has. It carries the same seven numbers as a row, so the SPA renders its total
+  `totalCount` already has. It carries the row's numbers plus `storageValue` (below), so the SPA renders its total
   row without arithmetic of its own, and neither paging nor a later time window can turn a guild
   total into a page total behind the reader's back. Its last field `containsStaleSums` is over the
   same union, so the total row still states that it contains a stale row when the served page does

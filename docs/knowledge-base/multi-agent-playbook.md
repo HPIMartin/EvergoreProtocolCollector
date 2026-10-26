@@ -54,7 +54,7 @@ moves `origin/main` ([engineering-handbook.md](engineering-handbook.md) §7).
      every fold of code outside `*.md` (handbook §9, delta rounds)
    - first, every round: `git fetch origin`, a moved `main` synced and the strand rebased
      (handbook §7), then `./verify format` green at the tip (author decision 2026-10-09)
-   - domain lens: value math, watermark/aggregation, parser fidelity
+   - domain lens: value math, aggregation, parser fidelity
    - robustness lens: fake-green tests, edges, time/concurrency/resources, boundaries, secrets
    - frontend lens: fake-green component tests, user paths, async determinism, layer boundaries,
      API contract, the browser-driven scenarios
@@ -503,11 +503,16 @@ A scenario gate's reports, held so a check can tell which features each agent re
 
 ## Worked example (the storage-value evaluator feature)
 
-1. **Specify:** *Given* a member deposited crafted goods of a known recipe, *when* a member
-   opens the overview, *then* the member's storage sum shows the recipe value times quantity and
+1. **Specify:** *Given* a member deposited goods of a catalogued item, *when* a member
+   opens the overview, *then* the member's storage sum shows the item's storage value times quantity and
    quality. Drafted as a `.feature`, gated by the scenario gate, **confirmed by the author as
    complete**, committed `@wip`.
-2. **Plan:** test list for `EvergoreDataEvaluator` storage calc: ① place value = Σ storageValue·qty·quality/100 ② withdraw value uses withdrawlValue ③ unknown item → UNDEFINED+log ④ watermark advances. Messages approved.
+2. **Plan:** test list for `EvergoreDataEvaluator` storage calc:
+   - ① place value = Σ storageValue·qty·quality/100;
+   - ② withdraw value uses withdrawlValue;
+   - ③ unknown item → UNDEFINED+log;
+   - ④ an item with market value 0 is reported as zero-valued;
+   - messages approved.
 3. **Implement:** four red→green→refactor micro-commits with those messages; the one that turns
    the scenario green also removes `@wip`, and a refactor commit tidies the evaluator under that
    net.
@@ -517,7 +522,8 @@ A scenario gate's reports, held so a check can tell which features each agent re
 
 ## Evolution
 
-Stay lean (1 implementer, the scenario gate, the per-surface lens panel, doc-reviewer, 1 reviewer).
-Widen the panel + majority vote for high-risk changes; consider a `/tdd-step` skill once the loop is
-proven; **Workflow tool** only for occasional large parallel audits (explicit opt-in), never for the
-interactive, human-gated commit loop.
+- Stay lean (1 implementer, the scenario gate, the per-surface lens panel, doc-reviewer, 1
+  reviewer).
+- Widen the panel + majority vote for high-risk changes.
+- **Workflow tool** only for occasional large parallel audits (explicit opt-in), never for the
+  interactive, human-gated commit loop.

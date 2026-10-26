@@ -138,7 +138,9 @@
     API key) and caches it under `~/.cache/trivy`.
   - Non-gating by default: without `vulnScan.failOnSeverity` neither task ever fails. Both stay
     on-demand, not wired into `build`/`check` (gating belongs to CI/delivery, never the local
-    build). Continuous alerting is handled by Dependabot.
+    build).
+  - Dependabot's version updates do not reach the Gradle graph: `.github/dependabot.yml` has no
+    `gradle` ecosystem (its ecosystems: "CI / dev environment" below).
   - **Tunable params → `gradle.properties`** (committed, central): `vulnScan.failOnSeverity` is a
     comma-separated Trivy severity list (e.g. `HIGH,CRITICAL`); when set, both tasks report only
     those severities and exit non-zero on a finding (a CI/delivery gate, since the scan never runs
@@ -160,7 +162,7 @@ so the script needs no second stack of its own.
 | `./verify focus <path>` | a `frontend/` path → `npm test -- <path>` (Vitest) in `frontend/`; a `src/test/resources/features/*.feature` path → the acceptance suite with `-Dcucumber.features=<path>` and every tag; a `src/main/` or `src/test/` path → `./gradlew test --no-build-cache --tests <class>`; any other path is a usage error (exit 2) | the TDD inner loop; the falsifiers' counter-tests |
 | `./verify bdd` | the acceptance suite (`--tests '*RunAcceptanceScenariosTest'`) with `-Dcucumber.filter.tags='@wip'`; no `@wip` scenario is a clean pass | the TDD loop while the scenarios are still tagged |
 | `./verify all` | `./gradlew clean build --no-build-cache --console=plain` (Java and frontend tests, lint, format, the armed scenarios), then the count of `TEST-*.xml` under `build/test-results/` | before every gate, after every rebase |
-| `./verify outdated` | refuses with the reason: no Gradle freshness task is installed, Dependabot reports freshness for every ecosystem of this project | the modernisation track, on demand |
+| `./verify outdated` | refuses, since no Gradle freshness task is installed; Dependabot's ecosystems: "CI / dev environment" below | the modernisation track, on demand |
 | `./verify vuln` | `./gradlew vulnScan` (Trivy over both dependency graphs, below), report-only | on demand; gating is a delivery decision |
 | `./verify stop` | `./gradlew --stop` against the worktree's own daemon registry | after a batch of builds; before the worktree is removed |
 

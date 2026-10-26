@@ -105,5 +105,5 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
   a variable.
 - **Git hooks are the mechanical half of the rules** ([`hooks/`](hooks/README.md), active via
   `git config core.hooksPath hooks`). git asks `pre-commit` only for `git commit`, so a
-  rebase/cherry-pick/revert commit is recorded after the fact and blocks the next commit; never read
-  a hook's printed output as the verdict on the commit that follows it.
+  rebase/cherry-pick/revert commit that adds a rule violation is recorded after the fact and blocks
+  the next commit; never read a hook's printed output as the verdict on the commit that follows it.

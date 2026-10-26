@@ -28,7 +28,7 @@
 |---|-----------|-------|-------------------|
 | M17 | 0.5.0: members log in | the login is on `main`; the password delivery (C15), the user management (C12), the usage records (C13), the member links (E28), the manual scrape trigger (E17), recurring round trips flagged (E30), the reader's place (E37), the `useLoad` guard (B48), the unreadable meta value (B36), the atomic ingest (D24), the job after the closed context (F10), the transaction statements (F27), the gate piece (G65, G86), the SPA's scan and lint inputs (H19), the Firefox profiles (H18), the browser grid on the agent seat (H14), the release tooling (F24) with the comparison's report (B43) and the deploy self-test's gaps (F28, F29); the release (F25); their order: backlog "Next, in order" | **After 0.4.0** (author decisions 2026-10-14 and 2026-10-15): auth is the feature 0.5.0 carries. What lands before the release ships with it, as far as it keeps the way back to 0.4.0 open (author answer 1a, 2026-10-25) |
 | M18 | 0.6.0, once 0.5.0 is stable | HTTPS through a reverse proxy (C16), dropping the old timestamp columns (D26), exact fixed-point sums (D25) with the naming follow-ups (D9) | HTTPS follows the login over plain HTTP (author decision 2026-10-15); the three migrations close the way back to 0.4.0, so they wait for the tag (author answer 1a, 2026-10-25) |
-| M8 | The numbers hold up | the remaining unvalued names and the ammunition credit, round-trip detection, the rounding, the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
+| M8 | The numbers hold up | the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | the slow-read warning (F19) | The bound of 1 s on the home server rests on an estimate, so a ledger page that crosses it should show in the log |
 | M10 | What the bottlenecks release | the aggregation in SQL (D18) | Measured request-path cost |
 | M11 | Product build-out | the time filter (E12) → the member of the month (E13); the estimated hunt deposits (E3); failure pages with a picture (E27); the collation of punctuation (F13) | The time filter inherits the SQL aggregation's query shape, so it follows it |
@@ -135,7 +135,9 @@ reaches its current major.
   - The author's history rewrite follows, once **no** worktree is open, no pushed `claude/` branch
     or open pull request remains, and both machines clone afresh.
   - The author moves every protected release tag.
-- [ ] Dependabot covers all three ecosystems and one refresh pass has run (backlog H11).
+- [ ] Dependabot configures a `gradle` ecosystem (backlog H11).
+- [ ] Dependabot configures a `docker` entry for the root `Dockerfile` (backlog H11).
+- [ ] One dependency refresh pass has run (backlog H11).
 - [ ] `Configuration` is real and immutable (C1); `vulnScan` is at zero and gated (C8).
 - [ ] Every pull request head is built by CI, and the landing refuses a head without its green named
       check (backlog A4), after the gate mechanics.
@@ -163,7 +165,8 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   session forgetting a written rule.
   - The tool-level enforcement hooks (G7), whose working-directory-drift guard addresses a failure
     mode that has already cost work.
-  - The one remaining hole in the git gate, a prefix-squattable host-path scan (G13).
+  - The remaining holes in the pre-commit scans, a prefix-squattable host path and a quoted path the
+    comment scan misses (G13).
   - Agent-environment polish (G11), including the shared probe result directory that makes
     concurrent falsifier runs flaky and the two worktree costs of the dissolved build-performance
     analysis.
@@ -175,8 +178,7 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   left (B34, B38), style alignment (B8), the shared boot fixture (B18), the parser's residual
   shapes (B22), deterministic fixture ids (B23), the cause of the unreadable-head test's failures
   (B47).
-- **Docs & code hygiene:** the doc-debt row's remaining false findings (G18), exception/logging
-  hygiene and dead code (D11).
+- **Code hygiene:** exception/logging hygiene and dead code (D11).
 - **Craftsmanship, when a gap allows:** catalog refactor (D6), full repackaging (D3) last, on top
   of a tested core.
 - **Creative:** weekly guild report / delivery channel (F3).

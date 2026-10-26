@@ -1,6 +1,6 @@
 ---
 name: falsifier-domain
-description: Adversarial verifier, domain lens. Given a feature's diff/commits, tries hard to PROVE the domain behavior is wrong (value math, valuation rules, watermark/aggregation semantics, parser fidelity). Returns a skeptical verdict + concrete counter-tests. Read-only; never commits or pushes.
+description: Adversarial verifier, domain lens. Given a feature's diff/commits, tries hard to PROVE the domain behavior is wrong (value math, valuation rules, aggregation semantics, parser fidelity). Returns a skeptical verdict + concrete counter-tests. Read-only; never commits or pushes.
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
@@ -21,14 +21,14 @@ Inspect the changed files and commits.
 
 ## Attack checklist (domain lens)
 - **Value math:** recompute at least one concrete example by hand against `domain-model.md`
-  (`getStorageValue` recipe cost, `getWithdrawlValue = marketValue·0.6`) and the verified
+  (`getStorageValue = marketValue·placement()`, `getWithdrawlValue = marketValue·0.6`) and the verified
   Gildenmehrwert formula in `google-sheet.md`.
 - **Quality scaling:** `value·quantity·quality/100` at quality 0, 100 and with the +1 modifier;
   rounding behavior.
 - **Transfer semantics:** the EINLAGERUNG vs ENTNAHME branch; unknown item names (→ UNDEFINED);
   quantity merging across same-name entries.
-- **Aggregation & watermark:** can cumulative totals double-count or gap when the watermark
-  advances? What happens on a first run, a re-run, an empty repository?
+- **Aggregation:** can a total recomputed from the stored entries double-count or drop one?
+  - What happens on a first run, a re-run, an empty repository?
 - **Parser fidelity:** do the German log lines the parser accepts mean what the code assumes
   (unknown transfer types must not silently default)? Is 1:1 parity with the production data at risk?
 - **A boundary expressed as a character class is the wrong lever** when a fix keeps leaking: every

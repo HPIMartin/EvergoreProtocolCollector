@@ -64,10 +64,12 @@ new section a skeleton now carries), present the hunk as a suggestion for the au
 
 ## 4. The delta the merge cannot make
 
-- **Retired placeholders and new contracts.** Where the new version replaced a placeholder by a
-  contract (build and test commands by `./verify`, say), install the missing piece from the project's
-  stack preset in `<incoming>/stacks/` and point the hooks at it; then `grep -rn "{{" .` outside
-  `.template/` must be clean.
+- **Retired placeholders and new contracts.**
+  - Where the new version replaced a placeholder by a contract (build and test commands by
+    `./verify`, say), install the missing piece from the project's stack preset in
+    `<incoming>/stacks/`.
+  - Point the hooks at it.
+  - `grep -rnE "[{][{][A-Z_]+[}][}]" .` outside `.template/` must be clean.
 - **Hooks.** Merge `hooks/` like any files, then re-apply the project's gate configuration (the
   `content-gate` config block, the `commit-msg` ticket settings) from the project's side of the
   merge; stage every hook `100755` (`git update-index --chmod=+x`).
@@ -87,7 +89,7 @@ new section a skeleton now carries), present the hunk as a suggestion for the au
 - `sh -n` per hook.
 - `./verify format` green.
 - `jq .` on `.claude/settings.json`.
-- `git ls-files -s hooks/` all `100755`.
+- `git ls-files -s hooks/` showing `100755` for every file except `hooks/README.md`.
 - `git config core.hooksPath` set.
 - Relative doc links resolving.
 - `grep -rn "ADAPT:" .` outside `.template/` listing only the spots the author keeps on purpose.

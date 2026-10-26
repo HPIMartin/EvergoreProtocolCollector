@@ -26,7 +26,7 @@
 | Risk | L | I | Countermeasure |
 |------|---|---|----------------|
 | A secret or host detail lands in the public showcase repo | L | H | Hard no-secrets rule (handbook §7), deny-listed secret reads, gitignored `*.local.*`/`zugang.txt`; staged-content scan hooks (backlog G13); leak protocol: purge and rotate |
-| The 2023 `selenium/standalone-firefox:109.0` image carries browser/OS CVEs | M | M | Dependabot `docker` ecosystem plus one refresh pass (backlog H11) |
+| The 2023 `selenium/standalone-firefox:109.0` image carries browser/OS CVEs | M | M | Planned: Dependabot's `docker` ecosystem on the root `Dockerfile` plus one refresh pass (backlog H11); until then the pin ages unwatched |
 | An agent pushes what it should not, with the author's rights on the PC or with the agent machine's deploy key ([git-state.md](knowledge-base/git-state.md), "What GitHub enforces") | L | H | Layered push guards from the managed policy down to the rulesets, their residue accepted ([working-with-ai-agents.md](knowledge-base/working-with-ai-agents.md), "Permissions & autonomy"); open work: the line between the machines (backlog G39) |
 | The unattended agent seat runs a Docker daemon of its own inside its container, so an agent could try to escape the container through it | L | H | Sysbox runs the daemon without a host socket, and the container reaches no local network ([dev-environment.md](knowledge-base/dev-environment.md), "Docker on the agent seat") |
 | On the PC's case-insensitive checkout, a fetched ref that differs from `main` only in case (a branch `Main`, a tag `MAIN`) takes the place of `origin/main` or `main` | L | H | The sync's case check after every fetch (handbook §7); a background fetch after that check stays open until the PC's refs are case-sensitive (open question D-21) |
@@ -39,7 +39,7 @@
 |------|---|---|----------------|
 | Long hobby pauses lose context between sessions | H | M | `/pause` parks state as `[wip]` and updates the backlog status; `/continue` reorients from repo and git; the KB carries the knowledge |
 | Fake-green tests or hallucinated APIs pass a solo review | M | H | An independent falsifier panel and reviewer gate, escalated for risky domains ([multi-agent-playbook.md](knowledge-base/multi-agent-playbook.md)) |
-| KB drift misleads KB-first agents | M | M | Rotating doc-reviewer sweep at every gate; accuracy sweep (backlog G18) and the committed citation guard |
+| KB drift misleads KB-first agents | M | M | Rotating doc-reviewer sweep at every gate, which reports false text; the committed citation guard |
 | The planned history rewrite (after backlog F1) breaks clones and dangles commit-hash references in durable docs | H | L | The author rewrites history only after announcing it and after durable docs swap their commit hashes for symbol references (backlog F1) |
 | Parallel worktree strands collide on shared files (build scripts, settings) | M | L | Scoped strands land one at a time through the gateway (handbook §7); a repo-wide reformat runs only between strands |
 

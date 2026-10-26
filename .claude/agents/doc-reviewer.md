@@ -59,13 +59,17 @@ The **rotating sweep**, where the list above names it:
 
 - it picks one tracked doc statelessly;
 - it checks that doc whole;
-- `wt` is the absolute path of the worktree under review (see Environment):
+- `<abs path>` is the worktree under review (see Environment);
+- it stays a literal path in every command;
+- it runs these two commands:
 
 ```
-docs=$(git -C "$wt" ls-files '*.md' ':(exclude).template/*' | sort); n=$(echo "$docs" | wc -l)
-i=$(( $(git -C "$wt" rev-list --count HEAD) % n ))
-echo "$docs" | sed -n "$((i+1))p"
+git -C <abs path> ls-files '*.md' ':(exclude).template/*' | sort
+git -C <abs path> rev-list --count HEAD
 ```
+
+- each command is a call of its own;
+- with `n` docs in that list and `c` the commit count, the swept doc is line `c % n + 1` of the list.
 
 Nobody has to remember to schedule sweeps; the commit count rotates through every doc over time.
 Report sweep findings separately:

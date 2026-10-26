@@ -17,11 +17,14 @@ and the spec you were given (the test list / acceptance criteria). Inspect the c
 commits.
 
 ## Attack checklist (robustness lens)
-- **Fake green:** for each new test, would it still pass if the production change were reverted? If
-  yes, it's tautological: flag it. Does the test assert the *real* effect (values, logged warning,
-  watermark advance), not just "no exception"? For a test **adapted** to a changed behavior, demand
-  the recorded mutation (handbook §4); where none exists, mutate the production code yourself in
-  your own worktree, run only that test, and report whether it can fail at all.
+- **Fake green:**
+  - For each new test, would it still pass if the production change were reverted? If yes, it's
+    tautological: flag it.
+  - Does the test assert the *real* effect (values, logged warning, stored sums), not just "no
+    exception"?
+  - For a test **adapted** to a changed behavior, demand the recorded mutation (handbook §4).
+    - Where none exists, mutate the production code yourself in your own worktree, run only that
+      test, and report whether it can fail at all.
 - **Edge cases:** zero/negative/huge quantities, empty inputs, empty repositories, malformed lines
   (one bad line must not kill a whole run).
 - **Time:** is the injected `Clock` actually used, or does a `now()` sneak in? Any system-default-zone
