@@ -6,7 +6,7 @@ equivalent). It exists so every tool bootstraps from the **same** rules without 
 knowledge base: a wrapper *points* into the KB and adds only that tool's own mechanics. The KB
 (`docs/knowledge-base/` + `backlog.md` + `open-questions.md`) is the single source of truth.
 
-**Template version: 10.** Bump this on any change to the SHARED section below. Every wrapper records the
+**Template version: 11.** Bump this on any change to the SHARED section below. Every wrapper records the
 version it was built from and, at session start, quick-checks that its SHARED section still matches,
 re-syncing on a bump. See the [KB README](README.md). This counter belongs to the SHARED section
 alone; the payload's `TEMPLATE-VERSION` at the repo root is a different counter, and the two need
@@ -56,7 +56,8 @@ automating a manual Google Sheet; also a showcase of clean, test-driven, AI-assi
 - **Commit protocol, branching, merge & the review gateway** → handbook §7. Word **one** one-line,
   present-tense-verb message (optional `[doc]` tag) yourself and commit; no confirmation round.
   Every change on a `claude/<topic>` branch in its own worktree, cut from a freshly synced
-  `main` → rebase → review the rebased tip → the author lands it on `origin/main`.
+  `main` (a chained strand from the tip of the strand before it) → rebase → review the rebased
+  tip → the author lands it on `origin/main`.
 - **Pushing** → handbook §7. On the agent seat every strand is pushed as `claude/<topic>` and
   opened as a pull request; on a local machine it stays a local branch in its worktree and is never
   pushed. An agent pushes only its own, forces only with `--force-with-lease`, never pushes a
