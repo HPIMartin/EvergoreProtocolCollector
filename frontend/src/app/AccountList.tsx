@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { Account } from '../domain'
 import { formatTimestamp, LOAD_FAILED_MESSAGE, StatusPanel } from '../ui'
@@ -13,10 +13,16 @@ export function AccountList({ accounts, reset }: AccountListProps) {
   const [outcomes, setOutcomes] = useState<Readonly<Record<string, Outcome>>>(
     {},
   )
+  const [closedAt, setClosedAt] = useState<string | null>(null)
   const latestReset = useRef<Record<string, number>>({})
 
-  function resetPasswordOf(name: string): void {
+  function closeQuestionOf(name: string): void {
     setAsking(null)
+    setClosedAt(name)
+  }
+
+  function resetPasswordOf(name: string): void {
+    closeQuestionOf(name)
     const mine = (latestReset.current[name] ?? 0) + 1
     latestReset.current[name] = mine
     setOutcomes((before) =>
@@ -68,27 +74,28 @@ export function AccountList({ accounts, reset }: AccountListProps) {
                   : formatTimestamp(account.lastLogin.toISOString())}
               </td>
               <td className="data-table__cell">
-                <OutcomeOf outcome={outcomes[account.name]} />
-                {asking === account.name ? (
-                  <ResetQuestion
-                    name={account.name}
-                    onConfirm={() => {
-                      resetPasswordOf(account.name)
-                    }}
-                    onCancel={() => {
-                      setAsking(null)
-                    }}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    data-testid="account-reset"
+                <div aria-live="polite">
+                  <OutcomeOf outcome={outcomes[account.name]} />
+                  {asking === account.name ? (
+                    <ResetQuestion
+                      name={account.name}
+                      onConfirm={() => {
+                        resetPasswordOf(account.name)
+                      }}
+                      onCancel={() => {
+                        closeQuestionOf(account.name)
+                      }}
+                    />
+                  ) : null}
+                </div>
+                {asking === account.name ? null : (
+                  <ResetButton
+                    focusOnMount={closedAt === account.name}
                     onClick={() => {
+                      setClosedAt(null)
                       setAsking(account.name)
                     }}
-                  >
-                    Passwort zurücksetzen
-                  </button>
+                  />
                 )}
               </td>
             </tr>
@@ -121,6 +128,32 @@ function OutcomeOf({ outcome }: { readonly outcome: Outcome | undefined }) {
     <span data-testid="account-issued">{outcome.password}</span>
   ) : (
     <StatusPanel variant="error" message={LOAD_FAILED_MESSAGE} />
+  )
+}
+
+interface ResetButtonProps {
+  readonly focusOnMount: boolean
+  readonly onClick: () => void
+}
+
+function ResetButton({ focusOnMount, onClick }: ResetButtonProps) {
+  const button = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (focusOnMount) {
+      button.current?.focus()
+    }
+  }, [focusOnMount])
+
+  return (
+    <button
+      ref={button}
+      type="button"
+      data-testid="account-reset"
+      onClick={onClick}
+    >
+      Passwort zurücksetzen
+    </button>
   )
 }
 

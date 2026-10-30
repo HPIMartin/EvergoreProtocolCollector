@@ -222,6 +222,37 @@ describe('the reset of a password on the admin page', () => {
     })
   })
 
+  it('puts the question in a polite live region so a screen reader reads it out', async () => {
+    await adminViewWith(apiListing([ALRIK]))
+
+    fireEvent.click(within(rowOf('Alrik')).getByTestId('account-reset'))
+
+    const region = within(rowOf('Alrik'))
+      .getByTestId('reset-question')
+      .closest('[aria-live]')
+    const announcing = region?.getAttribute('aria-live')
+    expect(announcing).toBe('polite')
+  })
+
+  it('moves the focus to the reset button of the account when the admin answers „Abbrechen“', async () => {
+    await adminViewWith(apiListing([ALRIK, ZWERG]))
+    fireEvent.click(within(rowOf('Zwerg')).getByTestId('account-reset'))
+
+    fireEvent.click(within(rowOf('Zwerg')).getByTestId('reset-cancel'))
+
+    const focused = document.activeElement
+    expect(focused).toBe(within(rowOf('Zwerg')).getByTestId('account-reset'))
+  })
+
+  it('moves the focus to the reset button of the account when the admin answers „Zurücksetzen“', async () => {
+    await adminViewWith(apiListing([ALRIK, ZWERG], resettingTo(ISSUED).reset))
+
+    await resetThrough('Zwerg')
+
+    const focused = document.activeElement
+    expect(focused).toBe(within(rowOf('Zwerg')).getByTestId('account-reset'))
+  })
+
   it('resets nothing and asks no more when the admin answers „Abbrechen“', async () => {
     const resets = resettingTo({})
     await adminViewWith(apiListing([ALRIK, ZWERG], resets.reset))
@@ -255,6 +286,18 @@ function issuedBeside(name: string): string | undefined {
 }
 
 describe('the password a reset issued on the admin page', () => {
+  it('stands in a polite live region so a screen reader reads it out', async () => {
+    await adminViewWith(apiListing([ALRIK], resettingTo(ISSUED).reset))
+
+    await resetThrough('Alrik')
+
+    const region = within(rowOf('Alrik'))
+      .getByTestId('account-issued')
+      .closest('[aria-live]')
+    const announcing = region?.getAttribute('aria-live')
+    expect(announcing).toBe('polite')
+  })
+
   it('stands beside the name of the account after „Zurücksetzen“', async () => {
     const resets = resettingTo(ISSUED)
     await adminViewWith(apiListing([ALRIK, ZWERG], resets.reset))

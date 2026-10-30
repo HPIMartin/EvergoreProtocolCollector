@@ -211,6 +211,13 @@ Five top-level folders under `frontend/src/`:
   - The question reads „Passwort von <Name> wirklich zurücksetzen?“ (`reset-question`).
   - The question offers „Zurücksetzen“ (`reset-confirm`) and „Abbrechen“ (`reset-cancel`).
   - „Abbrechen“ closes the question and sends nothing.
+  - The question, the issued password and a failure stand in a polite `aria-live` region of the
+    row.
+  - The focus moves to that row's „Zurücksetzen“ when the question opens, so a keyboard user is
+    not left on `body` when the row's „Passwort zurücksetzen“ is replaced by the question.
+  - The focus moves to that row's „Passwort zurücksetzen“ when „Abbrechen“ closes the question.
+  - The focus moves to that row's „Passwort zurücksetzen“ when the answer of „Zurücksetzen“
+    settles.
   - After „Zurücksetzen“ the issued password stands in that account's row (`account-issued`).
   - The issued password lives only in the list's component state, so it is gone when the admin
     leaves the page.
