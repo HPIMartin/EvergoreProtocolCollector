@@ -81,6 +81,17 @@ class CreateAccountsTest {
 	}
 
 	@Test
+	void givesAResetThePasswordAfterTheOneTheCreationDrewFromTheGeneratorBothAreHanded() {
+		bankRepo.seedAvatars(List.of("Aurora"));
+		ResetPassword reset = new ResetPassword(accounts, generator, hasher, new LoginGenerations());
+		tested.forEveryKnownAvatar();
+
+		Optional<String> issued = reset.forAccount("Aurora");
+
+		assertThat(issued).hasValue("Generated-2!");
+	}
+
+	@Test
 	void leavesAnExistingAccountAsItWasAndGeneratesNoNewPassword() {
 		bankRepo.seedAvatars(List.of("Aurora"));
 		tested.forEveryKnownAvatar();
