@@ -9,8 +9,9 @@ import {
 import { afterEach, describe, expect, it } from 'vitest'
 
 import type { ProtocolApi } from '../api'
-import { Forbidden } from '../api'
+import { Forbidden, RequestFailed } from '../api'
 import type { Account, AdminStatus } from '../domain'
+import { LOAD_FAILED_MESSAGE } from '../ui'
 
 import { AdminView } from './AdminView.tsx'
 
@@ -302,6 +303,51 @@ describe('the password a reset issued on the admin page', () => {
       besideZwerg: issuedBeside('Zwerg'),
     }
     expect(shown).toEqual({ besideAlrik: undefined, besideZwerg: undefined })
+  })
+
+  it('is shown for no account when the reset failed, which says so instead', async () => {
+    const failing = (): Promise<string> =>
+      Promise.reject(new RequestFailed(404))
+    await adminViewWith(apiListing([ALRIK, ZWERG], failing))
+
+    await resetThrough('Alrik')
+
+    const shown = {
+      messages: shownMessages(),
+      besideAlrik: issuedBeside('Alrik'),
+      besideZwerg: issuedBeside('Zwerg'),
+      questions: screen.queryAllByTestId('reset-question'),
+    }
+    expect(shown).toEqual({
+      messages: [LOAD_FAILED_MESSAGE],
+      besideAlrik: undefined,
+      besideZwerg: undefined,
+      questions: [],
+    })
+  })
+
+  it('stops saying so when the next reset succeeds', async () => {
+    const answers = [
+      () => Promise.reject(new RequestFailed(500)),
+      () => Promise.resolve('Tannenzapfen#47'),
+    ]
+    const reset = (): Promise<string> => answers.shift()?.() ?? unused()
+    await adminViewWith(apiListing([ALRIK], reset))
+    await resetThrough('Alrik')
+    const failed = shownMessages()
+
+    await resetThrough('Alrik')
+
+    const shown = {
+      failed,
+      afterwards: shownMessages(),
+      beside: issuedBeside('Alrik'),
+    }
+    expect(shown).toEqual({
+      failed: [LOAD_FAILED_MESSAGE],
+      afterwards: [],
+      beside: 'Tannenzapfen#47',
+    })
   })
 
   it('is replaced by the one a second reset of the same account issues', async () => {

@@ -218,6 +218,10 @@ Five top-level folders under `frontend/src/`:
   - The issued password is never read behind a second request.
   - A second reset of another account leaves the first password beside its own name.
   - A second reset of the same account replaces the password.
+  - A failed reset (any status) shows „Die Daten konnten nicht geladen werden. Bitte später erneut
+    versuchen.“ (`LOAD_FAILED_MESSAGE`) under the table and no password, until the next
+    „Zurücksetzen“; the list stays as it was.
+  - A 404 for a name without an account shows the same text.
   - Hooks: `accounts-title`, `accounts`, per row `account-row` with `account-name`,
     `account-rests` and `account-last-login`.
   - None is a `p`, so the admin page reader that collects `p[data-testid]` reads the status facts

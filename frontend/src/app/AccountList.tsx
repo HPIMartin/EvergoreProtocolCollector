@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import type { Account } from '../domain'
-import { formatTimestamp } from '../ui'
+import { formatTimestamp, LOAD_FAILED_MESSAGE, StatusPanel } from '../ui'
 
 export interface AccountListProps {
   readonly accounts: readonly Account[]
@@ -11,12 +11,19 @@ export interface AccountListProps {
 export function AccountList({ accounts, reset }: AccountListProps) {
   const [asking, setAsking] = useState<string | null>(null)
   const [issued, setIssued] = useState<Readonly<Record<string, string>>>({})
+  const [failed, setFailed] = useState(false)
 
   function resetPasswordOf(name: string): void {
     setAsking(null)
-    void reset(name).then((password) => {
-      setIssued((before) => ({ ...before, [name]: password }))
-    })
+    setFailed(false)
+    reset(name).then(
+      (password) => {
+        setIssued((before) => ({ ...before, [name]: password }))
+      },
+      () => {
+        setFailed(true)
+      },
+    )
   }
 
   return (
@@ -81,6 +88,9 @@ export function AccountList({ accounts, reset }: AccountListProps) {
           ))}
         </tbody>
       </table>
+      {failed ? (
+        <StatusPanel variant="error" message={LOAD_FAILED_MESSAGE} />
+      ) : null}
     </>
   )
 }
