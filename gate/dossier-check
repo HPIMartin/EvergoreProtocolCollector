@@ -55,6 +55,11 @@ fi
 worktree=$1
 tip_ref=$2
 dossier="$worktree/gate.local.d"
+surface="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/authentication-surface"
+[ -r "$surface" ] && grep -q '[^[:space:]]' "$surface" || {
+	printf 'dossier-check: %s cannot be read or names no path, so no diff can be told to call for the security lens\n' "$surface" >&2
+	exit 2
+}
 refusals=0
 
 refuse() {
@@ -113,10 +118,14 @@ changed_paths() {
 
 paths_requiring() {
 	case "$1" in
-		doc-reviewer.md) cat ;;
+		doc-reviewer.md|reviewer.md) cat ;;
 		lens-robustness.md) grep -v '\.md$' ;;
 		lens-domain.md) grep -v '\.md$' | grep '^src/' ;;
 		lens-frontend.md) grep -v '\.md$' | grep '^frontend/' ;;
+		lens-security.md) awk -v surface="$surface" '
+			BEGIN { while ((getline prefix < surface) > 0) { sub(/[ \t\r]+$/, "", prefix); if (prefix != "") prefixes[++n] = prefix } }
+			{ for (i = 1; i <= n; i++) if (index($0, prefixes[i]) == 1) { print; next } }
+		' ;;
 	esac
 }
 
@@ -153,10 +162,12 @@ changed_lines() {
 }
 
 stands_beside_filed_lows() {
-	case "$1" in doc-reviewer.md|bdd.log|wip.expected|kb-guard.log) ;; *) return 1 ;; esac
+	case "$1" in doc-reviewer.md|reviewer.md|bdd.log|wip.expected|kb-guard.log) ;; *) return 1 ;; esac
 	printf '%s\n' "$2" | grep -Eqx '[0-9a-f]{40}' || return 1
 	in_worktree rev-parse --verify --quiet "$2^{commit}" > /dev/null || return 1
-	[ "$1" != doc-reviewer.md ] || [ "$(own_verdict "$dossier/$1" verdict)" = PASS ] || return 1
+	case "$1" in
+		doc-reviewer.md|reviewer.md) [ "$(own_verdict "$dossier/$1" verdict)" = PASS ] || return 1 ;;
+	esac
 	[ -n "$filed_ids" ] && [ "$(changed_paths "$2" "$tip" 2>/dev/null)" = docs/backlog.md ] || return 1
 	lines=$(changed_lines "$2" "$tip") || return 1
 	! printf '%s\n' "$lines" | grep -Ev "^[<>]\\| \\*\\*($filed_ids)\\*\\* \\|" | grep -q .
@@ -179,9 +190,11 @@ needs() {
 		|| refuse lens "the diff touches $2, so the gate needs $1 (playbook, Cadence)"
 }
 needs doc-reviewer.md 'the strand'
+needs reviewer.md 'the strand'
 needs lens-robustness.md 'code'
 needs lens-domain.md 'src/'
 needs lens-frontend.md 'frontend/'
+needs lens-security.md 'the authentication surface'
 
 failure_marker='FAILED|FAIL |×|✗|AssertionError|AssertionFailedError|^(FAIL|ERROR): [A-Za-z_][A-Za-z0-9_]* \('
 test_path_re='(^|/)src/test/|\.test\.[jt]sx?$|(^|/)self-test$|^release/test_[^/]*\.py$'
@@ -515,23 +528,25 @@ for report in "$dossier"/lens-*.md; do
 	grep -Eq '(^|[^A-Za-z])robust:' "$report" && grep -Eq '(^|[^A-Za-z])treeDiff:' "$report" \
 		|| refuse report "${report#"$dossier"/} lacks the robust: or treeDiff: field of a lens report, so it is a summary, not the report verbatim (playbook, Handoff contracts; handbook §9)"
 done
-if [ -f "$dossier/doc-reviewer.md" ]; then
-	grep -Eq '(^|[^A-Za-z])verdict:' "$dossier/doc-reviewer.md" \
-		|| refuse report "doc-reviewer.md lacks the verdict: field of the doc-reviewer's report, so it is a summary, not the report verbatim (playbook, Handoff contracts; handbook §9)"
-fi
+for report in "$dossier/doc-reviewer.md" "$dossier/reviewer.md"; do
+	[ -f "$report" ] || continue
+	grep -Eq '(^|[^A-Za-z])verdict:' "$report" \
+		|| refuse report "${report##*/} lacks the verdict: field of its agent's report, so it is a summary, not the report verbatim (playbook, Handoff contracts; handbook §9)"
+done
 
 findings_file="$dossier/findings.txt"
 if [ -f "$findings_file" ]; then
 	tr -d '\r' < "$findings_file" > "$scratch/findings.txt"
 	findings_file=$scratch/findings.txt
 fi
-for report in "$dossier"/lens-*.md "$dossier/doc-reviewer.md"; do
+for report in "$dossier"/lens-*.md "$dossier/doc-reviewer.md" "$dossier/reviewer.md"; do
 	[ -f "$report" ] || continue
 	name=${report##*/}
 	name=${name%.md}
 	name=${name#lens-}
 	case "$name" in
 		doc-reviewer) raised_pattern='rule: *DOC-' field=verdict passing=PASS ;;
+		reviewer) raised_pattern='category:' field=verdict passing=PASS ;;
 		*) raised_pattern='severity:' field=robust passing=yes ;;
 	esac
 	entry="^[[:space:]]*([-*+]|[0-9]+[.)])?[[:space:]]*\`?\{$raised_pattern"

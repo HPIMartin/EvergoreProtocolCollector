@@ -35,7 +35,8 @@ The task brief says which gate you are at:
 Read `CLAUDE.md`, `docs/knowledge-base/engineering-handbook.md` (esp. §1–§9), the feature's
 `.feature`, the commits/diff, and the reports of the **falsifier panel** (`falsifier-domain` +
 `falsifier-robustness`, plus `falsifier-frontend` where the SPA was touched and
-`falsifier-security` where the diff touches the authentication surface) and the
+`falsifier-security` where the diff touches the authentication surface, the paths
+`gate/authentication-surface` lists) and the
 **`doc-reviewer`** of earlier rounds:
 
 - in round 1 you run beside the panel, so no earlier verdict exists;
@@ -152,9 +153,11 @@ earlier findings:
 
 ## Return (your final message = data for the orchestrator)
 
+- at the feature gate, first line `tip: <full SHA of the tip you reviewed>`
 - at the scenario gate, first `scenarioCheck:` with the output of `gate/scenario-check` verbatim
 - `verdict: PASS | FAIL`
-- findings: list of `{category: process|cleancode|solid|hexagonal|tests|security|docs, where: file:line, fix}`
+- findings: list of `{category: process|cleancode|solid|hexagonal|tests|security|docs, where: file:line, fix}`,
+  one per line
 - if FAIL: the minimal set of changes required to reach PASS
 - if any process rule slipped (even on a PASS): a ready-to-paste row for
   `docs/process-learnings.md` in the format `| <date> | <what slipped> | <rule> | <fix / prevention> |`

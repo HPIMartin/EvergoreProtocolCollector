@@ -148,8 +148,14 @@ falsifier panel + review gate run **at the feature commit**, not per micro-commi
   `falsifier-robustness`; frontend-only → `falsifier-frontend` + `falsifier-robustness`; full-stack
   → all three. Spawning a lens that cannot see the change buys a confident PASS that means nothing.
 - **`falsifier-security` joins wherever the diff touches the authentication surface** (author
-  decision 2026-10-15): `rest/filter`, the security configuration, login, cookie and JWT, roles,
-  passwords, the rate limit, deploy secrets.
+  decision 2026-10-15): a path that starts with a line of `gate/authentication-surface`, the
+  surface's one path list (the request filters, the security configuration, login, cookie and
+  JWT, roles, passwords, the rate limit, deploy secrets).
+  - The list names production paths, server and SPA.
+  - A test file under a listed directory matches its line too (`frontend/src/login/*.test.tsx`
+    under `frontend/src/login/`), so a change to it calls for the lens.
+  - A `gate/self-test` case holds every line to a path the repository tracks, so a rename that
+    leaves a line behind fails the self-test.
   - It works a fixed attack list, only the classes the diff touches (author decision 2026-10-20).
   - Budget: at most 10 requests per attack idea and 120 per run (author decision 2026-10-20).
   - It starts the tip as a container of its own on a free port, never the home server.
@@ -161,13 +167,13 @@ falsifier panel + review gate run **at the feature commit**, not per micro-commi
   or a mutation ends its report with the diff of the production tree against `HEAD` in its
   worktree, so a left-behind change shows up in its own report rather than in the next build.
 - **Every prior verdict is an input to the next gate agent**, not a message to the author alone: the
-  falsifiers' and the doc-reviewer's reports go into the gate dossier verbatim, where the reviewer
-  of a later round reads them (→ The gate dossier).
+  falsifiers', the doc-reviewer's and the reviewer's reports go into the gate dossier verbatim,
+  where the reviewer of a later round reads them (→ The gate dossier).
 - **Every lens brief at the feature gate carries an "Already decided, out of scope" list** (author
   decision 2026-10-12): the findings earlier rounds rejected or filed, the author's decisions bearing on the
   strand and what the plan leaves out, so a lens does not raise them again each round.
 - **Pure documentation/process changes (`[doc]` scope) skip the falsifier panel:** the
-  `doc-reviewer` is the gate; add the `reviewer` only when process adherence is genuinely in doubt.
+  `doc-reviewer` and the `reviewer` are the gate (→ The gate dossier, Required reports).
   - Round 1 of a large docs-only strand splits the doc-reviewer (handbook §9).
 - **Escalation:** features touching valuation math, time/timezones, concurrency, data migration or
   the auth/security surface (filters, token handling, what is publicly exposed) → spawn gate agents
@@ -272,9 +278,10 @@ and commit-plan approvals happen with **you** in chat; moving `origin/main` is y
   weakness that fails today at the HTTP boundary.
 - **Doc reviewer:** first line `tip: <full SHA>` (the commit it read); `verdict: PASS|FAIL`;
   findings `{rule: DOC-n, where, what, fix}`.
-- **Reviewer:** at the scenario gate, `scenarioCheck:`, the output of `gate/scenario-check`
-  verbatim; `PASS|FAIL`; findings `{category: process|cleancode|solid|hexagonal|tests|security|docs,
-  where, fix}`; ready-to-paste `process-learnings.md` row if a process rule slipped.
+- **Reviewer:** at the feature gate, first line `tip: <full SHA>` (the commit it read); at the
+  scenario gate, `scenarioCheck:`, the output of `gate/scenario-check` verbatim; `verdict:
+  PASS|FAIL`; findings `{category: process|cleancode|solid|hexagonal|tests|security|docs, where,
+  fix}`, one per line; ready-to-paste `process-learnings.md` row if a process rule slipped.
 
 ## The gate dossier
 
@@ -289,6 +296,8 @@ says where each piece of evidence lives.
 - **The reviewer runs the check as its first act**, on the strand worktree, beside the lenses:
   - a refusal of class `lens`, `report`, `finding` or `tip` that names a report the round spawned
     beside it concerns that report: the reviewer quotes it, it is not the reviewer's;
+  - the refusal of the missing `reviewer.md` is its own report's, which the orchestrator saves
+    once the reviewer returns, then runs the check again;
   - in a split round 1 (handbook §9), the refusal of the missing `doc-reviewer.md` concerns the
     split doc-reviewers;
   - every other refusal is a `process` finding of a FAIL;
@@ -298,32 +307,34 @@ says where each piece of evidence lives.
 - **Location:** `<strand worktree>/gate.local.d/`, ignored by git (`*.local.*`), so no build
   cleans it and the worktree's removal takes it along. A dossier anywhere else, or a symlink in its
   place, is refused.
-- **Reports and logs at the top level** (each lens report and the doc-reviewer's, verbatim; the
-  runs made at the tip) open with `tip: <sha>`, the full SHA they were produced at; one naming any
-  other tip is refused, except a report or run the next two bullets let stand. Evidence that
-  predates the tip lives in subdirectories.
-- **A lens report of an earlier tip stands** while no path its lens reads has changed since its tip
+- **Reports and logs at the top level** (each lens report, the doc-reviewer's and the reviewer's,
+  verbatim; the runs made at the tip) open with `tip: <sha>`, the full SHA they were produced at;
+  one naming any other tip is refused, except a report or run the next two bullets let stand.
+  Evidence that predates the tip lives in subdirectories.
+- **A lens report of an earlier tip stands** (the robustness, domain and frontend lenses' reports)
+  while no path its lens reads has changed since its tip
   (a verdict on unchanged code still holds, and a re-run costs a full lens):
   - both the strand (`<its tip>..<tip>`) and `main` (its merge-base with `main`..`main`) count;
   - a lens reads the paths its required report follows below;
   - the frontend lens also reads those under `src/`, `grid/` and `gradle/`, `build.gradle.kts`,
     `settings.gradle.kts`, `gradle.properties`, `gradlew`, `Dockerfile` and `verify`, where the
     API, the browser-driven scenarios and the build that runs them live;
-  - the doc-reviewer's report and every run name the tip under review, unless the next bullet
-    lets them stand.
-- **The doc-reviewer's report and the runs of an earlier tip stand beside filed lows**
-  (`doc-reviewer.md`, `bdd.log`, `wip.expected`, `kb-guard.log`; author decision 2026-10-13),
-  since a row that only records the passing round's own lows needs no second review:
+  - the doc-reviewer's and the reviewer's reports and every run name the tip under review, unless
+    the next bullet lets them stand.
+- **The doc-reviewer's and the reviewer's reports and the runs of an earlier tip stand beside
+  filed lows** (`doc-reviewer.md`, `reviewer.md`, `bdd.log`, `wip.expected`, `kb-guard.log`;
+  author decision 2026-10-13), since a row that only records the passing round's own lows needs no
+  second review:
   - the earlier tip is a commit that differs from the tip in `docs/backlog.md` alone;
   - every line changed there, read as text, is a row (`| **<ID>** |`) `findings.txt` traces as
     `backlog <ID>`;
-  - for `doc-reviewer.md`, the earlier report's own verdict is a pass.
+  - for `doc-reviewer.md` and `reviewer.md`, the earlier report's own verdict is a pass.
 - **Base and freeze** are read live, not from the dossier: the strand's merge-base must equal
   `git rev-parse main` at the moment of the check, the tip's tree must differ from main's, and the
   strand worktree must be clean and checked out at the tip.
-- **Gate reports:** `lens-<lens>.md` per falsifier lens and `doc-reviewer.md`, each the agent's
-  final message verbatim; a file without its contract's fields (`robust:` and `treeDiff:`, or `verdict:`;
-  → Handoff contracts) is a summary and is refused.
+- **Gate reports:** `lens-<lens>.md` per falsifier lens, `doc-reviewer.md` and `reviewer.md`, each
+  the agent's final message verbatim; a file without its contract's fields (`robust:` and
+  `treeDiff:`, or `verdict:`; → Handoff contracts) is a summary and is refused.
   - A report's own verdict is the one line that opens with its `robust:` or `verdict:`, after a
     `-`, `*`, `+` or numbered marker, bold or a backtick.
   - A choice such as `yes | no` on that line reads as no verdict.
@@ -347,14 +358,17 @@ says where each piece of evidence lives.
   - that tip follows the lows' row of "A passing round whose findings are all low" (handbook §9),
     if there is one;
   - that run belongs to round 1 (author decision 2026-10-16).
-- **Required reports** follow the strand's diff against its base: `doc-reviewer.md` always; any
-  path outside `*.md` adds `lens-robustness.md`, one under `src/` adds `lens-domain.md`, one under
-  `frontend/` adds `lens-frontend.md` (→ Cadence). A docs-only strand needs the doc-reviewer alone.
+- **Required reports** follow the strand's diff against its base: `doc-reviewer.md` and
+  `reviewer.md` always; any path outside `*.md` adds `lens-robustness.md`, one under `src/` adds
+  `lens-domain.md`, one under `frontend/` adds `lens-frontend.md`, one that starts with a line of
+  `gate/authentication-surface` adds `lens-security.md` (→ Cadence). A docs-only strand needs the
+  doc-reviewer and the reviewer alone.
   - A renamed path counts at both its ends, so code renamed into the docs still needs its lenses.
   - A name git quotes counts without its quotes.
-  - `lens-security.md`, where a round spawned the security lens, is checked like any lens report
-    and its findings traced as `security-<n>`.
-  - No path requires it yet: that comes with the reviewer's report item (G65).
+  - The check fails when it cannot read `gate/authentication-surface` or the list names no path.
+  - It reads each line of the list without its trailing blanks, tabs and carriage return, and
+    skips a blank line.
+  - `lens-security.md` is checked like any lens report and its findings traced as `security-<n>`.
   - It stands only at the tip it names.
 - **`red/`:** one record per commit that changes a test path (`src/test/`, `*.test.[jt]s(x)`, a
   `self-test`, `release/test_*.py`), whatever its tag, opening with `commit: <its subject>` (stable
@@ -402,12 +416,13 @@ says where each piece of evidence lives.
   fold, a `[doc]` commit), a `./verify focus` run of `KbCitationGuardTest` at the tip, since that
   test reads the KB prose; it shows the command, a bare `> Task :test` and `BUILD SUCCESSFUL`.
 - **`findings.txt`:** one line per finding the reports raise (a lens's list items that open with
-  `{severity:`, the doc-reviewer's that open with `{rule: DOC-`, one finding per line, numbered
-  1..n per report in their order, each traced once; a report whose own verdict is no readable
-  `robust: yes` or `verdict: PASS` lists at least one): `<lens>-<n> fixed <strand commit>`,
-  `<lens>-<n> backlog <ID>` (a row `docs/backlog.md` holds at the tip) or `<lens>-<n> rejected
-  <reason>`; the doc-reviewer's findings count as `doc-reviewer-<n>`, a split round 1's as
-  `<part>-<n>` (→ "A split round 1"). Anything else is refused.
+  `{severity:`, the doc-reviewer's that open with `{rule: DOC-`, the reviewer's that open with
+  `{category:`, one finding per line, numbered 1..n per report in their order, each traced once; a
+  report whose own verdict is no readable `robust: yes` or `verdict: PASS` lists at least one):
+  `<lens>-<n> fixed <strand commit>`, `<lens>-<n> backlog <ID>` (a row `docs/backlog.md` holds at
+  the tip) or `<lens>-<n> rejected <reason>`; the doc-reviewer's findings count as
+  `doc-reviewer-<n>`, the reviewer's as `reviewer-<n>`, a split round 1's as `<part>-<n>` (→ "A
+  split round 1"). Anything else is refused.
 - **`bdd.log` and `wip.expected`:** for a strand that touches `src/` or `frontend/`, the
   `./verify bdd` run at the tip, and one line per expected
   failure, `<the failing test's line without FAILED> | <its failure line>`, the failure line never

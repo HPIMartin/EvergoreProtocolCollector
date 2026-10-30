@@ -105,6 +105,7 @@ tip_reports() {
 tip_runs() {
 	wip_run "$(sorting_fails 76)" "$(headline_fails)"
 	write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+	write_file gate.local.d/reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
 }
 
 # One green full-suite log per commit, at the path the check itself names for that commit's code tree.
@@ -375,7 +376,7 @@ new_strand filed_lows_keep_runs
 complete_dossier
 file_lows '| **G100** | The lows of the passing round |'
 if accepts; then r=0; else r=1; fi
-check "a doc-reviewer report and the runs of an earlier tip stand when only the filed lows' backlog row changed" "$r"
+check "the doc-reviewer's and the reviewer's reports and the runs of an earlier tip stand when only the filed lows' backlog row changed" "$r"
 
 new_strand filed_lows_with_other_doc
 complete_dossier
@@ -455,6 +456,14 @@ file_lows '| **G100** | The lows of the passing round |'
 sed 's/verdict: PASS/verdict: FAIL/' gate.local.d/doc-reviewer.md > "$work/failing" && mv "$work/failing" gate.local.d/doc-reviewer.md
 if refuses_for tip && grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
 check "a doc-reviewer report of an earlier tip is refused beside filed lows when its verdict is FAIL" "$r"
+
+new_strand filed_lows_failing_reviewer
+complete_dossier
+file_lows '| **G100** | The lows of the passing round |'
+sed 's/verdict: PASS/verdict: FAIL/' gate.local.d/reviewer.md > "$work/failing" && mv "$work/failing" gate.local.d/reviewer.md
+if refuses_for tip && grep -q '^refused \[tip\]: reviewer.md ' "$work/out" \
+	&& ! grep -q '^refused \[tip\]: doc-reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a reviewer report of an earlier tip is refused beside filed lows when its verdict is FAIL" "$r"
 
 new_strand filed_lows_quoted_pass
 complete_dossier
@@ -697,6 +706,12 @@ write_file gate.local.d/doc-reviewer.md "tip: $(tip)" 'The doc-reviewer passed t
 if refuses_for report; then r=0; else r=1; fi
 check "a doc-reviewer summary in place of its report is refused" "$r"
 
+new_strand review_summary
+complete_dossier
+write_file gate.local.d/reviewer.md "tip: $(tip)" 'The reviewer passed the strand.'
+if refuses_for report && grep -q '^refused \[report\]: reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a reviewer summary in place of its report is refused" "$r"
+
 new_strand no_domain_lens
 complete_dossier
 mv gate.local.d/lens-domain.md gate.local.d/notes-domain.txt
@@ -715,6 +730,64 @@ complete_dossier
 mv gate.local.d/doc-reviewer.md gate.local.d/notes-doc.txt
 if refuses_for lens; then r=0; else r=1; fi
 check "a dossier without the doc-reviewer's report is refused" "$r"
+
+new_strand no_reviewer
+complete_dossier
+mv gate.local.d/reviewer.md gate.local.d/notes-review.txt
+if refuses_for lens && grep -q '^refused \[lens\]: .* reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a dossier without the reviewer's report is refused" "$r"
+
+new_strand no_security_lens
+write_file src/main/java/dev/schoenberg/evergore/protocolParser/rest/filter/AccessFilter.java 'class AccessFilter {' '}'
+commit_all 'Add the access filter'
+complete_dossier
+if refuses_for lens && grep -q 'needs lens-security.md' "$work/out"; then r=0; else r=1; fi
+check "a change to the authentication surface without the security lens is refused" "$r"
+
+new_strand no_surface_list
+write_file src/main/java/dev/schoenberg/evergore/protocolParser/rest/filter/AccessFilter.java 'class AccessFilter {' '}'
+commit_all 'Add the access filter'
+complete_dossier
+lens_report security
+mkdir -p "$work/listless"
+cp "$dossier_check" "$work/listless/dossier-check"
+if "$work/listless/dossier-check" "$repo" strand > "$work/out" 2>&1; then r=1
+elif grep -q 'authentication-surface' "$work/out"; then r=0; else r=1; fi
+check "the dossier check without its authentication surface list fails" "$r"
+
+# A copy of the check beside a list of the case's own, so a case can shape the list.
+check_with_list() {
+	mkdir -p "$work/$1"
+	cp "$dossier_check" "$work/$1/dossier-check"
+	printf "$2" > "$work/$1/authentication-surface"
+	"$work/$1/dossier-check" "$repo" strand > "$work/out" 2>&1
+}
+
+new_strand blank_surface_line
+complete_dossier
+if check_with_list blank_list 'src/main/java/dev/schoenberg/evergore/protocolParser/rest/filter/\n\n'; then r=0; else r=1; fi
+check "a blank line in the authentication surface list adds no path to it" "$r"
+
+new_strand crlf_surface_list
+write_file src/main/java/dev/schoenberg/evergore/protocolParser/rest/filter/AccessFilter.java 'class AccessFilter {' '}'
+commit_all 'Add the access filter'
+complete_dossier
+if check_with_list crlf_list 'src/main/java/dev/schoenberg/evergore/protocolParser/rest/filter/\t \r\n'; then r=1
+elif grep -q 'needs lens-security.md' "$work/out"; then r=0; else r=1; fi
+check "an authentication surface list with CRLF line ends and trailing blanks still names its paths" "$r"
+
+new_strand empty_surface_list
+complete_dossier
+if check_with_list empty_list '\n \n'; then r=1; elif grep -q 'authentication-surface' "$work/out"; then r=0; else r=1; fi
+check "the dossier check with an authentication surface list that names no path fails" "$r"
+
+unmatched_surface_lines=$(git -C "$gate_dir/.." ls-files | awk -v surface="$gate_dir/authentication-surface" '
+	BEGIN { while ((getline prefix < surface) > 0) { sub(/[ \t\r]+$/, "", prefix); if (prefix != "") prefixes[++n] = prefix } }
+	{ for (i = 1; i <= n; i++) if (index($0, prefixes[i]) == 1) matched[i] = 1 }
+	END { for (i = 1; i <= n; i++) if (!matched[i]) print prefixes[i] }
+')
+if [ -z "$unmatched_surface_lines" ]; then r=0; else printf '%s\n' "$unmatched_surface_lines"; r=1; fi
+check "every line of the authentication surface list starts a path the repository tracks" "$r"
 
 new_strand no_robustness_lens
 complete_dossier
@@ -739,9 +812,10 @@ write_file docs/guide.md '# Guide'
 commit_all '[doc] Add the guide'
 mkdir -p gate.local.d
 write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+write_file gate.local.d/reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
 kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
 if accepts; then r=0; else r=1; fi
-check "a docs-only strand passes with the doc-reviewer's report alone" "$r"
+check "a docs-only strand passes with the doc-reviewer's and the reviewer's reports alone" "$r"
 
 # A later commit that edits the feature's test without adding one, so only its own record is missing.
 tighten_feature_test() {
@@ -1618,6 +1692,7 @@ if holds_quoted_names; then
 	commit_all '[doc] Add a page whose file name git quotes'
 	mkdir -p gate.local.d
 	write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+	write_file gate.local.d/reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
 	kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
 	walk_logs
 	if accepts; then r=0; else r=1; fi
@@ -1655,6 +1730,7 @@ write_file 'docs/Ärger.md' '# Ärger'
 commit_all '[doc] Add a page with a non-ASCII name'
 mkdir -p gate.local.d
 write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
+write_file gate.local.d/reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings: none'
 kb_guard_log 'BUILD SUCCESSFUL in 1m 3s'
 if accepts; then r=0; else r=1; fi
 check "a non-ASCII doc file leaves the code tree unchanged" "$r"
@@ -1722,6 +1798,27 @@ write_file gate.local.d/doc-reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- fin
 	'  - {rule: DOC-2, where: docs/guide.md:4, what: stale count, fix: drop it}'
 if refuses_for finding; then r=0; else r=1; fi
 check "a doc-reviewer finding with no disposition is refused" "$r"
+
+new_strand untraced_review_finding
+complete_dossier
+write_file gate.local.d/reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings:' \
+	'  - {category: tests, where: src/test/FeatureTest.java:4, fix: name the act}'
+if refuses_for finding && grep -q 'trace.* as reviewer-<n>' "$work/out"; then r=0; else r=1; fi
+check "a reviewer finding with no disposition is refused" "$r"
+
+new_strand review_fail_uncounted
+complete_dossier
+write_file gate.local.d/reviewer.md "tip: $(tip)" '- `verdict: FAIL`' '- findings: the act sits in the assertion'
+if refuses_for report && grep -q '^refused \[report\]: reviewer.md ' "$work/out"; then r=0; else r=1; fi
+check "a reviewer FAIL that lists no counted finding is refused" "$r"
+
+new_strand traced_review_finding
+complete_dossier
+write_file gate.local.d/reviewer.md "tip: $(tip)" '- `verdict: PASS`' '- findings:' \
+	'  - {category: tests, where: src/test/FeatureTest.java:4, fix: name the act}'
+findings 'reviewer-1 backlog G99'
+if accepts; then r=0; else r=1; fi
+check "a reviewer finding traced as reviewer-1 passes" "$r"
 
 new_strand twice_traced
 complete_dossier

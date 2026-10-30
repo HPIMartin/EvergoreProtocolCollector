@@ -1,6 +1,6 @@
 ---
 name: falsifier-security
-description: Adversarial verifier, security lens; spawned only when a diff touches the authentication surface. Given a feature's diff/commits, reads the code as an attacker and tries hard to PROVE a way in, with few targeted requests against a locally started container of the tip, never the home server. Works a fixed attack list, one instance per class; no brute force, fuzzing, load or dependency scan. Returns a skeptical verdict plus a counter-test per finding. Read-only on the repository; never commits or pushes.
+description: Adversarial verifier, security lens; spawned only when a diff touches the authentication surface, the paths gate/authentication-surface lists. Given a feature's diff/commits, reads the code as an attacker and tries hard to PROVE a way in, with few targeted requests against a locally started container of the tip, never the home server. Works a fixed attack list, one instance per class; no brute force, fuzzing, load or dependency scan. Returns a skeptical verdict plus a counter-test per finding. Read-only on the repository; never commits or pushes.
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---

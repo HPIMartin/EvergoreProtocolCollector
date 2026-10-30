@@ -545,7 +545,7 @@ worktrees (own directory + HEAD + index) make parallel work safe.
     rebuilds the gate's evidence before spawning any gate agent, without asking while it works on
     its own, since the dossier check refuses any base but `main`:
     - a lens report whose read paths `main` left unchanged stands across the rebase;
-    - the doc-reviewer and the runs repeat at the rebased tip.
+    - the doc-reviewer, the reviewer and the runs repeat at the rebased tip.
   - **Local `main` only fast-forwards:** in the clean primary checkout, on `main`,
     `git merge --ff-only refs/remotes/origin/main` or `git pull --ff-only`; never a merge, a rebase
     or a plain `git pull` on `main`. The refs are spelled out because git resolves a tag or a local
@@ -774,7 +774,7 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - its brief carries the delta (`<previous tip>..<tip>`) and the dispositions so far;
   - every other lens report stands while the dossier accepts it
     ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier").
-- **A docs-only fold** (code tree unchanged) re-runs only the doc-reviewer:
+- **A docs-only fold** (code tree unchanged) re-runs only the doc-reviewer and the reviewer:
   - it checks a docs fix of the reviewer's finding too;
   - the lens verdicts stand;
   - a lens judges the code, and such a fold changes none.
@@ -798,7 +798,8 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
   - every report passes;
   - each finding is a lens's `low`, or one a passing doc-reviewer or reviewer raised;
   - the lows become one backlog row, which `findings.txt` names for each of them;
-  - the doc-reviewer's report and the runs of the passing tip stand beside that row
+  - the doc-reviewer's and the reviewer's reports and the runs of the passing tip stand beside
+    that row
     ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier");
   - no fold follows, since a fold would only seed the next round's findings.
 - **Cap on the PC: two panel rounds, then the hand-off** (author decision 2026-10-12), since the PC
@@ -827,23 +828,25 @@ second panel round on, only the gate agents the fold concerns re-check it. Bound
 - **Process-only FAILs** (whitespace not separated, KB not updated, commit-message format) are
   cheap mechanical fixes; they don't consume a round.
   - On the PC, such a fix after round 2 forces no further panel round (author decision
-    2026-10-13): the doc-reviewer and the runs are repeated at the fixed tip, no lens runs again,
-    and the dossier check closes it.
+    2026-10-13): the doc-reviewer, the reviewer and the runs are repeated at the fixed tip, no
+    lens runs again, and the dossier check closes it.
 - Fixes are folded into the commit they belong to (§7), never a "fix review" commit.
   - They are folded at the moment of fixing rather than at the end of the round.
   - The gate reads the branch log before the diff.
   - A commit that names a repair of an earlier commit is itself a FAIL.
   - An "and" joining two clauses in a proposed message is the signal to split.
 - **A gate agent's report is an input to the next gate agent**, not a message to the author alone:
-  every lens and doc-reviewer verdict of an earlier round reaches the next reviewer run verbatim in
-  the gate dossier. The gate dossier check refuses an incomplete dossier before a round closes
+  every lens, doc-reviewer and reviewer verdict of an earlier round reaches the next reviewer run
+  verbatim in the gate dossier. The gate dossier check refuses an incomplete dossier before a round closes
   ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier").
 - **The reviewer runs in round 1 beside the lenses** (author decision 2026-10-12), so its findings
   ride in the same round instead of restarting the panel at its end.
-  - From round 2 on, it runs again on the delta when a fold changed the code tree.
+  - From round 2 on, it runs again on the delta after every fold (author decision 2026-10-30),
+    since its report names the tip under review.
   - It also runs when a panel finding was rejected rather than fixed or filed, to judge the
     rejection.
-  - The dossier check traces the lens and doc-reviewer findings, not the reviewer's.
+  - The dossier check requires its report and traces its findings as it does the lenses' and
+    the doc-reviewer's.
 - **The security lens joins the panel** (author decision 2026-10-15), since no other lens reads the
   app as an attacker; when and how: [multi-agent-playbook.md](multi-agent-playbook.md), "Cadence".
 - **The gate verifies the claim, not the intent.** Every claimed fix is stated with the evidence
