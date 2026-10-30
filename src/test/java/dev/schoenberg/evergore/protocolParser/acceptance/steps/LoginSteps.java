@@ -91,6 +91,11 @@ public class LoginSteps {
 		logIn(name, password);
 	}
 
+	@When("a/the member logs in as {string} with the password {string} the member chose")
+	public void aMemberLogsInWithThePasswordTheMemberChose(String name, String password) {
+		logIn(name, password);
+	}
+
 	@Given("the member has tried to log in as {string} with the password {string}")
 	public void theMemberHasTriedToLogInWithThePassword(String name, String password) {
 		logIn(name, password);

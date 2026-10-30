@@ -45,6 +45,7 @@ public class ClientLoginSteps {
 	private static final int BAD_REQUEST = 400;
 	private static final int FOUND = 302;
 	private static final int FORBIDDEN = 403;
+	private static final int NOT_FOUND = 404;
 	private static final int NO_CONTENT = 204;
 
 	private final LoginRequests logins;
@@ -270,6 +271,11 @@ public class ClientLoginSteps {
 	public void theOperatorFindsTheRequestRefusedForAWrongCurrentPassword() {
 		assertThat(received.current().status()).isEqualTo(BAD_REQUEST);
 		assertThat(received.current().body()).isEqualTo("{\"refusal\":\"wrong-current-password\"}");
+	}
+
+	@Then("the operator finds the request refused for naming no account")
+	public void theOperatorFindsTheRequestRefusedForNamingNoAccount() {
+		assertThat(received.current().status()).isEqualTo(NOT_FOUND);
 	}
 
 	@Then("the operator finds the request refused for lacking an account")

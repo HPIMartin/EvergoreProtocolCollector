@@ -1,4 +1,3 @@
-@wip
 Feature: Resetting a password on the admin page
   The admin page lists every account ("The admin page lists the accounts"). Beside each account
   stands the button "Passwort zurücksetzen"; the page asks "Passwort von <name> wirklich

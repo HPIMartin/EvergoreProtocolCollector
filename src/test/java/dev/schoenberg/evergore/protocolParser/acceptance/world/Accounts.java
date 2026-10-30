@@ -53,6 +53,10 @@ public class Accounts {
 		LoginRequests.namesIn(accounts).forEach(avatar -> resetWith(adminLogin, avatar));
 	}
 
+	public void rememberIssued(String avatar, String password) {
+		passwords.record(avatar, password);
+	}
+
 	public void reset(String avatar) {
 		resetWith(adminLogin(), avatar);
 	}

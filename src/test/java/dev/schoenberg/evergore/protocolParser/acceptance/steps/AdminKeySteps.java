@@ -94,6 +94,16 @@ public class AdminKeySteps {
 		assertThat(LoginRequests.namesIn(accounts)).isEmpty();
 	}
 
+	@Then("the operator finds the list of accounts, asked for with the admin key, holding only {string} and {string}")
+	public void theOperatorFindsTheListOfAccountsHoldingOnly(String first, String second) {
+		Answer loggedIn = logins.logIn(ADMIN, log.adminKeyNamed());
+
+		Answer accounts = logins.listAccounts(LoginRequests.loginValueIn(loggedIn));
+
+		assertThat(accounts.status()).as("the list of accounts: " + accounts.body()).isEqualTo(SERVED);
+		assertThat(LoginRequests.namesIn(accounts)).containsExactlyInAnyOrder(first, second);
+	}
+
 	private static char swapCase(char character) {
 		return Character.isUpperCase(character) ? String.valueOf(character).toLowerCase(Locale.ROOT).charAt(0) : String.valueOf(character).toUpperCase(Locale.ROOT).charAt(0);
 	}

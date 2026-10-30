@@ -321,6 +321,12 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - `opening()`: `DashboardOpening`, which opens a page logged in with the admin key from the
     service's log (`ServiceLog.adminKeyNamed`) unless the browser already holds a login.
   - `loginForm()`: `LoginForm`, which logs in and chooses a password through the login page.
+  - `accountResets()`: `AccountResets`, which asks the reset question beside an account on the open
+    admin page, answers it by its button and resets (ask, confirm, wait for the password the page
+    shows beside the name), all by the test ids of the account table.
+  - The steps record the password read off the page in `ScenarioPasswords`.
+  - A reset through the page and one through the service's route are told apart by nothing a later
+    step reads.
   - `clock()`: `ShiftedClock`.
   - `timeZone()`: `TimeZoneBrowser`.
   - `colours()`: `ComputedColours`.

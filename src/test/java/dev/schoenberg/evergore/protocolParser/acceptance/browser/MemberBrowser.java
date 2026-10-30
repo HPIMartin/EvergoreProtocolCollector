@@ -30,6 +30,7 @@ public final class MemberBrowser {
 	private final DashboardOpening opening;
 	private final LoginForm loginForm;
 	private final PasswordChange passwordChange;
+	private final AccountResets accountResets;
 	private final LoggingOut loggingOut;
 	private final RequestsWithoutALogin requestsWithoutALogin;
 	private final ShiftedClock shiftedClock;
@@ -45,6 +46,7 @@ public final class MemberBrowser {
 		this.opening = new DashboardOpening(this);
 		this.loginForm = new LoginForm(this, log);
 		this.passwordChange = new PasswordChange(this);
+		this.accountResets = new AccountResets(this);
 		this.loggingOut = new LoggingOut(this);
 		this.requestsWithoutALogin = new RequestsWithoutALogin(this);
 		this.shiftedClock = new ShiftedClock(() -> driver);
@@ -169,6 +171,10 @@ public final class MemberBrowser {
 
 	public PasswordChange passwordChange() {
 		return passwordChange;
+	}
+
+	public AccountResets accountResets() {
+		return accountResets;
 	}
 
 	public LoggingOut loggingOut() {
