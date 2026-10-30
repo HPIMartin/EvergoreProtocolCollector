@@ -14,6 +14,8 @@ function apiRefusingTheAdminStatus(reason: Error): ProtocolApi {
   return {
     overview: refused,
     adminStatus: refused,
+    adminAccounts: refused,
+    resetPassword: refused,
     bankEntries: refused,
     storageEntries: refused,
   }

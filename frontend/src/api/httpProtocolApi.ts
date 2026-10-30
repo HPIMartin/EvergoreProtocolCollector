@@ -12,22 +12,27 @@ import type { LedgerSort } from './ledgerSort.ts'
 import type { PageWindow } from './pageWindow.ts'
 import type { ProtocolApi } from './protocolApi.ts'
 import {
+  accountsFrom,
   adminStatusFrom,
   bankPageFrom,
+  issuedPasswordFrom,
   overviewFrom,
   storagePageFrom,
 } from './wire.ts'
 
 export type HttpGet = (url: string) => Promise<Response>
 
+export type HttpPost = (url: string, body: string) => Promise<Response>
+
 const AVATARS = '/api/v1/avatars'
 const ADMIN_STATUS = '/api/v1/admin/status'
+const ADMIN_ACCOUNTS = '/api/v1/admin/accounts'
 const UNAUTHORIZED = 401
 const FORBIDDEN = 403
 const BAD_REQUEST = 400
 const NOT_FOUND = 404
 
-export function httpProtocolApi(get: HttpGet): ProtocolApi {
+export function httpProtocolApi(get: HttpGet, post: HttpPost): ProtocolApi {
   function urlOf(
     path: string,
     window: PageWindow,
@@ -86,6 +91,14 @@ export function httpProtocolApi(get: HttpGet): ProtocolApi {
       overviewFrom(await bodyOf(await get(urlOf('', window)))),
     adminStatus: async () =>
       adminStatusFrom(await bodyOf(await get(ADMIN_STATUS))),
+    adminAccounts: async () =>
+      accountsFrom(await bodyOf(await get(ADMIN_ACCOUNTS))),
+    resetPassword: async (name) =>
+      issuedPasswordFrom(
+        await bodyOf(
+          await post(`${ADMIN_ACCOUNTS}/${encodeURIComponent(name)}/reset`, ''),
+        ),
+      ),
     bankEntries: (avatar, window, sort = null) =>
       ledgerOf('bank', avatar, window, sort, bankPageFrom),
     storageEntries: (avatar, window, sort = null) =>

@@ -9,7 +9,7 @@ import {
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import type { HttpGet, SessionApi } from '../api'
+import type { HttpGet, HttpPost, SessionApi } from '../api'
 import { httpSessionApi, Unauthorized } from '../api'
 import type { Me } from '../domain'
 import { LOAD_FAILED_MESSAGE } from '../ui'
@@ -457,16 +457,26 @@ interface Answer {
 
 interface FakeServer {
   readonly askedFor: string[]
+  readonly posted: string[]
   readonly get: HttpGet
+  readonly post: HttpPost
 }
 
 function serving(answerFor: (path: string) => Answer): FakeServer {
   const askedFor: string[] = []
+  const posted: string[] = []
 
   return {
     askedFor,
+    posted,
     get: (url) => {
       askedFor.push(url)
+      const answer = answerFor(new URL(url, 'http://localhost').pathname)
+
+      return Promise.resolve(new Response(answer.body, answer))
+    },
+    post: (url) => {
+      posted.push(url)
       const answer = answerFor(new URL(url, 'http://localhost').pathname)
 
       return Promise.resolve(new Response(answer.body, answer))
@@ -476,11 +486,19 @@ function serving(answerFor: (path: string) => Answer): FakeServer {
 
 function servingByUrl(answerFor: (url: string) => Answer): FakeServer {
   const askedFor: string[] = []
+  const posted: string[] = []
 
   return {
     askedFor,
+    posted,
     get: (url) => {
       askedFor.push(url)
+      const answer = answerFor(url)
+
+      return Promise.resolve(new Response(answer.body, answer))
+    },
+    post: (url) => {
+      posted.push(url)
       const answer = answerFor(url)
 
       return Promise.resolve(new Response(answer.body, answer))
@@ -529,7 +547,14 @@ async function shellAt(
   session: SessionApi = NO_SESSION,
 ): Promise<void> {
   window.history.replaceState(null, '', address)
-  render(<App get={server.get} session={session} navigate={navigate} />)
+  render(
+    <App
+      get={server.get}
+      post={server.post}
+      session={session}
+      navigate={navigate}
+    />,
+  )
   await act(async () => undefined)
 }
 
@@ -1469,11 +1494,11 @@ describe('App', () => {
   })
 
   it('says in German that the data could not be loaded when the request itself is rejected', async () => {
-    const unreachable: HttpGet = () =>
+    const unreachable: HttpGet & HttpPost = () =>
       Promise.reject(new TypeError('Failed to fetch'))
 
     window.history.replaceState(null, '', `/overview`)
-    render(<App get={unreachable} session={NO_SESSION} />)
+    render(<App get={unreachable} post={unreachable} session={NO_SESSION} />)
     await act(async () => undefined)
 
     const shown = shownStatus()
@@ -1537,7 +1562,7 @@ describe('App', () => {
     window.history.replaceState(null, '', `/overview`)
     const server = serving(() => ({ status: 200, body: OVERVIEW_BODY }))
 
-    render(<App get={server.get} session={NO_SESSION} />)
+    render(<App get={server.get} post={server.post} session={NO_SESSION} />)
 
     const status = shownStatus()
 
@@ -1693,7 +1718,7 @@ describe('App', () => {
 
     render(
       <StrictMode>
-        <App get={server.get} session={NO_SESSION} />
+        <App get={server.get} post={server.post} session={NO_SESSION} />
       </StrictMode>,
     )
     await act(async () => undefined)

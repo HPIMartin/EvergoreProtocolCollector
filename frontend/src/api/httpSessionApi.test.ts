@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { MalformedResponse, RequestFailed, Unauthorized } from './apiErrors.ts'
-import type { HttpGet } from './httpProtocolApi.ts'
-import type { HttpPost } from './httpLoginApi.ts'
+import type { HttpGet, HttpPost } from './httpProtocolApi.ts'
 import { httpSessionApi } from './httpSessionApi.ts'
 
 interface Posted {

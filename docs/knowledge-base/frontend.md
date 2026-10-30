@@ -38,7 +38,7 @@ Five top-level folders under `frontend/src/`:
   - `domain`: the wire contract's concepts as types, plus the framework-free logic over them (the
     `Ledger` visitor, the German and Berlin-local wording).
   - `api`: the `ProtocolApi` port and its `fetch` adapter, which validates every wire body before
-    translating it into domain types; `HttpGet` is the seam the tests fake.
+    translating it into domain types; `HttpGet` and `HttpPost` are the seams the tests fake.
   - `ui`: the theme and the presentational primitives; props in, callbacks out, no knowledge of
     routes or HTTP.
   - `app`: the composition root: routing, each view's load state, and the shell that wires the
@@ -335,7 +335,7 @@ Five top-level folders under `frontend/src/`:
     already (after a restart or the 7 days);
   - any other failure leaves the page where it is and shows „Die Abmeldung hat nicht geklappt.
     Bitte erneut versuchen.“ in the account area until the next click on „Abmelden“.
-- **Tests reach no network.** The faked seam is `HttpGet`, answering a real `Response`, so status
+- **Tests reach no network.** The faked seams are `HttpGet` and `HttpPost`, answering a real `Response`, so status
   handling and URL building are exercised for real. Asynchronous assertions flush microtasks with
   `act`; no test uses a timer, a `waitFor` poll or a wall-clock wait.
 - **The one test that does run the real thing** is on the Java side: `DashboardBrowserSmokeTest`

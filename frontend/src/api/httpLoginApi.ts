@@ -7,8 +7,7 @@ import type {
 
 import { MalformedResponse, RequestFailed } from './apiErrors.ts'
 import { fieldOf } from './fieldOf.ts'
-
-export type HttpPost = (url: string, body: string) => Promise<Response>
+import type { HttpPost } from './httpProtocolApi.ts'
 
 export interface LoginApi {
   readonly logIn: (

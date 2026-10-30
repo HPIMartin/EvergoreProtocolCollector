@@ -2,8 +2,7 @@ import type { ChangePasswordAnswer, Me, PasswordRefusal } from '../domain'
 
 import { MalformedResponse, RequestFailed, Unauthorized } from './apiErrors.ts'
 import { fieldOf } from './fieldOf.ts'
-import type { HttpPost } from './httpLoginApi.ts'
-import type { HttpGet } from './httpProtocolApi.ts'
+import type { HttpGet, HttpPost } from './httpProtocolApi.ts'
 
 export interface SessionApi {
   readonly me: () => Promise<Me>

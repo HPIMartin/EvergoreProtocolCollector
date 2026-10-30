@@ -11,17 +11,15 @@ if (!rootElement) {
 
 const get = (url: string): Promise<Response> => fetch(url)
 
+const post = (url: string, body: string): Promise<Response> =>
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  })
+
 createRoot(rootElement).render(
   <StrictMode>
-    <App
-      get={get}
-      session={httpSessionApi(get, (url, body) =>
-        fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body,
-        }),
-      )}
-    />
+    <App get={get} post={post} session={httpSessionApi(get, post)} />
   </StrictMode>,
 )

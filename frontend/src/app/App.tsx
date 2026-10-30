@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import type { HttpGet, SessionApi } from '../api'
+import type { HttpGet, HttpPost, SessionApi } from '../api'
 import { httpProtocolApi } from '../api'
 import type { NavigationLink } from '../ui'
 import { PageFrame, StatusPanel } from '../ui'
@@ -23,6 +23,7 @@ const BRAND = 'Evergore Protocol Collector'
 
 export interface AppProps {
   readonly get: HttpGet
+  readonly post: HttpPost
   readonly session: SessionApi
   readonly navigate?: (target: string) => void
 }
@@ -31,9 +32,14 @@ function navigateTheBrowser(target: string): void {
   window.location.assign(target)
 }
 
-export function App({ get, session, navigate = navigateTheBrowser }: AppProps) {
+export function App({
+  get,
+  post,
+  session,
+  navigate = navigateTheBrowser,
+}: AppProps) {
   const { route, follow, replace } = useRouting()
-  const api = httpProtocolApi(get)
+  const api = httpProtocolApi(get, post)
   const account = useAccount(session, navigate, follow)
 
   const view: RouteVisitor<ReactNode> = {

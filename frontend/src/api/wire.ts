@@ -74,6 +74,10 @@ export function accountsFrom(body: unknown): Account[] {
   return body.map(accountFrom)
 }
 
+export function issuedPasswordFrom(body: unknown): string {
+  return stringFrom(objectFrom(body), 'password')
+}
+
 function accountFrom(item: unknown): Account {
   const account = objectFrom(item)
 

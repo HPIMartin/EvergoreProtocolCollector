@@ -5,8 +5,8 @@ export {
   RequestFailed,
   Unauthorized,
 } from './apiErrors.ts'
-export type { HttpGet } from './httpProtocolApi.ts'
-export type { HttpPost, LoginApi } from './httpLoginApi.ts'
+export type { HttpGet, HttpPost } from './httpProtocolApi.ts'
+export type { LoginApi } from './httpLoginApi.ts'
 export { httpLoginApi } from './httpLoginApi.ts'
 export { httpProtocolApi } from './httpProtocolApi.ts'
 export type { SessionApi } from './httpSessionApi.ts'
