@@ -1,4 +1,3 @@
-@wip
 Feature: The password a reset issued is shown once
   A reset of a password on the admin page ("Resetting a password on the admin page") issues a new
   random password, and the admin page shows it beside the account's name: it stays there until the

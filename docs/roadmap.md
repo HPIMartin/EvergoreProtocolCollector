@@ -26,7 +26,7 @@
 
 | # | Milestone | Items | Why this position |
 |---|-----------|-------|-------------------|
-| M17 | 0.5.0: members log in | the login is on `main`; the password delivery (C15), the user management (C12), the usage records (C13), the member links (E28), the manual scrape trigger (E17), recurring round trips flagged (E30), the reader's place (E37), the `useLoad` guard (B48), the unreadable meta value (B36), the atomic ingest (D24), the job after the closed context (F10), the transaction statements (F27), the SPA's scan and lint inputs (H19), the Firefox profiles (H18), the browser grid on the agent seat (H14), the release tooling (F24) with the comparison's report (B43) and the deploy self-test's gaps (F28, F29); the release (F25); their order: backlog "Next, in order" | **After 0.4.0** (author decisions 2026-10-14 and 2026-10-15): auth is the feature 0.5.0 carries. What lands before the release ships with it, as far as it keeps the way back to 0.4.0 open (author answer 1a, 2026-10-25) |
+| M17 | 0.5.0: members log in | the login is on `main`; the user management (C12), the usage records (C13), the member links (E28), the manual scrape trigger (E17), recurring round trips flagged (E30), the reader's place (E37), the `useLoad` guard (B48), the unreadable meta value (B36), the atomic ingest (D24), the job after the closed context (F10), the transaction statements (F27), the SPA's scan and lint inputs (H19), the Firefox profiles (H18), the browser grid on the agent seat (H14), the release tooling (F24) with the comparison's report (B43) and the deploy self-test's gaps (F28, F29); the release (F25); their order: backlog "Next, in order" | **After 0.4.0** (author decisions 2026-10-14 and 2026-10-15): auth is the feature 0.5.0 carries. What lands before the release ships with it, as far as it keeps the way back to 0.4.0 open (author answer 1a, 2026-10-25) |
 | M18 | 0.6.0, once 0.5.0 is stable | HTTPS through a reverse proxy (C16), dropping the old timestamp columns (D26), exact fixed-point sums (D25) with the naming follow-ups (D9) | HTTPS follows the login over plain HTTP (author decision 2026-10-15); the three migrations close the way back to 0.4.0, so they wait for the tag (author answer 1a, 2026-10-25) |
 | M8 | The numbers hold up | the opening balance (E18); the consent text in the ledger (F8) | The header named the figures, which is what makes what they omit a defect; the opening balance updates the explanation page in the same commit as its rule |
 | M9 | Clear the last bottleneck | the slow-read warning (F19) | The bound of 1 s on the home server rests on an estimate, so a ledger page that crosses it should show in the log |
@@ -40,8 +40,6 @@
 Slice: every guild member logs in with an own account, the admin manages the accounts on the admin
 page, and the author sees who uses the app and how.
 
-- [ ] Every issued password is shown to the admin once, for sending by in-game message (backlog
-      C15).
 - [ ] The admin page manages the accounts (backlog C12).
 - [ ] The admin page shows who logged in when and which views and options each member uses
       (backlog C13).

@@ -26,6 +26,7 @@ public final class LoginForm {
 
 	private final MemberBrowser browser;
 	private final ServiceLog log;
+	private String lastName;
 
 	LoginForm(MemberBrowser browser, ServiceLog log) {
 		this.browser = browser;
@@ -37,7 +38,12 @@ public final class LoginForm {
 		logIn(ADMIN, log.adminKeyNamed());
 	}
 
+	public boolean wasLastUsedByTheAdmin() {
+		return ADMIN.equalsIgnoreCase(lastName);
+	}
+
 	public void logIn(String name, String password) {
+		lastName = name;
 		openTheLoginPageUnlessItIsOpen();
 		fillIn(NAME, name);
 		fillIn(PASSWORD, password);

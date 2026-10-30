@@ -231,6 +231,16 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
     accounts.
   - The account's creation hands no password to anyone, so no scenario has a password before a
     reset.
+  - While the first browser's latest login is the admin's (`LoginForm.wasLastUsedByTheAdmin`),
+    `the admin has reset the password of …` and `the admin resets …` go through the admin page
+    (`AccountResets`).
+  - The reset goes through the admin page so the password shown beside the name is the one a later
+    step reads.
+  - Once a member logged in on that browser the step asks the service's route as above, since the
+    admin's login would replace the member's.
+  - `the operator finds the password the reset issued to … nowhere in the answer/the log` looks
+    in the body of the list of accounts the client asked for, or in the log as read by `the
+    operator reads the service's log`.
   - `<name> has chosen the password P` is a state, not an action.
   - It stores P's hash through the production `PasswordHasher` and the account repository of the
     running service, state `CHOSEN`.
@@ -1015,9 +1025,9 @@ date, **per line**, so a later partial re-scrape re-dates only the rows it touch
 
 ## The game's message form
 
-Read on 2026-10-21, signed in as `Alessia` on the world `zyrthania`. Once the app issues passwords
-(the password delivery item, **C15**), the admin sends each one through this form, together with an
-agent; no code reads it, so this section is the only record.
+Read on 2026-10-21, signed in as `Alessia` on the world `zyrthania`. The admin sends each password
+a reset issues through this form, together with an agent; no code reads it, so this section is the
+only record.
 
 - **Where:** `?page=msg_new` under the game's URL, the link "Neue Nachricht" on `?page=msg`.
   - The folders: "Eingang" `?page=msg`, "Ausgang" `?page=msg&fid=2`, "Einstellungen"

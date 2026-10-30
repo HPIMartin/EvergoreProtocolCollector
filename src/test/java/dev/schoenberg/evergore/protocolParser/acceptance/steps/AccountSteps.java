@@ -28,11 +28,6 @@ public class AccountSteps {
 		accounts.resetEveryAccount();
 	}
 
-	@Given("the admin has reset the password of {string}")
-	public void theAdminHasResetThePasswordOf(String avatar) {
-		accounts.reset(avatar);
-	}
-
 	@Given("{word} has chosen the password {string}")
 	public void hasChosenThePassword(String avatar, String password) {
 		accounts.chooseDirectly(avatar, password);
