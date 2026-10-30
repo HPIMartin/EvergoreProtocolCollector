@@ -56,6 +56,17 @@ class ListAccountsTest {
 		assertThat(listed).containsExactly(new AccountListing("Aurora", false, Optional.empty()), new AccountListing("Calix", true, Optional.empty()));
 	}
 
+	@Test
+	void listsTheAccountsInGermanOrderOfTheirNames() {
+		accounts.hold(account("Zeta", Optional.empty()));
+		accounts.hold(account("Aurora", Optional.empty()));
+		accounts.hold(account("Ärger", Optional.empty()));
+
+		List<String> names = tested.all().stream().map(AccountListing::name).toList();
+
+		assertThat(names).containsExactly("Ärger", "Aurora", "Zeta");
+	}
+
 	private void moved(String avatar, int daysBeforeTheNewestMovement) {
 		bank.seedEntries(avatar, List.of(new BankEntry(NEWEST_MOVEMENT.minus(Duration.ofDays(daysBeforeTheNewestMovement)), avatar, 300, TransferType.ENTNAHME)));
 	}
