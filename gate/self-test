@@ -2421,6 +2421,9 @@ new_walked_strand() {
 		'		if [ -n "${GATE_FOCUS_EXITS:-}" ]; then echo "BUILD SUCCESSFUL in 1s"; exit 1; fi ;;' \
 		'	*) printf "%s %s\n" "$1" "$(git rev-parse HEAD)" >> "$GATE_BUILDS" ;;' \
 		'esac' 'echo "> Task :test"' 'echo "> Task :frontend:npmTest"' \
+		'if [ "$1" = all ] && [ -d build/test-results ]; then mv build/test-results "build/cleaned-$$"; fi' \
+		'if [ "$1" = all ] && [ -z "${GATE_NO_RESULTS:-}" ]; then mkdir -p build/test-results/test; git rev-parse HEAD > build/test-results/test/TEST-Stub.xml; fi' \
+		'if [ "$1" = all ] && [ -n "${GATE_ALL_FAILS:-}" ]; then echo "BUILD FAILED in 1s"; exit 1; fi' \
 		'if [ -f src/main/Broken.java ]; then echo "BUILD FAILED in 1s"; exit 1; fi' \
 		'if [ "$1" = all ] && [ -f src/main/Dirty.java ]; then echo "// touched" >> src/main/Seed.java; fi' \
 		'if [ "$1" = all ] && [ -f src/main/Generator.java ]; then echo "class Needed {}" > src/main/Needed.java; fi' \
@@ -2428,6 +2431,7 @@ new_walked_strand() {
 		'echo "[verify] executed test classes: 3"' 'echo "BUILD SUCCESSFUL in 1s"' \
 		'if [ -f src/main/Lost.java ]; then echo "[verify] the test results could not be collected"; exit 1; fi'
 	chmod +x verify
+	write_file .gitignore '*.local.*' 'build/'
 	commit_all 'Stub the build'
 	git checkout -q strand
 	git rebase -q main
@@ -2474,6 +2478,29 @@ commit_all 'Break the build'
 log=$("$dossier_check" --walk-log "$repo" HEAD)
 if walked walk_fails; then r=1; elif grep -q '^BUILD FAILED' "$log.failed" && [ ! -e "$log" ]; then r=0; else r=1; fi
 check "the walk reports a failed build, keeps its log apart and exits non-zero" "$r"
+
+new_walked_strand walk_reports
+write_file src/main/Broken.java 'class Broken {' '}'
+commit_all 'Break the build'
+broken=$(git rev-parse HEAD)
+log=$("$dossier_check" --walk-log "$repo" HEAD)
+git rm -q src/main/Broken.java
+commit_all 'Mend the build'
+if walked walk_reports; then r=1; elif [ "$(cat "$log.failed-reports/TEST-Stub.xml" 2> /dev/null)" = "$broken" ]; then r=0; else r=1; fi
+check "the walk keeps the test reports of a failed build beside its log before it builds the next commit" "$r"
+
+new_walked_strand walk_reports_again
+log=$("$dossier_check" --walk-log "$repo" HEAD)
+GATE_ALL_FAILS=1 walked walk_reports_again || true
+if GATE_ALL_FAILS=1 GATE_NO_RESULTS=1 walked walk_reports_again; then r=1
+elif [ -d "$log.failed-reports" ] && [ ! -e "$log.failed-reports/TEST-Stub.xml" ]; then r=0; else r=1; fi
+check "the walk keeps only the test reports of the latest failed build of a tree" "$r"
+
+new_walked_strand walk_reports_mended
+log=$("$dossier_check" --walk-log "$repo" HEAD)
+GATE_ALL_FAILS=1 walked walk_reports_mended || true
+if walked walk_reports_mended && [ -e "$log" ] && [ ! -e "$log.failed-reports" ]; then r=0; else r=1; fi
+check "the walk drops the test reports of a failed build once its tree builds green" "$r"
 
 new_walked_strand walk_each
 write_file src/main/Second.java 'class Second {' '}'

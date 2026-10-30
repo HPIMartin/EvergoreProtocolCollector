@@ -101,10 +101,16 @@ for commit in $commits; do
 	if [ "$clean" = yes ] && [ "$status" -eq 0 ] && green "$log.tmp" "$tree"; then
 		mv "$log.tmp" "$log"
 		rm -f "$log.failed"
+		rm -rf "$log.failed-reports"
 		printf '%s BUILD SUCCESSFUL\n' "$short"
 	else
 		mv "$log.tmp" "$log.failed"
 		rm -f "$log"
+		rm -rf "$log.failed-reports"
+		mkdir "$log.failed-reports"
+		for report in "$walk"/build/test-results/test/*.xml; do
+			[ ! -f "$report" ] || cp "$report" "$log.failed-reports/"
+		done
 		printf '%s BUILD FAILED (log: %s)\n' "$short" "$log.failed"
 		failed=1
 		if [ "$clean" = no ]; then

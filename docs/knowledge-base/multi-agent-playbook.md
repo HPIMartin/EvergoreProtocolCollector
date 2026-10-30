@@ -387,6 +387,10 @@ says where each piece of evidence lives.
     - It prints one line per commit and exits non-zero when a build failed.
     - A failed build's log goes to `<log>.failed`, never to the proof path; an older log counts
       only when the dossier check would accept it.
+    - A failed build's `build/test-results/test/*.xml` is copied to `<log>.failed-reports/`
+      before the next commit is built, which would replace them.
+      - The directory holds only the latest failed build of that code tree.
+      - A green rebuild of the tree removes it together with `<log>.failed`.
     - It takes only a walk path that ends in `-walk`, and refuses one that is no worktree's top
       level, has a branch checked out or is not clean, and a new one inside another worktree unless
       it lies in that worktree's ignored `.claude/worktrees/`.
