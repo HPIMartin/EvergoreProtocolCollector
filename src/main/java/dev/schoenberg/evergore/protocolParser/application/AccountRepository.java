@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
@@ -8,6 +9,8 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordStat
 
 public interface AccountRepository {
 	Optional<Account> findByNameKey(String nameKey);
+
+	List<Account> allAccounts();
 
 	boolean addIfAbsent(Account account);
 

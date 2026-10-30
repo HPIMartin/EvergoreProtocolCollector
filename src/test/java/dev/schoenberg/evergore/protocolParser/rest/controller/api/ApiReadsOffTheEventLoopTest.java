@@ -240,6 +240,11 @@ class ApiReadsOffTheEventLoopTest {
 			}
 
 			@Override
+			public List<Account> allAccounts() {
+				return accounts;
+			}
+
+			@Override
 			public boolean addIfAbsent(Account toAdd) {
 				return false;
 			}

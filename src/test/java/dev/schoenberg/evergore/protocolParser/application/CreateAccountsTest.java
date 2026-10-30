@@ -212,6 +212,11 @@ class CreateAccountsTest {
 		}
 
 		@Override
+		public List<Account> allAccounts() {
+			return all();
+		}
+
+		@Override
 		public boolean addIfAbsent(Account account) {
 			if (account.nameKey().equals(nameKeyThatFailsToAdd)) {
 				throw new IllegalStateException("The insert failed.");

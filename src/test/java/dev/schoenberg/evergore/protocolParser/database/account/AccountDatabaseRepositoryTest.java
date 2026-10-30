@@ -223,6 +223,20 @@ class AccountDatabaseRepositoryTest {
 	}
 
 	@Test
+	void listsEveryStoredAccountWithItsRoleAndLatestLogin() {
+		tested.addIfAbsent(account("Aurora", "hash-1", PasswordState.ISSUED));
+		tested.addIfAbsent(account("Boreas", "hash-2", PasswordState.CHOSEN));
+		databaseFile.execute("UPDATE account SET role = 'ADMIN' WHERE name_key = 'boreas'");
+		tested.recordLastLogin("boreas", LOGGED_IN);
+
+		List<Account> all = tested.allAccounts();
+
+		assertThat(all)
+				.containsExactlyInAnyOrder(account("Aurora", "hash-1", PasswordState.ISSUED),
+						new Account("Boreas", "hash-2", PasswordState.CHOSEN, Role.ADMIN, Optional.of(LOGGED_IN)));
+	}
+
+	@Test
 	void findsNoAccountOfAnotherNameKey() {
 		tested.addIfAbsent(account("Aurora", "hash-1", PasswordState.ISSUED));
 

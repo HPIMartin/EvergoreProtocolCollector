@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.database.account;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import com.j256.ormlite.dao.Dao;
@@ -27,6 +28,11 @@ public class AccountDatabaseRepository implements AccountRepository {
 	@Override
 	public Optional<Account> findByNameKey(String nameKey) {
 		return entryOf(nameKey).map(AccountDatabaseRepository::accountOf);
+	}
+
+	@Override
+	public List<Account> allAccounts() {
+		return silentThrow(() -> accounts().queryForAll()).stream().map(AccountDatabaseRepository::accountOf).toList();
 	}
 
 	@Override

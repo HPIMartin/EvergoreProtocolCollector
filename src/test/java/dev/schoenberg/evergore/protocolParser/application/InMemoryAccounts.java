@@ -31,6 +31,11 @@ class InMemoryAccounts implements AccountRepository {
 	}
 
 	@Override
+	public List<Account> allAccounts() {
+		return List.copyOf(byNameKey.values());
+	}
+
+	@Override
 	public boolean addIfAbsent(Account account) {
 		return byNameKey.putIfAbsent(account.nameKey(), account) == null;
 	}
