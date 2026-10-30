@@ -26,6 +26,7 @@ import dev.schoenberg.evergore.protocolParser.helper.config.SecurityConfiguratio
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 class AccessFilterTest {
 	private static final Instant MADE = Instant.parse("2026-01-05T10:00:00Z");
@@ -67,7 +68,7 @@ class AccessFilterTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"/api/v1/admin/status", "/api/v1/admin", "/api/v1/admin/", "/assets/../api/v1/admin/status"})
+	@ValueSource(strings = {"/api/v1/admin/status", "/api/v1/admin/accounts", "/api/v1/admin", "/api/v1/admin/", "/assets/../api/v1/admin/status"})
 	void rejectsAMembersLoginOnTheAdminsPaths(String address) {
 		MutableHttpRequest<?> request = HttpRequest.GET(address);
 		request.setAttribute(LoginAttribute.NAME, AURORA);
@@ -102,6 +103,16 @@ class AccessFilterTest {
 		HttpRequest<?> request = HttpRequest.GET(PROTECTED_PATH);
 
 		assertThatThrownBy(() -> tested.doFilter(request, chain)).isInstanceOf(AccessNotAllowed.class);
+		assertThat(reachedTheChain).isEmpty();
+	}
+
+	@Test
+	void rejectsARequestForTheAccountListWithoutALogin() {
+		HttpRequest<?> request = HttpRequest.GET("/api/v1/admin/accounts");
+
+		Throwable thrown = catchThrowable(() -> tested.doFilter(request, chain));
+
+		assertThat(thrown).isInstanceOf(AccessNotAllowed.class);
 		assertThat(reachedTheChain).isEmpty();
 	}
 
