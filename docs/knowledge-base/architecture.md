@@ -311,10 +311,10 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     (`helper/security/RandomPasswordGenerator`: 16 characters from `SecureRandom`, always passing
     `PasswordRule`);
   - only its hash is stored, with the state `ISSUED`;
-  - the clear password goes to the port `application/IssuedPasswords`, whose production bean
-    discards it until the password delivery exists;
-  - an avatar that already has an account, whatever the capitals, is left as it is and is issued
-    nothing;
+  - the clear password goes nowhere: no one is shown it;
+  - the first password to log in with comes from the admin's reset (`application/ResetPassword`);
+  - an avatar that already has an account, whatever the capitals, is left as it is and gets no new
+    password;
   - an avatar whose folded name is `admin` gets none, and the service logs
     `No account for the avatar <Avatar>: the name admin logs in with the admin key.`;
   - an avatar whose hash or insert throws is logged with its name at error and the other avatars

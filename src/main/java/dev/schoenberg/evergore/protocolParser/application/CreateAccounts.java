@@ -14,16 +14,13 @@ public class CreateAccounts {
 	private final AccountRepository accounts;
 	private final PasswordGenerator passwordGenerator;
 	private final PasswordHasher passwordHasher;
-	private final IssuedPasswords issuedPasswords;
 	private final Logger logger;
 
-	public CreateAccounts(KnownAvatars knownAvatars, AccountRepository accounts, PasswordGenerator passwordGenerator, PasswordHasher passwordHasher,
-			IssuedPasswords issuedPasswords, Logger logger) {
+	public CreateAccounts(KnownAvatars knownAvatars, AccountRepository accounts, PasswordGenerator passwordGenerator, PasswordHasher passwordHasher, Logger logger) {
 		this.knownAvatars = knownAvatars;
 		this.accounts = accounts;
 		this.passwordGenerator = passwordGenerator;
 		this.passwordHasher = passwordHasher;
-		this.issuedPasswords = issuedPasswords;
 		this.logger = logger;
 	}
 
@@ -48,10 +45,7 @@ public class CreateAccounts {
 		if (accounts.findByNameKey(nameKey).isPresent()) {
 			return;
 		}
-		String issued = passwordGenerator.generate();
-		Account account = new Account(avatar, passwordHasher.hash(issued), PasswordState.ISSUED, Role.MEMBER, Optional.empty());
-		if (accounts.addIfAbsent(account)) {
-			issuedPasswords.issue(avatar, issued);
-		}
+		Account account = new Account(avatar, passwordHasher.hash(passwordGenerator.generate()), PasswordState.ISSUED, Role.MEMBER, Optional.empty());
+		accounts.addIfAbsent(account);
 	}
 }

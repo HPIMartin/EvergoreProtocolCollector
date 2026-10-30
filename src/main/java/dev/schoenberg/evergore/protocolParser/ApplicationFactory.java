@@ -16,7 +16,6 @@ import dev.schoenberg.evergore.protocolParser.application.ChooseNewPassword;
 import dev.schoenberg.evergore.protocolParser.application.CreateAccounts;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
-import dev.schoenberg.evergore.protocolParser.application.IssuedPasswords;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 import dev.schoenberg.evergore.protocolParser.application.ListAccounts;
 import dev.schoenberg.evergore.protocolParser.application.LogIn;
@@ -132,19 +131,13 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public IssuedPasswords issuedPasswords() {
-		return (avatar, password) -> {};
-	}
-
-	@Singleton
 	public SignedLogins signedLogins(Clock clock) {
 		return JwtLogins.withARandomKey(new SecureRandom(), clock);
 	}
 
 	@Singleton
-	public CreateAccounts createAccounts(KnownAvatars knownAvatars, AccountRepository accounts, PasswordGenerator passwordGenerator, PasswordHasher passwordHasher,
-			IssuedPasswords issuedPasswords, Logger logger) {
-		return new CreateAccounts(knownAvatars, accounts, passwordGenerator, passwordHasher, issuedPasswords, logger);
+	public CreateAccounts createAccounts(KnownAvatars knownAvatars, AccountRepository accounts, PasswordGenerator passwordGenerator, PasswordHasher passwordHasher, Logger logger) {
+		return new CreateAccounts(knownAvatars, accounts, passwordGenerator, passwordHasher, logger);
 	}
 
 	@Singleton

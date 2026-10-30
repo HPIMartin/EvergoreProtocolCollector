@@ -222,7 +222,7 @@ class EvergoreDataCollectorJobTest {
 		int runsAfterTheRecompute;
 
 		RecordingCreateAccounts(FailableEvaluator evaluator) {
-			super(null, null, null, null, null, null);
+			super(null, null, null, null, null);
 			this.evaluator = evaluator;
 		}
 

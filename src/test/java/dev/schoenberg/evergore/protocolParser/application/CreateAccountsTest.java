@@ -28,9 +28,8 @@ class CreateAccountsTest {
 	private final FakeAccounts accounts = new FakeAccounts();
 	private final CountingGenerator generator = new CountingGenerator();
 	private final MarkingHasher hasher = new MarkingHasher();
-	private final RecordedPasswords issued = new RecordedPasswords();
 	private final LoggerSpy logger = new LoggerSpy();
-	private final CreateAccounts tested = new CreateAccounts(new KnownAvatars(bankRepo, storageRepo), accounts, generator, hasher, issued, logger);
+	private final CreateAccounts tested = new CreateAccounts(new KnownAvatars(bankRepo, storageRepo), accounts, generator, hasher, logger);
 
 	@Test
 	void givesAnAvatarTheBankLedgerNamesAnAccountThatBeginsWithAReset() {
@@ -58,38 +57,31 @@ class CreateAccountsTest {
 		tested.forEveryKnownAvatar();
 
 		assertThat(accounts.all()).hasSize(1);
-		assertThat(issued.all()).hasSize(1);
+		assertThat(generator.generated()).isEqualTo(1);
 	}
 
 	@Test
-	void storesOnlyTheHashOfTheIssuedPassword() {
+	void storesOnlyTheHashOfTheGeneratedPassword() {
 		bankRepo.seedAvatars(List.of("Aurora"));
 
 		tested.forEveryKnownAvatar();
 
-		assertThat(accounts.all()).extracting(Account::passwordHash).noneMatch(hash -> hash.equals("Generated-1!"));
+		List<String> stored = accounts.all().stream().map(Account::passwordHash).toList();
+		assertThat(stored).containsExactly("hashed:Generated-1!");
 	}
 
 	@Test
-	void handsTheClearPasswordToTheIssuedPasswordsTogetherWithTheAvatar() {
-		bankRepo.seedAvatars(List.of("Aurora"));
-
-		tested.forEveryKnownAvatar();
-
-		assertThat(issued.all()).containsExactly(Map.entry("Aurora", "Generated-1!"));
-	}
-
-	@Test
-	void issuesEveryAccountAPasswordOfItsOwn() {
+	void givesEveryAccountAPasswordOfItsOwn() {
 		bankRepo.seedAvatars(List.of("Aurora", "Boreas"));
 
 		tested.forEveryKnownAvatar();
 
-		assertThat(issued.all()).containsExactly(Map.entry("Aurora", "Generated-1!"), Map.entry("Boreas", "Generated-2!"));
+		List<String> stored = accounts.all().stream().map(Account::passwordHash).toList();
+		assertThat(stored).containsExactly("hashed:Generated-1!", "hashed:Generated-2!");
 	}
 
 	@Test
-	void leavesAnExistingAccountAsItWasAndIssuesNoNewPassword() {
+	void leavesAnExistingAccountAsItWasAndGeneratesNoNewPassword() {
 		bankRepo.seedAvatars(List.of("Aurora"));
 		tested.forEveryKnownAvatar();
 		Account first = accounts.all().getFirst();
@@ -98,7 +90,7 @@ class CreateAccountsTest {
 		tested.forEveryKnownAvatar();
 
 		assertThat(accounts.all()).containsExactly(new Account("Aurora", "hashed:Sommer-2026!", PasswordState.CHOSEN, first.role(), first.lastLogin()));
-		assertThat(issued.all()).hasSize(1);
+		assertThat(generator.generated()).isEqualTo(1);
 	}
 
 	@Test
@@ -109,7 +101,8 @@ class CreateAccountsTest {
 
 		tested.forEveryKnownAvatar();
 
-		assertThat(issued.all()).containsExactly(Map.entry("Aurora", "Generated-1!"), Map.entry("Boreas", "Generated-2!"));
+		List<String> stored = accounts.all().stream().map(Account::passwordHash).toList();
+		assertThat(stored).containsExactly("hashed:Generated-1!", "hashed:Generated-2!");
 	}
 
 	@Test
@@ -119,7 +112,7 @@ class CreateAccountsTest {
 		tested.forEveryKnownAvatar();
 
 		assertThat(accounts.all()).hasSize(1);
-		assertThat(issued.all()).hasSize(1);
+		assertThat(generator.generated()).isEqualTo(1);
 	}
 
 	@ParameterizedTest
@@ -130,7 +123,7 @@ class CreateAccountsTest {
 		tested.forEveryKnownAvatar();
 
 		assertThat(accounts.all()).isEmpty();
-		assertThat(issued.all()).isEmpty();
+		assertThat(generator.generated()).isZero();
 	}
 
 	@ParameterizedTest
@@ -182,7 +175,8 @@ class CreateAccountsTest {
 
 		assertThat(accounts.all()).extracting(Account::avatar).containsExactly("Boreas");
 		assertThat(logger.errorMessages()).containsExactly("The account of the avatar Aurora could not be created; the other avatars still get theirs.");
-		assertThat(issued.all()).containsExactly(Map.entry("Boreas", "Generated-2!"));
+		List<String> stored = accounts.all().stream().map(Account::passwordHash).toList();
+		assertThat(stored).containsExactly("hashed:Generated-2!");
 	}
 
 	@Test
@@ -244,6 +238,10 @@ class CreateAccountsTest {
 	private static class CountingGenerator implements PasswordGenerator {
 		private final AtomicInteger issuedSoFar = new AtomicInteger();
 
+		int generated() {
+			return issuedSoFar.get();
+		}
+
 		@Override
 		public String generate() {
 			return "Generated-" + issuedSoFar.incrementAndGet() + "!";
@@ -274,19 +272,6 @@ class CreateAccountsTest {
 		@Override
 		public boolean verify(String clear, String encoded) {
 			return encoded.equals("hashed:" + clear);
-		}
-	}
-
-	private static class RecordedPasswords implements IssuedPasswords {
-		private final List<Map.Entry<String, String>> inOrder = new ArrayList<>();
-
-		List<Map.Entry<String, String>> all() {
-			return inOrder;
-		}
-
-		@Override
-		public void issue(String avatar, String clear) {
-			inOrder.add(Map.entry(avatar, clear));
 		}
 	}
 }
