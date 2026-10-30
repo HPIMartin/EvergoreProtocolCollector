@@ -23,7 +23,8 @@ class ResetPasswordTest {
 	private final LoginGenerations generations = new LoginGenerations();
 	private final AtomicInteger generated = new AtomicInteger();
 	private final PasswordGenerator generator = () -> "Generated-" + generated.incrementAndGet() + "!";
-	private final ResetPassword tested = new ResetPassword(accounts, generator, new PrefixHasher(new ArrayList<>()), generations);
+	private final PrefixHasher hasher = new PrefixHasher(new ArrayList<>());
+	private final ResetPassword tested = new ResetPassword(accounts, generator, hasher, generations);
 
 	@Test
 	void storesOnlyTheHashOfANewRandomPasswordAsIssued() {
@@ -55,6 +56,21 @@ class ResetPasswordTest {
 		long other = generations.of("aurora");
 		assertThat(after).isEqualTo(before + 1);
 		assertThat(other).isZero();
+	}
+
+	@Test
+	void givesTwoResetsTwoDifferentPasswordsAndOnlyTheLatestChecks() {
+		accounts.hold(new Account("Boreas", "hashed:Winter-2026!", PasswordState.CHOSEN, Role.MEMBER, Optional.of(LOGGED_IN)));
+		PasswordCheck check = new PasswordCheck(accounts, hasher, "hashed:a password nobody holds");
+
+		String first = tested.forAccount("Boreas").orElseThrow();
+		String second = tested.forAccount("Boreas").orElseThrow();
+
+		Optional<Account> withTheFirst = check.accountWith("Boreas", first);
+		Optional<Account> withTheSecond = check.accountWith("Boreas", second);
+		assertThat(second).isNotEqualTo(first);
+		assertThat(withTheFirst).isEmpty();
+		assertThat(withTheSecond).isPresent();
 	}
 
 	@ParameterizedTest
