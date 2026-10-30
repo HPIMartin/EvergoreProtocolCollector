@@ -1,6 +1,7 @@
 import type { ProtocolApi } from '../api'
 import { describeAbstention, describeRoundTrip, formatTimestamp } from '../ui'
 
+import { AccountList } from './AccountList.tsx'
 import { LoadedView } from './LoadedView.tsx'
 import { requestKeyOf } from './requestKey.ts'
 import { useLoad } from './useLoad.ts'
@@ -10,13 +11,23 @@ export interface AdminViewProps {
 }
 
 export function AdminView({ api }: AdminViewProps) {
-  const load = useLoad(() => api.adminStatus(), requestKeyOf('admin', null))
+  const load = useLoad(
+    async () => {
+      const [status, accounts] = await Promise.all([
+        api.adminStatus(),
+        api.adminAccounts(),
+      ])
+
+      return { status, accounts }
+    },
+    requestKeyOf('admin', null),
+  )
 
   return (
     <section>
       <h2 data-testid="view-title">Admin</h2>
       <LoadedView load={load}>
-        {(status) => (
+        {({ status, accounts }) => (
           <>
             <p data-testid="last-updated">{`Stand: ${momentOr(status.lastUpdated, 'noch kein Abgleich gelaufen')}`}</p>
             <p data-testid="last-successful-scrape">{`Letzter Scrape: ${momentOr(status.lastSuccessfulScrape, 'noch kein Scrape gelaufen')}`}</p>
@@ -51,6 +62,7 @@ export function AdminView({ api }: AdminViewProps) {
               heading="Nicht beurteilbar (Rezept ungelesen)"
               names={status.roundTripAbstentions.map(describeAbstention)}
             />
+            <AccountList accounts={accounts} />
           </>
         )}
       </LoadedView>

@@ -196,6 +196,19 @@ Five top-level folders under `frontend/src/`:
   It states facts only; the UP/DOWN verdict over them stays `/health`'s job.
   Deliberately not in `navigationOf`'s link set, so a guild member never sees it; reachable only by
   its direct URL. The page and the endpoint it reads need a login.
+- **`/admin` lists the accounts** (decision 2026-10-26):
+  - Under „Konten“ a table with „Name“, „Ruht“ and „Letzte Anmeldung“ holds one row per account.
+  - Rows stand in the order the service sent (its German order).
+  - The table is not sortable, so the SPA's collation never reorders it.
+  - „ruht“ marks a resting account.
+  - The latest login is shown in the page's timestamp format (`formatTimestamp`).
+  - „noch nie“ stands for no latest login.
+  - The page loads the status and the accounts together (`Promise.all`), so it has one outcome of
+    the six.
+  - Hooks: `accounts-title`, `accounts`, per row `account-row` with `account-name`,
+    `account-rests` and `account-last-login`.
+  - None is a `p`, so the admin page reader that collects `p[data-testid]` reads the status facts
+    only.
 - The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
   malformed escape is "no view", not a crash.
 - **Every view that loads data passes through one of six outcomes** (`useLoad` + `LoadedView`):
@@ -429,6 +442,7 @@ service's only read surface.
 | `GET /api/v1/avatars` | Overview: one `AvatarSummary` (`avatar`, the four ledger sums `bankWithdrawn`, `bankDeposited`, `storageWithdrawn`, `storageDeposited`, the derived `net`, the two flows `donation` and `craftSubsidy`, `balance` (the figure before the guild's share), plus `lastBankActivity`, `lastStorageActivity`, `staleSumsFrom` and the boolean `active`) per avatar **known to either ledger** (`KnownAvatars`, so a member who only ever moved items is listed too, with zero gold), sorted by **German collation** (`Ärger` before `Zorn`, the order the SPA's own text sorting uses); `totalCount` counts that union. |
 | `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first unless `sort` names another order. |
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first unless `sort` names another order. |
+| `GET /api/v1/admin/accounts` | Behind the admin role like the status; its shape is in build-run-deploy.md, "HTTP endpoints" (`accountsFrom` reads it; the page is under the views above). |
 | `GET /api/v1/admin/status` | Behind a login with the admin role (a member's login is answered 403, which the admin page shows as „Diese Seite ist dem Admin vorbehalten.“): `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, `roundTrips`, `roundTripAbstentions`, every key always rendered (the two round-trip arrays as `[]` rather than `null` when empty). The operator-facing facts; see below. |
 
 - **One envelope for every collection**: `page`, `size`, `totalCount`, `items`. `/api/v1/avatars`

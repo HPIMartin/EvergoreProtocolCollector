@@ -510,6 +510,13 @@ function alwaysServing(status: number, body: string | null): FakeServer {
   return serving(() => ({ status, body }))
 }
 
+function adminServing(statusBody: string): FakeServer {
+  return serving((path) => ({
+    status: 200,
+    body: path === '/api/v1/admin/accounts' ? '[]' : statusBody,
+  }))
+}
+
 const NO_SESSION: SessionApi = {
   me: () => new Promise<Me>(() => undefined),
   logOut: () => Promise.resolve(),
@@ -1570,7 +1577,7 @@ describe('App', () => {
   })
 
   it('shows the admin status page at its own address', async () => {
-    const server = alwaysServing(200, ADMIN_STATUS_BODY)
+    const server = adminServing(ADMIN_STATUS_BODY)
 
     await shellAt('/admin', server)
 
@@ -1582,7 +1589,7 @@ describe('App', () => {
       roundTripAbstentions: screen.getByTestId('round-trip-abstentions')
         .textContent,
     }).toStrictEqual({
-      askedFor: ['/api/v1/admin/status'],
+      askedFor: ['/api/v1/admin/status', '/api/v1/admin/accounts'],
       unknownItemNames: 'Unbekannte Items: Unobtainium',
       failedAvatarNames: 'Nicht aktualisierte Avatare: Zwerg',
       roundTrips: 'Verdacht auf Warenkreislauf: Alrik: 100 × Federn',
@@ -1601,10 +1608,7 @@ describe('App', () => {
   })
 
   it('shows the admin status page before any collection has run', async () => {
-    await shellAt(
-      '/admin',
-      alwaysServing(200, NEVER_COLLECTED_ADMIN_STATUS_BODY),
-    )
+    await shellAt('/admin', adminServing(NEVER_COLLECTED_ADMIN_STATUS_BODY))
 
     expect({
       lastUpdated: screen.getByTestId('last-updated').textContent,
@@ -1633,7 +1637,7 @@ describe('App', () => {
   })
 
   it('tells a failed scrape apart from the recompute that still ran', async () => {
-    await shellAt('/admin', alwaysServing(200, FAILED_RUN_ADMIN_STATUS_BODY))
+    await shellAt('/admin', adminServing(FAILED_RUN_ADMIN_STATUS_BODY))
 
     expect({
       lastSuccessfulScrape: screen.getByTestId('last-successful-scrape')
