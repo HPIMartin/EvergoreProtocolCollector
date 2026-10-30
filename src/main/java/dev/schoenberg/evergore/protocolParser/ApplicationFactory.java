@@ -26,6 +26,7 @@ import dev.schoenberg.evergore.protocolParser.application.LoginStart;
 import dev.schoenberg.evergore.protocolParser.application.PasswordCheck;
 import dev.schoenberg.evergore.protocolParser.application.PasswordGenerator;
 import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
+import dev.schoenberg.evergore.protocolParser.application.ResetPassword;
 import dev.schoenberg.evergore.protocolParser.application.RestingAccounts;
 import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
 import dev.schoenberg.evergore.protocolParser.application.ValidLogins;
@@ -201,6 +202,11 @@ public class ApplicationFactory {
 	public ChangePassword changePassword(PasswordCheck passwordCheck, AccountRepository accounts, PasswordHasher passwordHasher, LoginGenerations generations,
 			SignedLogins signedLogins) {
 		return new ChangePassword(passwordCheck, accounts, passwordHasher, new PasswordRule(), generations, signedLogins);
+	}
+
+	@Singleton
+	public ResetPassword resetPassword(AccountRepository accounts, PasswordGenerator passwordGenerator, PasswordHasher passwordHasher, LoginGenerations generations) {
+		return new ResetPassword(accounts, passwordGenerator, passwordHasher, generations);
 	}
 
 	@Singleton

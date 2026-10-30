@@ -100,6 +100,28 @@ class AccountsControllerTest {
 		assertThat(accountNamed(listed, NEVER_MOVED).getBoolean("rests")).isTrue();
 	}
 
+	@Test
+	void answersAResetWithTheNewPasswordAloneAndForbidsStoringIt() {
+		accounts.addIfAbsent(new Account("Vergesslich", SECRET_HASH, PasswordState.CHOSEN, Role.MEMBER, Optional.empty()));
+
+		HttpResponse<String> response = Unirest.post("/api/v1/admin/accounts/Vergesslich/reset").header("Cookie", LoginCookie.headerFor(server)).asString();
+
+		JSONObject answered = new JSONObject(response.getBody());
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getHeaders().getFirst("Cache-Control")).isEqualTo("no-store");
+		assertThat(answered.keySet()).containsExactly("password");
+		assertThat(answered.getString("password")).isNotBlank();
+		assertThat(response.getBody()).doesNotContain(SECRET_HASH);
+	}
+
+	@Test
+	void answersAResetOfANameWithoutAnAccountAsNotFound() {
+		HttpResponse<String> response = Unirest.post("/api/v1/admin/accounts/Niemand/reset").header("Cookie", LoginCookie.headerFor(server)).asString();
+
+		assertThat(response.getStatus()).isEqualTo(404);
+		assertThat(response.getBody()).doesNotContain("password");
+	}
+
 	private String latestBankMover() {
 		Map<String, Instant> latest = bank.latestTimestampPerAvatar();
 		return latest.entrySet().stream().max(Map.Entry.comparingByValue()).orElseThrow().getKey();
