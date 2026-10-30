@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -95,6 +96,7 @@ class ApiReadsOffTheEventLoopTest {
 	private final CountDownLatch lockReleased = new CountDownLatch(1);
 	private final AtomicInteger waitingReads = new AtomicInteger();
 	private volatile boolean readsWaitOnALock;
+	private volatile boolean witnessEveryHash;
 
 	private @Inject EmbeddedServer server;
 	private @Inject @Named(TaskExecutors.IO) ExecutorConfiguration ioConfiguration;
@@ -107,7 +109,7 @@ class ApiReadsOffTheEventLoopTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {AvatarSummariesController.PATH, BANK_ROUTE, "/api/v1/avatars/" + AVATAR + "/storage", AdminStatusController.PATH})
+	@ValueSource(strings = {AvatarSummariesController.PATH, BANK_ROUTE, "/api/v1/avatars/" + AVATAR + "/storage", AdminStatusController.PATH, AccountsController.PATH})
 	void readsTheDatabaseOnAPlatformThreadThatIsNoEventLoop(String route) {
 		int status = statusWithALogin(route);
 
@@ -182,6 +184,19 @@ class ApiReadsOffTheEventLoopTest {
 
 		assertThat(status).isEqualTo(NO_CONTENT.getCode());
 		assertThat(loginWork).extracting(Work::what).containsExactly("findByNameKey", "verify", "hash", "replacePassword");
+		assertThat(loginWork).noneMatch(Work::onAnEventLoop).noneMatch(work -> work.thread().isVirtual());
+	}
+
+	@Test
+	void readsTheAccountHashesTheIssuedPasswordAndWritesItOnAPlatformThreadThatIsNoEventLoop() {
+		witnessEveryHash = true;
+		String request = "POST " + AccountsController.PATH + "/" + AVATAR + "/reset HTTP/1.1\r\nHost: localhost\r\nCookie: " + LoginCookie.headerFor(server)
+				+ "\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+
+		int status = new RawHttpClient(server.getPort()).statusOfRequest(request);
+
+		assertThat(status).isEqualTo(OK.getCode());
+		assertThat(loginWork).extracting(Work::what).containsExactly("findByNameKey", "hash", "replacePassword");
 		assertThat(loginWork).noneMatch(Work::onAnEventLoop).noneMatch(work -> work.thread().isVirtual());
 	}
 
@@ -272,7 +287,7 @@ class ApiReadsOffTheEventLoopTest {
 		return new PasswordHasher() {
 			@Override
 			public String hash(String clear) {
-				if (clear.equals(PASSWORD) || clear.equals(CHANGED_PASSWORD)) {
+				if (witnessEveryHash || clear.equals(PASSWORD) || clear.equals(CHANGED_PASSWORD)) {
 					witnessLoginWork("hash");
 				}
 				return "witnessed:" + clear;
@@ -304,6 +319,12 @@ class ApiReadsOffTheEventLoopTest {
 			public List<String> getAllDifferentAvatars() {
 				witnessRead();
 				return super.getAllDifferentAvatars();
+			}
+
+			@Override
+			public Map<String, Instant> latestTimestampPerAvatar() {
+				witnessRead();
+				return super.latestTimestampPerAvatar();
 			}
 		};
 		bank.seedAvatars(List.of(AVATAR));
