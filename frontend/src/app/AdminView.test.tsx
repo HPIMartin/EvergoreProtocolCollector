@@ -289,6 +289,21 @@ describe('the password a reset issued on the admin page', () => {
     })
   })
 
+  it('is gone when the admin leaves the page and comes back', async () => {
+    const api = apiListing([ALRIK, ZWERG], resettingTo(ISSUED).reset)
+    await adminViewWith(api)
+    await resetThrough('Alrik')
+    cleanup()
+
+    await adminViewWith(api)
+
+    const shown = {
+      besideAlrik: issuedBeside('Alrik'),
+      besideZwerg: issuedBeside('Zwerg'),
+    }
+    expect(shown).toEqual({ besideAlrik: undefined, besideZwerg: undefined })
+  })
+
   it('is replaced by the one a second reset of the same account issues', async () => {
     const issued = ['Erstes#11', 'Zweites#22']
     const reset = (): Promise<string> => Promise.resolve(issued.shift() ?? '')
