@@ -222,6 +222,10 @@ Five top-level folders under `frontend/src/`:
     versuchen.“ (`LOAD_FAILED_MESSAGE`) under the table and no password, until the next
     „Zurücksetzen“; the list stays as it was.
   - A 404 for a name without an account shows the same text.
+  - An admin who resets the own account sees the password like any other.
+  - The reset of the own account ended the login, so the next navigation's load answers 401 and the
+    page asks to log in as it does for any ended login (above).
+  - The page does nothing of its own for the own account.
   - Hooks: `accounts-title`, `accounts`, per row `account-row` with `account-name`,
     `account-rests` and `account-last-login`.
   - None is a `p`, so the admin page reader that collects `p[data-testid]` reads the status facts

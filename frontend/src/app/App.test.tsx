@@ -1597,6 +1597,51 @@ describe('App', () => {
     })
   })
 
+  it('shows the password of the admin who reset the own account and asks to log in at the next navigation', async () => {
+    let ended = false
+    const server = serving((path) => {
+      if (path.endsWith('/reset')) {
+        ended = true
+
+        return { status: 200, body: '{"password":"Tannenzapfen#47"}' }
+      }
+      if (ended) {
+        return { status: 401, body: null }
+      }
+
+      return {
+        status: 200,
+        body:
+          path === '/api/v1/admin/accounts'
+            ? '[{"name":"Alrik","rests":false,"lastLogin":null}]'
+            : ADMIN_STATUS_BODY,
+      }
+    })
+    const navigated: string[] = []
+    await shellAt(
+      '/admin',
+      server,
+      (target) => navigated.push(target),
+      sessionOf({ name: 'Alrik', canChangePassword: true }),
+    )
+
+    fireEvent.click(screen.getByTestId('account-reset'))
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('reset-confirm'))
+    })
+    const issued = screen.getByTestId('account-issued').textContent
+    const navigatedByTheReset = [...navigated]
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Übersicht' }))
+    })
+
+    expect({ issued, navigatedByTheReset, navigated }).toStrictEqual({
+      issued: 'Tannenzapfen#47',
+      navigatedByTheReset: [],
+      navigated: ['/login?next=%2Foverview'],
+    })
+  })
+
   it('says in German that the admin status could not be loaded, without its status', async () => {
     await shellAt('/admin', alwaysServing(500, null))
 
