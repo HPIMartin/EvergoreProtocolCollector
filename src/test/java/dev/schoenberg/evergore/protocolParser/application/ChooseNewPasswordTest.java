@@ -50,6 +50,19 @@ class ChooseNewPasswordTest {
 	}
 
 	@Test
+	void letsTheMemberChooseThePasswordHeldBeforeAResetAgain() {
+		String reissued = "Reissued-2026!";
+		accounts.hold(issuedAccount("Boreas"));
+		tested.with("Boreas", ISSUED, NEW_PASSWORD);
+		new ResetPassword(accounts, () -> reissued, hasher, generations).forAccount("Boreas");
+
+		LogInOutcome outcome = tested.with("Boreas", reissued, NEW_PASSWORD);
+
+		assertThat(outcome).isEqualTo(new LogInOutcome.LoggedIn("login-Boreas-MEMBER-1"));
+		assertThat(accounts.held("boreas").passwordHash()).isEqualTo("hashed:" + NEW_PASSWORD);
+	}
+
+	@Test
 	void givesTheLoginTheGenerationItSawBeforeTheCheckWhenTheGenerationMovesDuringIt() {
 		accounts.hold(issuedAccount("Boreas"));
 		hasher.runDuringTheNextVerification(() -> generations.bumpWhileAt("boreas", 0, () -> {}));
