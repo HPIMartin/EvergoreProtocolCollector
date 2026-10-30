@@ -1,4 +1,3 @@
-@wip
 Feature: The admin page lists the accounts
   The admin page lists every account, in German alphabetical order like every name list there
   ("The health report: what the last recompute found"), with "ruht" beside a resting one and the

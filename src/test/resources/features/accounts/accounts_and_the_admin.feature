@@ -14,6 +14,26 @@ Feature: Accounts for the members, and the admin
 
   Rule: Every avatar the guild ledgers name gets one account
 
+    Scenario: Each avatar, first read from either ledger by the first or a later collection, has one account
+      Aurora stands in both ledgers and Brynja only in the storage ledger, both read by the first
+      collection; Boreas is read by a later one.
+
+      Given the guild bank ledger holds:
+        | Zeitpunkt        | Avatar | Betrag | Vorgang    |
+        | 01.01.2026 12:00 | Aurora | 1000   | Einzahlung |
+      And the guild storage ledger holds:
+        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
+        | 02.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
+        | 03.01.2026 12:00 | Brynja | 1     | Eisenbarren | 100      | Einlagerung |
+      And the daily collection has run
+      And the guild bank ledger also holds:
+        | Zeitpunkt        | Avatar | Betrag | Vorgang    |
+        | 04.01.2026 12:00 | Boreas | 750    | Einzahlung |
+      And the daily collection has run
+      And the admin has logged in as "admin" with the admin key the service's log names
+      When the admin opens the admin page
+      Then the admin page lists exactly the accounts "Aurora, Boreas, Brynja"
+
     Scenario: The password a reset issued to one account does not log in to another
       Given the guild bank ledger holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |

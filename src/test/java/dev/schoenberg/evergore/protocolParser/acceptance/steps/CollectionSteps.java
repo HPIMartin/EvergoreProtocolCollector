@@ -36,12 +36,17 @@ public class CollectionSteps {
 	@Given("the daily collection has run")
 	public void theDailyCollectionHasRun() {
 		LocalDate newestDay = protocols.newestMinute().map(LocalDateTime::toLocalDate).orElse(FIRST_DAY);
-		theDailyCollectionRanAt(newestDay.plusDays(1).atTime(COLLECTION_TIME));
+		time.setToUnlessPinned(newestDay.plusDays(1).atTime(COLLECTION_TIME));
+		runTheCollection();
 	}
 
 	@Given("the daily collection ran at {moment}")
 	public void theDailyCollectionRanAt(LocalDateTime moment) {
 		time.setTo(moment);
+		runTheCollection();
+	}
+
+	private void runTheCollection() {
 		int logged = log.lines().size();
 		int collections = service.runTheDailyCollection();
 

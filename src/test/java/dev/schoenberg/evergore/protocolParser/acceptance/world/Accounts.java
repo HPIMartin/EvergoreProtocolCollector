@@ -104,6 +104,12 @@ public class Accounts {
 		}
 	}
 
+	public void logIn(String avatar) {
+		Answer answer = logins.logIn(avatar, chosenBy(avatar));
+
+		assertThat(answer.status()).as("the login of %s: %s", avatar, answer.body()).isEqualTo(SERVED);
+	}
+
 	public void choosePasswordInPlaceOfTheIssuedOne(String avatar, String password) {
 		Answer answer = logins.chooseNewPassword(avatar, issuedTo(avatar), password);
 

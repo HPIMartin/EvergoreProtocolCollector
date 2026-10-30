@@ -89,6 +89,7 @@ Feature: The health report: what the last recompute found
         | the admin page    | the admin opens the admin page               | the members whose figures could not be refreshed | "Ähre", "Zeder"                                       |
         | the admin page    | the admin opens the admin page               | the suspected round trips                        | "Ärger: 1 × Federn", "Zorn: 1 × Federn"               |
         | the admin page    | the admin opens the admin page               | the pairs not judgeable                          | "Ärger: Kristallat", "Zorn: Kristallat"               |
+        | the admin page    | the admin opens the admin page               | the accounts                                     | "Ähre", "Ärger", "Boreas", "Zeder", "Zorn"            |
         | the health report | the operator asks the service for its health | the unknown items                                | "Äxtchen", "Zunder"                                   |
         | the health report | the operator asks the service for its health | the members whose figures could not be refreshed | "Ähre", "Zeder"                                       |
         | the health report | the operator asks the service for its health | the suspected round trips                        | "Ärger: 1 × Federn", "Zorn: 1 × Federn"               |

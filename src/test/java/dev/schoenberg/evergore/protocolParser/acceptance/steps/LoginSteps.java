@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class LoginSteps {
 	private static final String CHOOSING_A_NEW_PASSWORD = "Neues Passwort wählen";
 	private static final String ONE_MINUTE_LESS_THAN = "one minute less than ";
+	private static final String WRONG_PASSWORD = "Wrong-Password-1!";
+	private static final String RESTING_MESSAGE = "Dein Konto ruht, bis das Protokoll wieder einen Vorgang von dir zeigt.";
 	private static final String LOGIN_PAGE = "/login";
 	private static final String REQUEST_LOGGED = "Client IP: ";
 
@@ -136,6 +138,18 @@ public class LoginSteps {
 		logIn(name, accounts.issuedTo(name));
 
 		assertThat(browser.ledger().heading()).isEqualTo(CHOOSING_A_NEW_PASSWORD);
+	}
+
+	@Given("a member has tried to log in as {string} with a wrong password")
+	public void aMemberHasTriedToLogInWithAWrongPassword(String name) {
+		logIn(name, WRONG_PASSWORD);
+	}
+
+	@Given("a/the member has entered the name {string} and the password the reset issued on the login page and been told the account rests")
+	public void aMemberHasEnteredTheNameAndTheIssuedPasswordAndBeenToldTheAccountRests(String name) {
+		logIn(name, accounts.issuedTo(name));
+
+		assertThat(browser.overview().messages()).contains(RESTING_MESSAGE);
 	}
 
 	@When("the member chooses {string} as the new password")

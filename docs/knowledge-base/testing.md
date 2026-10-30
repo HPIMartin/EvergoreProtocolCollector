@@ -74,6 +74,7 @@
 | `AdminKeyAnnouncementTest` | The announcement logs the key once when the service starts, through the `LoggerSpy`. | pure unit |
 | `AdminKeyAtStartTest` | Starts a real application context with the `LoggerSpy` and finds exactly one admin key line of 43 characters in the log before anything asked for the key. | adapter |
 | `LoginPageEndpointTest` | Boots the server on its own fixture DB copy: the login page and its own files are served with no login, a dashboard page opened without a login is sent on to the login page, an API request without a login is refused with 401 instead, and an unknown path below the login page answers without the dashboard. | `@MicronautTest` integration |
+| `ScenarioTimeTest` | The acceptance world's clock: `has run` moves it unless a `the clocks … read` step pinned it, and an explicit set moves it even then. | pure unit |
 | `ServiceLogTest` | Pure unit tests of the acceptance world's reader of the service's log: it names the admin key the service announced, the key of the latest start when the service was started more than once, and fails when the service named no key. | pure unit |
 | `ApplicationExceptionHandlerTest` | Unit tests asserting each `ProtocolParserException` subclass maps to its HTTP status via the visitor, plus the `onUnknown` branch, plus that the logged path carries **no** token query parameter, plus the log severity per mapped status (client error → one `info` line, server error → `error` with the exception) and that a failing response mapping is still logged with its trace before it propagates. `accept` is `abstract`, so a new exception subclass is a compile error rather than a silent fallback. | pure unit |
 | `ApplicationExceptionHandlerHttpTest` | Boots the server against its own fixture DB copy and drives the not-found path through the **real Netty write**, which the pure unit test cannot reach: an unknown avatar answers 404 with the default `Not Found` reason phrase (no echo of the requested name), and an unknown avatar whose percent-encoded name carries `CRLF` still answers 404, where a control character in the reason phrase would answer 500. | `@MicronautTest` integration |
@@ -206,7 +207,9 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
     means the stored ledger, whether or not a collection follows. A later collection reads the
     same pages, and the extractor's dedup keeps them stored once.
   - `ScenarioTime`: the one clock, in Berlin wall-clock time; `the daily collection ran at` sets
-    it, `has run` sets it to 05:00 the morning after the newest movement (TIME-4).
+    it, `has run` sets it to 05:00 the morning after the newest movement (TIME-4), unless a `the
+    clocks of the service and of the member's/admin's browser read` step pinned it: then the
+    collection runs at the pinned moment.
   - `LedgerFaults`: a `java.lang.reflect.Proxy` around the ledger and meta ports, installed by
     `BeanCreatedEventListener`s (author choice 2026-09-28): a member's stored movements fail every
     read naming the member, only while a collection runs; withheld figures fail every read of the
@@ -308,6 +311,11 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - An uncoloured figure equals `--color-text` and its parent's colour.
   - That parent equals `--color-text` too, so a rule painting a whole row fails.
   - The admin reads through the same `MemberBrowser`.
+  - `read-admin.js` also returns the account list's rows (`ShownAccount`: name, `ruht` mark, latest
+    login, the password a reset issued).
+  - `read-admin.js` also returns the reset question the page asks.
+  - `the admin opens the admin page` logs in with the admin key every time, since a member's login
+    in the same browser replaced the admin's.
   - No separate pool exists per actor (handbook §5).
 - **`MemberBrowser` hands out its parts** through accessors.
   - `opening()`: `DashboardOpening`, which opens a page logged in with the admin key from the

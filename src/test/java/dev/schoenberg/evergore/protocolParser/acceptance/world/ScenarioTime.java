@@ -12,9 +12,21 @@ public class ScenarioTime {
 	private static final LocalDateTime START = LocalDateTime.of(2026, 1, 1, 0, 0);
 
 	private volatile Instant now = START.atZone(APP_ZONE).toInstant();
+	private volatile boolean pinned;
 
 	public void setTo(LocalDateTime wallClock) {
 		now = wallClock.atZone(APP_ZONE).toInstant();
+	}
+
+	public void pinTo(LocalDateTime wallClock) {
+		setTo(wallClock);
+		pinned = true;
+	}
+
+	public void setToUnlessPinned(LocalDateTime wallClock) {
+		if (!pinned) {
+			setTo(wallClock);
+		}
 	}
 
 	public void setTo(Instant instant) {

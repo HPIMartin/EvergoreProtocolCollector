@@ -7,6 +7,10 @@ public class DashboardOpening {
 		this.browser = browser;
 	}
 
+	public void openAsTheAdmin(String path) {
+		browser.loginForm().logInWithTheAdminKeyToOpen(path);
+	}
+
 	public void open(String path) {
 		if (browser.hasALogin()) {
 			browser.openHref(path);

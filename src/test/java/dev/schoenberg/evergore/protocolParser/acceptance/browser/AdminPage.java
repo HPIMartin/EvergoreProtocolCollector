@@ -2,4 +2,4 @@ package dev.schoenberg.evergore.protocolParser.acceptance.browser;
 
 import java.util.List;
 
-public record AdminPage(List<String> messages) {}
+public record AdminPage(List<String> messages, List<ShownAccount> accounts, String question) {}
