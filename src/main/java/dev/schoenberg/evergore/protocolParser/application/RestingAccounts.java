@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
+import java.util.function.Predicate;
+
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.ActivityLine;
@@ -15,8 +17,12 @@ public class RestingAccounts {
 	}
 
 	public boolean rest(Account account) {
+		return forOneListing().test(account);
+	}
+
+	public Predicate<Account> forOneListing() {
 		ActivityLine activityLine = ActivityLine.of(bankRepository.latestTimestampPerAvatar(), storageRepository.latestTimestampPerAvatar());
 
-		return !activityLine.isActive(account.avatar());
+		return account -> !activityLine.isActive(account.avatar());
 	}
 }

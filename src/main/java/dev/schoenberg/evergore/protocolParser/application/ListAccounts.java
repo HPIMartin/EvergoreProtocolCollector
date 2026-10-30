@@ -2,8 +2,10 @@ package dev.schoenberg.evergore.protocolParser.application;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.GermanOrder;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
 
 public class ListAccounts {
 	private final AccountRepository accounts;
@@ -15,10 +17,11 @@ public class ListAccounts {
 	}
 
 	public List<AccountListing> all() {
+		Predicate<Account> rests = restingAccounts.forOneListing();
 		return accounts
 				.allAccounts()
 				.stream()
-				.map(account -> new AccountListing(account.avatar(), restingAccounts.rest(account), account.lastLogin()))
+				.map(account -> new AccountListing(account.avatar(), rests.test(account), account.lastLogin()))
 				.sorted(Comparator.comparing(AccountListing::name, GermanOrder.NAMES))
 				.toList();
 	}

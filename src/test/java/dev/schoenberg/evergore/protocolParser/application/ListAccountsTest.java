@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -65,6 +66,29 @@ class ListAccountsTest {
 		List<String> names = tested.all().stream().map(AccountListing::name).toList();
 
 		assertThat(names).containsExactly("Ärger", "Aurora", "Zeta");
+	}
+
+	@Test
+	void readsTheNewestMovementsOnceForTheWholeListing() {
+		CountingBank countingBank = new CountingBank();
+		ListAccounts listing = new ListAccounts(accounts, new RestingAccounts(countingBank, new StorageRepositoryStub()));
+		accounts.hold(account("Aurora", Optional.empty()));
+		accounts.hold(account("Calix", Optional.empty()));
+		accounts.hold(account("Zeta", Optional.empty()));
+
+		listing.all();
+
+		assertThat(countingBank.reads).isEqualTo(1);
+	}
+
+	private static class CountingBank extends BankRepositoryStub {
+		private int reads;
+
+		@Override
+		public Map<String, Instant> latestTimestampPerAvatar() {
+			reads++;
+			return super.latestTimestampPerAvatar();
+		}
 	}
 
 	private void moved(String avatar, int daysBeforeTheNewestMovement) {
