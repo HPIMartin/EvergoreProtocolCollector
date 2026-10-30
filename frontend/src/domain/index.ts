@@ -1,3 +1,4 @@
+export type { Account } from './account.ts'
 export type {
   AdminStatus,
   RoundTrip,

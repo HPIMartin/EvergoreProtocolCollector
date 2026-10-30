@@ -1,4 +1,5 @@
 import type {
+  Account,
   AdminStatus,
   AvatarSummary,
   BankEntry,
@@ -62,6 +63,24 @@ function totalsFrom(value: unknown): GuildTotals {
     ...sums,
     ...share,
     containsStaleSums: booleanFrom(totals, 'containsStaleSums'),
+  }
+}
+
+export function accountsFrom(body: unknown): Account[] {
+  if (!Array.isArray(body)) {
+    throw new MalformedResponse('The API answered accounts that are no array')
+  }
+
+  return body.map(accountFrom)
+}
+
+function accountFrom(item: unknown): Account {
+  const account = objectFrom(item)
+
+  return {
+    name: stringFrom(account, 'name'),
+    rests: booleanFrom(account, 'rests'),
+    lastLogin: optionalInstantFrom(account, 'lastLogin'),
   }
 }
 

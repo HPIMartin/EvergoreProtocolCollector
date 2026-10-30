@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  accountsFrom,
   adminStatusFrom,
   bankPageFrom,
   overviewFrom,
@@ -786,6 +787,59 @@ describe('the admin status wire shape', () => {
         ...adminStatusBody,
         roundTripAbstentions: [{ avatar: 'Zwerg', item: null }],
       })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+})
+
+const accountsBody = [
+  { name: 'Alrik', rests: false, lastLogin: '2026-10-20T08:15:00Z' },
+  { name: 'Zwerg', rests: true, lastLogin: null },
+]
+
+describe('the account list wire shape', () => {
+  it('reads each account with its name, its rest and its latest login', () => {
+    const accounts = accountsFrom(accountsBody)
+
+    expect(accounts).toStrictEqual([
+      {
+        name: 'Alrik',
+        rests: false,
+        lastLogin: new Date('2026-10-20T08:15:00Z'),
+      },
+      { name: 'Zwerg', rests: true, lastLogin: null },
+    ])
+  })
+
+  it('reads an empty list as no accounts', () => {
+    const accounts = accountsFrom([])
+
+    expect(accounts).toStrictEqual([])
+  })
+
+  it.each([
+    ['an object', { items: accountsBody }],
+    ['nothing', undefined],
+    ['null', null],
+  ])('refuses %s instead of a list', (_label, body) => {
+    const reading = () => accountsFrom(body)
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it.each([
+    ['a name that is no string', { ...accountsBody[0], name: 7 }],
+    ['no name', { ...accountsBody[0], name: undefined }],
+    ['a rest that is no boolean', { ...accountsBody[0], rests: 'ja' }],
+    ['no rest', { ...accountsBody[0], rests: undefined }],
+    [
+      'a login that is no instant',
+      { ...accountsBody[0], lastLogin: 'gestern' },
+    ],
+    ['no login field at all', { ...accountsBody[0], lastLogin: undefined }],
+    ['no object', 'Alrik'],
+  ])('refuses an account with %s', (_label, account) => {
+    const reading = () => accountsFrom([account])
 
     expect(reading).toThrow(MalformedResponse)
   })
