@@ -1171,6 +1171,7 @@ answered (measured on Micronaut 4.10.9).
 | `GET /login`, `/login/`, `/login/**` | The login page (`LoginPageController` serves its `login.html` at `/login` and `/login/`) and its own bundle under `/login/assets/`: public, but rate-limited and logged; an unknown path below `/login` keeps its 404, the dashboard's fallback never answers it. |
 | `GET /health` | Micronaut management health endpoint, open without a login: the liveness/last-run monitor hook, its details for an admin login only (what it reports and to whom: bullets below the table). |
 | `GET /api/v1/admin/status` | JSON admin status, behind a login with the admin role (a member's login is answered 403) (keys and semantics: bullets below the table). |
+| `GET /api/v1/admin/accounts` | JSON list `[{name, rests, lastLogin}]` of every account in German order of name, behind a login with the admin role (a member's login is answered 403): `rests` marks an account whose avatar moved nothing for 30 days, `lastLogin` is an instant or `null` for an account that never logged in; no password and no hash. |
 | `POST /api/v1/login`, `POST /api/v1/login/new-password` | A login by name and password, and its second step after a reset: public, but rate-limited and logged (answers: "The login API" below). |
 | `GET /api/v1/me`, `POST /api/v1/logout`, `POST /api/v1/password` | Who is logged in, logging out, and changing the password: behind a login (answers: "The login API" below). |
 | `/swagger/**`, `/redoc/**`, `/rapidoc/**`, `/swagger-ui/**` | OpenAPI UIs: behind a login, rate-limited and logged. |

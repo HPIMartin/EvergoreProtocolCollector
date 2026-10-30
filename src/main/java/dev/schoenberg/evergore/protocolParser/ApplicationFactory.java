@@ -18,6 +18,7 @@ import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.application.IssuedPasswords;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
+import dev.schoenberg.evergore.protocolParser.application.ListAccounts;
 import dev.schoenberg.evergore.protocolParser.application.LogIn;
 import dev.schoenberg.evergore.protocolParser.application.LogOut;
 import dev.schoenberg.evergore.protocolParser.application.LoginGenerations;
@@ -173,6 +174,11 @@ public class ApplicationFactory {
 	@Singleton
 	public RestingAccounts restingAccounts(BankRepository bankRepository, StorageRepository storageRepository) {
 		return new RestingAccounts(bankRepository, storageRepository);
+	}
+
+	@Singleton
+	public ListAccounts listAccounts(AccountRepository accounts, RestingAccounts restingAccounts) {
+		return new ListAccounts(accounts, restingAccounts);
 	}
 
 	@Singleton
