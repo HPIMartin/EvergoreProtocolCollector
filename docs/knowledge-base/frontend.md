@@ -223,9 +223,15 @@ Five top-level folders under `frontend/src/`:
   - A reset the service refuses with 401 shows the login (above).
   - A reset the service refuses with 403 shows „Diese Seite ist dem Admin vorbehalten.“.
   - Any other failed reset shows „Die Daten konnten nicht geladen werden. Bitte später erneut
-    versuchen.“ (`LOAD_FAILED_MESSAGE`) under the table and no password, until the next
-    „Zurücksetzen“; the list stays as it was.
+    versuchen.“ (`LOAD_FAILED_MESSAGE`) in that account's row.
   - A 404 for a name without an account shows the same text.
+  - A failed reset removes the password shown in that row: it may be dead, as the service may have
+    applied the reset and lost only the answer.
+  - The failure stands until the next „Zurücksetzen“ of that account.
+  - The failure and the password are state per account, so another account's reset changes
+    neither.
+  - The answer of an account's latest reset is the one shown, whatever order the answers arrive in.
+  - A failed reset leaves the list as it was.
   - An admin who resets the own account sees the password like any other.
   - The reset of the own account ended the login, so the next navigation's load answers 401 and the
     page asks to log in as it does for any ended login (above).

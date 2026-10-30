@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import type { Account } from '../domain'
 import { formatTimestamp, LOAD_FAILED_MESSAGE, StatusPanel } from '../ui'
@@ -10,18 +10,29 @@ export interface AccountListProps {
 
 export function AccountList({ accounts, reset }: AccountListProps) {
   const [asking, setAsking] = useState<string | null>(null)
-  const [issued, setIssued] = useState<Readonly<Record<string, string>>>({})
-  const [failed, setFailed] = useState(false)
+  const [outcomes, setOutcomes] = useState<Readonly<Record<string, Outcome>>>(
+    {},
+  )
+  const latestReset = useRef<Record<string, number>>({})
 
   function resetPasswordOf(name: string): void {
     setAsking(null)
-    setFailed(false)
+    const mine = (latestReset.current[name] ?? 0) + 1
+    latestReset.current[name] = mine
+    setOutcomes((before) =>
+      before[name]?.kind === 'failed' ? withoutOutcomeOf(before, name) : before,
+    )
+    const settle = (outcome: Outcome): void => {
+      if (latestReset.current[name] === mine) {
+        setOutcomes((before) => ({ ...before, [name]: outcome }))
+      }
+    }
     reset(name).then(
       (password) => {
-        setIssued((before) => ({ ...before, [name]: password }))
+        settle({ kind: 'issued', password })
       },
       () => {
-        setFailed(true)
+        settle({ kind: 'failed' })
       },
     )
   }
@@ -57,11 +68,7 @@ export function AccountList({ accounts, reset }: AccountListProps) {
                   : formatTimestamp(account.lastLogin.toISOString())}
               </td>
               <td className="data-table__cell">
-                {issued[account.name] === undefined ? null : (
-                  <span data-testid="account-issued">
-                    {issued[account.name]}
-                  </span>
-                )}
+                <OutcomeOf outcome={outcomes[account.name]} />
                 {asking === account.name ? (
                   <ResetQuestion
                     name={account.name}
@@ -88,10 +95,32 @@ export function AccountList({ accounts, reset }: AccountListProps) {
           ))}
         </tbody>
       </table>
-      {failed ? (
-        <StatusPanel variant="error" message={LOAD_FAILED_MESSAGE} />
-      ) : null}
     </>
+  )
+}
+
+type Outcome =
+  | { readonly kind: 'issued'; readonly password: string }
+  | { readonly kind: 'failed' }
+
+function withoutOutcomeOf(
+  outcomes: Readonly<Record<string, Outcome>>,
+  name: string,
+): Readonly<Record<string, Outcome>> {
+  return Object.fromEntries(
+    Object.entries(outcomes).filter(([other]) => other !== name),
+  )
+}
+
+function OutcomeOf({ outcome }: { readonly outcome: Outcome | undefined }) {
+  if (outcome === undefined) {
+    return null
+  }
+
+  return outcome.kind === 'issued' ? (
+    <span data-testid="account-issued">{outcome.password}</span>
+  ) : (
+    <StatusPanel variant="error" message={LOAD_FAILED_MESSAGE} />
   )
 }
 

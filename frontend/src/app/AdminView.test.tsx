@@ -386,6 +386,90 @@ describe('the password a reset issued on the admin page', () => {
     })
   })
 
+  it('is removed from beside the account when the next reset of it fails', async () => {
+    const answers = [
+      () => Promise.resolve('Tannenzapfen#47'),
+      () => Promise.reject(new RequestFailed(500)),
+    ]
+    const reset = (): Promise<string> => answers.shift()?.() ?? unused()
+    await adminViewWith(apiListing([ALRIK], reset))
+    await resetThrough('Alrik')
+
+    await resetThrough('Alrik')
+
+    const shown = { beside: issuedBeside('Alrik'), messages: shownMessages() }
+    expect(shown).toEqual({
+      beside: undefined,
+      messages: [LOAD_FAILED_MESSAGE],
+    })
+  })
+
+  it('says beside the account whose reset failed so, and still when another account is reset', async () => {
+    const answers = [
+      () => Promise.reject(new RequestFailed(500)),
+      () => Promise.resolve('Birkenfalter#18'),
+    ]
+    const reset = (): Promise<string> => answers.shift()?.() ?? unused()
+    await adminViewWith(apiListing([ALRIK, ZWERG], reset))
+    await resetThrough('Alrik')
+
+    await resetThrough('Zwerg')
+
+    const shown = {
+      besideAlrik: within(rowOf('Alrik'))
+        .queryAllByTestId('status-panel')
+        .map((panel) => panel.textContent),
+      besideZwerg: within(rowOf('Zwerg')).queryAllByTestId('status-panel'),
+      issuedBesideZwerg: issuedBeside('Zwerg'),
+    }
+    expect(shown).toEqual({
+      besideAlrik: [LOAD_FAILED_MESSAGE],
+      besideZwerg: [],
+      issuedBesideZwerg: 'Birkenfalter#18',
+    })
+  })
+
+  it('shows the password of the latest reset of an account when the answers arrive in the other order', async () => {
+    const answers: ((password: string) => void)[] = []
+    const reset = (): Promise<string> =>
+      new Promise((resolve) => {
+        answers.push(resolve)
+      })
+    await adminViewWith(apiListing([ALRIK], reset))
+    await resetThrough('Alrik')
+    await resetThrough('Alrik')
+
+    await act(async () => {
+      answers[1]?.('Zweites#22')
+      answers[0]?.('Erstes#11')
+    })
+
+    const shown = issuedBeside('Alrik')
+    expect(shown).toBe('Zweites#22')
+  })
+
+  it('shows no failure when an earlier reset of the account fails after the latest one succeeded', async () => {
+    const rejections: ((reason: Error) => void)[] = []
+    const answers = [
+      () =>
+        new Promise<string>((_resolve, reject) => {
+          rejections.push(reject)
+        }),
+      () => Promise.resolve('Zweites#22'),
+    ]
+    const reset = (): Promise<string> => answers.shift()?.() ?? unused()
+    await adminViewWith(apiListing([ALRIK], reset))
+    await resetThrough('Alrik')
+    await resetThrough('Alrik')
+
+    await act(async () => {
+      rejections[0]?.(new RequestFailed(500))
+    })
+
+    const shown = { beside: issuedBeside('Alrik'), messages: shownMessages() }
+    expect(shown).toEqual({ beside: 'Zweites#22', messages: [] })
+  })
+
   it('is replaced by the one a second reset of the same account issues', async () => {
     const issued = ['Erstes#11', 'Zweites#22']
     const reset = (): Promise<string> => Promise.resolve(issued.shift() ?? '')
