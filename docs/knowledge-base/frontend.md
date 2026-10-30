@@ -218,7 +218,11 @@ Five top-level folders under `frontend/src/`:
   - The issued password is never read behind a second request.
   - A second reset of another account leaves the first password beside its own name.
   - A second reset of the same account replaces the password.
-  - A failed reset (any status) shows „Die Daten konnten nicht geladen werden. Bitte später erneut
+  - A reset the service refuses with 401 or 403 replaces the page's content as a load answered with
+    it does (the page hands the refusal to `failureOf`, the same outcome `useLoad` yields).
+  - A reset the service refuses with 401 shows the login (above).
+  - A reset the service refuses with 403 shows „Diese Seite ist dem Admin vorbehalten.“.
+  - Any other failed reset shows „Die Daten konnten nicht geladen werden. Bitte später erneut
     versuchen.“ (`LOAD_FAILED_MESSAGE`) under the table and no password, until the next
     „Zurücksetzen“; the list stays as it was.
   - A 404 for a name without an account shows the same text.

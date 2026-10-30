@@ -9,11 +9,12 @@ import {
 import { afterEach, describe, expect, it } from 'vitest'
 
 import type { ProtocolApi } from '../api'
-import { Forbidden, RequestFailed } from '../api'
+import { Forbidden, RequestFailed, Unauthorized } from '../api'
 import type { Account, AdminStatus } from '../domain'
 import { LOAD_FAILED_MESSAGE } from '../ui'
 
 import { AdminView } from './AdminView.tsx'
+import { LoginNavigation } from './LoginRequired.tsx'
 
 afterEach(cleanup)
 
@@ -324,6 +325,41 @@ describe('the password a reset issued on the admin page', () => {
       besideZwerg: undefined,
       questions: [],
     })
+  })
+
+  it('sends the admin to the login page with its own address as the way back when the reset is refused with 401', async () => {
+    window.history.replaceState(null, '', '/admin')
+    const navigatedTo: string[] = []
+    const unauthorized = (): Promise<string> =>
+      Promise.reject(new Unauthorized())
+    render(
+      <LoginNavigation.Provider
+        value={(target) => {
+          navigatedTo.push(target)
+        }}
+      >
+        <AdminView api={apiListing([ALRIK], unauthorized)} />
+      </LoginNavigation.Provider>,
+    )
+    await act(async () => undefined)
+
+    await resetThrough('Alrik')
+
+    const shown = { navigatedTo, messages: shownMessages() }
+    expect(shown).toEqual({
+      navigatedTo: ['/login?next=%2Fadmin'],
+      messages: ['Weiter zur Anmeldung…'],
+    })
+  })
+
+  it('says the page is reserved for the admin when the reset is refused with 403', async () => {
+    const forbidden = (): Promise<string> => Promise.reject(new Forbidden())
+    await adminViewWith(apiListing([ALRIK], forbidden))
+
+    await resetThrough('Alrik')
+
+    const messages = shownMessages()
+    expect(messages).toEqual(['Diese Seite ist dem Admin vorbehalten.'])
   })
 
   it('stops saying so when the next reset succeeds', async () => {

@@ -55,7 +55,7 @@ function loadedWith<T>(value: T): Load<T> {
   return { accept: (visitor) => visitor.loaded(value) }
 }
 
-function failureOf<T>(reason: unknown): Load<T> {
+export function failureOf<T>(reason: unknown): Load<T> {
   if (reason instanceof Unauthorized) {
     return { accept: (visitor) => visitor.unauthorized() }
   }

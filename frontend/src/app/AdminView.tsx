@@ -1,10 +1,13 @@
+import { useState } from 'react'
+
 import type { ProtocolApi } from '../api'
+import { Forbidden, Unauthorized } from '../api'
 import { describeAbstention, describeRoundTrip, formatTimestamp } from '../ui'
 
 import { AccountList } from './AccountList.tsx'
 import { LoadedView } from './LoadedView.tsx'
 import { requestKeyOf } from './requestKey.ts'
-import { useLoad } from './useLoad.ts'
+import { failureOf, useLoad } from './useLoad.ts'
 
 export interface AdminViewProps {
   readonly api: ProtocolApi
@@ -22,11 +25,24 @@ export function AdminView({ api }: AdminViewProps) {
     },
     requestKeyOf('admin', null),
   )
+  const [refusal, setRefusal] = useState<Unauthorized | Forbidden | null>(null)
+  const shown: typeof load = refusal === null ? load : failureOf(refusal)
+
+  async function reset(name: string): Promise<string> {
+    try {
+      return await api.resetPassword(name)
+    } catch (failure) {
+      if (failure instanceof Unauthorized || failure instanceof Forbidden) {
+        setRefusal(failure)
+      }
+      throw failure
+    }
+  }
 
   return (
     <section>
       <h2 data-testid="view-title">Admin</h2>
-      <LoadedView load={load}>
+      <LoadedView load={shown}>
         {({ status, accounts }) => (
           <>
             <p data-testid="last-updated">{`Stand: ${momentOr(status.lastUpdated, 'noch kein Abgleich gelaufen')}`}</p>
@@ -62,10 +78,7 @@ export function AdminView({ api }: AdminViewProps) {
               heading="Nicht beurteilbar (Rezept ungelesen)"
               names={status.roundTripAbstentions.map(describeAbstention)}
             />
-            <AccountList
-              accounts={accounts}
-              reset={(name) => api.resetPassword(name)}
-            />
+            <AccountList accounts={accounts} reset={reset} />
           </>
         )}
       </LoadedView>
