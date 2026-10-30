@@ -16,9 +16,19 @@ public class AccountSteps {
 		this.accounts = accounts;
 	}
 
+	@Given("the admin has reset the password of every account")
+	public void theAdminHasResetThePasswordOfEveryAccount() {
+		accounts.resetEveryAccount();
+	}
+
+	@Given("the admin has reset the password of {string}")
+	public void theAdminHasResetThePasswordOf(String avatar) {
+		accounts.reset(avatar);
+	}
+
 	@Given("{word} has chosen the password {string}")
 	public void hasChosenThePassword(String avatar, String password) {
-		accounts.choosePasswordInPlaceOfTheIssuedOne(avatar, password);
+		accounts.chooseDirectly(avatar, password);
 	}
 
 	@Given("{word} has chosen {string} in place of the password the reset issued")
@@ -31,7 +41,7 @@ public class AccountSteps {
 		accounts.giveTheRole(avatar, Role.valueOf(role.toUpperCase(Locale.ROOT)));
 	}
 
-	@Given("{word}'s account holds the password she chose, {string}")
+	@Given("{word}'s account holds the password she/he chose, {string}")
 	public void accountHoldsThePasswordSheChose(String avatar, String password) {
 		assertThat(accounts.chosenBy(avatar)).isEqualTo(password);
 	}

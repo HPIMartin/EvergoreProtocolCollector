@@ -20,6 +20,7 @@ Feature: Resting accounts
         | 01.01.2026 00:00 | Calix  | 300    | Entnahme |
         | 01.01.2026 00:00 | Dorn   | 300    | Entnahme |
       And the daily collection has run
+      And the admin has reset the password of every account
       And Dorn has chosen the password "Sommer-2026!"
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
@@ -28,15 +29,17 @@ Feature: Resting accounts
 
     Scenario Outline: A resting account with the role "<role>" is told it rests, holding <which>
       Given <avatar>'s account has the role "<role>"
+      And <state>
       When <who> logs in as "<avatar>" with <password>
       Then the page says "Dein Konto ruht, bis das Protokoll wieder einen Vorgang von dir zeigt."
       And a bookmark of the overview opened afterwards shows the login page
 
       Examples:
-        | avatar | role   | who       | which                         | password                      |
-        | Calix  | member | a member  | the password its reset issued | the password the reset issued |
-        | Calix  | admin  | the admin | the password its reset issued | the password the reset issued |
-        | Dorn   | member | a member  | the password he chose         | the password "Sommer-2026!"   |
+        | avatar | role   | who       | which                                               | state                                                      | password                             |
+        | Calix  | member | a member  | the password its reset issued                       | Calix's account still holds the password the reset issued  | the password the reset issued        |
+        | Calix  | admin  | the admin | the password its reset issued                       | Calix's account still holds the password the reset issued  | the password the reset issued        |
+        | Dorn   | member | a member  | the password he chose                               | Dorn's account holds the password he chose, "Sommer-2026!" | the password "Sommer-2026!"          |
+        | Calix  | member | a member  | the password a reset issued while the account rests | the admin has reset the password of "Calix"                | the password the latest reset issued |
 
     Scenario: A client that chooses a new password for a resting account is not logged in, and the issued password stays
       When a client gives the name "Calix" and the password the reset issued and chooses "Sommer-2026!" as the new password, skipping the login page
@@ -59,6 +62,7 @@ Feature: Resting accounts
         | 01.01.2026 00:00 | Calix  | 300    | Entnahme |
         | 01.01.2026 00:00 | Dorn   | 300    | Entnahme |
       And the daily collection has run
+      And the admin has reset the password of every account
       And Dorn has chosen the password "Sommer-2026!"
       And the guild storage ledger holds:
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |

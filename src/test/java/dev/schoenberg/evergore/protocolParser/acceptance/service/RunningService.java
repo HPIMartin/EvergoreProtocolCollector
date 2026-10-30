@@ -20,9 +20,14 @@ import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioDatabase;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioPasswords;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
+import dev.schoenberg.evergore.protocolParser.application.AccountRepository;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
+import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginName;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class RunningService {
 	private static final String TEST_ENVIRONMENT = "test";
@@ -154,6 +159,15 @@ public class RunningService {
 
 	public void storeWhatTheGameProtocolsShow() {
 		OwnThread.run(context.getBean(EvergoreDataExtractor.class)::loadData);
+	}
+
+	public void storeTheChosenPassword(String avatar, String password) {
+		String nameKey = new LoginName(avatar).key();
+		AccountRepository accounts = context.getBean(AccountRepository.class);
+		PasswordHasher hasher = context.getBean(PasswordHasher.class);
+
+		assertThat(accounts.findByNameKey(nameKey)).as("the account of %s", avatar).isPresent();
+		OwnThread.run(() -> accounts.replacePassword(nameKey, hasher.hash(password), PasswordState.CHOSEN));
 	}
 
 	public int collectionsRun() {

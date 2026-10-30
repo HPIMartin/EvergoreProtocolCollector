@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class AdminKeySteps {
 	private static final String ADMINS_STATUS_FIGURES = "/api/v1/admin/status";
 	private static final String RANDOM_KEY_OF_43_CHARACTERS = "[A-Za-z0-9_-]{43}";
+	private static final String ADMIN = "admin";
 	private static final int SERVED = 200;
 
 	private final ServiceLog log;
@@ -81,6 +82,16 @@ public class AdminKeySteps {
 		Answer figures = logins.asking(ADMINS_STATUS_FIGURES, LoginRequests.loginValueIn(loggedIn));
 
 		assertThat(figures.status()).as("the admin's status figures: " + figures.body()).isEqualTo(SERVED);
+	}
+
+	@Then("the operator finds the list of accounts, asked for with the admin key, empty")
+	public void theOperatorFindsTheListOfAccountsAskedForWithTheAdminKeyEmpty() {
+		Answer loggedIn = logins.logIn(ADMIN, log.adminKeyNamed());
+
+		Answer accounts = logins.listAccounts(LoginRequests.loginValueIn(loggedIn));
+
+		assertThat(accounts.status()).as("the list of accounts: " + accounts.body()).isEqualTo(SERVED);
+		assertThat(LoginRequests.namesIn(accounts)).isEmpty();
 	}
 
 	private static char swapCase(char character) {

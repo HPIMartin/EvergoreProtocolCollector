@@ -56,7 +56,8 @@ Feature: The health report: what the last recompute found
         | item worth nothing | Übungsstück-Kupferschwert |
 
   Rule: Every name list on the admin page and in the health report is in German alphabetical order
-    "Ärger" comes before "Zorn", as in the overview.
+    "Ärger" comes before "Zorn", as in the overview. The admin page's list of accounts ("The admin
+    page lists the accounts") follows the same order.
     The admin page shows no list of items worth nothing.
 
     Scenario Outline: <surface> lists <list> in German alphabetical order

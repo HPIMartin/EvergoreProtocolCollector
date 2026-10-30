@@ -1,17 +1,17 @@
 Feature: Choosing a password
-  Every account begins with a reset: the service issues a new random password, and whoever logs in
-  with it must choose a password of their own before anything opens; the login page then asks for it
-  under "Neues Passwort wählen", as "Accounts for the members, and the admin" shows for every new
-  account. A chosen password, after a reset or as a change, has at least 8 characters, among them at
-  least one digit and one special character, a character that is neither a letter, nor a digit, nor
-  a space; and it differs from the password it replaces. How an issued password reaches its member
-  is not covered here. Changing a chosen password is in "Changing the password".
+  A reset issues a new random password, and whoever logs in with it must choose a password of their
+  own before anything opens; the login page then asks for it under "Neues Passwort wählen". How the
+  admin resets a password and passes it on is in "Resetting a password on the admin page". A chosen
+  password, after a reset or as a change, has at least 8 characters, among them at least one digit
+  and one special character, a character that is neither a letter, nor a digit, nor a space; and it
+  differs from the password it replaces. Changing a chosen password is in "Changing the password".
 
   Background:
     Given the guild bank ledger holds:
       | Zeitpunkt        | Avatar | Betrag | Vorgang    |
       | 01.01.2026 12:00 | Aurora | 1000   | Einzahlung |
     And the daily collection has run
+    And the admin has reset the password of every account
 
   Rule: After a reset the member chooses a new password before anything opens
 

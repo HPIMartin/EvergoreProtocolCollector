@@ -1,6 +1,9 @@
 package dev.schoenberg.evergore.protocolParser.acceptance.operator;
 
+import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -9,6 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dev.schoenberg.evergore.protocolParser.rest.filter.AcceptanceClientIp;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public class LoginRequests {
 	public static final String SESSION_COOKIE = "epc_session";
 
@@ -16,6 +21,7 @@ public class LoginRequests {
 	private static final String NEW_PASSWORD = "/api/v1/login/new-password";
 	private static final String LOGOUT = "/api/v1/logout";
 	private static final String PASSWORD = "/api/v1/password";
+	private static final String ACCOUNTS = "/api/v1/admin/accounts";
 	private static final String SET_COOKIE = "Set-Cookie";
 	private static final String ADDRESS_PREFIX = "10.1.";
 	private static final int ADDRESSES_PER_BLOCK = 250;
@@ -54,6 +60,40 @@ public class LoginRequests {
 
 	public Answer asking(String address, String loginValue) {
 		return requests.get(address, withTheLogin(fromAFreshAddress(), loginValue));
+	}
+
+	public Answer asking(Asking asking, String loginValue) {
+		return requests.ask(asking, withTheLogin(fromAFreshAddress(), loginValue));
+	}
+
+	public Answer listAccounts(String loginValue) {
+		return asking(Asking.get(ACCOUNTS), loginValue);
+	}
+
+	public Answer resetPassword(String loginValue, String name) {
+		return asking(Asking.post(resetAddressOf(name)), loginValue);
+	}
+
+	public static String resetAddressOf(String name) {
+		return ACCOUNTS + "/" + URLEncoder.encode(name, UTF_8).replace("+", "%20") + "/reset";
+	}
+
+	public static List<String> namesIn(Answer accounts) {
+		try {
+			List<String> names = new ArrayList<>();
+			JSON.readTree(accounts.body()).forEach(account -> names.add(account.path("name").asText()));
+			return names;
+		} catch (JsonProcessingException e) {
+			throw new AssertionError("The list of accounts is not JSON: " + accounts.body(), e);
+		}
+	}
+
+	public static String passwordIn(Answer reset) {
+		try {
+			return JSON.readTree(reset.body()).path("password").asText();
+		} catch (JsonProcessingException e) {
+			throw new AssertionError("The reset's answer is not JSON: " + reset.body(), e);
+		}
 	}
 
 	public Answer changePassword(String loginValue, Optional<String> currentPassword, String newPassword) {

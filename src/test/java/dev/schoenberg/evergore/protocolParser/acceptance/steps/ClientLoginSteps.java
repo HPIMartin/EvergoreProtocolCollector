@@ -14,6 +14,7 @@ import io.cucumber.java.en.When;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.AlteredLogins;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.Answer;
+import dev.schoenberg.evergore.protocolParser.acceptance.operator.Asking;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.BundledFiles;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.ClientAnswer;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.LoginRequests;
@@ -35,6 +36,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ClientLoginSteps {
 	private static final String OVERVIEWS_FIGURES = "/api/v1/avatars";
 	private static final String ADMINS_STATUS_FIGURES = "/api/v1/admin/status";
+	private static final String ACCOUNTS = "/api/v1/admin/accounts";
+	private static final String RESET_OF = "the reset of the password of";
 	private static final String A_CLIENT = "198.51.100.1";
 	private static final String NOT_ISSUED = "Not-Issued-1!";
 	private static final int SERVED = 200;
@@ -76,19 +79,28 @@ public class ClientLoginSteps {
 
 	@ParameterType("the login page|a file the login page loads|the overview's figures|the movements of the bank ledger of \"Aurora\"|the admin's status figures|a file the dashboard loads"
 			+ "|the change of a password with the current one|the descriptions of the service's interface for programs \\(Swagger, ReDoc and RapiDoc\\)"
-			+ "|an interface address the service does not serve")
-	public List<String> askedFor(String phrase) {
+			+ "|an interface address the service does not serve|the list of accounts|the reset of the password of \"[^\"]+\"")
+	public List<Asking> askedFor(String phrase) {
 		return switch (phrase) {
-			case "the login page" -> List.of("/login");
-			case "a file the login page loads" -> List.of(BundledFiles.aFileTheLoginPageLoads());
-			case "the overview's figures" -> List.of(OVERVIEWS_FIGURES);
-			case "the movements of the bank ledger of \"Aurora\"" -> List.of(OVERVIEWS_FIGURES + "/Aurora/bank");
-			case "the admin's status figures" -> List.of(ADMINS_STATUS_FIGURES);
-			case "a file the dashboard loads" -> List.of(BundledFiles.aFileTheDashboardLoads());
-			case "the change of a password with the current one" -> List.of("/api/v1/password");
-			case "an interface address the service does not serve" -> List.of("/api/v1/unknown");
-			default -> List.of("/swagger-ui/index.html", "/redoc/index.html", "/rapidoc/index.html");
+			case "the login page" -> List.of(Asking.get("/login"));
+			case "a file the login page loads" -> List.of(Asking.get(BundledFiles.aFileTheLoginPageLoads()));
+			case "the overview's figures" -> List.of(Asking.get(OVERVIEWS_FIGURES));
+			case "the movements of the bank ledger of \"Aurora\"" -> List.of(Asking.get(OVERVIEWS_FIGURES + "/Aurora/bank"));
+			case "the admin's status figures" -> List.of(Asking.get(ADMINS_STATUS_FIGURES));
+			case "a file the dashboard loads" -> List.of(Asking.get(BundledFiles.aFileTheDashboardLoads()));
+			case "the change of a password with the current one" -> List.of(Asking.get("/api/v1/password"));
+			case "an interface address the service does not serve" -> List.of(Asking.get("/api/v1/unknown"));
+			case "the list of accounts" -> List.of(Asking.get(ACCOUNTS));
+			default -> phrase.startsWith(RESET_OF) ? List.of(Asking.post(LoginRequests.resetAddressOf(nameIn(phrase)))) : swaggerAddresses();
 		};
+	}
+
+	private static List<Asking> swaggerAddresses() {
+		return List.of(Asking.get("/swagger-ui/index.html"), Asking.get("/redoc/index.html"), Asking.get("/rapidoc/index.html"));
+	}
+
+	private static String nameIn(String phrase) {
+		return phrase.substring(phrase.indexOf('"') + 1, phrase.length() - 1);
 	}
 
 	@ParameterType("altered to claim the admin's role|altered to name another account|signed by someone other than the service|that carries no signature at all")
@@ -130,10 +142,10 @@ public class ClientLoginSteps {
 	}
 
 	@When("a client without a login asks for {askedFor}")
-	public void aClientWithoutALoginAsksFor(List<String> addresses) {
+	public void aClientWithoutALoginAsksFor(List<Asking> askings) {
 		Answer first = null;
-		for (String address : addresses) {
-			Answer answer = requests.get(address, Map.of(AcceptanceClientIp.HEADER, A_CLIENT));
+		for (Asking asking : askings) {
+			Answer answer = requests.ask(asking, Map.of(AcceptanceClientIp.HEADER, A_CLIENT));
 			first = first == null || answer.status() != UNAUTHORIZED ? answer : first;
 		}
 		received.remember(first);
@@ -229,8 +241,8 @@ public class ClientLoginSteps {
 	}
 
 	@When("another client asks for {askedFor} with a login {alteredLogin}")
-	public void anotherClientAsksForWithAnAlteredLogin(List<String> addresses, UnaryOperator<String> alteration) {
-		received.remember(logins.asking(addresses.getFirst(), alteration.apply(issuedLogin)));
+	public void anotherClientAsksForWithAnAlteredLogin(List<Asking> askings, UnaryOperator<String> alteration) {
+		received.remember(logins.asking(askings.getFirst(), alteration.apply(issuedLogin)));
 	}
 
 	@ParameterType("the current password \"[^\"]*\"|no current password|\"[^\"]*\"|the admin key")
@@ -352,9 +364,9 @@ public class ClientLoginSteps {
 		assertThat(setCookie()).startsWith(LoginRequests.SESSION_COOKIE + "=;").contains("Max-Age=0");
 	}
 
-	@When("the client asks for the admin's status figures with its login")
-	public void theClientAsksForTheAdminsStatusFiguresWithItsLogin() {
-		received.remember(logins.asking(ADMINS_STATUS_FIGURES, issuedLogin));
+	@When("the client asks for {askedFor} with its login")
+	public void theClientAsksForWithItsLogin(List<Asking> askings) {
+		received.remember(logins.asking(askings.getFirst(), issuedLogin));
 	}
 
 	@When("the client asks the service for its health with its login")

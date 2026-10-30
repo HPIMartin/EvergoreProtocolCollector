@@ -33,6 +33,10 @@ public class ServiceRequests {
 		return exchange("GET", address, headers, new byte[0]);
 	}
 
+	public Answer ask(Asking asking, Map<String, String> headers) {
+		return asking.isPost() ? post(asking.address(), "", headers) : get(asking.address(), headers);
+	}
+
 	public Answer post(String address, String jsonBody, Map<String, String> headers) {
 		Map<String, String> withBody = new HashMap<>(headers);
 		withBody.put("Content-Type", JSON);

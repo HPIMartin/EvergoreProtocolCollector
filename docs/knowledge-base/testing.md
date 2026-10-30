@@ -62,7 +62,7 @@
 | `LoginNameTest` | Pure unit tests of the login name's key: a typed name matches an avatar's regardless of capitals (umlauts included, `ß` and `SS` stay different), a decomposed umlaut matches the composed one both ways, surrounding blanks and a no-break space do not count, and the key is the lower case name in NFC whatever the JVM's default locale (a Turkish one included). | pure unit |
 | `CreateAccountsTest` | Pure unit tests over in-memory accounts, a prefix hasher and ledger stubs: an avatar either ledger names gets one account that begins with a reset (state `ISSUED`, only the hash stored, a password of its own handed to the issued passwords with the avatar), an existing account and the capitals of a name are left as they are and issued nothing, an avatar first read by a later collection gets an account and the others none, an avatar named `admin` in any capitals gets none and the service logs the name once, an avatar whose hash or insert throws is logged and the others still get their accounts, and the hashing runs on the thread that calls it. | pure unit |
 | `RandomPasswordGeneratorTest` | Pure unit tests: the generated password has sixteen characters, always passes `PasswordRule`, differs at every draw and holds no whitespace and no character that needs quoting. | pure unit |
-| `ScenarioPasswordsTest` | The acceptance world's record of issued passwords: it answers the password issued to an avatar, the latest when another was issued, and nothing for an avatar none was issued to. | pure unit |
+| `ScenarioPasswordsTest` | The acceptance world's record of issued passwords: it answers the password issued to an avatar, the latest when another was issued, the first one when asked for it, and nothing for an avatar none was issued to. | pure unit |
 | `JwtLoginsTest` | Pure unit tests of the signer of logins with a clock the test moves: it reads back the name, role, generation and source of what it issued, ends a login exactly 7 days after it was made (or at the expiry it was given), reads it one second before and refuses it at that moment and after, still reads it when the clock steps back 30 seconds, gives each login its own id, and refuses what the service did not sign as it is: another key, a random key of another instance, no or another algorithm, a missing or stripped signature, an altered name, role, source, generation or expiry, a claim of the wrong kind or naming no role or source, and values that are no login at all. | pure unit |
 | `SignedLoginsBeanTest` | Boots the context twice on throwaway databases: the service reads the login it issued, and a login issued before a restart is no login after it. | adapter |
 | `LoginEndpointTest` | Boots the server on its own fixture DB copy with accounts held through the repository and a fixed admin key: a right chosen password answers the logged-in step and a session cookie of 7 days (HttpOnly, `SameSite=Lax`, no `Secure`, no `Expires`) that carries a login ending 7 days after it was made and opens a protected path, a login another signer made opens nothing, the moment of the login is recorded as the last login, an issued password asks for a new one and sets no cookie, an unknown name, a missing password and a wrong password get the same 401, and a body over 4 KiB (also behind a double slash, gzipped, chunked or under a second transfer-encoding line) gets 413. | `@MicronautTest` integration |
@@ -218,9 +218,21 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
     scrape that crashes cannot pass for one that found nothing.
   - `OperatorSettings`: the environment variables and throttle settings the operator starts the
     service with.
-  - `ScenarioPasswords`: the password each reset issued to each avatar, recorded through the
-    `IssuedPasswords` bean `AcceptanceBeans` puts in place of the production one, which discards
-    it; the world object outlives a restart of the service.
+  - `ScenarioPasswords`: the passwords each reset issued to each avatar, in the order of the
+    resets.
+  - The world object, and so `ScenarioPasswords`, outlives a restart of the service.
+  - A reset is a step that logs in as `admin` with the admin key the log names and asks the service
+    for it.
+  - `the admin has reset the password of every account` takes the names from the admin's list of
+    accounts.
+  - The account's creation hands no password to anyone, so no scenario has a password before a
+    reset.
+  - `<name> has chosen the password P` is a state, not an action.
+  - It stores P's hash through the production `PasswordHasher` and the account repository of the
+    running service, state `CHOSEN`.
+  - `<name> has chosen the password P` ends no login and logs no one in.
+  - `<name> has chosen P in place of the password the reset issued` goes through the service as the
+    member's choice does.
 - **The daily collection is fired by hand**: `ManualTaskScheduler` replaces the `scheduled`
   `TaskScheduler`, records the fixed-delay job `@Scheduled` registers instead of starting it, and
   runs it when a step says the collection runs, through the same runnable the scheduler would

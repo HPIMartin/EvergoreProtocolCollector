@@ -110,9 +110,14 @@ public class LoginSteps {
 		secondBrowser.browser().loginForm().logIn(name, password);
 	}
 
-	@When("a/the member/admin logs in as {string} with the password the (first collection's )reset issued")
-	public void aMemberLogsInWithThePasswordTheResetIssued(String name) {
-		logIn(name, accounts.issuedTo(name));
+	@ParameterType("reset|latest reset|first reset")
+	public ResetOrder resetOrder(String phrase) {
+		return ResetOrder.of(phrase);
+	}
+
+	@When("a/the member/admin logs in as {string} with the password the {resetOrder} issued")
+	public void aMemberLogsInWithThePasswordTheResetIssued(String name, ResetOrder order) {
+		logIn(name, order.issuedTo(accounts, name));
 	}
 
 	@When("a/the member logs in as {string} with the password the reset issued to {word}")

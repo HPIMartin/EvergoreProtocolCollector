@@ -29,6 +29,26 @@ class ScenarioPasswordsTest {
 	}
 
 	@Test
+	void answersTheFirstPasswordWhenAnAvatarWasIssuedAnother() {
+		tested.record("Aurora", "Issued-1!");
+		tested.record("Boreas", "Issued-3!");
+		tested.record("Aurora", "Issued-2!");
+
+		Optional<String> issued = tested.firstIssuedTo("Aurora");
+
+		assertThat(issued).contains("Issued-1!");
+	}
+
+	@Test
+	void answersNoFirstPasswordForAnAvatarNoPasswordWasIssuedTo() {
+		tested.record("Aurora", "Issued-1!");
+
+		Optional<String> issued = tested.firstIssuedTo("Boreas");
+
+		assertThat(issued).isEmpty();
+	}
+
+	@Test
 	void answersNothingForAnAvatarNoPasswordWasIssuedTo() {
 		tested.record("Aurora", "Issued-1!");
 

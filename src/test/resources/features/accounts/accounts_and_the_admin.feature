@@ -1,49 +1,18 @@
 Feature: Accounts for the members, and the admin
   Every avatar the guild ledgers name gets one account, after the daily collection that first reads
-  it; the account begins with a reset, a random password of its own, and later collections leave it
-  as it is. An avatar named "admin", in any mix of capital and small letters, gets no account, since
-  that name logs in with the admin key ("The admin key"). Every account has the role "member" until
-  the operator gives it the admin role by hand; a role given or taken takes effect at the member's
-  next login, and a restart ends every login. A member sees every member's figures and ledgers; the
-  admin page, and what the health report shows beyond its verdict, are for the admin role only.
+  it; the account begins with a random password no one is shown, so its first password to log
+  in with comes from the admin's reset ("Resetting a password on the admin page"), and later
+  collections leave the account as it is. An avatar named "admin", in any mix of capital and
+  small letters, gets no account, since that name logs in with the admin key ("The admin key").
+  Every account has the role "member" until the operator gives it the admin role by hand; a role
+  given or taken takes effect at the member's next login, and a restart ends every login. A member
+  sees every member's figures and ledgers; the admin page, and what the health report shows beyond
+  its verdict, are for the admin role only. In these features, "<name> has chosen the password P"
+  says only which password the account holds, not after which reset it was chosen, and is no
+  login; "<name> has chosen P in place of the password the reset issued" is the choice itself, made
+  on the login page, and counts as a login.
 
   Rule: Every avatar the guild ledgers name gets one account
-
-    Scenario Outline: <avatar>, first read from the <ledger> ledger by <which> collection, has an account that begins with a reset
-      Given the guild bank ledger holds:
-        | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 01.01.2026 12:00 | Aurora | 1000   | Einzahlung |
-      And the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 02.01.2026 12:00 | Brynja | 1     | Eisenbarren | 100      | Einlagerung |
-      And the daily collection has run
-      And the guild bank ledger also holds:
-        | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 03.01.2026 12:00 | Boreas | 750    | Einzahlung |
-      And the daily collection has run
-      When a member logs in as "<avatar>" with the password the reset issued
-      Then the page is headed "Neues Passwort wählen"
-
-      Examples:
-        | avatar | ledger  | which     |
-        | Aurora | bank    | the first |
-        | Brynja | storage | the first |
-        | Boreas | bank    | a later   |
-
-    Scenario: An avatar both ledgers name has one account
-      With an account for each ledger, the password the reset issued to the second would still lead
-      to the choice of a new one.
-
-      Given the guild bank ledger holds:
-        | Zeitpunkt        | Avatar | Betrag | Vorgang    |
-        | 01.01.2026 12:00 | Aurora | 1000   | Einzahlung |
-      And the guild storage ledger holds:
-        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
-        | 02.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
-      And the daily collection has run
-      And Aurora has chosen "Sommer-2026!" in place of the password the reset issued
-      When a member logs in as "Aurora" with the password the reset issued
-      Then the page says "Name oder Passwort stimmt nicht."
 
     Scenario: The password a reset issued to one account does not log in to another
       Given the guild bank ledger holds:
@@ -51,6 +20,7 @@ Feature: Accounts for the members, and the admin
         | 01.01.2026 12:00 | Aurora | 1000   | Einzahlung |
         | 02.01.2026 12:00 | Boreas | 750    | Einzahlung |
       And the daily collection has run
+      And the admin has reset the password of every account
       When a member logs in as "Boreas" with the password the reset issued to Aurora
       Then the page says "Name oder Passwort stimmt nicht."
 
@@ -59,6 +29,7 @@ Feature: Accounts for the members, and the admin
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |
         | 01.01.2026 12:00 | Aurora | 1000   | Einzahlung |
       And the daily collection ran at 02.01.2026 05:00
+      And the admin has reset the password of every account
       And <state>
       And the daily collection ran at 03.01.2026 05:00
       When a member logs in as "Aurora" with <password>
@@ -66,7 +37,7 @@ Feature: Accounts for the members, and the admin
 
       Examples:
         | which                         | state                                                      | password                                         | heading               |
-        | the password its reset issued | Aurora's account still holds the password the reset issued | the password the first collection's reset issued | Neues Passwort wählen |
+        | the password its reset issued | Aurora's account still holds the password the reset issued | the password the reset issued                    | Neues Passwort wählen |
         | the password the member chose | Aurora has chosen the password "Sommer-2026!"              | the password "Sommer-2026!"                      | Übersicht             |
 
     Scenario Outline: An avatar named "<avatar>" gets no account, and the name stays the admin key's
@@ -76,6 +47,7 @@ Feature: Accounts for the members, and the admin
       When the daily collection runs
       Then the operator finds the line "No account for the avatar <avatar>: the name admin logs in with the admin key." in the service's log
       And the operator finds a login as "admin" with the admin key the service's log names opening the admin's status figures
+      And the operator finds the list of accounts, asked for with the admin key, empty
 
       Examples:
         | avatar |
@@ -110,7 +82,18 @@ Feature: Accounts for the members, and the admin
         | the admin | Boreas | Winter-2026! | the admin page    | sees it                   | the admin opens the admin page                            | the admin page reads "Stand: 03.01.2026 05:00"                                                                               |
         | a client  | Boreas | Winter-2026! | the health report | finds the dates beside it | the client asks the service for its health with its login | the operator finds the health report dating the last successful scrape and the last successful recompute at 03.01.2026 05:00 |
 
-    Scenario: A member's login does not open the admin's status figures
+    Scenario Outline: A member's login that asks for <what>, skipping the page, is refused
       Given a client has logged in as "Aurora" with the password "Sommer-2026!"
-      When the client asks for the admin's status figures with its login
+      When the client asks for <what> with its login
       Then the operator finds the request refused for lacking the admin's role
+
+      Examples:
+        | what                                  |
+        | the admin's status figures            |
+        | the list of accounts                  |
+        | the reset of the password of "Boreas" |
+
+    Scenario: A reset a member's login asked for leaves the other member's password as it was
+      Given a client has logged in as "Aurora" with the password "Sommer-2026!"
+      When the client asks for the reset of the password of "Boreas" with its login
+      Then the operator finds a login as "Boreas" with the password "Winter-2026!" opening the overview's figures

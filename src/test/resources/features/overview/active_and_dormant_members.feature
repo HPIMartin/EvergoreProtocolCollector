@@ -17,11 +17,13 @@ Feature: Active and dormant members
         | 15.01.2026 12:00 | Brynja | 1     | Eisenbarren | 100      | Einlagerung |
         | 31.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
       And the daily collection has run
+      And the admin has reset the password of every account
 
     Scenario Outline: <who>, who moved <when> before the newest movement, <outcome> <where>
       Boreas moved gold exactly 30 days before Aurora's newest movement, Calix one minute earlier.
       The same line decides whether a member's account rests ("Resting accounts"); every account
-      begins with a reset, so an account that does not rest asks for a new password.
+      holds the password the admin's reset issued, so an account that does not rest asks for a new
+      password.
 
       When <action>
       Then <result>

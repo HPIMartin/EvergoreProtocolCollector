@@ -11,6 +11,7 @@ Feature: Changing the password
       | 01.01.2026 12:00 | Aurora | 1000   | Einzahlung |
       | 02.01.2026 12:00 | Boreas | 750    | Einzahlung |
     And the daily collection has run
+    And the admin has reset the password of every account
     And Boreas has chosen the password "Herbst-2026!"
 
   Rule: The password set last logs in, and the one it replaced no longer does

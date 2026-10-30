@@ -36,8 +36,14 @@ Feature: Who the service lets in
         | the admin's status figures                                                            | refuses | refused for lacking a login |
         | a file the dashboard loads                                                            | refuses | refused for lacking a login |
         | the change of a password with the current one                                         | refuses | refused for lacking a login |
+        | the list of accounts                                                                  | refuses | refused for lacking a login |
+        | the reset of the password of "Aurora"                                                 | refuses | refused for lacking a login |
         | the descriptions of the service's interface for programs (Swagger, ReDoc and RapiDoc) | refuses | refused for lacking a login |
         | an interface address the service does not serve                                       | refuses | refused for lacking a login |
+
+    Scenario: A reset asked for without a login leaves the member's password as it was
+      When a client without a login asks for the reset of the password of "Aurora"
+      Then the operator finds a login as "Aurora" with the password "Sommer-2026!" opening the overview's figures
 
     Scenario Outline: <credential> in the address opens nothing
       When a client asks for the overview's figures with <credential> in the address

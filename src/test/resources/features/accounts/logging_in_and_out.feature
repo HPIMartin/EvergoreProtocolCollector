@@ -5,7 +5,8 @@ Feature: Logging in and out
   with a login" says. A wrong name and a wrong password get the same answer, so the login page does
   not tell which names have an account. A login lasts 7 days from the moment it was made, however
   much it is used, on its browser; it ends sooner when the member logs out on that browser, changes
-  the password on another one, or when the service restarts. How many requests a browser without a
+  the password on another one, when the admin resets the password ("Resetting a password on the
+  admin page"), or when the service restarts. How many requests a browser without a
   login may send is in "Request throttling and the request log". What the service lets in without a
   member's login is in "Who the service lets in", choosing a password in "Choosing a password", a
   resting account in "Resting accounts".
@@ -18,6 +19,7 @@ Feature: Logging in and out
       | 03.01.2026 12:00 | Calix  | 300    | Einzahlung |
       | 04.01.2026 12:00 | Boreas | 750    | Einzahlung |
     And the daily collection has run
+    And the admin has reset the password of every account
     And Aurora has chosen the password "Sommer-2026!"
     And Ärger has chosen the password "Winter-2026!"
     And Calix has chosen the password "Sommer-2026!"
