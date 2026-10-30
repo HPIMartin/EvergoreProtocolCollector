@@ -5,10 +5,19 @@ import { formatTimestamp } from '../ui'
 
 export interface AccountListProps {
   readonly accounts: readonly Account[]
+  readonly reset: (name: string) => Promise<string>
 }
 
-export function AccountList({ accounts }: AccountListProps) {
+export function AccountList({ accounts, reset }: AccountListProps) {
   const [asking, setAsking] = useState<string | null>(null)
+  const [issued, setIssued] = useState<Readonly<Record<string, string>>>({})
+
+  function resetPasswordOf(name: string): void {
+    setAsking(null)
+    void reset(name).then((password) => {
+      setIssued((before) => ({ ...before, [name]: password }))
+    })
+  }
 
   return (
     <>
@@ -41,9 +50,17 @@ export function AccountList({ accounts }: AccountListProps) {
                   : formatTimestamp(account.lastLogin.toISOString())}
               </td>
               <td className="data-table__cell">
+                {issued[account.name] === undefined ? null : (
+                  <span data-testid="account-issued">
+                    {issued[account.name]}
+                  </span>
+                )}
                 {asking === account.name ? (
                   <ResetQuestion
                     name={account.name}
+                    onConfirm={() => {
+                      resetPasswordOf(account.name)
+                    }}
                     onCancel={() => {
                       setAsking(null)
                     }}
@@ -70,14 +87,15 @@ export function AccountList({ accounts }: AccountListProps) {
 
 interface ResetQuestionProps {
   readonly name: string
+  readonly onConfirm: () => void
   readonly onCancel: () => void
 }
 
-function ResetQuestion({ name, onCancel }: ResetQuestionProps) {
+function ResetQuestion({ name, onConfirm, onCancel }: ResetQuestionProps) {
   return (
     <>
       <span data-testid="reset-question">{`Passwort von ${name} wirklich zurücksetzen?`}</span>
-      <button type="button" data-testid="reset-confirm">
+      <button type="button" data-testid="reset-confirm" onClick={onConfirm}>
         Zurücksetzen
       </button>
       <button type="button" data-testid="reset-cancel" onClick={onCancel}>

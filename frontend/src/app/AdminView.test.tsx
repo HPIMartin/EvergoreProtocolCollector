@@ -239,3 +239,65 @@ describe('the reset of a password on the admin page', () => {
     })
   })
 })
+
+const ISSUED = { Alrik: 'Tannenzapfen#47', Zwerg: 'Birkenfalter#18' }
+
+async function resetThrough(name: string): Promise<void> {
+  fireEvent.click(within(rowOf(name)).getByTestId('account-reset'))
+  fireEvent.click(within(rowOf(name)).getByTestId('reset-confirm'))
+  await act(async () => undefined)
+}
+
+function issuedBeside(name: string): string | undefined {
+  return within(rowOf(name)).queryByTestId('account-issued')?.textContent
+}
+
+describe('the password a reset issued on the admin page', () => {
+  it('stands beside the name of the account after „Zurücksetzen“', async () => {
+    const resets = resettingTo(ISSUED)
+    await adminViewWith(apiListing([ALRIK, ZWERG], resets.reset))
+
+    await resetThrough('Zwerg')
+
+    const shown = {
+      reset: resets.names,
+      besideZwerg: issuedBeside('Zwerg'),
+      besideAlrik: issuedBeside('Alrik'),
+      questions: screen.queryAllByTestId('reset-question'),
+    }
+    expect(shown).toEqual({
+      reset: ['Zwerg'],
+      besideZwerg: 'Birkenfalter#18',
+      besideAlrik: undefined,
+      questions: [],
+    })
+  })
+
+  it('stays beside its own name when the admin resets another account', async () => {
+    await adminViewWith(apiListing([ALRIK, ZWERG], resettingTo(ISSUED).reset))
+    await resetThrough('Alrik')
+
+    await resetThrough('Zwerg')
+
+    const shown = {
+      besideAlrik: issuedBeside('Alrik'),
+      besideZwerg: issuedBeside('Zwerg'),
+    }
+    expect(shown).toEqual({
+      besideAlrik: 'Tannenzapfen#47',
+      besideZwerg: 'Birkenfalter#18',
+    })
+  })
+
+  it('is replaced by the one a second reset of the same account issues', async () => {
+    const issued = ['Erstes#11', 'Zweites#22']
+    const reset = (): Promise<string> => Promise.resolve(issued.shift() ?? '')
+    await adminViewWith(apiListing([ALRIK], reset))
+    await resetThrough('Alrik')
+
+    await resetThrough('Alrik')
+
+    const shown = issuedBeside('Alrik')
+    expect(shown).toBe('Zweites#22')
+  })
+})

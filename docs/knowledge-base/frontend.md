@@ -211,6 +211,13 @@ Five top-level folders under `frontend/src/`:
   - The question reads „Passwort von <Name> wirklich zurücksetzen?“ (`reset-question`).
   - The question offers „Zurücksetzen“ (`reset-confirm`) and „Abbrechen“ (`reset-cancel`).
   - „Abbrechen“ closes the question and sends nothing.
+  - After „Zurücksetzen“ the issued password stands in that account's row (`account-issued`).
+  - The issued password lives only in the list's component state, so it is gone when the admin
+    leaves the page.
+  - The issued password is never put in the browser's storage.
+  - The issued password is never read behind a second request.
+  - A second reset of another account leaves the first password beside its own name.
+  - A second reset of the same account replaces the password.
   - Hooks: `accounts-title`, `accounts`, per row `account-row` with `account-name`,
     `account-rests` and `account-last-login`.
   - None is a `p`, so the admin page reader that collects `p[data-testid]` reads the status facts

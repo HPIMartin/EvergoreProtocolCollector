@@ -62,7 +62,10 @@ export function AdminView({ api }: AdminViewProps) {
               heading="Nicht beurteilbar (Rezept ungelesen)"
               names={status.roundTripAbstentions.map(describeAbstention)}
             />
-            <AccountList accounts={accounts} />
+            <AccountList
+              accounts={accounts}
+              reset={(name) => api.resetPassword(name)}
+            />
           </>
         )}
       </LoadedView>
