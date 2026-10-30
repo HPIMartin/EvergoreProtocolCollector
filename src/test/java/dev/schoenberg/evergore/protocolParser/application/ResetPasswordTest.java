@@ -29,4 +29,13 @@ class ResetPasswordTest {
 
 		assertThat(accounts.held("boreas")).isEqualTo(new Account("Boreas", "hashed:Generated-1!", PasswordState.ISSUED, Role.MEMBER, Optional.of(LOGGED_IN)));
 	}
+
+	@Test
+	void returnsTheClearPasswordItIssuedToItsCaller() {
+		accounts.hold(new Account("Boreas", "hashed:Winter-2026!", PasswordState.CHOSEN, Role.MEMBER, Optional.of(LOGGED_IN)));
+
+		Optional<String> issued = tested.forAccount("Boreas");
+
+		assertThat(issued).hasValue("Generated-1!");
+	}
 }

@@ -1,5 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
+import java.util.Optional;
+
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginName;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
 
@@ -14,8 +16,9 @@ public class ResetPassword {
 		this.passwordHasher = passwordHasher;
 	}
 
-	public void forAccount(String name) {
+	public Optional<String> forAccount(String name) {
 		String issued = passwordGenerator.generate();
 		accounts.replacePassword(new LoginName(name).key(), passwordHasher.hash(issued), PasswordState.ISSUED);
+		return Optional.of(issued);
 	}
 }
