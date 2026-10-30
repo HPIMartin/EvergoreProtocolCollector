@@ -12,6 +12,13 @@ public class LoginGenerations {
 		return byNameKey.getOrDefault(nameKey, 0L);
 	}
 
+	public void bump(String nameKey, Runnable change) {
+		synchronized (lockByNameKey.computeIfAbsent(nameKey, key -> new Object())) {
+			change.run();
+			byNameKey.put(nameKey, of(nameKey) + 1);
+		}
+	}
+
 	public OptionalLong bumpWhileAt(String nameKey, long expected, Runnable change) {
 		synchronized (lockByNameKey.computeIfAbsent(nameKey, key -> new Object())) {
 			long held = of(nameKey);

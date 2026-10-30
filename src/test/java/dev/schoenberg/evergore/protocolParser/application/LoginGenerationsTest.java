@@ -96,4 +96,20 @@ class LoginGenerationsTest {
 
 		assertThat(generation).isEqualTo(2);
 	}
+
+	@Test
+	void endsTheLoginsOfOneAccountWhateverGenerationIsCurrent() {
+		tested.bumpWhileAt("aurora", 0, () -> {});
+		tested.bumpWhileAt("aurora", 1, () -> {});
+		List<String> trail = new ArrayList<>();
+
+		tested.bump("aurora", () -> trail.add("changed"));
+
+		long generation = tested.of("aurora");
+		long untouched = tested.of("boreas");
+
+		assertThat(trail).containsExactly("changed");
+		assertThat(generation).isEqualTo(3);
+		assertThat(untouched).isZero();
+	}
 }
