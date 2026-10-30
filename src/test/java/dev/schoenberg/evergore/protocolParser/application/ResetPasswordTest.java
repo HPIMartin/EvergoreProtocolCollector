@@ -6,8 +6,11 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginName;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 
@@ -52,5 +55,17 @@ class ResetPasswordTest {
 		long other = generations.of("aurora");
 		assertThat(after).isEqualTo(before + 1);
 		assertThat(other).isZero();
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"Zephyr", " zephyr ", "admin", "Admin"})
+	void refusesANameWithoutAnAccountAndCreatesNone(String name) {
+		accounts.hold(new Account("Boreas", "hashed:Winter-2026!", PasswordState.CHOSEN, Role.MEMBER, Optional.of(LOGGED_IN)));
+
+		Optional<String> issued = tested.forAccount(name);
+
+		assertThat(issued).isEmpty();
+		assertThat(accounts.allAccounts()).extracting(Account::avatar).containsExactly("Boreas");
+		assertThat(generations.of(new LoginName(name).key())).isZero();
 	}
 }

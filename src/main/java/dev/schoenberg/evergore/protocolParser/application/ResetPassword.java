@@ -20,6 +20,9 @@ public class ResetPassword {
 
 	public Optional<String> forAccount(String name) {
 		String nameKey = new LoginName(name).key();
+		if (accounts.findByNameKey(nameKey).isEmpty()) {
+			return Optional.empty();
+		}
 		String issued = passwordGenerator.generate();
 		String hash = passwordHasher.hash(issued);
 		generations.bump(nameKey, () -> accounts.replacePassword(nameKey, hash, PasswordState.ISSUED));

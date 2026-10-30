@@ -44,7 +44,9 @@ class InMemoryAccounts implements AccountRepository {
 	public void replacePassword(String nameKey, String passwordHash, PasswordState state) {
 		trail.add("replacePassword");
 		Account held = byNameKey.get(nameKey);
-		byNameKey.put(nameKey, new Account(held.avatar(), passwordHash, state, held.role(), held.lastLogin()));
+		if (held != null) {
+			byNameKey.put(nameKey, new Account(held.avatar(), passwordHash, state, held.role(), held.lastLogin()));
+		}
 	}
 
 	@Override
