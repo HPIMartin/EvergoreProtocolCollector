@@ -200,11 +200,17 @@ Five top-level folders under `frontend/src/`:
   - Under „Konten“ a table with „Name“, „Ruht“ and „Letzte Anmeldung“ holds one row per account.
   - Rows stand in the order the service sent (its German order).
   - The table is not sortable, so the SPA's collation never reorders it.
+  - The column of the buttons has an empty header cell with the `aria-label` „Aktion“.
   - „ruht“ marks a resting account.
   - The latest login is shown in the page's timestamp format (`formatTimestamp`).
   - „noch nie“ stands for no latest login.
   - The page loads the status and the accounts together (`Promise.all`), so it has one outcome of
     the six.
+  - Beside each account stands the button „Passwort zurücksetzen“ (`account-reset`).
+  - The button asks first, on the page itself and not in a `window.confirm`.
+  - The question reads „Passwort von <Name> wirklich zurücksetzen?“ (`reset-question`).
+  - The question offers „Zurücksetzen“ (`reset-confirm`) and „Abbrechen“ (`reset-cancel`).
+  - „Abbrechen“ closes the question and sends nothing.
   - Hooks: `accounts-title`, `accounts`, per row `account-row` with `account-name`,
     `account-rests` and `account-last-login`.
   - None is a `p`, so the admin page reader that collects `p[data-testid]` reads the status facts

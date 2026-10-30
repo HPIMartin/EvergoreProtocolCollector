@@ -1,4 +1,11 @@
-import { act, cleanup, render, screen, within } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import type { ProtocolApi } from '../api'
@@ -34,17 +41,52 @@ function apiRefusingTheAdminStatus(reason: Error): ProtocolApi {
   }
 }
 
-function apiListing(accounts: Account[]): ProtocolApi {
-  const refused = (): Promise<never> => Promise.reject(new Error('unused'))
+const unused = (): Promise<never> => Promise.reject(new Error('unused'))
 
+function apiListing(
+  accounts: Account[],
+  resetPassword: (name: string) => Promise<string> = unused,
+): ProtocolApi {
   return {
-    overview: refused,
+    overview: unused,
     adminStatus: () => Promise.resolve(NO_FACTS),
     adminAccounts: () => Promise.resolve(accounts),
-    resetPassword: refused,
-    bankEntries: refused,
-    storageEntries: refused,
+    resetPassword,
+    bankEntries: unused,
+    storageEntries: unused,
   }
+}
+
+interface RecordedResets {
+  readonly names: string[]
+  readonly reset: (name: string) => Promise<string>
+}
+
+function resettingTo(issued: Record<string, string>): RecordedResets {
+  const names: string[] = []
+
+  return {
+    names,
+    reset: (name) => {
+      names.push(name)
+
+      return Promise.resolve(issued[name] ?? '')
+    },
+  }
+}
+
+function rowOf(name: string): HTMLElement {
+  const row = screen
+    .getAllByTestId('account-row')
+    .find(
+      (candidate) =>
+        within(candidate).getByTestId('account-name').textContent === name,
+    )
+  if (row === undefined) {
+    throw new Error(`no row for ${name}`)
+  }
+
+  return row
 }
 
 async function adminViewWith(api: ProtocolApi): Promise<void> {
@@ -108,7 +150,18 @@ describe('AdminView', () => {
       .getAllByRole('columnheader')
       .map((head) => head.textContent)
 
-    expect(heads).toEqual(['Name', 'Ruht', 'Letzte Anmeldung'])
+    expect(heads).toEqual(['Name', 'Ruht', 'Letzte Anmeldung', ''])
+  })
+
+  it('names the column of the buttons „Aktion“ for assistive technology without showing a text', async () => {
+    await adminViewWith(apiListing([ALRIK]))
+
+    const heads = within(screen.getByTestId('accounts')).getAllByRole(
+      'columnheader',
+    )
+
+    const labels = heads.map((head) => head.getAttribute('aria-label'))
+    expect(labels).toEqual([null, null, null, 'Aktion'])
   })
 
   it('lists a resting account as ruht and an account never logged in as noch nie', async () => {
@@ -128,5 +181,61 @@ describe('AdminView', () => {
     const names = accountRows().map(([name]) => name)
 
     expect(names).toEqual(['Zwerg', 'Alrik'])
+  })
+})
+
+describe('the reset of a password on the admin page', () => {
+  it('offers „Passwort zurücksetzen“ beside each account', async () => {
+    await adminViewWith(apiListing([ALRIK, ZWERG]))
+
+    const buttons = screen
+      .getAllByTestId('account-row')
+      .map((row) => within(row).getByTestId('account-reset').textContent)
+
+    expect(buttons).toEqual(['Passwort zurücksetzen', 'Passwort zurücksetzen'])
+  })
+
+  it('asks on the page itself before it resets', async () => {
+    const resets = resettingTo({})
+    await adminViewWith(apiListing([ALRIK, ZWERG], resets.reset))
+
+    fireEvent.click(within(rowOf('Zwerg')).getByTestId('account-reset'))
+
+    const asked = {
+      question: within(rowOf('Zwerg')).getByTestId('reset-question')
+        .textContent,
+      confirm: within(rowOf('Zwerg')).getByTestId('reset-confirm').textContent,
+      cancel: within(rowOf('Zwerg')).getByTestId('reset-cancel').textContent,
+      questionsAtAlrik: within(rowOf('Alrik')).queryAllByTestId(
+        'reset-question',
+      ),
+      reset: resets.names,
+    }
+    expect(asked).toEqual({
+      question: 'Passwort von Zwerg wirklich zurücksetzen?',
+      confirm: 'Zurücksetzen',
+      cancel: 'Abbrechen',
+      questionsAtAlrik: [],
+      reset: [],
+    })
+  })
+
+  it('resets nothing and asks no more when the admin answers „Abbrechen“', async () => {
+    const resets = resettingTo({})
+    await adminViewWith(apiListing([ALRIK, ZWERG], resets.reset))
+    fireEvent.click(within(rowOf('Alrik')).getByTestId('account-reset'))
+
+    fireEvent.click(within(rowOf('Alrik')).getByTestId('reset-cancel'))
+
+    const afterwards = {
+      reset: resets.names,
+      questions: screen.queryAllByTestId('reset-question'),
+      offered: within(rowOf('Alrik')).getByTestId('account-reset').textContent,
+    }
+    expect(afterwards).toEqual({
+      reset: [],
+      questions: [],
+      offered: 'Passwort zurücksetzen',
+    })
   })
 })
