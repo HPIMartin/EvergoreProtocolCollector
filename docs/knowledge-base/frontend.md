@@ -201,6 +201,7 @@ Five top-level folders under `frontend/src/`:
   - Rows stand in the order the service sent (its German order).
   - The table is not sortable, so the SPA's collation never reorders it.
   - The column of the buttons has an empty header cell with the `aria-label` „Aktion“.
+  - A list without an account shows the heading and the table head, no row and no error.
   - „ruht“ marks a resting account.
   - The latest login is shown in the page's timestamp format (`formatTimestamp`).
   - „noch nie“ stands for no latest login.

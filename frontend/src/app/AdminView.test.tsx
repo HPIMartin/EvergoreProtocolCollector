@@ -177,6 +177,16 @@ describe('AdminView', () => {
     ])
   })
 
+  it('lists no rows and shows no error when the service lists no account', async () => {
+    await adminViewWith(apiListing([]))
+
+    const shown = {
+      rows: screen.queryAllByTestId('account-row'),
+      messages: shownMessages(),
+    }
+    expect(shown).toEqual({ rows: [], messages: [] })
+  })
+
   it('keeps the order in which the service listed the accounts', async () => {
     await adminViewWith(apiListing([ZWERG, ALRIK]))
 
