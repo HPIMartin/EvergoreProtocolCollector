@@ -39,7 +39,7 @@ public class ChooseNewPassword {
 			return new LogInOutcome.NewPasswordRefused(refusal.get());
 		}
 		String newHash = passwordHasher.hash(newPassword);
-		if (!accounts.replaceIssuedPassword(account.get().nameKey(), newHash)) {
+		if (!accounts.replaceIssuedPassword(account.get().nameKey(), account.get().passwordHash(), newHash)) {
 			return new LogInOutcome.Refused();
 		}
 		return loginStart.startFor(account.get(), generation);

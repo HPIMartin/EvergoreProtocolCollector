@@ -357,8 +357,9 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     and asks for a new password;
   - `ChooseNewPassword` hashes the new password, replaces the hash with the state `CHOSEN` and
     starts a login;
-  - the replacing is one update that holds only `WHERE` the state is still `ISSUED`
-    (`AccountRepository.replaceIssuedPassword`);
+  - the replacing is one update that holds only `WHERE` the state is still `ISSUED` and the
+    stored hash is still the one the check read (`AccountRepository.replaceIssuedPassword`), so a
+    reset that lands during the check, which stores a new issued hash, is never overwritten;
   - both ask `application/RestingAccounts` after the right password and before the rest:
     - it reads the newest movement of each ledger;
     - it puts the account's avatar to the same `ActivityLine` the overview splits its roster with;

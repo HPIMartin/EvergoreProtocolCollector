@@ -110,7 +110,7 @@ class AccountDatabaseRepositoryTest {
 		tested.addIfAbsent(account("Aurora", "hash-1", PasswordState.ISSUED));
 		tested.recordLastLogin("aurora", LOGGED_IN);
 
-		boolean replaced = tested.replaceIssuedPassword("aurora", "hash-2");
+		boolean replaced = tested.replaceIssuedPassword("aurora", "hash-1", "hash-2");
 
 		assertThat(replaced).isTrue();
 		assertThat(tested.findByNameKey("aurora")).contains(new Account("Aurora", "hash-2", PasswordState.CHOSEN, Role.MEMBER, Optional.of(LOGGED_IN)));
@@ -120,10 +120,20 @@ class AccountDatabaseRepositoryTest {
 	void replacesNoChosenPasswordAsAnIssuedOne() {
 		tested.addIfAbsent(account("Aurora", "hash-1", PasswordState.CHOSEN));
 
-		boolean replaced = tested.replaceIssuedPassword("aurora", "hash-2");
+		boolean replaced = tested.replaceIssuedPassword("aurora", "hash-1", "hash-2");
 
 		assertThat(replaced).isFalse();
 		assertThat(tested.findByNameKey("aurora")).contains(account("Aurora", "hash-1", PasswordState.CHOSEN));
+	}
+
+	@Test
+	void replacesNoIssuedPasswordOtherThanTheOneTheCheckRead() {
+		tested.addIfAbsent(account("Aurora", "hash-reissued", PasswordState.ISSUED));
+
+		boolean replaced = tested.replaceIssuedPassword("aurora", "hash-1", "hash-2");
+
+		assertThat(replaced).isFalse();
+		assertThat(tested.findByNameKey("aurora")).contains(account("Aurora", "hash-reissued", PasswordState.ISSUED));
 	}
 
 	@Test
@@ -131,14 +141,14 @@ class AccountDatabaseRepositoryTest {
 		tested.addIfAbsent(account("Aurora", "hash-1", PasswordState.ISSUED));
 		tested.addIfAbsent(account("Boreas", "hash-1", PasswordState.ISSUED));
 
-		tested.replaceIssuedPassword("aurora", "hash-2");
+		tested.replaceIssuedPassword("aurora", "hash-1", "hash-2");
 
 		assertThat(tested.findByNameKey("boreas")).contains(account("Boreas", "hash-1", PasswordState.ISSUED));
 	}
 
 	@Test
 	void replacesNothingForANameNobodyHolds() {
-		boolean replaced = tested.replaceIssuedPassword("nobody", "hash-2");
+		boolean replaced = tested.replaceIssuedPassword("nobody", "hash-1", "hash-2");
 
 		assertThat(replaced).isFalse();
 	}

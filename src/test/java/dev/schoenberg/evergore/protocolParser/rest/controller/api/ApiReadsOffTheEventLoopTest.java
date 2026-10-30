@@ -255,7 +255,7 @@ class ApiReadsOffTheEventLoopTest {
 			}
 
 			@Override
-			public boolean replaceIssuedPassword(String nameKey, String passwordHash) {
+			public boolean replaceIssuedPassword(String nameKey, String issuedHash, String passwordHash) {
 				witnessLoginWork("replaceIssuedPassword");
 				return true;
 			}

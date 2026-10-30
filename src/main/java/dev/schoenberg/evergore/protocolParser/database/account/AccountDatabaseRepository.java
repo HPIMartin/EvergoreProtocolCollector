@@ -56,7 +56,7 @@ public class AccountDatabaseRepository implements AccountRepository {
 	}
 
 	@Override
-	public boolean replaceIssuedPassword(String nameKey, String passwordHash) {
+	public boolean replaceIssuedPassword(String nameKey, String issuedHash, String passwordHash) {
 		return database.inTransaction(() -> {
 			UpdateBuilder<AccountEntry, String> update = accounts().updateBuilder();
 			update
@@ -65,7 +65,9 @@ public class AccountDatabaseRepository implements AccountRepository {
 					.where()
 					.eq(NAME_KEY_COLUMN, nameKey)
 					.and()
-					.eq(PASSWORD_STATE_COLUMN, PasswordState.ISSUED);
+					.eq(PASSWORD_STATE_COLUMN, PasswordState.ISSUED)
+					.and()
+					.eq(PASSWORD_HASH_COLUMN, issuedHash);
 			return update.update() > 0;
 		});
 	}

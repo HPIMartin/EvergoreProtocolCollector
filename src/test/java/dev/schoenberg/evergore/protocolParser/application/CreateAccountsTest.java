@@ -236,7 +236,7 @@ class CreateAccountsTest {
 		}
 
 		@Override
-		public boolean replaceIssuedPassword(String nameKey, String passwordHash) {
+		public boolean replaceIssuedPassword(String nameKey, String issuedHash, String passwordHash) {
 			throw new UnsupportedOperationException();
 		}
 

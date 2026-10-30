@@ -16,7 +16,7 @@ public interface AccountRepository {
 
 	void replacePassword(String nameKey, String passwordHash, PasswordState state);
 
-	boolean replaceIssuedPassword(String nameKey, String passwordHash);
+	boolean replaceIssuedPassword(String nameKey, String issuedHash, String passwordHash);
 
 	void recordLastLogin(String nameKey, Instant at);
 }

@@ -50,10 +50,10 @@ class InMemoryAccounts implements AccountRepository {
 	}
 
 	@Override
-	public boolean replaceIssuedPassword(String nameKey, String passwordHash) {
+	public boolean replaceIssuedPassword(String nameKey, String issuedHash, String passwordHash) {
 		trail.add("replaceIssuedPassword");
 		Account held = byNameKey.get(nameKey);
-		if (held == null || held.passwordState() != PasswordState.ISSUED) {
+		if (held == null || held.passwordState() != PasswordState.ISSUED || !held.passwordHash().equals(issuedHash)) {
 			return false;
 		}
 		byNameKey.put(nameKey, new Account(held.avatar(), passwordHash, PasswordState.CHOSEN, held.role(), held.lastLogin()));

@@ -185,6 +185,20 @@ class ChooseNewPasswordTest {
 	}
 
 	@Test
+	void leavesThePasswordOfAResetThatOvertakesTheChoiceDuringItsCheck() {
+		accounts.hold(issuedAccount("Boreas"));
+		ResetPassword reset = new ResetPassword(accounts, () -> "Reissued-2026!", hasher, generations);
+		hasher.runDuringTheNextVerification(() -> reset.forAccount("Boreas"));
+
+		LogInOutcome outcome = tested.with("Boreas", ISSUED, NEW_PASSWORD);
+
+		assertThat(outcome).isEqualTo(new LogInOutcome.Refused());
+		assertThat(accounts.held("boreas").passwordHash()).isEqualTo("hashed:Reissued-2026!");
+		assertThat(accounts.held("boreas").passwordState()).isEqualTo(PasswordState.ISSUED);
+		assertThat(accounts.held("boreas").lastLogin()).isEmpty();
+	}
+
+	@Test
 	void tellsAnAccountThatRestsSoAndLeavesItsIssuedPasswordValid() {
 		accounts.hold(issuedAccount("Boreas"));
 		Instant newest = Instant.parse("2026-01-31T12:00:00Z");
