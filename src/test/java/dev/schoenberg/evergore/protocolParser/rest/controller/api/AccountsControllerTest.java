@@ -174,6 +174,15 @@ class AccountsControllerTest {
 		assertThat(role).contains(Role.MEMBER);
 	}
 
+	@Test
+	void answersNotFoundForAChangeOfRoleOfANameWithoutAnAccount() {
+		HttpResponse<String> response = postRole("Niemand", "{\"role\":\"admin\"}", LoginCookie.headerFor(server));
+
+		Optional<Account> created = accounts.findByNameKey("niemand");
+		assertThat(response.getStatus()).isEqualTo(404);
+		assertThat(created).isEmpty();
+	}
+
 	private HttpResponse<String> postRole(String name, String body, String cookie) {
 		return Unirest.post("/api/v1/admin/accounts/" + name + "/role").header("Cookie", cookie).header("Content-Type", "application/json").body(body).asString();
 	}

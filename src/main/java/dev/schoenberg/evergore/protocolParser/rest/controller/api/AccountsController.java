@@ -94,7 +94,7 @@ public class AccountsController {
 
 		@Override
 		public HttpResponse<?> onNoAccount() {
-			return HttpResponse.serverError();
+			return HttpResponse.status(HttpStatus.NOT_FOUND);
 		}
 
 		@Override
