@@ -69,19 +69,30 @@ class ListAccountsTest {
 	}
 
 	@Test
-	void readsTheNewestMovementsOnceForTheWholeListing() {
+	void readsTheNewestMovementsOfTheBankAndOfTheStorageOnceForTheWholeListing() {
 		CountingBank countingBank = new CountingBank();
-		ListAccounts listing = new ListAccounts(accounts, new RestingAccounts(countingBank, new StorageRepositoryStub()));
+		CountingStorage countingStorage = new CountingStorage();
+		ListAccounts listing = new ListAccounts(accounts, new RestingAccounts(countingBank, countingStorage));
 		accounts.hold(account("Aurora", Optional.empty()));
 		accounts.hold(account("Calix", Optional.empty()));
 		accounts.hold(account("Zeta", Optional.empty()));
 
 		listing.all();
 
-		assertThat(countingBank.reads).isEqualTo(1);
+		assertThat(List.of(countingBank.reads, countingStorage.reads)).containsExactly(1, 1);
 	}
 
 	private static class CountingBank extends BankRepositoryStub {
+		private int reads;
+
+		@Override
+		public Map<String, Instant> latestTimestampPerAvatar() {
+			reads++;
+			return super.latestTimestampPerAvatar();
+		}
+	}
+
+	private static class CountingStorage extends StorageRepositoryStub {
 		private int reads;
 
 		@Override
