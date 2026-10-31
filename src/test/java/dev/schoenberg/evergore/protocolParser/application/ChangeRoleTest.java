@@ -26,6 +26,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ChangeRoleTest {
 	private static final Instant LOGGED_IN = Instant.parse("2026-01-05T10:00:00Z");
 	private static final String UNICODE_LINE_SEPARATOR = String.valueOf((char) 0x2028);
+	private static final String UNICODE_PARAGRAPH_SEPARATOR = String.valueOf((char) 0x2029);
+	private static final String NEXT_LINE = String.valueOf((char) 0x85);
+	private static final String VERTICAL_TAB = String.valueOf((char) 0x0b);
 	private static final Login THE_ADMIN_KEYS_LOGIN = loginOf(AdminKey.NAME, LoginSource.ADMIN_KEY);
 
 	private final InMemoryAccounts accounts = new InMemoryAccounts(new ArrayList<>());
@@ -55,7 +58,11 @@ class ChangeRoleTest {
 		return Stream
 				.of(Arguments.of("Eve\nForged line", AdminKey.NAME, "Role of Eve\\u000aForged line set to admin by admin."),
 						Arguments.of("Eve", "Mallory\r\nForged line", "Role of Eve set to admin by Mallory\\u000d\\u000aForged line."),
-						Arguments.of("Eve" + UNICODE_LINE_SEPARATOR + "Forged line", AdminKey.NAME, "Role of Eve\\u2028Forged line set to admin by admin."));
+						Arguments.of("Eve" + UNICODE_LINE_SEPARATOR + "Forged line", AdminKey.NAME, "Role of Eve\\u2028Forged line set to admin by admin."),
+						Arguments.of("Eve" + NEXT_LINE + "Forged line", AdminKey.NAME, "Role of Eve\\u0085Forged line set to admin by admin."),
+						Arguments.of("Eve" + UNICODE_PARAGRAPH_SEPARATOR + "Forged line", AdminKey.NAME, "Role of Eve\\u2029Forged line set to admin by admin."),
+						Arguments.of("Eve\u001b[31mForged", AdminKey.NAME, "Role of Eve\\u001b[31mForged set to admin by admin."),
+						Arguments.of("Eve" + VERTICAL_TAB + "Forged line", AdminKey.NAME, "Role of Eve\\u000bForged line set to admin by admin."));
 	}
 
 	@ParameterizedTest
