@@ -17,8 +17,11 @@ public final class RoleWireNames {
 		};
 	}
 
-	public static Optional<Role> parse(String wireName) {
-		return switch (String.valueOf(wireName)) {
+	public static Optional<Role> parse(Object wireValue) {
+		if (!(wireValue instanceof String wireName)) {
+			return Optional.empty();
+		}
+		return switch (wireName) {
 			case MEMBER -> Optional.of(Role.MEMBER);
 			case ADMIN -> Optional.of(Role.ADMIN);
 			default -> Optional.empty();

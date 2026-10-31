@@ -175,6 +175,18 @@ class AccountsControllerTest {
 	}
 
 	@Test
+	void refusesARoleSentAsAList() {
+		accounts.addIfAbsent(new Account("Standhaft", SECRET_HASH, PasswordState.CHOSEN, Role.MEMBER, Optional.empty()));
+
+		HttpResponse<String> response = postRole("Standhaft", "{\"role\":[\"admin\"]}", LoginCookie.headerFor(server));
+
+		Optional<Role> role = accounts.findByNameKey("standhaft").map(Account::role);
+		assertThat(response.getStatus()).isEqualTo(400);
+		assertThat(response.getBody()).isEqualTo("{\"refusal\":\"unknown-role\"}");
+		assertThat(role).contains(Role.MEMBER);
+	}
+
+	@Test
 	void answersNotFoundForAChangeOfRoleOfANameWithoutAnAccount() {
 		HttpResponse<String> response = postRole("Niemand", "{\"role\":\"admin\"}", LoginCookie.headerFor(server));
 
