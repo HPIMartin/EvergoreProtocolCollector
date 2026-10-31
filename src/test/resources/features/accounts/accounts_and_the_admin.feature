@@ -4,8 +4,9 @@ Feature: Accounts for the members, and the admin
   in with comes from the admin's reset ("Resetting a password on the admin page"), and later
   collections leave the account as it is. An avatar named "admin", in any mix of capital and
   small letters, gets no account, since that name logs in with the admin key ("The admin key").
-  Every account has the role "member" until the operator gives it the admin role by hand; a role
-  given or taken takes effect at the member's next login, and a restart ends every login. A member
+  Every account has the role "member" until the admin gives it the admin role on the admin page
+  ("Giving and taking the admin role on the admin page") or the operator by hand; a role given or
+  taken takes effect at the member's next login, and a restart ends every login. A member
   sees every member's figures and ledgers; the admin page, and what the health report shows beyond
   its verdict, are for the admin role only. In these features, "<name> has chosen the password P"
   says only which password the account holds, not after which reset it was chosen, and is no
@@ -116,6 +117,11 @@ Feature: Accounts for the members, and the admin
       Examples:
         | what                                  |
         | the guild's usage figures             |
+
+      @wip
+      Examples:
+        | what                          |
+        | the role "admin" for "Aurora" |
 
     Scenario: A reset a member's login asked for leaves the other member's password as it was
       Given a client has logged in as "Aurora" with the password "Sommer-2026!"

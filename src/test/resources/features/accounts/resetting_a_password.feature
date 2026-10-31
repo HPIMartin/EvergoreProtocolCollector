@@ -80,18 +80,24 @@ Feature: Resetting a password on the admin page
       Then the admin page on that browser shows a password beside "Boreas"
       And the next page the admin opens on that browser is headed "Anmeldung"
 
-  Rule: A reset needs an account
+  Rule: A reset, like a change of role, needs an account
 
-    Scenario Outline: A reset asked for "<name>", a name without an account, is refused and creates none
+    Scenario Outline: <what> asked for "<name>", a name without an account, is refused and creates none
       Given a client has logged in as "admin" with the admin key the service's log names
-      When the client asks for the reset of the password of "<name>" with its login
+      When the client asks for <request> "<name>" with its login
       Then the operator finds the request refused for naming no account
       And the operator finds the list of accounts, asked for with the admin key, holding only "Aurora" and "Boreas"
 
       Examples:
-        | name  |
-        | Zelda |
-        | admin |
+        | what    | request                      | name  |
+        | A reset | the reset of the password of | Zelda |
+        | A reset | the reset of the password of | admin |
+
+      @wip
+      Examples:
+        | what             | request              | name  |
+        | The role "admin" | the role "admin" for | Zelda |
+        | The role "admin" | the role "admin" for | admin |
 
   Rule: An account with the admin role resets a password like the admin key
 

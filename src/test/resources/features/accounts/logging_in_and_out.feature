@@ -6,7 +6,8 @@ Feature: Logging in and out
   not tell which names have an account. A login lasts 7 days from the moment it was made, however
   much it is used, on its browser; it ends sooner when the member logs out on that browser, changes
   the password on another one, when the admin resets the password ("Resetting a password on the
-  admin page"), or when the service restarts. How many requests a browser without a
+  admin page") or changes the account's role ("Giving and taking the admin role on the admin page"),
+  or when the service restarts. How many requests a browser without a
   login may send is in "Request throttling and the request log". What the service lets in without a
   member's login is in "Who the service lets in", choosing a password in "Choosing a password", a
   resting account in "Resting accounts".
