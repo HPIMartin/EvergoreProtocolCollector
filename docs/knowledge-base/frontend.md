@@ -293,8 +293,8 @@ Five top-level folders under `frontend/src/`:
     or a field, with a count that is no whole number of at least 0, a first day that is no
     calendar day (`YYYY-MM-DD`), a name that is no string or a latest use that is no instant.
   - Hooks: `usage-title`, `usage`, per row `usage-row`, `usage-guild` and `usage-admin-key`.
-- The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
-  malformed escape is "no view", not a crash.
+- The avatar segment is percent-encoded when a link is built and decoded when a path is read;
+  - a malformed escape shows the notice of an unknown path, not a crash.
 - **Every view that loads data passes through one of six outcomes** (`useLoad` + `LoadedView`):
   loading, loaded, login refused, role refused, no such page, failed:
   - a role refused is a 403, shown as „Diese Seite ist dem Admin vorbehalten.“;
