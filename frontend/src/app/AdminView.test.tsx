@@ -294,6 +294,20 @@ describe('AdminView', () => {
     })
   })
 
+  it('keeps the held role while the change is in flight', async () => {
+    const setRole = (): Promise<void> => new Promise(() => undefined)
+    await adminViewWith(apiListing([ALRIK], unused, setRole))
+
+    await act(async () => {
+      fireEvent.change(within(rowOf('Alrik')).getByTestId('account-role'), {
+        target: { value: 'admin' },
+      })
+    })
+
+    const held = shownRoleOf(rowOf('Alrik'))
+    expect(held).toBe('Mitglied')
+  })
+
   it('offers the field again once the change is answered', async () => {
     const setRole = (): Promise<void> => Promise.resolve()
     await adminViewWith(apiListing([ALRIK], unused, setRole))
