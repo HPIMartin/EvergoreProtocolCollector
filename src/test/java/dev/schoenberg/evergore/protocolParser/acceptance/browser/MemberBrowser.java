@@ -104,6 +104,24 @@ public final class MemberBrowser {
 		awaitTheMoveFrom(before);
 	}
 
+	public void followTheLinkIn(String listHeading, String entryText) {
+		String before = driver().getCurrentUrl();
+		WebElement list = driver()
+				.findElements(By.cssSelector("p[data-testid]"))
+				.stream()
+				.filter(paragraph -> paragraph.getText().strip().startsWith(listHeading + ": "))
+				.findFirst()
+				.orElseThrow(() -> new AssertionError("The page shows no list headed " + listHeading));
+		WebElement entry = list
+				.findElements(By.cssSelector("[data-testid=finding]"))
+				.stream()
+				.filter(candidate -> candidate.getText().strip().equals(entryText))
+				.findFirst()
+				.orElseThrow(() -> new AssertionError("The list " + listHeading + " has no entry " + entryText));
+		entry.findElement(By.tagName("a")).click();
+		awaitTheMoveFrom(before);
+	}
+
 	public void followALinkFromAnotherSite(String href) {
 		String page = "<a id=\"across\" href=\"" + addressOf(href) + "\">to the dashboard</a>";
 		String anotherSite = "data:text/html;charset=utf-8," + URLEncoder.encode(page, UTF_8).replace("+", "%20");

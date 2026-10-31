@@ -9,7 +9,11 @@ import io.cucumber.java.en.When;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.AdminPage;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
+import dev.schoenberg.evergore.protocolParser.acceptance.browser.SecondBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.ShownAccount;
+import dev.schoenberg.evergore.protocolParser.acceptance.browser.ShownFinding;
+import dev.schoenberg.evergore.protocolParser.acceptance.browser.ShownFindingList;
+import dev.schoenberg.evergore.protocolParser.acceptance.browser.ShownLink;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ViewedBrowser;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,16 +25,42 @@ public class AdminSteps {
 			+ " const panel = section.querySelector('[data-testid=status-panel]'); return panel !== null && panel.textContent.trim() !== 'Wird geladen…' })()";
 
 	private final AdminsBrowser admins;
+	private final SecondBrowser secondBrowser;
 	private final ViewedBrowser viewed;
 
-	public AdminSteps(AdminsBrowser admins, ViewedBrowser viewed) {
+	public AdminSteps(AdminsBrowser admins, SecondBrowser secondBrowser, ViewedBrowser viewed) {
 		this.admins = admins;
+		this.secondBrowser = secondBrowser;
 		this.viewed = viewed;
 	}
 
 	@When("the admin opens the admin page")
 	public void theAdminOpensTheAdminPage() {
 		admins.openTheAdminPage();
+	}
+
+	@When("the admin follows the name in the entry {string} under {string} on the admin page")
+	public void theAdminFollowsTheNameInTheEntryUnderOnTheAdminPage(String entry, String list) {
+		MemberBrowser opened = secondBrowser.browser();
+
+		opened.followTheLinkIn(list, entry);
+		viewed.lookAt(opened);
+	}
+
+	@Then("in the entry {string} under {string} only {string} leads anywhere")
+	public void inTheEntryUnderOnlyLeadsAnywhere(String entry, String list, String member) {
+		ShownFinding shown = findingNamed(list, entry);
+
+		assertThat(shown.links()).extracting(ShownLink::text).containsExactly(member);
+		assertThat(shown.links()).extracting(ShownLink::href).doesNotContainNull();
+	}
+
+	@Then("{string} stands under {string} on the admin page and leads nowhere")
+	public void standsUnderOnTheAdminPageAndLeadsNowhere(String name, String list) {
+		ShownFindingList shown = findingList(list);
+
+		assertThat(shown.text()).isEqualTo(list + ": " + name);
+		assertThat(shown.links()).isEmpty();
 	}
 
 	@Then("the admin page reads {string}")
@@ -67,6 +97,24 @@ public class AdminSteps {
 		AdminPage viewedPage = viewed.current().read("read-admin.js", AdminPage.class);
 
 		assertThat(viewedPage.accountNamed(name).role()).isEqualTo(role);
+	}
+
+	private ShownFinding findingNamed(String list, String entry) {
+		return findingList(list)
+				.entries()
+				.stream()
+				.filter(shown -> entry.equals(shown.text()))
+				.findFirst()
+				.orElseThrow(() -> new AssertionError("The list " + list + " has no entry " + entry));
+	}
+
+	private ShownFindingList findingList(String heading) {
+		return adminPage()
+				.findings()
+				.stream()
+				.filter(shown -> heading.equals(shown.heading()))
+				.findFirst()
+				.orElseThrow(() -> new AssertionError("The admin page shows no list headed " + heading));
 	}
 
 	private List<String> namesShown() {

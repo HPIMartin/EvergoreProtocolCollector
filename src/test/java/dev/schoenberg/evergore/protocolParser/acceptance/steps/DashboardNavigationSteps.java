@@ -13,10 +13,13 @@ import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Navigation;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Navigation.FrameLink;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.Overview;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ViewedBrowser;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.BANK;
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.LedgerName.STORAGE;
 import static dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger.AMOUNT_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger.ITEM_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberLedger.QUANTITY_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.NO_VIEW_FOR_THAT_LINK;
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.UNKNOWN;
@@ -29,9 +32,11 @@ public class DashboardNavigationSteps {
 	private static final Pattern STORAGE_LEDGER_OF = Pattern.compile("the storage ledger of \"([^\"]+)\"");
 
 	private final MemberBrowser browser;
+	private final ViewedBrowser viewed;
 
-	public DashboardNavigationSteps(MemberBrowser browser) {
+	public DashboardNavigationSteps(MemberBrowser browser, ViewedBrowser viewed) {
 		this.browser = browser;
+		this.viewed = viewed;
 	}
 
 	@When("a member opens a bookmark of the overview")
@@ -50,6 +55,15 @@ public class DashboardNavigationSteps {
 		int column = ledger.columnOf(AMOUNT_COLUMN);
 
 		assertThat(ledger.rows()).extracting(row -> row.get(column)).contains(gold);
+	}
+
+	@Then("the ledger shows a movement of {int} {string}")
+	public void theLedgerShowsAMovementOf(int quantity, String item) {
+		MemberLedger ledger = viewed.current().ledger();
+		int quantityColumn = ledger.columnOf(QUANTITY_COLUMN);
+		int itemColumn = ledger.columnOf(ITEM_COLUMN);
+
+		assertThat(ledger.rows()).anyMatch(row -> row.get(quantityColumn).equals(String.valueOf(quantity)) && row.get(itemColumn).equals(item));
 	}
 
 	@When("a member opens a link to a page the dashboard does not have")

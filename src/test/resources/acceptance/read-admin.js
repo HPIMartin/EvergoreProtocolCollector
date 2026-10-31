@@ -10,8 +10,21 @@ const roleChoicesOf = (row) => {
   const field = roleFieldOf(row)
   return isChoice(field) ? [...field.options].map(textOf) : []
 }
+const linkOf = (anchor) => ({ text: textOf(anchor), href: anchor.getAttribute('href') })
+const linksIn = (element) => [...element.querySelectorAll('a')].map(linkOf)
+const findingListOf = (paragraph) => {
+  const text = textOf(paragraph)
+  return {
+    heading: text.split(': ')[0],
+    text,
+    entries: [...paragraph.querySelectorAll('[data-testid=finding]')].map((entry) => ({ text: textOf(entry), links: linksIn(entry) })),
+    links: linksIn(paragraph),
+  }
+}
+const paragraphs = [...document.querySelectorAll('p[data-testid]')]
 return JSON.stringify({
-  messages: [...document.querySelectorAll('p[data-testid]')].map(textOf),
+  messages: paragraphs.map(textOf),
+  findings: paragraphs.map(findingListOf),
   accounts: [...document.querySelectorAll('[data-testid=account-row]')].map((row) => ({
     name: cellOf(row, 'account-name'),
     role: roleOf(row),

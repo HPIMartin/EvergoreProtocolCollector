@@ -372,6 +372,15 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
     `awaitWritten`), so a slow write cannot turn a scenario red.
   - `UsageActors` keeps each actor's login moment and browser for the steps that act "N days
     after logging in"; a member who logs in "after the admin" does so on the second browser.
+  - `read-admin.js` also returns each findings list (`ShownFindingList`: heading, text, every link,
+    and its `[data-testid=finding]` entries as `ShownFinding` with their `ShownLink` text and
+    `href`).
+  - `MemberBrowser.followTheLinkIn(list heading, entry text)` finds the entry by its own text under
+    the list's heading and follows its link, awaiting the move.
+  - `the admin has opened the admin page` (`RoleChangeSteps`) is the `Given` before the follow step
+    `the admin follows the name in the entry {string} under {string} on the admin page`.
+  - `the ledger shows a movement of {int} {string}` reads the quantity and item columns of the
+    ledger the move reached.
   - No separate pool exists per actor (handbook §5).
 - **`MemberBrowser` hands out its parts** through accessors.
   - `opening()`: `DashboardOpening`, which opens a page logged in with the admin key from the
