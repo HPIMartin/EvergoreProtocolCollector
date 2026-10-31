@@ -117,7 +117,7 @@ public class RoleChangeSteps {
 	@Given("the admin has chosen {string} as the role of {string} on the admin page on that browser")
 	public void theAdminHasChosenAsTheRoleOfOnTheAdminPageOnThatBrowser(String label, String name) {
 		MemberBrowser other = secondBrowser.browser();
-		if (!other.accountResets().isOpen()) {
+		if (!other.adminPageIsOpen()) {
 			other.openHref(ADMIN_PAGE);
 		}
 		other.accountRoles().choose(name, label);
@@ -171,7 +171,7 @@ public class RoleChangeSteps {
 
 	private void chooseOnTheAdminPage(String label, String name) {
 		if (browser.loginForm().wasLastUsedByTheAdmin()) {
-			if (!browser.accountResets().isOpen()) {
+			if (!browser.adminPageIsOpen()) {
 				browser.opening().openAsTheAdmin(ADMIN_PAGE);
 			}
 			browser.accountRoles().choose(name, label);

@@ -183,6 +183,10 @@ public final class MemberBrowser {
 		return accountRoles;
 	}
 
+	public boolean adminPageIsOpen() {
+		return accountResets.isOpen();
+	}
+
 	public LoggingOut loggingOut() {
 		return loggingOut;
 	}
