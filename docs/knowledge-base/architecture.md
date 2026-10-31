@@ -424,6 +424,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     - it writes no log line.
   - a change writes one line, `Role of <Avatar> set to <member|admin> by <name of the login>.`, at
     info;
+  - both names are written with each control character and line separator as `\uXXXX`, so a name
+    never breaks the line;
   - `LoginGenerations.bumpIf` runs a change and raises the account's generation only when that
     change happened;
     - the logins of that account end and the logins of another account stand;

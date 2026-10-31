@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ChangeRoleTest {
 	private static final Instant LOGGED_IN = Instant.parse("2026-01-05T10:00:00Z");
+	private static final String UNICODE_LINE_SEPARATOR = String.valueOf((char) 0x2028);
 	private static final Login THE_ADMIN_KEYS_LOGIN = loginOf(AdminKey.NAME, LoginSource.ADMIN_KEY);
 
 	private final InMemoryAccounts accounts = new InMemoryAccounts(new ArrayList<>());
@@ -44,6 +45,25 @@ class ChangeRoleTest {
 		accounts.hold(account("Aurora", before));
 
 		tested.to(asked, role, by);
+
+		List<String> logged = logger.infoMessages();
+		assertThat(logged).containsExactly(line);
+	}
+
+	static Stream<Arguments> namesThatCarryAControlCharacter() {
+		return Stream
+				.of(Arguments.of("Eve\nForged line", AdminKey.NAME, "Role of Eve\\u000aForged line set to admin by admin."),
+						Arguments.of("Eve", "Mallory\r\nForged line", "Role of Eve set to admin by Mallory\\u000d\\u000aForged line."),
+						Arguments.of("Eve" + UNICODE_LINE_SEPARATOR + "Forged line", AdminKey.NAME, "Role of Eve\\u2028Forged line set to admin by admin."));
+	}
+
+	@ParameterizedTest
+	@MethodSource("namesThatCarryAControlCharacter")
+	void writesNoLineBreakFromANameIntoTheLog(String avatar, String actor, String line) {
+		accounts.hold(account(avatar, Role.MEMBER));
+		Login by = loginOf(actor, actor.equals(AdminKey.NAME) ? LoginSource.ADMIN_KEY : LoginSource.ACCOUNT);
+
+		tested.to(avatar, Role.ADMIN, by);
 
 		List<String> logged = logger.infoMessages();
 		assertThat(logged).containsExactly(line);

@@ -37,6 +37,23 @@ public class ChangeRole {
 	}
 
 	private static String lineOf(Account account, Role role, Login by) {
-		return "Role of " + account.avatar() + " set to " + role.name().toLowerCase(Locale.ROOT) + " by " + by.accountName() + ".";
+		return "Role of " + printable(account.avatar()) + " set to " + role.name().toLowerCase(Locale.ROOT) + " by " + printable(by.accountName()) + ".";
+	}
+
+	private static String printable(String name) {
+		StringBuilder printable = new StringBuilder();
+		name.codePoints().forEach(codePoint -> {
+			if (isControlOrLineSeparator(codePoint)) {
+				printable.append(String.format("\\u%04x", codePoint));
+			} else {
+				printable.appendCodePoint(codePoint);
+			}
+		});
+		return printable.toString();
+	}
+
+	private static boolean isControlOrLineSeparator(int codePoint) {
+		int type = Character.getType(codePoint);
+		return Character.isISOControl(codePoint) || type == Character.LINE_SEPARATOR || type == Character.PARAGRAPH_SEPARATOR;
 	}
 }
