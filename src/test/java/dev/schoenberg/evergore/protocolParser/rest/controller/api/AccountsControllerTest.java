@@ -65,16 +65,29 @@ class AccountsControllerTest {
 	}
 
 	@Test
-	void answersNameRestsAndLatestLoginOfEveryAccountAndNothingElse() {
+	void answersNameRoleRestsAndLatestLoginOfEveryAccountAndNothingElse() {
 		accounts.addIfAbsent(new Account("Stammgast", SECRET_HASH, PasswordState.CHOSEN, Role.MEMBER, Optional.of(LOGGED_IN)));
 
 		HttpResponse<String> response = Unirest.get("/api/v1/admin/accounts").header("Cookie", LoginCookie.headerFor(server)).asString();
 
 		JSONObject listed = accountNamed(new JSONArray(response.getBody()), "Stammgast");
 		assertThat(response.getStatus()).isEqualTo(200);
-		assertThat(listed.keySet()).containsExactlyInAnyOrder("name", "rests", "lastLogin");
+		assertThat(listed.keySet()).containsExactlyInAnyOrder("name", "role", "rests", "lastLogin");
 		assertThat(listed.getString("lastLogin")).isEqualTo("2026-01-05T10:00:00Z");
 		assertThat(response.getBody()).doesNotContain(SECRET_HASH);
+	}
+
+	@Test
+	void answersTheRoleOfEachAccountInItsWireName() {
+		accounts.addIfAbsent(new Account("Verwalter", SECRET_HASH, PasswordState.CHOSEN, Role.ADMIN, Optional.empty()));
+		accounts.addIfAbsent(new Account("Gewoehnlich", SECRET_HASH, PasswordState.CHOSEN, Role.MEMBER, Optional.empty()));
+
+		HttpResponse<String> response = Unirest.get("/api/v1/admin/accounts").header("Cookie", LoginCookie.headerFor(server)).asString();
+
+		JSONArray listed = new JSONArray(response.getBody());
+		String adminRole = accountNamed(listed, "Verwalter").getString("role");
+		String memberRole = accountNamed(listed, "Gewoehnlich").getString("role");
+		assertThat(List.of(adminRole, memberRole)).containsExactly("admin", "member");
 	}
 
 	@Test

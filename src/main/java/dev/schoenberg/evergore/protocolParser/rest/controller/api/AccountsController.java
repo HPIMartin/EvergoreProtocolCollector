@@ -11,12 +11,14 @@ import io.micronaut.http.annotation.PathVariable;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Produces;
 
+import dev.schoenberg.evergore.protocolParser.application.AccountListing;
 import dev.schoenberg.evergore.protocolParser.application.ListAccounts;
 import dev.schoenberg.evergore.protocolParser.application.ResetPassword;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AccountWire;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.ResetWire;
+import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.RoleWireNames;
 import dev.schoenberg.evergore.protocolParser.rest.filter.LoginAttribute;
 
 import static io.micronaut.http.MediaType.APPLICATION_JSON;
@@ -37,7 +39,11 @@ public class AccountsController {
 	@Produces(APPLICATION_JSON)
 	public List<AccountWire> accounts(HttpRequest<?> request) {
 		Login viewer = request.getAttribute(LoginAttribute.NAME, Login.class).orElseThrow(AccessNotAllowed::new);
-		return listAccounts.all(viewer).stream().map(listing -> new AccountWire(listing.name(), listing.resting(), listing.latestLogin().orElse(null))).toList();
+		return listAccounts.all(viewer).stream().map(AccountsController::wireOf).toList();
+	}
+
+	private static AccountWire wireOf(AccountListing listing) {
+		return new AccountWire(listing.name(), RoleWireNames.of(listing.role()), listing.resting(), listing.latestLogin().orElse(null));
 	}
 
 	@Post("/{name}/reset")

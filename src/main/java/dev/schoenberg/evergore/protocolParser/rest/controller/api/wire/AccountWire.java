@@ -4,4 +4,5 @@ import java.time.Instant;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record AccountWire(@JsonProperty("name") String name, @JsonProperty("rests") boolean rests, @JsonProperty("lastLogin") Instant lastLogin) {}
+public record AccountWire(@JsonProperty("name") String name, @JsonProperty("role") String role, @JsonProperty("rests") boolean rests,
+		@JsonProperty("lastLogin") Instant lastLogin) {}
