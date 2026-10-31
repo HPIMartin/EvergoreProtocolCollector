@@ -11,10 +11,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginName;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginSource;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
@@ -81,6 +83,19 @@ class ChangeRoleTest {
 		assertThat(outcome).isInstanceOf(RoleChangeOutcome.Unchanged.class);
 		assertThat(accounts.held("aurora")).isEqualTo(account("Aurora", held));
 		assertThat(generations.of("aurora")).isZero();
+		assertThat(logger.infoMessages()).isEmpty();
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"Zelda", "admin", "Admin"})
+	void refusesANameWithoutAnAccountAndCreatesNone(String name) {
+		accounts.hold(account("Aurora", Role.MEMBER));
+
+		RoleChangeOutcome outcome = tested.to(name, Role.ADMIN, THE_ADMIN_KEYS_LOGIN);
+
+		assertThat(outcome).isInstanceOf(RoleChangeOutcome.NoAccount.class);
+		assertThat(accounts.allAccounts()).containsExactly(account("Aurora", Role.MEMBER));
+		assertThat(generations.of(new LoginName(name).key())).isZero();
 		assertThat(logger.infoMessages()).isEmpty();
 	}
 

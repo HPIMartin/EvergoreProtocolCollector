@@ -413,6 +413,7 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     that step produced.
 - **Changing a role:**
   - `application/ChangeRole` gives an account the role the login of the admin asked for;
+  - a name without an account, the name `admin` among them, is refused (`NoAccount`);
   - it runs `AccountRepository.replaceRole` through `LoginGenerations.bumpIf`;
     - every open login of that account ends once the role changed;
   - the role an account holds already changes nothing (`Unchanged`);

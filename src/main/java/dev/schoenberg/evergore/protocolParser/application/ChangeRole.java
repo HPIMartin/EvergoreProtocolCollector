@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
 import java.util.Locale;
+import java.util.Optional;
 
 import dev.schoenberg.evergore.protocolParser.Logger;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
@@ -21,10 +22,14 @@ public class ChangeRole {
 
 	public RoleChangeOutcome to(String name, Role role, Login by) {
 		String nameKey = new LoginName(name).key();
+		Optional<Account> account = accounts.findByNameKey(nameKey);
+		if (account.isEmpty()) {
+			return new RoleChangeOutcome.NoAccount();
+		}
 		if (!generations.bumpIf(nameKey, () -> accounts.replaceRole(nameKey, role))) {
 			return new RoleChangeOutcome.Unchanged();
 		}
-		accounts.findByNameKey(nameKey).ifPresent(account -> logger.info(lineOf(account, role, by)));
+		logger.info(lineOf(account.get(), role, by));
 		return new RoleChangeOutcome.Changed();
 	}
 
