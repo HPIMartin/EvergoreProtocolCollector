@@ -10,12 +10,14 @@ import com.j256.ormlite.stmt.UpdateBuilder;
 import dev.schoenberg.evergore.protocolParser.application.AccountRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 
 import static dev.schoenberg.evergore.protocolParser.database.account.AccountEntry.LAST_LOGIN_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.account.AccountEntry.NAME_KEY_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.account.AccountEntry.PASSWORD_HASH_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.database.account.AccountEntry.PASSWORD_STATE_COLUMN;
+import static dev.schoenberg.evergore.protocolParser.database.account.AccountEntry.ROLE_COLUMN;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 
 public class AccountDatabaseRepository implements AccountRepository {
@@ -68,6 +70,15 @@ public class AccountDatabaseRepository implements AccountRepository {
 					.eq(PASSWORD_STATE_COLUMN, PasswordState.ISSUED)
 					.and()
 					.eq(PASSWORD_HASH_COLUMN, issuedHash);
+			return update.update() > 0;
+		});
+	}
+
+	@Override
+	public boolean replaceRole(String nameKey, Role role) {
+		return database.inTransaction(() -> {
+			UpdateBuilder<AccountEntry, String> update = accounts().updateBuilder();
+			update.updateColumnValue(ROLE_COLUMN, role).where().eq(NAME_KEY_COLUMN, nameKey);
 			return update.update() > 0;
 		});
 	}

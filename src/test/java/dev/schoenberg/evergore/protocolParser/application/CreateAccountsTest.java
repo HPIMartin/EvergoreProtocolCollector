@@ -241,6 +241,11 @@ class CreateAccountsTest {
 		}
 
 		@Override
+		public boolean replaceRole(String nameKey, Role role) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
 		public void recordLastLogin(String nameKey, Instant at) {
 			throw new UnsupportedOperationException();
 		}

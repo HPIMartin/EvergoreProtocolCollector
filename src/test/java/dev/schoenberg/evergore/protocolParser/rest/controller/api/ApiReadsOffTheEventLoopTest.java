@@ -278,6 +278,12 @@ class ApiReadsOffTheEventLoopTest {
 			}
 
 			@Override
+			public boolean replaceRole(String nameKey, Role role) {
+				witnessLoginWork("replaceRole");
+				return true;
+			}
+
+			@Override
 			public void recordLastLogin(String nameKey, Instant at) {
 				witnessLoginWork("recordLastLogin");
 			}

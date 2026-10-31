@@ -270,6 +270,11 @@ class ChooseNewPasswordTest {
 		}
 
 		@Override
+		public boolean replaceRole(String nameKey, Role role) {
+			return delegate.replaceRole(nameKey, role);
+		}
+
+		@Override
 		public void recordLastLogin(String nameKey, Instant at) {
 			delegate.recordLastLogin(nameKey, at);
 		}

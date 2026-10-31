@@ -414,7 +414,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
 - **Changing a role:**
   - `LoginGenerations.bumpIf` runs a change and raises the account's generation only when that
     change happened;
-    - the logins of that account end and the logins of another account stand.
+    - the logins of that account end and the logins of another account stand;
+  - `AccountRepository.replaceRole` stores the role of an account.
 - **Logging out:** `application/LogOut` keeps the `jti` of every login that logged out in memory
   until that login's own expiry and prunes the expired ones at each logout:
   - `application/ValidLogins` treats such a login as no login, so only that login ends: another

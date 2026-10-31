@@ -15,6 +15,7 @@ public class AccountEntry {
 	public static final String NAME_KEY_COLUMN = "name_key";
 	public static final String PASSWORD_HASH_COLUMN = "password_hash";
 	public static final String PASSWORD_STATE_COLUMN = "password_state";
+	public static final String ROLE_COLUMN = "role";
 	public static final String LAST_LOGIN_COLUMN = "last_login_epoch_millis";
 
 	@DatabaseField(columnName = "id", generatedId = true, canBeNull = false)
@@ -32,7 +33,7 @@ public class AccountEntry {
 	@DatabaseField(columnName = PASSWORD_STATE_COLUMN, dataType = DataType.ENUM_STRING, canBeNull = false)
 	public PasswordState passwordState;
 
-	@DatabaseField(columnName = "role", dataType = DataType.ENUM_STRING, canBeNull = false)
+	@DatabaseField(columnName = ROLE_COLUMN, dataType = DataType.ENUM_STRING, canBeNull = false)
 	public Role role;
 
 	@DatabaseField(columnName = LAST_LOGIN_COLUMN)

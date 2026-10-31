@@ -154,6 +154,35 @@ class AccountDatabaseRepositoryTest {
 	}
 
 	@Test
+	void replacesTheRoleOfTheNamedAccountAndKeepsTheRest() {
+		tested.addIfAbsent(account("Aurora", "hash-1", PasswordState.CHOSEN));
+		tested.addIfAbsent(account("Boreas", "hash-2", PasswordState.CHOSEN));
+		tested.recordLastLogin("aurora", LOGGED_IN);
+
+		boolean replaced = tested.replaceRole("aurora", Role.ADMIN);
+
+		assertThat(replaced).isTrue();
+		assertThat(tested.findByNameKey("aurora")).contains(new Account("Aurora", "hash-1", PasswordState.CHOSEN, Role.ADMIN, Optional.of(LOGGED_IN)));
+		assertThat(tested.findByNameKey("boreas")).contains(account("Boreas", "hash-2", PasswordState.CHOSEN));
+	}
+
+	@Test
+	void keepsAReplacedRoleForARepositoryOpenedOnTheSameFileAfterwards() {
+		tested.addIfAbsent(account("Aurora", "hash-1", PasswordState.CHOSEN));
+		tested.replaceRole("aurora", Role.ADMIN);
+		SqliteDatabase reopened = SqliteDatabase.open(configurationFor(FRESH_DB_PATH), () -> {}, new LoggerSpy());
+
+		Optional<Role> role;
+		try {
+			role = new AccountDatabaseRepository(reopened).findByNameKey("aurora").map(Account::role);
+		} finally {
+			reopened.close();
+		}
+
+		assertThat(role).contains(Role.ADMIN);
+	}
+
+	@Test
 	void recordsTheLastLoginAsAnInstantDownToTheMillisecond() {
 		tested.addIfAbsent(account("Aurora", "hash-1", PasswordState.CHOSEN));
 

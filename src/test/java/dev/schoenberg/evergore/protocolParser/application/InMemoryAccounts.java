@@ -8,6 +8,7 @@ import java.util.Optional;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 
 class InMemoryAccounts implements AccountRepository {
 	private final Map<String, Account> byNameKey = new LinkedHashMap<>();
@@ -57,6 +58,17 @@ class InMemoryAccounts implements AccountRepository {
 			return false;
 		}
 		byNameKey.put(nameKey, new Account(held.avatar(), passwordHash, PasswordState.CHOSEN, held.role(), held.lastLogin()));
+		return true;
+	}
+
+	@Override
+	public boolean replaceRole(String nameKey, Role role) {
+		trail.add("replaceRole");
+		Account held = byNameKey.get(nameKey);
+		if (held == null || held.role() == role) {
+			return false;
+		}
+		byNameKey.put(nameKey, new Account(held.avatar(), held.passwordHash(), held.passwordState(), role, held.lastLogin()));
 		return true;
 	}
 
