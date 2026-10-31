@@ -14,7 +14,7 @@ export function AccountList({ accounts, reset }: AccountListProps) {
     {},
   )
   const [closedAt, setClosedAt] = useState<string | null>(null)
-  const latestReset = useRef<Record<string, number>>({})
+  const [inFlight, setInFlight] = useState<ReadonlySet<string>>(new Set())
 
   function closeQuestionOf(name: string): void {
     setAsking(null)
@@ -23,15 +23,17 @@ export function AccountList({ accounts, reset }: AccountListProps) {
 
   function resetPasswordOf(name: string): void {
     closeQuestionOf(name)
-    const mine = (latestReset.current[name] ?? 0) + 1
-    latestReset.current[name] = mine
+    setInFlight((before) => new Set(before).add(name))
     setOutcomes((before) =>
       before[name]?.kind === 'failed' ? withoutOutcomeOf(before, name) : before,
     )
     const settle = (outcome: Outcome): void => {
-      if (latestReset.current[name] === mine) {
-        setOutcomes((before) => ({ ...before, [name]: outcome }))
-      }
+      setInFlight((before) => {
+        const after = new Set(before)
+        after.delete(name)
+        return after
+      })
+      setOutcomes((before) => ({ ...before, [name]: outcome }))
     }
     reset(name).then(
       (password) => {
@@ -88,7 +90,8 @@ export function AccountList({ accounts, reset }: AccountListProps) {
                     />
                   ) : null}
                 </div>
-                {asking === account.name ? null : (
+                {asking === account.name ||
+                inFlight.has(account.name) ? null : (
                   <ResetButton
                     focusOnMount={closedAt === account.name}
                     onClick={() => {

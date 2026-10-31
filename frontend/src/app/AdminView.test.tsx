@@ -482,47 +482,6 @@ describe('the password a reset issued on the admin page', () => {
     })
   })
 
-  it('shows the password of the latest reset of an account when the answers arrive in the other order', async () => {
-    const answers: ((password: string) => void)[] = []
-    const reset = (): Promise<string> =>
-      new Promise((resolve) => {
-        answers.push(resolve)
-      })
-    await adminViewWith(apiListing([ALRIK], reset))
-    await resetThrough('Alrik')
-    await resetThrough('Alrik')
-
-    await act(async () => {
-      answers[1]?.('Zweites#22')
-      answers[0]?.('Erstes#11')
-    })
-
-    const shown = issuedBeside('Alrik')
-    expect(shown).toBe('Zweites#22')
-  })
-
-  it('shows no failure when an earlier reset of the account fails after the latest one succeeded', async () => {
-    const rejections: ((reason: Error) => void)[] = []
-    const answers = [
-      () =>
-        new Promise<string>((_resolve, reject) => {
-          rejections.push(reject)
-        }),
-      () => Promise.resolve('Zweites#22'),
-    ]
-    const reset = (): Promise<string> => answers.shift()?.() ?? unused()
-    await adminViewWith(apiListing([ALRIK], reset))
-    await resetThrough('Alrik')
-    await resetThrough('Alrik')
-
-    await act(async () => {
-      rejections[0]?.(new RequestFailed(500))
-    })
-
-    const shown = { beside: issuedBeside('Alrik'), messages: shownMessages() }
-    expect(shown).toEqual({ beside: 'Zweites#22', messages: [] })
-  })
-
   it('is replaced by the one a second reset of the same account issues', async () => {
     const issued = ['Erstes#11', 'Zweites#22']
     const reset = (): Promise<string> => Promise.resolve(issued.shift() ?? '')
@@ -533,5 +492,18 @@ describe('the password a reset issued on the admin page', () => {
 
     const shown = issuedBeside('Alrik')
     expect(shown).toBe('Zweites#22')
+  })
+
+  it('offers no second reset of an account while its reset is in flight', async () => {
+    const reset = (): Promise<string> => new Promise(() => undefined)
+    await adminViewWith(apiListing([ALRIK, ZWERG], reset))
+
+    await resetThrough('Alrik')
+
+    const offered = {
+      atAlrik: within(rowOf('Alrik')).queryAllByTestId('account-reset'),
+      atZwerg: within(rowOf('Zwerg')).queryAllByTestId('account-reset').length,
+    }
+    expect(offered).toEqual({ atAlrik: [], atZwerg: 1 })
   })
 })

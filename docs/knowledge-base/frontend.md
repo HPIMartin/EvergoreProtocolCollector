@@ -238,7 +238,10 @@ Five top-level folders under `frontend/src/`:
   - The failure stands until the next „Zurücksetzen“ of that account.
   - The failure and the password are state per account, so another account's reset changes
     neither.
-  - The answer of an account's latest reset is the one shown, whatever order the answers arrive in.
+  - While an account's reset is in flight its row offers no „Passwort zurücksetzen“, so at most one
+    reset of an account is under way and its answer is the one shown.
+  - That holds within one open admin page: a second page, or a page opened again while a reset is
+    under way, can start another.
   - A failed reset leaves the list as it was.
   - An admin who resets the own account sees the password like any other.
   - The reset of the own account ended the login, so the next navigation's load answers 401 and the
