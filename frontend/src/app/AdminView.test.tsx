@@ -274,6 +274,26 @@ describe('AdminView', () => {
     })
   })
 
+  it('offers no second change of a role while one is in flight', async () => {
+    const setRole = (): Promise<void> => new Promise(() => undefined)
+    await adminViewWith(apiListing([ALRIK, ZWERG], unused, setRole))
+
+    await act(async () => {
+      fireEvent.change(within(rowOf('Alrik')).getByTestId('account-role'), {
+        target: { value: 'admin' },
+      })
+    })
+
+    const atAlrik = within(rowOf('Alrik')).getByTestId('account-role')
+    const atZwerg = within(rowOf('Zwerg')).getByTestId('account-role')
+    const alrikDisabled = atAlrik.hasAttribute('disabled')
+    const zwergDisabled = atZwerg.hasAttribute('disabled')
+    expect({ alrikDisabled, zwergDisabled }).toEqual({
+      alrikDisabled: true,
+      zwergDisabled: false,
+    })
+  })
+
   it("shows the own account's role without a choice", async () => {
     const own: Account = { ...ZWERG, role: 'admin', own: true }
     await adminViewWith(apiListing([ALRIK, own]))

@@ -12,6 +12,7 @@ export interface AccountListProps {
 
 export function AccountList({ accounts, reset, setRole }: AccountListProps) {
   const [roles, setRoles] = useState<ReadonlyMap<string, Role>>(new Map())
+  const [changing, setChanging] = useState<ReadonlySet<string>>(new Set())
   const [asking, setAsking] = useState<string | null>(null)
   const [outcomes, setOutcomes] = useState<ReadonlyMap<string, Outcome>>(
     new Map(),
@@ -47,6 +48,7 @@ export function AccountList({ accounts, reset, setRole }: AccountListProps) {
   }
 
   function chooseRoleOf(name: string, role: Role): void {
+    setChanging((before) => new Set(before).add(name))
     setRole(name, role).then(
       () => {
         setRoles((before) => new Map(before).set(name, role))
@@ -82,6 +84,7 @@ export function AccountList({ accounts, reset, setRole }: AccountListProps) {
                 <RoleField
                   account={account}
                   held={roles.get(account.name) ?? account.role}
+                  changing={changing.has(account.name)}
                   onChoose={(role) => {
                     chooseRoleOf(account.name, role)
                   }}
@@ -137,10 +140,11 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
 interface RoleFieldProps {
   readonly account: Account
   readonly held: Role
+  readonly changing: boolean
   readonly onChoose: (role: Role) => void
 }
 
-function RoleField({ account, held, onChoose }: RoleFieldProps) {
+function RoleField({ account, held, changing, onChoose }: RoleFieldProps) {
   if (account.own) {
     return <span data-testid="account-role">{ROLE_LABELS[held]}</span>
   }
@@ -150,6 +154,7 @@ function RoleField({ account, held, onChoose }: RoleFieldProps) {
       data-testid="account-role"
       aria-label={`Rolle von ${account.name}`}
       value={held}
+      disabled={changing}
       onChange={(event) => {
         if (isRole(event.target.value)) {
           onChoose(event.target.value)

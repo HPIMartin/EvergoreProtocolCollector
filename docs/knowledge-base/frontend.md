@@ -204,6 +204,8 @@ Five top-level folders under `frontend/src/`:
   - A choice applies at once, with no question first (decision 2026-10-31);
     - the page sends it through `setRole` of the API port;
     - the field shows the new role once the service answered 204.
+  - While the change of an account's role is in flight its field is disabled, so at most one
+    change of a role of an account is under way.
   - Beside the viewer's own account (`own`) the role stands as plain text (`account-role`, a
     `span`) without a choice, so an admin cannot set their own account to member on the page.
   - Rows stand in the order the service sent (its German order).
