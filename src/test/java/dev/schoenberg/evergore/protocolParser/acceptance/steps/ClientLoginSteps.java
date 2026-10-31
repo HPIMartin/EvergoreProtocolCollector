@@ -113,7 +113,7 @@ public class ClientLoginSteps {
 			return List.of(Asking.post(LoginRequests.resetAddressOf(nameIn(phrase))));
 		}
 		if (phrase.startsWith(ROLE_FOR)) {
-			return List.of(LoginRequests.roleAsking(roleIn(phrase), nameIn(phrase)));
+			return List.of(LoginRequests.roleAsking(roleNamedIn(phrase), nameIn(phrase)));
 		}
 		return swaggerAddresses();
 	}
@@ -126,7 +126,7 @@ public class ClientLoginSteps {
 		return phrase.substring(phrase.lastIndexOf('"', phrase.length() - 2) + 1, phrase.length() - 1);
 	}
 
-	private static String roleIn(String phrase) {
+	private static String roleNamedIn(String phrase) {
 		int opening = phrase.indexOf('"');
 		return phrase.substring(opening + 1, phrase.indexOf('"', opening + 1));
 	}
