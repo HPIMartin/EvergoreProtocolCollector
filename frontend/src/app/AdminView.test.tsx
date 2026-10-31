@@ -309,6 +309,48 @@ describe('AdminView', () => {
     expect(disabled).toBe(false)
   })
 
+  it('sends the admin to the login page with its own address as the way back when a change of role is refused with 401', async () => {
+    window.history.replaceState(null, '', '/admin')
+    const navigatedTo: string[] = []
+    const unauthorized = (): Promise<void> => Promise.reject(new Unauthorized())
+    render(
+      <LoginNavigation.Provider
+        value={(target) => {
+          navigatedTo.push(target)
+        }}
+      >
+        <AdminView api={apiListing([ALRIK], unused, unauthorized)} />
+      </LoginNavigation.Provider>,
+    )
+    await act(async () => undefined)
+
+    await act(async () => {
+      fireEvent.change(within(rowOf('Alrik')).getByTestId('account-role'), {
+        target: { value: 'admin' },
+      })
+    })
+
+    const messages = shownMessages()
+    expect({ navigatedTo, messages }).toEqual({
+      navigatedTo: ['/login?next=%2Fadmin'],
+      messages: ['Weiter zur Anmeldung…'],
+    })
+  })
+
+  it('says the page is reserved for the admin when a change of role is refused with 403', async () => {
+    const forbidden = (): Promise<void> => Promise.reject(new Forbidden())
+    await adminViewWith(apiListing([ALRIK], unused, forbidden))
+
+    await act(async () => {
+      fireEvent.change(within(rowOf('Alrik')).getByTestId('account-role'), {
+        target: { value: 'admin' },
+      })
+    })
+
+    const messages = shownMessages()
+    expect(messages).toEqual(['Diese Seite ist dem Admin vorbehalten.'])
+  })
+
   it("shows the own account's role without a choice", async () => {
     const own: Account = { ...ZWERG, role: 'admin', own: true }
     await adminViewWith(apiListing([ALRIK, own]))

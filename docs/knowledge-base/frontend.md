@@ -240,10 +240,12 @@ Five top-level folders under `frontend/src/`:
   - When a reset of an account starts, the row drops what it showed before, a password or a
     failure, so a password the service may already have replaced is never shown while the answer is
     awaited.
-  - A reset the service refuses with 401 or 403 replaces the page's content as a load answered with
-    it does (the page hands the refusal to `failureOf`, the same outcome `useLoad` yields).
-  - A reset the service refuses with 401 shows the login (above).
-  - A reset the service refuses with 403 shows „Diese Seite ist dem Admin vorbehalten.“.
+  - A reset or a change of a role the service refuses with 401 or 403 replaces the page's content
+    as a load answered with it does;
+    - the page hands the refusal to `failureOf`, the outcome `useLoad` yields.
+  - A reset or a change of a role the service refuses with 401 shows the login (above).
+  - A reset or a change of a role the service refuses with 403 shows „Diese Seite ist dem Admin
+    vorbehalten.“.
   - Any other failed reset shows „Die Daten konnten nicht geladen werden. Bitte später erneut
     versuchen.“ (`LOAD_FAILED_MESSAGE`) in that account's row.
   - A 404 for a name without an account shows the same text.
