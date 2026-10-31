@@ -199,6 +199,10 @@ Five top-level folders under `frontend/src/`:
 - **`/admin` lists the accounts** (decision 2026-10-26):
   - Under „Konten“ a table with „Name“, „Rolle“, „Ruht“ and „Letzte Anmeldung“ holds one row per account.
   - „Rolle“ shows „Mitglied“ for the role `member` and „Admin“ for `admin`.
+  - Beside each account but the viewer's own, „Rolle“ is a `select` (`account-role`, `aria-label`
+    „Rolle von <Name>“) that offers „Mitglied“ and „Admin“.
+  - Beside the viewer's own account (`own`) the role stands as plain text (`account-role`, a
+    `span`) without a choice, so an admin cannot set their own account to member on the page.
   - Rows stand in the order the service sent (its German order).
   - The table is not sortable, so the SPA's collation never reorders it.
   - The column of the buttons has an empty header cell with the `aria-label` „Aktion“.

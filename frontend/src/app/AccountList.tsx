@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
-import type { Account } from '../domain'
-import { ADMIN } from '../domain'
+import type { Account, Role } from '../domain'
+import { ADMIN, MEMBER } from '../domain'
 import { formatTimestamp, LOAD_FAILED_MESSAGE, StatusPanel } from '../ui'
 
 export interface AccountListProps {
@@ -67,8 +67,8 @@ export function AccountList({ accounts, reset }: AccountListProps) {
               <td className="data-table__cell" data-testid="account-name">
                 {account.name}
               </td>
-              <td className="data-table__cell" data-testid="account-role">
-                {account.role === ADMIN ? 'Admin' : 'Mitglied'}
+              <td className="data-table__cell">
+                <RoleField account={account} />
               </td>
               <td className="data-table__cell" data-testid="account-rests">
                 {account.rests ? 'ruht' : ''}
@@ -109,6 +109,28 @@ export function AccountList({ accounts, reset }: AccountListProps) {
         </tbody>
       </table>
     </>
+  )
+}
+
+const ROLE_LABELS: Readonly<Record<Role, string>> = {
+  [MEMBER]: 'Mitglied',
+  [ADMIN]: 'Admin',
+}
+
+function RoleField({ account }: { readonly account: Account }) {
+  if (account.own) {
+    return <span data-testid="account-role">{ROLE_LABELS[account.role]}</span>
+  }
+
+  return (
+    <select
+      data-testid="account-role"
+      aria-label={`Rolle von ${account.name}`}
+      defaultValue={account.role}
+    >
+      <option value={MEMBER}>{ROLE_LABELS[MEMBER]}</option>
+      <option value={ADMIN}>{ROLE_LABELS[ADMIN]}</option>
+    </select>
   )
 }
 

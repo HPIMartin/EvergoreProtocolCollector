@@ -111,6 +111,14 @@ function rowOf(name: string): HTMLElement {
   return row
 }
 
+function shownRoleOf(row: HTMLElement): string | null {
+  const field = within(row).getByTestId('account-role')
+
+  return field instanceof HTMLSelectElement
+    ? (field.selectedOptions[0]?.textContent ?? null)
+    : field.textContent
+}
+
 async function adminViewWith(api: ProtocolApi): Promise<void> {
   render(<AdminView api={api} />)
   await act(async () => undefined)
@@ -219,11 +227,39 @@ describe('AdminView', () => {
   it('shows Mitglied or Admin under Rolle for each account', async () => {
     await adminViewWith(apiListing([ALRIK, { ...ZWERG, role: 'admin' }]))
 
-    const roles = screen
-      .getAllByTestId('account-role')
-      .map((cell) => cell.textContent)
+    const roles = screen.getAllByTestId('account-row').map(shownRoleOf)
 
     expect(roles).toEqual(['Mitglied', 'Admin'])
+  })
+
+  it("offers Mitglied and Admin under Rolle beside every account but the viewer's own", async () => {
+    const own: Account = { ...ZWERG, role: 'admin', own: true }
+    await adminViewWith(apiListing([ALRIK, own]))
+
+    const field = within(rowOf('Alrik')).getByRole('combobox', {
+      name: 'Rolle von Alrik',
+    })
+    const options = Array.from(field.querySelectorAll('option')).map(
+      (option) => option.textContent,
+    )
+    const atTheOwn = within(rowOf('Zwerg')).queryAllByRole('combobox')
+
+    expect({ options, atTheOwn }).toEqual({
+      options: ['Mitglied', 'Admin'],
+      atTheOwn: [],
+    })
+  })
+
+  it("shows the own account's role without a choice", async () => {
+    const own: Account = { ...ZWERG, role: 'admin', own: true }
+    await adminViewWith(apiListing([ALRIK, own]))
+
+    const field = within(rowOf('Zwerg')).getByTestId('account-role')
+
+    expect({ tag: field.tagName, text: field.textContent }).toEqual({
+      tag: 'SPAN',
+      text: 'Admin',
+    })
   })
 
   it('names the column of the buttons „Aktion“ for assistive technology without showing a text', async () => {
