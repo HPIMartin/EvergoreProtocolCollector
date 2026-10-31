@@ -41,7 +41,9 @@ public class ClientLoginSteps {
 	private static final String ADMINS_STATUS_FIGURES = "/api/v1/admin/status";
 	private static final String ACCOUNTS = "/api/v1/admin/accounts";
 	private static final String RESET_OF = "the reset of the password of";
+	private static final String ROLE_FOR = "the role";
 	private static final String A_CLIENT = "198.51.100.1";
+	private static final String ADMIN = "admin";
 	private static final String NOT_ISSUED = "Not-Issued-1!";
 	private static final int SERVED = 200;
 	private static final int UNAUTHORIZED = 401;
@@ -87,7 +89,7 @@ public class ClientLoginSteps {
 	@ParameterType("the login page|a file the login page loads|the overview's figures|the movements of the bank ledger of \"Aurora\"|the admin's status figures|a file the dashboard loads"
 			+ "|the change of a password with the current one|the descriptions of the service's interface for programs \\(Swagger, ReDoc and RapiDoc\\)"
 			+ "|an interface address the service does not serve|the list of accounts|the reset of the password of \"[^\"]+\""
-			+ "|the name it is logged in under|the health check|the guild's usage figures")
+			+ "|the name it is logged in under|the health check|the guild's usage figures|the role \"(?:member|admin|superuser)\" for \"[^\"]+\"")
 	public List<Asking> askedFor(String phrase) {
 		return switch (phrase) {
 			case "the login page" -> List.of(Asking.get("/login"));
@@ -102,8 +104,18 @@ public class ClientLoginSteps {
 			case "the name it is logged in under" -> List.of(Asking.get("/api/v1/me"));
 			case "the health check" -> List.of(Asking.get("/health"));
 			case "the guild's usage figures" -> List.of(Asking.get("/api/v1/admin/usage"));
-			default -> phrase.startsWith(RESET_OF) ? List.of(Asking.post(LoginRequests.resetAddressOf(nameIn(phrase)))) : swaggerAddresses();
+			default -> otherAskings(phrase);
 		};
+	}
+
+	private static List<Asking> otherAskings(String phrase) {
+		if (phrase.startsWith(RESET_OF)) {
+			return List.of(Asking.post(LoginRequests.resetAddressOf(nameIn(phrase))));
+		}
+		if (phrase.startsWith(ROLE_FOR)) {
+			return List.of(LoginRequests.roleAsking(roleIn(phrase), nameIn(phrase)));
+		}
+		return swaggerAddresses();
 	}
 
 	private static List<Asking> swaggerAddresses() {
@@ -111,7 +123,12 @@ public class ClientLoginSteps {
 	}
 
 	private static String nameIn(String phrase) {
-		return phrase.substring(phrase.indexOf('"') + 1, phrase.length() - 1);
+		return phrase.substring(phrase.lastIndexOf('"', phrase.length() - 2) + 1, phrase.length() - 1);
+	}
+
+	private static String roleIn(String phrase) {
+		int opening = phrase.indexOf('"');
+		return phrase.substring(opening + 1, phrase.indexOf('"', opening + 1));
 	}
 
 	@ParameterType("altered to claim the admin's role|altered to name another account|signed by someone other than the service|that carries no signature at all")
@@ -252,6 +269,29 @@ public class ClientLoginSteps {
 		aClientHasLoggedIn(name, password);
 	}
 
+	@Given("a client without a login has asked for {askedFor}")
+	public void aClientWithoutALoginHasAskedFor(List<Asking> askings) {
+		received.remember(requests.ask(askings.getFirst(), Map.of(AcceptanceClientIp.HEADER, A_CLIENT)));
+	}
+
+	@Given("a client logged in as {string} with the password {string} has asked for {askedFor} with its login")
+	public void aClientLoggedInHasAskedFor(String name, String password, List<Asking> askings) {
+		aClientHasLoggedIn(name, password);
+		received.remember(logins.asking(askings.getFirst(), issuedLogin));
+	}
+
+	@Given("{word}'s account has the role {string} and a client logged in as {string} with the password {string} has asked for {askedFor} with its login")
+	public void accountHasTheRoleAndAClientLoggedInHasAskedFor(String avatar, String role, String name, String password, List<Asking> askings) {
+		accounts.giveTheRoleNamed(avatar, role);
+		aClientLoggedInHasAskedFor(name, password, askings);
+	}
+
+	@Given("the admin key's login has asked for {askedFor}")
+	public void theAdminKeysLoginHasAskedFor(List<Asking> askings) {
+		aClientHasLoggedInWithTheAdminKey(ADMIN);
+		received.remember(logins.asking(askings.getFirst(), issuedLogin));
+	}
+
 	@When("another client asks for {askedFor} with a login {alteredLogin}")
 	public void anotherClientAsksForWithAnAlteredLogin(List<Asking> askings, UnaryOperator<String> alteration) {
 		received.remember(logins.asking(askings.getFirst(), alteration.apply(issuedLogin)));
@@ -287,6 +327,25 @@ public class ClientLoginSteps {
 	@Then("the operator finds the request refused for naming no account")
 	public void theOperatorFindsTheRequestRefusedForNamingNoAccount() {
 		assertThat(received.current().status()).isEqualTo(NOT_FOUND);
+	}
+
+	@Then("the operator finds the request refused for taking one's own admin role")
+	public void theOperatorFindsTheRequestRefusedForTakingOnesOwnAdminRole() {
+		assertThat(received.current().status()).isEqualTo(FORBIDDEN);
+		assertThat(received.current().body()).isEqualTo("{\"refusal\":\"own-admin-role\"}");
+	}
+
+	@Then("the operator finds the request refused for naming a role other than \"member\" or \"admin\"")
+	public void theOperatorFindsTheRequestRefusedForNamingAnUnknownRole() {
+		assertThat(received.current().status()).isEqualTo(BAD_REQUEST);
+		assertThat(received.current().body()).isEqualTo("{\"refusal\":\"unknown-role\"}");
+	}
+
+	@Then("the operator finds the client's login still opening the admin's status figures")
+	public void theOperatorFindsTheClientsLoginStillOpeningTheAdminsStatusFigures() {
+		Answer figures = logins.asking(ADMINS_STATUS_FIGURES, issuedLogin);
+
+		assertThat(figures.status()).as("the admin's status figures: " + figures.body()).isEqualTo(SERVED);
 	}
 
 	@Then("the operator finds the request refused for lacking an account")

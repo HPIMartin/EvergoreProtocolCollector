@@ -34,7 +34,7 @@ public class ServiceRequests {
 	}
 
 	public Answer ask(Asking asking, Map<String, String> headers) {
-		return asking.isPost() ? post(asking.address(), "", headers) : get(asking.address(), headers);
+		return asking.isPost() ? post(asking.address(), asking.body(), headers) : get(asking.address(), headers);
 	}
 
 	public Answer post(String address, String jsonBody, Map<String, String> headers) {

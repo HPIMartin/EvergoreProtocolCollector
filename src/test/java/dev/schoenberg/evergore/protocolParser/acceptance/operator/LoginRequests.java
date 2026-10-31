@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dev.schoenberg.evergore.protocolParser.rest.filter.AcceptanceClientIp;
@@ -76,6 +77,23 @@ public class LoginRequests {
 
 	public static String resetAddressOf(String name) {
 		return ACCOUNTS + "/" + URLEncoder.encode(name, UTF_8).replace("+", "%20") + "/reset";
+	}
+
+	public static Asking roleAsking(String role, String name) {
+		return Asking.post(ACCOUNTS + "/" + URLEncoder.encode(name, UTF_8).replace("+", "%20") + "/role", json(Map.of("role", role)));
+	}
+
+	public static String roleIn(Answer accounts, String name) {
+		try {
+			for (JsonNode account : JSON.readTree(accounts.body())) {
+				if (name.equals(account.path("name").asText())) {
+					return account.path("role").asText();
+				}
+			}
+			throw new AssertionError("The list of accounts names no " + name + ": " + accounts.body());
+		} catch (JsonProcessingException e) {
+			throw new AssertionError("The list of accounts is not JSON: " + accounts.body(), e);
+		}
 	}
 
 	public static List<String> namesIn(Answer accounts) {

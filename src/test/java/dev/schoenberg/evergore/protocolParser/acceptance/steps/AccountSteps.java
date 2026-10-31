@@ -1,14 +1,12 @@
 package dev.schoenberg.evergore.protocolParser.acceptance.steps;
 
 import java.time.Duration;
-import java.util.Locale;
 
 import io.cucumber.java.en.Given;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
-import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -48,7 +46,7 @@ public class AccountSteps {
 
 	@Given("{word}'s account has the role {string}")
 	public void accountHasTheRole(String avatar, String role) {
-		accounts.giveTheRole(avatar, Role.valueOf(role.toUpperCase(Locale.ROOT)));
+		accounts.giveTheRoleNamed(avatar, role);
 	}
 
 	@Given("the operator has given {word}'s account the role {string} by hand")

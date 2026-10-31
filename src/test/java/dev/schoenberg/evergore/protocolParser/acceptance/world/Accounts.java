@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -97,7 +98,11 @@ public class Accounts {
 		chosen.put(avatar, replacement);
 	}
 
-	public void giveTheRole(String avatar, Role role) {
+	public void giveTheRoleNamed(String avatar, String roleName) {
+		giveTheRole(avatar, Role.valueOf(roleName.toUpperCase(Locale.ROOT)));
+	}
+
+	private void giveTheRole(String avatar, Role role) {
 		String url = "jdbc:sqlite:" + database.file() + "?busy_timeout=" + BUSY_MILLIS;
 		try (Connection connection = DriverManager.getConnection(url); PreparedStatement update = connection.prepareStatement("UPDATE account SET role = ? WHERE name_key = ?")) {
 			update.setString(1, role.name());
