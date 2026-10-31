@@ -2,10 +2,16 @@ package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginSource;
@@ -20,7 +26,25 @@ class ChangeRoleTest {
 
 	private final InMemoryAccounts accounts = new InMemoryAccounts(new ArrayList<>());
 	private final LoginGenerations generations = new LoginGenerations();
-	private final ChangeRole tested = new ChangeRole(accounts, generations);
+	private final LoggerSpy logger = new LoggerSpy();
+	private final ChangeRole tested = new ChangeRole(accounts, generations, logger);
+
+	static Stream<Arguments> changesWithTheLineTheyLog() {
+		return Stream
+				.of(Arguments.of("Aurora", Role.MEMBER, Role.ADMIN, loginOf(AdminKey.NAME, LoginSource.ADMIN_KEY), "Role of Aurora set to admin by admin."),
+						Arguments.of("AURORA", Role.ADMIN, Role.MEMBER, loginOf("Boreas", LoginSource.ACCOUNT), "Role of Aurora set to member by Boreas."));
+	}
+
+	@ParameterizedTest
+	@MethodSource("changesWithTheLineTheyLog")
+	void writesWhichRoleOfWhichAccountWhoSetToTheLog(String asked, Role before, Role role, Login by, String line) {
+		accounts.hold(account("Aurora", before));
+
+		tested.to(asked, role, by);
+
+		List<String> logged = logger.infoMessages();
+		assertThat(logged).containsExactly(line);
+	}
 
 	@Test
 	void givesTheAccountTheRoleItWasAskedFor() {
