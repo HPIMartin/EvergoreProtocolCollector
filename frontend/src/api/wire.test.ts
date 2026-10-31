@@ -793,21 +793,52 @@ describe('the admin status wire shape', () => {
 })
 
 const accountsBody = [
-  { name: 'Alrik', rests: false, lastLogin: '2026-10-20T08:15:00Z' },
-  { name: 'Zwerg', rests: true, lastLogin: null },
+  {
+    name: 'Alrik',
+    role: 'member',
+    own: false,
+    rests: false,
+    lastLogin: '2026-10-20T08:15:00Z',
+  },
+  {
+    name: 'Zwerg',
+    role: 'admin',
+    own: true,
+    rests: true,
+    lastLogin: null,
+  },
 ]
 
 describe('the account list wire shape', () => {
-  it('reads each account with its name, its rest and its latest login', () => {
+  it('reads each account with its name, its role, its own mark, its rest and its latest login', () => {
     const accounts = accountsFrom(accountsBody)
 
     expect(accounts).toStrictEqual([
       {
         name: 'Alrik',
+        role: 'member',
+        own: false,
         rests: false,
         lastLogin: new Date('2026-10-20T08:15:00Z'),
       },
-      { name: 'Zwerg', rests: true, lastLogin: null },
+      {
+        name: 'Zwerg',
+        role: 'admin',
+        own: true,
+        rests: true,
+        lastLogin: null,
+      },
+    ])
+  })
+
+  it('reads the role and the own mark of an account', () => {
+    const accounts = accountsFrom(accountsBody)
+
+    const marks = accounts.map(({ role, own }) => ({ role, own }))
+
+    expect(marks).toStrictEqual([
+      { role: 'member', own: false },
+      { role: 'admin', own: true },
     ])
   })
 
@@ -830,6 +861,15 @@ describe('the account list wire shape', () => {
   it.each([
     ['a name that is no string', { ...accountsBody[0], name: 7 }],
     ['no name', { ...accountsBody[0], name: undefined }],
+    [
+      'a role that is neither member nor admin',
+      { ...accountsBody[0], role: 'superuser' },
+    ],
+    ['a role in capitals', { ...accountsBody[0], role: 'Admin' }],
+    ['a role that is no string', { ...accountsBody[0], role: 7 }],
+    ['no role', { ...accountsBody[0], role: undefined }],
+    ['an own mark that is no boolean', { ...accountsBody[0], own: 'ja' }],
+    ['no own mark', { ...accountsBody[0], own: undefined }],
     ['a rest that is no boolean', { ...accountsBody[0], rests: 'ja' }],
     ['no rest', { ...accountsBody[0], rests: undefined }],
     [

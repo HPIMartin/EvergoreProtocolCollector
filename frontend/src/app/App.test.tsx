@@ -1617,7 +1617,7 @@ describe('App', () => {
         status: 200,
         body:
           path === '/api/v1/admin/accounts'
-            ? '[{"name":"Alrik","rests":false,"lastLogin":null}]'
+            ? '[{"name":"Alrik","role":"member","own":false,"rests":false,"lastLogin":null}]'
             : ADMIN_STATUS_BODY,
       }
     })

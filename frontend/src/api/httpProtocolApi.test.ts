@@ -98,8 +98,20 @@ const ADMIN_STATUS_BODY = JSON.stringify({
 })
 
 const ACCOUNTS_BODY = JSON.stringify([
-  { name: 'Alrik', rests: false, lastLogin: '2026-10-20T08:15:00Z' },
-  { name: 'Zwerg', rests: true, lastLogin: null },
+  {
+    name: 'Alrik',
+    role: 'member',
+    own: false,
+    rests: false,
+    lastLogin: '2026-10-20T08:15:00Z',
+  },
+  {
+    name: 'Zwerg',
+    role: 'admin',
+    own: true,
+    rests: true,
+    lastLogin: null,
+  },
 ])
 
 const NO_USAGE = {
@@ -456,10 +468,18 @@ describe('the HTTP protocol API', () => {
       accounts: [
         {
           name: 'Alrik',
+          role: 'member',
+          own: false,
           rests: false,
           lastLogin: new Date('2026-10-20T08:15:00Z'),
         },
-        { name: 'Zwerg', rests: true, lastLogin: null },
+        {
+          name: 'Zwerg',
+          role: 'admin',
+          own: true,
+          rests: true,
+          lastLogin: null,
+        },
       ],
     })
   })

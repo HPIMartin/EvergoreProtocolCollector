@@ -131,10 +131,18 @@ function accountRows(): string[][] {
 
 const ALRIK: Account = {
   name: 'Alrik',
+  role: 'member',
+  own: false,
   rests: false,
   lastLogin: new Date('2026-12-31T11:00:00Z'),
 }
-const ZWERG: Account = { name: 'Zwerg', rests: true, lastLogin: null }
+const ZWERG: Account = {
+  name: 'Zwerg',
+  role: 'member',
+  own: false,
+  rests: true,
+  lastLogin: null,
+}
 
 describe('AdminView', () => {
   it('says the page is reserved for the admin when the service refuses the role', async () => {
@@ -571,7 +579,13 @@ describe('the password a reset issued on the admin page', () => {
   it.each(['constructor', '__proto__', 'toString'])(
     'stands beside an account named %s without a failure shown before or after its reset',
     async (name) => {
-      const account: Account = { name, rests: false, lastLogin: null }
+      const account: Account = {
+        name,
+        role: 'member',
+        own: false,
+        rests: false,
+        lastLogin: null,
+      }
       await adminViewWith(apiListing([account], () => Promise.resolve('Pw#1')))
       const before = shownMessages()
 

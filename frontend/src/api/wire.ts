@@ -9,9 +9,10 @@ import type {
   RoundTrip,
   RoundTripAbstention,
   StorageEntry,
+  Role,
   TransferType,
 } from '../domain'
-import { isTransferType } from '../domain'
+import { isRole, isTransferType } from '../domain'
 
 import { MalformedResponse } from './apiErrors.ts'
 
@@ -83,9 +84,22 @@ function accountFrom(item: unknown): Account {
 
   return {
     name: stringFrom(account, 'name'),
+    role: roleFrom(account, 'role'),
+    own: booleanFrom(account, 'own'),
     rests: booleanFrom(account, 'rests'),
     lastLogin: optionalInstantFrom(account, 'lastLogin'),
   }
+}
+
+function roleFrom(source: WireObject, field: string): Role {
+  const value = source[field]
+  if (!isRole(value)) {
+    throw new MalformedResponse(
+      `The API answered a ${field} that is neither member nor admin`,
+    )
+  }
+
+  return value
 }
 
 export function adminStatusFrom(body: unknown): AdminStatus {

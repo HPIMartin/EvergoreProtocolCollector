@@ -1,4 +1,5 @@
-export type { Account } from './account.ts'
+export type { Account, Role } from './account.ts'
+export { ADMIN, MEMBER, isRole } from './account.ts'
 export type {
   AdminStatus,
   RoundTrip,
