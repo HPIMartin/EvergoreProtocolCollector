@@ -1,5 +1,5 @@
 export { formatCount, formatGold, formatTimestamp } from './format.ts'
-export { describeAbstention, describeRoundTrip } from './roundTripText.ts'
+export { describeAbstention, roundTripDetail } from './roundTripText.ts'
 export { LOAD_FAILED_MESSAGE } from './loadFailedMessage.ts'
 export { LOG_OUT_FAILED_MESSAGE } from './logOutFailedMessage.ts'
 export { RESTING_MESSAGE } from './restingMessage.ts'

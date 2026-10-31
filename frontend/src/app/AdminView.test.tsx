@@ -6,7 +6,7 @@ import {
   screen,
   within,
 } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ProtocolApi } from '../api'
 import { Forbidden, RequestFailed, Unauthorized } from '../api'
@@ -840,5 +840,86 @@ describe('the password a reset issued on the admin page', () => {
       atZwerg: within(rowOf('Zwerg')).queryAllByTestId('account-reset').length,
     }
     expect(offered).toEqual({ atAlrik: [], atZwerg: 1 })
+  })
+})
+
+function apiReporting(status: AdminStatus): ProtocolApi {
+  return { ...apiListing([]), adminStatus: () => Promise.resolve(status) }
+}
+
+interface ShownFindings {
+  readonly paragraph: string | null
+  readonly entries: readonly {
+    readonly text: string | null
+    readonly links: readonly (readonly [string | null, string | null])[]
+  }[]
+}
+
+function findingsIn(listTestId: string): ShownFindings {
+  const list = screen.getByTestId(listTestId)
+
+  return {
+    paragraph: list.textContent,
+    entries: within(list)
+      .getAllByTestId('finding')
+      .map((entry) => ({
+        text: entry.textContent,
+        links: within(entry)
+          .queryAllByRole('link')
+          .map((link) => [link.textContent, link.getAttribute('href')]),
+      })),
+  }
+}
+
+describe('the findings of the last recompute on the admin page', () => {
+  it("leads the name in each suspected round trip, and only the name, to that member's storage ledger", async () => {
+    const roundTrips = [
+      { avatar: 'Hans Meyer', item: 'Federn', quantity: 1 },
+      { avatar: 'Ärger', item: 'Bolzen', quantity: 100 },
+      { avatar: 'Ärger', item: 'Pfeile', quantity: 100 },
+    ]
+    await adminViewWith(apiReporting({ ...NO_FACTS, roundTrips }))
+
+    const shown = findingsIn('round-trips')
+
+    expect(shown).toEqual({
+      paragraph:
+        'Verdacht auf Warenkreislauf: Hans Meyer: 1 × Federn, Ärger: 100 × Bolzen, Ärger: 100 × Pfeile',
+      entries: [
+        {
+          text: 'Hans Meyer: 1 × Federn',
+          links: [['Hans Meyer', '/avatars/Hans%20Meyer/storage']],
+        },
+        {
+          text: 'Ärger: 100 × Bolzen',
+          links: [['Ärger', '/avatars/%C3%84rger/storage']],
+        },
+        {
+          text: 'Ärger: 100 × Pfeile',
+          links: [['Ärger', '/avatars/%C3%84rger/storage']],
+        },
+      ],
+    })
+  })
+
+  it('shows two identical findings, each under a key of its own', async () => {
+    const errors = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+    const same = { avatar: 'Ärger', item: 'Bolzen', quantity: 100 }
+    await adminViewWith(
+      apiReporting({ ...NO_FACTS, roundTrips: [same, { ...same }] }),
+    )
+
+    const shown = {
+      entries: findingsIn('round-trips').entries.map((entry) => entry.text),
+      complaints: errors.mock.calls.length,
+    }
+
+    errors.mockRestore()
+    expect(shown).toEqual({
+      entries: ['Ärger: 100 × Bolzen', 'Ärger: 100 × Bolzen'],
+      complaints: 0,
+    })
   })
 })

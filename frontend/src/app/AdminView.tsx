@@ -1,13 +1,20 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 
 import type { ProtocolApi } from '../api'
 import { Forbidden, Unauthorized } from '../api'
 import type { Role } from '../domain'
-import { describeAbstention, describeRoundTrip, formatTimestamp } from '../ui'
+import {
+  describeAbstention,
+  formatTimestamp,
+  Link,
+  roundTripDetail,
+} from '../ui'
 
 import { AccountList } from './AccountList.tsx'
+import { hrefOf } from './href.ts'
 import { LoadedView } from './LoadedView.tsx'
 import { requestKeyOf } from './requestKey.ts'
+import { storagePath } from './route.ts'
 import { UsageSection } from './UsageSection.tsx'
 import { failureOf, useLoad } from './useLoad.ts'
 
@@ -78,10 +85,13 @@ export function AdminView({ api }: AdminViewProps) {
               heading="Nicht aktualisierte Avatare"
               names={status.failedAvatarNames}
             />
-            <NameList
+            <FindingList
               testId="round-trips"
               heading="Verdacht auf Warenkreislauf"
-              names={status.roundTrips.map(describeRoundTrip)}
+              findings={status.roundTrips.map((roundTrip) => ({
+                member: roundTrip.avatar,
+                detail: roundTripDetail(roundTrip),
+              }))}
             />
             <NameList
               testId="round-trip-abstentions"
@@ -129,6 +139,38 @@ function NameList({ testId, heading, names }: NameListProps) {
   return (
     <p data-testid={testId}>
       {heading}: {names.join(', ')}
+    </p>
+  )
+}
+
+interface Finding {
+  readonly member: string
+  readonly detail: string
+}
+
+interface FindingListProps {
+  readonly testId: string
+  readonly heading: string
+  readonly findings: readonly Finding[]
+}
+
+function FindingList({ testId, heading, findings }: FindingListProps) {
+  if (findings.length === 0) {
+    return null
+  }
+
+  return (
+    <p data-testid={testId}>
+      {heading}:{' '}
+      {findings.map(({ member, detail }, position) => (
+        <Fragment key={`${position}: ${member}`}>
+          {position === 0 ? '' : ', '}
+          <span data-testid="finding">
+            <Link href={hrefOf(storagePath(member))}>{member}</Link>
+            {`: ${detail}`}
+          </span>
+        </Fragment>
+      ))}
     </p>
   )
 }
