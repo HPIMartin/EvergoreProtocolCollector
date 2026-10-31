@@ -12,14 +12,18 @@ export interface AccountListProps {
 
 export function AccountList({ accounts, reset, setRole }: AccountListProps) {
   const [roles, setRoles] = useState<ReadonlyMap<string, Role>>(new Map())
-  const [changing, setChanging] = useState<ReadonlySet<string>>(new Set())
+  const [roleChangesInFlight, setRoleChangesInFlight] = useState<
+    ReadonlySet<string>
+  >(new Set())
   const [failedRoles, setFailedRoles] = useState<ReadonlySet<string>>(new Set())
   const [asking, setAsking] = useState<string | null>(null)
   const [outcomes, setOutcomes] = useState<ReadonlyMap<string, Outcome>>(
     new Map(),
   )
   const [closedAt, setClosedAt] = useState<string | null>(null)
-  const [inFlight, setInFlight] = useState<ReadonlySet<string>>(new Set())
+  const [resetsInFlight, setResetsInFlight] = useState<ReadonlySet<string>>(
+    new Set(),
+  )
 
   function closeQuestionOf(name: string): void {
     setAsking(null)
@@ -28,10 +32,10 @@ export function AccountList({ accounts, reset, setRole }: AccountListProps) {
 
   function resetPasswordOf(name: string): void {
     closeQuestionOf(name)
-    setInFlight((before) => new Set(before).add(name))
+    setResetsInFlight((before) => new Set(before).add(name))
     setOutcomes((before) => withoutOutcomeOf(before, name))
     const settle = (outcome: Outcome): void => {
-      setInFlight((before) => withoutName(before, name))
+      setResetsInFlight((before) => withoutName(before, name))
       setOutcomes((before) => new Map(before).set(name, outcome))
     }
     reset(name).then(
@@ -45,15 +49,15 @@ export function AccountList({ accounts, reset, setRole }: AccountListProps) {
   }
 
   function chooseRoleOf(name: string, role: Role): void {
-    setChanging((before) => new Set(before).add(name))
+    setRoleChangesInFlight((before) => new Set(before).add(name))
     setFailedRoles((before) => withoutName(before, name))
     setRole(name, role).then(
       () => {
-        setChanging((before) => withoutName(before, name))
+        setRoleChangesInFlight((before) => withoutName(before, name))
         setRoles((before) => new Map(before).set(name, role))
       },
       () => {
-        setChanging((before) => withoutName(before, name))
+        setRoleChangesInFlight((before) => withoutName(before, name))
         setFailedRoles((before) => new Set(before).add(name))
       },
     )
@@ -86,7 +90,7 @@ export function AccountList({ accounts, reset, setRole }: AccountListProps) {
                 <RoleField
                   account={account}
                   held={roles.get(account.name) ?? account.role}
-                  changing={changing.has(account.name)}
+                  inFlight={roleChangesInFlight.has(account.name)}
                   failed={failedRoles.has(account.name)}
                   onChoose={(role) => {
                     chooseRoleOf(account.name, role)
@@ -117,7 +121,7 @@ export function AccountList({ accounts, reset, setRole }: AccountListProps) {
                   ) : null}
                 </div>
                 {asking === account.name ||
-                inFlight.has(account.name) ? null : (
+                resetsInFlight.has(account.name) ? null : (
                   <ResetButton
                     focusOnMount={closedAt === account.name}
                     onClick={() => {
@@ -143,7 +147,7 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
 interface RoleFieldProps {
   readonly account: Account
   readonly held: Role
-  readonly changing: boolean
+  readonly inFlight: boolean
   readonly failed: boolean
   readonly onChoose: (role: Role) => void
 }
@@ -151,7 +155,7 @@ interface RoleFieldProps {
 function RoleField({
   account,
   held,
-  changing,
+  inFlight,
   failed,
   onChoose,
 }: RoleFieldProps) {
@@ -165,7 +169,7 @@ function RoleField({
         data-testid="account-role"
         aria-label={`Rolle von ${account.name}`}
         value={held}
-        disabled={changing}
+        disabled={inFlight}
         onChange={(event) => {
           if (isRole(event.target.value)) {
             onChoose(event.target.value)
