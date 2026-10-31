@@ -107,8 +107,9 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
         fails at once there (SQLite answers `SQLITE_BUSY` without waiting);
     - only writes open a transaction;
     - the scheduled job and the login are the two writers in-process:
-      - the login writes the last login, and after a reset or a change the new password's hash, each
-        in one short transaction of its own, every hash and check done before it begins;
+      - the login writes the last login (none when a reset or a change overtook its check), and
+        after a reset or a change the new password's hash, each in one short transaction of its
+        own, every hash and check done before it begins;
       - while the job's recompute batch or a ledger batch holds the write lock, that transaction
         waits up to the 10 s bound and the login's answer waits with it;
       - a batch longer than the bound fails the login with a 500, and the member tries again;
@@ -347,12 +348,18 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     folded name key (`LoginName`) and runs exactly one Argon2id check;
   - an unknown name is checked against a hash of no password, drawn once at the start, so it costs
     the same check as a wrong password;
-  - `application/LoginStart` records the last login with the `Clock`'s instant and issues a signed
-    login with the account's name and role and the generation `application/LoginGenerations` holds
-    for it, an in-memory count per account that starts at 0;
+  - `application/LoginStart` issues a signed login with the account's name and role and the
+    generation read from `application/LoginGenerations` before the check, an in-memory count per
+    account that starts at 0;
   - `LogIn` and `ChooseNewPassword` read that generation before the password check and sign with
     it, so a login that a change of the password overtakes during its check carries the old
     generation and ends with that change;
+  - `LoginStart` records the last login, with the `Clock`'s instant, only while the generation the
+    check saw is still the account's, so a login that a reset or a change overtakes during its
+    check leaves no last login;
+  - the generation check and the last-login write are not atomic, so a reset landing between them,
+    or during the reset's own write, can still leave a last login;
+  - that last login opens nothing;
   - `LogIn` starts a login for a right chosen password; for a right issued password it starts none
     and asks for a new password;
   - `ChooseNewPassword` hashes the new password, replaces the hash with the state `CHOSEN` and

@@ -212,7 +212,65 @@ class ChooseNewPasswordTest {
 		assertThat(logins.issued()).isEmpty();
 	}
 
+	@Test
+	void recordsNoLastLoginWhenAResetReissuesThePasswordBetweenTheChoiceAndTheStartOfItsLogin() {
+		accounts.hold(issuedAccount("Boreas"));
+		ResetPassword reset = new ResetPassword(accounts, () -> "Reissued-2026!", hasher, generations);
+		AccountRepository resettingAfterTheChoice = new AccountsThatRunAfterTheChoice(accounts, () -> reset.forAccount("Boreas"));
+		ChooseNewPassword overtaken = new ChooseNewPassword(new PasswordCheck(resettingAfterTheChoice, hasher, HASH_OF_NO_PASSWORD), resettingAfterTheChoice, hasher,
+				new PasswordRule(), new LoginStart(resettingAfterTheChoice, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC)),
+				new RestingAccounts(bank, new StorageRepositoryStub()));
+
+		overtaken.with("Boreas", ISSUED, NEW_PASSWORD);
+
+		assertThat(accounts.held("boreas").lastLogin()).isEmpty();
+	}
+
 	private static Account issuedAccount(String avatar) {
 		return new Account(avatar, "hashed:" + ISSUED, PasswordState.ISSUED, Role.MEMBER, Optional.empty());
+	}
+
+	private static class AccountsThatRunAfterTheChoice implements AccountRepository {
+		private final AccountRepository delegate;
+		private final Runnable afterTheChoice;
+
+		AccountsThatRunAfterTheChoice(AccountRepository delegate, Runnable afterTheChoice) {
+			this.delegate = delegate;
+			this.afterTheChoice = afterTheChoice;
+		}
+
+		@Override
+		public Optional<Account> findByNameKey(String nameKey) {
+			return delegate.findByNameKey(nameKey);
+		}
+
+		@Override
+		public List<Account> allAccounts() {
+			return delegate.allAccounts();
+		}
+
+		@Override
+		public boolean addIfAbsent(Account account) {
+			return delegate.addIfAbsent(account);
+		}
+
+		@Override
+		public void replacePassword(String nameKey, String passwordHash, PasswordState state) {
+			delegate.replacePassword(nameKey, passwordHash, state);
+		}
+
+		@Override
+		public boolean replaceIssuedPassword(String nameKey, String issuedHash, String passwordHash) {
+			boolean replaced = delegate.replaceIssuedPassword(nameKey, issuedHash, passwordHash);
+			if (replaced) {
+				afterTheChoice.run();
+			}
+			return replaced;
+		}
+
+		@Override
+		public void recordLastLogin(String nameKey, Instant at) {
+			delegate.recordLastLogin(nameKey, at);
+		}
 	}
 }

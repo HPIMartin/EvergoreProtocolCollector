@@ -27,7 +27,9 @@ public class LoginStart {
 	}
 
 	private String loginValueFor(Account account, long generationSeenBeforeTheCheck) {
-		accounts.recordLastLogin(account.nameKey(), clock.instant());
+		if (generations.of(account.nameKey()) == generationSeenBeforeTheCheck) {
+			accounts.recordLastLogin(account.nameKey(), clock.instant());
+		}
 		return signedLogins.issue(account.avatar(), account.role(), generationSeenBeforeTheCheck);
 	}
 
