@@ -411,6 +411,10 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - a login another change ended meanwhile gets `LoginEnded` and changes nothing;
   - `SignedLogins` issues the fresh login for the browser that changed it, with the generation
     that step produced.
+- **Changing a role:**
+  - `LoginGenerations.bumpIf` runs a change and raises the account's generation only when that
+    change happened;
+    - the logins of that account end and the logins of another account stand.
 - **Logging out:** `application/LogOut` keeps the `jti` of every login that logged out in memory
   until that login's own expiry and prunes the expired ones at each logout:
   - `application/ValidLogins` treats such a login as no login, so only that login ends: another

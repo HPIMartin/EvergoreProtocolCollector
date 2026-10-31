@@ -98,6 +98,34 @@ class LoginGenerationsTest {
 	}
 
 	@Test
+	void raisesTheGenerationOnlyWhenTheChangeReportsAChange() {
+		List<String> trail = new ArrayList<>();
+
+		boolean changed = tested.bumpIf("aurora", () -> trail.add("changed"));
+
+		long generation = tested.of("aurora");
+		long untouched = tested.of("boreas");
+
+		assertThat(changed).isTrue();
+		assertThat(trail).containsExactly("changed");
+		assertThat(generation).isEqualTo(1);
+		assertThat(untouched).isZero();
+	}
+
+	@Test
+	void runsTheChangeButRaisesNothingWhenItReportsNoChange() {
+		List<String> trail = new ArrayList<>();
+
+		boolean changed = tested.bumpIf("aurora", () -> !trail.add("tried"));
+
+		long generation = tested.of("aurora");
+
+		assertThat(changed).isFalse();
+		assertThat(trail).containsExactly("tried");
+		assertThat(generation).isZero();
+	}
+
+	@Test
 	void endsTheLoginsOfOneAccountWhateverGenerationIsCurrent() {
 		tested.bumpWhileAt("aurora", 0, () -> {});
 		tested.bumpWhileAt("aurora", 1, () -> {});
