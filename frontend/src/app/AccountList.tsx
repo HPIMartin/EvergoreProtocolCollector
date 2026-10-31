@@ -24,9 +24,7 @@ export function AccountList({ accounts, reset }: AccountListProps) {
   function resetPasswordOf(name: string): void {
     closeQuestionOf(name)
     setInFlight((before) => new Set(before).add(name))
-    setOutcomes((before) =>
-      before[name]?.kind === 'failed' ? withoutOutcomeOf(before, name) : before,
-    )
+    setOutcomes((before) => withoutOutcomeOf(before, name))
     const settle = (outcome: Outcome): void => {
       setInFlight((before) => {
         const after = new Set(before)

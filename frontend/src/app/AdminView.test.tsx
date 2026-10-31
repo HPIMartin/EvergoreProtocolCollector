@@ -494,6 +494,21 @@ describe('the password a reset issued on the admin page', () => {
     expect(shown).toBe('Zweites#22')
   })
 
+  it('is removed from beside the account as soon as the next reset of it starts', async () => {
+    const answers = [
+      () => Promise.resolve('Erstes#11'),
+      () => new Promise<string>(() => undefined),
+    ]
+    const reset = (): Promise<string> => answers.shift()?.() ?? unused()
+    await adminViewWith(apiListing([ALRIK], reset))
+    await resetThrough('Alrik')
+
+    await resetThrough('Alrik')
+
+    const shown = { beside: issuedBeside('Alrik'), messages: shownMessages() }
+    expect(shown).toEqual({ beside: undefined, messages: [] })
+  })
+
   it('offers no second reset of an account while its reset is in flight', async () => {
     const reset = (): Promise<string> => new Promise(() => undefined)
     await adminViewWith(apiListing([ALRIK, ZWERG], reset))

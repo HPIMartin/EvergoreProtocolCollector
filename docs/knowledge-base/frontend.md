@@ -226,6 +226,9 @@ Five top-level folders under `frontend/src/`:
   - The issued password is never read behind a second request.
   - A second reset of another account leaves the first password beside its own name.
   - A second reset of the same account replaces the password.
+  - When a reset of an account starts, the row drops what it showed before, a password or a
+    failure, so a password the service may already have replaced is never shown while the answer is
+    awaited.
   - A reset the service refuses with 401 or 403 replaces the page's content as a load answered with
     it does (the page hands the refusal to `failureOf`, the same outcome `useLoad` yields).
   - A reset the service refuses with 401 shows the login (above).
