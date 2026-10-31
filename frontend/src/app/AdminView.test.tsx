@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import type { ProtocolApi } from '../api'
 import { Forbidden, RequestFailed, Unauthorized } from '../api'
-import type { Account, AdminStatus, Usage, UsageCounts } from '../domain'
+import type { Account, AdminStatus, Role, Usage, UsageCounts } from '../domain'
 import { LOAD_FAILED_MESSAGE } from '../ui'
 
 import { AdminView } from './AdminView.tsx'
@@ -54,6 +54,7 @@ function apiRefusingTheAdminStatus(reason: Error): ProtocolApi {
     adminAccounts: refused,
     adminUsage: refused,
     resetPassword: refused,
+    setRole: refused,
     bankEntries: refused,
     storageEntries: refused,
   }
@@ -64,6 +65,7 @@ const unused = (): Promise<never> => Promise.reject(new Error('unused'))
 function apiListing(
   accounts: Account[],
   resetPassword: (name: string) => Promise<string> = unused,
+  setRole: (name: string, role: Role) => Promise<void> = unused,
 ): ProtocolApi {
   return {
     overview: unused,
@@ -71,6 +73,7 @@ function apiListing(
     adminAccounts: () => Promise.resolve(accounts),
     adminUsage: () => Promise.resolve(NO_USAGE),
     resetPassword,
+    setRole,
     bankEntries: unused,
     storageEntries: unused,
   }

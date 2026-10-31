@@ -546,6 +546,58 @@ describe('the HTTP protocol API', () => {
     await expect(resetting).rejects.toBeInstanceOf(error)
   })
 
+  it("posts the chosen role to the account's role address", async () => {
+    const fetched = answering(204, null)
+    const tested = httpProtocolApi(fetched.get, fetched.post)
+
+    await tested.setRole('Alrik', 'admin')
+
+    expect(fetched.posted).toStrictEqual([
+      { url: '/api/v1/admin/accounts/Alrik/role', body: '{"role":"admin"}' },
+    ])
+  })
+
+  it('encodes the name of the account in the route of the role', async () => {
+    const fetched = answering(204, null)
+    const tested = httpProtocolApi(fetched.get, fetched.post)
+
+    await tested.setRole('Erde Eibe/Ärger?', 'member')
+
+    expect(fetched.posted).toStrictEqual([
+      {
+        url: '/api/v1/admin/accounts/Erde%20Eibe%2F%C3%84rger%3F/role',
+        body: '{"role":"member"}',
+      },
+    ])
+  })
+
+  it.each([
+    [401, Unauthorized],
+    [403, Forbidden],
+  ])(
+    'throws %d as a refusal of the login or the role',
+    async (status, error) => {
+      const fetched = answering(status, null)
+      const tested = httpProtocolApi(fetched.get, fetched.post)
+
+      const setting = tested.setRole('Alrik', 'admin')
+
+      await expect(setting).rejects.toBeInstanceOf(error)
+    },
+  )
+
+  it.each([400, 404, 500])(
+    'throws RequestFailed for a %d on the role route',
+    async (status) => {
+      const fetched = answering(status, null)
+      const tested = httpProtocolApi(fetched.get, fetched.post)
+
+      const setting = tested.setRole('Alrik', 'admin')
+
+      await expect(setting).rejects.toBeInstanceOf(RequestFailed)
+    },
+  )
+
   it.each([
     ['holds no password', '{}'],
     ['holds a password that is no string', '{"password":7}'],

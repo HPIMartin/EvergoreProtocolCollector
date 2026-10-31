@@ -51,7 +51,7 @@ export function httpProtocolApi(get: HttpGet, post: HttpPost): ProtocolApi {
     return `${AVATARS}${path}?${parameters.toString()}`
   }
 
-  async function bodyOf(response: Response): Promise<unknown> {
+  function refuseUnlessOk(response: Response): void {
     if (response.status === UNAUTHORIZED) {
       throw new Unauthorized()
     }
@@ -61,6 +61,10 @@ export function httpProtocolApi(get: HttpGet, post: HttpPost): ProtocolApi {
     if (!response.ok) {
       throw new RequestFailed(response.status)
     }
+  }
+
+  async function bodyOf(response: Response): Promise<unknown> {
+    refuseUnlessOk(response)
 
     try {
       return await response.json()
@@ -102,6 +106,14 @@ export function httpProtocolApi(get: HttpGet, post: HttpPost): ProtocolApi {
           await post(`${ADMIN_ACCOUNTS}/${encodeURIComponent(name)}/reset`, ''),
         ),
       ),
+    setRole: async (name, role) => {
+      refuseUnlessOk(
+        await post(
+          `${ADMIN_ACCOUNTS}/${encodeURIComponent(name)}/role`,
+          JSON.stringify({ role }),
+        ),
+      )
+    },
     bankEntries: (avatar, window, sort = null) =>
       ledgerOf('bank', avatar, window, sort, bankPageFrom),
     storageEntries: (avatar, window, sort = null) =>

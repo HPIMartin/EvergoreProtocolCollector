@@ -78,6 +78,7 @@ function apiAnswering(usage: Usage, asked: string[] = []): ProtocolApi {
       return Promise.resolve(usage)
     },
     resetPassword: unused,
+    setRole: unused,
     bankEntries: unused,
     storageEntries: unused,
   }

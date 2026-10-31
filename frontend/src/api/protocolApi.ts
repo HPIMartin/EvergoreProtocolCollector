@@ -4,6 +4,7 @@ import type {
   BankEntry,
   Ledger,
   Overview,
+  Role,
   StorageEntry,
   Usage,
 } from '../domain'
@@ -17,6 +18,7 @@ export interface ProtocolApi {
   adminAccounts: () => Promise<Account[]>
   adminUsage: () => Promise<Usage>
   resetPassword: (name: string) => Promise<string>
+  setRole: (name: string, role: Role) => Promise<void>
   bankEntries: (
     avatar: string,
     window: PageWindow,
