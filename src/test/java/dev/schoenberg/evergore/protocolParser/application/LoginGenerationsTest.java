@@ -78,6 +78,28 @@ class LoginGenerationsTest {
 		assertThat(generation).isEqualTo(1);
 	}
 
+	@Test
+	void holdsASecondBumpIfOfTheSameAccountUntilTheFirstChangeIsDone() throws InterruptedException {
+		AtomicReference<Boolean> second = new AtomicReference<>();
+		Thread[] rival = new Thread[1];
+		Thread.State[] seen = new Thread.State[1];
+
+		boolean first = tested.bumpIf("aurora", () -> {
+			rival[0] = new Thread(() -> second.set(tested.bumpIf("aurora", () -> true)));
+			rival[0].start();
+			seen[0] = stateOnceItBlocksOrEnds(rival[0]);
+			return true;
+		});
+		rival[0].join();
+
+		long generation = tested.of("aurora");
+
+		assertThat(seen[0]).isNotEqualTo(Thread.State.TERMINATED);
+		assertThat(first).isTrue();
+		assertThat(second.get()).isTrue();
+		assertThat(generation).isEqualTo(2);
+	}
+
 	private static Thread.State stateOnceItBlocksOrEnds(Thread thread) {
 		Thread.State state = thread.getState();
 		while (state != Thread.State.BLOCKED && state != Thread.State.WAITING && state != Thread.State.TERMINATED) {
