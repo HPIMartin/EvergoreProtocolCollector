@@ -5,4 +5,4 @@ import java.util.Optional;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 
-public record AccountListing(String name, Role role, boolean resting, Optional<Instant> latestLogin) {}
+public record AccountListing(String name, Role role, boolean own, boolean resting, Optional<Instant> latestLogin) {}

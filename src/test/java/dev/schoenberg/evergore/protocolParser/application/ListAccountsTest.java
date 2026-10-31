@@ -10,6 +10,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginSource;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
@@ -24,6 +26,8 @@ class ListAccountsTest {
 	private static final Instant LOGGED_IN = Instant.parse("2026-01-05T10:00:00Z");
 	private static final Instant NEWEST_MOVEMENT = Instant.parse("2026-01-31T12:00:00Z");
 
+	private static final Login ADMIN_KEYS_LOGIN = loginOf(AdminKey.NAME, LoginSource.ADMIN_KEY);
+
 	private final InMemoryAccounts accounts = new InMemoryAccounts(new ArrayList<>());
 	private final BankRepositoryStub bank = new BankRepositoryStub();
 	private final ListAccounts tested = new ListAccounts(accounts, new RestingAccounts(bank, new StorageRepositoryStub()));
@@ -32,18 +36,18 @@ class ListAccountsTest {
 	void carriesNoLatestLoginForAnAccountThatNeverLoggedIn() {
 		accounts.hold(account("Aurora", Optional.empty()));
 
-		List<AccountListing> listed = tested.all();
+		List<AccountListing> listed = tested.all(ADMIN_KEYS_LOGIN);
 
-		assertThat(listed).containsExactly(new AccountListing("Aurora", Role.MEMBER, false, Optional.empty()));
+		assertThat(listed).containsExactly(new AccountListing("Aurora", Role.MEMBER, false, false, Optional.empty()));
 	}
 
 	@Test
 	void carriesTheLatestLoginOfAnAccountThatLoggedIn() {
 		accounts.hold(account("Aurora", Optional.of(LOGGED_IN)));
 
-		List<AccountListing> listed = tested.all();
+		List<AccountListing> listed = tested.all(ADMIN_KEYS_LOGIN);
 
-		assertThat(listed).containsExactly(new AccountListing("Aurora", Role.MEMBER, false, Optional.of(LOGGED_IN)));
+		assertThat(listed).containsExactly(new AccountListing("Aurora", Role.MEMBER, false, false, Optional.of(LOGGED_IN)));
 	}
 
 	@Test
@@ -51,7 +55,7 @@ class ListAccountsTest {
 		accounts.hold(new Account("Aurora", "hash", PasswordState.CHOSEN, Role.MEMBER, Optional.empty()));
 		accounts.hold(new Account("Boreas", "hash", PasswordState.CHOSEN, Role.ADMIN, Optional.empty()));
 
-		List<AccountListing> listed = tested.all();
+		List<AccountListing> listed = tested.all(ADMIN_KEYS_LOGIN);
 
 		assertThat(listed).extracting(AccountListing::name, AccountListing::role).containsExactly(tuple("Aurora", Role.MEMBER), tuple("Boreas", Role.ADMIN));
 	}
@@ -63,9 +67,30 @@ class ListAccountsTest {
 		moved("Aurora", 0);
 		moved("Calix", 31);
 
-		List<AccountListing> listed = tested.all();
+		List<AccountListing> listed = tested.all(ADMIN_KEYS_LOGIN);
 
-		assertThat(listed).containsExactly(new AccountListing("Aurora", Role.MEMBER, false, Optional.empty()), new AccountListing("Calix", Role.MEMBER, true, Optional.empty()));
+		AccountListing awake = new AccountListing("Aurora", Role.MEMBER, false, false, Optional.empty());
+		AccountListing resting = new AccountListing("Calix", Role.MEMBER, false, true, Optional.empty());
+		assertThat(listed).containsExactly(awake, resting);
+	}
+
+	@Test
+	void marksOnlyTheViewersOwnAccountAsOwn() {
+		accounts.hold(account("Aurora", Optional.empty()));
+		accounts.hold(account("Boreas", Optional.empty()));
+
+		List<AccountListing> listed = tested.all(loginOf("BOREAS", LoginSource.ACCOUNT));
+
+		assertThat(listed).extracting(AccountListing::name, AccountListing::own).containsExactly(tuple("Aurora", false), tuple("Boreas", true));
+	}
+
+	@Test
+	void marksNoAccountAsOwnForTheAdminKeysLogin() {
+		accounts.hold(account("Aurora", Optional.empty()));
+
+		List<AccountListing> listed = tested.all(loginOf("Aurora", LoginSource.ADMIN_KEY));
+
+		assertThat(listed).extracting(AccountListing::own).containsExactly(false);
 	}
 
 	@Test
@@ -74,7 +99,7 @@ class ListAccountsTest {
 		accounts.hold(account("Aurora", Optional.empty()));
 		accounts.hold(account("Ärger", Optional.empty()));
 
-		List<String> names = tested.all().stream().map(AccountListing::name).toList();
+		List<String> names = tested.all(ADMIN_KEYS_LOGIN).stream().map(AccountListing::name).toList();
 
 		assertThat(names).containsExactly("Ärger", "Aurora", "Zeta");
 	}
@@ -88,7 +113,7 @@ class ListAccountsTest {
 		accounts.hold(account("Calix", Optional.empty()));
 		accounts.hold(account("Zeta", Optional.empty()));
 
-		listing.all();
+		listing.all(ADMIN_KEYS_LOGIN);
 
 		assertThat(List.of(countingBank.reads, countingStorage.reads)).containsExactly(1, 1);
 	}
@@ -115,6 +140,10 @@ class ListAccountsTest {
 
 	private void moved(String avatar, int daysBeforeTheNewestMovement) {
 		bank.seedEntries(avatar, List.of(new BankEntry(NEWEST_MOVEMENT.minus(Duration.ofDays(daysBeforeTheNewestMovement)), avatar, 300, TransferType.ENTNAHME)));
+	}
+
+	private static Login loginOf(String accountName, LoginSource source) {
+		return new Login(accountName, Role.ADMIN, 0, source, "id", LOGGED_IN, LOGGED_IN.plus(Login.LIFETIME));
 	}
 
 	private static Account account(String avatar, Optional<Instant> lastLogin) {

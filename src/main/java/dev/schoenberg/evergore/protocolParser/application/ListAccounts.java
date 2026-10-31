@@ -6,6 +6,7 @@ import java.util.function.Predicate;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.GermanOrder;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 
 public class ListAccounts {
 	private final AccountRepository accounts;
@@ -16,12 +17,12 @@ public class ListAccounts {
 		this.restingAccounts = restingAccounts;
 	}
 
-	public List<AccountListing> all() {
+	public List<AccountListing> all(Login viewer) {
 		Predicate<Account> rests = restingAccounts.forOneListing();
 		return accounts
 				.allAccounts()
 				.stream()
-				.map(account -> new AccountListing(account.avatar(), account.role(), rests.test(account), account.lastLogin()))
+				.map(account -> new AccountListing(account.avatar(), account.role(), viewer.isTheLoginOf(account), rests.test(account), account.lastLogin()))
 				.sorted(Comparator.comparing(AccountListing::name, GermanOrder.NAMES))
 				.toList();
 	}
