@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { Account } from '../domain'
+import { ADMIN } from '../domain'
 import { formatTimestamp, LOAD_FAILED_MESSAGE, StatusPanel } from '../ui'
 
 export interface AccountListProps {
@@ -50,6 +51,7 @@ export function AccountList({ accounts, reset }: AccountListProps) {
         <thead>
           <tr>
             <th className="data-table__cell">Name</th>
+            <th className="data-table__cell">Rolle</th>
             <th className="data-table__cell">Ruht</th>
             <th className="data-table__cell">Letzte Anmeldung</th>
             <th className="data-table__cell" aria-label="Aktion" />
@@ -64,6 +66,9 @@ export function AccountList({ accounts, reset }: AccountListProps) {
             >
               <td className="data-table__cell" data-testid="account-name">
                 {account.name}
+              </td>
+              <td className="data-table__cell" data-testid="account-role">
+                {account.role === ADMIN ? 'Admin' : 'Mitglied'}
               </td>
               <td className="data-table__cell" data-testid="account-rests">
                 {account.rests ? 'ruht' : ''}

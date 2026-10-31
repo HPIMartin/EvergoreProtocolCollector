@@ -203,14 +203,24 @@ describe('AdminView', () => {
     expect(heading).toBe('Konten')
   })
 
-  it('heads the account table with Name, Ruht and Letzte Anmeldung', async () => {
+  it('heads the account table with Name, Rolle, Ruht and Letzte Anmeldung', async () => {
     await adminViewWith(apiListing([ALRIK]))
 
     const heads = within(screen.getByTestId('accounts'))
       .getAllByRole('columnheader')
       .map((head) => head.textContent)
 
-    expect(heads).toEqual(['Name', 'Ruht', 'Letzte Anmeldung', ''])
+    expect(heads).toEqual(['Name', 'Rolle', 'Ruht', 'Letzte Anmeldung', ''])
+  })
+
+  it('shows Mitglied or Admin under Rolle for each account', async () => {
+    await adminViewWith(apiListing([ALRIK, { ...ZWERG, role: 'admin' }]))
+
+    const roles = screen
+      .getAllByTestId('account-role')
+      .map((cell) => cell.textContent)
+
+    expect(roles).toEqual(['Mitglied', 'Admin'])
   })
 
   it('names the column of the buttons „Aktion“ for assistive technology without showing a text', async () => {
@@ -221,7 +231,7 @@ describe('AdminView', () => {
     )
 
     const labels = heads.map((head) => head.getAttribute('aria-label'))
-    expect(labels).toEqual([null, null, null, 'Aktion'])
+    expect(labels).toEqual([null, null, null, null, 'Aktion'])
   })
 
   it('lists a resting account as ruht and an account never logged in as noch nie', async () => {
