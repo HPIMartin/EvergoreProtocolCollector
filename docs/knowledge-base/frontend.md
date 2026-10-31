@@ -206,7 +206,7 @@ Five top-level folders under `frontend/src/`:
     - the field shows the new role once the service answered 204.
   - While the change of an account's role is in flight its field is disabled, so at most one
     change of a role of an account is under way.
-  - The field is offered again once the service answered the change.
+  - The field is offered again once the service answered the change, or the change failed.
   - A change of a role that fails for any other reason shows „Die Daten konnten nicht geladen
     werden. Bitte später erneut versuchen.“ (`LOAD_FAILED_MESSAGE`) beside the account.
   - A failed change of a role keeps the role the field held.

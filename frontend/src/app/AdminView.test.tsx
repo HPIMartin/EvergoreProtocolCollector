@@ -373,6 +373,21 @@ describe('AdminView', () => {
     })
   })
 
+  it('offers the field again once a change of role has failed', async () => {
+    const failing = (): Promise<void> => Promise.reject(new RequestFailed(500))
+    await adminViewWith(apiListing([ALRIK], unused, failing))
+
+    await act(async () => {
+      fireEvent.change(within(rowOf('Alrik')).getByTestId('account-role'), {
+        target: { value: 'admin' },
+      })
+    })
+
+    const field = within(rowOf('Alrik')).getByTestId('account-role')
+    const disabled = field.hasAttribute('disabled')
+    expect(disabled).toBe(false)
+  })
+
   it("shows the own account's role without a choice", async () => {
     const own: Account = { ...ZWERG, role: 'admin', own: true }
     await adminViewWith(apiListing([ALRIK, own]))

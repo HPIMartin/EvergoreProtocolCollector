@@ -56,6 +56,7 @@ export function AccountList({ accounts, reset, setRole }: AccountListProps) {
         setRoles((before) => new Map(before).set(name, role))
       },
       () => {
+        setChanging((before) => withoutName(before, name))
         setFailedRoles((before) => new Set(before).add(name))
       },
     )
