@@ -244,6 +244,15 @@ describe('the reset of a password on the admin page', () => {
     expect(announcing).toBe('polite')
   })
 
+  it('moves the focus to „Zurücksetzen“ of the account when the question opens', async () => {
+    await adminViewWith(apiListing([ALRIK, ZWERG]))
+
+    fireEvent.click(within(rowOf('Zwerg')).getByTestId('account-reset'))
+
+    const focused = document.activeElement
+    expect(focused).toBe(within(rowOf('Zwerg')).getByTestId('reset-confirm'))
+  })
+
   it('moves the focus to the reset button of the account when the admin answers „Abbrechen“', async () => {
     await adminViewWith(apiListing([ALRIK, ZWERG]))
     fireEvent.click(within(rowOf('Zwerg')).getByTestId('account-reset'))

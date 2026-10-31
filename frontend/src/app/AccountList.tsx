@@ -166,10 +166,21 @@ interface ResetQuestionProps {
 }
 
 function ResetQuestion({ name, onConfirm, onCancel }: ResetQuestionProps) {
+  const confirm = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    confirm.current?.focus()
+  }, [])
+
   return (
     <>
       <span data-testid="reset-question">{`Passwort von ${name} wirklich zurücksetzen?`}</span>
-      <button type="button" data-testid="reset-confirm" onClick={onConfirm}>
+      <button
+        ref={confirm}
+        type="button"
+        data-testid="reset-confirm"
+        onClick={onConfirm}
+      >
         Zurücksetzen
       </button>
       <button type="button" data-testid="reset-cancel" onClick={onCancel}>
