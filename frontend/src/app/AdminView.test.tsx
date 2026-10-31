@@ -509,6 +509,24 @@ describe('the password a reset issued on the admin page', () => {
     expect(shown).toEqual({ beside: undefined, messages: [] })
   })
 
+  it.each(['constructor', '__proto__', 'toString'])(
+    'stands beside an account named %s without a failure shown before or after its reset',
+    async (name) => {
+      const account: Account = { name, rests: false, lastLogin: null }
+      await adminViewWith(apiListing([account], () => Promise.resolve('Pw#1')))
+      const before = shownMessages()
+
+      await resetThrough(name)
+
+      const shown = {
+        before,
+        beside: issuedBeside(name),
+        after: shownMessages(),
+      }
+      expect(shown).toEqual({ before: [], beside: 'Pw#1', after: [] })
+    },
+  )
+
   it('offers no second reset of an account while its reset is in flight', async () => {
     const reset = (): Promise<string> => new Promise(() => undefined)
     await adminViewWith(apiListing([ALRIK, ZWERG], reset))

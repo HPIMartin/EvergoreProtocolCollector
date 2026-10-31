@@ -241,6 +241,8 @@ Five top-level folders under `frontend/src/`:
   - The failure stands until the next „Zurücksetzen“ of that account.
   - The failure and the password are state per account, so another account's reset changes
     neither.
+  - That state is keyed by account name in a `Map`, so a name such as „constructor“ or „__proto__“
+    lists and resets like any other.
   - While an account's reset is in flight its row offers no „Passwort zurücksetzen“, so at most one
     reset of an account is under way and its answer is the one shown.
   - That holds within one open admin page: a second page, or a page opened again while a reset is

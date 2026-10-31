@@ -10,8 +10,8 @@ export interface AccountListProps {
 
 export function AccountList({ accounts, reset }: AccountListProps) {
   const [asking, setAsking] = useState<string | null>(null)
-  const [outcomes, setOutcomes] = useState<Readonly<Record<string, Outcome>>>(
-    {},
+  const [outcomes, setOutcomes] = useState<ReadonlyMap<string, Outcome>>(
+    new Map(),
   )
   const [closedAt, setClosedAt] = useState<string | null>(null)
   const [inFlight, setInFlight] = useState<ReadonlySet<string>>(new Set())
@@ -31,7 +31,7 @@ export function AccountList({ accounts, reset }: AccountListProps) {
         after.delete(name)
         return after
       })
-      setOutcomes((before) => ({ ...before, [name]: outcome }))
+      setOutcomes((before) => new Map(before).set(name, outcome))
     }
     reset(name).then(
       (password) => {
@@ -75,7 +75,7 @@ export function AccountList({ accounts, reset }: AccountListProps) {
               </td>
               <td className="data-table__cell">
                 <div aria-live="polite">
-                  <OutcomeOf outcome={outcomes[account.name]} />
+                  <OutcomeOf outcome={outcomes.get(account.name)} />
                   {asking === account.name ? (
                     <ResetQuestion
                       name={account.name}
@@ -112,12 +112,13 @@ type Outcome =
   | { readonly kind: 'failed' }
 
 function withoutOutcomeOf(
-  outcomes: Readonly<Record<string, Outcome>>,
+  outcomes: ReadonlyMap<string, Outcome>,
   name: string,
-): Readonly<Record<string, Outcome>> {
-  return Object.fromEntries(
-    Object.entries(outcomes).filter(([other]) => other !== name),
-  )
+): ReadonlyMap<string, Outcome> {
+  const without = new Map(outcomes)
+  without.delete(name)
+
+  return without
 }
 
 function OutcomeOf({ outcome }: { readonly outcome: Outcome | undefined }) {
