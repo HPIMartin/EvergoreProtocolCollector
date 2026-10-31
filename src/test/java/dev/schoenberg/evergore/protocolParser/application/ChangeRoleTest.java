@@ -99,6 +99,29 @@ class ChangeRoleTest {
 		assertThat(logger.infoMessages()).isEmpty();
 	}
 
+	@Test
+	void refusesAnAdminsLoginTakingItsOwnAdminRole() {
+		accounts.hold(account("Boreas", Role.ADMIN));
+
+		RoleChangeOutcome outcome = tested.to("boreas", Role.MEMBER, loginOf("Boreas", LoginSource.ACCOUNT));
+
+		assertThat(outcome).isInstanceOf(RoleChangeOutcome.OwnAdminRole.class);
+		assertThat(accounts.held("boreas")).isEqualTo(account("Boreas", Role.ADMIN));
+		assertThat(generations.of("boreas")).isZero();
+		assertThat(logger.infoMessages()).isEmpty();
+	}
+
+	@Test
+	void letsAnAdminsLoginTakeAnotherAdminsRole() {
+		accounts.hold(account("Boreas", Role.ADMIN));
+		accounts.hold(account("Calix", Role.ADMIN));
+
+		RoleChangeOutcome outcome = tested.to("Calix", Role.MEMBER, loginOf("Boreas", LoginSource.ACCOUNT));
+
+		assertThat(outcome).isInstanceOf(RoleChangeOutcome.Changed.class);
+		assertThat(accounts.held("calix")).isEqualTo(account("Calix", Role.MEMBER));
+	}
+
 	private static Login loginOf(String accountName, LoginSource source) {
 		return new Login(accountName, Role.ADMIN, 0, source, "id", LOGGED_IN, LOGGED_IN.plus(Login.LIFETIME));
 	}

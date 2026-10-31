@@ -9,6 +9,8 @@ public sealed interface RoleChangeOutcome {
 		T onUnchanged();
 
 		T onNoAccount();
+
+		T onOwnAdminRole();
 	}
 
 	record Changed() implements RoleChangeOutcome {
@@ -29,6 +31,13 @@ public sealed interface RoleChangeOutcome {
 		@Override
 		public <T> T accept(Visitor<T> visitor) {
 			return visitor.onNoAccount();
+		}
+	}
+
+	record OwnAdminRole() implements RoleChangeOutcome {
+		@Override
+		public <T> T accept(Visitor<T> visitor) {
+			return visitor.onOwnAdminRole();
 		}
 	}
 }

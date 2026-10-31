@@ -26,6 +26,9 @@ public class ChangeRole {
 		if (account.isEmpty()) {
 			return new RoleChangeOutcome.NoAccount();
 		}
+		if (by.isTheLoginOf(account.get()) && role == Role.MEMBER) {
+			return new RoleChangeOutcome.OwnAdminRole();
+		}
 		if (!generations.bumpIf(nameKey, () -> accounts.replaceRole(nameKey, role))) {
 			return new RoleChangeOutcome.Unchanged();
 		}
