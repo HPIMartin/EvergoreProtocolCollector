@@ -430,6 +430,7 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - `AccountRepository.replaceRole` stores the role of an account and reports whether it changed
     anything;
     - it writes only where the stored role differs (`WHERE`).
+  - what the endpoint answers: [build-run-deploy.md](build-run-deploy.md), "HTTP endpoints".
 - **Logging out:** `application/LogOut` keeps the `jti` of every login that logged out in memory
   until that login's own expiry and prunes the expired ones at each logout:
   - `application/ValidLogins` treats such a login as no login, so only that login ends: another

@@ -148,6 +148,21 @@ class AccountsControllerTest {
 		assertThat(response.getBody()).doesNotContain("password");
 	}
 
+	@Test
+	void setsTheRoleNamedInTheBodyAndAnswersNoContent() {
+		accounts.addIfAbsent(new Account("Befoerderter", SECRET_HASH, PasswordState.CHOSEN, Role.MEMBER, Optional.empty()));
+
+		HttpResponse<String> response = postRole("Befoerderter", "{\"role\":\"admin\"}", LoginCookie.headerFor(server));
+
+		Optional<Role> role = accounts.findByNameKey("befoerderter").map(Account::role);
+		assertThat(response.getStatus()).isEqualTo(204);
+		assertThat(role).contains(Role.ADMIN);
+	}
+
+	private HttpResponse<String> postRole(String name, String body, String cookie) {
+		return Unirest.post("/api/v1/admin/accounts/" + name + "/role").header("Cookie", cookie).header("Content-Type", "application/json").body(body).asString();
+	}
+
 	private String latestBankMover() {
 		Map<String, Instant> latest = bank.latestTimestampPerAvatar();
 		return latest.entrySet().stream().max(Map.Entry.comparingByValue()).orElseThrow().getKey();

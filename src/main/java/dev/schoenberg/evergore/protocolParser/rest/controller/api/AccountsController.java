@@ -1,10 +1,13 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller.api;
 
 import java.util.List;
+import java.util.Locale;
 
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.annotation.Body;
+import io.micronaut.http.annotation.Consumes;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.PathVariable;
@@ -12,12 +15,16 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Produces;
 
 import dev.schoenberg.evergore.protocolParser.application.AccountListing;
+import dev.schoenberg.evergore.protocolParser.application.ChangeRole;
 import dev.schoenberg.evergore.protocolParser.application.ListAccounts;
 import dev.schoenberg.evergore.protocolParser.application.ResetPassword;
+import dev.schoenberg.evergore.protocolParser.application.RoleChangeOutcome;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
+import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AccountWire;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.ResetWire;
+import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.RoleRequest;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.RoleWireNames;
 import dev.schoenberg.evergore.protocolParser.rest.filter.LoginAttribute;
 
@@ -29,17 +36,18 @@ public class AccountsController {
 
 	private final ListAccounts listAccounts;
 	private final ResetPassword resetPassword;
+	private final ChangeRole changeRole;
 
-	public AccountsController(ListAccounts listAccounts, ResetPassword resetPassword) {
+	public AccountsController(ListAccounts listAccounts, ResetPassword resetPassword, ChangeRole changeRole) {
 		this.listAccounts = listAccounts;
 		this.resetPassword = resetPassword;
+		this.changeRole = changeRole;
 	}
 
 	@Get
 	@Produces(APPLICATION_JSON)
 	public List<AccountWire> accounts(HttpRequest<?> request) {
-		Login viewer = request.getAttribute(LoginAttribute.NAME, Login.class).orElseThrow(AccessNotAllowed::new);
-		return listAccounts.all(viewer).stream().map(AccountsController::wireOf).toList();
+		return listAccounts.all(loginOf(request)).stream().map(AccountsController::wireOf).toList();
 	}
 
 	private static AccountWire wireOf(AccountListing listing) {
@@ -53,5 +61,40 @@ public class AccountsController {
 				.forAccount(name)
 				.map(issued -> HttpResponse.ok(new ResetWire(issued)).header("Cache-Control", "no-store"))
 				.orElseGet(() -> HttpResponse.status(HttpStatus.NOT_FOUND));
+	}
+
+	@Post("/{name}/role")
+	@Consumes(APPLICATION_JSON)
+	@Produces(APPLICATION_JSON)
+	public HttpResponse<?> role(HttpRequest<?> request, @PathVariable("name") String name, @Body RoleRequest body) {
+		Role role = Role.valueOf(body.role().toUpperCase(Locale.ROOT));
+
+		return changeRole.to(name, role, loginOf(request)).accept(new RoleAnswer());
+	}
+
+	private static Login loginOf(HttpRequest<?> request) {
+		return request.getAttribute(LoginAttribute.NAME, Login.class).orElseThrow(AccessNotAllowed::new);
+	}
+
+	private static final class RoleAnswer implements RoleChangeOutcome.Visitor<HttpResponse<?>> {
+		@Override
+		public HttpResponse<?> onChanged() {
+			return HttpResponse.noContent();
+		}
+
+		@Override
+		public HttpResponse<?> onUnchanged() {
+			return HttpResponse.serverError();
+		}
+
+		@Override
+		public HttpResponse<?> onNoAccount() {
+			return HttpResponse.serverError();
+		}
+
+		@Override
+		public HttpResponse<?> onOwnAdminRole() {
+			return HttpResponse.serverError();
+		}
 	}
 }
