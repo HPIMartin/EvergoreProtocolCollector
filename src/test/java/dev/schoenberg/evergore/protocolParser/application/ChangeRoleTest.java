@@ -29,6 +29,7 @@ class ChangeRoleTest {
 	private static final String UNICODE_PARAGRAPH_SEPARATOR = String.valueOf((char) 0x2029);
 	private static final String NEXT_LINE = String.valueOf((char) 0x85);
 	private static final String VERTICAL_TAB = String.valueOf((char) 0x0b);
+	private static final String ESCAPE = String.valueOf((char) 0x1b);
 	private static final Login THE_ADMIN_KEYS_LOGIN = loginOf(AdminKey.NAME, LoginSource.ADMIN_KEY);
 
 	private final InMemoryAccounts accounts = new InMemoryAccounts(new ArrayList<>());
@@ -61,13 +62,13 @@ class ChangeRoleTest {
 						Arguments.of("Eve" + UNICODE_LINE_SEPARATOR + "Forged line", AdminKey.NAME, "Role of Eve\\u2028Forged line set to admin by admin."),
 						Arguments.of("Eve" + NEXT_LINE + "Forged line", AdminKey.NAME, "Role of Eve\\u0085Forged line set to admin by admin."),
 						Arguments.of("Eve" + UNICODE_PARAGRAPH_SEPARATOR + "Forged line", AdminKey.NAME, "Role of Eve\\u2029Forged line set to admin by admin."),
-						Arguments.of("Eve\u001b[31mForged", AdminKey.NAME, "Role of Eve\\u001b[31mForged set to admin by admin."),
+						Arguments.of("Eve" + ESCAPE + "[31mForged", AdminKey.NAME, "Role of Eve\\u001b[31mForged set to admin by admin."),
 						Arguments.of("Eve" + VERTICAL_TAB + "Forged line", AdminKey.NAME, "Role of Eve\\u000bForged line set to admin by admin."));
 	}
 
 	@ParameterizedTest
 	@MethodSource("namesThatCarryAControlCharacter")
-	void writesNoLineBreakFromANameIntoTheLog(String avatar, String actor, String line) {
+	void writesEachControlOrSeparatorCharacterOfANameEscapedIntoTheLog(String avatar, String actor, String line) {
 		accounts.hold(account(avatar, Role.MEMBER));
 		Login by = loginOf(actor, actor.equals(AdminKey.NAME) ? LoginSource.ADMIN_KEY : LoginSource.ACCOUNT);
 
