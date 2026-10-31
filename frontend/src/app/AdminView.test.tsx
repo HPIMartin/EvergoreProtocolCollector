@@ -250,6 +250,30 @@ describe('AdminView', () => {
     })
   })
 
+  it('applies a chosen role at once, asks no question and shows it once answered', async () => {
+    const chosen: [string, Role][] = []
+    const setRole = (name: string, role: Role): Promise<void> => {
+      chosen.push([name, role])
+
+      return Promise.resolve()
+    }
+    await adminViewWith(apiListing([ALRIK], unused, setRole))
+
+    await act(async () => {
+      fireEvent.change(within(rowOf('Alrik')).getByTestId('account-role'), {
+        target: { value: 'admin' },
+      })
+    })
+
+    const shown = shownRoleOf(rowOf('Alrik'))
+    const questions = screen.queryAllByTestId('reset-question')
+    expect({ chosen, shown, questions }).toEqual({
+      chosen: [['Alrik', 'admin']],
+      shown: 'Admin',
+      questions: [],
+    })
+  })
+
   it("shows the own account's role without a choice", async () => {
     const own: Account = { ...ZWERG, role: 'admin', own: true }
     await adminViewWith(apiListing([ALRIK, own]))

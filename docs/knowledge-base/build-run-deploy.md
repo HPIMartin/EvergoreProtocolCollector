@@ -1482,10 +1482,16 @@ operator always has an admin login, also before any account holds the admin role
   - it is never written anywhere but that line;
   - the next restart draws a new one;
   - the old key logs in no more;
-- a member's account gets the admin role by hand on the production database, after the first
-  collection has created the accounts:
+- a member's account gets the admin role on the admin page, after the first collection has created
+  the accounts (`POST /api/v1/admin/accounts/{name}/role`, "HTTP endpoints"):
+  - the key's login gives the first one;
+  - an account that holds the role gives it on;
+  - the key gives it again should no account hold it;
+- the operator may still give it by hand on the production database:
   - the statement is `UPDATE account SET role = 'ADMIN' WHERE name_key = '<the folded name>'`;
-  - the role is a claim of the signed login, so it takes effect at that member's next login.
+  - the role is a claim of the signed login, so it takes effect at that member's next login;
+  - a change by hand ends no login;
+  - a change on the admin page ends every login of that account.
 
 ## Scheduled job
 

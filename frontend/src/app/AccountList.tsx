@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { Account, Role } from '../domain'
-import { ADMIN, MEMBER } from '../domain'
+import { ADMIN, MEMBER, isRole } from '../domain'
 import { formatTimestamp, LOAD_FAILED_MESSAGE, StatusPanel } from '../ui'
 
 export interface AccountListProps {
   readonly accounts: readonly Account[]
   readonly reset: (name: string) => Promise<string>
+  readonly setRole: (name: string, role: Role) => Promise<void>
 }
 
-export function AccountList({ accounts, reset }: AccountListProps) {
+export function AccountList({ accounts, reset, setRole }: AccountListProps) {
+  const [roles, setRoles] = useState<ReadonlyMap<string, Role>>(new Map())
   const [asking, setAsking] = useState<string | null>(null)
   const [outcomes, setOutcomes] = useState<ReadonlyMap<string, Outcome>>(
     new Map(),
@@ -44,6 +46,15 @@ export function AccountList({ accounts, reset }: AccountListProps) {
     )
   }
 
+  function chooseRoleOf(name: string, role: Role): void {
+    setRole(name, role).then(
+      () => {
+        setRoles((before) => new Map(before).set(name, role))
+      },
+      () => undefined,
+    )
+  }
+
   return (
     <>
       <h3 data-testid="accounts-title">Konten</h3>
@@ -68,7 +79,13 @@ export function AccountList({ accounts, reset }: AccountListProps) {
                 {account.name}
               </td>
               <td className="data-table__cell">
-                <RoleField account={account} />
+                <RoleField
+                  account={account}
+                  held={roles.get(account.name) ?? account.role}
+                  onChoose={(role) => {
+                    chooseRoleOf(account.name, role)
+                  }}
+                />
               </td>
               <td className="data-table__cell" data-testid="account-rests">
                 {account.rests ? 'ruht' : ''}
@@ -117,16 +134,27 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
   [ADMIN]: 'Admin',
 }
 
-function RoleField({ account }: { readonly account: Account }) {
+interface RoleFieldProps {
+  readonly account: Account
+  readonly held: Role
+  readonly onChoose: (role: Role) => void
+}
+
+function RoleField({ account, held, onChoose }: RoleFieldProps) {
   if (account.own) {
-    return <span data-testid="account-role">{ROLE_LABELS[account.role]}</span>
+    return <span data-testid="account-role">{ROLE_LABELS[held]}</span>
   }
 
   return (
     <select
       data-testid="account-role"
       aria-label={`Rolle von ${account.name}`}
-      defaultValue={account.role}
+      value={held}
+      onChange={(event) => {
+        if (isRole(event.target.value)) {
+          onChoose(event.target.value)
+        }
+      }}
     >
       <option value={MEMBER}>{ROLE_LABELS[MEMBER]}</option>
       <option value={ADMIN}>{ROLE_LABELS[ADMIN]}</option>
