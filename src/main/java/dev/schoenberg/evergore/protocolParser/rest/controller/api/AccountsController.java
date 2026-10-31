@@ -99,7 +99,7 @@ public class AccountsController {
 
 		@Override
 		public HttpResponse<?> onOwnAdminRole() {
-			return HttpResponse.serverError();
+			return HttpResponse.status(HttpStatus.FORBIDDEN).body(LoginRefusal.OWN_ADMIN_ROLE);
 		}
 	}
 }

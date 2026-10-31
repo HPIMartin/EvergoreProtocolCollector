@@ -183,6 +183,18 @@ class AccountsControllerTest {
 		assertThat(created).isEmpty();
 	}
 
+	@Test
+	void refusesTakingTheOwnAdminRoleWithItsReason() {
+		accounts.addIfAbsent(new Account("Selbst", SECRET_HASH, PasswordState.CHOSEN, Role.ADMIN, Optional.empty()));
+
+		HttpResponse<String> response = postRole("Selbst", "{\"role\":\"member\"}", LoginCookie.adminHeaderFor(server, "Selbst"));
+
+		Optional<Role> role = accounts.findByNameKey("selbst").map(Account::role);
+		assertThat(response.getStatus()).isEqualTo(403);
+		assertThat(response.getBody()).isEqualTo("{\"refusal\":\"own-admin-role\"}");
+		assertThat(role).contains(Role.ADMIN);
+	}
+
 	private HttpResponse<String> postRole(String name, String body, String cookie) {
 		return Unirest.post("/api/v1/admin/accounts/" + name + "/role").header("Cookie", cookie).header("Content-Type", "application/json").body(body).asString();
 	}
