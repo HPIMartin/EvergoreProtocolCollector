@@ -413,6 +413,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     that step produced.
 - **Changing a role:**
   - `application/ChangeRole` gives an account the role the login of the admin asked for;
+  - it runs `AccountRepository.replaceRole` through `LoginGenerations.bumpIf`;
+    - every open login of that account ends once the role changed;
   - `LoginGenerations.bumpIf` runs a change and raises the account's generation only when that
     change happened;
     - the logins of that account end and the logins of another account stand;

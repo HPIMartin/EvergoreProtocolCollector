@@ -6,13 +6,16 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 
 public class ChangeRole {
 	private final AccountRepository accounts;
+	private final LoginGenerations generations;
 
-	public ChangeRole(AccountRepository accounts) {
+	public ChangeRole(AccountRepository accounts, LoginGenerations generations) {
 		this.accounts = accounts;
+		this.generations = generations;
 	}
 
 	public RoleChangeOutcome to(String name, Role role, Login by) {
-		accounts.replaceRole(new LoginName(name).key(), role);
+		String nameKey = new LoginName(name).key();
+		generations.bumpIf(nameKey, () -> accounts.replaceRole(nameKey, role));
 		return new RoleChangeOutcome.Changed();
 	}
 }

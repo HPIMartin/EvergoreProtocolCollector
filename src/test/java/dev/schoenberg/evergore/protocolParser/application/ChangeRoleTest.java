@@ -19,7 +19,8 @@ class ChangeRoleTest {
 	private static final Login THE_ADMIN_KEYS_LOGIN = loginOf(AdminKey.NAME, LoginSource.ADMIN_KEY);
 
 	private final InMemoryAccounts accounts = new InMemoryAccounts(new ArrayList<>());
-	private final ChangeRole tested = new ChangeRole(accounts);
+	private final LoginGenerations generations = new LoginGenerations();
+	private final ChangeRole tested = new ChangeRole(accounts, generations);
 
 	@Test
 	void givesTheAccountTheRoleItWasAskedFor() {
@@ -29,6 +30,20 @@ class ChangeRoleTest {
 
 		assertThat(accounts.held("aurora")).isEqualTo(account("Aurora", Role.ADMIN));
 		assertThat(outcome).isInstanceOf(RoleChangeOutcome.Changed.class);
+	}
+
+	@Test
+	void endsEveryLoginOfThatAccountAndLeavesTheLoginsOfAnotherOne() {
+		accounts.hold(account("Boreas", Role.MEMBER));
+		accounts.hold(account("Aurora", Role.MEMBER));
+		long before = generations.of("boreas");
+
+		tested.to("Boreas", Role.ADMIN, THE_ADMIN_KEYS_LOGIN);
+
+		long after = generations.of("boreas");
+		long other = generations.of("aurora");
+		assertThat(after).isEqualTo(before + 1);
+		assertThat(other).isZero();
 	}
 
 	private static Login loginOf(String accountName, LoginSource source) {
