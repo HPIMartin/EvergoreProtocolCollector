@@ -113,6 +113,11 @@ Feature: Accounts for the members, and the admin
         | the list of accounts                  |
         | the reset of the password of "Boreas" |
 
+      @wip
+      Examples:
+        | what                                  |
+        | the guild's usage figures             |
+
     Scenario: A reset a member's login asked for leaves the other member's password as it was
       Given a client has logged in as "Aurora" with the password "Sommer-2026!"
       When the client asks for the reset of the password of "Boreas" with its login

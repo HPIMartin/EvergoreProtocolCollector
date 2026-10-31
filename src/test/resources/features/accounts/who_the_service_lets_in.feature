@@ -41,6 +41,17 @@ Feature: Who the service lets in
         | the descriptions of the service's interface for programs (Swagger, ReDoc and RapiDoc) | refuses | refused for lacking a login |
         | an interface address the service does not serve                                       | refuses | refused for lacking a login |
 
+      @wip
+      Examples:
+        | what                      | answer  | result                      |
+        | the guild's usage figures | refuses | refused for lacking a login |
+
+      @wip
+      Examples:
+        | what                                            | answer  | result                      |
+        | a report of a view a member's page showed       | refuses | refused for lacking a login |
+        | an answer to the notice about the usage records | refuses | refused for lacking a login |
+
     Scenario: A reset asked for without a login leaves the member's password as it was
       When a client without a login asks for the reset of the password of "Aurora"
       Then the operator finds a login as "Aurora" with the password "Sommer-2026!" opening the overview's figures

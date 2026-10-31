@@ -95,3 +95,13 @@ Feature: The health report: what the last recompute found
         | the health report | the operator asks the service for its health | the suspected round trips                        | "Ärger: 1 × Federn", "Zorn: 1 × Federn"               |
         | the health report | the operator asks the service for its health | the pairs not judgeable                          | "Ärger: Kristallat", "Zorn: Kristallat"               |
         | the health report | the operator asks the service for its health | the items worth nothing                          | "Übungsstück-Ätherrüstung", "Übungsstück-Wollrüstung" |
+
+      @wip
+      Examples: the usage of each account ("Who uses the app, and when")
+        | surface        | reading                        | list                         | order                                      |
+        | the admin page | the admin opens the admin page | the accounts under "Nutzung" | "Ähre", "Ärger", "Boreas", "Zeder", "Zorn" |
+
+      @wip
+      Examples: what no member used ("What the guild uses")
+        | surface        | reading                        | list                                      | order                                                                                                                                                                                                         |
+        | the admin page | the admin opens the admin page | the views and options under "Nie genutzt" | "Admin-Seite", "Bank (eigene)", "Bank (fremde)", "Erklärseite", "Keine Ansicht", "Lager (eigenes)", "Lager (fremdes)", "Passwort ändern", "Übersicht", "Übersicht sortiert", "Vor Abzügen", "Vorgänge geblättert", "Vorgänge sortiert" |
