@@ -210,6 +210,7 @@ Five top-level folders under `frontend/src/`:
   - A change of a role that fails for any other reason shows „Die Daten konnten nicht geladen
     werden. Bitte später erneut versuchen.“ (`LOAD_FAILED_MESSAGE`) beside the account.
   - A failed change of a role keeps the role the field held.
+  - The next change of that role drops the text.
   - Beside the viewer's own account (`own`) the role stands as plain text (`account-role`, a
     `span`) without a choice, so an admin cannot set their own account to member on the page.
   - Rows stand in the order the service sent (its German order).

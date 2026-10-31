@@ -50,6 +50,7 @@ export function AccountList({ accounts, reset, setRole }: AccountListProps) {
 
   function chooseRoleOf(name: string, role: Role): void {
     setChanging((before) => new Set(before).add(name))
+    setFailedRoles((before) => withoutName(before, name))
     setRole(name, role).then(
       () => {
         setChanging((before) => withoutName(before, name))

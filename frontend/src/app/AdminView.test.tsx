@@ -388,6 +388,34 @@ describe('AdminView', () => {
     expect(disabled).toBe(false)
   })
 
+  it('stops saying a change of role failed once the next change is chosen', async () => {
+    const answers = [
+      (): Promise<void> => Promise.reject(new RequestFailed(500)),
+      (): Promise<void> => new Promise(() => undefined),
+    ]
+    const setRole = (): Promise<void> => answers.shift()?.() ?? unused()
+    await adminViewWith(apiListing([ALRIK], unused, setRole))
+    await act(async () => {
+      fireEvent.change(within(rowOf('Alrik')).getByTestId('account-role'), {
+        target: { value: 'admin' },
+      })
+    })
+    const field = within(rowOf('Alrik')).getByTestId('account-role')
+    const enabledBefore = !field.hasAttribute('disabled')
+    const messagesBefore = shownMessages()
+
+    await act(async () => {
+      fireEvent.change(field, { target: { value: 'admin' } })
+    })
+
+    const messages = shownMessages()
+    expect({ enabledBefore, messagesBefore, messages }).toEqual({
+      enabledBefore: true,
+      messagesBefore: [LOAD_FAILED_MESSAGE],
+      messages: [],
+    })
+  })
+
   it("shows the own account's role without a choice", async () => {
     const own: Account = { ...ZWERG, role: 'admin', own: true }
     await adminViewWith(apiListing([ALRIK, own]))
