@@ -195,7 +195,7 @@ public class AccountResetSteps {
 	}
 
 	private void openTheAdminPageOnTheAdminsBrowser() {
-		if (!browser.accountResets().isOpen()) {
+		if (!browser.adminPageIsOpen()) {
 			browser.opening().openAsTheAdmin(ADMIN_PAGE);
 		}
 	}
@@ -211,7 +211,7 @@ public class AccountResetSteps {
 
 	private void resetOnTheOtherBrowser(String name) {
 		MemberBrowser other = secondBrowser.browser();
-		if (!other.accountResets().isOpen()) {
+		if (!other.adminPageIsOpen()) {
 			other.openHref(ADMIN_PAGE);
 		}
 		accounts.rememberIssued(name, other.accountResets().reset(name));
