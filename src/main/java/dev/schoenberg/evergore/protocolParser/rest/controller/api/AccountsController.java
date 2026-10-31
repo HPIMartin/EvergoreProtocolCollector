@@ -89,7 +89,7 @@ public class AccountsController {
 
 		@Override
 		public HttpResponse<?> onUnchanged() {
-			return HttpResponse.serverError();
+			return HttpResponse.noContent();
 		}
 
 		@Override

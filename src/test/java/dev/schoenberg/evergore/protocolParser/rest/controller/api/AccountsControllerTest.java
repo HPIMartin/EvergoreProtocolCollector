@@ -195,6 +195,17 @@ class AccountsControllerTest {
 		assertThat(role).contains(Role.ADMIN);
 	}
 
+	@Test
+	void answersNoContentForTheRoleTheAccountHolds() {
+		accounts.addIfAbsent(new Account("Gleichbleibend", SECRET_HASH, PasswordState.CHOSEN, Role.ADMIN, Optional.empty()));
+
+		HttpResponse<String> response = postRole("Gleichbleibend", "{\"role\":\"admin\"}", LoginCookie.headerFor(server));
+
+		Optional<Role> role = accounts.findByNameKey("gleichbleibend").map(Account::role);
+		assertThat(response.getStatus()).isEqualTo(204);
+		assertThat(role).contains(Role.ADMIN);
+	}
+
 	private HttpResponse<String> postRole(String name, String body, String cookie) {
 		return Unirest.post("/api/v1/admin/accounts/" + name + "/role").header("Cookie", cookie).header("Content-Type", "application/json").body(body).asString();
 	}
