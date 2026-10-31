@@ -4,6 +4,7 @@ return JSON.stringify({
   messages: [...document.querySelectorAll('p[data-testid]')].map(textOf),
   accounts: [...document.querySelectorAll('[data-testid=account-row]')].map((row) => ({
     name: cellOf(row, 'account-name'),
+    role: cellOf(row, 'account-role'),
     rests: cellOf(row, 'account-rests'),
     lastLogin: cellOf(row, 'account-last-login'),
     issued: cellOf(row, 'account-issued'),

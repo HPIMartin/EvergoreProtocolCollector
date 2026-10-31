@@ -59,6 +59,11 @@ public class AdminSteps {
 		assertThat(accountNamed(name).lastLogin()).isEqualTo(lastLogin);
 	}
 
+	@Then("the admin page gives {string} as the role of {string}")
+	public void theAdminPageGivesAsTheRoleOf(String role, String name) {
+		assertThat(accountNamed(name).role()).isEqualTo(role);
+	}
+
 	private ShownAccount accountNamed(String name) {
 		return adminPage()
 				.accounts()

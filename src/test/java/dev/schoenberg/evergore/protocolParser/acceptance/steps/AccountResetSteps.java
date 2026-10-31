@@ -1,5 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.acceptance.steps;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -81,6 +82,13 @@ public class AccountResetSteps {
 		} else {
 			resetWithoutABrowser(name);
 		}
+	}
+
+	@Given("the admin has reset the password of {string} {int} hours after that login")
+	public void theAdminHasResetThePasswordOfHoursAfterThatLogin(String name, int hours) {
+		time.passes(Duration.ofHours(hours));
+		browser.clock().reads(time.now());
+		theAdminHasResetThePasswordOf(name);
 	}
 
 	@Given("the admin has reset the password of {string} and then reset it again")

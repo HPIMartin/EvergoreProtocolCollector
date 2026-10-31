@@ -51,6 +51,11 @@ public class AccountSteps {
 		accounts.giveTheRole(avatar, Role.valueOf(role.toUpperCase(Locale.ROOT)));
 	}
 
+	@Given("the operator has given {word}'s account the role {string} by hand")
+	public void theOperatorHasGivenTheAccountTheRoleByHand(String avatar, String role) {
+		accountHasTheRole(avatar, role);
+	}
+
 	@Given("{word}'s account holds the password she/he chose, {string}")
 	public void accountHoldsThePasswordSheChose(String avatar, String password) {
 		assertThat(accounts.chosenBy(avatar)).isEqualTo(password);

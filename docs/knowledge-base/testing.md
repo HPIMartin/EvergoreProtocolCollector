@@ -353,8 +353,8 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - An uncoloured figure equals `--color-text` and its parent's colour.
   - That parent equals `--color-text` too, so a rule painting a whole row fails.
   - The admin reads through the same `MemberBrowser`.
-  - `read-admin.js` also returns the account list's rows (`ShownAccount`: name, `ruht` mark, latest
-    login, the password a reset issued).
+  - `read-admin.js` also returns the account list's rows (`ShownAccount`: name, role, `ruht` mark,
+    latest login, the password a reset issued).
   - `read-admin.js` also returns the reset question the page asks; reading waits until the usage
     section has its table or its outcome.
   - `read-usage.js` returns the usage table (`UsageTable`): the window chosen, the column heads, and
