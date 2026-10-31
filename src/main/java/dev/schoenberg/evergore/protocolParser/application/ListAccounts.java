@@ -21,7 +21,7 @@ public class ListAccounts {
 		return accounts
 				.allAccounts()
 				.stream()
-				.map(account -> new AccountListing(account.avatar(), rests.test(account), account.lastLogin()))
+				.map(account -> new AccountListing(account.avatar(), account.role(), rests.test(account), account.lastLogin()))
 				.sorted(Comparator.comparing(AccountListing::name, GermanOrder.NAMES))
 				.toList();
 	}

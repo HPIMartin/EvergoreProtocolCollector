@@ -18,6 +18,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class ListAccountsTest {
 	private static final Instant LOGGED_IN = Instant.parse("2026-01-05T10:00:00Z");
@@ -33,7 +34,7 @@ class ListAccountsTest {
 
 		List<AccountListing> listed = tested.all();
 
-		assertThat(listed).containsExactly(new AccountListing("Aurora", false, Optional.empty()));
+		assertThat(listed).containsExactly(new AccountListing("Aurora", Role.MEMBER, false, Optional.empty()));
 	}
 
 	@Test
@@ -42,7 +43,17 @@ class ListAccountsTest {
 
 		List<AccountListing> listed = tested.all();
 
-		assertThat(listed).containsExactly(new AccountListing("Aurora", false, Optional.of(LOGGED_IN)));
+		assertThat(listed).containsExactly(new AccountListing("Aurora", Role.MEMBER, false, Optional.of(LOGGED_IN)));
+	}
+
+	@Test
+	void givesEachListingTheRoleItsAccountHolds() {
+		accounts.hold(new Account("Aurora", "hash", PasswordState.CHOSEN, Role.MEMBER, Optional.empty()));
+		accounts.hold(new Account("Boreas", "hash", PasswordState.CHOSEN, Role.ADMIN, Optional.empty()));
+
+		List<AccountListing> listed = tested.all();
+
+		assertThat(listed).extracting(AccountListing::name, AccountListing::role).containsExactly(tuple("Aurora", Role.MEMBER), tuple("Boreas", Role.ADMIN));
 	}
 
 	@Test
@@ -54,7 +65,7 @@ class ListAccountsTest {
 
 		List<AccountListing> listed = tested.all();
 
-		assertThat(listed).containsExactly(new AccountListing("Aurora", false, Optional.empty()), new AccountListing("Calix", true, Optional.empty()));
+		assertThat(listed).containsExactly(new AccountListing("Aurora", Role.MEMBER, false, Optional.empty()), new AccountListing("Calix", Role.MEMBER, true, Optional.empty()));
 	}
 
 	@Test
