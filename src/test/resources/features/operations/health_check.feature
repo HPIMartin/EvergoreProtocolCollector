@@ -4,7 +4,7 @@ Feature: The service's health check: its verdict
   attempted since the service started, up while the last one succeeded, down once it failed. A
   failed read of the game alone does not bring the service down, since the figures are still
   recomputed from the stored movements. The dates the report gives beside the verdict are in "The
-  admin page: how the daily collection is going", and what it names is in "The health report: what
+  admin page: how the collections are going", and what it names is in "The health report: what
   the last recompute found". Those dates and findings are for a login with the admin's role: the
   operator asks with the admin key the service names in its log at every start, while without the
   admin's login (no login, a member's login, or one the service did not issue or that has ended) the

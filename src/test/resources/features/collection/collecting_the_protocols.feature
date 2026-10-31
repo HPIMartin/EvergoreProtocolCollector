@@ -1,11 +1,13 @@
 Feature: Collecting the guild protocols from the game
-  Once a day the service signs in to the game, reads the guild bank's and the guild storage's
-  transaction protocols, adds every movement it has not stored yet to the guild ledgers, and then
-  recomputes every member's figures from their whole history. The game only shows the recent past,
-  so the ledgers are the guild's lasting record. What a run stored shows in the members' ledgers on
-  the dashboard: a ledger that "shows exactly" some movements holds these and no others, newest
-  first; movements of the same minute may stand in either order. The bank ledger's "Vorgang" column
-  is left out here; how it names a deposit is settled in "A member's bank and storage ledgers".
+  Once a day, and whenever the admin starts a collection on the admin page ("Starting a collection
+  on the admin page"), the service signs in to the game, reads the guild bank's and the guild
+  storage's transaction protocols, adds every movement it has not stored yet to the guild ledgers,
+  and then recomputes every member's figures from their whole history. The game only shows the
+  recent past, so the ledgers are the guild's lasting record. What a run stored shows in the
+  members' ledgers on the dashboard: a ledger that "shows exactly" some movements holds these and no
+  others, newest first; movements of the same minute may stand in either order. The bank ledger's
+  "Vorgang" column is left out here; how it names a deposit is settled in "A member's bank and
+  storage ledgers".
 
   Scenario: A collection run stores the movements the game's protocols show
     Given the game's bank protocol shows:
@@ -118,6 +120,27 @@ Feature: Collecting the guild protocols from the game
         | 01.01.2026 12:00 | Aurora | 500    |
 
   Rule: Every run recomputes the figures from the whole history
+
+    @wip
+    Scenario Outline: <which> brings a movement made after the last collection into the figures
+      Boreas's movement of 12:00 comes after the daily collection of 05:00 and reaches the figures
+      only through a later collection.
+
+      Given the guild storage ledger holds:
+        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
+        | 01.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
+      And the daily collection ran at 02.01.2026 05:00
+      And the guild storage ledger also holds:
+        | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
+        | 02.01.2026 12:00 | Boreas | 1     | Eisenbarren | 100      | Einlagerung |
+      And <collection>
+      When a member opens the overview
+      Then the overview lists "Aurora, Boreas"
+
+      Examples:
+        | which                                  | collection                                                                                             |
+        | The next daily collection              | the daily collection ran at 03.01.2026 05:00                                                           |
+        | A collection started on the admin page | the admin started a collection on the admin page at 02.01.2026 13:00 and that collection has finished |
 
     Scenario: A second run recomputes the figures instead of adding to them
       Given the guild storage ledger holds:

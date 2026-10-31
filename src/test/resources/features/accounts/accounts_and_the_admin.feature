@@ -1,5 +1,5 @@
 Feature: Accounts for the members, and the admin
-  Every avatar the guild ledgers name gets one account, after the daily collection that first reads
+  Every avatar the guild ledgers name gets one account, after the collection that first reads
   it; the account begins with a random password no one is shown, so its first password to log
   in with comes from the admin's reset ("Resetting a password on the admin page"), and later
   collections leave the account as it is. An avatar named "admin", in any mix of capital and
@@ -15,7 +15,7 @@ Feature: Accounts for the members, and the admin
 
   Rule: Every avatar the guild ledgers name gets one account
 
-    Scenario: Each avatar, first read from either ledger by the first or a later collection, has one account
+    Scenario Outline: Each avatar, first read from either ledger by the first collection or by <later>, has one account
       Aurora stands in both ledgers and Brynja only in the storage ledger, both read by the first
       collection; Boreas is read by a later one.
 
@@ -26,14 +26,23 @@ Feature: Accounts for the members, and the admin
         | Zeitpunkt        | Avatar | Menge | Gegenstand  | Qualität | Vorgang     |
         | 02.01.2026 12:00 | Aurora | 1     | Eisenbarren | 100      | Einlagerung |
         | 03.01.2026 12:00 | Brynja | 1     | Eisenbarren | 100      | Einlagerung |
-      And the daily collection has run
+      And the daily collection ran at 04.01.2026 05:00
       And the guild bank ledger also holds:
         | Zeitpunkt        | Avatar | Betrag | Vorgang    |
         | 04.01.2026 12:00 | Boreas | 750    | Einzahlung |
-      And the daily collection has run
       And the admin has logged in as "admin" with the admin key the service's log names
+      And <collection>
       When the admin opens the admin page
       Then the admin page lists exactly the accounts "Aurora, Boreas, Brynja"
+
+      Examples:
+        | later                                  | collection                                                                                             |
+        | the next daily collection              | the daily collection ran at 05.01.2026 05:00                                                           |
+
+      @wip
+      Examples:
+        | later                                  | collection                                                                                             |
+        | a collection started on the admin page | the admin started a collection on the admin page at 04.01.2026 13:00 and that collection has finished |
 
     Scenario: The password a reset issued to one account does not log in to another
       Given the guild bank ledger holds:
@@ -121,6 +130,11 @@ Feature: Accounts for the members, and the admin
       Examples:
         | what                          |
         | the role "admin" for "Aurora" |
+
+      @wip
+      Examples:
+        | what         |
+        | a collection |
 
     Scenario: A reset a member's login asked for leaves the other member's password as it was
       Given a client has logged in as "Aurora" with the password "Sommer-2026!"

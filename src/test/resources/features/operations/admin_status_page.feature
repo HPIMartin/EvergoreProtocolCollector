@@ -1,15 +1,15 @@
-Feature: The admin page: how the daily collection is going
-  The admin page tells the admin how the daily collection is going: the date of the figures on show
-  ("Stand"), when the game was last read ("Letzter Scrape") and the figures last recomputed
-  ("Letzte Neuberechnung"), and when either last failed. The health report gives the operator the
-  same dates, so the scenarios dating the runs speak for both. What the last recompute found is in
-  "The admin page: what the last recompute found". The page states facts; judging the service
-  healthy or not is the health check's job. The run outcomes are kept only while the service runs;
-  the figures' date is stored with the figures. All times are German wall-clock time, as the game
-  shows them; the health report writes them in UTC, as "The service's health check: its verdict"
-  explains. Who may open the page is in "Accounts for the members, and the admin".
-  The operator asks for the health report with the admin key, as "The service's health check: its
-  verdict" says.
+Feature: The admin page: how the collections are going
+  The admin page tells the admin how the collections, daily or started on the admin page, are going:
+  the date of the figures on show ("Stand"), when the game was last read ("Letzter Scrape") and the
+  figures last recomputed ("Letzte Neuberechnung"), and when either last failed. The health report
+  gives the operator the same dates, so the scenarios dating the runs speak for both. What the last
+  recompute found is in "The admin page: what the last recompute found". The page states facts;
+  judging the service healthy or not is the health check's job. The run outcomes are kept only while
+  the service runs; the figures' date is stored with the figures. All times are German wall-clock
+  time, as the game shows them; the health report writes them in UTC, as "The service's health
+  check: its verdict" explains. Who may open the page is in "Accounts for the members, and the
+  admin". The operator asks for the health report with the admin key, as "The service's health
+  check: its verdict" says.
 
   Rule: The page dates the figures on show with the last recompute that succeeded
 
@@ -55,19 +55,25 @@ Feature: The admin page: how the daily collection is going
         | Letzte Neuberechnung: noch keine Neuberechnung gelaufen |
       And the admin page lists no unknown item
 
-  Rule: The admin page and the health report date each step of the daily collection
+  Rule: The admin page and the health report date each step of a collection, daily or started on the admin page
     The health check's verdict on the same runs is in "The service's health check: its verdict".
 
-    Scenario Outline: After a successful collection <surface> dates the read of the game and the recompute at that collection
-      Given the daily collection ran at 02.01.2026 05:00
+    Scenario Outline: After a successful <which>, <surface> dates the read of the game and the recompute at that collection
+      Given <collection>
       When <reading>
-      Then <surface> dates the last successful scrape and the last successful recompute at 02.01.2026 05:00
+      Then <surface> dates the last successful scrape and the last successful recompute at <moment>
       And <surface> reports no failure
 
       Examples:
-        | surface           | reading                                      |
-        | the admin page    | the admin opens the admin page               |
-        | the health report | the operator asks the service for its health |
+        | which            | collection                                   | moment           | surface           | reading                                      |
+        | daily collection | the daily collection ran at 02.01.2026 05:00 | 02.01.2026 05:00 | the admin page    | the admin opens the admin page               |
+        | daily collection | the daily collection ran at 02.01.2026 05:00 | 02.01.2026 05:00 | the health report | the operator asks the service for its health |
+
+      @wip
+      Examples:
+        | which                                  | collection                                                                                             | moment           | surface           | reading                                      |
+        | collection started on the admin page   | the admin started a collection on the admin page at 02.01.2026 13:00 and that collection has finished | 02.01.2026 13:00 | the admin page    | the admin opens the admin page               |
+        | collection started on the admin page   | the admin started a collection on the admin page at 02.01.2026 13:00 and that collection has finished | 02.01.2026 13:00 | the health report | the operator asks the service for its health |
 
     Scenario Outline: A collection that could not reach the game is dated as a scrape failure on <surface>, and the figures are still recomputed
       Given the daily collection ran at 02.01.2026 05:00

@@ -55,6 +55,11 @@ Feature: Who the service lets in
         | what                          | answer  | result                      |
         | the role "admin" for "Aurora" | refuses | refused for lacking a login |
 
+      @wip
+      Examples:
+        | what         | answer  | result                      |
+        | a collection | refuses | refused for lacking a login |
+
     Scenario: A reset asked for without a login leaves the member's password as it was
       When a client without a login asks for the reset of the password of "Aurora"
       Then the operator finds a login as "Aurora" with the password "Sommer-2026!" opening the overview's figures
