@@ -201,6 +201,19 @@ class ApiReadsOffTheEventLoopTest {
 		assertThat(loginWork).noneMatch(Work::onAnEventLoop).noneMatch(work -> work.thread().isVirtual());
 	}
 
+	@Test
+	void readsTheAccountAndWritesTheRoleOnAPlatformThreadThatIsNoEventLoop() {
+		String body = "{\"role\":\"admin\"}";
+		String request = "POST " + AccountsController.PATH + "/" + AVATAR + "/role HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nCookie: "
+				+ LoginCookie.headerFor(server) + "\r\nContent-Length: " + body.length() + "\r\nConnection: close\r\n\r\n" + body;
+
+		int status = new RawHttpClient(server.getPort()).statusOfRequest(request);
+
+		assertThat(status).isEqualTo(NO_CONTENT.getCode());
+		assertThat(loginWork).extracting(Work::what).containsExactly("findByNameKey", "replaceRole");
+		assertThat(loginWork).noneMatch(Work::onAnEventLoop).noneMatch(work -> work.thread().isVirtual());
+	}
+
 	private int statusWithALogin(String route) {
 		return new RawHttpClient(server.getPort())
 				.statusOfRequest("GET " + route + " HTTP/1.1\r\nHost: localhost\r\nCookie: " + LoginCookie.headerFor(server) + "\r\nConnection: close\r\n\r\n");
