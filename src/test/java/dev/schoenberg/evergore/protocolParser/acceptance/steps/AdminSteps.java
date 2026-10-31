@@ -10,6 +10,7 @@ import io.cucumber.java.en.When;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.AdminPage;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.ShownAccount;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ViewedBrowser;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -20,9 +21,11 @@ public class AdminSteps {
 			+ " const panel = section.querySelector('[data-testid=status-panel]'); return panel !== null && panel.textContent.trim() !== 'Wird geladen…' })()";
 
 	private final AdminsBrowser admins;
+	private final ViewedBrowser viewed;
 
-	public AdminSteps(AdminsBrowser admins) {
+	public AdminSteps(AdminsBrowser admins, ViewedBrowser viewed) {
 		this.admins = admins;
+		this.viewed = viewed;
 	}
 
 	@When("the admin opens the admin page")
@@ -56,21 +59,14 @@ public class AdminSteps {
 
 	@Then("the admin page gives {string} as the latest login of {string}")
 	public void theAdminPageGivesAsTheLatestLoginOf(String lastLogin, String name) {
-		assertThat(accountNamed(name).lastLogin()).isEqualTo(lastLogin);
+		assertThat(adminPage().accountNamed(name).lastLogin()).isEqualTo(lastLogin);
 	}
 
 	@Then("the admin page gives {string} as the role of {string}")
 	public void theAdminPageGivesAsTheRoleOf(String role, String name) {
-		assertThat(accountNamed(name).role()).isEqualTo(role);
-	}
+		AdminPage viewedPage = viewed.current().read("read-admin.js", AdminPage.class);
 
-	private ShownAccount accountNamed(String name) {
-		return adminPage()
-				.accounts()
-				.stream()
-				.filter(account -> name.equals(account.name()))
-				.findFirst()
-				.orElseThrow(() -> new AssertionError("The admin page lists no account of " + name));
+		assertThat(viewedPage.accountNamed(name).role()).isEqualTo(role);
 	}
 
 	private List<String> namesShown() {

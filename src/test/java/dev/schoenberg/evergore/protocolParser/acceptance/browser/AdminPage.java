@@ -2,4 +2,8 @@ package dev.schoenberg.evergore.protocolParser.acceptance.browser;
 
 import java.util.List;
 
-public record AdminPage(List<String> messages, List<ShownAccount> accounts, String question) {}
+public record AdminPage(List<String> messages, List<ShownAccount> accounts, String question) {
+	public ShownAccount accountNamed(String name) {
+		return accounts.stream().filter(account -> name.equals(account.name())).findFirst().orElseThrow(() -> new AssertionError("The admin page lists no account of " + name));
+	}
+}

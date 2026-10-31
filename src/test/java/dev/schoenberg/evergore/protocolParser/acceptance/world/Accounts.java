@@ -62,6 +62,12 @@ public class Accounts {
 		resetWith(adminLogin(), avatar);
 	}
 
+	public void changeRole(String avatar, String roleWireName) {
+		Answer answer = logins.asking(LoginRequests.roleAsking(roleWireName, avatar), adminLogin());
+
+		assertThat(answer.status()).as("the role %s of %s: %s", roleWireName, avatar, answer.body()).isEqualTo(NO_CONTENT);
+	}
+
 	public void chooseDirectly(String avatar, String password) {
 		service.storeTheChosenPassword(avatar, password);
 		chosen.put(avatar, password);

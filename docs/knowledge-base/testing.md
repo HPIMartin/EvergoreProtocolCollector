@@ -355,8 +355,9 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - An uncoloured figure equals `--color-text` and its parent's colour.
   - That parent equals `--color-text` too, so a rule painting a whole row fails.
   - The admin reads through the same `MemberBrowser`.
-  - `read-admin.js` also returns the account list's rows (`ShownAccount`: name, role, `ruht` mark,
-    latest login, the password a reset issued).
+  - `read-admin.js` also returns the account list's rows (`ShownAccount`: name, role, the role
+    choices the field offers (none beside the viewer's own account), `ruht` mark, latest login, the
+    password a reset issued).
   - `read-admin.js` also returns the reset question the page asks; reading waits until the usage
     section has its table or its outcome.
   - `read-usage.js` returns the usage table (`UsageTable`): the window chosen, the column heads, and
@@ -381,6 +382,11 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - The steps record the password read off the page in `ScenarioPasswords`.
   - A reset through the page and one through the service's route are told apart by nothing a later
     step reads.
+  - `accountRoles()`: `AccountRoles`, which picks the role in the field beside an account and waits
+    until the field is enabled again and shows it.
+  - While the first browser's latest login is the admin's, `the admin has chosen … as the role of …`
+    goes through the admin page (`AccountRoles`), and asks the service's route once a member logged
+    in on that browser, as the reset does.
   - `clock()`: `ShiftedClock`.
   - `timeZone()`: `TimeZoneBrowser`.
   - `colours()`: `ComputedColours`.
