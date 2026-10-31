@@ -31,11 +31,7 @@ export function AccountList({ accounts, reset, setRole }: AccountListProps) {
     setInFlight((before) => new Set(before).add(name))
     setOutcomes((before) => withoutOutcomeOf(before, name))
     const settle = (outcome: Outcome): void => {
-      setInFlight((before) => {
-        const after = new Set(before)
-        after.delete(name)
-        return after
-      })
+      setInFlight((before) => withoutName(before, name))
       setOutcomes((before) => new Map(before).set(name, outcome))
     }
     reset(name).then(
