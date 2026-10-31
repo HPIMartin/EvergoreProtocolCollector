@@ -78,7 +78,7 @@ public class AccountDatabaseRepository implements AccountRepository {
 	public boolean replaceRole(String nameKey, Role role) {
 		return database.inTransaction(() -> {
 			UpdateBuilder<AccountEntry, String> update = accounts().updateBuilder();
-			update.updateColumnValue(ROLE_COLUMN, role).where().eq(NAME_KEY_COLUMN, nameKey);
+			update.updateColumnValue(ROLE_COLUMN, role).where().eq(NAME_KEY_COLUMN, nameKey).and().ne(ROLE_COLUMN, role);
 			return update.update() > 0;
 		});
 	}

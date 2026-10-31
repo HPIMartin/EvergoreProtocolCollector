@@ -167,6 +167,23 @@ class AccountDatabaseRepositoryTest {
 	}
 
 	@Test
+	void answersNoChangeForTheRoleTheAccountHolds() {
+		tested.addIfAbsent(account("Aurora", "hash-1", PasswordState.CHOSEN));
+
+		boolean replaced = tested.replaceRole("aurora", Role.MEMBER);
+
+		assertThat(replaced).isFalse();
+		assertThat(tested.findByNameKey("aurora")).contains(account("Aurora", "hash-1", PasswordState.CHOSEN));
+	}
+
+	@Test
+	void answersNoChangeForANameNobodyHolds() {
+		boolean replaced = tested.replaceRole("nobody", Role.ADMIN);
+
+		assertThat(replaced).isFalse();
+	}
+
+	@Test
 	void keepsAReplacedRoleForARepositoryOpenedOnTheSameFileAfterwards() {
 		tested.addIfAbsent(account("Aurora", "hash-1", PasswordState.CHOSEN));
 		tested.replaceRole("aurora", Role.ADMIN);
