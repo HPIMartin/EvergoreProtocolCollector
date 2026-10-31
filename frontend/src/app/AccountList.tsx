@@ -51,6 +51,7 @@ export function AccountList({ accounts, reset, setRole }: AccountListProps) {
     setChanging((before) => new Set(before).add(name))
     setRole(name, role).then(
       () => {
+        setChanging((before) => withoutName(before, name))
         setRoles((before) => new Map(before).set(name, role))
       },
       () => undefined,
@@ -165,6 +166,13 @@ function RoleField({ account, held, changing, onChoose }: RoleFieldProps) {
       <option value={ADMIN}>{ROLE_LABELS[ADMIN]}</option>
     </select>
   )
+}
+
+function withoutName(names: ReadonlySet<string>, name: string): Set<string> {
+  const without = new Set(names)
+  without.delete(name)
+
+  return without
 }
 
 type Outcome =
