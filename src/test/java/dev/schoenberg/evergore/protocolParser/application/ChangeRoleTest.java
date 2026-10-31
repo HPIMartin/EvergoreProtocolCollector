@@ -36,7 +36,8 @@ class ChangeRoleTest {
 	static Stream<Arguments> changesWithTheLineTheyLog() {
 		return Stream
 				.of(Arguments.of("Aurora", Role.MEMBER, Role.ADMIN, loginOf(AdminKey.NAME, LoginSource.ADMIN_KEY), "Role of Aurora set to admin by admin."),
-						Arguments.of("AURORA", Role.ADMIN, Role.MEMBER, loginOf("Boreas", LoginSource.ACCOUNT), "Role of Aurora set to member by Boreas."));
+						Arguments.of("AURORA", Role.ADMIN, Role.MEMBER, loginOf("Boreas", LoginSource.ACCOUNT), "Role of Aurora set to member by Boreas."),
+						Arguments.of(" AURORA ", Role.MEMBER, Role.ADMIN, loginOf(AdminKey.NAME, LoginSource.ADMIN_KEY), "Role of Aurora set to admin by admin."));
 	}
 
 	@ParameterizedTest
@@ -140,6 +141,38 @@ class ChangeRoleTest {
 
 		assertThat(outcome).isInstanceOf(RoleChangeOutcome.Changed.class);
 		assertThat(accounts.held("calix")).isEqualTo(account("Calix", Role.MEMBER));
+	}
+
+	@Test
+	void changesNothingForAnAdminsLoginAskingForTheAdminRoleItHolds() {
+		accounts.hold(account("Boreas", Role.ADMIN));
+
+		RoleChangeOutcome outcome = tested.to("Boreas", Role.ADMIN, loginOf("Boreas", LoginSource.ACCOUNT));
+
+		assertThat(outcome).isInstanceOf(RoleChangeOutcome.Unchanged.class);
+		assertThat(accounts.held("boreas")).isEqualTo(account("Boreas", Role.ADMIN));
+		assertThat(logger.infoMessages()).isEmpty();
+	}
+
+	@Test
+	void letsTheAdminKeyTakeTheAdminRoleOfAnAccountNamedAdmin() {
+		accounts.hold(account("Admin", Role.ADMIN));
+
+		RoleChangeOutcome outcome = tested.to("Admin", Role.MEMBER, THE_ADMIN_KEYS_LOGIN);
+
+		assertThat(outcome).isInstanceOf(RoleChangeOutcome.Changed.class);
+		assertThat(accounts.held("admin")).isEqualTo(account("Admin", Role.MEMBER));
+	}
+
+	@Test
+	void refusesAnAdminsLoginTakingItsOwnAdminRoleWhateverBlanksAndCapitalsItsNameCarries() {
+		accounts.hold(account("Boreas", Role.ADMIN));
+
+		RoleChangeOutcome outcome = tested.to("Boreas", Role.MEMBER, loginOf(" boreas ", LoginSource.ACCOUNT));
+
+		assertThat(outcome).isInstanceOf(RoleChangeOutcome.OwnAdminRole.class);
+		assertThat(accounts.held("boreas")).isEqualTo(account("Boreas", Role.ADMIN));
+		assertThat(logger.infoMessages()).isEmpty();
 	}
 
 	private static Login loginOf(String accountName, LoginSource source) {
