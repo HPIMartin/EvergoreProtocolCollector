@@ -93,7 +93,6 @@ Feature: Resetting a password on the admin page
         | A reset | the reset of the password of | Zelda |
         | A reset | the reset of the password of | admin |
 
-      @wip
       Examples:
         | what             | request              | name  |
         | The role "admin" | the role "admin" for | Zelda |

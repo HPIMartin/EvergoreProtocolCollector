@@ -1,4 +1,3 @@
-@wip
 Feature: Giving and taking the admin role on the admin page
   Beside each account the admin page offers the field "Rolle" with "Mitglied" and "Admin"
   ("The admin page lists the accounts"); choosing the other one gives the account the admin role or

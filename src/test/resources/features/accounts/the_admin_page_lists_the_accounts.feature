@@ -28,7 +28,6 @@ Feature: The admin page lists the accounts
 
   Rule: The admin page lists every account by name with its role, a resting one marked, and its latest login
 
-    @wip
     Scenario: The admin page lists every account with its role, a resting one marked, none logged in yet
       The movements of Calix and Dorn of 01.01. at 00:00 lie more than 30 days before Boreas's of
       31.01., so their accounts rest. The operator has given Boreas and Calix the admin role.
@@ -43,7 +42,6 @@ Feature: The admin page lists the accounts
         | Calix  | Admin    | ruht | noch nie         |
         | Dorn   | Mitglied | ruht | noch nie         |
 
-    @wip
     Scenario Outline: A role <change> by hand after the member's login shows as "<shown>"
       Boreas logs in on his own browser; the admin reads the admin page with the admin key. The
       operator's change by hand leaves Boreas's login standing until it ends; a change on the admin
@@ -76,7 +74,6 @@ Feature: The admin page lists the accounts
         | Boreas | Boreas has chosen "Winter-2026!" in place of the password the reset issued and logged in with it again 2 hours later      | 31.12.2026 14:00 | 2      |
         | Calix  | a member has entered the name "Calix" and the password the reset issued on the login page and been told the account rests | noch nie         | 0      |
 
-    @wip
     Scenario: A reset keeps the role and the latest login shown
       "Boreas has chosen the password" says only which password the account holds, as "Accounts
       for the members, and the admin" explains; the login is the step after it. The operator has

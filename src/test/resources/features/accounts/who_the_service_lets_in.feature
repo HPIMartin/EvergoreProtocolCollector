@@ -51,7 +51,6 @@ Feature: Who the service lets in
         | a report of a view a member's page showed       | refuses | refused for lacking a login |
         | an answer to the notice about the usage records | refuses | refused for lacking a login |
 
-      @wip
       Examples:
         | what                          | answer  | result                      |
         | the role "admin" for "Aurora" | refuses | refused for lacking a login |

@@ -118,7 +118,6 @@ Feature: Accounts for the members, and the admin
         | what                                  |
         | the guild's usage figures             |
 
-      @wip
       Examples:
         | what                          |
         | the role "admin" for "Aurora" |

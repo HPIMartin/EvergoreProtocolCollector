@@ -123,6 +123,22 @@ public class RoleChangeSteps {
 		other.accountRoles().choose(name, label);
 	}
 
+	@Given("the admin has opened the admin page")
+	public void theAdminHasOpenedTheAdminPage() {
+		secondBrowser.browser().opening().openAsTheAdmin(ADMIN_PAGE);
+	}
+
+	@Given("the admin has chosen {string} as the role of {string} on another browser")
+	public void theAdminHasChosenAsTheRoleOfOnAnotherBrowser(String label, String name) {
+		browser.opening().openAsTheAdmin(ADMIN_PAGE);
+		browser.accountRoles().choose(name, label);
+	}
+
+	@Given("the admin has chosen {string} as the role of {string} on the page opened before")
+	public void theAdminHasChosenAsTheRoleOfOnThePageOpenedBefore(String label, String name) {
+		secondBrowser.browser().accountRoles().choose(name, label);
+	}
+
 	@When("the admin opens the admin page on that browser")
 	public void theAdminOpensTheAdminPageOnThatBrowser() {
 		MemberBrowser other = secondBrowser.browser();

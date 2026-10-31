@@ -387,6 +387,9 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - While the first browser's latest login is the admin's, `the admin has chosen … as the role of …`
     goes through the admin page (`AccountRoles`), and asks the service's route once a member logged
     in on that browser, as the reset does.
+  - The scenario that reads a page before another browser changes the role opens it on the second
+    browser and makes the other choice on the first, since a member's login on the first browser
+    would replace the admin's.
   - `clock()`: `ShiftedClock`.
   - `timeZone()`: `TimeZoneBrowser`.
   - `colours()`: `ComputedColours`.
