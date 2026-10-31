@@ -351,6 +351,28 @@ describe('AdminView', () => {
     expect(messages).toEqual(['Diese Seite ist dem Admin vorbehalten.'])
   })
 
+  it('says so when a change of role fails and keeps the role held', async () => {
+    const failing = (): Promise<void> => Promise.reject(new RequestFailed(500))
+    await adminViewWith(apiListing([ALRIK, ZWERG], unused, failing))
+
+    await act(async () => {
+      fireEvent.change(within(rowOf('Alrik')).getByTestId('account-role'), {
+        target: { value: 'admin' },
+      })
+    })
+
+    const besideAlrik = within(rowOf('Alrik'))
+      .queryAllByTestId('status-panel')
+      .map((panel) => panel.textContent)
+    const besideZwerg = within(rowOf('Zwerg')).queryAllByTestId('status-panel')
+    const held = shownRoleOf(rowOf('Alrik'))
+    expect({ besideAlrik, besideZwerg, held }).toEqual({
+      besideAlrik: [LOAD_FAILED_MESSAGE],
+      besideZwerg: [],
+      held: 'Mitglied',
+    })
+  })
+
   it("shows the own account's role without a choice", async () => {
     const own: Account = { ...ZWERG, role: 'admin', own: true }
     await adminViewWith(apiListing([ALRIK, own]))

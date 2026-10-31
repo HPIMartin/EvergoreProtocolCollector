@@ -13,6 +13,7 @@ export interface AccountListProps {
 export function AccountList({ accounts, reset, setRole }: AccountListProps) {
   const [roles, setRoles] = useState<ReadonlyMap<string, Role>>(new Map())
   const [changing, setChanging] = useState<ReadonlySet<string>>(new Set())
+  const [failedRoles, setFailedRoles] = useState<ReadonlySet<string>>(new Set())
   const [asking, setAsking] = useState<string | null>(null)
   const [outcomes, setOutcomes] = useState<ReadonlyMap<string, Outcome>>(
     new Map(),
@@ -54,7 +55,9 @@ export function AccountList({ accounts, reset, setRole }: AccountListProps) {
         setChanging((before) => withoutName(before, name))
         setRoles((before) => new Map(before).set(name, role))
       },
-      () => undefined,
+      () => {
+        setFailedRoles((before) => new Set(before).add(name))
+      },
     )
   }
 
@@ -86,6 +89,7 @@ export function AccountList({ accounts, reset, setRole }: AccountListProps) {
                   account={account}
                   held={roles.get(account.name) ?? account.role}
                   changing={changing.has(account.name)}
+                  failed={failedRoles.has(account.name)}
                   onChoose={(role) => {
                     chooseRoleOf(account.name, role)
                   }}
@@ -142,29 +146,43 @@ interface RoleFieldProps {
   readonly account: Account
   readonly held: Role
   readonly changing: boolean
+  readonly failed: boolean
   readonly onChoose: (role: Role) => void
 }
 
-function RoleField({ account, held, changing, onChoose }: RoleFieldProps) {
+function RoleField({
+  account,
+  held,
+  changing,
+  failed,
+  onChoose,
+}: RoleFieldProps) {
   if (account.own) {
     return <span data-testid="account-role">{ROLE_LABELS[held]}</span>
   }
 
   return (
-    <select
-      data-testid="account-role"
-      aria-label={`Rolle von ${account.name}`}
-      value={held}
-      disabled={changing}
-      onChange={(event) => {
-        if (isRole(event.target.value)) {
-          onChoose(event.target.value)
-        }
-      }}
-    >
-      <option value={MEMBER}>{ROLE_LABELS[MEMBER]}</option>
-      <option value={ADMIN}>{ROLE_LABELS[ADMIN]}</option>
-    </select>
+    <>
+      <select
+        data-testid="account-role"
+        aria-label={`Rolle von ${account.name}`}
+        value={held}
+        disabled={changing}
+        onChange={(event) => {
+          if (isRole(event.target.value)) {
+            onChoose(event.target.value)
+          }
+        }}
+      >
+        <option value={MEMBER}>{ROLE_LABELS[MEMBER]}</option>
+        <option value={ADMIN}>{ROLE_LABELS[ADMIN]}</option>
+      </select>
+      <div aria-live="polite">
+        {failed ? (
+          <StatusPanel variant="error" message={LOAD_FAILED_MESSAGE} />
+        ) : null}
+      </div>
+    </>
   )
 }
 
