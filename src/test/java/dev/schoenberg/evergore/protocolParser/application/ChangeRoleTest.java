@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
@@ -68,6 +69,19 @@ class ChangeRoleTest {
 		long other = generations.of("aurora");
 		assertThat(after).isEqualTo(before + 1);
 		assertThat(other).isZero();
+	}
+
+	@ParameterizedTest
+	@EnumSource(Role.class)
+	void changesNothingEndsNoLoginAndLogsNothingForTheRoleTheAccountHolds(Role held) {
+		accounts.hold(account("Aurora", held));
+
+		RoleChangeOutcome outcome = tested.to("Aurora", held, THE_ADMIN_KEYS_LOGIN);
+
+		assertThat(outcome).isInstanceOf(RoleChangeOutcome.Unchanged.class);
+		assertThat(accounts.held("aurora")).isEqualTo(account("Aurora", held));
+		assertThat(generations.of("aurora")).isZero();
+		assertThat(logger.infoMessages()).isEmpty();
 	}
 
 	private static Login loginOf(String accountName, LoginSource source) {

@@ -21,7 +21,9 @@ public class ChangeRole {
 
 	public RoleChangeOutcome to(String name, Role role, Login by) {
 		String nameKey = new LoginName(name).key();
-		generations.bumpIf(nameKey, () -> accounts.replaceRole(nameKey, role));
+		if (!generations.bumpIf(nameKey, () -> accounts.replaceRole(nameKey, role))) {
+			return new RoleChangeOutcome.Unchanged();
+		}
 		accounts.findByNameKey(nameKey).ifPresent(account -> logger.info(lineOf(account, role, by)));
 		return new RoleChangeOutcome.Changed();
 	}
