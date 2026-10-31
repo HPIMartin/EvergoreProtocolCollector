@@ -12,6 +12,7 @@ public record LoginRefusal(@JsonProperty("refusal") String refusal) {
 	public static final LoginRefusal NO_ACCOUNT = new LoginRefusal("no-account");
 	public static final LoginRefusal BREAKS_THE_RULE = new LoginRefusal("breaks-the-rule");
 	public static final LoginRefusal SAME_AS_BEFORE = new LoginRefusal("same-as-before");
+	public static final LoginRefusal UNKNOWN_ROLE = new LoginRefusal("unknown-role");
 
 	public static LoginRefusal of(PasswordRefusal refusal) {
 		return refusal.accept(new PasswordRefusalVisitor<>() {

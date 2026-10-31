@@ -1,8 +1,9 @@
 package dev.schoenberg.evergore.protocolParser.rest.controller.api;
 
 import java.util.List;
-import java.util.Locale;
+import java.util.Optional;
 
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
@@ -23,6 +24,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AccountWire;
+import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.LoginRefusal;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.ResetWire;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.RoleRequest;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.RoleWireNames;
@@ -66,10 +68,13 @@ public class AccountsController {
 	@Post("/{name}/role")
 	@Consumes(APPLICATION_JSON)
 	@Produces(APPLICATION_JSON)
-	public HttpResponse<?> role(HttpRequest<?> request, @PathVariable("name") String name, @Body RoleRequest body) {
-		Role role = Role.valueOf(body.role().toUpperCase(Locale.ROOT));
+	public HttpResponse<?> role(HttpRequest<?> request, @PathVariable("name") String name, @Body @Nullable RoleRequest body) {
+		Optional<Role> role = body == null ? Optional.empty() : RoleWireNames.parse(body.role());
+		if (role.isEmpty()) {
+			return HttpResponse.badRequest(LoginRefusal.UNKNOWN_ROLE);
+		}
 
-		return changeRole.to(name, role, loginOf(request)).accept(new RoleAnswer());
+		return changeRole.to(name, role.get(), loginOf(request)).accept(new RoleAnswer());
 	}
 
 	private static Login loginOf(HttpRequest<?> request) {

@@ -22,6 +22,8 @@ import kong.unirest.json.JSONArray;
 import kong.unirest.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.schoenberg.evergore.protocolParser.LoginCookie;
 import dev.schoenberg.evergore.protocolParser.application.AccountRepository;
@@ -157,6 +159,19 @@ class AccountsControllerTest {
 		Optional<Role> role = accounts.findByNameKey("befoerderter").map(Account::role);
 		assertThat(response.getStatus()).isEqualTo(204);
 		assertThat(role).contains(Role.ADMIN);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"{\"role\":\"superuser\"}", "{\"role\":\"Admin\"}", "{\"role\":\"\"}", "{}", ""})
+	void refusesARoleOtherThanMemberOrAdmin(String body) {
+		accounts.addIfAbsent(new Account("Standhaft", SECRET_HASH, PasswordState.CHOSEN, Role.MEMBER, Optional.empty()));
+
+		HttpResponse<String> response = postRole("Standhaft", body, LoginCookie.headerFor(server));
+
+		Optional<Role> role = accounts.findByNameKey("standhaft").map(Account::role);
+		assertThat(response.getStatus()).isEqualTo(400);
+		assertThat(response.getBody()).isEqualTo("{\"refusal\":\"unknown-role\"}");
+		assertThat(role).contains(Role.MEMBER);
 	}
 
 	private HttpResponse<String> postRole(String name, String body, String cookie) {
