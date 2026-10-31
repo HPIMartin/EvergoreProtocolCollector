@@ -14,10 +14,10 @@ import dev.schoenberg.evergore.protocolParser.application.ChooseNewPassword;
 import dev.schoenberg.evergore.protocolParser.application.LogIn;
 import dev.schoenberg.evergore.protocolParser.application.LogInOutcome;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordRefusal;
-import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.LoginRefusal;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.LoginRequest;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.LoginStep;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.NewPasswordRequest;
+import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.Refusal;
 
 import static io.micronaut.http.MediaType.APPLICATION_JSON;
 
@@ -75,17 +75,17 @@ public class LoginController {
 
 		@Override
 		public HttpResponse<?> onRefused() {
-			return HttpResponse.status(HttpStatus.UNAUTHORIZED).body(LoginRefusal.WRONG_NAME_OR_PASSWORD);
+			return HttpResponse.status(HttpStatus.UNAUTHORIZED).body(Refusal.WRONG_NAME_OR_PASSWORD);
 		}
 
 		@Override
 		public HttpResponse<?> onResting() {
-			return HttpResponse.status(HttpStatus.FORBIDDEN).body(LoginRefusal.RESTING);
+			return HttpResponse.status(HttpStatus.FORBIDDEN).body(Refusal.RESTING);
 		}
 
 		@Override
 		public HttpResponse<?> onNewPasswordRefused(PasswordRefusal refusal) {
-			return HttpResponse.badRequest(LoginRefusal.of(refusal));
+			return HttpResponse.badRequest(Refusal.of(refusal));
 		}
 	}
 }

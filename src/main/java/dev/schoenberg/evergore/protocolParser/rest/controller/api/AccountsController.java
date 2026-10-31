@@ -24,7 +24,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
 import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.AccountWire;
-import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.LoginRefusal;
+import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.Refusal;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.ResetWire;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.RoleRequest;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.RoleWireNames;
@@ -71,7 +71,7 @@ public class AccountsController {
 	public HttpResponse<?> role(HttpRequest<?> request, @PathVariable("name") String name, @Body @Nullable RoleRequest body) {
 		Optional<Role> role = body == null ? Optional.empty() : RoleWireNames.parse(body.role());
 		if (role.isEmpty()) {
-			return HttpResponse.badRequest(LoginRefusal.UNKNOWN_ROLE);
+			return HttpResponse.badRequest(Refusal.UNKNOWN_ROLE);
 		}
 
 		return changeRole.to(name, role.get(), loginOf(request)).accept(new RoleAnswer());
@@ -99,7 +99,7 @@ public class AccountsController {
 
 		@Override
 		public HttpResponse<?> onOwnAdminRole() {
-			return HttpResponse.status(HttpStatus.FORBIDDEN).body(LoginRefusal.OWN_ADMIN_ROLE);
+			return HttpResponse.status(HttpStatus.FORBIDDEN).body(Refusal.OWN_ADMIN_ROLE);
 		}
 	}
 }

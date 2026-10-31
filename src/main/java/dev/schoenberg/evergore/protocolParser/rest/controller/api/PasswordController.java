@@ -17,7 +17,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordRefusal;
 import dev.schoenberg.evergore.protocolParser.exceptions.AccessNotAllowed;
 import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.ChangePasswordRequest;
-import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.LoginRefusal;
+import dev.schoenberg.evergore.protocolParser.rest.controller.api.wire.Refusal;
 import dev.schoenberg.evergore.protocolParser.rest.filter.LoginAttribute;
 
 import static io.micronaut.http.MediaType.APPLICATION_JSON;
@@ -54,7 +54,7 @@ public class PasswordController {
 
 		@Override
 		public HttpResponse<?> onNoAccount() {
-			return HttpResponse.status(HttpStatus.FORBIDDEN).body(LoginRefusal.NO_ACCOUNT);
+			return HttpResponse.status(HttpStatus.FORBIDDEN).body(Refusal.NO_ACCOUNT);
 		}
 
 		@Override
@@ -64,12 +64,12 @@ public class PasswordController {
 
 		@Override
 		public HttpResponse<?> onWrongCurrentPassword() {
-			return HttpResponse.badRequest(LoginRefusal.WRONG_CURRENT_PASSWORD);
+			return HttpResponse.badRequest(Refusal.WRONG_CURRENT_PASSWORD);
 		}
 
 		@Override
 		public HttpResponse<?> onNewPasswordRefused(PasswordRefusal refusal) {
-			return HttpResponse.badRequest(LoginRefusal.of(refusal));
+			return HttpResponse.badRequest(Refusal.of(refusal));
 		}
 	}
 }
