@@ -5,4 +5,8 @@ import java.time.Instant;
 
 public record Login(String accountName, Role role, long generation, LoginSource source, String id, Instant issuedAt, Instant expiresAt) {
 	public static final Duration LIFETIME = Duration.ofDays(7);
+
+	public boolean isTheLoginOf(Account account) {
+		return source == LoginSource.ACCOUNT && new LoginName(accountName).matches(account.avatar());
+	}
 }
