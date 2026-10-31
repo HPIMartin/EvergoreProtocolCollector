@@ -18,6 +18,10 @@ public final class LoginCookie {
 		return NAME + "=" + server.getApplicationContext().getBean(SignedLogins.class).issue(avatar, Role.MEMBER, 0);
 	}
 
+	public static String adminHeaderFor(EmbeddedServer server, String avatar) {
+		return NAME + "=" + server.getApplicationContext().getBean(SignedLogins.class).issue(avatar, Role.ADMIN, 0);
+	}
+
 	public static String headerFor(EmbeddedServer server) {
 		return NAME + "=" + valueFor(server);
 	}

@@ -65,14 +65,14 @@ class AccountsControllerTest {
 	}
 
 	@Test
-	void answersNameRoleRestsAndLatestLoginOfEveryAccountAndNothingElse() {
+	void answersNameRoleOwnRestsAndLatestLoginOfEveryAccountAndNothingElse() {
 		accounts.addIfAbsent(new Account("Stammgast", SECRET_HASH, PasswordState.CHOSEN, Role.MEMBER, Optional.of(LOGGED_IN)));
 
 		HttpResponse<String> response = Unirest.get("/api/v1/admin/accounts").header("Cookie", LoginCookie.headerFor(server)).asString();
 
 		JSONObject listed = accountNamed(new JSONArray(response.getBody()), "Stammgast");
 		assertThat(response.getStatus()).isEqualTo(200);
-		assertThat(listed.keySet()).containsExactlyInAnyOrder("name", "role", "rests", "lastLogin");
+		assertThat(listed.keySet()).containsExactlyInAnyOrder("name", "role", "own", "rests", "lastLogin");
 		assertThat(listed.getString("lastLogin")).isEqualTo("2026-01-05T10:00:00Z");
 		assertThat(response.getBody()).doesNotContain(SECRET_HASH);
 	}
@@ -88,6 +88,19 @@ class AccountsControllerTest {
 		String adminRole = accountNamed(listed, "Verwalter").getString("role");
 		String memberRole = accountNamed(listed, "Gewoehnlich").getString("role");
 		assertThat(List.of(adminRole, memberRole)).containsExactly("admin", "member");
+	}
+
+	@Test
+	void marksTheAccountOfTheAskingLoginAsOwn() {
+		accounts.addIfAbsent(new Account("Fragender", SECRET_HASH, PasswordState.CHOSEN, Role.ADMIN, Optional.empty()));
+		accounts.addIfAbsent(new Account("Andere", SECRET_HASH, PasswordState.CHOSEN, Role.ADMIN, Optional.empty()));
+
+		HttpResponse<String> response = Unirest.get("/api/v1/admin/accounts").header("Cookie", LoginCookie.adminHeaderFor(server, "Fragender")).asString();
+
+		JSONArray listed = new JSONArray(response.getBody());
+		boolean askersOwn = accountNamed(listed, "Fragender").getBoolean("own");
+		boolean anothersOwn = accountNamed(listed, "Andere").getBoolean("own");
+		assertThat(List.of(askersOwn, anothersOwn)).containsExactly(true, false);
 	}
 
 	@Test

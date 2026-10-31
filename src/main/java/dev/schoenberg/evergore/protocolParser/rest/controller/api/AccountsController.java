@@ -43,7 +43,7 @@ public class AccountsController {
 	}
 
 	private static AccountWire wireOf(AccountListing listing) {
-		return new AccountWire(listing.name(), RoleWireNames.of(listing.role()), listing.resting(), listing.latestLogin().orElse(null));
+		return new AccountWire(listing.name(), RoleWireNames.of(listing.role()), listing.own(), listing.resting(), listing.latestLogin().orElse(null));
 	}
 
 	@Post("/{name}/reset")
