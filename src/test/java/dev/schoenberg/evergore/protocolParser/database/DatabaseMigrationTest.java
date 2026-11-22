@@ -54,6 +54,15 @@ class DatabaseMigrationTest {
 	}
 
 	@Test
+	void createsTheUsageRecordTableWithItsColumns() {
+		migrate();
+
+		List<String> columns = dump("SELECT name, type FROM pragma_table_info('usage_record') ORDER BY cid", 2);
+
+		assertThat(columns).containsExactly("id|INTEGER|", "account_key|VARCHAR|", "at_epoch_millis|INTEGER|", "what|VARCHAR|", "detail|VARCHAR|");
+	}
+
+	@Test
 	void anEmptyDatabaseRefusesANullInEveryLedgerColumn() {
 		migrate();
 
@@ -183,7 +192,8 @@ class DatabaseMigrationTest {
 						"bankEntries|bankEntries_avatar_timeStampEpochMillis_idx|1|timeStampEpochMillis|", "bankEntries|bankEntries_avatar_timeStamp_idx|0|avatar|",
 						"bankEntries|bankEntries_avatar_timeStamp_idx|1|timeStamp|", "storageEntries|storageEntries_avatar_timeStampEpochMillis_idx|0|avatar|",
 						"storageEntries|storageEntries_avatar_timeStampEpochMillis_idx|1|timeStampEpochMillis|", "storageEntries|storageEntries_avatar_timeStamp_idx|0|avatar|",
-						"storageEntries|storageEntries_avatar_timeStamp_idx|1|timeStamp|");
+						"storageEntries|storageEntries_avatar_timeStamp_idx|1|timeStamp|", "usage_record|usage_record_account_key_at_epoch_millis_idx|0|account_key|",
+						"usage_record|usage_record_account_key_at_epoch_millis_idx|1|at_epoch_millis|");
 	}
 
 	@Test
@@ -204,7 +214,8 @@ class DatabaseMigrationTest {
 						"bankEntries|bankEntries_avatar_timeStampEpochMillis_idx|1|timeStampEpochMillis|", "bankEntries|bankEntries_avatar_timeStamp_idx|0|avatar|",
 						"bankEntries|bankEntries_avatar_timeStamp_idx|1|timeStamp|", "storageEntries|storageEntries_avatar_timeStampEpochMillis_idx|0|avatar|",
 						"storageEntries|storageEntries_avatar_timeStampEpochMillis_idx|1|timeStampEpochMillis|", "storageEntries|storageEntries_avatar_timeStamp_idx|0|avatar|",
-						"storageEntries|storageEntries_avatar_timeStamp_idx|1|timeStamp|");
+						"storageEntries|storageEntries_avatar_timeStamp_idx|1|timeStamp|", "usage_record|usage_record_account_key_at_epoch_millis_idx|0|account_key|",
+						"usage_record|usage_record_account_key_at_epoch_millis_idx|1|at_epoch_millis|");
 	}
 
 	@Test
@@ -328,7 +339,7 @@ class DatabaseMigrationTest {
 			return null;
 		});
 
-		assertThat(tableNames()).containsExactlyInAnyOrder("account", "bankEntries", "flyway_schema_history", "metaInformation", "storageEntries");
+		assertThat(tableNames()).containsExactlyInAnyOrder("account", "bankEntries", "flyway_schema_history", "metaInformation", "storageEntries", "usage_record");
 		assertRejectsNullInEveryColumn("metaInformation", "key, value", List.of("'k'", "'v'"));
 	}
 
