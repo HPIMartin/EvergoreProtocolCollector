@@ -1,0 +1,148 @@
+#!/bin/sh
+# The session-start report of the guard module (the SessionStart hook runs it): it says whether the
+# shell-shape guard is active and why not, and names a missing tool the agent tools need. It reads
+# python3 by running it, never by finding it on PATH alone, since a stub on PATH may exit 49, and
+# it imports the modules the guard's import lines name and reports the first one python3 lacks
+# (Debian's python3-minimal lacks several), and it asks the guard itself for its state, so the
+# report and the guard cannot disagree; a guard that fails its own check it reports as
+# misconfigured. A project directory that is empty or no Linux path it reports before it looks for
+# the guard, since the hooks then run none, and a missing guard file as a guard that does not run,
+# since the file ships beside this one. With the guard active it also asks the guard for its
+# worktree root (--root) and names a set AGENT_WORKTREES the guard ignores, and, where
+# AGENT_WORKTREES is unset or empty, the volume root below, under which the guard then approves
+# nothing, unless it is the guard's own root.
+# It starts python3 with -I, as the PreToolUse hook does, so a PYTHONPATH of the project's cannot
+# shadow a module the guard imports.
+# It calls only shell builtins and python3, prints one JSON object (the agent's context and the
+# author's message), and always exits 0, so a failing check never blocks a session.
+# MODULE agent-seat
+# On the unattended agent seat (AGENT_SEAT reads unattended) it adds the line "agent seat:
+# unattended", names no volume root, since the seat mounts none, and names a missing gh, curl,
+# openssl or jq among the missing agent tools.
+# /MODULE agent-seat
+set -u
+
+# > **ADAPT:** the volume's worktree root with the volumes module; empty without it.
+volume_root='/worktrees'
+# MODULE agent-seat
+[ "${AGENT_SEAT:-}" != unattended ] || volume_root=
+# /MODULE agent-seat
+
+project=${CLAUDE_PROJECT_DIR:-}
+guard=$project/agent/bash-shape-guard
+reason=
+label=inactive
+lines=
+notice=
+newline='
+'
+
+python_reason() {
+	command -v python3 > /dev/null 2>&1 || { reason='python3 is not on PATH'; return 0; }
+	version=$(python3 -I -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2> /dev/null) \
+		|| { reason='python3 does not run'; return 0; }
+	case "$version" in
+		[0-9]*.[0-9]*) ;;
+		*) reason='python3 does not run'; return 0 ;;
+	esac
+	major=${version%%.*}
+	minor=${version#*.}
+	if [ "$major" -lt 3 ] || { [ "$major" -eq 3 ] && [ "$minor" -lt 9 ]; }; then
+		reason='python3 is older than 3.9'
+	fi
+}
+
+# agent/self-test's precheck holds the same import-line reader; change both together.
+module_reason() {
+	module=$(python3 -I -c 'import sys
+for line in open(sys.argv[1], "rb"):
+	if line.startswith(b"import "):
+		name = line.split()[1].decode()
+		try:
+			__import__(name)
+		except Exception:
+			print(name)
+			break' "$guard" 2> /dev/null) || module=
+	[ -z "$module" ] || reason="python3 lacks its standard library (no module $module)"
+}
+
+guard_reason() {
+	python_reason
+	[ -z "$reason" ] || return 0
+	module_reason
+	[ -z "$reason" ] || return 0
+	state=$(python3 -I "$guard" --state 2> /dev/null) || state=
+	case "$state" in
+		active) ;;
+		'inactive: '*) reason=${state#inactive: } ;;
+		'misconfigured: '*) reason=${state#misconfigured: }; label=misconfigured ;;
+		*) reason='the guard does not start' ;;
+	esac
+}
+
+root_lines() {
+	answer=$(python3 -I "$guard" --root 2> /dev/null) || answer=
+	root=${answer%%"$newline"*}
+	case "$answer" in
+		*"$newline"'AGENT_WORKTREES ignored: '*)
+			why=${answer#*"$newline"'AGENT_WORKTREES ignored: '}
+			notice="agent guard: AGENT_WORKTREES ignored, since $why; the worktree root in use is $root"
+			;;
+	esac
+	if [ -n "$volume_root" ] && [ -z "${AGENT_WORKTREES:-}" ]; then
+		shown=$(python3 -I -c 'import json, sys; print(json.dumps(sys.argv[1])[1:-1])' "$volume_root" 2> /dev/null)
+		if [ "$root" != "${shown%/}/" ]; then
+			notice="$notice${notice:+\\n}agent guard: AGENT_WORKTREES is unset or empty, so the guard approves nothing under $shown; a session on the host reaches the volume's worktrees only through docker exec -u vscode <container> …, and strands run from a session in the container"
+		fi
+	fi
+}
+
+case "$project" in
+	'') reason='CLAUDE_PROJECT_DIR is unset' ;;
+	/*) ;;
+	*) reason='CLAUDE_PROJECT_DIR is no Linux path' ;;
+esac
+if [ -n "$reason" ]; then
+	lines="agent guard inactive: $reason, so the hooks run no guard and its refusals are off"
+elif [ -f "$guard" ]; then
+	guard_reason
+	if [ -n "$reason" ]; then
+		lines="agent guard $label: $reason"
+	else
+		root_lines
+		lines="agent guard active${notice:+\\n}$notice"
+	fi
+else
+	reason='agent/bash-shape-guard is missing'
+	lines="agent guard inactive: $reason, so the hooks run no guard and its refusals are off"
+fi
+
+missing=
+for tool in sh awk git mktemp; do
+	command -v "$tool" > /dev/null 2>&1 || missing="$missing no $tool on PATH;"
+done
+if [ -f "$project/gate/lens-request" ]; then
+	command -v curl > /dev/null 2>&1 || missing="$missing no curl on PATH: gate/lens-request refuses without it;"
+fi
+# MODULE agent-seat
+if [ "${AGENT_SEAT:-}" = unattended ]; then
+	lines="$lines${lines:+\\n}agent seat: unattended"
+	for tool in gh curl openssl jq; do
+		case "$missing" in
+			*" no $tool on PATH"*) ;;
+			*) command -v "$tool" > /dev/null 2>&1 || missing="$missing no $tool on PATH: the agent seat needs it;" ;;
+		esac
+	done
+fi
+# /MODULE agent-seat
+if [ -n "$missing" ]; then
+	lines="$lines${lines:+\\n}agent tools:$missing the agent and gate tools need sh, awk, git and mktemp"
+fi
+
+if [ -n "$reason" ] || [ -n "$missing" ] || [ -n "$notice" ]; then
+	message="\"systemMessage\":\"$lines\","
+else
+	message=
+fi
+printf '{%s"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$message" "$lines"
+exit 0
