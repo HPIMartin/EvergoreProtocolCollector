@@ -1559,6 +1559,11 @@ step git add -A
 if "$hooks_dir/content-gate" --staged >/dev/null 2>&1; then r=0; else r=1; fi
 check "the content gate passes a comment in a script under release/" "$r"
 
+new_repo frontendtoken
+write_file frontend/src/api/client.ts 'const URL = "https://example.com/api?token=abcdef";'
+if refuses "Add the frontend client"; then r=0; else r=1; fi
+check "a hard-coded token in frontend production source leaves no commit behind" "$r"
+
 # A copy of the content gate whose comment_exempt_dirs lists one more directory, written through a
 # second file, so a case proves the list the way a project edits it.
 gate_exempting() {
