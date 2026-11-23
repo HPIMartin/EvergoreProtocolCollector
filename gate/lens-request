@@ -1,6 +1,18 @@
 #!/bin/sh
 set -eu
 
+# > **ADAPT:** the host the security lens's requests reach, one single-quoted assignment. The
+# > default `localhost` is right where the tip runs on the machine the session runs on;
+# > `host.docker.internal` where the session runs in a container whose Docker socket belongs to the
+# > host. /adopt sets it from the environment answer and /template-upgrade keeps it.
+host='host.docker.internal'
+# MODULE agent-seat
+# The unattended seat runs the tip's container on its own Docker daemon, which answers on localhost.
+if [ "${AGENT_SEAT:-}" = unattended ]; then
+	host=localhost
+fi
+# /MODULE agent-seat
+
 usage() {
 	printf 'usage: gate/lens-request <port> <METHOD> <path> [--header '\''Name: Value'\'']... [--body-file <file>]\n' >&2
 	exit 2
@@ -23,8 +35,8 @@ esac
 [ "$port" -ge 1024 ] && [ "$port" -le 65535 ] || refuse "port $port is outside 1024-65535"
 
 case "$method" in
-	GET | POST | PUT | DELETE | HEAD | OPTIONS) ;;
-	*) refuse "method '$method' is not one of GET POST PUT DELETE HEAD OPTIONS" ;;
+	GET | POST | PUT | PATCH | DELETE | HEAD | OPTIONS) ;;
+	*) refuse "method '$method' is not one of GET POST PUT PATCH DELETE HEAD OPTIONS" ;;
 esac
 
 case "$path" in
@@ -32,9 +44,7 @@ case "$path" in
 	*) refuse "path '$path' does not begin with /" ;;
 esac
 
-host=host.docker.internal
-[ "${EPC_SEAT:-}" = agent-machine ] && host=localhost
-
+body=
 remaining=$#
 while [ "$remaining" -gt 0 ]; do
 	opt=$1
@@ -60,7 +70,9 @@ while [ "$remaining" -gt 0 ]; do
 			file=$1
 			shift
 			remaining=$((remaining - 1))
+			[ "$file" != - ] || refuse "body file '-' reads standard input in curl; write ./- for a file of that name"
 			[ -f "$file" ] || refuse "body file '$file' does not exist"
+			body=$file
 			set -- "$@" --data-binary "@$file"
 			;;
 		*)
@@ -68,4 +80,14 @@ while [ "$remaining" -gt 0 ]; do
 	esac
 done
 
-exec curl -q -s -i --globoff --path-as-is --noproxy '*' --max-time 15 -X "$method" "$@" "http://$host:$port$path"
+[ "$method" != HEAD ] || [ -z "$body" ] || refuse "HEAD sends no body, so --body-file '$body' has nothing to carry"
+
+command -v curl > /dev/null 2>&1 || refuse "no curl on PATH, so no request can be sent"
+
+if [ "$method" = HEAD ]; then
+	set -- -I "$@"
+else
+	set -- -X "$method" "$@"
+fi
+
+exec curl -q -s -S -i --globoff --path-as-is --noproxy '*' --max-time 15 "$@" "http://$host:$port$path"

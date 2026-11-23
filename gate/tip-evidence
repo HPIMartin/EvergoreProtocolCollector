@@ -1,6 +1,10 @@
 #!/bin/sh
 set -eu
 
+# Runs the evidence the dossier asks of the tip itself: bdd.log, kb-guard.log and wip.expected
+# (multi-agent-playbook.md, "The gate dossier"). The values come from the ADAPT block of
+# gate/dossier-check.
+
 usage() {
 	printf 'usage: gate/tip-evidence <strand worktree>\n' >&2
 	exit 2
@@ -11,55 +15,112 @@ refuse() {
 	exit 2
 }
 
+for tool in awk git mktemp; do
+	command -v "$tool" > /dev/null 2>&1 || {
+		printf 'gate/tip-evidence: no %s on PATH; the gate module needs sh, awk, git and mktemp, so nothing was run\n' "$tool" >&2
+		exit 2
+	}
+done
+
+last_line() { awk 'NF { last = $0 } END { print last }' "$1"; }
+
+gate_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+check="$gate_dir/dossier-check"
+. "$gate_dir/lock"
+
+stop_wanted=no
+strand=
+finish() {
+	if [ "$stop_wanted" = yes ] && [ -x "$strand/verify" ]; then
+		"$strand/verify" stop > /dev/null 2>&1 || true
+	fi
+	lock_release_all
+}
+trap finish EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 [ $# -eq 1 ] || usage
 strand=$(git -C "$1" rev-parse --show-toplevel) || refuse "$1 is no git worktree"
-gate_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-[ -z "$(git -C "$strand" status --porcelain)" ] || refuse "$strand is not clean; commit or set the change aside first"
+[ -z "$(git -C "$strand" status --porcelain --untracked-files=all)" ] || refuse "$strand is not clean; commit or set the change aside first"
+
+bdd_leg=$("$check" --value bdd_leg) || refuse "the ADAPT block of $check cannot be read"
+docs_guard_test=$("$check" --value docs_guard_test)
+docs_guard_ran_re=$("$check" --value docs_guard_ran_re)
+walk_success_re=$("$check" --value walk_success_re)
+
 dossier="$strand/gate.local.d"
 tip=$(git -C "$strand" rev-parse HEAD)
 mkdir -p "$dossier"
-exec 8< "$dossier"
-flock -n 8 || refuse "another run holds $dossier"
-trap '"$strand/verify" stop > /dev/null 2>&1 || true' EXIT
+lock_take "$dossier/tip-evidence.lock" "another run holds $dossier"
 
-{
-	printf 'tip: %s\n' "$tip"
-	"$strand/verify" bdd 2>&1 || true
-} > "$dossier/bdd.log.tmp"
-mv "$dossier/bdd.log.tmp" "$dossier/bdd.log"
-printf 'bdd.log: %s\n' "$(grep -E '^BUILD (SUCCESSFUL|FAILED)' "$dossier/bdd.log" | tail -1)"
+guard=
+if [ -n "$docs_guard_test" ]; then
+	guards=$(git -C "$strand" ls-files -z -- "*$docs_guard_test.*" | tr '\0' '\n' \
+		| awk -v name="$docs_guard_test" '{ base = $0; sub(/^.*\//, "", base); sub(/\.[^.]*$/, "", base); if (base == name) print }')
+	guard=$(printf '%s\n' "$guards" | head -n 1)
+	[ "$(printf '%s\n' "$guards" | awk 'NF { n++ } END { print n + 0 }')" -le 1 ] \
+		|| refuse "$strand holds more than one file named $docs_guard_test, so no run says which one it proves"
+fi
+stop_wanted=yes
 
-guarded=0
-guard=$(git -C "$strand" ls-files '*KbCitationGuardTest.java' | head -1)
-if [ -z "$guard" ]; then
+if [ "$bdd_leg" = on ]; then
+	{
+		printf 'tip: %s\n' "$tip"
+		"$strand/verify" bdd 2>&1 || true
+	} > "$dossier/bdd.log.tmp"
+	mv "$dossier/bdd.log.tmp" "$dossier/bdd.log"
+	printf 'bdd.log: %s\n' "$(last_line "$dossier/bdd.log")"
+else
+	rm -f "$dossier/bdd.log" "$dossier/wip.expected"
+	printf 'bdd.log: none, bdd_leg is off in the ADAPT block\n'
+	printf 'wip.expected: none, bdd_leg is off in the ADAPT block\n'
+fi
+
+guard_failed=0
+if [ -z "$docs_guard_test" ]; then
 	rm -f "$dossier/kb-guard.log"
-	printf 'kb-guard.log: none, the strand holds no KbCitationGuardTest\n'
-	guarded=1
+	printf 'kb-guard.log: none, the ADAPT block names no docs_guard_test\n'
+elif [ -z "$guard" ]; then
+	rm -f "$dossier/kb-guard.log"
+	printf 'kb-guard.log: none, the strand holds no %s\n' "$docs_guard_test"
+	guard_failed=1
 else
 	status=0
 	{
 		printf 'tip: %s\n' "$tip"
-		printf 'command: %s/verify focus %s/%s\n' "$strand" "$strand" "$guard"
-		"$strand/verify" focus "$strand/$guard" 2>&1 || status=$?
+		printf 'command: ./verify focus %s\n' "$guard"
+		(cd "$strand" && ./verify focus "$guard") 2>&1 || status=$?
 	} > "$dossier/kb-guard.log.tmp"
 	mv "$dossier/kb-guard.log.tmp" "$dossier/kb-guard.log"
-	printf 'kb-guard.log: %s\n' "$(grep -E '^BUILD (SUCCESSFUL|FAILED)' "$dossier/kb-guard.log" | tail -1)"
-	if [ "$status" -ne 0 ] || ! grep -q '^BUILD SUCCESSFUL' "$dossier/kb-guard.log"; then
-		guarded=1
+	printf 'kb-guard.log: %s\n' "$(last_line "$dossier/kb-guard.log")"
+	# The dossier check judges the run by these two lines, so it is judged by them here too.
+	ran=no
+	if tr -d '\r' < "$dossier/kb-guard.log" | grep -Eq -- "$docs_guard_ran_re" \
+		&& tr -d '\r' < "$dossier/kb-guard.log" | grep -Eq -- "$walk_success_re"; then
+		ran=yes
+	fi
+	if [ "$status" -ne 0 ] || [ "$ran" = no ]; then
+		guard_failed=1
 	fi
 fi
 
-if [ "$(git -C "$strand" rev-parse HEAD)" != "$tip" ] || [ -n "$(git -C "$strand" status --porcelain)" ]; then
+if [ "$(git -C "$strand" rev-parse HEAD)" != "$tip" ] || [ -n "$(git -C "$strand" status --porcelain --untracked-files=all)" ]; then
 	rm -f "$dossier/bdd.log" "$dossier/kb-guard.log"
 	refuse "$strand moved during the runs, so they prove no tip; run again on a still worktree"
 fi
 
-wip=$("$gate_dir/dossier-check" --wip "$strand" "$tip") || refuse "the @wip scenarios at $tip could not be read"
-if [ -n "$wip" ]; then
-	printf 'wip.expected: kept, since a scenario is still @wip; name each expected failure and the tip yourself\n'
-else
-	printf 'tip: %s\n' "$tip" > "$dossier/wip.expected"
-	printf 'wip.expected: the tip alone, no scenario is @wip\n'
+if [ "$bdd_leg" = on ]; then
+	# The reader refuses a feature it cannot read, one in a language it does not know included, and
+	# names it above; wip.expected then stays as it is, never rewritten as if no scenario were @wip.
+	wip=$("$check" --wip "$strand" "$tip") || refuse "the @wip scenarios at $tip could not be read, so wip.expected is left as it is"
+	if [ -n "$wip" ]; then
+		printf 'wip.expected: kept, since a scenario is still @wip; name each expected failure and the tip yourself\n'
+	else
+		printf 'tip: %s\n' "$tip" > "$dossier/wip.expected"
+		printf 'wip.expected: the tip alone, no scenario is @wip\n'
+	fi
 fi
 
-exit "$guarded"
+exit "$guard_failed"

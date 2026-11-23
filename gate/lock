@@ -1,0 +1,48 @@
+# Sourced by gate/walk and gate/tip-evidence, which define refuse(). A lock is a directory made by
+# mkdir, which is atomic on every host; its owner file holds the pid of the run that made it.
+# A lock whose owner no longer runs is taken over: the old directory is moved aside by one rename,
+# which only one taker wins, and checked to be the one that was judged dead. A lock that names no
+# owner is never taken over, since its maker may sit between mkdir and the write of its pid.
+held_locks=
+
+lock_claim() {
+	printf '%s\n' "$$" > "$1/owner"
+	held_locks="$held_locks
+$1"
+}
+
+lock_take() {
+	lock=$1
+	what=$2
+	if mkdir "$lock" 2> /dev/null; then
+		lock_claim "$lock"
+		return 0
+	fi
+	[ -d "$lock" ] || refuse "$what (lock $lock cannot be made)"
+	owner=$(cat "$lock/owner" 2> /dev/null || true)
+	case "$owner" in
+		''|*[!0-9]*) refuse "$what (lock $lock holds no pid of its own; remove it once no run holds it)" ;;
+	esac
+	if kill -0 "$owner" 2> /dev/null; then
+		refuse "$what (lock $lock, pid $owner; if that process is no run of the gate, remove $lock by hand)"
+	fi
+	taken="$lock.over.$$"
+	mv "$lock" "$taken" 2> /dev/null || refuse "$what (lock $lock changed hands while it was taken over)"
+	if [ "$(cat "$taken/owner" 2> /dev/null || true)" != "$owner" ]; then
+		mv "$taken" "$lock" 2> /dev/null || true
+		refuse "$what (lock $lock changed hands while it was taken over)"
+	fi
+	rm -rf "$taken"
+	mkdir "$lock" 2> /dev/null || refuse "$what (lock $lock was taken first)"
+	lock_claim "$lock"
+}
+
+lock_release_all() {
+	while IFS= read -r held; do
+		[ -n "$held" ] || continue
+		rm -rf "$held"
+	done <<HELD
+$held_locks
+HELD
+	held_locks=
+}

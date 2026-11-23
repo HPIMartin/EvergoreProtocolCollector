@@ -1,17 +1,46 @@
 #!/bin/sh
 set -eu
 
+# The scenario gate's check (multi-agent-playbook.md, "The scenario-gate dossier"): it prints the
+# fingerprint of each feature file as it is now and refuses a falsifier or reviewer report that
+# did not read exactly these, or that lacks its own verdict line. Its pass says that every report
+# read the features as they are; a report whose verdict is not a pass is named on that last line.
+# The features directory comes from the ADAPT block of gate/dossier-check.
+
 usage() {
 	printf 'usage: gate/scenario-check <strand worktree>\n' >&2
 	printf '       gate/scenario-check --fingerprints <strand worktree>\n' >&2
 	exit 2
 }
 
+die() {
+	printf 'scenario-check: %s\n' "$1" >&2
+	exit 2
+}
+
+for tool in awk git mktemp; do
+	command -v "$tool" > /dev/null 2>&1 || {
+		printf 'scenario-check: no %s on PATH; the gate module needs sh, awk, git and mktemp, so nothing was checked\n' "$tool" >&2
+		exit 2
+	}
+done
+
+gate_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+features_dir=$("$gate_dir/dossier-check" --value features_dir) || die "the ADAPT block of $gate_dir/dossier-check cannot be read"
+
 fingerprints() {
-	find "$1/src/test/resources/features/" -type f -name '*.feature' | LC_ALL=C sort | while IFS= read -r file; do
+	git -C "$1" rev-parse --is-inside-work-tree > /dev/null 2>&1 \
+		|| die "$1 is no git checkout, so no feature can be fingerprinted"
+	[ -d "$1/$features_dir" ] || die "$1/$features_dir is no directory, so no feature can be fingerprinted"
+	found=$(find "$1/$features_dir/" -type f -name '*.feature' | LC_ALL=C sort)
+	while IFS= read -r file; do
+		[ -n "$file" ] || continue
+		[ -f "$file" ] || die "a feature path holds a line break, which a fingerprint line cannot carry (near $file)"
 		feature=${file#"$1"/}
 		printf 'fingerprint: %s %s\n' "$(git -C "$1" hash-object -- "$feature")" "$feature"
-	done
+	done <<FOUND
+$found
+FOUND
 }
 
 if [ "${1:-}" = --fingerprints ]; then
@@ -24,14 +53,38 @@ fi
 worktree=$1
 dossier="$worktree/gate.local.d/scenario"
 refusals=0
-scratch=$(mktemp -d)
+scratch=$(mktemp -d) || die "no scratch directory can be made in ${TMPDIR:-/tmp}, so nothing was checked"
 trap 'rm -rf "$scratch"' EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 refuse() {
 	printf 'refused [%s]: %s\n' "$1" "$2"
 	refusals=$((refusals + 1))
 }
 
+# A report's own verdict, as the feature gate's check reads one: its one line that opens with the
+# field, after a list marker, bold or a backtick, and reads its value alone; "-" where there is none.
+own_verdict() {
+	tr -d '\r' < "$1" | field="$2" awk '
+		BEGIN {
+			field = ENVIRON["field"]
+			opening = "^[[:space:]]*([-*+]|[0-9]+[.)])?[[:space:]]*(\\*\\*|`)?" field ":"
+			alone = opening "[[:space:]]*(\\*\\*|`)?[A-Za-z]+(\\*\\*|`)?[[:space:]]*$"
+		}
+		$0 ~ opening { openings++; line = $0 }
+		END {
+			value = "-"
+			if (openings == 1 && line ~ alone) {
+				value = line; sub("^[^:]*" field ":", "", value); gsub(/[*`[:space:]]/, "", value)
+			}
+			print value
+		}
+	'
+}
+
+not_passing=
 judge() {
 	report="$dossier/$1"
 	: > "$scratch/changed"
@@ -39,7 +92,20 @@ judge() {
 		refuse report "$1 is missing from gate.local.d/scenario/ (playbook, The scenario-gate dossier)"
 		return
 	fi
-	tr -d '\r' < "$report" | sed 's/^[[:space:]]*//' | grep -E '^fingerprint: [0-9a-f]{40} ' | LC_ALL=C sort -u > "$scratch/named" || true
+	case "$1" in
+		reviewer.md) field=verdict choice='PASS or FAIL' ;;
+		*) field=soundSpec choice='yes or no' ;;
+	esac
+	value=$(own_verdict "$report" "$field") || value=-
+	case "$field:$value" in
+		soundSpec:yes|verdict:PASS) ;;
+		soundSpec:no|verdict:FAIL) not_passing="${not_passing:+$not_passing, }$1 ($field: $value)" ;;
+		*) refuse report "$1 has no single line of its own that opens with $field: and reads $choice alone, so it does not say how it judged the scenarios (playbook, Handoff contracts)" ;;
+	esac
+	# A fingerprint line counts after indentation and one list marker, and without the blanks at its
+	# end.
+	tr -d '\r' < "$report" | sed -e 's/^[[:space:]]*//' -e 's/^[-*+][[:space:]]\{1,\}//' -e 's/[[:space:]]*$//' \
+		| grep -E '^fingerprint: [0-9a-f]{40}([0-9a-f]{24})? ' | LC_ALL=C sort -u > "$scratch/named" || true
 	if [ ! -s "$scratch/named" ]; then
 		refuse fingerprint "$1 names no fingerprint, so nothing shows which features it read (playbook, The scenario-gate dossier)"
 		return
@@ -49,6 +115,13 @@ judge() {
 	while IFS= read -r line; do
 		named=${line#fingerprint: }
 		feature=${named#* }
+		case "$feature" in
+			"$features_dir"/*.feature) ;;
+			*)
+				refuse fingerprint "$1 names $feature, which is no .feature file under $features_dir (handbook §9)"
+				continue
+				;;
+		esac
 		if [ -f "$worktree/$feature" ]; then
 			printf '%s\n' "$feature" >> "$scratch/changed"
 			refuse fingerprint "$1 names $feature at ${named%% *}, which now reads $(git -C "$worktree" hash-object -- "$feature"), so it judged an earlier fold (handbook §9)"
@@ -78,4 +151,5 @@ if [ "$refusals" -ne 0 ]; then
 	printf 'scenario-check: FAIL, %s refusal(s); the reviewer'"'"'s scenario verdict does not stand\n' "$refusals"
 	exit 1
 fi
-printf 'scenario-check: PASS on %s feature(s); %s\n' "$(wc -l < "$scratch/now" | tr -d ' ')" "$reviewed"
+printf 'scenario-check: PASS on %s feature(s); %s%s\n' "$(wc -l < "$scratch/now" | tr -d ' ')" "$reviewed" \
+	"${not_passing:+; reports that do not pass: $not_passing}"
