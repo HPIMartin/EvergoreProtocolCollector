@@ -1,10 +1,24 @@
 #!/bin/sh
 set -eu
 
+# > **ADAPT:** the version of `docker-ce` and `docker-ce-cli` for the Debian release below; bump the
+# > Docker pins together; /adopt pins the current one.
 docker_version=5:29.9.0-1~debian.12~bookworm
+# > **ADAPT:** the version of `containerd.io` for the Debian release below; /adopt pins the current
+# > one.
 containerd_version=2.4.1-2~debian.12~bookworm
+# > **ADAPT:** the version of `docker-buildx-plugin` for the Debian release below; /adopt pins the
+# > current one.
 buildx_version=0.38.0-1~debian.12~bookworm
+# > **ADAPT:** the version of `docker-compose-plugin` for the Debian release below; /adopt pins the
+# > current one.
 compose_version=5.6.0-1~debian.12~bookworm
+# > **ADAPT:** the Debian release of the base image the devcontainer's Dockerfile names; the Docker
+# > pins above are built for it.
+debian_release=bookworm
+# > **ADAPT:** the stack's cache folders in the seat user's home, each a mount point owned by that
+# > user; `.npm` is the node feature's.
+cache_dirs='.gradle .npm'
 docker_release_fingerprint=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 docker_key_url=https://download.docker.com/linux/debian/gpg
 docker_repository=https://download.docker.com/linux/debian
@@ -40,6 +54,17 @@ primary_fingerprints() {
 		awk -F: '$1 == "pub" || $1 == "sec" { primary = 1; next } $1 == "fpr" && primary { print $10; primary = 0 }'
 }
 
+os_release_value() {
+	sed -n "s/^$1=//p" "$root/etc/os-release" | tr -d "\"'"
+}
+
+[ -f "$root/etc/os-release" ] ||
+	fail "the base image has no /etc/os-release, so nothing shows it is Debian $debian_release, the debian_release line"
+os_id=$(os_release_value ID)
+os_codename=$(os_release_value VERSION_CODENAME)
+[ "$os_id" = debian ] && [ "$os_codename" = "$debian_release" ] ||
+	fail "the base image is '$os_id' '$os_codename', not Debian $debian_release: set the debian_release line and the Docker pins for the base image"
+
 apt-get update
 apt_install ca-certificates curl gnupg
 
@@ -53,7 +78,7 @@ keys=$(primary_fingerprints "$listing")
 install -d -m 0755 "$root${keyring%/*}"
 gpg --dearmor -o "$root$keyring" "$GNUPGHOME/docker.asc"
 architecture=$(dpkg --print-architecture)
-printf 'deb [arch=%s signed-by=%s] %s bookworm stable\n' "$architecture" "$keyring" "$docker_repository" > "$root$apt_list"
+printf 'deb [arch=%s signed-by=%s] %s %s stable\n' "$architecture" "$keyring" "$docker_repository" "$debian_release" > "$root$apt_list"
 
 apt-get update
 apt_install --allow-downgrades \
@@ -69,6 +94,9 @@ find "$root/var/lib/apt/lists" -mindepth 1 -delete
 git config --system core.hooksPath hooks
 git config --system push.default nothing
 usermod -aG docker "$seat_user"
-install -d -o "$seat_user" -g "$seat_user" "$root/workspaces" \
-	"$root$seat_home/.claude" "$root$seat_home/.gradle" "$root$seat_home/.npm" "$root$seat_home/.local"
+set -- "$root/workspaces" "$root$seat_home/.claude"
+for cache_dir in $cache_dirs; do
+	set -- "$@" "$root$seat_home/$cache_dir"
+done
+install -d -o "$seat_user" -g "$seat_user" "$@"
 install -d -m 0700 -o "$seat_user" -g "$seat_user" "$root$seat_home/.ssh"
