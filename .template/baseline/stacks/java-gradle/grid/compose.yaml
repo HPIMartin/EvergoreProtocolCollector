@@ -1,0 +1,34 @@
+name: acceptance-grid
+
+x-node: &node
+  depends_on:
+    - selenium-hub
+  shm_size: 2gb
+  environment:
+    SE_EVENT_BUS_HOST: selenium-hub
+    SE_NODE_GRID_URL: http://selenium-hub:4444
+    SE_NODE_MAX_SESSIONS: 4
+    SE_NODE_OVERRIDE_MAX_SESSIONS: "true"
+
+services:
+  selenium-hub:
+    image: selenium/hub:${SELENIUM_TAG}
+    healthcheck:
+      test: ["CMD", "/opt/bin/check-grid.sh", "--host", "0.0.0.0", "--port", "4444"]
+      start_period: 120s
+      interval: 5s
+      timeout: 5s
+      retries: 3
+  firefox:
+    <<: *node
+    image: selenium/node-firefox:${SELENIUM_TAG}
+  chrome:
+    <<: *node
+    image: selenium/node-chrome:${SELENIUM_TAG}
+  edge:
+    <<: *node
+    image: selenium/node-edge:${SELENIUM_TAG}
+
+networks:
+  default:
+    name: acceptance-grid

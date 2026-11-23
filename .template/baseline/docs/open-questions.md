@@ -1,17 +1,25 @@
 # Open Questions & Decisions Log
 
-A living record of decisions and the questions that shape the plan. When a question is answered,
-move it to **Decisions** with the date and rationale. Agents: read this before changing scope.
-Entries stay terse: decision + why + where it is codified. The KB doc is the canonical home of each
-rule; this table is the dated index, not a second copy.
+A living record of decisions and the questions that shape the plan.
+
+- Agents: read this before changing scope.
+- An answered question moves to **Decisions**: one dated row per decision.
+- A row stays terse; the KB doc is the canonical home of each rule, and this table is the dated
+  index, not a second copy.
+- The decision cell: the decision in bold, then its origin in parentheses.
+  - The origin: "author decision", or who else decided.
+  - Once a later row changes it: `author decision; amended by the <date> row on <topic>`.
+- The rationale cell: the why, then "Alternatives offered:" with the options not taken, then `→` and
+  where the decision is codified.
 
 ## Decisions (answered)
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| YYYY-MM-DD | *(example)* **Conversation language:** the author's language for chat; code, comments, identifiers and docs stay English | Author preference → CLAUDE.md |
+| YYYY-MM-DD | *(example)* **Conversation language: the author's language for chat; code, comments, identifiers and docs stay English** (author decision) | Author preference. Alternative offered: English for chat too → CLAUDE.md |
 
-> **ADAPT:** Replace the example row with your own decisions as they are made. One row per decision: date, what was decided, why, and where it is codified (which KB doc).
+> **ADAPT:** Replace the example row with your own decisions as they are made, in the row shape
+> above.
 
 ## Recorded mutations (red evidence where a new case could not start red)
 

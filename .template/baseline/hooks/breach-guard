@@ -1,27 +1,132 @@
 #!/bin/sh
-# Refuses while a commit recorded by post-rewrite or post-commit is still reachable from HEAD. This
-# is the only place the record is pruned, and only by reachability, so a rewrite that removes the
-# offending commit ends the block with no manual step.
+# Refuses while HEAD reaches a commit that post-rewrite, post-commit or post-merge recorded. The
+# record is append-only: nothing deletes or rewrites it, so a clean commit on another branch or in
+# another worktree cannot clear a breach that a branch still carries. A recorded commit stops
+# refusing once no HEAD reaches it, because a rewrite took it out of the history, or once the
+# author released it with hooks/breach-release.
+# The record is gate-record in the common git dir. Older hooks, from before it took that name,
+# append to gate-breach and delete it at a clean commit; a gate-breach that stands is read too,
+# never written, so its entries keep refusing, and a worktree still on those hooks cannot delete
+# the record.
+# `--reaches <rev>` asks the same about <rev> for the landing step and the gate, and writes nothing.
+# It reads the repository of the current directory, never the one this script sits in: the gate
+# runs its own copy of it.
 set -eu
 
-cd "$(git rev-parse --show-toplevel)"
-breach="$(git rev-parse --git-common-dir)/gate-breach"
-[ -f "$breach" ] || exit 0
+usage() {
+	printf 'usage: hooks/breach-guard [--reaches <rev>]\n' >&2
+	exit 2
+}
 
-reachable=""
-while read -r recorded; do
-	[ -n "$recorded" ] || continue
-	if git merge-base --is-ancestor "$recorded" HEAD 2>/dev/null; then
-		reachable="$reachable $recorded"
+case $# in
+	0) mode=commit ;;
+	2) [ "$1" = --reaches ] || usage; mode=query; rev=$2 ;;
+	*) usage ;;
+esac
+
+# A query answers 2 when it cannot answer; a commit is refused all the same.
+cannot() {
+	printf '[breach-guard] %s\n' "$1" >&2
+	[ "$mode" = query ] && exit 2
+	exit 1
+}
+
+top=$(git rev-parse --show-toplevel 2>/dev/null) || cannot "$(pwd) is not inside a git work tree"
+cd "$top"
+
+if [ "$mode" = query ]; then
+	case $rev in
+		-*) target='' ;;
+		*) target=$(git rev-parse -q --verify "$rev^{commit}") || target='' ;;
+	esac
+	[ -n "$target" ] || cannot "$rev is no commit"
+fi
+
+common=$(git rev-parse --git-common-dir)
+set --
+for file in "$common/gate-breach" "$common/gate-record"; do
+	[ -e "$file" ] || [ -L "$file" ] || continue
+	{ [ -f "$file" ] && [ -r "$file" ]; } || cannot "cannot read the breach record $file; every commit is refused until it can be read"
+	set -- "$@" "$file"
+done
+[ "$#" -gt 0 ] || exit 0
+
+# A record the committer cannot write would lose the next breach a writer finds, since git ignores
+# the writers' exit status; a query writes nothing and answers all the same.
+if [ "$mode" = commit ] && [ -e "$common/gate-record" ] && [ ! -w "$common/gate-record" ]; then
+	cannot "cannot write to the breach record $common/gate-record, so the hooks could not record a later breach; every commit is refused until it can be written"
+fi
+
+case $(git rev-parse --show-object-format 2>/dev/null || true) in
+	sha1) id_length=40 ;;
+	sha256) id_length=64 ;;
+	*) cannot "git names no object format this script knows, so the breach record $* cannot be read; every commit is refused until it can be read" ;;
+esac
+
+# An entry is one full commit id alone on a line, at the id length of the repository's object
+# format; a `released <id> <date> <name>` line ends it wherever it stands, in either file. A line is
+# read without its trailing blanks and CR, and an empty one is skipped. Any other line fails closed,
+# since it may be an entry a writer cut short: every writer puts a newline before its line, so a
+# cut-short line stays alone, and a hex line of another length may be one glued to the next append.
+# Each live id is listed once, in record order, gate-breach first.
+live=$(awk -v id_length="$id_length" '
+	function full_id(s) { return length(s) == id_length + 0 && s ~ /^[0-9a-f]+$/ }
+	{ sub(/[ \t\r]+$/, "") }
+	$0 == "" { next }
+	full_id($0) { if (!($0 in seen)) { seen[$0] = 1; order[++n] = $0 } next }
+	$1 == "released" && NF >= 4 && full_id($2) && $3 ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/ {
+		released[$2] = 1
+		next
+	}
+	{ malformed = "line " FNR " of " FILENAME; exit }
+	END {
+		if (malformed != "") { print "malformed " malformed; exit }
+		for (i = 1; i <= n; i++) if (!(order[i] in released)) print order[i]
+	}
+' "$@") || cannot "cannot read the breach record $*; every commit is refused until it can be read"
+case $live in
+	"malformed "*) cannot "${live#malformed } is neither an entry nor a release line, so every commit is refused until the author repairs that line" ;;
+esac
+
+# An unborn HEAD reaches nothing. The record is read and checked first all the same, so one that
+# cannot be read or holds a malformed line refuses the first commit too.
+if [ "$mode" = commit ]; then
+	target=$(git rev-parse -q --verify 'HEAD^{commit}') || exit 0
+fi
+
+# A recorded commit whose object is gone reaches nothing: --is-ancestor then fails like a "no".
+reached=''
+for id in $live; do
+	if git merge-base --is-ancestor "$id" "$target" 2>/dev/null; then
+		reached="$reached $id"
 	fi
-done < "$breach"
+done
+[ -n "$reached" ] || exit 0
 
-if [ -n "$reachable" ]; then
-	printf '\n[gate] history carries ungated commit(s):%s\n' "$reachable" >&2
-	printf 'git runs no pre-commit hook for the commits rebase, cherry-pick and revert create, so they
-were recorded after the fact. Amend or rebase them until the gate passes; the record clears itself
-once they are no longer reachable from HEAD.\n' >&2
+way_out() {
+	printf '%s\n' \
+		'The way out is a rewrite that takes each recorded commit out of the history: start' \
+		'`git rebase -i <recorded commit>^`, or `git rebase -i --root` for a recorded root commit,' \
+		'with `edit` on it, `git add` the fix at the stop, then run' \
+		'`GIT_EDITOR=true git rebase --continue`, which amends it without asking pre-commit and' \
+		'without opening an editor; post-rewrite checks the result again, and a commit replayed' \
+		'with its change unchanged stays recorded. A recorded merge' \
+		'commit: rebuild the branch without it, or run `git rebase --abort` when a rebase wrote it. A' \
+		'recorded commit already on the protected branch is released by the author alone, with' \
+		'hooks/breach-release (handbook §7).' >&2
+}
+
+# The first line of a query is a contract with the gate: the rev as given and every full id on it.
+if [ "$mode" = query ]; then
+	printf '[breach-guard] %s reaches recorded commit(s):%s\n' "$rev" "$reached" >&2
+	way_out
 	exit 1
 fi
 
-rm -f "$breach"
+printf '\n[gate] history carries ungated commit(s):%s\n' "$reached" >&2
+printf '%s\n' \
+	'git runs no pre-commit hook for the commits rebase, cherry-pick and revert create, and a merge' \
+	'commit never belongs in the history, so they were recorded after the fact. While HEAD reaches' \
+	'them every commit is refused: a new one, a `git commit --amend` and `agent/fold` alike.' >&2
+way_out
+exit 1

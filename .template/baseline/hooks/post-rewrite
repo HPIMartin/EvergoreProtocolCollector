@@ -9,15 +9,19 @@ cd "$(git rev-parse --show-toplevel)"
 hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 # The record lives in the common dir so it follows the commit into every worktree of the
-# repository; the stamp is the private worktree's own note about what it just approved.
+# repository, and it is only ever appended to; the stamp is the private worktree's own note about
+# what it just approved.
 stamp="$(git rev-parse --git-dir)/gate-stamp"
 gated() {
 	[ -f "$stamp" ] && [ "$(cat "$stamp")" = "$(git rev-parse "$1^{tree}")" ]
 }
-breach="$(git rev-parse --git-common-dir)/gate-breach"
+record="$(git rev-parse --git-common-dir)/gate-record"
 
 # The pre-image's findings with the commit label and the line numbers taken off, so a commit whose
 # violations are replayed unchanged is exempt while one that adds a violation of its own is not.
+# Each line of a rewrite is compared alone: a squash or fixup hands in one line per folded commit,
+# so one that folds a clean commit into an already failing one is recorded, unless the result's
+# tree is the one the gate stamp holds.
 bare_findings() {
 	printf '%s\n' "$1" \
 		| sed -e 's/^\[gate\] commit [0-9a-f][0-9a-f]*:/[gate]/' \
@@ -25,42 +29,97 @@ bare_findings() {
 			-e 's/^[0-9][0-9]*:/:/' \
 		| sort
 }
-found="$breach.new"
-: > "$found"
-report=""
+
+# A pre-image that is a live entry of the breach record is no replayed old history: the rewrite
+# takes the recorded id out of the history, so the new id is recorded in its place and the block
+# follows the commit. The first line of a breach-guard query lists every live id its commit
+# reaches. A guard that cannot answer counts as a live entry.
+live_entry() {
+	answer=0
+	listed=$("$hooks_dir/breach-guard" --reaches "$1" 2>&1 >/dev/null) || answer=$?
+	case $answer in
+		0) return 1 ;;
+		1) ;;
+		*) return 0 ;;
+	esac
+	# The guard's line is found by what it says, wherever it stands in what the guard printed. An
+	# answer of 1 without that line cannot be read, which counts as a live entry too.
+	ids=$(printf '%s\n' "$listed" | sed -n 's/^\[breach-guard\] .* reaches recorded commit(s)://p' | sed -n 1p)
+	[ -n "$ids" ] || return 0
+	case " $ids " in
+		*" $1 "*) return 0 ;;
+	esac
+	return 1
+}
+
+# What a commit changes, apart from where it stands: its patch without context lines, index lines
+# and hunk positions. A replay onto another base keeps it, and a fix at an edit stop does not.
+change_of() {
+	git diff-tree --root --no-commit-id -p -U0 --no-ext-diff --no-textconv --no-color --text "$1" 2>/dev/null \
+		| sed -e '/^index /d' -e 's/^@@ .*$/@@/'
+}
+
+# The ids found stay in a variable until the one append at the end: a scratch file in the common
+# dir would be emptied by a rewrite in another worktree running at the same time. The append opens
+# with a newline, so a line a writer cut short, or one saved without its final newline, stays off
+# the first id and breach-guard reads it as malformed.
+found=''
+report=''
 
 while read -r old new _rest; do
 	[ -n "${new:-}" ] || continue
-	git rev-parse --verify --quiet "$new^{commit}" >/dev/null || continue
+	new_id=$(git rev-parse --verify --quiet "$new^{commit}") || continue
+	old_id=''
+	if [ -n "${old:-}" ]; then
+		old_id=$(git rev-parse --verify --quiet "$old^{commit}" 2>/dev/null) || old_id=''
+	fi
+	live=no
+	if [ -n "$old_id" ] && [ "$old_id" != "$new_id" ] && live_entry "$old_id"; then live=yes; fi
+	# A live entry replayed with its change unchanged stays recorded whatever the content gate
+	# says of it now: a commit recorded for its format, or for what a later commit mended, passes
+	# that gate and would otherwise shed its block.
+	if [ "$live" = yes ] && [ "$(change_of "$old_id")" = "$(change_of "$new_id")" ]; then
+		found="$found$new_id
+"
+		report="$report[gate] commit $new_id replays the recorded commit $old_id with its change unchanged, so it stays recorded under its new id.
+"
+		continue
+	fi
 	if gated "$new"; then continue; fi
 	if finding=$("$hooks_dir/content-gate" --commit "$new" 2>&1); then
 		continue
 	fi
-	if [ -n "${old:-}" ] && git rev-parse --verify --quiet "$old^{commit}" >/dev/null 2>&1; then
+	if [ -n "$old_id" ] && [ "$live" = no ]; then
 		carried=$("$hooks_dir/content-gate" --commit "$old" 2>&1 || true)
 		if [ "$(bare_findings "$carried")" = "$(bare_findings "$finding")" ]; then
 			continue
 		fi
 	fi
-	printf '%s\n' "$new" >> "$found"
+	found="$found$new
+"
 	report="$report$finding
 "
 done
 
 if ! gated HEAD && ! "$hooks_dir/format-gate" >/dev/null 2>&1; then
-	git rev-parse HEAD >> "$found"
+	found="$found$(git rev-parse HEAD)
+"
 	report="$report
 [gate] the rewritten tree fails the format/style check (hooks/format-gate). Format it and amend.
 "
 fi
 
-if [ -s "$found" ]; then
-	cat "$found" >> "$breach"
-	sort -u -o "$breach" "$breach"
-	rm -f "$found"
+# The append is checked: a record that cannot take the ids (one the committer cannot write, a full
+# disk) would otherwise lose the breach behind the shell's own error, so the verdict that closes the
+# message says they are NOT recorded instead.
+if [ -n "$found" ]; then
+	if (printf '\n%s' "$found" >> "$record") 2>/dev/null; then
+		verdict='every further commit is refused until they are gone.'
+	else
+		ids=$(printf '%s ' $found)
+		verdict="they are NOT recorded (${ids% }): the breach record $record could not be appended to, so no hook refuses on their account."
+	fi
 	printf '\n[post-rewrite] this %s created commit(s) no pre-commit hook ever saw, and they fail the gate:\n%s\n' "${1:-rewrite}" "$report" >&2
-	printf '[post-rewrite] every further commit is refused until they are gone.\n' >&2
+	printf '[post-rewrite] %s\n' "$verdict" >&2
 	exit 1
 fi
-
-rm -f "$found"

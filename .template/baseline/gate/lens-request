@@ -1,0 +1,93 @@
+#!/bin/sh
+set -eu
+
+# > **ADAPT:** the host the security lens's requests reach, one single-quoted assignment. The
+# > default `localhost` is right where the tip runs on the machine the session runs on;
+# > `host.docker.internal` where the session runs in a container whose Docker socket belongs to the
+# > host. /adopt sets it from the environment answer and /template-upgrade keeps it.
+host='localhost'
+# MODULE agent-seat
+# The unattended seat runs the tip's container on its own Docker daemon, which answers on localhost.
+if [ "${AGENT_SEAT:-}" = unattended ]; then
+	host=localhost
+fi
+# /MODULE agent-seat
+
+usage() {
+	printf 'usage: gate/lens-request <port> <METHOD> <path> [--header '\''Name: Value'\'']... [--body-file <file>]\n' >&2
+	exit 2
+}
+
+refuse() {
+	printf 'refused: %s\n' "$1" >&2
+	exit 2
+}
+
+[ $# -ge 3 ] || usage
+port=$1
+method=$2
+path=$3
+shift 3
+
+case "$port" in
+	'' | *[!0-9]*) refuse "port '$port' is not a number" ;;
+esac
+[ "$port" -ge 1024 ] && [ "$port" -le 65535 ] || refuse "port $port is outside 1024-65535"
+
+case "$method" in
+	GET | POST | PUT | PATCH | DELETE | HEAD | OPTIONS) ;;
+	*) refuse "method '$method' is not one of GET POST PUT PATCH DELETE HEAD OPTIONS" ;;
+esac
+
+case "$path" in
+	/*) ;;
+	*) refuse "path '$path' does not begin with /" ;;
+esac
+
+body=
+remaining=$#
+while [ "$remaining" -gt 0 ]; do
+	opt=$1
+	shift
+	remaining=$((remaining - 1))
+	case "$opt" in
+		--header)
+			[ "$remaining" -gt 0 ] || refuse "--header needs a value"
+			value=$1
+			shift
+			remaining=$((remaining - 1))
+			case "$value" in
+				@*) refuse "header '$value' starts with @, which curl reads as a file" ;;
+				*': '*) ;;
+				*) refuse "header '$value' is not a Name: Value pair" ;;
+			esac
+			cleaned=$(printf '%s' "$value" | tr -d '[:cntrl:]')
+			[ "$cleaned" = "$value" ] || refuse "header '$value' holds a control character"
+			set -- "$@" -H "$value"
+			;;
+		--body-file)
+			[ "$remaining" -gt 0 ] || refuse "--body-file needs a value"
+			file=$1
+			shift
+			remaining=$((remaining - 1))
+			[ "$file" != - ] || refuse "body file '-' reads standard input in curl; write ./- for a file of that name"
+			[ -f "$file" ] || refuse "body file '$file' does not exist"
+			body=$file
+			set -- "$@" --data-binary "@$file"
+			;;
+		*)
+			refuse "unknown option '$opt'" ;;
+	esac
+done
+
+[ "$method" != HEAD ] || [ -z "$body" ] || refuse "HEAD sends no body, so --body-file '$body' has nothing to carry"
+
+command -v curl > /dev/null 2>&1 || refuse "no curl on PATH, so no request can be sent"
+
+if [ "$method" = HEAD ]; then
+	set -- -I "$@"
+else
+	set -- -X "$method" "$@"
+fi
+
+exec curl -q -s -S -i --globoff --path-as-is --noproxy '*' --max-time 15 "$@" "http://$host:$port$path"

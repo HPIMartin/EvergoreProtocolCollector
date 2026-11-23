@@ -8,7 +8,7 @@
 
 ## `verify`
 
-Copy [verify](verify) to the repo root and work through its `# ADAPT` lines. What each subcommand
+Copy [verify](verify) to the repo root and work through its ADAPT notes. What each subcommand
 runs:
 
 | Subcommand | Command |
@@ -20,6 +20,7 @@ runs:
 | `all` | `./gradlew clean build --no-build-cache --console=plain`, then the executed test-class count from `build/test-results/test/` |
 | `outdated` | `./gradlew dependencyUpdates` (com.github.ben-manes.versions plugin) |
 | `vuln` | `./gradlew dependencyCheckAnalyze` (OWASP dependency-check) |
+| `stop` | `./gradlew --stop` against this tree's own registry (contract: `stacks/README.md`) |
 
 - A relative `focus` path resolves against the **caller's** directory, so the script behaves the same
   from a subdirectory as from the root.
@@ -111,40 +112,231 @@ testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
   ```java
   @Suite
   @IncludeEngines("cucumber")
-  @SelectClasspathResource("features")
+  @SelectPackages("features")
   class RunAcceptanceScenariosTest {
   }
   ```
 
-- **Step-definition shape**, scenarios driven through ports with in-memory fakes (handbook §5), no
+- **Step-definition shape**, each actor driven through its real surface against a fresh real
+  service (handbook §5): a page object over the browser for a screen, a client for an API. No
   comments (`hooks/content-gate` refuses them):
 
   ```java
-  public final class MonthlyContributionSteps {
+  public final class ContributionSteps {
 
-      private final InMemoryOrders orders = new InMemoryOrders();
-      private MonthlyOverview overview;
+      private final RunningService service;
+      private final ScenarioBrowser browser;
+      private ContributionOverviewPage overview;
 
-      @Given("customer {string} placed orders worth {int} this month")
-      public void customerPlacedOrdersWorth(String customer, int total) {
-          orders.record(new Order(customer, total));
+      public ContributionSteps(RunningService service, ScenarioBrowser browser) {
+          this.service = service;
+          this.browser = browser;
       }
 
-      @When("the manager opens the monthly overview")
-      public void theManagerOpensTheMonthlyOverview() {
-          overview = new MonthlyOverviewQuery(orders).run();
+      @Given("the order book holds an order from {string} worth {int} placed on {}")
+      public void theOrderBookHoldsAnOrder(String customer, int worth, String placedAt) {
+          service.orders().place(new Order(customer, worth, ScenarioTime.parse(placedAt)));
       }
 
-      @Then("the contribution column for {string} shows {int}")
-      public void theContributionColumnShows(String customer, int expected) {
+      @When("the manager opens the contribution overview")
+      public void theManagerOpensTheContributionOverview() {
+          overview = ContributionOverviewPage.openIn(browser, service);
+      }
+
+      @Then("the manager sees {int} in {word}'s contribution column")
+      public void theManagerSeesInTheContributionColumn(int expected, String customer) {
           assertThat(overview.contributionOf(customer)).isEqualTo(expected);
       }
   }
   ```
 
-- **A scenario under development** carries `@wip` on the `Scenario` (or on the `Feature` while the
-  whole file is new), and one derived from legacy code carries `@characterization` until the author
-  confirms it, so `verify all` stays green either way.
+  `RunningService` is the project's own class: a hook starts a fresh service before each scenario
+  and stops it after, and `orders()` writes through the service's real write path.
+
+  > **ADAPT:** a project that chose the in-memory model at adoption drives ports with in-memory
+  > fakes instead: the `Given` records into an in-memory port and the `When` runs the query over it.
+
+- **A scenario under development** carries `@wip` on the level handbook §5 names (step 3), and one
+  derived from legacy code carries `@characterization` until the author confirms it, so
+  `verify all` stays green either way.
+
+<!-- MODULE acceptance -->
+## Web-UI acceptance (browser half)
+
+- **Shipped files:** [acceptance/](acceptance/) lands under
+  `src/test/java/<base package>/acceptance/`, its package line `{{BASE_PACKAGE}}` resolved by
+  `/adopt`.
+  - `OrphanedBrowserSweep` (+ test) and `AcceptanceHooks`: the sweep before all scenarios, the
+    browser left after each, `quitAll` and the skip count after all.
+  - `browser/ScenarioBrowser` (a scenario's own browser and download folder, started on its first
+    use and quit on its leave, + `ScenarioBrowserTest`), `Browsers` (the registry of started
+    browsers that `quitAll` empties after the run, + `BrowsersTest`), `BrowserChoice` (local
+    Firefox or the grid, + `BrowserChoiceTest`), `ShiftedClock` (+ `ShiftedClockTest`),
+    `TimeZoneBrowser` (+ `TimeZoneBrowserTest`), `BiDiDriver` (the one WebDriver BiDi check);
+    `RecordingDriver` is a test helper.
+  - `ShiftedClockTest` sets the default locale under JUnit's `LOCALE` resource lock, so a project
+    that runs Jupiter tests concurrently gives its own locale-reading tests that lock too.
+  - `browser/GeckoDriverExecutable` (+ test), `AcceptanceBrowserStartTest` (the start rules over
+    all test code of the base package), `LocalBrowserCheck` (+ test), `SkippedScenarios`,
+    `OwnBuildDirectory` (+ test).
+  - No comments in any of them, so the adopter's content gate accepts them in `src/test/`.
+  - They assume Linux: Unix paths, `/usr/bin/perl` (the sweep test), and a `firefox` on the
+    `PATH`. The adopter's formatter formats them after the copy.
+  - In a container, the sweep test's kill cases need a first process that reaps orphaned
+    children:
+    - One that reaps none (`tail -f /dev/null`) leaves a killed plant a zombie, and the case
+      hangs.
+    - `docker run --init`, compose's `init: true` or devcontainer.json's `"init": true` gives one.
+    - A CI job's first process is the runner's choice and unproven here, so a job that runs the
+      sweep test in a container gives it an init.
+- **Dependencies** (versions in the build file):
+
+  ```groovy
+  testImplementation 'io.cucumber:cucumber-picocontainer'
+  testImplementation 'org.seleniumhq.selenium:selenium-java'
+  testImplementation 'org.junit.jupiter:junit-jupiter'
+  testImplementation 'com.tngtech.archunit:archunit-junit5'
+  testImplementation 'org.assertj:assertj-core'
+  testCompileOnly 'com.google.auto.service:auto-service-annotations'
+  ```
+
+  The last one only silences a `-Xlint:all` class-file warning of Selenium's driver service.
+- **Parallel scenarios,** `src/test/resources/junit-platform.properties`, plus one exclusive
+  resource for each tag that marks process-wide state (`time-zone` is an example tag name):
+
+  ```properties
+  cucumber.execution.parallel.enabled=true
+  cucumber.execution.parallel.config.strategy=fixed
+  cucumber.execution.parallel.config.fixed.parallelism=4
+  cucumber.execution.parallel.config.fixed.max-pool-size=4
+  cucumber.execution.exclusive-resources.time-zone.read-write=\
+      org.junit.platform.engine.support.hierarchical.ExclusiveResource.GLOBAL_KEY
+  ```
+
+- **Settings reach the test JVM as properties** (inside the `test` block shown above):
+
+  ```groovy
+  tasks.named('test') {
+      systemProperty 'otel.logs.exporter', 'none'
+      def forwarded = [
+          ACCEPTANCE_GRID       : 'acceptance.grid',
+          ACCEPTANCE_BROWSER    : 'acceptance.browser',
+          ACCEPTANCE_NO_BROWSER : 'acceptance.noBrowser',
+      ]
+      forwarded.each { variable, property ->
+          def value = providers.environmentVariable(variable).orNull
+          if (value != null) {
+              systemProperty property, value
+          }
+      }
+      def parallelism = providers.environmentVariable('ACCEPTANCE_PARALLELISM').orNull
+      if (parallelism != null) {
+          systemProperty 'cucumber.execution.parallel.config.fixed.parallelism', parallelism
+          systemProperty 'cucumber.execution.parallel.config.fixed.max-pool-size', parallelism
+      }
+      testLogging {
+          showStandardStreams = true
+      }
+  }
+  ```
+
+  - `otel.logs.exporter=none` keeps Selenium's OpenTelemetry log exporter quiet, which matters
+    with the grid.
+  - `showStandardStreams` lets the skip count below reach the console.
+  - Both limits of Cucumber's worker pool follow `ACCEPTANCE_PARALLELISM`: it grows to its
+    maximum while a worker blocks.
+- **No silent skip,** the rule of [testing.md](../../docs/knowledge-base/testing.md), "The browser
+  half"; the preset's values are `ACCEPTANCE_NO_BROWSER` and the `firefox` it looks for on the
+  `PATH`.
+- **The sweep** form is `OrphanedBrowserSweep.SELECTOR`, the one ADAPT value, `MARKER` (the
+  default) or `ANCESTRY` (devcontainer variant only); the forms and their reach:
+  testing.md, "The browser half". The local start keeps geckodriver's profiles under
+  `build/tmp/browsers`, which marks them and keeps them out of `/tmp`.
+  - The profile, download and marker paths resolve against the test JVM's working directory
+    (`build/` there), which Gradle's `test` task sets to the project directory.
+    - A moved `buildDirectory` puts them outside what `clean` removes.
+    - An IDE run from another directory puts them where neither `clean` nor the Gradle run's sweep
+      reaches.
+- **The driver:** the local start takes geckodriver from the `webdriver.gecko.driver` property,
+  else from the `PATH`. With neither, Selenium Manager downloads a driver of its own choosing at
+  test time, so a reproducible or offline run pins one, by that property or by a geckodriver the
+  toolchain puts on the `PATH`.
+- **Other ADAPT values:** `BrowserChoice.BROWSER_LOCALE` (`en`), `SERVICE_HOST_ON_THE_GRID` (shared
+  with the grid recipe's `alias`), the exclusive-resource tag above, the pinned Selenium image tag
+  in the grid recipe.
+- **Grid:** [grid/](grid/) lands at `grid/` in the repository; its use, its refusals and its
+  attended-session limit: [build-run-deploy.md](../../docs/knowledge-base/build-run-deploy.md),
+  "The browser grid". Its values here are `SELENIUM_TAG`, `wait_seconds`, the network name and
+  the alias in `grid/grid`, and the hub's `start_period` in `grid/compose.yaml`.
+  - An `ACCEPTANCE_GRID` that is set but empty counts as a grid, and the start fails on the empty
+    address; a local run leaves the variable unset.
+- **A page object opens a page only through `open(addressOf(port, path))`** of `ScenarioBrowser`:
+  `open` checks the shifted clock after the load, and `addressOf` uses the grid's service host
+  where a grid runs. `driver().get(...)` with a hand-built address skips both.
+<!-- /MODULE acceptance -->
+
+## KB guard (optional)
+
+- **What it guards:** DOC-12 of the [KB README](../../docs/knowledge-base/README.md) over the
+  Markdown files under `docs/knowledge-base/`, at any depth. The rule, its example list and its stop
+  list live there; this section does not restate them.
+  - It reads the name that opens a code span (`` `Name` ``, `` `Name.member()` ``), also where the
+    span wraps onto the next line, and not a name inside a span (`List<Name>`, `new Name()`,
+    `@Name`). Its blocks follow a subset of CommonMark's rules: a rare shape (a paragraph line
+    that starts with `|`, a fence inside a blockquote) can hide a name or flag a well-formed line.
+  - It reads each line inside a fenced block as code spans too, so a template literal or shell
+    backticks there can yield a candidate: list it on the stop list or move it out of the fence.
+  - Any fence line of the fence's character closes the fence, whatever its length.
+  - A name resolves when any class on the test classpath or in the JDK carries it as its simple
+    name, nested, local and JDK-internal classes included. So a renamed project class whose old
+    name a dependency or the JDK also uses (`ConnectionPool`, `TaskQueue`) stays unflagged.
+- **Shipped files:** [kb-guard/](kb-guard/) lands under `src/test/java/<base package>/kbguard/`, its
+  package line `{{BASE_PACKAGE}}` resolved by `/adopt`.
+  - `KbCitationGuardTest`: the guard and its tests.
+  - `KbClassReferenceExtractor` (+ test): the candidate rules.
+  - `ListedTypeNames` (+ test): reads DOC-12's two lists from the KB README, and fails closed on
+    an entry without a reason or whose name the candidate rule yields neither on its own nor
+    heading a dotted access, naming the line, or on a README without the block, naming the file.
+  - `KnownJavaSymbols` (+ test): the simple names of the test classpath (directories and jars)
+    and of the JDK.
+  - `KnownFrontendSymbols` (+ test): the names a frontend source tree declares, plus the platform
+    list.
+  - No comments in any of them, so the adopter's content gate accepts them in `src/test/`. The
+    adopter's formatter formats them after the copy.
+  - The JDK names come from the runtime image the tests run on, so a JDK name resolves only where
+    that runtime holds its module, as a full JDK does.
+- **Dependencies:** JUnit Jupiter and AssertJ only, both already in the test classpath.
+- **The `test` task declares the inputs,** so a change to the KB alone, or to the frontend sources
+  alone, reruns the guard and the task is never `UP-TO-DATE` over a stale verdict. The second input
+  only where the frontend root below is set:
+
+  ```groovy
+  tasks.named('test') {
+      inputs.dir('docs/knowledge-base').withPropertyName('knowledgeBase')
+              .withPathSensitivity(PathSensitivity.RELATIVE)
+      inputs.dir('frontend/src').withPropertyName('frontendSources')
+              .withPathSensitivity(PathSensitivity.RELATIVE)
+  }
+  ```
+
+- **ADAPT values:**
+  - The frontend source root, the same path in `KbCitationGuardTest.FRONTEND_SOURCE_ROOT` and in the
+    second input (`""` and no second input where no frontend sits beside the backend; a root that is
+    set and is no directory fails the test). Point it at the sources (`frontend/src`), not the
+    frontend's project folder: build output and package caches there would resolve their names.
+  - `KnownFrontendSymbols.PLATFORM_NAMES`: the platform names the project's KB cites; the shipped
+    list is the ECMAScript globals plus `Temporal`.
+  - DOC-12's example list and stop list grow with the project's KB.
+
+  > **ADAPT:** the KB guard's three values above: the frontend source root, the platform list and
+  > DOC-12's two lists.
+
+- **The paths assume the root Gradle project runs the tests,** as the rest of this preset does.
+  Where a subproject runs them, its `test` task declares the inputs with `rootProject.file(...)` and
+  sets `workingDir = rootProject.projectDir`, and the gate block names that task, the up-to-date
+  run admitted as in `gate.env`: `docs_guard_ran_re='^> Task :backend:test( UP-TO-DATE)?$'`.
+- **A project with no Gradle backend** (pure js-ts-npm) runs no guard: the `doc-reviewer` checks
+  DOC-12 by eye.
 
 ## Probe source set (agent throwaway code, build-run-deploy.md)
 
@@ -169,7 +361,7 @@ A `probe` source set whose compile and runtime classpath is the **test** classpa
   multi-module build sets `production_trees='*/src/main/'` and `test_trees='*/src/test/'`.
 - `print_allow_paths` stays empty unless a module is a CLI adapter whose stdout is the interface.
 
-## Toolchain pinning (single-sourcing, dev-environment.md)
+## Toolchain pinning (dev-environment.md, "Toolchain version")
 
 - Build file: the Java toolchain declaration (`java { toolchain { languageVersion = ... } }`) plus
   the Gradle wrapper version (`gradle/wrapper/gradle-wrapper.properties`).

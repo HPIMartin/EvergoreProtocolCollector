@@ -1,0 +1,102 @@
+#!/bin/sh
+set -eu
+
+# > **ADAPT:** the version of `docker-ce` and `docker-ce-cli` for the Debian release below; bump the
+# > Docker pins together; /adopt pins the current one.
+docker_version=5:29.9.3-1~debian.12~bookworm
+# > **ADAPT:** the version of `containerd.io` for the Debian release below; /adopt pins the current
+# > one.
+containerd_version=2.4.2-4~debian.12~bookworm
+# > **ADAPT:** the version of `docker-buildx-plugin` for the Debian release below; /adopt pins the
+# > current one.
+buildx_version=0.39.0-1~debian.12~bookworm
+# > **ADAPT:** the version of `docker-compose-plugin` for the Debian release below; /adopt pins the
+# > current one.
+compose_version=5.7.1-1~debian.12~bookworm
+# > **ADAPT:** the Debian release of the base image the devcontainer's Dockerfile names; the Docker
+# > pins above are built for it.
+debian_release=bookworm
+# > **ADAPT:** the stack's cache folders in the seat user's home, each a mount point owned by that
+# > user; `.npm` is the node feature's.
+cache_dirs='.npm'
+docker_release_fingerprint=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+docker_key_url=https://download.docker.com/linux/debian/gpg
+docker_repository=https://download.docker.com/linux/debian
+keyring=/etc/apt/keyrings/docker.gpg
+apt_list=/etc/apt/sources.list.d/docker.list
+seat_user=vscode
+seat_home=/home/$seat_user
+
+fail() {
+	printf '[agent-provision] %s\n' "$*" >&2
+	exit 1
+}
+
+usage() {
+	printf 'usage: provision [--root <directory the file tree is written under>]\n' >&2
+	exit 2
+}
+
+root=
+case $# in
+	0) ;;
+	2) [ "$1" = --root ] && [ -d "$2" ] || usage
+		root=$2 ;;
+	*) usage ;;
+esac
+
+apt_install() {
+	DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@"
+}
+
+primary_fingerprints() {
+	printf '%s\n' "$1" |
+		awk -F: '$1 == "pub" || $1 == "sec" { primary = 1; next } $1 == "fpr" && primary { print $10; primary = 0 }'
+}
+
+os_release_value() {
+	sed -n "s/^$1=//p" "$root/etc/os-release" | tr -d "\"'"
+}
+
+[ -f "$root/etc/os-release" ] ||
+	fail "the base image has no /etc/os-release, so nothing shows it is Debian $debian_release, the debian_release line"
+os_id=$(os_release_value ID)
+os_codename=$(os_release_value VERSION_CODENAME)
+[ "$os_id" = debian ] && [ "$os_codename" = "$debian_release" ] ||
+	fail "the base image is '$os_id' '$os_codename', not Debian $debian_release: set the debian_release line and the Docker pins for the base image"
+
+apt-get update
+apt_install ca-certificates curl gnupg
+
+GNUPGHOME=$(mktemp -d)
+export GNUPGHOME
+trap 'rm -rf "$GNUPGHOME"' EXIT
+curl -fsSL --proto '=https' --proto-redir '=https' -o "$GNUPGHOME/docker.asc" "$docker_key_url"
+listing=$(gpg --show-keys --with-colons "$GNUPGHOME/docker.asc")
+keys=$(primary_fingerprints "$listing")
+[ "$keys" = "$docker_release_fingerprint" ] || fail "Docker's apt key is not $docker_release_fingerprint but: $keys"
+install -d -m 0755 "$root${keyring%/*}"
+gpg --dearmor -o "$root$keyring" "$GNUPGHOME/docker.asc"
+architecture=$(dpkg --print-architecture)
+printf 'deb [arch=%s signed-by=%s] %s %s stable\n' "$architecture" "$keyring" "$docker_repository" "$debian_release" > "$root$apt_list"
+
+apt-get update
+apt_install --allow-downgrades \
+	tmux \
+	docker-ce="$docker_version" \
+	docker-ce-cli="$docker_version" \
+	containerd.io="$containerd_version" \
+	docker-buildx-plugin="$buildx_version" \
+	docker-compose-plugin="$compose_version"
+apt-get clean
+find "$root/var/lib/apt/lists" -mindepth 1 -delete
+
+git config --system core.hooksPath hooks
+git config --system push.default nothing
+usermod -aG docker "$seat_user"
+set -- "$root/workspaces" "$root$seat_home/.claude"
+for cache_dir in $cache_dirs; do
+	set -- "$@" "$root$seat_home/$cache_dir"
+done
+install -d -o "$seat_user" -g "$seat_user" "$@"
+install -d -m 0700 -o "$seat_user" -g "$seat_user" "$root$seat_home/.ssh"

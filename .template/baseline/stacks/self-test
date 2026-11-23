@@ -8,6 +8,7 @@ stacks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 for leaked in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do
 	unset "$leaked"
 done
+unset SELENIUM_TAG GRID_INSPECT_FAILS GRID_INSPECT_ANSWER GRID_COMPOSE_FAILS GRID_HUB_ID GRID_HUB_HEALTH GRID_HUB_INSPECT_FAILS GRID_HUB_PS_FAILS
 
 path_base="/usr/bin:/bin"
 git_bin=$(command -v git || true)
@@ -35,6 +36,7 @@ stub_at() {
 #!/bin/sh
 name=$(basename "$0")
 printf '%s %s\n' "$name" "$*" >> "$STUB_LOG"
+[ -z "${STUB_CWD_LOG:-}" ] || printf '%s %s in %s\n' "$name" "$*" "$(pwd -P)" >> "$STUB_CWD_LOG"
 if [ -n "${STUB_FAIL_MATCH:-}" ]; then
 	if printf '%s %s' "$name" "$*" | grep -qE "$STUB_FAIL_MATCH"; then
 		exit "${STUB_FAIL_CODE:-1}"
@@ -46,6 +48,56 @@ STUB
 }
 
 stub() { stub_at "$bin/$1"; }
+
+preset_tools=$(grep -h -o 'require [A-Za-z0-9_.][A-Za-z0-9_./-]*' "$stacks_dir"/*/verify | sed 's/^require //' |
+	grep -v -x -e git -e '\./.*' | sort -u | tr '\n' ' ')
+hidden_tools="$preset_tools docker"
+hide_key=""
+hidden_path=""
+
+stand_in_for() {
+	stand_in=$(PATH=$path_base mktemp -d "$work/stand-in.XXXXXX")
+	names=$2
+	set -- "$1"/. ! -name . -prune
+	for name in $names; do
+		set -- "$@" ! -name "$name" ! -name "$name.exe"
+	done
+	PATH=$path_base find "$@" -exec sh -c 'ln -s "$@" "$0"/' "$stand_in" {} +
+}
+
+hide() {
+	[ "$1 / $2" != "$hide_key" ] || return 0
+	hide_key="$1 / $2"
+	hidden_path=""
+	old_ifs=$IFS
+	IFS=:
+	for dir in $1; do
+		IFS=$old_ifs
+		for hidden in $2; do
+			if [ -e "$dir/$hidden" ] || [ -e "$dir/$hidden.exe" ]; then
+				stand_in_for "$dir" "$2"
+				dir=$stand_in
+				break
+			fi
+		done
+		hidden_path="${hidden_path:+$hidden_path:}$dir"
+		IFS=:
+	done
+	IFS=$old_ifs
+}
+
+locks=0
+lock=""
+
+aim_build_lock() {
+	locks=$((locks + 1))
+	lock="$work/build-$locks.lock"
+	sed "s|^build_lock=.*|build_lock=\"$lock\"|" verify > verify.aimed
+	mv verify.aimed verify
+	chmod +x verify
+	STUB_LOCK=$lock
+	export STUB_LOCK
+}
 
 project() {
 	name=$1
@@ -63,11 +115,13 @@ project() {
 	fi
 	cp "$stacks_dir/$script" verify
 	chmod +x verify
+	aim_build_lock
 	STUB_LOG="$proj/stub.log"
 	: > "$STUB_LOG"
 	export STUB_LOG
 	unset STUB_FAIL_MATCH STUB_FAIL_CODE
-	PATH="$bin:$path_base"
+	hide "$path_base" "$hidden_tools"
+	PATH="$bin:$hidden_path"
 	export PATH
 	for tool in "$@"; do
 		stub "$tool"
@@ -78,6 +132,12 @@ project_without_git() {
 	no_git=1
 	project "$@"
 	no_git=""
+}
+
+project_with_every_tool() {
+	project "$1" "$2" $preset_tools
+	stub_at "$proj/gradlew"
+	mkdir -p frontend
 }
 
 fails_with() {
@@ -223,6 +283,24 @@ attempt ./verify outdated
 if [ "$status" -eq 1 ]; then r=0; else r=1; fi
 check "js outdated fails when npm is not installed" "$r"
 
+planted="$work/planted-tools"
+mkdir -p "$planted"
+stub_at "$planted/npm"
+stub_at "$planted/planted-extra"
+project helper-tools-stubbed js-ts-npm/verify find mktemp ln sh
+hide "$planted:$path_base" "$hidden_tools"
+planted_stand_in=${hidden_path%%:*}
+if [ "$planted_stand_in" != "$planted" ] && [ -e "$planted_stand_in/planted-extra" ] && [ ! -e "$planted_stand_in/npm" ]; then r=0; else r=1; fi
+check "the hiding builds its stand-in with the machine's own tools, whatever the case before it stubbed" "$r"
+
+machine_base=$path_base
+path_base="$planted:$path_base"
+project tool-on-the-machine js-ts-npm/verify
+path_base=$machine_base
+attempt ./verify vuln
+if [ "$status" -eq 1 ] && grep -q 'required tool not available: npm' "$out_file" && [ ! -s "$STUB_LOG" ]; then r=0; else r=1; fi
+check "a case that stubs no tool meets the preset's refusal, though the machine has that tool on its path" "$r"
+
 project js-all js-ts-npm/verify npm
 attempt ./verify all
 if [ "$status" -eq 0 ] && logged 'artifacts/test-results'; then r=0; else r=1; fi
@@ -317,6 +395,470 @@ attempt ./verify vuln
 if [ "$status" -eq 0 ]; then r=0; else r=1; fi
 check "csharp vuln stays green when the scan reports findings" "$r"
 
+for row in 'java-gradle format ^gradlew format all' \
+	'js-ts-npm format format:check format all' 'js-ts-npm tests ^npm.test all' \
+	'python format ruff.format format all' 'python tests pytest all' \
+	'cpp format ^clang-format.+--Werror format all' 'cpp tests ^ctest all' \
+	'csharp-dotnet format ^dotnet.format format all' 'csharp-dotnet tests ^dotnet.test all' \
+	'multi-stack format ^npm.run.--silent.format:check format all' 'multi-stack tests ^npm.test all'; do
+	set -- $row
+	preset=$1
+	failed=$2
+	failing=$3
+	shift 3
+	case "$preset $failed" in
+		'multi-stack format') what="only the frontend's format check fails" ;;
+		'multi-stack tests') what="only the frontend's tests fail" ;;
+		*' format') what="its format check fails" ;;
+		*) what="its tests fail" ;;
+	esac
+	for sub; do
+		project_with_every_tool "failing-$preset-$failed-$sub" "$preset/verify"
+		: > a.cpp
+		git add a.cpp
+		fails_with "$failing" 1
+		attempt ./verify "$sub"
+		if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+		check "$preset $sub exits 1 when $what" "$r"
+	done
+done
+
+project cpp-format-whole-paths cpp/verify
+cat > "$bin/clang-format" <<'STUB'
+#!/bin/sh
+for arg; do
+	printf 'clang-format arg <%s>\n' "$arg" >> "$STUB_LOG"
+done
+STUB
+chmod +x "$bin/clang-format"
+mkdir -p src
+: > 'src/my file.cpp'
+: > "src/it's.h"
+git add src
+attempt ./verify format
+if [ "$status" -eq 0 ] && logged 'clang-format arg <src/my file.cpp>' && logged "clang-format arg <src/it's.h>"; then r=0; else r=1; fi
+check "cpp format hands clang-format each tracked source whole, though its path holds a blank or a quote" "$r"
+
+project cpp-format-no-sources cpp/verify clang-format
+attempt ./verify format
+if [ "$status" -eq 0 ] && ! logged 'clang-format'; then r=0; else r=1; fi
+check "cpp format with no tracked source is green and calls no clang-format" "$r"
+
+selects_wip() {
+	project_with_every_tool "bdd-$1" "$1/verify"
+	attempt ./verify bdd
+	if [ "$status" -eq 0 ] && grep -qxF "$2" "$STUB_LOG"; then r=0; else r=1; fi
+	check "$1 bdd runs the @wip scenarios and no others" "$r"
+}
+selects_wip java-gradle 'gradlew test --no-build-cache --console=plain -Dcucumber.filter.tags=@wip'
+selects_wip js-ts-npm 'npm run --silent bdd -- --profile wip'
+selects_wip python 'uv run pytest -p no:cacheprovider -v -m wip'
+selects_wip cpp 'uv run --project tests/acceptance pytest -p no:cacheprovider -v -m wip tests/acceptance'
+selects_wip csharp-dotnet 'dotnet test --filter TestCategory=wip'
+selects_wip multi-stack 'gradlew test --no-build-cache --console=plain -Dcucumber.filter.tags=@wip'
+
+focuses_feature() {
+	project_with_every_tool "focus-feature-$1" "$1/verify"
+	attempt ./verify focus "$2"
+	if [ "$status" -eq 0 ] && grep -qxF "$3" "$STUB_LOG"; then r=0; else r=1; fi
+	check "$1 focus on a feature file runs that file whatever its tags" "$r"
+}
+focuses_feature java-gradle features/x.feature \
+	'gradlew test --no-build-cache --console=plain -Dcucumber.features=features/x.feature -Dcucumber.filter.tags=@wip or not @wip'
+focuses_feature js-ts-npm features/x.feature 'npm run --silent bdd -- --profile focus features/x.feature'
+focuses_feature python features/x.feature 'uv run pytest -p no:cacheprovider -v tests/steps/test_x.py'
+focuses_feature cpp tests/acceptance/x.feature \
+	'uv run --project tests/acceptance pytest -p no:cacheprovider -v tests/acceptance/steps/test_x.py'
+focuses_feature multi-stack src/test/resources/features/x.feature \
+	'gradlew test --no-build-cache --console=plain -Dcucumber.features=src/test/resources/features/x.feature -Dcucumber.filter.tags=@wip or not @wip'
+
+project_with_every_tool cpp-all-acceptance-path cpp/verify
+attempt ./verify all
+if [ "$status" -eq 0 ] && grep -qxF 'uv run --project tests/acceptance pytest -p no:cacheprovider -v -m not wip and not characterization --junitxml=artifacts/test-results/acceptance.xml tests/acceptance' "$STUB_LOG"; then r=0; else r=1; fi
+check "cpp all hands pytest the acceptance project's path, so pytest reads that project's configuration" "$r"
+
+line_of() { grep -nxF "$1" "$STUB_LOG" | head -n 1 | cut -d: -f1; }
+
+installs_exactly_first() {
+	project_with_every_tool "all-exact-$1" "$1/verify"
+	STUB_CWD_LOG="$proj/cwd.log"
+	export STUB_CWD_LOG
+	attempt ./verify all
+	unset STUB_CWD_LOG
+	installed=$(line_of "$2")
+	first_check=$(line_of "$3")
+	if [ "$status" -eq 0 ] && [ -n "$installed" ] && [ -n "$first_check" ] &&
+		[ "$installed" -lt "$first_check" ] && [ "$(grep -cxF "$2" "$STUB_LOG")" -eq 1 ] &&
+		grep -qxF "$2 in $(cd "$proj/$4" && pwd -P)" "$proj/cwd.log"; then
+		r=0
+	else
+		r=1
+	fi
+	case "$4" in
+		.) where='at the root' ;;
+		*) where="in $4/" ;;
+	esac
+	check "$1 all installs exactly what the lock file names, $where, before its first check" "$r"
+}
+installs_exactly_first python 'uv sync --locked' 'uv run ruff format --check .' .
+installs_exactly_first js-ts-npm 'npm ci' 'npm run --silent format:check' .
+installs_exactly_first multi-stack 'npm ci' 'npm run --silent format:check' frontend
+
+for preset in python cpp; do
+	project_with_every_tool "bdd-failing-$preset" "$preset/verify"
+	fails_with 'pytest.*-m wip' 1
+	attempt ./verify bdd
+	if [ "$status" -eq 1 ] && ! grep -q 'no @wip scenarios' "$out_file"; then r=0; else r=1; fi
+	check "$preset bdd fails when a @wip scenario fails, and reads only the runner's no-tests code as none tagged" "$r"
+done
+
+test_csproj='<Project Sdk="Microsoft.NET.Sdk"><ItemGroup><PackageReference Include="Microsoft.NET.Test.Sdk" /></ItemGroup></Project>'
+project_with_every_tool csharp-no-tests csharp-dotnet/verify
+mkdir -p src
+printf '%s\n' "$test_csproj" > src/App.csproj
+attempt ./verify focus src/Thing.cs
+focus_status=$status
+attempt ./verify bdd
+if [ "$focus_status" -eq 0 ] && [ "$status" -eq 0 ] &&
+	grep -qxF 'dotnet test src/App.csproj --filter FullyQualifiedName~Thing -- RunConfiguration.TreatNoTestsAsError=true' "$STUB_LOG" &&
+	grep -qxF 'dotnet test --filter TestCategory=wip' "$STUB_LOG"; then r=0; else r=1; fi
+check "csharp focus passes TreatNoTestsAsError=true to dotnet test, and bdd does not" "$r"
+
+project_with_every_tool csharp-two-projects csharp-dotnet/verify
+mkdir -p tests/Unit/Domain tests/Acceptance/Features
+printf '%s\n' "$test_csproj" > tests/Unit/Unit.csproj
+printf '%s\n' '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><IsTestProject>true</IsTestProject></PropertyGroup></Project>' \
+	> tests/Acceptance/Acceptance.csproj
+attempt ./verify focus tests/Unit/Domain/FooTests.cs
+class_status=$status
+attempt ./verify focus tests/Acceptance/Features/Bar.feature
+if [ "$class_status" -eq 0 ] && [ "$status" -eq 0 ] &&
+	grep -qxF 'dotnet test tests/Unit/Unit.csproj --filter FullyQualifiedName~FooTests -- RunConfiguration.TreatNoTestsAsError=true' "$STUB_LOG" &&
+	grep -qxF 'dotnet test tests/Acceptance/Acceptance.csproj --filter FullyQualifiedName~BarFeature -- RunConfiguration.TreatNoTestsAsError=true' "$STUB_LOG" &&
+	[ "$(grep -c '^dotnet test' "$STUB_LOG")" -eq 2 ]; then r=0; else r=1; fi
+check "csharp focus runs only the test project nearest its target, so a second test project cannot fail it" "$r"
+
+project_with_every_tool csharp-no-project csharp-dotnet/verify
+mkdir -p src
+attempt ./verify focus src/Thing.cs
+if [ "$status" -eq 2 ] && grep -qF '[verify] src/Thing.cs lies in no test project' "$out_file" && [ ! -s "$STUB_LOG" ]; then r=0; else r=1; fi
+check "csharp focus refuses a target in no test project, naming it, before any tool runs" "$r"
+
+project_with_every_tool csharp-production-target csharp-dotnet/verify
+mkdir -p src/App tests/Unit
+printf '%s\n' '<Project Sdk="Microsoft.NET.Sdk"></Project>' > src/App/App.csproj
+printf '%s\n' "$test_csproj" > tests/Unit/Unit.csproj
+attempt ./verify focus src/App/Foo.cs
+if [ "$status" -eq 2 ] && grep -qF '[verify] src/App/Foo.cs lies in src/App/App.csproj, which is no test project' "$out_file" &&
+	[ ! -s "$STUB_LOG" ]; then r=0; else r=1; fi
+check "csharp focus refuses a target whose nearest project is no test project, naming both, before any tool runs" "$r"
+
+project java-stop java-gradle/verify
+stub_at "$proj/gradlew"
+attempt ./verify stop
+if [ "$status" -eq 0 ] && logged 'gradlew --console=plain --stop'; then r=0; else r=1; fi
+check "java stop stops the Gradle daemon" "$r"
+
+project java-stop-failing java-gradle/verify
+stub_at "$proj/gradlew"
+fails_with '^gradlew' 3
+attempt ./verify stop
+if [ "$status" -eq 1 ]; then r=0; else r=1; fi
+check "java stop fails when the daemon cannot be stopped" "$r"
+
+project java-stop-missing java-gradle/verify
+attempt ./verify stop
+if [ "$status" -eq 0 ] && [ ! -s "$STUB_LOG" ]; then r=0; else r=1; fi
+check "java stop is a clean 0 when the build wrapper is missing, as nothing runs to stop" "$r"
+
+r=0
+for preset in js-ts-npm python cpp csharp-dotnet; do
+	project "stop-$preset" "$preset/verify"
+	attempt ./verify stop
+	if [ "$status" -ne 0 ] || [ -s "$STUB_LOG" ]; then r=1; fi
+done
+check "a preset with nothing to stop answers stop with 0 and runs no tool" "$r"
+
+project multi-stop multi-stack/verify npm
+stub_at "$proj/gradlew"
+mkdir -p frontend
+attempt ./verify stop
+if [ "$status" -eq 0 ] && logged 'gradlew --console=plain --stop' && ! grep -q '^npm ' "$STUB_LOG"; then r=0; else r=1; fi
+check "the composed script stops the daemon of its Gradle stack and runs nothing for the frontend" "$r"
+
+registry_stub() {
+	cat > "$proj/gradlew" <<'STUB'
+#!/bin/sh
+printf 'registry %s\n' "${GRADLE_OPTS:-}" >> "$STUB_LOG"
+exit 0
+STUB
+	chmod +x "$proj/gradlew"
+}
+
+registry_option() { printf 'registry -Dorg.gradle.daemon.registry.base="%s/registry.local.d"' "$proj"; }
+
+registry_last_stub() {
+	cat > "$proj/gradlew" <<'STUB'
+#!/bin/sh
+last=$(printf '%s\n' "${GRADLE_OPTS:-}" | tr ' ' '\n' | sed -n 's/^-Dorg\.gradle\.daemon\.registry\.base=//p' | tail -n 1)
+printf 'effective %s\n' "$last" >> "$STUB_LOG"
+case " ${GRADLE_OPTS:-} " in *" -Dother=1 "*) printf 'outer kept\n' >> "$STUB_LOG" ;; esac
+exit 0
+STUB
+	chmod +x "$proj/gradlew"
+}
+
+for pair in java-gradle:java multi-stack:multi; do
+	project "${pair#*:}-stop-registry-outer" "${pair%%:*}/verify" npm
+	registry_last_stub
+	mkdir -p frontend
+	GRADLE_OPTS='-Dother=1 -Dorg.gradle.daemon.registry.base=/shared/registry'
+	export GRADLE_OPTS
+	attempt ./verify stop
+	unset GRADLE_OPTS
+	if [ "$status" -eq 0 ] && logged "effective \"$proj/registry.local.d\"" && logged 'outer kept'; then r=0; else r=1; fi
+	check "${pair%%:*} stop keeps an outer GRADLE_OPTS, and its own registry wins over one named there" "$r"
+done
+
+for pair in java-gradle:java multi-stack:multi; do
+	project "${pair#*:}-quote\"root" "${pair%%:*}/verify" npm
+	registry_stub
+	mkdir -p frontend
+	attempt ./verify stop
+	if [ "$status" -eq 2 ] && grep -q 'double quote' "$out_file" && [ ! -s "$STUB_LOG" ]; then r=0; else r=1; fi
+	check "${pair%%:*} refuses a root holding a double quote, which would lose its daemon registry, before it runs anything" "$r"
+done
+
+project java-stop-registry java-gradle/verify
+registry_stub
+attempt ./verify stop
+if [ "$status" -eq 0 ] && logged "$(registry_option)"; then r=0; else r=1; fi
+check "java stop reaches only the daemons of its own tree, through a daemon registry inside that tree" "$r"
+
+project java-bdd-registry java-gradle/verify
+registry_stub
+attempt ./verify bdd
+if [ "$status" -eq 0 ] && logged "$(registry_option)"; then r=0; else r=1; fi
+check "java builds start their daemon in the registry of their own tree" "$r"
+
+project multi-stop-registry multi-stack/verify npm
+registry_stub
+mkdir -p frontend
+attempt ./verify stop
+if [ "$status" -eq 0 ] && logged "$(registry_option)"; then r=0; else r=1; fi
+check "the composed script stops only the daemons of its own tree, through a daemon registry inside that tree" "$r"
+
+project multi-bdd-registry multi-stack/verify npm
+registry_stub
+mkdir -p frontend
+attempt ./verify bdd
+if [ "$status" -eq 0 ] && logged "$(registry_option)"; then r=0; else r=1; fi
+check "the composed script's Gradle builds start their daemon in the registry of their own tree" "$r"
+
+grid_project() {
+	project "$1" java-gradle/grid/grid
+	cp "$stacks_dir/java-gradle/grid/compose.yaml" "$proj/compose.yaml"
+	GRID_STATE="$proj/state"
+	export GRID_STATE
+	mkdir -p "$GRID_STATE"
+	: > "$GRID_STATE/members"
+	printf '#!/bin/sh\nprintf "abc123def\\n"\n' > "$bin/hostname"
+	chmod +x "$bin/hostname"
+	cat > "$bin/docker" <<'STUB'
+#!/bin/sh
+printf 'docker %s\n' "$*" >> "$STUB_LOG"
+members="$GRID_STATE/members"
+case "$1 $2" in
+	"inspect --type")
+		case "$*" in
+			*State.Health*)
+				[ -z "${GRID_HUB_INSPECT_FAILS:-}" ] || exit 1
+				[ "$6" = "${GRID_HUB_ID-hub123}" ] || exit 1
+				printf '%s\n' "${GRID_HUB_HEALTH-healthy}"
+				exit 0
+				;;
+		esac
+		[ -z "${GRID_INSPECT_FAILS:-}" ] || exit 1
+		printf '%s\n' "${GRID_INSPECT_ANSWER-/self-box}"
+		;;
+	"compose -f")
+		printf 'compose-tag %s\n' "${SELENIUM_TAG-unset}" >> "$STUB_LOG"
+		[ -z "${GRID_COMPOSE_FAILS:-}" ] || exit 1
+		case "$*" in
+			*' ps --quiet selenium-hub')
+				[ -z "${GRID_HUB_PS_FAILS:-}" ] || exit 1
+				printf '%s\n' "${GRID_HUB_ID-hub123}"
+				;;
+		esac
+		;;
+	"network inspect")
+		cat "$members"
+		;;
+	"network connect")
+		for last; do :; done
+		printf '%s\n' "$last" >> "$members"
+		;;
+	"network disconnect")
+		for last; do :; done
+		grep -vxF "$last" "$members" > "$members.next" || true
+		mv "$members.next" "$members"
+		;;
+esac
+exit 0
+STUB
+	chmod +x "$bin/docker"
+}
+
+grid_connects() { grep -c '^docker network connect' "$STUB_LOG" || true; }
+
+grid_project grid-up
+attempt ./verify up
+if [ "$status" -eq 0 ] && logged 'docker network connect --alias acceptance-service acceptance-grid self-box' && grep -qxF self-box "$GRID_STATE/members"; then r=0; else r=1; fi
+check "grid up starts the grid and joins the session's own container under the service-host name" "$r"
+
+grid_project grid-up-twice
+attempt ./verify up
+attempt ./verify up
+if [ "$status" -eq 0 ] && [ "$(grid_connects)" -eq 1 ]; then r=0; else r=1; fi
+check "grid up twice joins the network once" "$r"
+
+grid_project grid-up-lookalike
+printf 'self-box-2\nother-self-box\n' > "$GRID_STATE/members"
+attempt ./verify up
+if [ "$status" -eq 0 ] && [ "$(grid_connects)" -eq 1 ] && grep -qxF self-box "$GRID_STATE/members"; then r=0; else r=1; fi
+check "grid up still joins when the network holds a container whose name merely contains ours" "$r"
+
+grid_project grid-down
+attempt ./verify up
+attempt ./verify down
+disconnect_line=$(grep -n -m1 '^docker network disconnect acceptance-grid self-box$' "$STUB_LOG" | cut -d: -f1)
+down_line=$(grep -n -m1 -E '^docker compose -f .* down$' "$STUB_LOG" | cut -d: -f1)
+if [ "$status" -eq 0 ] && [ -n "$disconnect_line" ] && [ -n "$down_line" ] && [ "$disconnect_line" -lt "$down_line" ] \
+	&& ! grep -qxF self-box "$GRID_STATE/members"; then r=0; else r=1; fi
+check "grid down leaves the network before it stops the grid, whose stop removes the network" "$r"
+
+grid_project grid-down-alone
+printf 'self-box-2\n' > "$GRID_STATE/members"
+attempt ./verify down
+if [ "$status" -eq 0 ] && grep -qE '^docker compose -f .* down$' "$STUB_LOG" && ! logged 'network disconnect'; then r=0; else r=1; fi
+check "grid down when not joined only stops the grid, whatever a lookalike name does on the network" "$r"
+
+grid_project grid-nameless
+attempt env GRID_INSPECT_FAILS=1 ./verify up
+if [ "$status" -eq 1 ] && grep -q 'cannot name' "$out_file" && ! logged 'compose' && [ "$(grid_connects)" -eq 0 ]; then r=0; else r=1; fi
+check "grid up refuses, naming the problem and starting nothing, where its own container cannot be inspected" "$r"
+
+grid_project grid-nameless-empty
+attempt env GRID_INSPECT_ANSWER= ./verify up
+if [ "$status" -eq 1 ] && grep -q 'cannot name' "$out_file" && ! logged 'compose' && [ "$(grid_connects)" -eq 0 ]; then r=0; else r=1; fi
+check "grid up refuses where its own container answers no name" "$r"
+
+grid_project grid-nameless-down
+printf 'self-box\n' > "$GRID_STATE/members"
+attempt env GRID_INSPECT_FAILS=1 ./verify down
+if [ "$status" -eq 1 ] && grep -q 'cannot name' "$out_file" && ! logged 'compose'; then r=0; else r=1; fi
+check "grid down refuses where its own container cannot be named, instead of leaving the grid half stopped" "$r"
+
+grid_project grid-tag
+attempt ./verify up
+pinned_tag=$(sed -n 's/^SELENIUM_TAG=//p' verify)
+if [ "$status" -eq 0 ] && [ -n "$pinned_tag" ] && logged "compose-tag $pinned_tag"; then r=0; else r=1; fi
+check "grid up hands its pinned image tag to compose" "$r"
+
+grid_project grid-order
+attempt ./verify up
+compose_line=$(grep -n -m1 '^docker compose -f .* up --detach --wait --wait-timeout [0-9][0-9]*$' "$STUB_LOG" | cut -d: -f1)
+connect_line=$(grep -n -m1 '^docker network connect' "$STUB_LOG" | cut -d: -f1)
+if [ "$status" -eq 0 ] && [ -n "$compose_line" ] && [ -n "$connect_line" ] && [ "$compose_line" -lt "$connect_line" ]; then r=0; else r=1; fi
+check "grid up starts the grid with a bounded wait before it joins the network" "$r"
+
+grid_project grid-wait-bounded
+attempt ./verify up
+wait_seconds=$(sed -n 's/^wait_seconds=\([0-9][0-9]*\)$/\1/p' verify)
+if [ "$status" -eq 0 ] && [ -n "$wait_seconds" ] && [ "$wait_seconds" -gt 0 ] \
+	&& grep -qxE "docker compose -f .*/compose\.yaml up --detach --wait --wait-timeout $wait_seconds" "$STUB_LOG"; then r=0; else r=1; fi
+check "grid up waits for the grid no longer than its pinned number of seconds" "$r"
+
+hub_health_check() {
+	awk '
+		/^  [^ ]/ { hub = ($0 == "  selenium-hub:"); next }
+		hub && /^    healthcheck:$/ { health = 1; next }
+		hub && /^    [^ ]/ { health = 0 }
+		hub && health && /^      test: \["CMD", "\/opt\/bin\/check-grid\.sh", "--host", "0\.0\.0\.0", "--port", "4444"\]$/ { found = 1 }
+		/^[^ ]/ { hub = 0; health = 0 }
+		END { exit !found }
+	' "$1"
+}
+r=0
+hub_health_check "$stacks_dir/java-gradle/grid/compose.yaml" || r=1
+[ "$(grep -c 'healthcheck:' "$stacks_dir/java-gradle/grid/compose.yaml")" -eq 1 ] || r=1
+check "the grid's hub, and it alone, carries a health check by the images' own check-grid.sh, so compose's wait has a ready state to wait for" "$r"
+
+start_period=$(sed -n 's/^      start_period: \([0-9][0-9]*\)s$/\1/p' "$stacks_dir/java-gradle/grid/compose.yaml")
+bound=$(sed -n 's/^wait_seconds=\([0-9][0-9]*\)$/\1/p' "$stacks_dir/java-gradle/grid/grid")
+if [ -n "$start_period" ] && [ -n "$bound" ] && [ "$start_period" -ge "$bound" ]; then r=0; else r=1; fi
+check "the hub's health check counts no failure before grid up's bounded wait ends, so a slow start reads starting, never unhealthy" "$r"
+
+grid_project grid-compose-fails
+attempt env GRID_COMPOSE_FAILS=1 ./verify up
+wait_seconds=$(sed -n 's/^wait_seconds=\([0-9][0-9]*\)$/\1/p' verify)
+if [ "$status" -eq 1 ] && [ "$(grid_connects)" -eq 0 ] && ! grep -q 'hub http' "$out_file" \
+	&& grep -qF "[grid] the grid did not start, or its hub did not report ready within $wait_seconds s; joined nothing." "$out_file" \
+	&& grep -qF 'docker logs acceptance-grid-selenium-hub-1 shows why, and grid/grid down stops what runs' "$out_file"; then r=0; else r=1; fi
+sed 's/^name: .*/name: shop-grid/' compose.yaml > compose.renamed && mv compose.renamed compose.yaml
+attempt env GRID_COMPOSE_FAILS=1 ./verify up
+grep -qF 'docker logs shop-grid-selenium-hub-1 shows why' "$out_file" || r=1
+check "grid up exits 1, joins nothing and names the bounded wait and the way out, the hub's container by the compose project's name, where the grid does not come up" "$r"
+
+for hub_case in starting:GRID_HUB_HEALTH=starting unhealthy:GRID_HUB_HEALTH=unhealthy unchecked:GRID_HUB_HEALTH= \
+	nameless:GRID_HUB_ID= unlisted:GRID_HUB_PS_FAILS=1 uninspectable:GRID_HUB_INSPECT_FAILS=1; do
+	grid_project "grid-hub-${hub_case%%:*}"
+	attempt env "${hub_case#*:}" ./verify up
+	if [ "$status" -eq 1 ] && [ "$(grid_connects)" -eq 0 ] && ! grep -q 'hub http' "$out_file" \
+		&& grep -qF 'its hub did not report ready within' "$out_file"; then r=0; else r=1; fi
+	check "grid up exits 1 and joins nothing where compose's wait returns but the hub reads ${hub_case%%:*}" "$r"
+done
+
+grid_project grid-hub-read
+attempt ./verify up
+up_line=$(grep -n -m1 '^docker compose -f .* up --detach --wait ' "$STUB_LOG" | cut -d: -f1)
+ps_line=$(grep -n -m1 '^docker compose -f .*/compose\.yaml ps --quiet selenium-hub$' "$STUB_LOG" | cut -d: -f1)
+health_line=$(grep -n -m1 '^docker inspect --type container --format .*State\.Health.* hub123$' "$STUB_LOG" | cut -d: -f1)
+connect_line=$(grep -n -m1 '^docker network connect' "$STUB_LOG" | cut -d: -f1)
+if [ "$status" -eq 0 ] && [ -n "$up_line" ] && [ -n "$ps_line" ] && [ -n "$health_line" ] && [ -n "$connect_line" ] \
+	&& [ "$up_line" -lt "$ps_line" ] && [ "$ps_line" -lt "$health_line" ] && [ "$health_line" -lt "$connect_line" ]; then r=0; else r=1; fi
+check "grid up reads the hub's own health after compose's wait and before it joins, since compose's wait can return 0 on a hub still starting" "$r"
+
+grid_project grid-no-docker
+attempt env PATH="$hidden_path" ./verify up
+if [ "$status" -eq 1 ] && grep -q 'docker is not installed' "$out_file" && ! grep -q 'cannot name' "$out_file"; then r=0; else r=1; fi
+check "grid up refuses, naming the missing docker command rather than the container" "$r"
+
+stub_at "$planted/docker"
+machine_base=$path_base
+path_base="$planted:$path_base"
+grid_project grid-docker-on-the-machine
+path_base=$machine_base
+attempt env PATH="$hidden_path" ./verify up
+if [ "$status" -eq 1 ] && grep -q 'docker is not installed' "$out_file" && [ ! -s "$STUB_LOG" ]; then r=0; else r=1; fi
+check "grid up refuses, naming the missing docker command, though the machine has docker on its path" "$r"
+
+grid_project grid-inspect-type
+attempt ./verify up
+if [ "$status" -eq 0 ] && logged 'docker inspect --type container --format {{.Name}} abc123def'; then r=0; else r=1; fi
+check "grid up inspects its own container, by the id its hostname gives, as a container, never as an image or volume of that name" "$r"
+
+grid_project grid-misuse
+r=0
+attempt ./verify
+[ "$status" -eq 2 ] || r=1
+attempt ./verify nonsense
+[ "$status" -eq 2 ] || r=1
+attempt ./verify up down
+[ "$status" -eq 2 ] || r=1
+[ ! -s "$STUB_LOG" ] || r=1
+check "grid answers a misuse with the usage exit code before it runs any docker command" "$r"
+
 r=0
 for preset in java-gradle js-ts-npm python cpp csharp-dotnet multi-stack; do
 	project "usage-$preset" "$preset/verify"
@@ -329,10 +871,547 @@ for preset in java-gradle js-ts-npm python cpp csharp-dotnet multi-stack; do
 done
 check "every script answers a misuse with the usage exit code" "$r"
 
-printf 'stack preset self-test: '
-if [ "$failures" -eq 0 ]; then
-	printf 'all cases pass\n'
-else
-	printf '%s case(s) FAILED\n' "$failures"
-	exit 1
+presets='java-gradle js-ts-npm python cpp csharp-dotnet multi-stack'
+
+lock_helper() {
+	awk '/^# > [*][*]ADAPT:[*][*] the machine-wide build lock/ { on = 1 }
+		on { print }
+		on && /^hold_build_lock\(\) \{$/ { body = 1 }
+		body && /^}$/ { exit }' "$1"
+}
+
+r=0
+first=$(lock_helper "$stacks_dir/java-gradle/verify")
+case "$first" in
+	*'hold_build_lock() {'*) ;;
+	*) r=1 ;;
+esac
+for preset in $presets; do
+	[ "$(lock_helper "$stacks_dir/$preset/verify")" = "$first" ] || r=1
+done
+check "the build-lock helper is the same text, lock path included, in all six verify scripts" "$r"
+
+r=0
+for preset in $presets; do
+	grep 'trap .*EXIT' "$stacks_dir/$preset/verify" > "$work/exit-traps" || r=1
+	if grep -v "trap '\{0,1\}release_build_lock[;' ]" "$work/exit-traps" | grep -q .; then r=1; fi
+done
+check "every exit trap in a preset's verify releases the build lock before it does anything else" "$r"
+
+r=0
+for preset in $presets; do
+	awk -v q="'" '
+		function all_three() { return seen["HUP"] && seen["INT"] && seen["TERM"] }
+		/^[ \t]*trap - "\$1"$/ { next }
+		/^[ \t]*trap / {
+			cond = $NF
+			if (cond == "EXIT") {
+				if (exit_traps && !all_three()) bad = 1
+				exit_traps++
+				split("", seen)
+				cleanup = ""
+				if (match($0, "release_build_lock; .*" q " EXIT$")) cleanup = substr($0, RSTART + 20, RLENGTH - 26)
+				next
+			}
+			if (cond != "HUP" && cond != "INT" && cond != "TERM") { bad = 1; next }
+			if (!exit_traps) bad = 1
+			if ($0 !~ ("end_by_signal " cond q " " cond "$")) bad = 1
+			if (cleanup != "" && index($0, q cleanup "; end_by_signal ") == 0) bad = 1
+			seen[cond] = 1
+		}
+		END { if (!exit_traps || !all_three()) bad = 1; exit bad }' \
+		"$stacks_dir/$preset/verify" || r=1
+done
+check "every exit trap in a preset's verify is followed by its hangup, interrupt and termination traps, each of which does that exit trap's cleanup and ends the run by its own signal, and no trap names another condition" "$r"
+
+project lock-none python/verify uv
+hide "$path_base" "$hidden_tools flock"
+attempt env PATH="$bin:$hidden_path" ./verify bdd
+notes=$(grep -c 'this run takes no build lock: the machine lacks flock or /proc' "$out_file" || true)
+if [ "$status" -eq 0 ] && [ "$notes" -eq 1 ] && logged 'pytest' && [ ! -e "$lock" ]; then r=0; else r=1; fi
+check "without flock a building run prints one note, takes no lock and goes on" "$r"
+
+project lock-none-trap java-gradle/verify
+stub_at "$proj/gradlew"
+hide "$path_base" "$hidden_tools flock"
+attempt env PATH="$bin:$hidden_path" ./verify all
+if [ "$status" -eq 0 ] && grep -q 'this run takes no build lock' "$out_file" && ! grep -qv '^\[verify\] ' "$out_file" &&
+	[ ! -e "$lock" ]; then r=0; else r=1; fi
+check "without flock a building run whose command sets its own exit trap ends as cleanly, with no message but its own" "$r"
+
+lock_here=""
+if (PATH=$path_base; command -v flock && command -v timeout) >/dev/null 2>&1 &&
+	[ -d "/proc/$$/fdinfo" ]; then
+	lock_here=1
 fi
+lock_skip=""
+skips=0
+skipped=""
+
+skip() {
+	if [ "${STACKS_SELF_TEST_STRICT:-}" = 1 ]; then
+		printf '  FAIL %s: skipped under STACKS_SELF_TEST_STRICT=1: %s\n' "$1" "$2"
+		failures=$((failures + 1))
+		return 0
+	fi
+	printf '  skip %s: %s\n' "$1" "$2"
+	skips=$((skips + 1))
+	skipped="$skipped
+  skipped: $1"
+}
+
+lock_case() {
+	if [ -z "$lock_here" ]; then
+		skip "$1" "this machine lacks flock, timeout or /proc"
+		return 0
+	fi
+	r=0
+	lock_skip=""
+	"$2"
+	if [ -n "$lock_skip" ]; then
+		skip "$1" "$lock_skip"
+	else
+		check "$1" "$r"
+	fi
+}
+
+summarize() {
+	printf 'stack preset self-test: '
+	if [ "$failures" -eq 0 ]; then
+		printf 'all cases pass'
+	else
+		printf '%s case(s) FAILED' "$failures"
+	fi
+	if [ "$skips" -eq 0 ]; then
+		printf '\n'
+	else
+		printf ', %s case(s) skipped, unproved on this machine (STACKS_SELF_TEST_STRICT=1 fails on a skip):%s\n' \
+			"$skips" "$skipped"
+	fi
+	[ "$failures" -eq 0 ]
+}
+
+skip_run() {
+	(
+		lock_here=""
+		failures=0
+		skips=0
+		skipped=""
+		STACKS_SELF_TEST_STRICT=$1
+		lock_case 'a case this machine cannot prove' true
+		summarize
+	) > "$work/skip.out" 2>&1
+}
+
+skip_status=0
+skip_run '' || skip_status=$?
+r=0
+[ "$skip_status" -eq 0 ] &&
+	grep -qxF 'stack preset self-test: all cases pass, 1 case(s) skipped, unproved on this machine (STACKS_SELF_TEST_STRICT=1 fails on a skip):' "$work/skip.out" &&
+	grep -qxF '  skipped: a case this machine cannot prove' "$work/skip.out" || r=1
+check "a skipped case is counted and named in the summary, and a skip alone exits 0" "$r"
+
+skip_status=0
+skip_run 1 || skip_status=$?
+r=0
+[ "$skip_status" -eq 1 ] &&
+	grep -q '^  FAIL a case this machine cannot prove: skipped under STACKS_SELF_TEST_STRICT=1: ' "$work/skip.out" &&
+	grep -qxF 'stack preset self-test: 1 case(s) FAILED' "$work/skip.out" || r=1
+check "STACKS_SELF_TEST_STRICT=1 turns a skip into a named failure, and the suite into exit 1" "$r"
+
+await() {
+	tries=0
+	until "$@" 2>/dev/null; do
+		tries=$((tries + 1))
+		[ "$tries" -lt 100 ] || return 1
+		sleep 0.1
+	done
+}
+
+waits_seen() { [ "$(grep -c 'waiting for' "$1")" -ge "$2" ]; }
+
+lock_stub_at() {
+	cat > "$1" <<'STUB'
+#!/bin/sh
+name=$(basename "$0")
+if flock -n "$STUB_LOCK" true; then state=free; else state=held; fi
+printf '%s %s %s %s\n' "$name" "$state" "${STUB_RUN:-run}" "$*" >> "$STUB_LOG"
+if [ -n "${STUB_HOLD:-}" ] && [ "${STUB_HOLD_ONLY:-$name}" = "$name" ]; then
+	: > "$STUB_HOLD.held"
+	until [ -e "$STUB_HOLD.go" ]; do sleep 0.1; done
+fi
+if [ -n "${STUB_NEST:-}" ]; then
+	STUB_NEST= ./verify focus "$STUB_NEST" || exit 1
+	if flock -n "$STUB_LOCK" true; then state=free; else state=held; fi
+	printf '%s %s after the nested run\n' "$name" "$state" >> "$STUB_LOG"
+fi
+if [ -n "${STUB_LINGER:-}" ]; then
+	sleep 30 < /dev/null > /dev/null 2>&1 &
+	printf '%s\n' "$!" >> "$STUB_LINGER"
+fi
+printf '%s done %s\n' "$name" "${STUB_RUN:-run}" >> "$STUB_LOG"
+exit 0
+STUB
+	chmod +x "$1"
+}
+
+lock_project() {
+	project "$1" "$2"
+	for tool in $preset_tools ./gradlew; do
+		[ "$tool" != "${3:-}" ] || continue
+		case "$tool" in
+			./*) lock_stub_at "$proj/${tool#./}" ;;
+			*) lock_stub_at "$bin/$tool" ;;
+		esac
+	done
+	mkdir -p frontend
+}
+
+hold_lock() {
+	timeout 60 flock "$lock" sh -c ': > "$1.held"; until [ -e "$1.go" ]; do sleep 0.1; done' _ "$1" &
+	holder=$!
+	await test -e "$1.held"
+}
+
+release_lock() {
+	: > "$1.go"
+	wait "$holder" || true
+}
+
+waited() { grep -q 'waiting for' "$out_file"; }
+
+lock_taken_by_every_building_command() {
+	for preset in java-gradle js-ts-npm python cpp csharp-dotnet; do
+		lock_project "lock-taken-$preset" "$preset/verify"
+		mkdir -p src/test
+		printf '%s\n' "$test_csproj" > src/test/App.csproj
+		for run in 'focus src/test/thing_test.x' bdd all vuln; do
+			: > "$STUB_LOG"
+			attempt timeout 20 ./verify $run
+			if [ "$status" -ne 0 ] || [ ! -s "$STUB_LOG" ] || grep -q ' free ' "$STUB_LOG"; then r=1; fi
+		done
+	done
+}
+lock_case "focus, bdd, all and vuln run inside the build lock in every single-stack preset" \
+	lock_taken_by_every_building_command
+
+lock_held_across_the_composition() {
+	lock_project lock-composed multi-stack/verify
+	for run in all vuln; do
+		: > "$STUB_LOG"
+		attempt timeout 20 ./verify "$run"
+		if [ "$status" -ne 0 ] || waited || grep -q ' free ' "$STUB_LOG"; then r=1; fi
+		grep -q '^gradlew held ' "$STUB_LOG" || r=1
+		grep -q '^npm held ' "$STUB_LOG" || r=1
+	done
+	for run in 'focus frontend/src/a.test.ts' 'focus src/test/resources/features/x.feature' \
+		'focus src/test/java/ThingTest.java' bdd; do
+		: > "$STUB_LOG"
+		attempt timeout 20 ./verify $run
+		if [ "$status" -ne 0 ] || [ ! -s "$STUB_LOG" ] || waited || grep -q ' free ' "$STUB_LOG"; then r=1; fi
+	done
+}
+lock_case "the composed script runs every stack of a building command inside one hold of the lock and never waits for itself" \
+	lock_held_across_the_composition
+
+lock_queues_a_second_run() {
+	lock_project lock-wait python/verify
+	STUB_RUN=first STUB_HOLD="$proj/first" timeout 60 ./verify bdd > "$proj/first.out" 2>&1 &
+	first_run=$!
+	await test -e "$proj/first.held" || r=1
+	STUB_RUN=second timeout 60 ./verify bdd > "$proj/second.out" 2>&1 &
+	second_run=$!
+	await grep -qF "[verify] waiting for $lock: another build on this machine holds it" "$proj/second.out" || r=1
+	if grep -q ' second ' "$STUB_LOG"; then r=1; fi
+	: > "$proj/first.go"
+	first_status=0
+	wait "$first_run" || first_status=$?
+	second_status=0
+	wait "$second_run" || second_status=$?
+	[ "$first_status" -eq 0 ] && [ "$second_status" -eq 0 ] || r=1
+	[ "$(awk '{ printf "%s ", $3 }' "$STUB_LOG")" = 'first first second second ' ] || r=1
+}
+lock_case "a second building run says it waits for the lock while another holds it, and runs after it" \
+	lock_queues_a_second_run
+
+lock_reentered_under_a_holder() {
+	lock_project lock-reentry python/verify
+	attempt timeout 20 flock "$lock" ./verify bdd
+	if [ "$status" -ne 0 ] || waited || ! grep -q '^uv held ' "$STUB_LOG"; then r=1; fi
+	: > "$STUB_LOG"
+	STUB_NEST=tests/test_inner.py
+	export STUB_NEST
+	attempt timeout 20 ./verify bdd
+	unset STUB_NEST
+	if [ "$status" -ne 0 ] || waited || [ "$(grep -c '^uv done ' "$STUB_LOG")" -ne 2 ]; then r=1; fi
+	grep -q '^uv held after the nested run$' "$STUB_LOG" || r=1
+}
+lock_case "a run inside a process that holds the lock, a flock holder or a verify run, goes on without waiting for itself and leaves the holder's lock held" \
+	lock_reentered_under_a_holder
+
+lock_freed_past_a_lingering_child() {
+	for pair in python:bdd java-gradle:all multi-stack:all; do
+		preset=${pair%%:*}
+		run=${pair#*:}
+		lock_project "lock-linger-$preset" "$preset/verify"
+		: > "$proj/linger"
+		STUB_LINGER="$proj/linger"
+		export STUB_LINGER
+		attempt timeout 20 ./verify "$run"
+		unset STUB_LINGER
+		if [ "$status" -ne 0 ] || [ ! -s "$proj/linger" ]; then r=1; fi
+		flock -n "$lock" true || r=1
+		attempt timeout 10 ./verify "$run"
+		if [ "$status" -ne 0 ] || waited; then r=1; fi
+		while read -r pid; do
+			kill "$pid" 2> /dev/null || true
+		done < "$proj/linger"
+	done
+}
+lock_case "a building run frees the lock when it ends, though a process it started still holds the lock file open, with or without an exit trap of its own command" \
+	lock_freed_past_a_lingering_child
+
+signal_launch() {
+	launch=""
+	if env --default-signal="$1" true 2> /dev/null; then
+		launch="env --default-signal=$1"
+	elif [ "$1" = INT ]; then
+		lock_skip="env here cannot give a background run its SIGINT back"
+		return 1
+	fi
+}
+
+lock_freed_on_a_signal() {
+	signal_launch "$signal" || return 0
+	lock_project "lock-signal-$signal" python/verify
+	: > "$proj/linger"
+	STUB_HOLD="$proj/tool" STUB_LINGER="$proj/linger" $launch ./verify bdd > "$proj/signal.out" 2>&1 &
+	run_pid=$!
+	await test -e "$proj/tool.held" || r=1
+	kill -s "$signal" "$run_pid" || r=1
+	: > "$proj/tool.go"
+	wait "$run_pid" || true
+	await grep -q '^uv done ' "$STUB_LOG" || r=1
+	flock -n "$lock" true || r=1
+	while read -r pid; do
+		kill "$pid" 2> /dev/null || true
+	done < "$proj/linger"
+}
+for signal in TERM HUP INT; do
+	lock_case "a building run ended by SIG$signal frees the lock once its tool ends, though a process it started still holds the lock file open" \
+		lock_freed_on_a_signal
+done
+
+lock_ended_by_a_signal() {
+	case "$signal" in
+		HUP) killed=129 ;;
+		INT) killed=130 ;;
+		TERM) killed=143 ;;
+	esac
+	signal_launch "$signal" || return 0
+	lock_project "lock-end-$signal" python/verify
+	STUB_HOLD="$proj/tool" $launch ./verify all > "$proj/signal.out" 2>&1 &
+	run_pid=$!
+	await test -e "$proj/tool.held" || r=1
+	kill -s "$signal" "$run_pid" || r=1
+	: > "$proj/tool.go"
+	run_status=0
+	wait "$run_pid" || run_status=$?
+	[ "$run_status" -eq "$killed" ] || r=1
+	[ "$(grep -c '^uv \(held\|free\) ' "$STUB_LOG")" -eq 1 ] || r=1
+	flock -n "$lock" true || r=1
+}
+for signal in TERM HUP INT; do
+	lock_case "a building run ended by SIG$signal starts no step after its tool ends and ends by that signal" \
+		lock_ended_by_a_signal
+done
+
+lock_ended_where_the_signal_cannot_kill() {
+	signal_launch TERM
+	lock_project lock-end-unkillable python/verify
+	STUB_HOLD="$proj/tool" $launch sh -c 'kill() { :; }; . "$0"' ./verify all > "$proj/signal.out" 2>&1 &
+	run_pid=$!
+	await test -e "$proj/tool.held" || r=1
+	kill -s TERM "$run_pid" || r=1
+	: > "$proj/tool.go"
+	run_status=0
+	wait "$run_pid" || run_status=$?
+	[ "$run_status" -eq 1 ] || r=1
+	[ "$(grep -c '^uv \(held\|free\) ' "$STUB_LOG")" -eq 1 ] || r=1
+	flock -n "$lock" true || r=1
+}
+lock_case "a building run that the signal it re-raises cannot end, as a container's first process, starts no step after its tool ends and exits 1" \
+	lock_ended_where_the_signal_cannot_kill
+
+lock_interrupt_stops_the_caller() {
+	if ! env --default-signal=INT true 2> /dev/null || ! command -v bash > /dev/null 2>&1 ||
+		! command -v setsid > /dev/null 2>&1; then
+		lock_skip="this machine lacks bash, setsid or an env that gives a background run its SIGINT back"
+		return 0
+	fi
+	lock_project lock-interrupt-caller python/verify
+	STUB_HOLD="$proj/tool" env --default-signal=INT setsid bash -c './verify all; ./verify all' \
+		> "$proj/caller.out" 2>&1 &
+	caller=$!
+	await test -e "$proj/tool.held" || r=1
+	kill -INT "-$caller" || r=1
+	: > "$proj/tool.go"
+	caller_status=0
+	wait "$caller" || caller_status=$?
+	[ "$caller_status" -eq 130 ] || r=1
+	[ "$(grep -c '^uv \(held\|free\) ' "$STUB_LOG")" -eq 1 ] || r=1
+	flock -n "$lock" true || r=1
+}
+lock_case "an interrupt to a bash loop over verify ends the run by the signal, so the loop starts no further run" \
+	lock_interrupt_stops_the_caller
+
+lock_cleaned_up_on_a_signal() {
+	lock_project lock-cleanup-signal multi-stack/verify
+	mkdir -p "$proj/tmp"
+	signal_launch TERM
+	STUB_HOLD="$proj/tool" STUB_HOLD_ONLY=npm TMPDIR="$proj/tmp" $launch ./verify all > "$proj/signal.out" 2>&1 &
+	run_pid=$!
+	await test -e "$proj/tool.held" || r=1
+	kill -s TERM "$run_pid" || r=1
+	: > "$proj/tool.go"
+	run_status=0
+	wait "$run_pid" || run_status=$?
+	[ "$run_status" -eq 143 ] || r=1
+	[ "$(grep -c '^npm \(held\|free\) ' "$STUB_LOG")" -eq 1 ] || r=1
+	[ -z "$(ls -A "$proj/tmp")" ] || r=1
+	flock -n "$lock" true || r=1
+}
+lock_case "the composed script's all, ended by a signal while its results file exists, removes that file as it ends" \
+	lock_cleaned_up_on_a_signal
+
+lock_awaited_through_an_unlocked_descriptor() {
+	lock_project lock-open-unlocked python/verify
+	hold_lock "$proj/holder" || r=1
+	timeout 60 sh -c 'exec 7<"$1"; ./verify bdd' _ "$lock" > "$proj/caller.out" 2>&1 &
+	caller=$!
+	await waits_seen "$proj/caller.out" 1 || r=1
+	if [ -s "$STUB_LOG" ]; then r=1; fi
+	release_lock "$proj/holder"
+	caller_status=0
+	wait "$caller" || caller_status=$?
+	if [ "$caller_status" -ne 0 ] || ! grep -q '^uv held ' "$STUB_LOG"; then r=1; fi
+}
+lock_case "a run that holds the lock file open but not its lock waits for the lock like any other, and runs no tool before it" \
+	lock_awaited_through_an_unlocked_descriptor
+
+lock_unrelated_descriptor_kept() {
+	lock_project lock-unrelated java-gradle/verify
+	: > "$proj/other.lock"
+	attempt timeout 20 sh -c 'exec 9<"$1"; flock -n 9 || exit 9; flock "$2" ./verify all || exit 7; if flock -n "$1" true; then exit 8; fi' \
+		_ "$proj/other.lock" "$lock"
+	[ "$status" -eq 0 ] || r=1
+}
+lock_case "a run that took no lock, one inside a holder whose command sets its own exit trap, frees no lock its caller holds on descriptor 9" \
+	lock_unrelated_descriptor_kept
+
+lock_never_awaited() {
+	for preset in $presets; do
+		lock_project "lock-never-$preset" "$preset/verify"
+		hold_lock "$proj/holder" || r=1
+		for run in format stop outdated; do
+			attempt timeout 10 ./verify "$run"
+			if [ "$status" -ne 0 ] || waited; then r=1; fi
+		done
+		release_lock "$proj/holder"
+	done
+}
+lock_case "format, stop and outdated never wait for the lock, in every preset" lock_never_awaited
+
+lock_refused_before_the_queue() {
+	for preset in $presets; do
+		lock_project "lock-usage-$preset" "$preset/verify"
+		hold_lock "$proj/holder" || r=1
+		for run in nonsense focus; do
+			attempt timeout 10 ./verify $run
+			if [ "$status" -ne 2 ] || waited; then r=1; fi
+		done
+		stray=""
+		case "$preset" in
+			multi-stack) stray=docs/readme.md ;;
+			csharp-dotnet) stray=src/Thing.cs ;;
+		esac
+		if [ -n "$stray" ]; then
+			attempt timeout 10 ./verify focus "$stray"
+			if [ "$status" -ne 2 ] || waited || [ -s "$STUB_LOG" ]; then r=1; fi
+		fi
+		release_lock "$proj/holder"
+	done
+	for refusal in java-gradle:./gradlew:bdd js-ts-npm:npm:bdd python:uv:bdd csharp-dotnet:dotnet:bdd \
+		cpp:uv:focus:tests/acceptance/x.feature cpp:uv:all multi-stack:npm:all multi-stack:npm:vuln; do
+		preset=${refusal%%:*}
+		rest=${refusal#*:}
+		missing=${rest%%:*}
+		run=$(printf '%s' "${rest#*:}" | tr ':' ' ')
+		lock_project "lock-tool-$preset-$locks" "$preset/verify" "$missing"
+		hold_lock "$proj/holder" || r=1
+		attempt timeout 10 ./verify $run
+		if [ "$status" -ne 1 ] || waited || [ -s "$STUB_LOG" ]; then r=1; fi
+		release_lock "$proj/holder"
+	done
+}
+lock_case "a usage error or a missing tool is refused before the queue, and before any tool runs" \
+	lock_refused_before_the_queue
+
+lock_file_readable_to_all() {
+	lock_project lock-mode python/verify
+	[ ! -e "$lock" ] || r=1
+	attempt sh -c 'umask 077 && timeout 20 ./verify bdd'
+	[ "$status" -eq 0 ] || r=1
+	case "$(ls -l "$lock" 2> /dev/null)" in
+		'-rw-r--r--'*) ;;
+		*) r=1 ;;
+	esac
+}
+lock_case "a first building run under umask 077 leaves the lock file readable to every user, with mode 644" \
+	lock_file_readable_to_all
+
+lock_unreadable_refused() {
+	lock_project lock-unreadable python/verify
+	: > "$lock"
+	chmod 000 "$lock"
+	reader=""
+	if [ "$(id -u)" -eq 0 ]; then
+		reader="setpriv --inh-caps=-all --bounding-set=-dac_override,-dac_read_search"
+	fi
+	if $reader sh -c ': < "$1"' _ "$lock" 2>/dev/null; then
+		lock_skip="a file with mode 000 stays readable to this user"
+	else
+		attempt timeout 10 $reader ./verify bdd
+		if [ "$status" -ne 1 ] || [ -s "$STUB_LOG" ] ||
+			! grep -qF "[verify] cannot read $lock, the machine-wide build lock; its owner can make it readable" "$out_file"; then
+			r=1
+		fi
+	fi
+	chmod 644 "$lock"
+}
+lock_case "an unreadable lock file stops a building run with a named message, before any tool runs" \
+	lock_unreadable_refused
+
+lock_requeued_on_a_new_file() {
+	lock_project lock-deleted python/verify
+	hold_lock "$proj/old" || r=1
+	old_holder=$holder
+	STUB_RUN=waiter timeout 60 ./verify bdd > "$proj/waiter.out" 2>&1 &
+	waiter=$!
+	await waits_seen "$proj/waiter.out" 1 || r=1
+	rm -f "$lock"
+	hold_lock "$proj/new" || r=1
+	new_holder=$holder
+	: > "$proj/old.go"
+	wait "$old_holder" || true
+	await waits_seen "$proj/waiter.out" 2 || r=1
+	if grep -q ' waiter ' "$STUB_LOG"; then r=1; fi
+	: > "$proj/new.go"
+	wait "$new_holder" || true
+	waiter_status=0
+	wait "$waiter" || waiter_status=$?
+	if [ "$waiter_status" -ne 0 ] || ! grep -q '^uv held waiter ' "$STUB_LOG"; then r=1; fi
+}
+lock_case "a run that waited on a deleted lock file queues again on the new one" lock_requeued_on_a_new_file
+
+summarize || exit 1

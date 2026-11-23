@@ -2,7 +2,7 @@
 set -eu
 
 usage() {
-	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln\n' >&2
+	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln|stop\n' >&2
 	exit 2
 }
 
@@ -59,88 +59,156 @@ report() {
 	printf '[verify] %s reported findings (exit %s)\n' "$1" "$status"
 }
 
+# > **ADAPT:** the machine-wide build lock. It serializes the builds and test runs of every
+# > worktree of this project on the machine, so only one of them runs at a time; every worktree of
+# > the machine must name the same file.
+build_lock="/tmp/{{PROJECT_NAME}}-build.lock"
+build_lock_taken=""
+
+fd_holds_build_lock() {
+	[ "/proc/$$/fd/$1" -ef "$build_lock" ] && grep -q '^lock:.*FLOCK' "/proc/$$/fdinfo/$1" 2>/dev/null
+}
+
+release_build_lock() {
+	if [ -n "$build_lock_taken" ]; then
+		flock -u 9
+	fi
+}
+
+end_by_signal() {
+	release_build_lock
+	trap - "$1"
+	kill -s "$1" $$
+	exit 1
+}
+
+hold_build_lock() {
+	if ! command -v flock >/dev/null 2>&1 || [ ! -d "/proc/$$/fdinfo" ]; then
+		printf '[verify] this run takes no build lock: the machine lacks flock or /proc\n' >&2
+		return 0
+	fi
+	for fd in /proc/$$/fd/*; do
+		if fd_holds_build_lock "${fd##*/}"; then
+			return 0
+		fi
+	done
+	while :; do
+		[ -e "$build_lock" ] || (umask 022 && touch "$build_lock") 2>/dev/null || true
+		if ! (exec 9<"$build_lock") 2>/dev/null; then
+			printf '[verify] cannot read %s, the machine-wide build lock; its owner can make it readable\n' "$build_lock" >&2
+			exit 1
+		fi
+		exec 9<"$build_lock"
+		if ! flock -n 9; then
+			printf '[verify] waiting for %s: another build on this machine holds it\n' "$build_lock" >&2
+			flock 9 || exit 1
+		fi
+		if [ "/proc/$$/fd/9" -ef "$build_lock" ]; then
+			build_lock_taken=1
+			trap release_build_lock EXIT
+			trap 'end_by_signal HUP' HUP
+			trap 'end_by_signal INT' INT
+			trap 'end_by_signal TERM' TERM
+			return 0
+		fi
+	done
+}
+
 build_dir=build
 acceptance=tests/acceptance
-# ADAPT: the artifact the acceptance scenarios drive. The steps know this path and nothing else
-# about the build.
+# > **ADAPT:** the artifact the acceptance scenarios drive. The steps know this path and nothing
+# > else about the build.
 APP_BINARY=${APP_BINARY:-$root/$build_dir/app}
 export APP_BINARY
 
 format_sources() {
-	require git
-	require clang-format
-	files=$(git ls-files '*.cpp' '*.cc' '*.hpp' '*.h') || {
+	git ls-files '*.cpp' '*.cc' '*.hpp' '*.h' > /dev/null || {
 		printf '[verify] not a git repository, so the sources cannot be listed\n' >&2
 		exit 1
 	}
-	if [ -n "$files" ]; then
-		printf '%s\n' "$files" | xargs clang-format --dry-run --Werror || exit 1
-	fi
+	git ls-files -z '*.cpp' '*.cc' '*.hpp' '*.h' | xargs -0 -r clang-format --dry-run --Werror || exit 1
 }
 
 configure() {
-	require cmake
 	run cmake -S . -B "$build_dir" -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 }
 
 case "$cmd" in
-	format|focus|bdd|all|outdated|vuln) ;;
+	format|focus|bdd|all|outdated|vuln|stop) ;;
 	*) usage ;;
 esac
 
+# > **ADAPT:** stop ends what the build tool leaves running after a build; a stack that leaves
+# > nothing running answers it with 0.
+[ "$cmd" != stop ] || exit 0
+
 case "$cmd" in
 	format)
+		require git
+		require clang-format
 		format_sources
 		;;
 	focus)
+		require cmake
+		case "$target" in
+			*.feature) require uv ;;
+			*) require ctest ;;
+		esac
+		hold_build_lock
 		configure
 		run cmake --build "$build_dir"
 		case "$target" in
 			*.feature)
-				require uv
 				run uv run --project "$acceptance" pytest -p no:cacheprovider -v \
 					"$acceptance/steps/test_$(basename "$target" .feature).py"
 				;;
 			*)
-				require ctest
 				run ctest --test-dir "$build_dir" --output-on-failure --no-tests=error \
 					-R "^$(basename "$target" | sed 's/\.[^.]*$//')\."
 				;;
 		esac
 		;;
 	bdd)
+		require cmake
+		require uv
+		hold_build_lock
 		configure
 		run cmake --build "$build_dir"
-		require uv
 		pass_when_no_scenario_is_tagged \
-			uv run --project "$acceptance" pytest -p no:cacheprovider -v -m wip
+			uv run --project "$acceptance" pytest -p no:cacheprovider -v -m wip "$acceptance"
 		;;
 	all)
+		require git
+		require clang-format
+		require cmake
+		# > **ADAPT:** drop this check and the run-clang-tidy run below where clang-tidy runs
+		# > during the build via CMAKE_CXX_CLANG_TIDY.
+		require run-clang-tidy
+		require ctest
+		require uv
+		hold_build_lock
 		format_sources
 		configure
 		run cmake --build "$build_dir" --clean-first
-		# ADAPT: drop this line where clang-tidy runs during the build via CMAKE_CXX_CLANG_TIDY.
-		require run-clang-tidy
 		run run-clang-tidy -p "$build_dir" -quiet
 		mkdir -p artifacts/test-results
-		require ctest
 		run ctest --test-dir "$build_dir" --output-on-failure --no-tests=error \
 			--output-junit "$root/artifacts/test-results/ctest.xml"
-		require uv
 		run uv run --project "$acceptance" pytest -p no:cacheprovider -v \
 			-m "not wip and not characterization" \
-			--junitxml=artifacts/test-results/acceptance.xml
+			--junitxml=artifacts/test-results/acceptance.xml "$acceptance"
 		;;
 	outdated)
-		# ADAPT: vcpkg manifest mode shown. Conan: compare the conanfile requirements against
-		# conan list "<name>/*" -r=conancenter.
+		# > **ADAPT:** vcpkg manifest mode shown. Conan: compare the conanfile requirements against
+		# > conan list "<name>/*" -r=conancenter.
 		require vcpkg
 		report vcpkg x-update-baseline --dry-run
 		;;
 	vuln)
-		# ADAPT: osv-scanner v2 spells this "osv-scanner scan source -r ."; a Conan project scans
-		# osv-scanner --lockfile conan.lock.
+		# > **ADAPT:** osv-scanner v2 spells this "osv-scanner scan source -r ."; a Conan project
+		# > scans osv-scanner --lockfile conan.lock.
 		require osv-scanner
+		hold_build_lock
 		report osv-scanner -r .
 		;;
 esac

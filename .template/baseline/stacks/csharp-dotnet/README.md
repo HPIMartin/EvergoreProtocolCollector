@@ -13,12 +13,13 @@ Copy [verify](verify) to the repo root.
 | Subcommand | Command |
 |---|---|
 | `format` | `dotnet format --verify-no-changes` |
-| `focus <Class.cs>` | `dotnet test --filter FullyQualifiedName~<Class>`; a substring match on the basename, so same-named classes in different namespaces all run |
-| `focus <x.feature>` | `dotnet test --filter FullyQualifiedName~<Stem>Feature` |
+| `focus <Class.cs>` | `dotnet test <Project.csproj> --filter FullyQualifiedName~<Class> -- RunConfiguration.TreatNoTestsAsError=true`; a substring match on the basename, so same-named classes in different namespaces of that project all run |
+| `focus <x.feature>` | `dotnet test <Project.csproj> --filter FullyQualifiedName~<Stem>Feature -- RunConfiguration.TreatNoTestsAsError=true` |
 | `bdd` | `dotnet test --filter "TestCategory=wip"` |
 | `all` | format check, `dotnet build --no-incremental`, `dotnet test --no-build --filter "TestCategory!=wip&TestCategory!=characterization"` |
 | `outdated` | `dotnet list package --outdated` |
 | `vuln` | `dotnet list package --vulnerable --include-transitive` |
+| `stop` | nothing, exit 0: the build servers `dotnet` starts are shared by every tree of the machine, so no tree stops them alone |
 
 - `--no-incremental` disables the incremental build for the gateway run; `dotnet test` re-runs every
   selected test, it restores no results.
@@ -27,9 +28,28 @@ Copy [verify](verify) to the repo root.
 - A relative `focus` path resolves against the **caller's** directory, so the script behaves the same
   from a subdirectory as from the root.
 - `bdd` on an empty `@wip` set passes: VSTest's `TreatNoTestsAsError` is false by default, so a
-  filter that matches nothing warns and returns 0. Leave it false, or `bdd` fails between features.
+  filter that matches nothing warns and returns 0. `bdd` leaves it false, since it would fail
+  between features otherwise; `focus` sets it, so a focused run that selects nothing fails.
+  - VSTest applies it per test project, so `focus` runs only `<Project.csproj>`, the nearest
+    `*.csproj` at or above the target's folder (a `.feature` lives in its acceptance project's
+    folder); a second test project that holds no match cannot fail the run.
+  - A target with no `*.csproj` in its folder or above it in the tree is refused with exit 2
+    and a message naming it, before any tool runs.
+  - `all` leaves it false as well, since a test project that holds only `@wip` scenarios would
+    fail it otherwise. So `all` passes on a solution with no test project at all: the summary per
+    test assembly is what shows that tests ran.
+  - The nearest project must be a test project: it references `Microsoft.NET.Test.Sdk` or
+    `MSTest.Sdk`, or sets `IsTestProject` to true. A target whose nearest project is none, such
+    as a production class, is refused with exit 2, so focus a test file.
+    - Why: `dotnet test` on a class library runs no test and exits 0 (an SDK 8 run).
+    - Known limit: the check reads the project file itself, as text. A test project whose test
+      packages come from a `Directory.Build.props`, or whose `IsTestProject` is spelled `True`,
+      is refused: set `<IsTestProject>true</IsTestProject>` in its project file. A marker in a
+      comment or under a false `Condition` still counts.
 - Reqnroll names a feature's generated class `<Stem>Feature`, which is what lets `focus` select a
   feature file. That run carries no category filter, so `@wip` scenarios execute.
+  - Known limit: `focus <x.feature>` selects the class `<Stem>Feature`; name the file after its
+    `Feature:` title, or a focused run selects nothing and fails.
 
 ## settings.json allow block
 
@@ -105,29 +125,41 @@ execution. The one scoped exception is the probe project.
   run (an IDE "run all") skip instead of fail, but an ignored scenario stays ignored under
   `verify bdd` too, so it has to come off before the scenario can be driven green. Default to `@wip`
   alone and let the filter do the excluding.
-- **Step-definition shape**, driven through ports with in-memory fakes (handbook §5), no comments
-  (`hooks/content-gate` refuses them):
+- **Step-definition shape**, each actor driven through its real surface against a fresh real
+  service (handbook §5): a page object over the browser for a screen, a client for an API. No
+  comments (`hooks/content-gate` refuses them):
 
   ```csharp
   [Binding]
-  public sealed class MonthlyContributionSteps
+  public sealed class ContributionSteps(RunningService service, ScenarioBrowser browser)
   {
-      private readonly InMemoryOrders orders = new();
-      private MonthlyOverview overview;
+      private ContributionOverviewPage? overview;
 
-      [Given(@"customer ""(.*)"" placed orders worth (\d+) this month")]
-      public void CustomerPlacedOrdersWorth(string customer, int total) =>
-          orders.Record(new Order(customer, total));
+      [Given(@"the order book holds an order from ""(.*)"" worth (\d+) placed on (.*)")]
+      public Task TheOrderBookHoldsAnOrder(string customer, int worth, string placedAt) =>
+          service.Orders.Place(new Order(customer, worth, ScenarioTime.Parse(placedAt)));
 
-      [When(@"the manager opens the monthly overview")]
-      public void TheManagerOpensTheMonthlyOverview() =>
-          overview = new MonthlyOverviewQuery(orders).Run();
+      [When(@"the manager opens the contribution overview")]
+      public async Task TheManagerOpensTheContributionOverview() =>
+          overview = await ContributionOverviewPage.OpenIn(browser, service);
 
-      [Then(@"the contribution column for ""(.*)"" shows (\d+)")]
-      public void TheContributionColumnShows(string customer, int expected) =>
-          Assert.That(overview.ContributionOf(customer), Is.EqualTo(expected));
+      [Then(@"the manager sees (\d+) in (.*)'s contribution column")]
+      public async Task TheManagerSeesInTheContributionColumn(int expected, string customer) =>
+          Assert.That(await overview!.ContributionOf(customer), Is.EqualTo(expected));
   }
   ```
+
+  The field holds nothing until the `When` step opens the page, so under
+  `<Nullable>enable</Nullable>` and warnings as errors it is declared nullable, and the `Then` step
+  dereferences it with `!`, which the content gate refuses in production source only.
+
+  `ScenarioBrowser` is the project's own wrapper over its browser driver (the java-gradle preset
+  ships one). `RunningService` is its own class: a `[BeforeScenario]` hook starts a fresh service
+  and an `[AfterScenario]` hook stops it, and `Orders.Place` writes through the service's real
+  write path.
+
+  > **ADAPT:** a project that chose the in-memory model at adoption drives ports with in-memory
+  > fakes instead: the `Given` records into an in-memory port and the `When` runs the query over it.
 
 ## Probe location (agent throwaway code, build-run-deploy.md)
 
@@ -144,7 +176,7 @@ execution. The one scoped exception is the probe project.
   project adds `Assets/` to `production_trees` (addendum below).
 - `print_allow_paths` covers a console adapter whose stdout is the interface.
 
-## Toolchain pinning (single-sourcing, dev-environment.md)
+## Toolchain pinning (dev-environment.md, "Toolchain version")
 
 - `global.json` pins the SDK feature band; `rollForward: latestFeature` lets a patch-level newer SDK
   serve without a repo change while a feature-band jump stays a decision.

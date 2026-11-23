@@ -1,0 +1,1024 @@
+#!/bin/sh
+set -euf
+
+usage() {
+	cat >&2 <<'USAGE'
+usage: sh module-filter list
+       sh module-filter check --keep "<names>"
+       sh module-filter apply --keep "<names>" [--root <dir>] [--payload <dir>] [--prune]
+       sh module-filter verify --keep "<names>" [--root <dir>] [--payload <dir>]
+
+Takes out of a tree what belongs to the template modules that are not kept. The file
+module-manifest beside this script is the one place that says what belongs to a module.
+
+  list     one line per module: its name, a tab, the modules it needs or -, a tab, its title;
+           under it one line per precondition the adopter checks: a tab, asks, a tab, the text
+  check    prints ok when every kept name is a module and has the modules it needs
+  apply    plans first and changes nothing when the plan fails: each fence of a module is
+           closed by its own closing fence before another opens; a fence-like line (a comment
+           marker, blanks or none, MODULE or /MODULE, a blank, then a letter, digit or -) that
+           is no exact fence of its file type is refused; each json, key, hook and cut
+           row of a dropped module is found exactly once in the payload's own copy of its
+           file and at most once in an installed copy, unless no row of that module is found at
+           all (a module already cut, so apply runs again); a key opens its value on its own line
+           and closes it;
+           where its file has no hook row of the key's module, the key goes with its whole value,
+           and is refused where that value does not read as JSON;
+           where it has, the value is read as Claude Code's hooks: a handler goes where its
+           "command" is word for word the text of such a hook row, escapes as the file writes
+           them, then the group whose "hooks" array that leaves empty, the event whose array that
+           leaves empty, and the key once it is empty; a member named twice in one object counts
+           as none; the key stays while an entry of the project stays in it; what goes, the key
+           included, is refused where it shares a line with what stays or a comma behind it
+           stands on a later line; no line that stays holds the text of a trace row of a dropped
+           module where the character before the text is no letter, digit, _, . or -.
+           Then it cuts the fenced blocks of the dropped modules with both fence lines, their
+           json lines, keys and cut texts, and takes the comma from an element that became the
+           last of its array or object. It prints "edited <file>" per changed file,
+           "note: <file>: fence of no manifest module: <name>" per fence it leaves alone,
+           "note: <file>: <kind> row not found, nothing to cut: <text>" per row an installed
+           copy lacks, "note: <module>: no row of it is left to cut" per such module, and
+           "remove <path>" per existing file or directory of a dropped module:
+           it deletes none of them unless --prune is given, and then prints "removed <path>".
+           A changed file that cannot be written is refused, and every file written before
+           it is put back as it was
+  verify   prints one "leftover <place>: <what>" line per trace of a dropped module and per
+           fence-like line; a json row's /workspaces/{{PROJECT_NAME}} matches any root path; a key
+           with hook rows is no leftover, each handler a hook row names is one; it prints the note
+           on a fence of no manifest module as apply does, which changes no exit status
+
+  --keep     the kept modules, blank separated; "" keeps none
+  --root     the tree to filter; default: the current directory
+  --payload  the pristine payload whose file list says which files are scanned;
+             default: <root>/.template/baseline where it exists, else the root itself
+  --prune    delete the files and directories of the dropped modules (for a scratch copy)
+
+A fence is a whole line, blanks around it and a carriage return behind it allowed:
+  <!-- MODULE name -->   in .md
+  # MODULE name          in a file without extension, a dot file, .sh, .yml, .yaml, .env, .toml
+  // MODULE name         in .json and .jsonc
+The closing fence reads /MODULE. The name is one module, or several joined by + (name+other):
+such a block goes as soon as one of them is dropped, its closing fence names it as its opening
+fence does, and a name with a part that is no module is a fence of no manifest module. A file of
+any other type is never scanned. A file under a path row is not scanned for the fences of that
+row's module, nor for those whose every part is such a module, and not at all once that module
+is dropped. A symbolic link is never followed. Line endings and a missing final newline stay.
+A payload file name that holds a tab or a newline is refused.
+
+Manifest rows, the fields separated by one blank, the last one running to the line's end:
+  module <name> <title>
+  needs <name> <module>
+  asks <name> <text>
+  path <name> <file, or directory/>
+  json <name[+name]> <file> <string that stands alone on its line>
+  key <name[+name]> <file> <top-level key>
+  hook <name[+name]> <file> <a handler's "command" as the file writes it, between its quotes>
+  cut <name[+name]> <file> <text inside one line>
+  trace <name[+name]> <file> <text no line may keep once the row is dropped>
+  installs <payload path> <root path>
+  skip <path>
+A row of several names is dropped as soon as one of them is. A row for a payload path holds
+for its installed copy too. A skip row's path is never scanned and never edited.
+
+exit: 0 done; 1 refused, on stderr as "refused: <reason>", or a leftover; 2 usage
+USAGE
+	exit 2
+}
+
+refuse() {
+	printf 'refused: %s\n' "$1" >&2
+	exit 1
+}
+
+allow_options() {
+	for option in $given; do
+		case " $1 " in *" $option "*) ;; *) usage ;; esac
+	done
+}
+
+[ $# -ge 1 ] || usage
+action=$1
+shift
+keep=
+root=.
+payload=
+prune=0
+given=
+while [ $# -gt 0 ]; do
+	case $1 in
+		--keep|--root|--payload)
+			[ $# -ge 2 ] || usage
+			case $1 in
+				--keep) keep=$2 ;;
+				--root) root=$2 ;;
+				--payload) payload=$2 ;;
+			esac
+			given="$given $1"
+			shift 2 ;;
+		--prune)
+			prune=1
+			given="$given $1"
+			shift ;;
+		*) usage ;;
+	esac
+done
+case $action in
+	list) allow_options '' ;;
+	check) allow_options '--keep' ;;
+	apply) allow_options '--keep --root --payload --prune' ;;
+	verify) allow_options '--keep --root --payload' ;;
+	*) usage ;;
+esac
+case $action in
+	list) ;;
+	*) case " $given " in *' --keep '*) ;; *) usage ;; esac ;;
+esac
+
+tool_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+manifest=$tool_dir/module-manifest
+[ -f "$manifest" ] || refuse "no module-manifest beside $0"
+
+newline='
+'
+tab=$(printf '\t')
+installs=
+skips=
+row_files=
+module_paths=
+while IFS= read -r row || [ -n "$row" ]; do
+	kind=${row%% *}
+	rest=${row#* }
+	case $kind in
+		installs) installs=$installs$rest$newline ;;
+		skip) skips=$skips$rest$newline ;;
+		path) module_paths=$module_paths${rest#* }$newline ;;
+		json|key|hook|cut|trace)
+			rest=${rest#* }
+			row_files=$row_files${rest%% *}$newline ;;
+	esac
+done < "$manifest"
+
+case $action in
+	apply|verify)
+		[ -d "$root" ] || refuse "--root names no directory: $root"
+		root=$(CDPATH= cd -- "$root" && pwd)
+		if [ -n "$payload" ]; then
+			[ -d "$payload" ] || refuse "--payload names no directory: $payload"
+			payload=$(CDPATH= cd -- "$payload" && pwd)
+		elif [ -d "$root/.template/baseline" ]; then
+			payload=$root/.template/baseline
+		else
+			payload=$root
+		fi ;;
+esac
+
+payload_files() {
+	names=$1
+	set --
+	for skipped in $skips; do
+		[ $# -eq 0 ] || set -- "$@" -o
+		set -- "$@" -path "./${skipped%/}"
+	done
+	[ $# -eq 0 ] || set -- \( "$@" \) -prune -o
+	cd "$payload"
+	case $names in
+		all) find . "$@" -type f -print ;;
+		odd) find . "$@" -type f \( -name "*$tab*" -o -name "*$newline*" \) -exec awk '
+			function shown(text, mark, sign,   part, count, i, joined) {
+				count = split(text, part, mark)
+				joined = part[1]
+				for (i = 2; i <= count; i++) joined = joined sign part[i]
+				return joined
+			}
+			BEGIN {
+				name = shown(shown(substr(ARGV[1], 3), "\t", "\\t"), "\n", "\\n")
+				print "refused: a payload file name holds a tab or a newline: " name
+			}' {} \; ;;
+	esac
+}
+
+standing() {
+	for skipped in $skips; do
+		case $2/ in "${skipped%/}/"*) return 0 ;; esac
+	done
+	case $1 in
+		file) [ -f "$root/$2" ] && [ ! -L "$root/$2" ] || return 0 ;;
+		path) [ -e "$root/$2" ] || [ -L "$root/$2" ] || return 0 ;;
+	esac
+	printf '%s\t%s\t%s\n' "$1" "$2" "$3"
+}
+
+with_installed_copies() {
+	standing "$1" "$2" "$2"
+	for pair in $installs; do
+		from=${pair%% *}
+		to=${pair#* }
+		case $from in
+			*/) case $2 in "$from"*) standing "$1" "$to${2#"$from"}" "$2" ;; esac ;;
+			*) [ "$2" != "$from" ] || standing "$1" "$to" "$2" ;;
+		esac
+	done
+}
+
+inventory() {
+	IFS=$newline
+	payload_files all | while IFS= read -r found; do
+		with_installed_copies file "${found#./}"
+	done
+	for named in $row_files; do
+		with_installed_copies file "$named"
+	done
+	for named in $module_paths; do
+		with_installed_copies path "$named"
+	done
+}
+
+run_filter() {
+	MODULE_FILTER_ACTION=$action MODULE_FILTER_KEEP=$keep MODULE_FILTER_ROOT=$root MODULE_FILTER_MANIFEST=$manifest \
+		MODULE_FILTER_SPOOL=$spool LC_ALL=C awk '
+		function refuse(reason) { refusal[++refusals] = reason }
+		function flaw(reason) { if (action == "apply") refuse(reason) }
+		function report(line) { reported[++reports] = line }
+		function trace(place, what) { if (action == "verify") report("leftover " place ": " what) }
+
+		function before_blank(text,   at) { at = index(text, " "); return at ? substr(text, 1, at - 1) : text }
+		function after_blank(text,   at) { at = index(text, " "); return at ? substr(text, at + 1) : "" }
+		function bare(text) { sub(/^[ \t]+/, "", text); sub(/[ \t\r]+$/, "", text); return text }
+		function leaves_root(path) { return path == "" || path ~ /^\// || path ~ /(^|\/)\.\.(\/|$)/ }
+		function covers(path, name) { return (path ~ /\/$/) ? (substr(name, 1, length(path)) == path) : (name == path) }
+
+		function of_modules(names,   part, count, i) {
+			count = split(names, part, "+")
+			for (i = 1; i <= count; i++) if (!(part[i] in is_module)) return 0
+			return 1
+		}
+
+		function all_in(names, set,   part, count, i) {
+			count = split(names, part, "+")
+			for (i = 1; i <= count; i++) if (!(part[i] in set)) return 0
+			return 1
+		}
+
+		function any_dropped(names,   part, count, i) {
+			count = split(names, part, "+")
+			for (i = 1; i <= count; i++) if (part[i] in dropped) return 1
+			return 0
+		}
+
+		function no_module(names, line,   part, count, i) {
+			count = split(names, part, "+")
+			if (count == 0) part[++count] = ""
+			for (i = 1; i <= count; i++) {
+				if (part[i] in is_module) continue
+				refuse("module-manifest line " line ": no module named " part[i])
+				return 1
+			}
+			return 0
+		}
+
+		function strays(path, line) {
+			if (!leaves_root(path)) return 0
+			refuse("module-manifest line " line ": the path leaves the root: " path)
+			return 1
+		}
+
+		function read_manifest(   line, number, kind, rest, name, i) {
+			number = 0
+			while ((getline line < manifest) > 0) {
+				number++
+				sub(/\r$/, "", line)
+				if (line == "") continue
+				kind = before_blank(line)
+				rest = after_blank(line)
+				name = before_blank(rest)
+				if (kind == "module") {
+					module[++modules] = name
+					is_module[name] = 1
+					title[name] = after_blank(rest)
+				} else if (kind == "needs") {
+					need_owner[++needs] = name
+					need_target[needs] = after_blank(rest)
+					need_line[needs] = number
+				} else if (kind == "asks") {
+					ask_owner[++asks] = name
+					ask_text[asks] = after_blank(rest)
+					ask_line[asks] = number
+				} else if (kind == "path") {
+					path_owner[++paths] = name
+					path_of[paths] = after_blank(rest)
+					path_line[paths] = number
+				} else if (kind == "json" || kind == "key" || kind == "hook" || kind == "cut" || kind == "trace") {
+					rest = after_blank(rest)
+					row_kind[++rows] = kind
+					row_names[rows] = name
+					row_file[rows] = before_blank(rest)
+					row_text[rows] = after_blank(rest)
+					row_line[rows] = number
+				} else if (kind == "installs") {
+					if (!strays(name, number)) strays(after_blank(rest), number)
+				} else if (kind == "skip") {
+					strays(rest, number)
+				} else {
+					refuse("module-manifest line " number ": unknown row: " kind)
+				}
+			}
+			close(manifest)
+			for (i = 1; i <= needs; i++) if (!no_module(need_owner[i], need_line[i])) no_module(need_target[i], need_line[i])
+			for (i = 1; i <= asks; i++) no_module(ask_owner[i], ask_line[i])
+			for (i = 1; i <= paths; i++) if (!no_module(path_owner[i], path_line[i])) strays(path_of[i], path_line[i])
+			for (i = 1; i <= rows; i++) {
+				if (no_module(row_names[i], row_line[i]) || strays(row_file[i], row_line[i])) continue
+				if (row_text[i] == "") refuse("module-manifest line " row_line[i] ": the row names no text")
+				else if (row_kind[i] == "hook" && !keyed(i)) refuse("module-manifest line " row_line[i] ": a hook row needs a key row of its module in its file")
+			}
+		}
+
+		function keyed(hook,   i) {
+			for (i = 1; i <= rows; i++) if (row_kind[i] == "key" && row_file[i] == row_file[hook] && shares(row_names[i], row_names[hook])) return 1
+			return 0
+		}
+
+		function read_keep(   listed, count, i, part, parts, p) {
+			count = split(keep, listed, " ")
+			for (i = 1; i <= count; i++) {
+				if (listed[i] in is_module) kept[listed[i]] = 1
+				else refuse("no module named " listed[i])
+			}
+			for (i = 1; i <= needs; i++) if ((need_owner[i] in kept) && !(need_target[i] in kept)) refuse(need_owner[i] " needs " need_target[i])
+			for (i = 1; i <= modules; i++) if (!(module[i] in kept)) dropped[module[i]] = 1
+			for (i = 1; i <= rows; i++) {
+				parts = split(row_names[i], part, "+")
+				for (p = 1; p <= parts; p++) if ((part[p] in dropped) && !(i in row_dropped)) row_dropped[i] = part[p]
+			}
+		}
+
+		function list_modules(   i, j, needed) {
+			for (i = 1; i <= modules; i++) {
+				needed = ""
+				for (j = 1; j <= needs; j++) if (need_owner[j] == module[i]) needed = needed (needed == "" ? "" : " ") need_target[j]
+				report(module[i] "\t" (needed == "" ? "-" : needed) "\t" title[module[i]])
+				for (j = 1; j <= asks; j++) if (ask_owner[j] == module[i]) report("\tasks\t" ask_text[j])
+			}
+		}
+
+		function fence_form(name) {
+			sub(/^.*\//, "", name)
+			if (name ~ /\.md$/) return "markdown"
+			if (name ~ /\.jsonc?$/) return "json"
+			if (name !~ /\./ || name ~ /^\./ || name ~ /\.(sh|yml|yaml|env|toml)$/) return "shell"
+			return ""
+		}
+
+		function is_fence(line, form,   inner, ending, name) {
+			if (form == "" || !index(line, "MODULE ")) return 0
+			inner = bare(line)
+			if (substr(inner, 1, length(lead[form])) != lead[form]) return 0
+			inner = substr(inner, length(lead[form]) + 1)
+			ending = length(inner) - length(trail[form])
+			if (ending < 0 || substr(inner, ending + 1) != trail[form]) return 0
+			inner = substr(inner, 1, ending)
+			fence_closes = 0
+			if (substr(inner, 1, 7) == "MODULE ") name = substr(inner, 8)
+			else if (substr(inner, 1, 8) == "/MODULE ") { name = substr(inner, 9); fence_closes = 1 }
+			else return 0
+			if (name == "" || name ~ /[ \t]/) return 0
+			fence_name = name
+			return 1
+		}
+
+		function depth_change(line,   at, size, c, in_string, change) {
+			size = length(line)
+			in_string = 0
+			change = 0
+			for (at = 1; at <= size; at++) {
+				c = substr(line, at, 1)
+				if (in_string) {
+					if (c == "\\") at++
+					else if (c == "\"") in_string = 0
+				} else if (c == "\"") in_string = 1
+				else if (c == "/" && substr(line, at + 1, 1) == "/") break
+				else if (c == "{" || c == "[") change++
+				else if (c == "}" || c == "]") change--
+			}
+			return change
+		}
+
+		function opens_key(line, key,   start, rest) {
+			start = "\"" key "\""
+			line = bare(line)
+			if (substr(line, 1, length(start)) != start) return 0
+			rest = substr(line, length(start) + 1)
+			sub(/^[ \t]+/, "", rest)
+			return substr(rest, 1, 1) == ":"
+		}
+
+		function at_any_root(element, text,   at, head, tail, middle) {
+			at = index(text, "/workspaces/{{PROJECT_NAME}}")
+			if (!at) return 0
+			head = "\"" substr(text, 1, at - 1)
+			tail = substr(text, at + 28) "\""
+			if (length(element) <= length(head) + length(tail)) return 0
+			if (substr(element, 1, length(head)) != head || substr(element, length(element) - length(tail) + 1) != tail) return 0
+			middle = substr(element, length(head) + 1, length(element) - length(head) - length(tail))
+			return middle ~ /^\/[^"]*$/
+		}
+
+		function value_on_line(line, key,   rest) {
+			rest = substr(bare(line), length(key) + 3)
+			sub(/^[ \t]*:[ \t]*/, "", rest)
+			return rest != "" && substr(rest, 1, 2) != "//"
+		}
+
+		function traced(line, text,   from, at) {
+			from = 0
+			while ((at = index(substr(line, from + 1), text)) > 0) {
+				from += at
+				if (from == 1 || substr(line, from - 1, 1) !~ /[A-Za-z0-9_.-]/) return 1
+			}
+			return 0
+		}
+
+		function shares(names, other,   part, count, i) {
+			count = split(names, part, "+")
+			for (i = 1; i <= count; i++) if (index("+" other "+", "+" part[i] "+")) return 1
+			return 0
+		}
+
+		function token(line, type, text) {
+			tokens++
+			tk_line[tokens] = line
+			tk_type[tokens] = type
+			tk_text[tokens] = text
+		}
+
+		function tokenize(from, to, content,   i, line, size, at, c, start) {
+			tokens = 0
+			for (i = from; i <= to; i++) {
+				line = content[i]
+				size = length(line)
+				for (at = 1; at <= size; at++) {
+					c = substr(line, at, 1)
+					if (c == " " || c == "\t" || c == "\r") continue
+					if (c == "/" && substr(line, at + 1, 1) == "/") break
+					start = at
+					if (c == "\"") {
+						for (at++; at <= size; at++) {
+							c = substr(line, at, 1)
+							if (c == "\\") at++
+							else if (c == "\"") break
+						}
+						if (at > size) return 0
+						token(i, "s", substr(line, start + 1, at - start - 1))
+					} else if (index("{}[]:,", c)) {
+						token(i, c, c)
+					} else {
+						while (at < size && !index(" \t\r{}[]:,\"", substr(line, at + 1, 1)) && substr(line, at + 1, 2) != "//") at++
+						token(i, "x", substr(line, start, at - start + 1))
+					}
+				}
+			}
+			return 1
+		}
+
+		function parse_value(   id, closer, name_at, child) {
+			if (tp > tokens) return 0
+			id = ++nodes
+			n_first[id] = tp
+			n_kind[id] = tk_type[tp]
+			n_size[id] = 0
+			if (n_kind[id] == "s" || n_kind[id] == "x") {
+				n_text[id] = tk_text[tp]
+				n_last[id] = tp++
+				return id
+			}
+			if (n_kind[id] != "{" && n_kind[id] != "[") return 0
+			closer = (n_kind[id] == "{") ? "}" : "]"
+			if (++tp <= tokens && tk_type[tp] == closer) {
+				n_last[id] = tp++
+				return id
+			}
+			while (tp <= tokens) {
+				name_at = tp
+				if (closer == "}") {
+					if (tk_type[tp] != "s" || tp + 1 > tokens || tk_type[tp + 1] != ":") return 0
+					tp += 2
+				}
+				if (!(child = parse_value())) return 0
+				n_child[id, ++n_size[id]] = child
+				n_name[child] = (closer == "}") ? tk_text[name_at] : ""
+				n_first[child] = name_at
+				if (tp > tokens) return 0
+				if (tk_type[tp] == ",") { tp++; continue }
+				if (tk_type[tp] != closer) return 0
+				n_last[id] = tp++
+				return id
+			}
+			return 0
+		}
+
+		function member(id, name,   k, found) {
+			if (n_kind[id] != "{") return 0
+			found = 0
+			for (k = 1; k <= n_size[id]; k++) {
+				if (n_name[n_child[id, k]] != name) continue
+				if (found) return 0
+				found = n_child[id, k]
+			}
+			return found
+		}
+
+		function hook_of(command, key, list, size,   w, r) {
+			for (w = 1; w <= size; w++) {
+				r = list[w]
+				if (row_kind[r] == "hook" && shares(row_names[r], row_names[key]) && row_text[r] == command) return r
+			}
+			return 0
+		}
+
+		function cut_span(name, label, first, last, content, gone,   after, at, j) {
+			at = 0
+			if (first > 1 && tk_line[first - 1] == tk_line[first]) at = tk_line[first]
+			after = last + 1
+			if (after <= tokens && tk_type[after] == ",") {
+				if (tk_line[after] != tk_line[last]) at = tk_line[after]
+				after++
+			}
+			if (!at && after <= tokens && tk_line[after] == tk_line[last]) at = tk_line[last]
+			if (at) flaw(name ":" at ": " label " does not stand on lines of its own: " bare(content[at]))
+			for (j = tk_line[first]; j <= tk_line[last]; j++) gone[j] = 1
+		}
+
+		function trace_line(name, i, line, list, size,   w, r) {
+			for (w = 1; w <= size; w++) {
+				r = list[w]
+				if (row_kind[r] != "trace" || !traced(line, row_text[r])) continue
+				if (action == "apply") refuse(name ":" i ": trace of " row_dropped[r] ": " row_text[r])
+				else trace(name ":" i, "trace " row_text[r])
+			}
+		}
+
+		function hooks_stay(name, r, value, times, list, size,   e, g, k, event, group, handlers, handler, command, found, event_stays, group_stays, key_stays) {
+			key_stays = !(value && n_kind[value] == "{" && n_size[value] > 0)
+			if (value && n_kind[value] == "{") for (e = 1; e <= n_size[value]; e++) {
+				event = n_child[value, e]
+				event_stays = !(n_kind[event] == "[" && n_size[event] > 0)
+				if (n_kind[event] == "[") for (g = 1; g <= n_size[event]; g++) {
+					group = n_child[event, g]
+					handlers = member(group, "hooks")
+					group_stays = !(handlers && n_kind[handlers] == "[" && n_size[handlers] > 0)
+					if (handlers && n_kind[handlers] == "[") for (k = 1; k <= n_size[handlers]; k++) {
+						handler = n_child[handlers, k]
+						command = member(handler, "command")
+						found = (command && n_kind[command] == "s") ? hook_of(n_text[command], r, list, size) : 0
+						if (!found) { group_stays = 1; continue }
+						times[found]++
+						goes[handler] = 1
+						trace(name ":" tk_line[n_first[command]], "hook " row_text[found])
+					}
+					if (group_stays) event_stays = 1
+					else goes[group] = 1
+				}
+				if (event_stays) key_stays = 1
+				else goes[event] = 1
+			}
+			return key_stays
+		}
+
+		function cut_entry(name, r, unit, content, gone) {
+			cut_span(name, "an entry of " row_names[r] "\047s hooks", n_first[unit], n_last[unit], content, gone)
+		}
+
+		function cut_hooks(name, r, value, content, gone,   e, g, k, event, group, handlers, handler) {
+			if (value && n_kind[value] == "{") for (e = 1; e <= n_size[value]; e++) {
+				event = n_child[value, e]
+				if (event in goes) { cut_entry(name, r, event, content, gone); continue }
+				if (n_kind[event] == "[") for (g = 1; g <= n_size[event]; g++) {
+					group = n_child[event, g]
+					if (group in goes) { cut_entry(name, r, group, content, gone); continue }
+					handlers = member(group, "hooks")
+					if (handlers && n_kind[handlers] == "[") for (k = 1; k <= n_size[handlers]; k++) {
+						handler = n_child[handlers, k]
+						if (handler in goes) cut_entry(name, r, handler, content, gone)
+					}
+				}
+			}
+		}
+
+		function comma_below(name, r, to, count, content,   j, line) {
+			for (j = to + 1; j <= count; j++) {
+				line = bare(content[j])
+				if (line == "" || substr(line, 1, 2) == "//") continue
+				if (substr(line, 1, 1) == ",") flaw(name ":" j ": key " row_text[r] " does not stand on lines of its own: " line)
+				return
+			}
+		}
+
+		function close_key(name, r, from, to, count, content, reworded, gone, times, list, size,   w, hooked, value, j) {
+			hooked = 0
+			for (w = 1; w <= size; w++) if (row_kind[list[w]] == "hook" && shares(row_names[list[w]], row_names[r])) hooked = 1
+			split("", goes)
+			nodes = 0
+			value = 0
+			if (tokenize(from, to, content) && tokens >= 2 && tk_type[1] == "s" && tk_type[2] == ":") {
+				tp = 3
+				value = parse_value()
+			}
+			if (!hooked || !hooks_stay(name, r, value, times, list, size)) {
+				times[r]++
+				if (!hooked) trace(name ":" from, "key " row_text[r])
+				if (value) cut_span(name, "key " row_text[r], 1, n_last[value], content, gone)
+				else {
+					flaw(name ":" from ": key " row_text[r] " does not read as JSON, so its end is not known")
+					for (j = from; j <= to; j++) gone[j] = 1
+				}
+				if (!value || tk_line[n_last[value]] == to) comma_below(name, r, to, count, content)
+			} else {
+				kept_key[r, name] = 1
+				cut_hooks(name, r, value, content, gone)
+			}
+			for (j = from; j <= to; j++) if (!(j in gone)) trace_line(name, j, (j in reworded) ? reworded[j] : content[j], list, size)
+		}
+
+		function settle_absent_rows(   r, m, part, parts, p, gone_whole) {
+			for (r = 1; r <= rows; r++) {
+				if (!((r in absent) || (r in found_once))) continue
+				parts = split(row_names[r], part, "+")
+				for (p = 1; p <= parts; p++) {
+					if (!(part[p] in dropped)) continue
+					scanned[part[p]]++
+					if (r in absent) missing[part[p]]++
+				}
+			}
+			for (r = 1; r <= rows; r++) {
+				if (!(r in absent)) continue
+				gone_whole = 0
+				parts = split(row_names[r], part, "+")
+				for (p = 1; p <= parts; p++) if ((part[p] in dropped) && missing[part[p]] == scanned[part[p]]) gone_whole = 1
+				if (!gone_whole) flaw(absent[r] ": " row_kind[r] " row found 0 times, not once: " row_text[r])
+			}
+			if (action != "apply") return
+			for (m = 1; m <= modules; m++) {
+				if ((module[m] in missing) && missing[module[m]] == scanned[module[m]]) report("note: " module[m] ": no row of it is left to cut")
+			}
+		}
+
+		function occurrences(line, text,   count, at) {
+			count = 0
+			while ((at = index(line, text)) > 0) {
+				count++
+				line = substr(line, at + length(text))
+			}
+			return count
+		}
+
+		function without_last_comma(line,   size, at, c, in_string, code) {
+			size = length(line)
+			in_string = 0
+			for (at = 1; at <= size; at++) {
+				c = substr(line, at, 1)
+				if (in_string) {
+					if (c == "\\") at++
+					else if (c == "\"") in_string = 0
+				} else if (c == "\"") in_string = 1
+				else if (c == "/" && substr(line, at + 1, 1) == "/") break
+			}
+			code = substr(line, 1, at - 1)
+			if (match(code, /,[ \t\r]*$/)) return substr(code, 1, RSTART - 1) substr(code, RSTART + 1) substr(line, at)
+			return line
+		}
+
+		function scan(number,   name, full, form, origin, origin_count, o, p, r, i, got, count, content, line, current, element, first, at, hits, own, wanted, wanted_count, w, json_row, has_json, key_rows, cut_rows, trace_rows, times, open_name, open_line, closes_here, fenced, depth, key_open, gone, reworded, changed, mends_commas, kept_lines, removed_since, last_element, key_row, key_start, in_key) {
+			name = file_at[number]
+			full = root "/" name
+			form = fence_form(name)
+			split("", own)
+			origin_count = split(substr(origins[name], 2), origin, "\t")
+			for (p = 1; p <= paths; p++) {
+				for (o = 1; o <= origin_count; o++) {
+					if (!covers(path_of[p], origin[o])) continue
+					if (path_owner[p] in dropped) return
+					own[path_owner[p]] = 1
+				}
+			}
+			wanted_count = 0
+			has_json = 0
+			key_rows = 0
+			cut_rows = 0
+			trace_rows = 0
+			for (r = 1; r <= rows; r++) {
+				if (!(r in row_dropped)) continue
+				for (o = 1; o <= origin_count; o++) {
+					if (row_file[r] != origin[o]) continue
+					wanted[++wanted_count] = r
+					times[r] = 0
+					if (row_kind[r] == "json") { json_row["\"" row_text[r] "\""] = r; has_json = 1 }
+					else if (row_kind[r] == "key") key_rows++
+					else if (row_kind[r] == "cut") cut_rows++
+					else if (row_kind[r] == "trace") trace_rows++
+					break
+				}
+			}
+			if (form == "" && wanted_count == 0) return
+
+			count = 0
+			while ((got = (getline line < full)) > 0) content[++count] = line
+			close(full)
+			if (got < 0) { refuse(name ": the file cannot be read"); return }
+
+			open_name = ""
+			depth = 0
+			key_open = 0
+			changed = 0
+			for (i = 1; i <= count; i++) {
+				line = content[i]
+				closes_here = 0
+				fenced = is_fence(line, form)
+				if (!fenced && form != "" && bare(line) ~ /^(<!--|[#]|\/\/)[ \t]*\/?MODULE[ \t]+[A-Za-z0-9-]/) {
+					flaw(name ":" i ": a fence-like line that is no fence of this file type: " bare(line))
+					trace(name ":" i, "fence-like line " bare(line))
+				}
+				if (fenced && !all_in(fence_name, own)) {
+					if (!of_modules(fence_name)) {
+						if (!((name, fence_name) in noted)) {
+							noted[name, fence_name] = 1
+							report("note: " name ": fence of no manifest module: " fence_name)
+						}
+					} else if (!fence_closes) {
+						if (any_dropped(fence_name)) trace(name ":" i, "fence " fence_name)
+						if (open_name != "") flaw(name ":" i ": fence " fence_name " opens inside the fence " open_name " of line " open_line)
+						else { open_name = fence_name; open_line = i }
+					} else if (open_name == fence_name) {
+						closes_here = 1
+					} else {
+						if (any_dropped(fence_name)) trace(name ":" i, "fence " fence_name)
+						if (open_name == "") flaw(name ":" i ": closing fence " fence_name " has no opening fence")
+						else flaw(name ":" i ": closing fence " fence_name " stands inside the fence " open_name " of line " open_line)
+					}
+				}
+				if (open_name != "" && any_dropped(open_name)) gone[i] = 1
+				if (closes_here) open_name = ""
+
+				if (has_json) {
+					element = bare(line)
+					sub(/[ \t]*,$/, "", element)
+					if (element in json_row) {
+						r = json_row[element]
+						times[r]++
+						gone[i] = 1
+						trace(name ":" i, "json " row_text[r])
+					} else if (action == "verify") {
+						for (w = 1; w <= wanted_count; w++) {
+							r = wanted[w]
+							if (row_kind[r] == "json" && at_any_root(element, row_text[r])) trace(name ":" i, "json " row_text[r])
+						}
+					}
+				}
+				if (cut_rows) {
+					current = line
+					for (w = 1; w <= wanted_count; w++) {
+						r = wanted[w]
+						if (row_kind[r] != "cut") continue
+						hits = occurrences(line, row_text[r])
+						if (!hits) continue
+						times[r] += hits
+						trace(name ":" i, "cut " row_text[r])
+						at = index(current, row_text[r])
+						if (at) current = substr(current, 1, at - 1) substr(current, at + length(row_text[r]))
+						reworded[i] = current
+					}
+				}
+				if (key_rows) {
+					if (!key_open && depth == 1) {
+						for (w = 1; w <= wanted_count; w++) {
+							r = wanted[w]
+							if (row_kind[r] != "key" || !opens_key(line, row_text[r])) continue
+							if (!value_on_line(line, row_text[r])) flaw(name ":" i ": key " row_text[r] " opens no value on its line")
+							key_open = 1
+							key_row = r
+							key_start = i
+							break
+						}
+					}
+					depth += depth_change(line)
+					if (key_open) {
+						in_key[i] = 1
+						if (depth <= 1) {
+							key_open = 0
+							close_key(name, key_row, key_start, i, count, content, reworded, gone, times, wanted, wanted_count)
+						}
+					}
+				}
+				if (trace_rows && !(i in gone) && !(i in in_key)) trace_line(name, i, (i in reworded) ? reworded[i] : line, wanted, wanted_count)
+			}
+			if (open_name != "") flaw(name ":" open_line ": fence " open_name " is never closed")
+			if (key_open) {
+				flaw(name ":" key_start ": key " row_text[key_row] " is never closed")
+				kept_key[key_row, name] = 1
+				for (i = key_start; i <= count; i++) if (!(i in gone)) trace_line(name, i, (i in reworded) ? reworded[i] : content[i], wanted, wanted_count)
+			}
+			for (w = 1; w <= wanted_count; w++) {
+				r = wanted[w]
+				if (row_kind[r] == "trace") continue
+				if (times[r] == 0 && name != row_file[r]) {
+					if (action == "apply") report("note: " name ": " row_kind[r] " row not found, nothing to cut: " row_text[r])
+				} else if (times[r] == 0) {
+					if (!((r, name) in kept_key)) absent[r] = name
+				} else if (times[r] == 1) {
+					if (name == row_file[r]) found_once[r] = 1
+				} else {
+					flaw(name ": " row_kind[r] " row found " times[r] " times, not once: " row_text[r])
+				}
+			}
+			for (i = 1; i <= count; i++) if ((i in gone) || (i in reworded)) changed = 1
+			if (action != "apply" || !changed) return
+
+			mends_commas = (form == "json" || has_json || key_rows)
+			kept_lines = 0
+			removed_since = 0
+			last_element = 0
+			for (i = 1; i <= count; i++) {
+				if (i in gone) { removed_since = 1; continue }
+				line = (i in reworded) ? reworded[i] : content[i]
+				fresh[number, ++kept_lines] = line
+				if (!mends_commas) continue
+				element = bare(line)
+				if (element == "" || substr(element, 1, 2) == "//") continue
+				first = substr(element, 1, 1)
+				if (removed_since && last_element && (first == "]" || first == "}")) fresh[number, last_element] = without_last_comma(fresh[number, last_element])
+				last_element = kept_lines
+				removed_since = 0
+			}
+			fresh_lines[number] = kept_lines
+			edited[++edits] = number
+		}
+
+		function quoted(text,   piece, pieces, i, result) {
+			pieces = split(text, piece, "\047")
+			result = "\047" piece[1]
+			for (i = 2; i <= pieces; i++) result = result "\047\\\047\047" piece[i]
+			return result "\047"
+		}
+
+		function ends_in_newline(full,   question, answer) {
+			question = "tail -c 1 " quoted(full) " | wc -l"
+			answer = 0
+			question | getline answer
+			close(question)
+			return answer + 0 > 0
+		}
+
+		function write_edits(   e, number, full, spooled, closing_newline, i) {
+			for (e = 1; e <= edits; e++) {
+				number = edited[e]
+				full = root "/" file_at[number]
+				spooled = spool "/" e
+				closing_newline = ends_in_newline(full)
+				printf "" > spooled
+				for (i = 1; i <= fresh_lines[number]; i++) {
+					ORS = (i < fresh_lines[number] || closing_newline) ? "\n" : ""
+					print fresh[number, i] > spooled
+				}
+				ORS = "\n"
+				close(spooled)
+				report("edited " file_at[number])
+			}
+		}
+
+		function owner_dropped(origin,   p) {
+			for (p = 1; p <= paths; p++) if (path_of[p] == origin && (path_owner[p] in dropped)) return path_owner[p]
+			return ""
+		}
+
+		function name_paths(   f, g, owner, inside) {
+			for (f = 1; f <= found_paths; f++) {
+				owner = owner_dropped(found_origin[f])
+				if (owner == "" || (found_path[f] in named)) continue
+				inside = 0
+				for (g = 1; g <= found_paths; g++) {
+					if (g != f && found_path[g] != found_path[f] && found_path[g] ~ /\/$/ && covers(found_path[g], found_path[f]) && owner_dropped(found_origin[g]) != "") inside = 1
+				}
+				if (inside) continue
+				named[found_path[f]] = 1
+				if (action == "apply") report("remove " found_path[f])
+				else report("leftover " found_path[f] ": path of " owner)
+			}
+		}
+
+		BEGIN {
+			BINMODE = 3
+			FS = "\t"
+			action = ENVIRON["MODULE_FILTER_ACTION"]
+			keep = ENVIRON["MODULE_FILTER_KEEP"]
+			root = ENVIRON["MODULE_FILTER_ROOT"]
+			manifest = ENVIRON["MODULE_FILTER_MANIFEST"]
+			spool = ENVIRON["MODULE_FILTER_SPOOL"]
+			lead["markdown"] = "<!-- "
+			trail["markdown"] = " -->"
+			lead["shell"] = "# "
+			trail["shell"] = ""
+			lead["json"] = "// "
+			trail["json"] = ""
+		}
+
+		($1 == "file" || $1 == "path") && (leaves_root($2) || leaves_root($3)) {
+			refuse("the inventory names a path that leaves the root: " $2)
+			next
+		}
+
+		$1 == "file" {
+			if (!($2 in origins)) file_at[++files] = $2
+			origins[$2] = origins[$2] "\t" $3
+		}
+
+		$1 == "path" {
+			found_path[++found_paths] = $2
+			found_origin[found_paths] = $3
+		}
+
+		END {
+			read_manifest()
+			if (!refusals && action != "list") read_keep()
+			if (!refusals) {
+				if (action == "list") list_modules()
+				else if (action == "check") report("ok")
+				else {
+					for (f = 1; f <= files; f++) scan(f)
+					settle_absent_rows()
+					if (!refusals && action == "apply") write_edits()
+					if (!refusals) name_paths()
+				}
+			}
+			if (refusals) {
+				for (i = 1; i <= refusals; i++) print "refused: " refusal[i]
+				exit 1
+			}
+			for (i = 1; i <= reports; i++) print reported[i]
+		}
+	'
+}
+
+case $action in
+	apply|verify)
+		odd=$(payload_files odd)
+		[ -z "$odd" ] || { printf '%s\n' "$odd" >&2; exit 1; } ;;
+esac
+
+spool=$(mktemp -d)
+trap 'rm -rf "$spool"' EXIT
+trap 'exit 1' HUP INT TERM
+report=$spool/report
+ran=0
+case $action in
+	list|check) run_filter < /dev/null > "$report" || ran=$? ;;
+	*) inventory | LC_ALL=C sort -u | run_filter > "$report" || ran=$? ;;
+esac
+if [ "$ran" -ne 0 ] && ! grep -q '^refused: ' "$report"; then
+	refuse "the filter program failed with status $ran"
+fi
+
+put_back() {
+	count=0
+	while IFS= read -r written && [ "$count" -lt "$1" ]; do
+		count=$((count + 1))
+		if [ "$count" -lt "$1" ]; then
+			cat "$spool/original-$count" > "$root/$written" || :
+		else
+			{ cat "$spool/original-$count" > "$root/$written"; } 2> /dev/null || :
+		fi
+	done < "$spool/edited"
+}
+
+sed -n 's/^edited //p' "$report" > "$spool/edited"
+count=0
+while IFS= read -r file; do
+	count=$((count + 1))
+	cp "$root/$file" "$spool/original-$count"
+done < "$spool/edited"
+count=0
+while IFS= read -r file; do
+	count=$((count + 1))
+	{ cat "$spool/$count" > "$root/$file"; } 2> /dev/null && continue
+	put_back "$count"
+	refuse "$file: cannot be written; nothing was changed"
+done < "$spool/edited"
+
+outcome=0
+while IFS= read -r line; do
+	case $line in
+		'refused: '*)
+			printf '%s\n' "$line" >&2
+			outcome=1 ;;
+		'leftover '*)
+			printf '%s\n' "$line"
+			outcome=1 ;;
+		'remove '*)
+			if [ "$prune" -eq 1 ]; then
+				rm -rf "$root/${line#remove }"
+				printf 'removed %s\n' "${line#remove }"
+			else
+				printf '%s\n' "$line"
+			fi ;;
+		*) printf '%s\n' "$line" ;;
+	esac
+done < "$report"
+exit "$outcome"

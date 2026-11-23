@@ -7,6 +7,11 @@ reviewer itself never writes). The point is that future work and future agents d
 *toward* the process, not away from it. Recurring items are promoted into the tool entry file (e.g.
 `CLAUDE.md`) or the [engineering handbook](knowledge-base/engineering-handbook.md).
 
+- A row stays once its remedy has landed.
+  - Why: a slip that recurs after a failed remedy shows as a recurrence only beside its earlier row.
+- Which rows a session reads:
+  [working-with-ai-agents.md](knowledge-base/working-with-ai-agents.md), "Context & token hygiene".
+
 The table starts empty in a fresh adoption; rows accumulate as the project runs. Keep each row
 terse: what happened, which rule it violated (cite the handbook section), and the concrete
 prevention.

@@ -2,7 +2,7 @@
 set -eu
 
 usage() {
-	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln\n' >&2
+	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln|stop\n' >&2
 	exit 2
 }
 
@@ -20,8 +20,17 @@ if [ "$cmd" = focus ]; then
 fi
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+case "$root" in
+	*\"*)
+		printf '[verify] %s holds a double quote, which Gradle drops from its options, so no daemon registry of this tree can be named\n' "$root" >&2
+		exit 2
+		;;
+esac
 cd "$root"
 target=${target#"$root"/}
+
+GRADLE_OPTS="${GRADLE_OPTS:+$GRADLE_OPTS }-Dorg.gradle.daemon.registry.base=\"$root/registry.local.d\""
+export GRADLE_OPTS
 
 run_in() {
 	dir=$1
@@ -61,14 +70,75 @@ report() {
 	report_in "$root" "$@"
 }
 
+# > **ADAPT:** the machine-wide build lock. It serializes the builds and test runs of every
+# > worktree of this project on the machine, so only one of them runs at a time; every worktree of
+# > the machine must name the same file.
+build_lock="/tmp/{{PROJECT_NAME}}-build.lock"
+build_lock_taken=""
+
+fd_holds_build_lock() {
+	[ "/proc/$$/fd/$1" -ef "$build_lock" ] && grep -q '^lock:.*FLOCK' "/proc/$$/fdinfo/$1" 2>/dev/null
+}
+
+release_build_lock() {
+	if [ -n "$build_lock_taken" ]; then
+		flock -u 9
+	fi
+}
+
+end_by_signal() {
+	release_build_lock
+	trap - "$1"
+	kill -s "$1" $$
+	exit 1
+}
+
+hold_build_lock() {
+	if ! command -v flock >/dev/null 2>&1 || [ ! -d "/proc/$$/fdinfo" ]; then
+		printf '[verify] this run takes no build lock: the machine lacks flock or /proc\n' >&2
+		return 0
+	fi
+	for fd in /proc/$$/fd/*; do
+		if fd_holds_build_lock "${fd##*/}"; then
+			return 0
+		fi
+	done
+	while :; do
+		[ -e "$build_lock" ] || (umask 022 && touch "$build_lock") 2>/dev/null || true
+		if ! (exec 9<"$build_lock") 2>/dev/null; then
+			printf '[verify] cannot read %s, the machine-wide build lock; its owner can make it readable\n' "$build_lock" >&2
+			exit 1
+		fi
+		exec 9<"$build_lock"
+		if ! flock -n 9; then
+			printf '[verify] waiting for %s: another build on this machine holds it\n' "$build_lock" >&2
+			flock 9 || exit 1
+		fi
+		if [ "/proc/$$/fd/9" -ef "$build_lock" ]; then
+			build_lock_taken=1
+			trap release_build_lock EXIT
+			trap 'end_by_signal HUP' HUP
+			trap 'end_by_signal INT' INT
+			trap 'end_by_signal TERM' TERM
+			return 0
+		fi
+	done
+}
+
 every_tag='@wip or not @wip'
-# ADAPT: one entry per stack; the prefix decides which stack owns a focused path.
+# > **ADAPT:** one entry per stack; the prefix decides which stack owns a focused path.
 frontend=frontend
 
 case "$cmd" in
-	format|focus|bdd|all|outdated|vuln) ;;
+	format|focus|bdd|all|outdated|vuln|stop) ;;
 	*) usage ;;
 esac
+
+if [ "$cmd" = stop ]; then
+	[ -x ./gradlew ] || exit 0
+	run ./gradlew --console=plain --stop
+	exit 0
+fi
 
 case "$cmd" in
 	format)
@@ -78,20 +148,24 @@ case "$cmd" in
 		run_in "$frontend" npm run --silent format:check
 		;;
 	focus)
-		# ADAPT: one pattern per stack root. A path that matches none of them is a usage error, so
-		# a typo or a file outside every stack can never be answered by the wrong runner.
+		# > **ADAPT:** one pattern per stack root. A path that matches none of them is a usage
+		# > error, so a typo or a file outside every stack can never be answered by the wrong
+		# > runner.
 		case "$target" in
 			"$frontend"/*)
 				require npm
+				hold_build_lock
 				run_in "$frontend" npm test -- "${target#"$frontend"/}"
 				;;
 			src/test/resources/features/*.feature)
 				require ./gradlew
+				hold_build_lock
 				run ./gradlew test --no-build-cache --console=plain \
 					-Dcucumber.features="$target" -Dcucumber.filter.tags="$every_tag"
 				;;
 			src/main/*|src/test/*)
 				require ./gradlew
+				hold_build_lock
 				run ./gradlew test --no-build-cache --console=plain \
 					--tests "$(basename "$target" .java)"
 				;;
@@ -104,15 +178,21 @@ case "$cmd" in
 		;;
 	bdd)
 		require ./gradlew
+		hold_build_lock
 		run ./gradlew test --no-build-cache --console=plain -Dcucumber.filter.tags='@wip'
 		;;
 	all)
 		require ./gradlew
+		require npm
+		hold_build_lock
 		run ./gradlew clean build --no-build-cache --console=plain
 		results=$(mktemp)
-		trap 'rm -f "$results"' EXIT
-		# ADAPT: a deny-list, like the java preset's. Extend it to every directory no stack writes
-		# results into, or the count reports someone else's run.
+		trap 'release_build_lock; rm -f "$results"' EXIT
+		trap 'rm -f "$results"; end_by_signal HUP' HUP
+		trap 'rm -f "$results"; end_by_signal INT' INT
+		trap 'rm -f "$results"; end_by_signal TERM' TERM
+		# > **ADAPT:** a deny-list, like the java preset's. Extend it to every directory no stack
+		# > writes results into, or the count reports someone else's run.
 		if ! find . -type d \
 				\( -name .git -o -name .claude -o -name .template -o -name node_modules \) -prune \
 				-o -path '*/build/test-results/*' -name 'TEST-*.xml' -print > "$results"; then
@@ -120,7 +200,7 @@ case "$cmd" in
 			exit 1
 		fi
 		printf '[verify] executed test classes: %s\n' "$(wc -l < "$results" | tr -d ' ')"
-		require npm
+		run_in "$frontend" npm ci
 		mkdir -p "$frontend/artifacts/test-results"
 		run_in "$frontend" npm run --silent format:check
 		run_in "$frontend" npm run --silent lint
@@ -136,8 +216,9 @@ case "$cmd" in
 		;;
 	vuln)
 		require ./gradlew
-		report ./gradlew --console=plain dependencyCheckAnalyze
 		require npm
+		hold_build_lock
+		report ./gradlew --console=plain dependencyCheckAnalyze
 		report_in "$frontend" npm audit
 		;;
 esac

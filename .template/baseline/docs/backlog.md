@@ -9,15 +9,16 @@
 Every session reads this section first (see [CLAUDE.md](../CLAUDE.md)). It stays in the repository
 whether or not the team has a ticket system: it is the session's entry point.
 
-**Conventions:** no prose and no durable knowledge here. What a later reader needs belongs in the
-[knowledge base](knowledge-base/README.md), what a decision needs in
-[open-questions.md](open-questions.md), and an environment quirk in the KB doc it concerns
-(dev-environment.md, build-run-deploy.md, the playbook's agent gotchas). Completed items are
-**removed** (the commits show them, no `DONE` tombstones); only **rejected/deferred** items stay,
-with their decision + rationale. Item IDs live **only here**; removing an item also removes **every
-shortcode that referenced it** across the docs. Derive a new ID from the **whole file** (the highest
-per group), never from the last row you happened to read, and re-read the table after inserting: a
-blank line between two rows splits the table mid-body (DOC-11).
+**Conventions:**
+
+- No prose and no durable knowledge here:
+  - what a later reader needs belongs in the [knowledge base](knowledge-base/README.md);
+  - what a decision needs, in [open-questions.md](open-questions.md);
+  - an environment quirk, in the KB doc it concerns (dev-environment.md, build-run-deploy.md, the
+    playbook's agent gotchas).
+- Item IDs live **only** here.
+- Choosing an ID, completing, parking or rejecting a row and filing doc debt follow DOC-5, a table
+  edit DOC-11 ([knowledge-base/README.md](knowledge-base/README.md), "Doc conventions").
 
 **Where we are:**
 
@@ -28,10 +29,36 @@ blank line between two rows splits the table mid-body (DOC-11).
 > **ADAPT:** The single next work item, concrete enough that a fresh session can start without asking.
 > With a ticket system, name the ticket key.
 
+**Next, in order:**
+
+> **ADAPT:** Once more than the next action is lined up, list it here in waves:
+>
+> - the first wave numbered, in its order;
+> - every later wave headed by a trigger the author can observe (`once <item> has landed`,
+>   `after the author's go on <decision>`), never by an ordinal;
+> - each item named in words, its ID once in parentheses.
+
 ## Items
 
-> **ADAPT:** Without a ticket system, your open work items live here, grouped as you like (epics,
-> short IDs); keep only open and rejected/deferred items. With a ticket system (Jira, GitLab issues),
-> the items live there: replace this section with the pointer to the ticket project and the query
-> that lists the open work, and keep temporary personal tasks in the gitignored
-> `docs/backlog.local.md` instead.
+| ID | Item | Why |
+|----|------|-----|
+
+> **ADAPT:** Without a ticket system, your open work items live in this table:
+>
+> - grouped as you like (epics, short IDs), one table per group;
+> - with the columns you need added (acceptance, effort, priority);
+> - open and parked rows only.
+>
+> With a ticket system (Jira, GitLab issues), the items live there:
+>
+> - replace this section with the pointer to the ticket project and the query that lists the open
+>   work;
+> - temporary personal tasks go to the gitignored `docs/backlog.local.md` instead.
+
+## Considered and rejected (do not re-propose without a new reason)
+
+> **ADAPT:** filled as items are rejected (DOC-5).
+
+## Doc debt: wrong text left over
+
+> **ADAPT:** filled as a strand leaves wrong text it could not clear (DOC-5).

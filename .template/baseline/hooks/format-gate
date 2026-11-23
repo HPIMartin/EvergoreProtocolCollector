@@ -1,8 +1,8 @@
 #!/bin/sh
 # The stack's fast format/style check, in one place. Called by pre-commit, pre-applypatch,
-# pre-merge-commit, post-commit and post-rewrite, so the gate has a single adaptation spot instead
-# of five. Must run in seconds: the test run and the full build stay out of it deliberately, so the
-# TDD micro-commit loop stays fast (every commit is already green by the time it is made).
+# post-commit and post-rewrite, so the gate has a single adaptation spot instead of four. Must run
+# in seconds: the test run and the full build stay out of it deliberately, so the TDD micro-commit
+# loop stays fast (every commit is already green by the time it is made).
 #
 # The check is guarded on a repo-local build wrapper rather than on a command in PATH. That is what
 # lets hooks/self-test stub the wrapper in a throwaway repository and assert the leg's behaviour

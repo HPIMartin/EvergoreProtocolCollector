@@ -15,14 +15,17 @@ Copy [verify](verify) to the repo root.
 | `format` | `clang-format --dry-run --Werror` over `git ls-files '*.cpp' '*.cc' '*.hpp' '*.h'` |
 | `focus <file>` | configure, build, `ctest -R "^<stem>\."`; the stem is the file's basename, so same-named test files in different directories all run |
 | `focus <x.feature>` | configure, build, `uv run --project tests/acceptance pytest -v tests/acceptance/steps/test_<stem>.py` |
-| `bdd` | configure, build, `uv run --project tests/acceptance pytest -v -m wip` |
-| `all` | format, configure, `cmake --build build --clean-first`, `run-clang-tidy`, `ctest --output-junit`, acceptance run with `-m "not wip and not characterization"` |
+| `bdd` | configure, build, `uv run --project tests/acceptance pytest -v -m wip tests/acceptance` |
+| `all` | format, configure, `cmake --build build --clean-first`, `run-clang-tidy`, `ctest --output-junit`, acceptance run over `tests/acceptance` with `-m "not wip and not characterization"` |
 | `outdated` | `vcpkg x-update-baseline --dry-run` (or the Conan equivalent) |
 | `vuln` | `osv-scanner -r .` |
+| `stop` | nothing, exit 0: a build leaves no process running |
 
 - `--clean-first` is what disables the incremental build for the gateway run; CTest restores nothing
   and re-runs every selected test.
 - `--no-tests=error` is the guard against the vacuous green: a run that discovers no test fails.
+- Every pytest run names a path under `tests/acceptance`, and pytest looks for its configuration
+  from that path upwards, so it finds the acceptance project's before any at the root.
 - Proof of execution for `all`: CTest's `N tests passed` line plus pytest's `-v` output.
   `artifacts/test-results/ctest.xml` and `artifacts/test-results/acceptance.xml` are what CI
   publishes.
@@ -92,6 +95,7 @@ artifact** from outside, through a test-only Python toolchain:
 - `tests/acceptance/` is its own uv project (`pyproject.toml`, `uv.lock`, `pytest`, `pytest-bdd`),
   with `features/` and `steps/`. A feature `features/<stem>.feature` pairs with
   `steps/test_<stem>.py`.
+  - pytest-bdd's version floor: [stacks/python/README.md](../python/README.md), "pytest-bdd wiring".
 - **The boundary is the artifact's interface**: steps start the binary, write to its stdin, read its
   stdout, or call its IPC/API surface. They never link, include or reach into the internals, so an
   internal refactoring cannot break a scenario.
@@ -122,11 +126,12 @@ artifact** from outside, through a test-only Python toolchain:
 
 ## Git gate settings
 
-- `production_trees='src/ include/'` and `test_trees='tests/'` match the shipped defaults.
+- `production_trees='src/ include/'` and `test_trees='tests/'` fit this preset's layout; the
+  shipped defaults (`src/ include/ Assets/` and `src/test/ tests/ test/`) already cover both.
 - `print_allow_paths` covers a CLI adapter whose stdout is the interface, which for this preset is
   also the surface the acceptance steps drive; `std::cout` stays a smell everywhere else.
 
-## Toolchain pinning (single-sourcing, dev-environment.md)
+## Toolchain pinning (dev-environment.md, "Toolchain version")
 
 - `cmake_minimum_required(VERSION ...)` plus `CMAKE_CXX_STANDARD` state the language and tool floor;
   the dependency versions are pinned by the vcpkg `builtin-baseline` in `vcpkg.json` or by the

@@ -1,0 +1,2624 @@
+#!/bin/sh
+set -euf
+
+adopt_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+live_filter=$adopt_dir/module-filter
+live_manifest=$adopt_dir/module-manifest
+repository=$(CDPATH= cd -- "$adopt_dir/../../.." && pwd)
+
+for needed in awk cmp cp diff find grep mktemp sed sort tr; do
+	command -v "$needed" > /dev/null 2>&1 || {
+		printf 'module filter self-test: no %s on PATH, so no case ran\n' "$needed" >&2
+		exit 2
+	}
+done
+for shipped in "$live_filter" "$live_manifest"; do
+	[ -f "$shipped" ] || {
+		printf 'module filter self-test: %s is missing, so no case ran\n' "$shipped" >&2
+		exit 2
+	}
+done
+
+for leaked in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do
+	unset "$leaked"
+done
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+exec 3>&1
+failures=0
+cases=0
+case_name=''
+broken=0
+status=0
+out=$work/out
+err=$work/err
+tab=$(printf '\t')
+
+check() {
+	cases=$((cases + 1))
+	if [ "$2" -eq 0 ] && [ "$broken" -eq 0 ]; then
+		printf '  ok   %s\n' "$1"
+	else
+		printf '  FAIL %s\n' "$1"
+		failures=$((failures + 1))
+		shift 2
+		for diagnosis in "$@"; do
+			[ ! -s "$diagnosis" ] || sed -n '1,20s/^/         /p' "$diagnosis"
+		done
+	fi
+}
+
+step() {
+	"$@" && return 0
+	printf '  setup failed in %s: %s\n' "$case_name" "$*" >&3
+	broken=1
+}
+
+tool_with_manifest() {
+	tool=$work/tool-$1
+	mkdir -p "$tool"
+	cp "$live_filter" "$tool/module-filter"
+	cat > "$tool/module-manifest"
+}
+
+new_case() {
+	case_name=$1
+	broken=0
+	tree=$work/$1/tree
+	step mkdir -p "$tree"
+}
+
+put() {
+	target=$tree/$1
+	shift
+	mkdir -p "${target%/*}"
+	printf '%s\n' "$@" > "$target"
+}
+
+put_bytes() {
+	target=$tree/$1
+	mkdir -p "${target%/*}"
+	printf "$2" > "$target"
+}
+
+put_text() {
+	target=$tree/$1
+	mkdir -p "${target%/*}"
+	cat > "$target"
+}
+
+holds() {
+	target=$tree/$1
+	shift
+	printf '%s\n' "$@" | cmp -s - "$target"
+}
+
+holds_bytes() { printf "$2" | cmp -s - "$tree/$1"; }
+
+holds_text() { cmp -s - "$tree/$1"; }
+
+attempt() {
+	set +e
+	"$@" > "$out" 2> "$err" < /dev/null
+	status=$?
+	set -e
+}
+
+filter() { attempt sh "$tool/module-filter" "$@"; }
+
+apply_keeping() {
+	kept_names=$1
+	shift
+	filter apply --keep "$kept_names" --root "$tree" "$@"
+}
+
+verify_keeping() {
+	kept_names=$1
+	shift
+	filter verify --keep "$kept_names" --root "$tree" "$@"
+}
+
+said() { grep -qxF -- "$1" "$out"; }
+
+said_only() {
+	printf '%s\n' "$@" | sort > "$work/expected"
+	sort "$out" | cmp -s - "$work/expected"
+}
+
+silent() { [ ! -s "$out" ]; }
+
+refused_with() { [ "$status" -eq 1 ] && grep -qxF -- "refused: $1" "$err"; }
+
+is_usage_error() { [ "$status" -eq 2 ] && grep -q '^usage: ' "$err" && silent; }
+
+remember_tree() { cp -R "$tree" "$tree.before"; }
+
+untouched() { diff -r "$tree.before" "$tree" > /dev/null 2>&1; }
+
+well_formed() {
+	LC_ALL=C awk -v comments="$2" '
+		function fail() { flawed = 1; exit }
+		function value_may_start() { return expecting == "value" || expecting == "value or close" }
+		function value_closed() { expecting = (depth == 0) ? "end" : "comma or close" }
+		BEGIN { BINMODE = 3; expecting = "value" }
+		{
+			size = length($0)
+			at = 1
+			while (at <= size) {
+				c = substr($0, at, 1)
+				if (c == " " || c == "\t" || c == "\r") { at++; continue }
+				if (c == "/" && substr($0, at + 1, 1) == "/") {
+					if (comments != "with comments") fail()
+					break
+				}
+				if (c == "\"") {
+					at++
+					while (at <= size && substr($0, at, 1) != "\"") at += (substr($0, at, 1) == "\\") ? 2 : 1
+					if (at > size) fail()
+					at++
+					if (value_may_start()) value_closed()
+					else if (expecting == "key" || expecting == "key or close") expecting = "colon"
+					else fail()
+					continue
+				}
+				if (c == "{" || c == "[") {
+					if (!value_may_start()) fail()
+					holder[++depth] = c
+					expecting = (c == "{") ? "key or close" : "value or close"
+					at++
+					continue
+				}
+				if (c == "}" || c == "]") {
+					if (depth == 0) fail()
+					if (c == "}" && !(holder[depth] == "{" && (expecting == "key or close" || expecting == "comma or close"))) fail()
+					if (c == "]" && !(holder[depth] == "[" && (expecting == "value or close" || expecting == "comma or close"))) fail()
+					depth--
+					value_closed()
+					at++
+					continue
+				}
+				if (c == ":") {
+					if (expecting != "colon") fail()
+					expecting = "value"
+					at++
+					continue
+				}
+				if (c == ",") {
+					if (expecting != "comma or close") fail()
+					expecting = (holder[depth] == "{") ? "key" : "value"
+					at++
+					continue
+				}
+				if (match(substr($0, at), /^[-+.0-9A-Za-z]+/)) {
+					if (!value_may_start()) fail()
+					value_closed()
+					at += RLENGTH
+					continue
+				}
+				fail()
+			}
+		}
+		END { exit (flawed || expecting != "end") ? 1 : 0 }
+	' "$1"
+}
+
+printf 'module filter self-test\n'
+
+new_case checker
+put strict.json '{' '	"list": [' '		"a",' '		"b"' '	],' '	"text": "a } ] \" // b"' '}'
+if well_formed "$tree/strict.json" 'strict'; then r=0; else r=1; fi
+check "the well-formedness check of this suite accepts sound JSON" "$r"
+put dangling.json '{' '	"list": [' '		"a",' '	]' '}'
+if ! well_formed "$tree/dangling.json" 'strict'; then r=0; else r=1; fi
+check "the well-formedness check of this suite refuses a dangling comma" "$r"
+put missing.json '{' '	"a": 1' '	"b": 2' '}'
+if ! well_formed "$tree/missing.json" 'strict'; then r=0; else r=1; fi
+check "the well-formedness check of this suite refuses a missing comma" "$r"
+put commented.json '{' '	// a comment' '	"a": 1' '}'
+if well_formed "$tree/commented.json" 'with comments' && ! well_formed "$tree/commented.json" 'strict'; then r=0; else r=1; fi
+check "the well-formedness check of this suite takes comments only where they are allowed" "$r"
+
+tool_with_manifest standard <<'ROWS'
+module alpha The alpha tools
+module beta The beta helper
+module gamma The gamma volume
+needs beta alpha
+asks beta a UI surface
+asks gamma the devcontainer variant
+path alpha tools/alpha/
+path beta tools/alpha/beta-helper
+path beta docs/beta notes.md
+path gamma env/box/.box/gamma.sh
+json alpha conf/rules.json Bash(sh alpha/*)
+json alpha conf/rules.json Bash(sh alpha/*..*)
+json alpha conf/rules.json /alpha
+json alpha conf/last.json /alpha
+key gamma conf/rules.json hooks
+key gamma conf/keys.json hooks
+cut gamma env/box/.box/box.json  && chown gamma
+installs env/box/.box/ .box/
+installs env/plain/.versions .versions
+skip tooling/
+skip .git/
+skip .template/
+ROWS
+standard=$tool
+
+new_case usage
+filter
+if is_usage_error; then r=0; else r=1; fi
+check "no command is a usage error that prints the usage" "$r"
+filter frobnicate
+if is_usage_error; then r=0; else r=1; fi
+check "an unknown command is a usage error" "$r"
+filter apply --root "$tree"
+if is_usage_error; then r=0; else r=1; fi
+check "apply without --keep is a usage error" "$r"
+filter verify --root "$tree"
+if is_usage_error; then r=0; else r=1; fi
+check "verify without --keep is a usage error" "$r"
+filter check
+if is_usage_error; then r=0; else r=1; fi
+check "check without --keep is a usage error" "$r"
+filter apply --root "$tree" --keep
+if is_usage_error; then r=0; else r=1; fi
+check "an option without its value is a usage error" "$r"
+filter apply --keep '' --root "$tree" --force
+if is_usage_error; then r=0; else r=1; fi
+check "an unknown option is a usage error" "$r"
+filter verify --keep '' --root "$tree" --prune
+if is_usage_error; then r=0; else r=1; fi
+check "--prune outside apply is a usage error" "$r"
+filter check --keep '' --root "$tree"
+if is_usage_error; then r=0; else r=1; fi
+check "check takes no --root" "$r"
+filter list --keep ''
+if is_usage_error; then r=0; else r=1; fi
+check "list takes no option" "$r"
+filter apply --keep '' --root "$tree/absent"
+if [ "$status" -eq 1 ] && grep -q '^refused: --root names no directory' "$err" && silent; then r=0; else r=1; fi
+check "a root that is no directory is refused" "$r"
+filter apply --keep '' --root "$tree" --payload "$tree/absent"
+if [ "$status" -eq 1 ] && grep -q '^refused: --payload names no directory' "$err" && silent; then r=0; else r=1; fi
+check "a payload that is no directory is refused" "$r"
+
+new_case list
+filter list
+printf '%s\n' "alpha$tab-${tab}The alpha tools" "beta${tab}alpha${tab}The beta helper" "${tab}asks${tab}a UI surface" \
+	"gamma$tab-${tab}The gamma volume" "${tab}asks${tab}the devcontainer variant" > "$work/expected"
+if [ "$status" -eq 0 ] && cmp -s "$work/expected" "$out"; then r=0; else r=1; fi
+check "list prints each module with what it needs and its title, then what it asks" "$r"
+
+new_case check
+filter check --keep 'alpha beta'
+if [ "$status" -eq 0 ] && said_only 'ok'; then r=0; else r=1; fi
+check "check accepts kept modules that have what they need" "$r"
+filter check --keep ''
+if [ "$status" -eq 0 ] && said_only 'ok'; then r=0; else r=1; fi
+check "check accepts keeping no module" "$r"
+filter check --keep 'alpha delta'
+if refused_with 'no module named delta' && silent; then r=0; else r=1; fi
+check "check refuses a name that is no module" "$r"
+filter check --keep 'beta gamma'
+if refused_with 'beta needs alpha' && silent; then r=0; else r=1; fi
+check "check refuses a module kept without the module it needs" "$r"
+
+new_case apply_needs
+put docs/guide.md 'Core.' '<!-- MODULE gamma -->' 'Gamma.' '<!-- /MODULE gamma -->'
+remember_tree
+apply_keeping 'beta'
+if refused_with 'beta needs alpha' && silent && untouched; then r=0; else r=1; fi
+check "apply refuses an unmet need and leaves the tree as it was" "$r"
+verify_keeping 'beta'
+if refused_with 'beta needs alpha' && silent; then r=0; else r=1; fi
+check "verify refuses an unmet need" "$r"
+
+tool_with_manifest chain <<'ROWS'
+module one The first
+module two The second
+module three The third
+needs two one
+needs three one
+needs three two
+ROWS
+new_case chain
+filter list
+if [ "$status" -eq 0 ] && said "three${tab}one two${tab}The third"; then r=0; else r=1; fi
+check "list names every module a module needs" "$r"
+filter check --keep 'three one'
+if refused_with 'three needs two'; then r=0; else r=1; fi
+check "check refuses a module that lacks one of the two it needs" "$r"
+
+tool_with_manifest unknown-row <<'ROWS'
+module alpha The alpha tools
+glob alpha docs/*.md
+ROWS
+new_case unknown_row
+put docs/guide.md 'Core.'
+apply_keeping ''
+if refused_with 'module-manifest line 2: unknown row: glob' && silent; then r=0; else r=1; fi
+check "a manifest row of an unknown kind is refused" "$r"
+
+tool_with_manifest stranger <<'ROWS'
+module alpha The alpha tools
+json alpha+delta conf/rules.json Bash(delta)
+ROWS
+new_case stranger
+put docs/guide.md 'Core.'
+apply_keeping ''
+if refused_with 'module-manifest line 2: no module named delta' && silent; then r=0; else r=1; fi
+check "a manifest row that names no module is refused" "$r"
+
+tool_with_manifest escaping <<'ROWS'
+module alpha The alpha tools
+path alpha ../outside/
+ROWS
+new_case escaping
+put docs/guide.md 'Core.'
+mkdir -p "$work/escaping/outside"
+apply_keeping '' --prune
+if refused_with 'module-manifest line 2: the path leaves the root: ../outside/' && silent && [ -d "$work/escaping/outside" ]; then r=0; else r=1; fi
+check "a manifest path that leaves the root is refused" "$r"
+
+tool=$standard
+
+new_case markdown_dropped
+put docs/guide.md 'Core line.' '<!-- MODULE alpha -->' '- Alpha line.' '<!-- /MODULE alpha -->' 'Last line.'
+apply_keeping 'gamma'
+if [ "$status" -eq 0 ] && holds docs/guide.md 'Core line.' 'Last line.' && said_only 'edited docs/guide.md'; then r=0; else r=1; fi
+check "a Markdown block of a dropped module goes with both fence lines" "$r"
+
+new_case markdown_kept
+put docs/guide.md 'Core line.' '<!-- MODULE alpha -->' '- Alpha line.' '<!-- /MODULE alpha -->' 'Last line.'
+remember_tree
+apply_keeping 'alpha gamma'
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "a Markdown block of a kept module stays with its fences" "$r"
+
+shell_like='run run.sh ci.yml ci.yaml gate.env conf.toml Dockerfile .gitignore'
+new_case shell_dropped
+for name in $shell_like; do
+	put "scripts/$name" 'first' '# MODULE alpha' 'alpha only' '# /MODULE alpha' 'last'
+done
+apply_keeping ''
+for name in $shell_like; do
+	if [ "$status" -eq 0 ] && holds "scripts/$name" 'first' 'last' && said "edited scripts/$name"; then r=0; else r=1; fi
+	check "a shell block of a dropped module goes from a file named $name" "$r"
+done
+
+new_case shell_kept
+put scripts/run 'first' '# MODULE alpha' 'alpha only' '# /MODULE alpha' 'last'
+remember_tree
+apply_keeping 'alpha'
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "a shell block of a kept module stays with its fences" "$r"
+
+new_case json_dropped
+for name in box.json box.jsonc; do
+	put "conf/$name" '{' '	"first": 1,' '	// MODULE alpha' '	// Why alpha needs it.' '	"alpha": 2,' '	// /MODULE alpha' '	"last": 3' '}'
+done
+apply_keeping ''
+for name in box.json box.jsonc; do
+	if [ "$status" -eq 0 ] && holds "conf/$name" '{' '	"first": 1,' '	"last": 3' '}' && said "edited conf/$name"; then r=0; else r=1; fi
+	check "a JSON block of a dropped module goes from a file named $name" "$r"
+done
+
+new_case json_kept
+put conf/box.json '{' '	"first": 1,' '	// MODULE alpha' '	"alpha": 2,' '	// /MODULE alpha' '	"last": 3' '}'
+remember_tree
+apply_keeping 'alpha'
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "a JSON block of a kept module stays with its fences" "$r"
+
+new_case other_types
+put src/Guard.java 'class Guard {' '// MODULE alpha' '<!-- MODULE alpha -->' '# MODULE alpha' '}'
+put notes.txt '# MODULE alpha' 'never closed'
+put Dockerfile.dev '# /MODULE alpha'
+remember_tree
+apply_keeping ''
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "a file of another type is never scanned" "$r"
+verify_keeping ''
+if [ "$status" -eq 0 ] && silent; then r=0; else r=1; fi
+check "verify reads no file of another type" "$r"
+
+near_miss() { refused_with "$1: a fence-like line that is no fence of this file type: $2"; }
+
+new_case foreign_forms
+put docs/guide.md '# MODULE alpha' 'prose' '// MODULE alpha'
+put scripts/run '<!-- MODULE alpha -->' 'echo' '// /MODULE alpha'
+put conf/box.json '# MODULE alpha' '<!-- /MODULE alpha -->'
+remember_tree
+apply_keeping 'alpha'
+if near_miss docs/guide.md:1 '# MODULE alpha' && near_miss docs/guide.md:3 '// MODULE alpha' && near_miss scripts/run:1 '<!-- MODULE alpha -->' \
+	&& near_miss scripts/run:3 '// /MODULE alpha' && near_miss conf/box.json:1 '# MODULE alpha' && near_miss conf/box.json:2 '<!-- /MODULE alpha -->' \
+	&& untouched && silent; then r=0; else r=1; fi
+check "a fence in the form of another file type is refused, kept module or not, and the tree stays as it was" "$r"
+verify_keeping 'alpha'
+if [ "$status" -eq 1 ] && said 'leftover docs/guide.md:1: fence-like line # MODULE alpha' && said 'leftover conf/box.json:2: fence-like line <!-- /MODULE alpha -->' \
+	&& [ "$(grep -c '^leftover ' "$out")" -eq 6 ]; then r=0; else r=1; fi
+check "verify names a fence in the form of another file type" "$r"
+
+new_case carriage_returns
+put_bytes docs/guide.md 'Core line.\r\n<!-- MODULE alpha -->\r\n- Alpha line.\r\n<!-- /MODULE alpha -->\r\nLast line.\r\n'
+apply_keeping ''
+if [ "$status" -eq 0 ] && holds_bytes docs/guide.md 'Core line.\r\nLast line.\r\n'; then r=0; else r=1; fi
+check "a fence with a trailing carriage return is a fence, and the kept lines keep theirs" "$r"
+
+new_case blanks_around
+put_bytes scripts/run 'first\n  \t# MODULE alpha \t \nalpha only\n\t# /MODULE alpha  \nlast\n'
+apply_keeping ''
+if [ "$status" -eq 0 ] && holds scripts/run 'first' 'last'; then r=0; else r=1; fi
+check "a fence with leading and trailing blanks is a fence" "$r"
+
+new_case more_than_a_name
+put scripts/run 'first' '# MODULE alpha and more' '#MODULE alpha' '	# /MODULE  alpha' 'last'
+put docs/guide.md '<!-- MODULE alpha --> and more' '<!-- MODULE alpha beta -->' '<!--MODULE alpha-->' '<!-- MODULE alpha-->' '	<!--  /MODULE -->'
+put conf/box.json '{' '	//MODULE alpha' '	// MODULE alpha  x' '}'
+remember_tree
+apply_keeping ''
+if near_miss scripts/run:2 '# MODULE alpha and more' && near_miss scripts/run:3 '#MODULE alpha' && near_miss scripts/run:4 '# /MODULE  alpha' \
+	&& near_miss docs/guide.md:1 '<!-- MODULE alpha --> and more' && near_miss docs/guide.md:2 '<!-- MODULE alpha beta -->' \
+	&& near_miss docs/guide.md:3 '<!--MODULE alpha-->' && near_miss docs/guide.md:4 '<!-- MODULE alpha-->' && near_miss docs/guide.md:5 '<!--  /MODULE -->' \
+	&& near_miss conf/box.json:2 '//MODULE alpha' && near_miss conf/box.json:3 '// MODULE alpha  x' && untouched && silent; then r=0; else r=1; fi
+check "a fence-like line that is no exact fence is refused, and the tree stays as it was" "$r"
+verify_keeping ''
+if [ "$status" -eq 1 ] && said 'leftover docs/guide.md:4: fence-like line <!-- MODULE alpha-->' && [ "$(grep -c '^leftover ' "$out")" -eq 10 ]; then r=0; else r=1; fi
+check "verify names a fence-like line that is no exact fence" "$r"
+new_case project_comments
+put .devcontainer/Dockerfile 'FROM base' '# MODULE: built in stage 2' '# MODULES are built in stage 3' '  # /MODULE' 'RUN true'
+put docs/guide.md 'Core.' '<!-- MODULES: see below -->' '	<!--  /MODULES -->'
+remember_tree
+apply_keeping ''
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "a comment where MODULE is not followed by a blank and a name, as in a project's Dockerfile, is an ordinary line" "$r"
+verify_keeping ''
+if [ "$status" -eq 0 ] && silent; then r=0; else r=1; fi
+check "verify reads such a comment as an ordinary line" "$r"
+new_case fence_words_in_prose
+put docs/guide.md 'A MODULE fence: <!-- MODULE alpha -->.' '`# MODULE alpha`' '#!/bin/sh' '## MODULE alpha'
+put scripts/run 'echo "# MODULE alpha"' 'x=1 # MODULE alpha'
+remember_tree
+apply_keeping ''
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "a line that only mentions a fence further in is an ordinary line" "$r"
+
+new_case unclosed
+put docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'Alpha.'
+put docs/other.md 'Core.' '<!-- MODULE gamma -->' 'Gamma.' '<!-- /MODULE gamma -->'
+remember_tree
+apply_keeping ''
+if refused_with 'docs/guide.md:2: fence alpha is never closed' && untouched && silent; then r=0; else r=1; fi
+check "an unclosed fence is refused and the tree stays as it was, byte for byte" "$r"
+
+new_case nested
+put docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- MODULE gamma -->' 'G.' '<!-- /MODULE gamma -->' '<!-- /MODULE alpha -->'
+put docs/other.md 'Core.' '<!-- MODULE gamma -->' 'Gamma.' '<!-- /MODULE gamma -->'
+remember_tree
+apply_keeping ''
+if refused_with 'docs/guide.md:4: fence gamma opens inside the fence alpha of line 2' && untouched && silent; then r=0; else r=1; fi
+check "a nested fence is refused and the tree stays as it was, byte for byte" "$r"
+
+new_case stray_closing
+put scripts/run 'first' '# /MODULE alpha' 'last'
+put docs/other.md 'Core.' '<!-- MODULE gamma -->' 'Gamma.' '<!-- /MODULE gamma -->'
+remember_tree
+apply_keeping ''
+if refused_with 'scripts/run:2: closing fence alpha has no opening fence' && untouched && silent; then r=0; else r=1; fi
+check "a stray closing fence is refused and the tree stays as it was, byte for byte" "$r"
+
+new_case foreign_closing
+put conf/box.json '{' '	// MODULE alpha' '	"a": 1,' '	// /MODULE gamma' '	"b": 2' '}'
+remember_tree
+apply_keeping ''
+if refused_with 'conf/box.json:4: closing fence gamma stands inside the fence alpha of line 2' && untouched && silent; then r=0; else r=1; fi
+check "a fence closed by another module's closing fence is refused" "$r"
+
+new_case kept_unclosed
+put docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'Alpha.'
+remember_tree
+apply_keeping 'alpha'
+if refused_with 'docs/guide.md:2: fence alpha is never closed' && untouched && silent; then r=0; else r=1; fi
+check "a broken fence of a kept module is refused too" "$r"
+
+new_case unknown_name
+put docs/guide.md 'Core.' '<!-- MODULE delta -->' 'Delta.' '<!-- /MODULE delta -->' '<!-- MODULE delta -->' 'Never closed.'
+remember_tree
+apply_keeping ''
+if [ "$status" -eq 0 ] && untouched && said_only 'note: docs/guide.md: fence of no manifest module: delta'; then r=0; else r=1; fi
+check "a fence of no manifest module is left alone and named in one note" "$r"
+verify_keeping ''
+if [ "$status" -eq 0 ] && said_only 'note: docs/guide.md: fence of no manifest module: delta'; then r=0; else r=1; fi
+check "verify names a fence of no manifest module in the note apply prints, and passes" "$r"
+
+tool_with_manifest compound <<'ROWS'
+module alpha The alpha tools
+module beta The beta helper
+module gamma The gamma volume
+path alpha tools/alpha/
+ROWS
+
+new_case compound_kept
+put docs/guide.md 'Core.' '<!-- MODULE alpha+beta -->' 'Both.' '<!-- /MODULE alpha+beta -->' 'Last.'
+remember_tree
+apply_keeping 'alpha beta'
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "a block of two modules stays with its fences while both are kept" "$r"
+
+for kept_names in beta alpha gamma; do
+	new_case "compound_without_$kept_names"
+	put docs/guide.md 'Core.' '<!-- MODULE alpha+beta -->' 'Both.' '<!-- /MODULE alpha+beta -->' 'Last.'
+	apply_keeping "$kept_names"
+	if [ "$status" -eq 0 ] && holds docs/guide.md 'Core.' 'Last.' && said_only 'edited docs/guide.md'; then r=0; else r=1; fi
+	check "a block of two modules goes with both fence lines, keeping '$kept_names'" "$r"
+done
+
+new_case compound_forms
+put scripts/run 'first' '# MODULE alpha+beta' 'both only' '# /MODULE alpha+beta' 'last'
+put conf/box.json '{' '	"first": 1,' '	// MODULE alpha+beta' '	"both": 2,' '	// /MODULE alpha+beta' '	"last": 3' '}'
+apply_keeping 'alpha'
+if [ "$status" -eq 0 ] && holds scripts/run 'first' 'last' && holds conf/box.json '{' '	"first": 1,' '	"last": 3' '}' \
+	&& said_only 'edited scripts/run' 'edited conf/box.json'; then r=0; else r=1; fi
+check "a block of two modules goes from a shell file and a JSON file once one of them is dropped" "$r"
+
+new_case compound_unknown_part
+put docs/guide.md 'Core.' '<!-- MODULE alpha+delta -->' 'Delta.' '<!-- /MODULE alpha+delta -->' '<!-- MODULE alpha+delta -->' 'Never closed.'
+remember_tree
+apply_keeping 'alpha beta gamma'
+if [ "$status" -eq 0 ] && untouched && said_only 'note: docs/guide.md: fence of no manifest module: alpha+delta'; then r=0; else r=1; fi
+check "a fence with a part that is no manifest module is left alone and named in one note" "$r"
+
+new_case compound_closed_by_one
+put docs/guide.md 'Core.' '<!-- MODULE alpha+beta -->' 'Both.' '<!-- /MODULE alpha -->' 'Last.'
+remember_tree
+apply_keeping 'alpha beta'
+if refused_with 'docs/guide.md:4: closing fence alpha stands inside the fence alpha+beta of line 2' && untouched && silent; then r=0; else r=1; fi
+check "a block of two modules closed by the fence of one of them is refused" "$r"
+
+new_case compound_nested
+put docs/guide.md 'Core.' '<!-- MODULE gamma -->' 'G.' '<!-- MODULE alpha+beta -->' 'Both.' '<!-- /MODULE alpha+beta -->' '<!-- /MODULE gamma -->'
+remember_tree
+apply_keeping 'alpha beta gamma'
+if refused_with 'docs/guide.md:4: fence alpha+beta opens inside the fence gamma of line 2' && untouched && silent; then r=0; else r=1; fi
+check "a block of two modules inside another block is refused" "$r"
+
+new_case compound_own
+put tools/alpha/notes.md 'Core.' '<!-- MODULE alpha+beta -->' 'Both.' '<!-- /MODULE alpha+beta -->' 'Last.'
+apply_keeping 'alpha'
+if [ "$status" -eq 0 ] && holds tools/alpha/notes.md 'Core.' 'Last.' && said_only 'edited tools/alpha/notes.md'; then r=0; else r=1; fi
+check "a block of two modules in a path row's file of one of them goes once the other is dropped" "$r"
+
+new_case compound_verify
+put docs/guide.md 'Core.' '<!-- MODULE alpha+beta -->' 'Both.' '<!-- /MODULE alpha+beta -->'
+verify_keeping 'alpha'
+if [ "$status" -eq 1 ] && said_only 'leftover docs/guide.md:2: fence alpha+beta'; then r=0; else r=1; fi
+check "verify names a leftover block of two modules once one of them is dropped" "$r"
+verify_keeping 'alpha beta'
+if [ "$status" -eq 0 ] && silent; then r=0; else r=1; fi
+check "verify passes a block of two modules while both are kept" "$r"
+tool=$standard
+
+new_case several_blocks
+put docs/guide.md 'One.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->' 'Two.' '<!-- MODULE beta -->' 'B.' '<!-- /MODULE beta -->' \
+	'Three.' '<!-- MODULE gamma -->' 'G.' '<!-- /MODULE gamma -->'
+apply_keeping 'gamma'
+if [ "$status" -eq 0 ] && holds docs/guide.md 'One.' 'Two.' 'Three.' '<!-- MODULE gamma -->' 'G.' '<!-- /MODULE gamma -->' \
+	&& said_only 'edited docs/guide.md'; then r=0; else r=1; fi
+check "two dropped blocks go from one file, a kept one stays, and the file is named once" "$r"
+
+new_case no_final_newline
+put_bytes docs/guide.md 'Core.\n<!-- MODULE alpha -->\nA.\n<!-- /MODULE alpha -->\nLast.'
+put_bytes docs/tail.md 'Core.\n<!-- MODULE alpha -->\nA.\n<!-- /MODULE alpha -->'
+apply_keeping ''
+if [ "$status" -eq 0 ] && holds_bytes docs/guide.md 'Core.\nLast.'; then r=0; else r=1; fi
+check "a file without a final newline gets none" "$r"
+if [ "$status" -eq 0 ] && holds_bytes docs/tail.md 'Core.'; then r=0; else r=1; fi
+check "a dropped last block without a final newline leaves the new last line without one" "$r"
+
+new_case blanks_in_a_name
+put 'docs/my own notes.md' 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+apply_keeping ''
+if [ "$status" -eq 0 ] && holds 'docs/my own notes.md' 'Core.' && said_only 'edited docs/my own notes.md'; then r=0; else r=1; fi
+check "a file with blanks in its name is edited" "$r"
+
+new_case odd_names
+put docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+odd_tab=0
+odd_newline=0
+put "docs/x${tab}y.md" 'Core.' 2> /dev/null && [ -f "$tree/docs/x${tab}y.md" ] && odd_tab=1
+put "docs/a
+b.md" 'Core.' 2> /dev/null && [ -f "$tree/docs/a
+b.md" ] && odd_newline=1
+if [ "$odd_tab" -eq 1 ] && [ "$odd_newline" -eq 1 ]; then
+	remember_tree
+	apply_keeping ''
+	if refused_with 'a payload file name holds a tab or a newline: docs/x\ty.md' && refused_with 'a payload file name holds a tab or a newline: docs/a\nb.md' \
+		&& untouched && silent; then r=0; else r=1; fi
+	check "a payload file name that holds a tab or a newline is refused by name and the tree stays as it was" "$r"
+	verify_keeping ''
+	if refused_with 'a payload file name holds a tab or a newline: docs/x\ty.md' && silent; then r=0; else r=1; fi
+	check "verify refuses a payload file name that holds a tab or a newline" "$r"
+else
+	printf '  skip a payload file name that holds a tab or a newline is refused: this host makes no such name\n'
+fi
+
+new_case symbolic_link
+put docs/guide.md 'Core.'
+mkdir -p "$work/symbolic_link/outside"
+printf '%s\n' 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->' > "$work/symbolic_link/outside/linked.md"
+cp "$work/symbolic_link/outside/linked.md" "$work/symbolic_link/as-it-was.md"
+if ln -s "$work/symbolic_link/outside/linked.md" "$tree/docs/link.md" 2> /dev/null && [ -L "$tree/docs/link.md" ]; then
+	apply_keeping ''
+	if [ "$status" -eq 0 ] && silent && [ -L "$tree/docs/link.md" ] \
+		&& cmp -s "$work/symbolic_link/as-it-was.md" "$work/symbolic_link/outside/linked.md"; then r=0; else r=1; fi
+	check "a symbolic link to a file is neither followed nor edited" "$r"
+	verify_keeping ''
+	if [ "$status" -eq 0 ] && silent; then r=0; else r=1; fi
+	check "verify follows no symbolic link" "$r"
+	step ln -s "$work/symbolic_link/outside" "$tree/linked"
+	apply_keeping ''
+	if [ "$status" -eq 0 ] && silent && cmp -s "$work/symbolic_link/as-it-was.md" "$work/symbolic_link/outside/linked.md"; then r=0; else r=1; fi
+	check "a symbolic link to a directory is not entered" "$r"
+else
+	printf '  skip a symbolic link is neither followed nor edited: this host makes no symbolic link\n'
+fi
+
+new_case rewrites
+put docs/changed.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+put docs/same.md 'Core.' '<!-- MODULE gamma -->' 'G.' '<!-- /MODULE gamma -->'
+: > "$work/rewrites/marker"
+sleep 1
+apply_keeping 'gamma'
+rewritten=$(find "$tree" -type f -newer "$work/rewrites/marker")
+if [ "$status" -eq 0 ] && holds docs/changed.md 'Core.' && case $rewritten in *same.md*) false ;; esac; then r=0; else r=1; fi
+check "a file that keeps every line is not rewritten" "$r"
+if [ -z "$(find "$tree" -type f ! -name changed.md ! -name same.md)" ]; then r=0; else r=1; fi
+check "no temporary file stays beside an edited file" "$r"
+
+new_case beside_is_a_directory
+put docs/a.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+put docs/b.md 'Core.' '<!-- MODULE alpha -->' 'B.' '<!-- /MODULE alpha -->'
+step mkdir -p "$tree/docs/b.md.module-filter-new"
+apply_keeping ''
+if [ "$status" -eq 0 ] && holds docs/a.md 'Core.' && holds docs/b.md 'Core.' && [ -d "$tree/docs/b.md.module-filter-new" ] \
+	&& [ -z "$(find "$tree" -type f ! -name a.md ! -name b.md)" ]; then r=0; else r=1; fi
+check "apply writes nothing beside the files it edits" "$r"
+
+new_case beside_is_taken
+put docs/a.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+put docs/a.md.module-filter-new 'PRECIOUS'
+apply_keeping ''
+if [ "$status" -eq 0 ] && holds docs/a.md 'Core.' && holds docs/a.md.module-filter-new 'PRECIOUS'; then r=0; else r=1; fi
+check "apply neither overwrites nor deletes a file that bears the name of a temporary file" "$r"
+
+new_case awk_fails
+put docs/a.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+put docs/b.md 'Core.' '<!-- MODULE alpha -->' 'B.' '<!-- /MODULE alpha -->'
+remember_tree
+failing=$work/awk_fails/bin
+step mkdir -p "$failing"
+printf '%s\n' '#!/bin/sh' "\"$(command -v awk)\" \"\$@\"" 'exit 3' > "$failing/awk"
+step chmod +x "$failing/awk"
+attempt env PATH="$failing:$PATH" sh "$tool/module-filter" apply --keep '' --root "$tree"
+if refused_with 'the filter program failed with status 3' && untouched && silent; then r=0; else r=1; fi
+check "an awk run that fails after writing leaves the tree as it was" "$r"
+
+new_case unwritable
+put docs/a.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+put docs/b.md 'Core.' '<!-- MODULE alpha -->' 'B.' '<!-- /MODULE alpha -->'
+remember_tree
+step chmod a-w "$tree/docs/b.md"
+if ! (: >> "$tree/docs/b.md") 2> /dev/null; then
+	apply_keeping ''
+	if refused_with 'docs/b.md: cannot be written; nothing was changed' && untouched && silent; then r=0; else r=1; fi
+	check "a file that cannot be written is refused, and every file written before it is put back byte for byte" "$r"
+else
+	printf '  skip a file that cannot be written is refused and every file is put back: a read-only file can be written here\n'
+fi
+step chmod u+w "$tree/docs/b.md"
+
+new_case temporary_directory
+put docs/a.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+spool=$work/temporary_directory/tmp
+step mkdir -p "$spool"
+attempt env TMPDIR="$spool" sh "$tool/module-filter" apply --keep 'beta' --root "$tree"
+refused=$status
+attempt env TMPDIR="$spool" sh "$tool/module-filter" apply --keep '' --root "$tree"
+if [ "$refused" -eq 1 ] && [ "$status" -eq 0 ] && holds docs/a.md 'Core.' && [ -z "$(ls -A "$spool")" ]; then r=0; else r=1; fi
+check "apply leaves no temporary file behind, refused or done" "$r"
+
+new_case mode
+put scripts/run '#!/bin/sh' '# MODULE alpha' 'alpha' '# /MODULE alpha' 'exit 0'
+step chmod +x "$tree/scripts/run"
+apply_keeping ''
+if [ "$status" -eq 0 ] && holds scripts/run '#!/bin/sh' 'exit 0' && [ -x "$tree/scripts/run" ]; then r=0; else r=1; fi
+check "an edited script stays executable" "$r"
+
+new_case own_fences
+put tools/alpha/tool 'first' '# MODULE alpha' 'never closed' '# MODULE gamma' 'gamma only' '# /MODULE gamma' 'last'
+apply_keeping 'alpha'
+if [ "$status" -eq 0 ] && holds tools/alpha/tool 'first' '# MODULE alpha' 'never closed' 'last'; then r=0; else r=1; fi
+check "a path row's file is not scanned for the fences of its own module" "$r"
+
+new_case doomed_file
+put tools/alpha/tool 'first' '# MODULE gamma' 'gamma only' '# /MODULE gamma' '# MODULE beta' 'never closed'
+remember_tree
+apply_keeping ''
+if [ "$status" -eq 0 ] && untouched && said_only 'remove tools/alpha/'; then r=0; else r=1; fi
+check "a file under a dropped module's path is neither scanned nor edited" "$r"
+
+new_case skipped
+put tooling/guide.md 'Core.' '<!-- MODULE alpha -->' 'never closed'
+put .git/description '# MODULE alpha'
+put docs/guide.md 'Core.'
+remember_tree
+apply_keeping ''
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "a skip row's directory is neither scanned nor edited" "$r"
+
+tool_with_manifest skipped_rows <<'ROWS'
+module alpha The alpha tools
+json alpha tooling/rules.json /alpha
+installs conf/ tooling/conf/
+skip tooling/
+ROWS
+new_case skipped_rows
+put tooling/rules.json '[' '	"/alpha"' ']'
+put tooling/conf/box.md '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+put conf/box.md 'Core.'
+remember_tree
+apply_keeping ''
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "a row's file and an installed copy under a skip row's path are neither scanned nor edited" "$r"
+tool=$standard
+
+module_paths() {
+	put tools/alpha/tool 'x'
+	put tools/alpha/beta-helper 'x'
+	put 'docs/beta notes.md' 'x'
+	put docs/guide.md 'x'
+}
+
+new_case paths_named
+module_paths
+remember_tree
+apply_keeping 'alpha'
+if [ "$status" -eq 0 ] && said_only 'remove tools/alpha/beta-helper' 'remove docs/beta notes.md' && untouched; then r=0; else r=1; fi
+check "apply names each existing path of a dropped module and deletes nothing" "$r"
+
+new_case paths_nested
+module_paths
+apply_keeping 'gamma'
+if [ "$status" -eq 0 ] && said_only 'remove tools/alpha/' 'remove docs/beta notes.md'; then r=0; else r=1; fi
+check "a path inside a dropped directory is not named beside it" "$r"
+
+new_case paths_absent
+put docs/guide.md 'x'
+apply_keeping ''
+if [ "$status" -eq 0 ] && silent; then r=0; else r=1; fi
+check "a path that does not exist is not named, and a row whose file does not exist is skipped" "$r"
+
+new_case paths_kept
+module_paths
+apply_keeping 'alpha beta'
+if [ "$status" -eq 0 ] && silent; then r=0; else r=1; fi
+check "a kept module's paths are not named" "$r"
+
+new_case prune
+module_paths
+apply_keeping 'gamma' --prune
+if [ "$status" -eq 0 ] && said_only 'removed tools/alpha/' 'removed docs/beta notes.md' && [ ! -e "$tree/tools/alpha" ] \
+	&& [ ! -e "$tree/docs/beta notes.md" ] && [ -f "$tree/docs/guide.md" ] && [ -d "$tree/tools" ]; then r=0; else r=1; fi
+check "--prune deletes the paths of the dropped modules and says so" "$r"
+
+standard_rules() {
+	put_text conf/rules.json <<'JSON'
+{
+	"permissions": {
+		"allow": [
+			"Edit(docs/**)",
+			"Bash(sh alpha/*)",
+			"Bash(core:*)"
+		],
+		"deny": [
+			"Bash(sh alpha/*..*)"
+		],
+		"additionalDirectories": [
+			"/tmp",
+			"/alpha"
+		]
+	},
+	"hooks": {
+		"Start": [
+			{
+				"command": "case \"$DIR\" in /*) s=\"{ $DIR }\" ;; esac; printf '{\"a\":\"%s\"}\\n' \"]\" // none",
+				"timeout": 30
+			}
+		]
+	},
+	"worktree": {
+		"baseRef": "head",
+		"hooks": "nested and kept"
+	}
+}
+JSON
+}
+
+new_case json_rows
+standard_rules
+apply_keeping 'gamma'
+r=0
+[ "$status" -eq 0 ] && said_only 'edited conf/rules.json' || r=1
+holds_text conf/rules.json <<'JSON' || r=1
+{
+	"permissions": {
+		"allow": [
+			"Edit(docs/**)",
+			"Bash(core:*)"
+		],
+		"deny": [
+		],
+		"additionalDirectories": [
+			"/tmp"
+		]
+	},
+	"hooks": {
+		"Start": [
+			{
+				"command": "case \"$DIR\" in /*) s=\"{ $DIR }\" ;; esac; printf '{\"a\":\"%s\"}\\n' \"]\" // none",
+				"timeout": 30
+			}
+		]
+	},
+	"worktree": {
+		"baseRef": "head",
+		"hooks": "nested and kept"
+	}
+}
+JSON
+check "the json lines of a dropped module go: one in the middle, an only one and a last one" "$r"
+if well_formed "$tree/conf/rules.json" 'strict'; then r=0; else r=1; fi
+check "the file stays well-formed once its json lines are gone" "$r"
+
+new_case json_rows_kept
+standard_rules
+remember_tree
+apply_keeping 'alpha gamma'
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "the json lines and the key of kept modules stay" "$r"
+
+new_case last_element
+put conf/last.json '{' '	"note": "/alpha",' '	"additionalDirectories": [' '		"/tmp",' '		"/alpha"' '	]' '}'
+apply_keeping 'gamma'
+if [ "$status" -eq 0 ] && holds conf/last.json '{' '	"note": "/alpha",' '	"additionalDirectories": [' '		"/tmp"' '	]' '}'; then r=0; else r=1; fi
+check "the last element of an array removed takes the comma of the element before it" "$r"
+if grep -qxF '	"note": "/alpha",' "$tree/conf/last.json"; then r=0; else r=1; fi
+check "a string that is not alone on its line is not a json row's line" "$r"
+
+new_case last_element_crlf
+put_bytes conf/last.json '{\r\n\t"additionalDirectories": [\r\n\t\t"/tmp",\r\n\t\t"/alpha"\r\n\t]\r\n}\r\n'
+apply_keeping 'gamma'
+if [ "$status" -eq 0 ] && holds_bytes conf/last.json '{\r\n\t"additionalDirectories": [\r\n\t\t"/tmp"\r\n\t]\r\n}\r\n'; then r=0; else r=1; fi
+check "the element that becomes last loses its comma and keeps its carriage return" "$r"
+
+new_case json_twice
+put conf/last.json '{' '	"additionalDirectories": [' '		"/alpha",' '		"/alpha"' '	]' '}'
+put docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+remember_tree
+apply_keeping 'gamma'
+if refused_with 'conf/last.json: json row found 2 times, not once: /alpha' && untouched && silent; then r=0; else r=1; fi
+check "a json row found twice is refused and the tree stays as it was" "$r"
+
+new_case json_nowhere
+standard_rules
+put conf/last.json '{' '	"additionalDirectories": [' '		"/tmp"' '	]' '}'
+put docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+remember_tree
+apply_keeping 'gamma'
+if refused_with 'conf/last.json: json row found 0 times, not once: /alpha' && untouched && silent; then r=0; else r=1; fi
+check "a json row found nowhere is refused and the tree stays as it was" "$r"
+
+new_case last_block
+put conf/box.jsonc '{' '	"mounts": [' '		"core",' '		// MODULE gamma' '		"gamma, kept",' '		// /MODULE gamma' '		// A comment.' \
+	'' '		// MODULE alpha' '		"alpha, last"' '		// /MODULE alpha' '	]' '}'
+apply_keeping 'gamma'
+if [ "$status" -eq 0 ] && holds conf/box.jsonc '{' '	"mounts": [' '		"core",' '		// MODULE gamma' '		"gamma, kept"' '		// /MODULE gamma' \
+	'		// A comment.' '' '	]' '}'; then r=0; else r=1; fi
+check "a dropped block that stood last takes the comma of the element before it, past comments" "$r"
+
+new_case last_before_a_comment
+put conf/box.jsonc '{' '	"mounts": [' '		"core, kept", // why, not "x",' '		// MODULE alpha' '		"alpha"' '		// /MODULE alpha' '	]' '}'
+apply_keeping 'gamma'
+if [ "$status" -eq 0 ] && holds conf/box.jsonc '{' '	"mounts": [' '		"core, kept" // why, not "x",' '	]' '}'; then r=0; else r=1; fi
+check "the element that becomes last loses the comma before its trailing comment" "$r"
+
+tool_with_manifest plus <<'ROWS'
+module p The p module
+module q The q module
+module r The r module
+json p conf/rules.json only p
+json p+q conf/rules.json p and q
+json q+r conf/rules.json q and r
+json p+q+r conf/rules.json p, q and r
+ROWS
+number=0
+for kept_set in '' 'p' 'q' 'r' 'p q' 'p r' 'q r' 'p q r'; do
+	number=$((number + 1))
+	new_case "plus_$number"
+	put conf/rules.json '{' '	"allow": [' '		"only p",' '		"p and q",' '		"q and r",' '		"p, q and r",' '		"core"' '	]' '}'
+	apply_keeping "$kept_set"
+	{
+		printf '%s\n' '{' '	"allow": ['
+		case " $kept_set " in *' p '*) printf '%s\n' '		"only p",' ;; esac
+		case " $kept_set " in *' p q '*) printf '%s\n' '		"p and q",' ;; esac
+		case " $kept_set " in *' q r '*) printf '%s\n' '		"q and r",' ;; esac
+		case " $kept_set " in ' p q r ') printf '%s\n' '		"p, q and r",' ;; esac
+		printf '%s\n' '		"core"' '	]' '}'
+	} > "$work/expected"
+	if [ "$status" -eq 0 ] && cmp -s "$work/expected" "$tree/conf/rules.json"; then r=0; else r=1; fi
+	check "a row of several modules stays only while each of them is kept: keeping '${kept_set:-none}'" "$r"
+done
+
+tool=$standard
+
+new_case key_dropped
+standard_rules
+apply_keeping 'alpha'
+r=0
+[ "$status" -eq 0 ] && said_only 'edited conf/rules.json' || r=1
+holds_text conf/rules.json <<'JSON' || r=1
+{
+	"permissions": {
+		"allow": [
+			"Edit(docs/**)",
+			"Bash(sh alpha/*)",
+			"Bash(core:*)"
+		],
+		"deny": [
+			"Bash(sh alpha/*..*)"
+		],
+		"additionalDirectories": [
+			"/tmp",
+			"/alpha"
+		]
+	},
+	"worktree": {
+		"baseRef": "head",
+		"hooks": "nested and kept"
+	}
+}
+JSON
+check "a top-level key of a dropped module goes with its whole value, and the same key deeper stays" "$r"
+
+new_case key_last
+put conf/keys.json '{' '	"permissions": {' '		"allow": []' '	},' '	"hooks": {' '		"Start": [ { "command": "} ] \" {" } ]' '	}' '}'
+apply_keeping 'alpha'
+if [ "$status" -eq 0 ] && holds conf/keys.json '{' '	"permissions": {' '		"allow": []' '	}' '}'; then r=0; else r=1; fi
+check "a key that stood last takes the comma of the value before it" "$r"
+
+new_case key_one_line
+put conf/keys.json '{' '	"hooks" : "none",' '	"permissions": {' '		"hooks": 1' '	}' '}'
+apply_keeping 'alpha'
+if [ "$status" -eq 0 ] && holds conf/keys.json '{' '	"permissions": {' '		"hooks": 1' '	}' '}'; then r=0; else r=1; fi
+check "a key whose value ends on its own line goes as that one line" "$r"
+
+new_case key_sharing_its_line
+put conf/keys.json '{' '	"hooks": 1, "model": "opus"' '}'
+remember_tree
+apply_keeping 'alpha'
+if refused_with 'conf/keys.json:2: key hooks does not stand on lines of its own: "hooks": 1, "model": "opus"' && untouched && silent; then r=0; else r=1; fi
+check "a key of a dropped module that shares its line with a member that stays is refused, never cut" "$r"
+
+new_case key_comma_below
+put conf/keys.json '{' '	"hooks": {' '		"x": 1' '	}' '	, "model": "opus"' '}'
+remember_tree
+apply_keeping 'alpha'
+if refused_with 'conf/keys.json:5: key hooks does not stand on lines of its own: , "model": "opus"' && untouched && silent; then r=0; else r=1; fi
+check "a key of a dropped module whose comma stands on the next line is refused, never cut" "$r"
+
+new_case key_unread
+put conf/keys.json '{' '	"hooks": { /* x */' '		"Stop": []' '	}, "model": "opus"' '}'
+remember_tree
+apply_keeping 'alpha'
+if refused_with 'conf/keys.json:2: key hooks does not read as JSON, so its end is not known' && untouched && silent; then r=0; else r=1; fi
+check "a key of a dropped module whose value does not read as JSON is refused, never cut by its lines" "$r"
+
+new_case key_value_below
+put conf/keys.json '{' '	"permissions": {' '		"allow": []' '	},' '	"hooks":' '	{' '		"x": 1' '	}' '}'
+put conf/rules.json '{' '	"hooks": // the guard' '	{' '		"x": 1' '	}' '}'
+remember_tree
+apply_keeping 'alpha'
+if refused_with 'conf/keys.json:5: key hooks opens no value on its line' && refused_with 'conf/rules.json:2: key hooks opens no value on its line' \
+	&& untouched && silent; then r=0; else r=1; fi
+check "a key whose value opens on a later line is refused and the tree stays as it was" "$r"
+
+new_case key_value_compact
+put conf/keys.json '{' '	"permissions": {},' '	"hooks": {"a": [1]}' '}'
+apply_keeping 'alpha'
+if [ "$status" -eq 0 ] && holds conf/keys.json '{' '	"permissions": {}' '}'; then r=0; else r=1; fi
+check "a key whose whole value stands on its line goes as that line" "$r"
+
+new_case key_nowhere
+put conf/keys.json '{' '	"permissions": {' '		"hooks": 1' '	}' '}'
+put env/box/.box/box.json '{' '	"postCreateCommand": "git config core.hooksPath hooks && chown gamma"' '}'
+remember_tree
+apply_keeping 'alpha'
+if refused_with 'conf/keys.json: key row found 0 times, not once: hooks' && untouched && silent; then r=0; else r=1; fi
+check "a key found only below the top level is refused and the tree stays as it was" "$r"
+
+new_case key_twice
+put conf/keys.json '{' '	"hooks": 1,' '	"hooks": 2' '}'
+remember_tree
+apply_keeping 'alpha'
+if refused_with 'conf/keys.json: key row found 2 times, not once: hooks' && untouched && silent; then r=0; else r=1; fi
+check "a key found twice is refused and the tree stays as it was" "$r"
+
+tool_with_manifest hooked <<'ROWS'
+module guard The guard
+module other The other
+key guard conf/settings.json hooks
+hook guard conf/settings.json python3 agent/guard
+hook guard conf/settings.json sh agent/check
+trace guard conf/settings.json agent/guard
+trace guard conf/settings.json agent/check
+module gate The gate
+trace gate conf/settings.json gate/
+ROWS
+
+new_case hooks_of_guard_alone
+put_text conf/settings.json <<'JSON'
+{
+	"permissions": {
+		"allow": []
+	},
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Bash|Monitor",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "python3 agent/guard",
+						"timeout": 30
+					}
+				]
+			}
+		],
+		"SessionStart": [
+			{ "hooks": [ { "type": "command", "command": "sh agent/check" } ] }
+		]
+	}
+}
+JSON
+apply_keeping 'other'
+if [ "$status" -eq 0 ] && said_only 'edited conf/settings.json' \
+	&& holds conf/settings.json '{' '	"permissions": {' '		"allow": []' '	}' '}'; then r=0; else r=1; fi
+check "a hooks key that holds the module's entries alone goes once they are cut" "$r"
+
+beside_the_project() {
+	put_text conf/settings.json <<'JSON'
+{
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Bash|Monitor",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "python3 agent/guard",
+						"timeout": 30
+					}
+				]
+			},
+			{
+				"matcher": "Edit",
+				"hooks": [ { "type": "command", "command": "npx prettier --write" } ]
+			}
+		],
+		"SessionStart": [
+			{ "hooks": [ { "type": "command", "command": "sh agent/check" } ] }
+		]
+	},
+	"worktree": {
+		"baseRef": "head"
+	}
+}
+JSON
+}
+
+new_case hooks_beside_the_project
+beside_the_project
+apply_keeping 'other'
+r=0
+[ "$status" -eq 0 ] && said_only 'edited conf/settings.json' || r=1
+holds_text conf/settings.json <<'JSON' || r=1
+{
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Edit",
+				"hooks": [ { "type": "command", "command": "npx prettier --write" } ]
+			}
+		]
+	},
+	"worktree": {
+		"baseRef": "head"
+	}
+}
+JSON
+well_formed "$tree/conf/settings.json" 'strict' || r=1
+check "the module's groups go, an event they leave empty goes, and the project's group stays well-formed" "$r"
+remember_tree
+apply_keeping 'other'
+if [ "$status" -eq 0 ] && untouched && said_only 'note: guard: no row of it is left to cut'; then r=0; else r=1; fi
+check "apply runs again over hooks whose module's entries an earlier run cut" "$r"
+verify_keeping 'other'
+if [ "$status" -eq 0 ] && silent; then r=0; else r=1; fi
+check "verify passes once the module's entries are cut and the project's stay" "$r"
+
+new_case hooks_verified
+beside_the_project
+verify_keeping 'other'
+if [ "$status" -eq 1 ] && said_only 'leftover conf/settings.json:9: hook python3 agent/guard' \
+	'leftover conf/settings.json:20: hook sh agent/check'; then r=0; else r=1; fi
+check "verify names each of the module's entries in the hooks key once, and none of the project's" "$r"
+
+new_case hooks_in_the_module_group
+put_text conf/settings.json <<'JSON'
+{
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Bash|Monitor",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "python3 agent/guard",
+						"timeout": 30
+					},
+					{
+						"type": "command",
+						"command": "sh scripts/audit.sh"
+					}
+				]
+			}
+		],
+		"SessionStart": [
+			{ "hooks": [ { "type": "command", "command": "sh agent/check" } ] },
+			{ "hooks": [ { "type": "command", "command": "sh scripts/hello.sh" } ] }
+		]
+	}
+}
+JSON
+apply_keeping 'other'
+r=0
+[ "$status" -eq 0 ] && said_only 'edited conf/settings.json' || r=1
+holds_text conf/settings.json <<'JSON' || r=1
+{
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Bash|Monitor",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "sh scripts/audit.sh"
+					}
+				]
+			}
+		],
+		"SessionStart": [
+			{ "hooks": [ { "type": "command", "command": "sh scripts/hello.sh" } ] }
+		]
+	}
+}
+JSON
+well_formed "$tree/conf/settings.json" 'strict' || r=1
+check "a handler of the module goes from a group the project's handler shares, and the group stays" "$r"
+
+new_case hooks_last_in_their_place
+put_text conf/settings.json <<'JSON'
+{
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Bash|Monitor",
+				"hooks": [
+					{ "type": "command", "command": "sh scripts/audit.sh" },
+					{
+						"type": "command",
+						"command": "python3 agent/guard"
+					}
+				]
+			}
+		],
+		"SessionStart": [
+			{ "hooks": [ { "type": "command", "command": "sh agent/check" } ] }
+		],
+		"Stop": [
+			{ "hooks": [ { "type": "prompt", "prompt": "Check the plan" } ] }
+		]
+	}
+}
+JSON
+apply_keeping 'other'
+r=0
+[ "$status" -eq 0 ] && said_only 'edited conf/settings.json' || r=1
+holds_text conf/settings.json <<'JSON' || r=1
+{
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Bash|Monitor",
+				"hooks": [
+					{ "type": "command", "command": "sh scripts/audit.sh" }
+				]
+			}
+		],
+		"Stop": [
+			{ "hooks": [ { "type": "prompt", "prompt": "Check the plan" } ] }
+		]
+	}
+}
+JSON
+well_formed "$tree/conf/settings.json" 'strict' || r=1
+check "a handler that stood last takes the comma of the one before it, and an event between others goes with its own" "$r"
+
+new_case hooks_empty_shapes
+put_text conf/settings.json <<'JSON'
+{
+	"hooks": {
+		"Stop": [],
+		"PreToolUse": [
+			{ "matcher": "Edit", "hooks": [] },
+			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] }
+		],
+		"SessionStart": [
+			{ "hooks": [ { "type": "command", "command": "sh agent/check" } ] }
+		]
+	}
+}
+JSON
+apply_keeping 'other'
+r=0
+[ "$status" -eq 0 ] && said_only 'edited conf/settings.json' || r=1
+holds_text conf/settings.json <<'JSON' || r=1
+{
+	"hooks": {
+		"Stop": [],
+		"PreToolUse": [
+			{ "matcher": "Edit", "hooks": [] }
+		]
+	}
+}
+JSON
+check "an event with no group and a group with no handler are the project's and stay" "$r"
+
+new_case hooks_with_a_comment
+put_text conf/settings.json <<'JSON'
+{
+	"permissions": {},
+	"hooks": {
+		// the guard's entries: { "see": [
+		"PreToolUse": [
+			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] }
+		],
+		"SessionStart": [
+			{ "hooks": [ { "type": "command", "command": "sh agent/check" } ] }
+		]
+	}
+}
+JSON
+apply_keeping 'other'
+if [ "$status" -eq 0 ] && holds conf/settings.json '{' '	"permissions": {}' '}'; then r=0; else r=1; fi
+check "a comment inside the hooks key is read past, whatever brackets it holds" "$r"
+
+hooked_line() {
+	put conf/settings.json '{' '	"hooks": {' '		"PreToolUse": [' "$@" '		],' '		"SessionStart": [' \
+		'			{ "hooks": [ { "type": "command", "command": "sh agent/check" } ] }' '		]' '	}' '}'
+}
+refused_whole() { refused_with "conf/settings.json:$1: an entry of guard's hooks does not stand on lines of its own: $2" && untouched && silent; }
+
+new_case hooks_extended
+hooked_line '			{ "hooks": [ { "type": "command", "command": "python3 agent/guard --strict" } ] }'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json:4: trace of guard: agent/guard' \
+	&& refused_with 'conf/settings.json: hook row found 0 times, not once: python3 agent/guard' && untouched && silent; then r=0; else r=1; fi
+check "a command that names the module's path but is not its row word for word is refused with its line, never cut" "$r"
+
+new_case hooks_on_one_line_first
+hooked_line '			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" }, { "type": "command", "command": "npx eslint --fix" } ] }'
+remember_tree
+apply_keeping 'other'
+if refused_whole 4 '{ "hooks": [ { "type": "command", "command": "python3 agent/guard" }, { "type": "command", "command": "npx eslint --fix" } ] }'; then r=0; else r=1; fi
+check "a handler of the module that shares its line with a handler of the project behind it is refused, never cut" "$r"
+
+new_case hooks_on_one_line_last
+hooked_line '			{ "hooks": [ { "type": "command", "command": "npx eslint --fix" }, { "type": "command", "command": "python3 agent/guard" } ] }'
+remember_tree
+apply_keeping 'other'
+if refused_whole 4 '{ "hooks": [ { "type": "command", "command": "npx eslint --fix" }, { "type": "command", "command": "python3 agent/guard" } ] }'; then r=0; else r=1; fi
+check "a handler of the module that shares its line with a handler of the project before it is refused, never cut" "$r"
+
+new_case hooks_sharing_their_last_line
+hooked_line '			{ "hooks": [' '				{ "type": "command", "command": "python3 agent/guard" }, { "type": "command", "command": "npx eslint --fix" }' '			] }'
+remember_tree
+apply_keeping 'other'
+if refused_whole 5 '{ "type": "command", "command": "python3 agent/guard" }, { "type": "command", "command": "npx eslint --fix" }'; then r=0; else r=1; fi
+check "a handler of the module that starts its line but ends where the project's handler starts is refused, never cut" "$r"
+
+new_case hooks_sharing_their_first_line
+hooked_line '			{ "hooks": [ { "type": "command", "command": "npx eslint --fix" }, {' \
+	'				"type": "command", "command": "python3 agent/guard"' '			}' '			] }'
+remember_tree
+apply_keeping 'other'
+if refused_whole 4 '{ "hooks": [ { "type": "command", "command": "npx eslint --fix" }, {'; then r=0; else r=1; fi
+check "a handler of the module that ends its line but starts where the project's handler ends is refused, never cut" "$r"
+
+new_case hooks_comma_below
+hooked_line '			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] }' \
+	'			, { "hooks": [ { "type": "command", "command": "npx eslint --fix" } ] }'
+remember_tree
+apply_keeping 'other'
+if refused_whole 5 ', { "hooks": [ { "type": "command", "command": "npx eslint --fix" } ] }'; then r=0; else r=1; fi
+check "a group of the module whose comma stands on the next line is refused, never cut" "$r"
+
+new_case hooks_twice
+hooked_line '			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] },' \
+	'			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] }'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json: hook row found 2 times, not once: python3 agent/guard' && untouched && silent; then r=0; else r=1; fi
+check "a handler of the module found twice is refused and the tree stays as it was" "$r"
+
+new_case hooks_one_missing
+put conf/settings.json '{' '	"hooks": {' '		"PreToolUse": [' '			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] }' '		]' '	}' '}'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json: hook row found 0 times, not once: sh agent/check' && untouched && silent; then r=0; else r=1; fi
+check "a handler of the module left out while the other stands is refused and the tree stays as it was" "$r"
+
+new_case hooks_unread
+hooked_line '			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] },'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json:4: trace of guard: agent/guard' && untouched && silent; then r=0; else r=1; fi
+check "a hooks value that does not read as JSON cuts nothing, and the module's commands in it are refused as traces" "$r"
+
+new_case hooks_comma_missing
+hooked_line '			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] }' \
+	'			{ "hooks": [ { "type": "command", "command": "npx eslint --fix" } ] }'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json:4: trace of guard: agent/guard' && untouched && silent; then r=0; else r=1; fi
+check "a hooks value whose elements lack a comma cuts nothing, and the module's command in it is refused as a trace" "$r"
+
+new_case hooks_key_sharing_its_last_line
+put conf/settings.json '{' '	"hooks": {' '		"PreToolUse": [' \
+	'			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] }' '		],' '		"SessionStart": [' \
+	'			{ "hooks": [ { "type": "command", "command": "sh agent/check" } ] }' '		]' \
+	'	}, "permissions": {' '		"allow": []' '	}' '}'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json:9: key hooks does not stand on lines of its own: }, "permissions": {' && untouched && silent; then r=0; else r=1; fi
+check "a hooks key that would go whole but shares its last line with a member that stays is refused, never cut" "$r"
+
+new_case hooks_key_comma_below
+put conf/settings.json '{' '	"a": 1,' '	"hooks": {' '		"PreToolUse": [' \
+	'			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] }' '		],' '		"SessionStart": [' \
+	'			{ "hooks": [ { "type": "command", "command": "sh agent/check" } ] }' '		]' '	}' '' '	// the model' '	, "model": "opus"' '}'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json:13: key hooks does not stand on lines of its own: , "model": "opus"' && untouched && silent; then r=0; else r=1; fi
+check "a hooks key whose comma stands on a later line, past a blank and a comment, is refused, never cut" "$r"
+
+new_case hooks_key_on_one_line
+one_line='"hooks": { "PreToolUse": [ { "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] } ], "SessionStart": [ { "hooks": [ { "type": "command", "command": "sh agent/check" } ] } ] }, "model": "opus"'
+put conf/settings.json '{' "	$one_line" '}'
+remember_tree
+apply_keeping 'other'
+if refused_with "conf/settings.json:2: key hooks does not stand on lines of its own: $one_line" && untouched && silent; then r=0; else r=1; fi
+check "a hooks key on one line with a member that stays is refused, never cut" "$r"
+
+for twice in 'command first:{ "hooks": [ { "type": "command", "command": "python3 agent/guard", "command": "sh scripts/mine.sh" } ] }' \
+	'command last:{ "hooks": [ { "type": "command", "command": "sh scripts/mine.sh", "command": "python3 agent/guard" } ] }' \
+	'hooks first:{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ], "hooks": [ { "type": "command", "command": "sh scripts/mine.sh" } ] }' \
+	'hooks last:{ "hooks": [ { "type": "command", "command": "sh scripts/mine.sh" } ], "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] }'; do
+	label=${twice%%:*}
+	new_case "hooks_twice_named_${label% *}_${label#* }"
+	hooked_line "			${twice#*:}"
+	remember_tree
+	apply_keeping 'other'
+	if refused_with 'conf/settings.json:4: trace of guard: agent/guard' && untouched && silent; then r=0; else r=1; fi
+	check "a member \"${label% *}\" named twice in one object, the module's ${label#* }, reads as none, so the module's command in it is refused as a trace, never cut" "$r"
+done
+
+new_case hooks_of_a_group_not_an_array
+hooked_line '			{ "hooks": { "a": { "type": "command", "command": "python3 agent/guard" } } }'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json:4: trace of guard: agent/guard' && untouched && silent; then r=0; else r=1; fi
+check "a group whose hooks member is no array holds no handler, so the module's command in it is refused as a trace" "$r"
+
+new_case hooks_event_not_an_array
+put conf/settings.json '{' '	"hooks": {' \
+	'		"PreToolUse": { "a": { "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] } },' '		"SessionStart": [' \
+	'			{ "hooks": [ { "type": "command", "command": "sh agent/check" } ] }' '		]' '	}' '}'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json:3: trace of guard: agent/guard' && untouched && silent; then r=0; else r=1; fi
+check "an event that is no array holds no group, so the module's command in it is refused as a trace" "$r"
+
+new_case hooks_open_string
+hooked_line '			{ "hooks": [ { "type": "command", "command": "python3 agent/guard' '			} ] }'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json:4: trace of guard: agent/guard' && untouched && silent; then r=0; else r=1; fi
+check "a string left open on its line cuts nothing, and the module's command in it is refused as a trace" "$r"
+
+new_case hooks_never_closed
+hooked_line '			{ "hooks": [ { "type": "command", "command": "python3 agent/guard } ] }'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json:2: key hooks is never closed' && refused_with 'conf/settings.json:4: trace of guard: agent/guard' \
+	&& untouched && silent; then r=0; else r=1; fi
+check "a key whose brackets never close, a string left open, is refused, and its module's commands as traces" "$r"
+verify_keeping 'other'
+if [ "$status" -eq 1 ] && said 'leftover conf/settings.json:4: trace agent/guard'; then r=0; else r=1; fi
+check "verify reads the lines of a key that is never closed for traces" "$r"
+
+new_case hooks_named_with_a_suffix
+hooked_line '			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] },' \
+	'			{ "hooks": [ { "type": "command", "command": "sh scripts/agent/check.sh" } ] }'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json:5: trace of guard: agent/check' && untouched && silent; then r=0; else r=1; fi
+check "a command of the project whose path runs on past its module's with a dot is refused as a trace, never cut" "$r"
+
+new_case hooks_named_alike
+hooked_line '			{ "hooks": [ { "type": "command", "command": "python3 agent/guard" } ] },' \
+	'			{ "hooks": [ { "type": "command", "command": "sh tools/agent/checker.sh" } ] }'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json:5: trace of guard: agent/check' && untouched && silent; then r=0; else r=1; fi
+check "a command of the project whose path only begins like its module's is refused as a trace, never cut" "$r"
+
+new_case hooks_of_the_project
+put conf/settings.json '{' '	"hooks": {' '		"PostToolUse": [ { "hooks": [ { "type": "command", "command": "npx prettier --write" } ] } ]' '	}' '}'
+remember_tree
+apply_keeping 'other'
+if [ "$status" -eq 0 ] && [ ! -s "$err" ] && untouched && said_only 'note: guard: no row of it is left to cut'; then r=0; else r=1; fi
+check "a hooks key that holds none of its module's entries stays, and the module is named as having no row left" "$r"
+verify_keeping 'other'
+if [ "$status" -eq 0 ] && silent; then r=0; else r=1; fi
+check "verify counts a hooks key that holds none of its module's entries as no leftover" "$r"
+
+new_case hooks_empty
+put conf/settings.json '{' '	"hooks": {}' '}'
+remember_tree
+apply_keeping 'other'
+if [ "$status" -eq 0 ] && [ ! -s "$err" ] && untouched; then r=0; else r=1; fi
+check "an empty hooks key of the project stays" "$r"
+
+new_case hooks_kept_with_a_trace
+put conf/settings.json '{' '	"hooks": {' '		"PostToolUse": [ { "hooks": [ { "type": "command", "command": "sh gate/lint" } ] } ]' '	}' '}'
+remember_tree
+apply_keeping 'other'
+if refused_with 'conf/settings.json:3: trace of gate: gate/' && untouched; then r=0; else r=1; fi
+check "a key that stays is still read for the traces of dropped modules" "$r"
+verify_keeping 'other'
+if [ "$status" -eq 1 ] && said_only 'leftover conf/settings.json:3: trace gate/'; then r=0; else r=1; fi
+check "verify names a trace inside a key that stays" "$r"
+
+tool_with_manifest unkeyed <<'ROWS'
+module guard The guard
+hook guard conf/settings.json python3 agent/guard
+key guard conf/other.json hooks
+ROWS
+new_case hook_without_key
+put conf/settings.json '{' '	"hooks": {}' '}'
+filter apply --keep '' --root "$tree"
+if refused_with 'module-manifest line 2: a hook row needs a key row of its module in its file'; then r=0; else r=1; fi
+check "a hook row with no key row of its module in its file is refused" "$r"
+tool=$standard
+
+box_file() {
+	put "$1" '{' '	"name": "box",' '	// MODULE gamma' '	"volume": "gamma",' '	// /MODULE gamma' \
+		'	"postCreateCommand": "git config core.hooksPath hooks && chown gamma"' '}'
+}
+
+box_holds_no_gamma() {
+	holds "$1" '{' '	"name": "box",' '	"postCreateCommand": "git config core.hooksPath hooks"' '}'
+}
+
+new_case cut_dropped
+box_file env/box/.box/box.json
+apply_keeping 'alpha'
+if [ "$status" -eq 0 ] && box_holds_no_gamma env/box/.box/box.json && said_only 'edited env/box/.box/box.json'; then r=0; else r=1; fi
+check "a cut text of a dropped module leaves its line without it" "$r"
+
+new_case cut_kept
+box_file env/box/.box/box.json
+remember_tree
+apply_keeping 'gamma'
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "a cut text of a kept module stays" "$r"
+
+new_case cut_two_lines
+put env/box/.box/box.json '{' '	"a": "x && chown gamma",' '	"b": "y && chown gamma"' '}'
+remember_tree
+apply_keeping 'alpha'
+if refused_with 'env/box/.box/box.json: cut row found 2 times, not once:  && chown gamma' && untouched && silent; then r=0; else r=1; fi
+check "a cut text found on two lines is refused and the tree stays as it was" "$r"
+
+new_case cut_twice_on_a_line
+put env/box/.box/box.json '{' '	"a": "x && chown gamma && chown gamma"' '}'
+remember_tree
+apply_keeping 'alpha'
+if refused_with 'env/box/.box/box.json: cut row found 2 times, not once:  && chown gamma' && untouched && silent; then r=0; else r=1; fi
+check "a cut text found twice on one line is refused" "$r"
+
+new_case cut_nowhere
+put env/box/.box/box.json '{' '	"a": "x"' '}'
+standard_rules
+remember_tree
+apply_keeping 'alpha'
+if refused_with 'env/box/.box/box.json: cut row found 0 times, not once:  && chown gamma' && untouched && silent; then r=0; else r=1; fi
+check "a cut text found nowhere is refused and the tree stays as it was" "$r"
+
+new_case payload
+payload=$work/payload/payload
+mkdir -p "$payload/env/box/.box" "$payload/docs" "$payload/env/plain"
+: > "$payload/env/box/.box/box.json"
+: > "$payload/env/box/.box/gamma.sh"
+: > "$payload/env/plain/.versions"
+: > "$payload/docs/guide.md"
+box_file .box/box.json
+put .box/gamma.sh 'x'
+put .versions 'core 1' '# MODULE gamma' 'gamma 2' '# /MODULE gamma'
+put docs/guide.md 'Core.' '<!-- MODULE gamma -->' 'G.' '<!-- /MODULE gamma -->'
+put docs/own.md 'Mine.' '<!-- MODULE gamma -->' 'never closed'
+cp "$tree/docs/own.md" "$work/payload/own-as-it-was.md"
+apply_keeping 'alpha' --payload "$payload"
+if [ "$status" -eq 0 ] && cmp -s "$work/payload/own-as-it-was.md" "$tree/docs/own.md" && holds docs/guide.md 'Core.'; then r=0; else r=1; fi
+check "a file the payload does not hold is never scanned" "$r"
+if box_holds_no_gamma .box/box.json && said 'edited .box/box.json'; then r=0; else r=1; fi
+check "the installed copy of a payload directory's file is filtered by the rows of that file" "$r"
+if holds .versions 'core 1' && said 'edited .versions'; then r=0; else r=1; fi
+check "the installed copy of a single payload file is filtered" "$r"
+if said 'remove .box/gamma.sh' && ! grep -q '^remove env/' "$out"; then r=0; else r=1; fi
+check "the installed copy of a dropped module's path is named, the absent payload path is not" "$r"
+verify_keeping 'alpha' --payload "$payload"
+if [ "$status" -eq 1 ] && said_only 'leftover .box/gamma.sh: path of gamma'; then r=0; else r=1; fi
+check "verify reads the files the payload holds and no other" "$r"
+
+new_case both_copies
+box_file env/box/.box/box.json
+box_file .box/box.json
+apply_keeping 'alpha'
+if [ "$status" -eq 0 ] && box_holds_no_gamma env/box/.box/box.json && box_holds_no_gamma .box/box.json \
+	&& said_only 'edited env/box/.box/box.json' 'edited .box/box.json'; then r=0; else r=1; fi
+check "a payload file and its installed copy are both filtered where both exist" "$r"
+
+tool_with_manifest traced <<'ROWS'
+module alpha The alpha tools
+module gamma The gamma volume
+json alpha conf/rules.json Bash(sh alpha/*)
+cut gamma env/box/.box/box.json  && chown gamma
+trace alpha conf/rules.json alpha/
+trace gamma env/box/.box/box.json chown gamma
+installs env/box/.box/ .box/
+ROWS
+traced=$tool
+traced_payload=$work/traced-payload
+mkdir -p "$traced_payload/env/box/.box"
+printf '%s\n' '{' '	"postCreateCommand": "git config core.hooksPath hooks && chown gamma"' '}' > "$traced_payload/env/box/.box/box.json"
+
+new_case copy_without_cut
+put .box/box.json '{' '	"postCreateCommand": "git config core.hooksPath hooks"' '}'
+remember_tree
+apply_keeping 'alpha' --payload "$traced_payload"
+if [ "$status" -eq 0 ] && untouched && said_only 'note: .box/box.json: cut row not found, nothing to cut:  && chown gamma'; then r=0; else r=1; fi
+check "an installed copy that lacks a cut text is noted and left as it is" "$r"
+
+new_case payload_file_without_cut
+put env/box/.box/box.json '{' '	"postCreateCommand": "git config core.hooksPath hooks"' '}'
+put .box/box.json '{' '	"postCreateCommand": "git config core.hooksPath hooks"' '}'
+standard_rules
+remember_tree
+traced_tool=$tool
+tool=$standard
+apply_keeping 'alpha'
+tool=$traced_tool
+if refused_with 'env/box/.box/box.json: cut row found 0 times, not once:  && chown gamma' && untouched && silent; then r=0; else r=1; fi
+check "the payload's own file that lacks a cut text is refused, whatever its installed copy holds, while another row of its module stands" "$r"
+
+new_case copy_with_cut_twice
+put .box/box.json '{' '	"a": "x && chown gamma",' '	"b": "y && chown gamma"' '}'
+remember_tree
+apply_keeping 'alpha' --payload "$traced_payload"
+if refused_with '.box/box.json: cut row found 2 times, not once:  && chown gamma' && untouched && silent; then r=0; else r=1; fi
+check "an installed copy that holds a cut text twice is refused" "$r"
+
+new_case copy_with_other_spelling
+put .box/box.json '{' '	"postCreateCommand": "git config core.hooksPath hooks &&  chown gamma"' '}'
+remember_tree
+apply_keeping 'alpha' --payload "$traced_payload"
+if refused_with '.box/box.json:2: trace of gamma: chown gamma' && untouched && silent; then r=0; else r=1; fi
+check "an installed copy that holds a dropped module's link in another spelling is refused by the trace row" "$r"
+
+new_case rule_on_a_shared_line
+put conf/rules.json '{' '	"allow": ["Edit(docs/**)", "Bash(sh alpha/*)"]' '}'
+remember_tree
+apply_keeping 'gamma'
+if refused_with 'conf/rules.json:2: trace of alpha: alpha/' && untouched && silent; then r=0; else r=1; fi
+check "a rule of a dropped module reformatted onto one line with others is refused by the trace row" "$r"
+
+new_case trace_kept
+put conf/rules.json '{' '	"allow": ["Edit(docs/**)", "Bash(sh alpha/*)"]' '}'
+put .box/box.json '{' '	"postCreateCommand": "git config core.hooksPath hooks &&  chown gamma"' '}'
+remember_tree
+filter apply --keep 'alpha gamma' --root "$tree" --payload "$traced_payload"
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "a trace row of a kept module refuses nothing" "$r"
+
+new_case trace_after_the_cut
+put .box/box.json '{' '	"postCreateCommand": "git config core.hooksPath hooks && chown gamma"' '}'
+apply_keeping 'alpha' --payload "$traced_payload"
+if [ "$status" -eq 0 ] && holds .box/box.json '{' '	"postCreateCommand": "git config core.hooksPath hooks"' '}' \
+	&& said_only 'edited .box/box.json'; then r=0; else r=1; fi
+check "a trace row reads the line as the cut leaves it" "$r"
+
+new_case verify_compact_rule
+put conf/rules.json '{' '	"allow": ["Bash(sh alpha/*)", "core"]' '}'
+verify_keeping 'gamma'
+if [ "$status" -eq 1 ] && said_only 'leftover conf/rules.json:2: trace alpha/'; then r=0; else r=1; fi
+check "verify names a rule of a dropped module that shares its line with others" "$r"
+
+new_case verify_copy_other_spelling
+put .box/box.json '{' '	"postCreateCommand": "git config core.hooksPath hooks &&  chown gamma"' '}'
+verify_keeping 'alpha' --payload "$traced_payload"
+if [ "$status" -eq 1 ] && said_only 'leftover .box/box.json:2: trace chown gamma'; then r=0; else r=1; fi
+check "verify names a dropped module's link in another spelling in an installed copy" "$r"
+tool=$standard
+
+tool_with_manifest rooted <<'ROWS'
+module alpha The alpha tools
+json alpha conf/rules.json Bash(/workspaces/{{PROJECT_NAME}}/.claude/worktrees/*/gate/walk*)
+json alpha conf/rules.json Bash(sh alpha/*)
+ROWS
+new_case verify_rewritten_root
+put conf/rules.json '{' '	"allow": [' '		"Bash(/workspaces/acme/.claude/worktrees/*/gate/walk*)",' \
+	'		"Bash(/opt/my acme/.claude/worktrees/*/gate/walk*)",' '		"Bash(/workspaces/acme/.claude/worktrees/*/gate/walker*)",' \
+	'		"Bash(sh /workspaces/acme/.claude/worktrees/*/gate/walk*)",' '		"Bash(/workspaces/{{PROJECT_NAME}}/.claude/worktrees/*/gate/walk*)",' \
+	'		"Bash(sh beta/*)"' '	]' '}'
+verify_keeping ''
+if [ "$status" -eq 1 ] && said_only 'leftover conf/rules.json:3: json Bash(/workspaces/{{PROJECT_NAME}}/.claude/worktrees/*/gate/walk*)' \
+	'leftover conf/rules.json:4: json Bash(/workspaces/{{PROJECT_NAME}}/.claude/worktrees/*/gate/walk*)' \
+	'leftover conf/rules.json:7: json Bash(/workspaces/{{PROJECT_NAME}}/.claude/worktrees/*/gate/walk*)'; then r=0; else r=1; fi
+check "verify names a json line whose project root adoption has rewritten to any path" "$r"
+tool=$standard
+
+new_case baseline
+put .template/baseline/docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+put docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+put docs/own.md 'Mine.' '<!-- MODULE alpha -->' 'never closed'
+apply_keeping ''
+if [ "$status" -eq 0 ] && said_only 'edited docs/guide.md' && holds docs/guide.md 'Core.' \
+	&& holds .template/baseline/docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->' \
+	&& holds docs/own.md 'Mine.' '<!-- MODULE alpha -->' 'never closed'; then r=0; else r=1; fi
+check "the payload is .template/baseline where the root holds one, and the baseline stays as it is" "$r"
+
+leftovers() {
+	put docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->' '<!-- MODULE delta -->'
+	put scripts/run 'first' '# /MODULE beta'
+	standard_rules
+	box_file env/box/.box/box.json
+	put tools/alpha/tool 'x' '# MODULE gamma'
+	put tools/alpha/beta-helper 'x'
+}
+
+new_case verify_leftovers
+leftovers
+remember_tree
+verify_keeping ''
+if said 'leftover docs/guide.md:2: fence alpha' && said 'leftover scripts/run:2: fence beta' && said 'leftover env/box/.box/box.json:3: fence gamma'; then r=0; else r=1; fi
+check "verify names a fence of a dropped module, a stray closing one too" "$r"
+if said 'leftover conf/rules.json:5: json Bash(sh alpha/*)' && said 'leftover conf/rules.json:9: json Bash(sh alpha/*..*)' \
+	&& said 'leftover conf/rules.json:13: json /alpha'; then r=0; else r=1; fi
+check "verify names a json line of a dropped module" "$r"
+if said 'leftover conf/rules.json:16: key hooks' && ! grep -q 'rules.json:26' "$out"; then r=0; else r=1; fi
+check "verify names a top-level key of a dropped module" "$r"
+if said 'leftover env/box/.box/box.json:6: cut  && chown gamma'; then r=0; else r=1; fi
+check "verify names a cut text of a dropped module" "$r"
+if said 'leftover tools/alpha/: path of alpha' && ! grep -q 'beta-helper' "$out" && ! grep -q 'tools/alpha/tool' "$out"; then r=0; else r=1; fi
+check "verify names a path of a dropped module once and reads nothing below it" "$r"
+if [ "$status" -eq 1 ] && [ "$(grep -c '^leftover ' "$out")" -eq 9 ] \
+	&& [ "$(grep -v '^leftover ' "$out")" = 'note: docs/guide.md: fence of no manifest module: delta' ] && untouched; then r=0; else r=1; fi
+check "verify exits 1 with one line per leftover, one note on the fence of no module, and changes nothing" "$r"
+
+new_case verify_kept
+leftovers
+verify_keeping 'alpha beta gamma'
+if [ "$status" -eq 0 ] && said_only 'note: docs/guide.md: fence of no manifest module: delta'; then r=0; else r=1; fi
+check "verify passes where every module is kept" "$r"
+
+new_case verify_after_apply
+put docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+standard_rules
+box_file env/box/.box/box.json
+put tools/alpha/tool 'x'
+apply_keeping '' --prune
+applied=$status
+verify_keeping ''
+if [ "$applied" -eq 0 ] && [ "$status" -eq 0 ] && silent; then r=0; else r=1; fi
+check "verify passes on the tree apply --prune leaves" "$r"
+remember_tree
+apply_keeping ''
+if [ "$status" -eq 0 ] && [ ! -s "$err" ] && untouched \
+	&& said_only 'note: alpha: no row of it is left to cut' 'note: gamma: no row of it is left to cut'; then r=0; else r=1; fi
+check "a second apply whose rows are gone passes, names each module already cut and changes nothing" "$r"
+
+new_case later_drop
+put docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->'
+standard_rules
+box_file env/box/.box/box.json
+apply_keeping 'alpha beta'
+first=$status
+apply_keeping ''
+if [ "$first" -eq 0 ] && [ "$status" -eq 0 ] && [ ! -s "$err" ] && holds docs/guide.md 'Core.' && ! grep -qF 'alpha/' "$tree/conf/rules.json" \
+	&& said 'note: gamma: no row of it is left to cut' && said 'edited conf/rules.json'; then r=0; else r=1; fi
+check "a later apply that drops one more module cuts it and names the module an earlier apply cut" "$r"
+
+new_case partly_cut
+standard_rules
+box_file env/box/.box/box.json
+apply_keeping 'alpha beta'
+put_text conf/rules.json <<'JSON'
+{
+	"permissions": {
+		"allow": [
+			"Bash(sh alpha/*)",
+			"Bash(core:*)"
+		]
+	}
+}
+JSON
+remember_tree
+apply_keeping ''
+if refused_with 'conf/rules.json: json row found 0 times, not once: /alpha' && untouched && silent; then r=0; else r=1; fi
+check "a module whose rows are gone in part is refused and the tree stays as it was" "$r"
+
+new_case second_apply
+put docs/guide.md 'Core.' '<!-- MODULE beta -->' 'B.' '<!-- /MODULE beta -->'
+apply_keeping 'alpha gamma'
+remember_tree
+apply_keeping 'alpha gamma'
+if [ "$status" -eq 0 ] && untouched && silent; then r=0; else r=1; fi
+check "a second apply of a module that has only fences changes nothing" "$r"
+
+new_case keep_all
+module_paths
+put docs/guide.md 'Core.' '<!-- MODULE alpha -->' 'A.' '<!-- /MODULE alpha -->' '<!-- MODULE delta -->'
+standard_rules
+box_file env/box/.box/box.json
+remember_tree
+apply_keeping 'alpha beta gamma'
+if [ "$status" -eq 0 ] && untouched && said_only 'note: docs/guide.md: fence of no manifest module: delta'; then r=0; else r=1; fi
+check "apply keeping every module edits nothing and names no path" "$r"
+
+tool=$adopt_dir
+case_name=repository
+broken=0
+own=$work/repository
+mkdir -p "$own"
+skip_rows=$(sed -n 's/^skip //p' "$live_manifest")
+
+in_a_skip_row() {
+	for skipped in $skip_rows; do
+		case $1/ in "${skipped%/}/"*) return 0 ;; esac
+	done
+	return 1
+}
+
+repository_files() {
+	if git -C "$repository" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+		git -C "$repository" -c core.quotepath=off ls-files -co --exclude-standard
+	else
+		(cd "$repository" && find . -type f) | sed 's/^\.\///'
+	fi
+}
+
+copy_repository() {
+	repository_files > "$own/files" || return 1
+	batch=
+	set --
+	while IFS= read -r file; do
+		if in_a_skip_row "$file" || [ ! -f "$repository/$file" ]; then continue; fi
+		case $file in */*) folder=${file%/*} ;; *) folder=. ;; esac
+		if [ "$folder" != "$batch" ]; then
+			[ $# -eq 0 ] || cp -p "$@" "$pristine/$batch/" || return 1
+			set --
+			batch=$folder
+			mkdir -p "$pristine/$batch" || return 1
+		fi
+		set -- "$@" "$repository/$file"
+	done < "$own/files"
+	[ $# -eq 0 ] || cp -p "$@" "$pristine/$batch/"
+}
+
+pristine=$own/pristine
+step copy_repository
+(cd "$pristine" && find . -type f | sort) > "$own/pristine-files"
+
+settings_lines_stand_in_their_rows() {
+	LC_ALL=C awk '
+		function of_the_four(names,   part, count, i, found, joined) {
+			count = split(names, part, "+")
+			for (i = 1; i <= count; i++) found[part[i]] = 1
+			joined = ""
+			if ("agent-seat" in found) joined = joined "+agent-seat"
+			if ("gate" in found) joined = joined "+gate"
+			if ("security-lens" in found) joined = joined "+security-lens"
+			if ("volumes" in found) joined = joined "+volumes"
+			return substr(joined, 2)
+		}
+		FILENAME == ARGV[1] {
+			if ($1 == "json" && $3 == ".claude/settings.json") {
+				text = $0
+				for (i = 1; i <= 3; i++) text = substr(text, index(text, " ") + 1)
+				row_modules[text] = of_the_four($2)
+			}
+			next
+		}
+		{
+			line = $0
+			sub(/^[ \t]+/, "", line)
+			sub(/[ \t\r]+$/, "", line)
+			sub(/,$/, "", line)
+			elsewhere = line
+			gsub(/\.claude\/worktrees/, "", elsewhere)
+			named = ""
+			if (index(line, "fetch --prune origin)")) named = named "+agent-seat"
+			if (index(line, "gate/")) named = named "+gate"
+			if (index(line, "lens-request")) named = named "+security-lens"
+			if (index(elsewhere, "/worktrees")) named = named "+volumes"
+			named = substr(named, 2)
+			inner = (line ~ /^".*"$/) ? substr(line, 2, length(line) - 2) : ""
+			standing = (inner != "" && (inner in row_modules)) ? row_modules[inner] : ""
+			if (standing != named) {
+				print FNR ": " line
+				misfit = 1
+			}
+		}
+		END { exit misfit }
+	' "$live_manifest" "$pristine/.claude/settings.json"
+}
+
+if settings_lines_stand_in_their_rows > "$own/misfits" 2>&1; then r=0; else r=1; fi
+check "every line of .claude/settings.json that names fetch --prune origin), gate/, lens-request or /worktrees stands in a row of exactly those modules" "$r" "$own/misfits"
+
+r=0
+sed -n -e 's/^path [^ ]* //p' -e 's/^installs \([^ ]*\) .*/\1/p' "$live_manifest" > "$own/named-paths"
+while IFS= read -r named_path; do
+	[ -e "$pristine/$named_path" ] || r=1
+done < "$own/named-paths"
+[ -s "$own/named-paths" ] || r=1
+check "every path row and every installs row names a file or directory of this repository" "$r"
+
+r=0
+sed -n -e 's/^json [^ ]* \([^ ]*\) .*/\1/p' -e 's/^key [^ ]* \([^ ]*\) .*/\1/p' -e 's/^hook [^ ]* \([^ ]*\) .*/\1/p' \
+	-e 's/^cut [^ ]* \([^ ]*\) .*/\1/p' "$live_manifest" | sort -u > "$own/row-files"
+: > "$own/missing-row-files"
+while IFS= read -r row_file; do
+	[ -f "$pristine/$row_file" ] || { printf '%s\n' "$row_file" >> "$own/missing-row-files"; r=1; }
+done < "$own/row-files"
+[ -s "$own/row-files" ] || r=1
+check "every json, key, hook and cut row names a file of this repository" "$r" "$own/missing-row-files"
+
+hook_rows_stand_as_commands() {
+	LC_ALL=C awk '
+		BEGIN { BINMODE = 3 }
+		FNR == NR {
+			sub(/\r$/, "")
+			if ($1 != "hook") next
+			text = $0
+			for (i = 1; i <= 3; i++) text = substr(text, index(text, " ") + 1)
+			rows++
+			if ($3 != ".claude/settings.json") { print "hook row of another file: " $0; misfit = 1; next }
+			wanted["\"command\": \"" text "\""] = $0
+			next
+		}
+		{
+			line = $0
+			sub(/^[ \t]+/, "", line)
+			sub(/[ \t\r]+$/, "", line)
+			sub(/,$/, "", line)
+			if (line in wanted) seen[line]++
+			else if (line ~ /agent\/(bash-shape-guard|session-check)/) { print FNR ": a guard command no hook row names: " line; misfit = 1 }
+		}
+		END {
+			for (line in wanted) if (seen[line] != 1) { print "hook row found " (seen[line] + 0) " times as a command: " wanted[line]; misfit = 1 }
+			exit (misfit || rows != 2) ? 1 : 0
+		}
+	' "$live_manifest" "$pristine/.claude/settings.json"
+}
+
+if hook_rows_stand_as_commands > "$own/hook-misfits" 2>&1; then r=0; else r=1; fi
+check "each guard command of .claude/settings.json stands word for word in one hook row, and each hook row once as a command there" "$r" "$own/hook-misfits"
+
+trace_lines() {
+	TEXT=$1 LC_ALL=C awk '
+		BEGIN { BINMODE = 3; text = ENVIRON["TEXT"] }
+		{
+			from = 0
+			while ((at = index(substr($0, from + 1), text)) > 0) {
+				from += at
+				if (from > 1 && substr($0, from - 1, 1) ~ /[A-Za-z0-9_.-]/) continue
+				print FNR ": " $0
+				found = 1
+				break
+			}
+		}
+		END { exit !found }
+	' "$2"
+}
+
+r=0
+sed -n 's/^trace //p' "$live_manifest" > "$own/trace-rows"
+while IFS=' ' read -r trace_names trace_file trace_text; do
+	trace_lines "$trace_text" "$pristine/$trace_file" > /dev/null || r=1
+done < "$own/trace-rows"
+[ -s "$own/trace-rows" ] || r=1
+check "every trace row's text stands in its file in this repository, after a character that ends a word" "$r"
+
+traces_left() {
+	while IFS=' ' read -r trace_names trace_file trace_text; do
+		trace_dropped=0
+		for trace_name in $(printf '%s\n' "$trace_names" | tr '+' ' '); do
+			case " $kept_set " in *" $trace_name "*) ;; *) trace_dropped=1 ;; esac
+		done
+		[ "$trace_dropped" -eq 1 ] && [ -f "$tree/$trace_file" ] || continue
+		! trace_lines "$trace_text" "$tree/$trace_file" || return 1
+	done < "$own/trace-rows"
+}
+
+filter list
+cp "$out" "$own/list"
+every_module=$(awk -F '\t' '$1 != "" { printf "%s ", $1 }' "$own/list")
+
+tree=$own/keep-all
+step cp -R "$pristine" "$tree"
+apply_keeping "$every_module"
+if [ "$status" -eq 0 ] && ! grep -qv '^note: ' "$out" && diff -r "$pristine" "$tree" > /dev/null 2>&1; then r=0; else r=1; fi
+check "keeping every module leaves this repository as it is" "$r"
+if [ "$status" -eq 0 ] && silent; then r=0; else r=1; fi
+check "every fence name in this repository is a manifest module" "$r"
+
+fence_like_lines_are_fences() {
+	(cd "$1" && find . -type f ! -path './stacks/java-gradle/kb-guard/*') | sed 's/^\.\///' | ROOT=$1 LC_ALL=C awk '
+		BEGIN { BINMODE = 3 }
+		{
+			name = $0
+			base = name
+			sub(/^.*\//, "", base)
+			if (base ~ /\.md$/) exact = "^<!-- /?MODULE [^ \t]+ -->$"
+			else if (base ~ /\.jsonc?$/) exact = "^// /?MODULE [^ \t]+$"
+			else if (base ~ /^\./ || base !~ /\./ || base ~ /\.(sh|yml|yaml|env|toml)$/) exact = "^# /?MODULE [^ \t]+$"
+			else exact = "^$"
+			file = ENVIRON["ROOT"] "/" name
+			number = 0
+			while ((getline line < file) > 0) {
+				number++
+				sub(/^[ \t]+/, "", line)
+				sub(/[ \t\r]+$/, "", line)
+				if (line !~ /^(<!--|[#]|\/\/)[ \t]*\/?MODULE/ || line ~ exact) continue
+				print name ":" number ": " line
+				wrong = 1
+			}
+			close(file)
+		}
+		END { exit wrong }
+	'
+}
+
+if fence_like_lines_are_fences "$pristine" > "$own/fence-like" 2>&1; then r=0; else r=1; fi
+check "every fence-like line in this repository is an exact fence of its file type" "$r" "$own/fence-like"
+
+tree=$own/near-miss
+step cp -R "$pristine" "$tree"
+near_miss_doc=docs/knowledge-base/testing.md
+{ printf '%s\n' '<!-- MODULE gate-->'; cat "$pristine/$near_miss_doc"; } > "$tree/$near_miss_doc"
+if ! fence_like_lines_are_fences "$tree" > "$own/fence-like-near-miss" 2>&1 \
+	&& grep -qxF "$near_miss_doc:1: <!-- MODULE gate-->" "$own/fence-like-near-miss"; then r=0; else r=1; fi
+check "this repository with a near-miss fence in a knowledge-base doc: the fence-like line check finds it" "$r"
+remember_tree
+apply_keeping ''
+if near_miss "$near_miss_doc:1" '<!-- MODULE gate-->' && untouched && silent; then r=0; else r=1; fi
+check "this repository with a near-miss fence in a knowledge-base doc: apply refuses it and changes nothing" "$r"
+verify_keeping "$every_module"
+if [ "$status" -eq 1 ] && said_only "leftover $near_miss_doc:1: fence-like line <!-- MODULE gate-->"; then r=0; else r=1; fi
+check "this repository with a near-miss fence in a knowledge-base doc: verify names it" "$r"
+
+project_settings() {
+	mkdir -p "$tree/.claude" && ADDED=$1 LC_ALL=C awk '
+		{ print }
+		/"allow": \[/ && ENVIRON["ADDED"] != "" && !added { print "\t\t\t" ENVIRON["ADDED"]; added = 1 }
+	' "$pristine/.claude/settings.json" > "$tree/.claude/settings.json"
+}
+
+in_a_project() {
+	tree=$own/project-$1
+	step project_settings "$2"
+}
+
+trace_refused() { refused_with "$1: trace of $2: $3" && untouched && silent; }
+
+in_a_project aggregate '"Read(src/aggregate/**)",'
+apply_keeping 'guard volumes acceptance'
+if [ "$status" -eq 0 ] && grep -qF '"Read(src/aggregate/**)",' "$tree/.claude/settings.json"; then r=0; else r=1; fi
+check "a project's own rule that names aggregate/ is no trace of gate" "$r"
+
+in_a_project ops '"Bash(./ops/session-check*)",'
+apply_keeping 'gate volumes acceptance'
+if [ "$status" -eq 0 ] && grep -qF '"Bash(./ops/session-check*)",' "$tree/.claude/settings.json"; then r=0; else r=1; fi
+check "a project's own rule that names a session-check of its own is no trace of guard" "$r"
+
+in_a_project workspace ''
+put .devcontainer/devcontainer.json '{' '	"name": "p",' '	"postCreateCommand": "mkdir -p ${containerWorkspaceFolder}/.claude/worktrees"' '}'
+apply_keeping 'gate guard'
+if [ "$status" -eq 0 ] && holds .devcontainer/devcontainer.json '{' '	"name": "p",' \
+	'	"postCreateCommand": "mkdir -p ${containerWorkspaceFolder}/.claude/worktrees"' '}'; then r=0; else r=1; fi
+check "a project's own devcontainer that names .claude/worktrees is no trace of volumes" "$r"
+
+in_a_project compact '"Read(docs/**)", "Bash(sh gate/*)",'
+remember_tree
+apply_keeping 'guard volumes acceptance'
+if trace_refused .claude/settings.json:4 gate gate/; then r=0; else r=1; fi
+check "a gate rule that shares its line with a project's rule is refused by the trace row" "$r"
+
+in_a_project rooted '"Bash(/srv/acme/.claude/worktrees/*/gate/walk*)",'
+remember_tree
+apply_keeping 'guard volumes acceptance'
+if trace_refused .claude/settings.json:4 gate gate/; then r=0; else r=1; fi
+check "a gate helper allow under a rewritten root is refused by the trace row" "$r"
+
+in_a_project chown ''
+put .devcontainer/devcontainer.json '{' '	"postCreateCommand": "git config core.hooksPath hooks && sudo chown -R vscode /worktrees"' '}'
+remember_tree
+apply_keeping 'gate guard'
+if trace_refused .devcontainer/devcontainer.json:2 volumes /worktrees; then r=0; else r=1; fi
+check "the worktree root's owner change in another spelling is refused by the trace row" "$r"
+
+in_a_project agent-worktrees ''
+put .devcontainer/devcontainer.json '{' '	"containerEnv": { "AGENT_WORKTREES": "/srv/wt" }' '}'
+remember_tree
+apply_keeping 'gate guard'
+if trace_refused .devcontainer/devcontainer.json:2 volumes AGENT_WORKTREES; then r=0; else r=1; fi
+check "an AGENT_WORKTREES line outside its fence is refused by the trace row" "$r"
+
+tree=$own/project-hooks
+step mkdir -p "$tree/.claude"
+LC_ALL=C awk '
+	/agent\/bash-shape-guard/ { shape = $0 }
+	/agent\/session-check/ { check = $0 }
+	/"worktree":/ {
+		print "\t\"statusLine\": {"; print shape; print "\t\t\"type\": \"command\""; print "\t},"
+		print "\t\"subagentStatusLine\": {"; print check; print "\t\t\"type\": \"command\""; print "\t},"
+	}
+	{ print }
+' "$pristine/.claude/settings.json" > "$tree/.claude/settings.json" || broken=1
+remember_tree
+apply_keeping 'gate volumes acceptance'
+if [ "$status" -eq 1 ] && grep -q '^refused: \.claude/settings\.json:[0-9]*: trace of guard: agent/bash-shape-guard$' "$err" \
+	&& grep -q '^refused: \.claude/settings\.json:[0-9]*: trace of guard: agent/session-check$' "$err" && untouched && silent; then r=0; else r=1; fi
+check "the guard's hook commands outside the hooks key are refused by the trace rows" "$r"
+
+seatless_modules=$(printf '%s\n' $every_module | grep -vx agent-seat | tr '\n' ' ')
+
+in_a_project fetch-spelling '"Bash(git -C /srv/project fetch --prune origin)",'
+remember_tree
+apply_keeping "$seatless_modules"
+if trace_refused .claude/settings.json:4 agent-seat 'fetch --prune origin)'; then r=0; else r=1; fi
+check "the seat's fetch allow in another spelling is refused by the trace row" "$r"
+
+fetch_rules=0
+for own_remote in upstream 'origin:*' origin-mirror origin2; do
+	fetch_rules=$((fetch_rules + 1))
+	in_a_project "fetch-own-$fetch_rules" "\"Bash(git fetch --prune $own_remote)\","
+	apply_keeping "$seatless_modules"
+	if [ "$status" -eq 0 ] && grep -qF "\"Bash(git fetch --prune $own_remote)\"," "$tree/.claude/settings.json"; then r=0; else r=1; fi
+	check "a project's own allow 'git fetch --prune $own_remote' is no trace of agent-seat" "$r"
+done
+
+seat_project() {
+	in_a_project "$1" ''
+	step cp -R "$pristine/env/devcontainer/.devcontainer" "$tree/.devcontainer"
+	put .github/workflows/ci.yml 'name: ci' 'on: push' 'jobs: {}'
+	put .github/rulesets/main.json '{' '	"name": "own main",' '	"target": "branch"' '}'
+}
+
+seat_project installed-seatless
+remember_tree
+apply_keeping "$seatless_modules" --payload "$pristine"
+if [ "$status" -eq 0 ] && said 'remove .devcontainer/agent/'; then r=0; else r=1; fi
+check "a project whose .devcontainer/agent/ is the installed agent image, agent-seat dropped: apply names it for removal" "$r"
+if [ "$status" -eq 0 ] && ! grep -qE '(^| )\.github/' "$out" && diff -r "$tree.before/.github" "$tree/.github" > /dev/null 2>&1; then r=0; else r=1; fi
+check "a project with a .github/ of its own, agent-seat dropped: apply names and edits nothing under .github/" "$r"
+
+seat_project installed-seat
+apply_keeping "$every_module" --payload "$pristine"
+if [ "$status" -eq 0 ] && ! said 'remove .devcontainer/agent/' && [ -d "$tree/.devcontainer/agent" ]; then r=0; else r=1; fi
+check "a project whose .devcontainer/agent/ is the installed agent image, agent-seat kept: apply leaves it" "$r"
+
+LC_ALL=C awk -F '\t' '
+	function kept_with(name,   grown, i, count, part) {
+		split("", chosen)
+		chosen[name] = 1
+		do {
+			grown = 0
+			for (i = 1; i <= modules; i++) {
+				if (!(module[i] in chosen)) continue
+				count = split(needs[module[i]], part, " ")
+				while (count > 0) {
+					if (!(part[count] in chosen)) { chosen[part[count]] = 1; grown = 1 }
+					count--
+				}
+			}
+		} while (grown)
+		return listed(1)
+	}
+	function kept_without(name,   grown, i, count, part) {
+		split("", chosen)
+		chosen[name] = 1
+		do {
+			grown = 0
+			for (i = 1; i <= modules; i++) {
+				if (module[i] in chosen) continue
+				count = split(needs[module[i]], part, " ")
+				while (count > 0) {
+					if (part[count] in chosen) { chosen[module[i]] = 1; grown = 1 }
+					count--
+				}
+			}
+		} while (grown)
+		return listed(0)
+	}
+	function listed(wanted,   i, names) {
+		names = ""
+		for (i = 1; i <= modules; i++) if ((module[i] in chosen) == wanted) names = names module[i] " "
+		return names
+	}
+	$1 != "" { module[++modules] = $1; needs[$1] = ($2 == "-") ? "" : $2 }
+	END {
+		split("", chosen)
+		print "every module kept\t" listed(0)
+		print "no module kept\t"
+		for (m = 1; m <= modules; m++) {
+			print module[m] " dropped with what needs it\t" kept_without(module[m])
+			print module[m] " kept with what it needs\t" kept_with(module[m])
+		}
+	}
+' "$own/list" > "$own/combinations"
+
+exactly_the_dropped_lines_are_gone() {
+	diff -rq "$pristine" "$tree" > "$own/differ" 2>&1
+	sed 's/^\.\///' "$own/pristine-files" | BEFORE=$pristine AFTER=$tree MANIFEST=$live_manifest KEPT=$kept_set \
+		DIFFERS=$own/differ LC_ALL=C awk '
+		function trimmed(text) { sub(/^[ \t]+/, "", text); sub(/[ \t\r]+$/, "", text); return text }
+		function field_rest(text, skipped,   i) {
+			for (i = 1; i <= skipped; i++) text = substr(text, index(text, " ") + 1)
+			return text
+		}
+		function first_field(text) { return substr(text, 1, index(text " ", " ") - 1) }
+		function under(holder, name) { return (holder ~ /\/$/) ? (index(name, holder) == 1) : (holder == name) }
+		function form_of(name) {
+			sub(/^.*\//, "", name)
+			if (name ~ /\.md$/) return "md"
+			if (name ~ /\.jsonc?$/) return "json"
+			if (name ~ /^\./ || name !~ /\./ || name ~ /\.(sh|yml|yaml|env|toml)$/) return "shell"
+			return ""
+		}
+		function goes(names,   part, count, i) {
+			count = split(names, part, "+")
+			for (i = 1; i <= count; i++) if (!(part[i] in kept)) return 1
+			return 0
+		}
+		function each_copy(file, what, owner,   i) {
+			register(file, what, owner)
+			for (i = 1; i <= installs; i++) {
+				if (from[i] ~ /\/$/) { if (index(file, from[i]) == 1) register(to[i] substr(file, length(from[i]) + 1), what, owner) }
+				else if (file == from[i]) register(to[i], what, owner)
+			}
+		}
+		function register(file, what, owner) {
+			if (what == "path") { held[++holders] = file; holder_module[holders] = owner }
+			else rows_of[file] = rows_of[file] " " what
+		}
+		function fence(line) {
+			line = trimmed(line)
+			if (form == "md") {
+				if (line !~ /^<!-- \/?MODULE [^ \t]+ -->$/) return 0
+				line = substr(line, 6, length(line) - 9)
+			} else if (form == "shell") {
+				if (line !~ /^# \/?MODULE [^ \t]+$/) return 0
+				line = substr(line, 3)
+			} else {
+				if (line !~ /^\/\/ \/?MODULE [^ \t]+$/) return 0
+				line = substr(line, 4)
+			}
+			closing = (substr(line, 1, 1) == "/")
+			fence_name = substr(line, closing ? 9 : 8)
+			return of_modules(fence_name) && !all_own(fence_name)
+		}
+		function of_modules(names,   part, count, i) {
+			count = split(names, part, "+")
+			for (i = 1; i <= count; i++) if (!(part[i] in is_module)) return 0
+			return 1
+		}
+		function all_own(names,   part, count, i) {
+			count = split(names, part, "+")
+			for (i = 1; i <= count; i++) if (!(part[i] in own)) return 0
+			return 1
+		}
+		function mark(from_line, to_line,   i) { for (i = from_line; i <= to_line; i++) gone[i] = 1; marked = 1 }
+		function mark_fences(   i, open, start) {
+			open = ""
+			for (i = 1; i <= n; i++) {
+				if (!fence(old[i])) continue
+				if (!closing && open == "") { open = fence_name; start = i }
+				else if (closing && fence_name == open) {
+					if (goes(open)) mark(start, i)
+					open = ""
+				}
+			}
+		}
+		function mark_json(r,   i, line) {
+			for (i = 1; i <= n; i++) {
+				line = trimmed(old[i])
+				sub(/,$/, "", line)
+				if (line == "\"" text[r] "\"") mark(i, i)
+			}
+		}
+		function mark_key(r,   i, j, indent, rest, value) {
+			for (i = 2; i <= n && trimmed(old[i]) == ""; i++) ;
+			match(old[i], /^[ \t]*/)
+			indent = substr(old[i], 1, RLENGTH)
+			for (i = 1; i <= n; i++) {
+				if (substr(old[i], 1, length(indent)) != indent) continue
+				rest = substr(old[i], length(indent) + 1)
+				if (index(rest, "\"" text[r] "\"") != 1) continue
+				rest = trimmed(substr(rest, length(text[r]) + 3))
+				if (substr(rest, 1, 1) != ":") continue
+				value = trimmed(substr(rest, 2))
+				sub(/,$/, "", value)
+				if (value !~ /[[{]$/) { mark(i, i); continue }
+				for (j = i + 1; j <= n; j++) {
+					if (substr(old[j], 1, length(indent)) != indent) continue
+					value = substr(old[j], length(indent) + 1, 1)
+					if (value == "}" || value == "]") break
+				}
+				mark(i, j)
+			}
+		}
+		function mark_cut(r,   i, at) {
+			for (i = 1; i <= n; i++) {
+				at = index(old[i], text[r])
+				if (!at) continue
+				recut[i] = substr(old[i], 1, at - 1) substr(old[i], at + length(text[r]))
+				marked = 1
+			}
+		}
+		function only_a_comma_less(wanted, j,   k, q, line, c) {
+			for (k = 1; k <= length(wanted); k++) {
+				if (substr(wanted, k, 1) != ",") continue
+				if (substr(wanted, 1, k - 1) substr(wanted, k + 1) != fresh[j]) continue
+				if (substr(wanted, k + 1) !~ /^[ \t\r]*(\/\/.*)?$/) continue
+				for (q = j + 1; q <= m; q++) {
+					line = trimmed(fresh[q])
+					if (line == "" || substr(line, 1, 2) == "//") continue
+					c = substr(line, 1, 1)
+					return c == "]" || c == "}"
+				}
+			}
+			return 0
+		}
+		function compare(name,   after, line, i, j, wanted) {
+			after = ENVIRON["AFTER"] "/" name
+			m = 0
+			split("", fresh)
+			while ((getline line < after) > 0) fresh[++m] = line
+			close(after)
+			j = 0
+			for (i = 1; i <= n; i++) {
+				if (i in gone) continue
+				wanted = (i in recut) ? recut[i] : old[i]
+				if (++j > m) { print name ": line " i " is gone, though nothing of a dropped module holds it"; return 1 }
+				if (fresh[j] == wanted || only_a_comma_less(wanted, j)) continue
+				print name ": line " i " stands as line " j " changed: " fresh[j]
+				return 1
+			}
+			if (j == m) return 0
+			print name ": holds " (m - j) " line(s) beyond the lines a dropped module leaves"
+			return 1
+		}
+		BEGIN {
+			BINMODE = 3
+			listed = split(ENVIRON["KEPT"], names, " ")
+			for (i = 1; i <= listed; i++) kept[names[i]] = 1
+			while ((getline row < ENVIRON["MANIFEST"]) > 0) {
+				sub(/\r$/, "", row)
+				sort = first_field(row)
+				if (sort == "module") is_module[first_field(field_rest(row, 1))] = 1
+				else if (sort == "installs") { from[++installs] = first_field(field_rest(row, 1)); to[installs] = field_rest(row, 2) }
+				else if (sort == "path" || sort == "json" || sort == "key" || sort == "cut") list[++rows] = row
+			}
+			close(ENVIRON["MANIFEST"])
+			for (r = 1; r <= rows; r++) {
+				kind[r] = first_field(list[r])
+				owners = first_field(field_rest(list[r], 1))
+				if (kind[r] == "path") { each_copy(field_rest(list[r], 2), "path", owners); continue }
+				text[r] = field_rest(list[r], 3)
+				if (goes(owners)) each_copy(first_field(field_rest(list[r], 2)), r, owners)
+			}
+			prefix = "Files " ENVIRON["BEFORE"] "/"
+			infix = " and " ENVIRON["AFTER"] "/"
+			while ((getline line < ENVIRON["DIFFERS"]) > 0) {
+				if (index(line, prefix) != 1) continue
+				line = substr(line, length(prefix) + 1)
+				at = index(line, infix)
+				if (at) differs[substr(line, 1, at - 1)] = 1
+			}
+		}
+		{
+			name = $0
+			split("", own)
+			doomed = 0
+			for (h = 1; h <= holders; h++) {
+				if (!under(held[h], name)) continue
+				if (holder_module[h] in kept) own[holder_module[h]] = 1
+				else doomed = 1
+			}
+			if (doomed) next
+			form = form_of(name)
+			split("", old)
+			split("", gone)
+			split("", recut)
+			n = 0
+			before = ENVIRON["BEFORE"] "/" name
+			while ((getline line < before) > 0) old[++n] = line
+			close(before)
+			marked = 0
+			if (form != "") mark_fences()
+			count = split(rows_of[name], mine, " ")
+			for (k = 1; k <= count; k++) {
+				r = mine[k]
+				if (kind[r] == "json") mark_json(r)
+				else if (kind[r] == "key") mark_key(r)
+				else mark_cut(r)
+			}
+			if (marked) { if (compare(name)) wrong = 1 }
+			else if (name in differs) { print name ": changed, though nothing of a dropped module stands in it"; wrong = 1 }
+		}
+		END { exit wrong }
+	'
+}
+
+only_removed_paths_are_gone() {
+	(cd "$tree" && find . -type f | sort) > "$own/tree-files"
+	LC_ALL=C awk '
+		stage == "removed" { if (sub(/^removed /, "")) removed[++removals] = "./" $0; next }
+		stage == "after" { after[$0] = 1; if (!($0 in before)) appeared = 1; next }
+		{ before[$0] = 1; file[++files] = $0 }
+		END {
+			for (f = 1; f <= files; f++) {
+				if (file[f] in after) continue
+				covered = 0
+				for (p = 1; p <= removals; p++) {
+					if (file[f] == removed[p]) covered = 1
+					if (removed[p] ~ /\/$/ && substr(file[f], 1, length(removed[p])) == removed[p]) covered = 1
+				}
+				if (!covered) { print file[f]; vanished = 1 }
+			}
+			exit (appeared || vanished) ? 1 : 0
+		}
+	' "$own/pristine-files" stage=removed "$own/applied" stage=after "$own/tree-files"
+}
+
+expected_removals() {
+	for module in agent-seat gate guard security-lens acceptance volumes; do
+		case " $1 " in *" $module "*) continue ;; esac
+		case $module in
+			agent-seat) printf '%s\n' agent/push agent/gh agent/github-token land/ ci/github/ hooks/pre-push \
+				env/devcontainer/.devcontainer/agent/ ;;
+			gate) printf '%s\n' gate/ ;;
+			guard) printf '%s\n' agent/bash-shape-guard agent/session-check ;;
+			security-lens)
+				case " $1 " in *' gate '*) printf '%s\n' gate/lens-request ;; esac
+				printf '%s\n' .claude/agents/falsifier-security.md ;;
+		esac
+	done | LC_ALL=C sort
+}
+
+number=0
+volumeless_tree=$own/no-such-tree
+seatless_tree=$own/no-such-tree
+seat_tree=$own/no-such-tree
+lensless_tree=$own/no-such-tree
+seatless_verified=1
+: > "$own/applied-seatless"
+: > "$own/applied-seat"
+while IFS="$tab" read -r label kept_set; do
+	number=$((number + 1))
+	tree=$own/tree-$number
+	step cp -R "$pristine" "$tree"
+	apply_keeping "$kept_set" --prune
+	cp "$out" "$own/applied"
+	if [ "$status" -eq 0 ] && ! grep -q '^note: [^:]*: no row of it is left to cut$' "$out"; then r=0; else r=1; fi
+	check "this repository, $label: apply passes, so every row of a dropped module is found exactly once" "$r" "$own/applied"
+	verify_keeping "$kept_set"
+	if [ "$status" -eq 0 ] && silent; then r=0; else r=1; fi
+	check "this repository, $label: verify finds nothing of a dropped module" "$r"
+	verified=$r
+	settings=$tree/.claude/settings.json
+	devcontainer=$tree/env/devcontainer/.devcontainer/devcontainer.json
+	if well_formed "$settings" 'strict'; then r=0; else r=1; fi
+	check "this repository, $label: .claude/settings.json stays well-formed" "$r"
+	if well_formed "$devcontainer" 'with comments'; then r=0; else r=1; fi
+	check "this repository, $label: the devcontainer file stays well-formed" "$r"
+	if command -v jq > /dev/null 2>&1; then
+		if jq . "$settings" > /dev/null 2>&1 && grep -v '^[[:space:]]*//' "$devcontainer" | jq . > /dev/null 2>&1; then r=0; else r=1; fi
+		check "this repository, $label: jq reads both files" "$r"
+	else
+		printf '  skip this repository, %s: jq reads both files: no jq on this host\n' "$label"
+	fi
+	: > "$own/vanished"
+	if exactly_the_dropped_lines_are_gone > "$own/strayed-$number" 2>&1 && only_removed_paths_are_gone > "$own/vanished" 2>&1; then r=0; else r=1; fi
+	check "this repository, $label: exactly the lines of the dropped modules are gone, and every other file is as it was" "$r" "$own/strayed-$number" "$own/vanished"
+	if traces_left > "$own/traces-$number" 2>&1; then r=0; else r=1; fi
+	check "this repository, $label: no line holds the trace text of a dropped module" "$r" "$own/traces-$number"
+	expected_removals "$kept_set" > "$own/removals-expected"
+	sed -n 's/^removed //p' "$own/applied" | LC_ALL=C sort > "$own/removals"
+	if cmp -s "$own/removals-expected" "$own/removals"; then r=0; else r=1; fi
+	diff "$own/removals-expected" "$own/removals" > "$own/removals-diff" 2>&1 || :
+	check "this repository, $label: apply removes exactly the paths of the dropped modules, as this suite names them" "$r" "$own/removals-diff"
+	remember_tree
+	apply_keeping "$kept_set"
+	if [ "$status" -eq 0 ] && [ ! -s "$err" ] && ! grep -q -e '^edited ' -e '^remove' "$out" && untouched; then r=0; else r=1; fi
+	check "this repository, $label: a second apply passes and changes nothing" "$r" "$err"
+	case $label in
+		'agent-seat dropped with what needs it')
+			seatless_tree=$tree
+			seatless_verified=$verified
+			cp "$own/applied" "$own/applied-seatless" ;;
+		'agent-seat kept with what it needs')
+			seat_tree=$tree
+			cp "$own/applied" "$own/applied-seat" ;;
+		'security-lens dropped with what needs it') lensless_tree=$tree ;;
+		'volumes dropped with what needs it') volumeless_tree=$tree ;;
+	esac
+done < "$own/combinations"
+
+if [ -f "$volumeless_tree/agent/bash-shape-guard" ] && grep -qx "volume_root=''" "$volumeless_tree/agent/session-check" \
+	&& ! grep -qF '/worktrees' "$volumeless_tree/agent/session-check"; then r=0; else r=1; fi
+check "this repository, volumes dropped and guard kept: the session check names no volume root" "$r"
+
+fences_of() { grep -cE "^[[:space:]]*(<!--|#) MODULE $2( -->)?\$" "$1" 2> /dev/null || :; }
+both_fence_files() { grep -rlE '^[[:space:]]*(<!--|#|//) /?MODULE agent-seat\+security-lens' "$1" 2> /dev/null; }
+both_blocks_gone() {
+	[ "$(fences_of "$pristine/gate/self-test" 'agent-seat\+security-lens')" -eq 2 ] || return 1
+	[ -d "$1" ] && ! both_fence_files "$1" > /dev/null && [ -f "$1/gate/self-test" ] || return 1
+	! grep -q -e 'unset AGENT_SEAT' -e "the seat switch's cases" "$1/gate/self-test" || return 1
+	! grep -qF 'the host of `gate/lens-request`' "$1/docs/knowledge-base/multi-agent-playbook.md" || return 1
+	! grep -qF "the wrapper's host on the unattended seat" "$1/docs/knowledge-base/working-with-ai-agents.md" || return 1
+	[ -f "$1/$template_readme" ] && ! grep -qF 'overrides that host' "$1/$template_readme"
+}
+template_readme=README.md
+[ ! -f "$pristine/TEMPLATE-README.md" ] || template_readme=TEMPLATE-README.md
+if both_blocks_gone "$lensless_tree"; then r=0; else r=1; fi
+check "this repository, security-lens dropped and agent-seat kept: every block of both modules goes" "$r"
+if both_blocks_gone "$seatless_tree"; then r=0; else r=1; fi
+check "this repository, agent-seat dropped and security-lens kept: every block of both modules goes" "$r"
+r=0
+for fenced_file in "$template_readme" docs/knowledge-base/multi-agent-playbook.md docs/knowledge-base/working-with-ai-agents.md hooks/self-test; do
+	[ "$(fences_of "$lensless_tree/$fenced_file" agent-seat)" = "$(fences_of "$pristine/$fenced_file" agent-seat)" ] || r=1
+	[ "$(fences_of "$pristine/$fenced_file" agent-seat)" -gt 0 ] || r=1
+done
+check "this repository, security-lens dropped and agent-seat kept: each block of agent-seat alone stays" "$r"
+r=0
+for fenced_file in "$template_readme" docs/knowledge-base/working-with-ai-agents.md gate/self-test; do
+	[ "$(fences_of "$seatless_tree/$fenced_file" security-lens)" = "$(fences_of "$pristine/$fenced_file" security-lens)" ] || r=1
+	[ "$(fences_of "$pristine/$fenced_file" security-lens)" -gt 0 ] || r=1
+done
+check "this repository, agent-seat dropped and security-lens kept: each block of security-lens alone stays" "$r"
+attempt sh "$lensless_tree/gate/self-test" no-case-is-named-so
+if [ "$status" -eq 2 ] && grep -q '^gate self-test: no case matches ' "$out" && ! grep -q 'seat switch' "$out"; then r=0; else r=1; fi
+check "this repository, security-lens dropped and agent-seat kept: the gate self-test prints no skip line for the seat switch" "$r"
+
+seat_paths='agent/push agent/gh agent/github-token land/ ci/github/ hooks/pre-push env/devcontainer/.devcontainer/agent/'
+r=$seatless_verified
+for seat_path in $seat_paths; do
+	grep -qxF "removed $seat_path" "$own/applied-seatless" || r=1
+	[ ! -e "$seatless_tree/$seat_path" ] || r=1
+done
+check "this repository, agent-seat dropped: apply names each of the seat's seven paths, the prune takes them, and verify finds nothing" "$r"
+r=0
+for seat_path in $seat_paths; do
+	! grep -qxF "removed $seat_path" "$own/applied-seat" || r=1
+	[ -e "$seat_tree/$seat_path" ] || r=1
+done
+grep -qF '"Bash(git fetch --prune origin)",' "$seat_tree/.claude/settings.json" || r=1
+check "this repository, agent-seat kept: apply names none of the seat's paths, and .claude/settings.json keeps its fetch --prune allow" "$r"
+if [ -f "$seatless_tree/.claude/settings.json" ] && ! grep -qF 'fetch --prune' "$seatless_tree/.claude/settings.json" \
+	&& well_formed "$seatless_tree/.claude/settings.json" 'strict'; then r=0; else r=1; fi
+check "this repository, agent-seat dropped: .claude/settings.json loses the fetch --prune allow and stays well-formed" "$r"
+
+edited_scripts_parse() {
+	parsed=0
+	while IFS= read -r applied_line; do
+		edited_file=${applied_line#edited }
+		[ "$edited_file" != "$applied_line" ] || continue
+		case $edited_file in
+			*.sh) ;;
+			*) case $(sed -n '1p' "$1/$edited_file") in '#!/bin/sh'|'#!/usr/bin/env sh') ;; *) continue ;; esac ;;
+		esac
+		sh -n "$1/$edited_file" || { printf '%s does not parse\n' "$edited_file"; return 1; }
+		parsed=$((parsed + 1))
+	done < "$2"
+	[ "$parsed" -gt 0 ]
+}
+if edited_scripts_parse "$seatless_tree" "$own/applied-seatless" > "$own/unparsed-seatless" 2>&1; then r=0; else r=1; fi
+check "this repository, agent-seat dropped: every shell script the filter edited still parses" "$r" "$own/unparsed-seatless"
+if edited_scripts_parse "$seat_tree" "$own/applied-seat" > "$own/unparsed-seat" 2>&1; then r=0; else r=1; fi
+check "this repository, agent-seat kept: every shell script the filter edited still parses" "$r" "$own/unparsed-seat"
+
+guard_state() {
+	env CLAUDE_PROJECT_DIR="$1" python3 -I "$1/agent/bash-shape-guard" --state 2> /dev/null
+}
+seatless_guard=$seatless_tree/agent/bash-shape-guard
+if grep -qx 'APPROVALS = "fold checkout"' "$seatless_guard" && ! grep '^# > ' "$seatless_guard" | grep -q -e '`push`' -e '`gh`'; then r=0; else r=1; fi
+check "this repository, agent-seat dropped: the guard approves the fold and the checkout only, and its ADAPT block names neither push nor gh" "$r"
+if grep -qx 'APPROVALS = "fold checkout push gh"' "$seat_tree/agent/bash-shape-guard"; then r=0; else r=1; fi
+check "this repository, agent-seat kept: the guard approves the fold, the checkout, the push and gh" "$r"
+if python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' > /dev/null 2>&1; then
+	if [ "$(guard_state "$seatless_tree")" = active ]; then r=0; else r=1; fi
+	check "this repository, agent-seat dropped: the guard states active" "$r"
+	if [ "$(guard_state "$seat_tree")" = active ]; then r=0; else r=1; fi
+	check "this repository, agent-seat kept: the guard states active" "$r"
+else
+	printf '  skip this repository, agent-seat dropped and kept: the guard states active: no python3 3.9 or newer runs on this host\n'
+fi
+if [ "$number" -ge 4 ]; then r=0; else r=1; fi
+check "this repository was filtered under every combination its modules allow" "$r"
+
+seat_asks_expected="a GitHub origin
+only on the author's request
+the devcontainer variant
+a Debian devcontainer image whose user is vscode
+a landing branch called main"
+seat_asks=$(awk -F '\t' '$1 != "" { in_seat = ($1 == "agent-seat"); next } in_seat && $2 == "asks" { print $3 }' "$own/list")
+if [ "$seat_asks" = "$seat_asks_expected" ]; then r=0; else r=1; fi
+check "this repository: list names the agent-seat module's request rule and its preconditions under agent-seat, in order" "$r"
+
+devcontainer_path=env/devcontainer/.devcontainer/devcontainer.json
+fences=$(sed -n 's/^[[:space:]]*\/\/ MODULE //p' "$pristine/$devcontainer_path" | tr -d '\r' | tr '\n' ' ')
+if [ "$fences" = 'guard volumes volumes volumes ' ]; then r=0; else r=1; fi
+check "the devcontainer file fences the python feature for guard, the worktree root, its volume and the note on its two links for volumes" "$r"
+no_module_tree=$own/tree-2
+r=0
+for gone_text in features/python AGENT_WORKTREES target=/worktrees ADAPT:\ the\ volumes ADAPT:\ the\ guard; do
+	! grep -qF -- "$gone_text" "$no_module_tree/$devcontainer_path" || r=1
+done
+for kept_text in features/node CLAUDE_CONFIG_DIR target=/home/vscode/.claude; do
+	grep -qF -- "$kept_text" "$no_module_tree/$devcontainer_path" || r=1
+done
+check "this repository, no module kept: the devcontainer file holds no module line and every core one" "$r"
+
+if [ "$failures" -eq 0 ]; then
+	printf 'module filter self-test: all %s cases pass\n' "$cases"
+	exit 0
+fi
+printf 'module filter self-test: %s of %s case(s) FAILED\n' "$failures" "$cases" >&2
+exit 1

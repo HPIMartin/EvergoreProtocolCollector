@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+
+# > **ADAPT:** the Claude Code version the agent image installs; /adopt pins the current one.
+version=2.1.325
+installer_url=https://claude.ai/install.sh
+
+fail() {
+	printf '[agent-claude-code] %s\n' "$*" >&2
+	exit 1
+}
+
+[ $# -eq 0 ] || fail "takes no arguments; the version is pinned here"
+expr "x$version" : 'x[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' > /dev/null ||
+	fail "the pinned version '$version' is not <digits>.<digits>.<digits>"
+
+installer=$(mktemp)
+trap 'rm -f "$installer"' EXIT
+curl -fsSL --proto '=https' --proto-redir '=https' -o "$installer" "$installer_url"
+bash "$installer" "$version"
+installed=$(claude --version)
+[ "$installed" = "$version (Claude Code)" ] || fail "Claude Code reports '$installed', not the pinned $version"

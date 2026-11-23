@@ -41,7 +41,9 @@ adds no build knowledge of its own: every command it runs is a `verify` subcomma
    Until it has pushed `:latest`, every other job fails on a missing image; the job's second rule is
    `when: manual` exactly for this.
 5. Enable a pipeline schedule for `vuln` (weekly is the usual cadence).
-6. Wire the `deploy` job, or delete it and the `deploy` stage.
+6. Wire the `deploy` job along the checklist in build-run-deploy.md, "Release & deploy", or delete
+   it and the `deploy` stage. Without a registry to deliver from, that chapter's "Delivering
+   without CI" names the one exception to handbook §7's deliver rule.
 
 ## Notes that bite
 

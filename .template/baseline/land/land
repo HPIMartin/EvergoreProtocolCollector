@@ -1,0 +1,160 @@
+#!/bin/sh
+# Lands a reviewed pull request on the owner's command: the landing workflow runs it on a new
+# comment, and a comment that reads /land <sha> pushes exactly that commit onto the landing target
+# as a fast-forward, deletes the head branch leased on that commit and answers on the pull request.
+# Its inputs: LAND_EVENT, the path of the event's JSON; LAND_REPO, <owner>/<repository>;
+# LAND_TARGET, the landing target; LAND_REMOTE, the URL git fetches and pushes; and LAND_API, the
+# REST caller, github-api beside this file unless set; it also reads GITHUB_RUN_ATTEMPT, which
+# GitHub Actions sets. Exits 2 before reading the event where an input or jq is missing. Ignores,
+# with exit 0 and no answer, a comment that is not new, not on a pull request, not /land alone or
+# followed by ASCII white space (a no-break or other Unicode space passes the workflow's if, and is
+# ignored here), not the repository owner's, not a user's or posted through an app. Refuses, with
+# exit 1 and the reason as its answer, a run whose GITHUB_RUN_ATTEMPT is not 1, unset included,
+# since a re-run replays the stored comment and the landing scripts of the first run's commit; an
+# empty prefix below; a command that is not /land, one space and the head's 40 lowercase hex digits
+# on one line; a landing target other than main or the prefix's land-probe branch; a pull request
+# it cannot read, not open, whose head lives in another repository or whose base is not the target;
+# a head branch outside the prefix, that git refuses as a name or that is the target; a head other
+# than the commanded commit; check runs it cannot read, that are no objects or that need more than
+# one page; a required check below without a completed run of that name by the app below concluded
+# success; any check run not completed as success, neutral or skipped, each named in the answer
+# inside a code span, with every character but letters, digits, spaces and ._()+- replaced by _;
+# commit statuses it cannot read; a combined commit status other than success where any status
+# exists; branches it cannot fetch; a head branch that moved during the checks; a target that is not
+# an ancestor of the head; and a refused push. Where an answer cannot be posted it says so and keeps
+# its exit. Its push onto the target never forces; it never pushes a tag and never deletes the
+# target; the head branch's deletion is leased on the landed commit.
+set -eu
+
+# > **ADAPT:** the prefix of the agent branches (handbook §7, "Branching"); /adopt sets it.
+branch_prefix='claude/'
+
+# > **ADAPT:** the check run every landed head must carry, completed as success; empty, a head with
+# > no check run lands. Name a required check once CI exists.
+required_check=''
+
+# > **ADAPT:** the slug of the app whose run counts as the required check: github-actions for a
+# > job of a GitHub Actions workflow, so a run another app reports under that name never counts.
+required_check_app='github-actions'
+
+land_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+api=${LAND_API:-"$land_dir/github-api"}
+
+for required in LAND_EVENT LAND_REPO LAND_TARGET LAND_REMOTE; do
+	eval "value=\${$required:-}"
+	[ -n "$value" ] || { printf 'land: %s is not set\n' "$required" >&2; exit 2; }
+done
+command -v jq >/dev/null 2>&1 || { printf 'land: jq is missing\n' >&2; exit 2; }
+
+event() { jq -r "$1" "$LAND_EVENT"; }
+
+ignore() {
+	printf 'land: ignored: %s\n' "$1"
+	exit 0
+}
+
+number=$(event '.issue.number')
+
+answer() {
+	jq -n --arg body "$1" '{body: $body}' > "$work/answer.json"
+	"$api" POST "repos/$LAND_REPO/issues/$number/comments" "$work/answer.json" >/dev/null
+}
+
+refuse() {
+	printf 'land: refused: %s\n' "$1" >&2
+	answer "Not landed: $1" || printf 'land: the refusal could not be posted\n' >&2
+	exit 1
+}
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+[ "$(event '.action')" = created ] || ignore 'not a new comment'
+[ "$(event '.issue.pull_request != null')" = true ] || ignore 'not a pull request'
+body=$(event '.comment.body' | tr -d '\r')
+command_sha=$(printf '%s\n' "$body" | sed -n '1s/^\/land \([0-9a-f]\{40\}\)[[:space:]]*$/\1/p')
+[ "$(printf '%s\n' "$body" | wc -l)" -eq 1 ] || command_sha=
+case "$body" in /land | "/land"[[:space:]]*) ;; *) ignore 'not a /land command' ;; esac
+
+# > **ADAPT:** on an organisation's repository the owner is no user, so no /land is honoured until
+# > the project lists its permitted landers in a repository variable and checks the commenter
+# > against it in place of the owner check, here and in the job's if in land.yml.
+owner=${LAND_REPO%%/*}
+[ "$(event '.comment.user.login')" = "$owner" ] || ignore 'the comment is not the owner'"'"'s'
+[ "$(event '.comment.user.type')" = User ] || ignore 'the comment is not a user'"'"'s'
+[ "$(event '.comment.performed_via_github_app == null')" = true ] || ignore 'the comment was posted through an app'
+
+[ "${GITHUB_RUN_ATTEMPT:-}" = 1 ] || refuse 'a re-run replays the old command; comment /land again.'
+
+[ -n "$branch_prefix" ] || refuse 'the branch prefix in land/land is empty, so it lands nothing.'
+
+[ -n "$command_sha" ] || refuse 'the command reads `/land <sha>`, with all 40 lowercase hex digits of the head commit.'
+
+probe="${branch_prefix}land-probe"
+case "$LAND_TARGET" in
+	main|"$probe") ;;
+	*) refuse "the landing target \`$LAND_TARGET\` is neither \`main\` nor \`$probe\`." ;;
+esac
+
+"$api" GET "repos/$LAND_REPO/pulls/$number" > "$work/pull.json" || refuse 'the pull request could not be read.'
+pull() { jq -r "$1" "$work/pull.json"; }
+[ "$(pull '.state')" = open ] || refuse 'the pull request is not open.'
+[ "$(pull '.head.repo.full_name')" = "$LAND_REPO" ] || refuse 'the head branch lives in another repository.'
+[ "$(pull '.base.ref')" = "$LAND_TARGET" ] || refuse "the pull request's base is not \`$LAND_TARGET\`."
+head_ref=$(pull '.head.ref')
+head_sha=$(pull '.head.sha')
+case "$head_ref" in
+	"$branch_prefix"?*) topic=${head_ref#"$branch_prefix"} ;;
+	*) topic= ;;
+esac
+printf '%s\n' "$topic" | grep -Eq '^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$' \
+	|| refuse "the head branch is not a \`$branch_prefix<topic>\` branch."
+git check-ref-format "refs/heads/$head_ref" || refuse 'the head branch name is not a plain branch name.'
+[ "$head_ref" != "$LAND_TARGET" ] || refuse 'the head branch is the landing target.'
+printf '%s\n' "$head_sha" | grep -Eq '^[0-9a-f]{40}$' || refuse 'the head commit could not be read.'
+case "$head_sha" in
+	"$command_sha") ;;
+	*) refuse "the head is \`$head_sha\`, not the commit \`$command_sha\` the command names." ;;
+esac
+
+"$api" GET "repos/$LAND_REPO/commits/$head_sha/check-runs?per_page=100" > "$work/runs.json" \
+	|| refuse 'the check runs could not be read.'
+[ "$(jq -r '(.total_count | type) == "number" and (.check_runs | type) == "array" and all(.check_runs[]; type == "object")' "$work/runs.json" 2>/dev/null)" = true ] \
+	|| refuse 'the check runs could not be read.'
+runs_total=$(jq -r '.total_count' "$work/runs.json")
+[ "$runs_total" = "$(jq -r '.check_runs | length' "$work/runs.json")" ] \
+	|| refuse 'the head carries more check runs than one page reads.'
+if [ -n "$required_check" ]; then
+	[ "$(jq --arg name "$required_check" --arg app "$required_check_app" '[.check_runs[] | select(.name == $name and .app.slug == $app and .status == "completed" and .conclusion == "success")] | length' "$work/runs.json")" -gt 0 ] \
+		|| refuse "the required check \`$required_check\` has no run by \`$required_check_app\` on the head completed as success."
+fi
+unfinished=$(jq -r '[.check_runs[] | select(.status != "completed" or ((.conclusion // "") | IN("success", "neutral", "skipped") | not)) | .name | tostring | gsub("[^A-Za-z0-9 ._()+-]"; "_") | "`\(.)`"] | join(", ")' "$work/runs.json")
+[ -z "$unfinished" ] || refuse "check runs not green on the head: $unfinished."
+"$api" GET "repos/$LAND_REPO/commits/$head_sha/status" > "$work/status.json" \
+	|| refuse 'the commit statuses could not be read.'
+[ "$(jq -r '(.total_count | type) == "number" and (.state | type) == "string"' "$work/status.json" 2>/dev/null)" = true ] \
+	|| refuse 'the commit statuses could not be read.'
+if [ "$(jq -r '.total_count' "$work/status.json")" != 0 ]; then
+	[ "$(jq -r '.state' "$work/status.json")" = success ] || refuse 'the combined commit status of the head is not success.'
+fi
+
+git init -q "$work/repo"
+git -C "$work/repo" remote add origin "$LAND_REMOTE"
+git -C "$work/repo" fetch -q --no-tags origin \
+	"refs/heads/$head_ref:refs/land/head" "refs/heads/$LAND_TARGET:refs/land/target" \
+	|| refuse 'the branches could not be fetched.'
+[ "$(git -C "$work/repo" rev-parse refs/land/head)" = "$head_sha" ] \
+	|| refuse 'the head branch moved while the landing was checked.'
+git -C "$work/repo" merge-base --is-ancestor refs/land/target "$head_sha" \
+	|| refuse "\`$LAND_TARGET\` is not an ancestor of the head; rebase the branch and command again."
+git -C "$work/repo" push -q origin "$head_sha:refs/heads/$LAND_TARGET" \
+	|| refuse "the fast-forward push to \`$LAND_TARGET\` was refused."
+
+landed="Landed \`$head_sha\` on \`$LAND_TARGET\` as a fast-forward."
+if git -C "$work/repo" push -q "--force-with-lease=refs/heads/$head_ref:$head_sha" origin ":refs/heads/$head_ref"; then
+	landed="$landed Deleted \`$head_ref\`."
+else
+	landed="$landed \`$head_ref\` was not deleted: it moved after the landing."
+fi
+printf 'land: %s\n' "$landed"
+answer "$landed" || printf 'land: the result could not be posted\n' >&2

@@ -30,12 +30,19 @@ Copy [verify](verify) to the repo root and add the scripts it dispatches to. The
 | `focus <file>` | `npm test -- <file>` |
 | `focus <x.feature>` | `npm run bdd -- --profile focus <path>` |
 | `bdd` | `npm run bdd -- --profile wip` |
-| `all` | format, lint, typecheck, `npm test`, `npm run bdd -- --profile default`, both with a junit reporter into `artifacts/test-results/` |
+| `all` | `npm ci`, format, lint, typecheck, `npm test`, `npm run bdd -- --profile default`, both with a junit reporter into `artifacts/test-results/` |
 | `outdated` | `npm outdated` |
 | `vuln` | `npm audit` |
+| `stop` | nothing, exit 0: a build leaves no process running |
 
 - A relative `focus` path resolves against the **caller's** directory, so the script behaves the same
   from a subdirectory as from the root.
+- `all` opens with `npm ci`, which replaces `node_modules` with exactly what `package-lock.json`
+  names, so a package a commit dropped is gone before any check runs; the other subcommands use
+  `node_modules` as it stands.
+  - `format` never waits for the build lock, so a `./verify format` in the same tree while an
+    `all` reinstalls, as from the pre-commit hook, can fail on a half-installed `node_modules`;
+    run it again once `all` has ended.
 - Proof of execution for `all`: Vitest's verbose reporter prints one line per test plus the
   `Tests N passed` summary, and the Cucumber summary formatter prints the scenario counts. The junit
   files (`artifacts/test-results/vitest.xml`, `artifacts/test-results/cucumber.xml`) are what CI
@@ -70,6 +77,8 @@ approval prompt; widen locally if your loop needs it.
 - **Typecheck:** `tsc --noEmit` with `"strict": true`; a type error fails `verify all` (handbook §3).
 - **Lint:** ESLint with `--max-warnings 0`, so every warning fails the gate.
 - **Format:** Prettier; `prettier --check .` in the gate, `prettier --write .` to fix.
+  - Named limit: `.` is the whole tree, so the check also reads `.template/baseline/` and the
+    template's own Markdown, files the project did not write.
 - Lint rules stay disjoint from the formatter's, so no rule lives in two tools.
 
 ## Cucumber-js wiring
@@ -99,22 +108,36 @@ approval prompt; widen locally if your loop needs it.
   `NODE_OPTIONS='--import tsx'` around the script), a CommonJS project uses `require` plus
   `requireModule: ['ts-node/register']`. The loader-free alternative compiles the steps with `tsc`
   and points `import` at the emitted JavaScript.
-- **Step-definition shape**, driven through ports with in-memory fakes (handbook §5), no comments
-  (`hooks/content-gate` refuses them):
+- **Step-definition shape**, each actor driven through its real surface against a fresh real
+  service (handbook §5): a page object over the browser for a screen, a client for an API. No
+  comments (`hooks/content-gate` refuses them):
 
   ```ts
-  Given('customer {string} placed orders worth {int} this month', function (customer: string, total: number) {
-    this.orders.record({ customer, total });
+  Given(
+    'the order book holds an order from {string} worth {int} placed on {}',
+    async function (customer: string, worth: number, placedAt: string) {
+      await this.service.orders.place({ customer, worth, placedAt: scenarioTime(placedAt) });
+    },
+  );
+
+  When('the manager opens the contribution overview', async function () {
+    this.overview = await ContributionOverviewPage.openIn(this.browser, this.service);
   });
 
-  When('the manager opens the monthly overview', function () {
-    this.overview = monthlyOverview(this.orders);
-  });
-
-  Then('the contribution column for {string} shows {int}', function (customer: string, expected: number) {
-    expect(this.overview.contributionOf(customer)).toBe(expected);
-  });
+  Then(
+    "the manager sees {int} in {word}'s contribution column",
+    async function (expected: number, customer: string) {
+      expect(await this.overview.contributionOf(customer)).toBe(expected);
+    },
+  );
   ```
+
+  `this.browser` is the project's own wrapper over its browser driver (the java-gradle preset ships
+  one), and `this.service` is its own handle on a fresh service, started by a `Before` hook and
+  stopped by an `After` hook; `orders.place` writes through the service's real write path.
+
+  > **ADAPT:** a project that chose the in-memory model at adoption drives ports with in-memory
+  > fakes instead: the `Given` records into an in-memory port and the `When` runs the query over it.
 
 - **Alternative:** `@amiceli/vitest-cucumber` executes the same `.feature` files inside Vitest, which
   leaves the project with a single runner at the price of Cucumber's reporting and profile handling
@@ -134,7 +157,7 @@ two npm scripts: `npm run probe` (the test runner pointed at `src/probe/`) and `
 - `print_allow_paths` covers a CLI entry point whose stdout is the interface; `console.log` stays a
   smell everywhere else.
 
-## Toolchain pinning (single-sourcing, dev-environment.md)
+## Toolchain pinning (dev-environment.md, "Toolchain version")
 
 - `package.json` `"engines"` plus the committed `package-lock.json`; install with `npm ci`, never
   bare `npm install`, so the lockfile stays authoritative.

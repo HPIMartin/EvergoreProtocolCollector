@@ -1,0 +1,230 @@
+#!/bin/sh
+set -eu
+
+# Builds each commit of a strand in a walk worktree of its own, cut anew for every build, and writes
+# the full-suite log the dossier check reads for that commit's code tree (multi-agent-playbook.md,
+# "The gate dossier").
+# Every value that depends on the project comes from the ADAPT block of gate/dossier-check.
+
+usage() {
+	printf 'usage: gate/walk <strand worktree> <walk worktree>\n' >&2
+	exit 2
+}
+
+refuse() {
+	printf 'gate/walk: %s\n' "$1" >&2
+	exit 2
+}
+
+for tool in awk git mktemp; do
+	command -v "$tool" > /dev/null 2>&1 || {
+		printf 'gate/walk: no %s on PATH; the gate module needs sh, awk, git and mktemp, so nothing was walked\n' "$tool" >&2
+		exit 2
+	}
+done
+
+absolute() {
+	case "$1" in
+		/*) printf '%s\n' "$1" ;;
+		*) printf '%s/%s\n' "$PWD" "$1" ;;
+	esac
+}
+
+physical() { (cd "$1" 2> /dev/null && pwd -P); }
+
+clean_status() { git -C "$1" status --porcelain --untracked-files=all; }
+
+still() {
+	[ "$(git -C "$walk" rev-parse HEAD)" = "$1" ] && [ -z "$(clean_status "$walk")" ]
+}
+
+# The value holds globs separated by blanks, one per stack, each below the walk worktree: they are
+# split with globbing off, so none expands against the caller's directory, and each is then
+# expanded below the walk worktree alone. A report that is a link, or whose directory a link takes
+# outside the walk worktree, may come from anywhere, so it is not kept.
+keep_failed_reports() {
+	walk_real=$(physical "$walk") && [ -n "$walk_real" ] || return 0
+	set -f
+	for glob in $failed_reports; do
+		set +f
+		for report in "$walk"/$glob; do
+			[ -f "$report" ] && [ ! -L "$report" ] && [ "$report" -nt "$1.stamp" ] || continue
+			report_dir=$(physical "$(dirname -- "$report")") || continue
+			case "$report_dir/" in
+				"$walk_real"/*) cp "$report" "$1.failed-reports/" ;;
+			esac
+		done
+		set -f
+	done
+	set +f
+}
+
+gate_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+check="$gate_dir/dossier-check"
+. "$gate_dir/lock"
+
+stop_wanted=no
+walk=
+finish() {
+	if [ "$stop_wanted" = yes ] && [ -x "$walk/verify" ]; then
+		"$walk/verify" stop > /dev/null 2>&1 || true
+	fi
+	lock_release_all
+}
+trap finish EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+[ $# -eq 2 ] || usage
+strand=$(git -C "$1" rev-parse --show-toplevel) || refuse "$1 is no git worktree"
+walk=$(absolute "$2")
+walk=${walk%/}
+case "$walk" in
+	*-walk) ;;
+	*) refuse "$walk does not end in -walk, so it may be another session's worktree" ;;
+esac
+case "/$walk/" in
+	*/./*|*/../*) refuse "$walk holds a . or .. path segment, which git resolves elsewhere than the text reads" ;;
+esac
+[ ! -e "$walk" ] || [ -d "$walk" ] || refuse "$walk is a file, not a directory"
+
+walk_success_re=$("$check" --value walk_success_re) || refuse "the ADAPT block of $check cannot be read"
+[ -n "$walk_success_re" ] || refuse "the walk leg is off in the ADAPT block (walk_success_re is empty), so no walk log is read"
+base_ref=$("$check" --value base_ref)
+failed_reports=$("$check" --value walk_failed_reports)
+set -f
+for glob in $failed_reports; do
+	case "/$glob/" in
+		*/../*) refuse "the walk_failed_reports glob '$glob' holds a .. segment, which reaches outside the walk worktree" ;;
+	esac
+	if printf '%s\n' "$glob" | tr '/' '\n' | awk '
+		/^\./ && /[*?[]/ { rest = substr($0, 2); gsub(/\[[^]]*\]/, "", rest); if (rest ~ /^[*?.]*$/) found = 1 }
+		END { exit !found }
+	'; then
+		refuse "the walk_failed_reports glob '$glob' holds a segment of a dot and glob characters, which may match .. and reach outside the walk worktree"
+	fi
+done
+set +f
+
+base=$(git -C "$strand" merge-base HEAD "$base_ref" 2> /dev/null) || refuse "the strand has no $base_ref to walk from"
+commits=$(git -C "$strand" rev-list --reverse "$base..HEAD")
+[ -n "$commits" ] || refuse "the strand has no commit since its merge base with $base_ref"
+mkdir -p "$strand/gate.local.d/walk"
+lock_take "$strand/gate.local.d/walk.lock" "another walk of $strand runs"
+
+if [ ! -e "$walk" ]; then
+	ancestor=$(dirname -- "$walk")
+	while [ ! -d "$ancestor" ]; do ancestor=$(dirname -- "$ancestor"); done
+	# git's standard error stays out of the path: a warning beside a good answer would name no
+	# directory. It is read apart, and only where git fails.
+	if enclosing=$(git -C "$ancestor" rev-parse --show-toplevel 2> /dev/null); then
+		enclosing=$(physical "$enclosing") || refuse "the worktree that holds $ancestor cannot be entered, so $walk is not shown to lie outside it"
+		resolved=$(physical "$ancestor")${walk#"$ancestor"}
+		primary=$(physical "$(git -C "$strand" worktree list --porcelain | sed -n '1s/^worktree //p')")
+		case "$resolved" in
+			"$primary"/.claude/worktrees/*)
+				[ "$enclosing" = "$primary" ] && git -C "$ancestor" check-ignore -q "$walk"
+				;;
+			*) false ;;
+		esac || refuse "$walk would lie inside the worktree $enclosing"
+	else
+		reason=$(LC_ALL=C git -C "$ancestor" rev-parse --show-toplevel 2>&1 > /dev/null) || true
+		case "$reason" in
+			*"not a git repository"*) ;;
+			*) refuse "git cannot read $ancestor: $reason" ;;
+		esac
+	fi
+fi
+mkdir -p "$(dirname -- "$walk")" || refuse "the parent of $walk cannot be made"
+lock_take "$walk.lock" "another walk uses $walk"
+if [ -e "$walk" ]; then
+	[ "$(physical "$(git -C "$walk" rev-parse --show-toplevel 2> /dev/null || printf '%s' "$walk.none")")" = "$(physical "$walk")" ] \
+		|| refuse "$walk is no worktree of its own"
+	[ "$(physical "$walk")" != "$(physical "$strand")" ] || refuse "$walk is the strand worktree"
+	git -C "$walk" symbolic-ref -q HEAD > /dev/null && refuse "$walk has a branch checked out, not a detached head"
+	[ -z "$(clean_status "$walk")" ] || refuse "$walk is not clean"
+fi
+
+# Each build starts in a worktree cut anew at its commit, so nothing an earlier build or an earlier
+# walk left there serves it, the files git ignores included. git removes a worktree only while it
+# holds no untracked and no changed file, and the build tool is stopped first, so it keeps no file
+# there open.
+cut_anew() {
+	if [ -e "$walk" ]; then
+		if [ -x "$walk/verify" ]; then
+			"$walk/verify" stop > /dev/null 2>&1 || true
+		fi
+		gone=$(git -C "$strand" worktree remove "$walk" 2>&1) \
+			|| refuse "git cannot remove $walk, so it is not cut anew for $2: $gone"
+	fi
+	made=$(git -C "$strand" worktree add -q --detach "$walk" "$1" 2>&1) \
+		|| refuse "git cannot cut $walk anew at $2: $made"
+}
+
+stop_wanted=yes
+failed=0
+base_log=$("$check" --walk-log "$strand" "$base")
+
+for commit in $commits; do
+	short=$(git -C "$strand" rev-parse --short "$commit")
+	tree=$(git -C "$strand" rev-parse "$commit^{tree}")
+	log=$("$check" --walk-log "$strand" "$commit")
+	if [ "$log" = "$base_log" ]; then
+		printf '%s unchanged from the base\n' "$short"
+		continue
+	fi
+	if [ -s "$log" ] && "$check" --walk-green "$strand" "$commit" "$log"; then
+		printf '%s proven\n' "$short"
+		continue
+	fi
+	cut_anew "$commit" "$short"
+	still "$commit" || refuse "$walk is not clean at $short before its build"
+	mkdir -p "${log%/*}"
+	# A report counts as this build's only when written after the stamp; the loop waits for the
+	# clock to tick past it, so a report written at once still reads newer than the stamp. File
+	# times that never advance would spin the loop, so the wait is bounded and then refuses.
+	# The one sleep is 2 s: vfat keeps file times to two seconds, and 1 s refused honest builds.
+	printf '' > "$log.stamp" 2> /dev/null || refuse "the stamp $log.stamp cannot be made"
+	spins=0
+	until [ "$log.tick" -nt "$log.stamp" ]; do
+		[ "$spins" -le 1000 ] || refuse "the file times under ${log%/*} do not advance, so no failed report can be told as this build's"
+		[ "$spins" -ne 1000 ] || sleep 2
+		spins=$((spins + 1))
+		{ printf '' > "$log.tick"; } 2> /dev/null || refuse "the tick $log.tick cannot be made"
+	done
+	status=0
+	{
+		printf 'tree: %s\n' "$tree"
+		"$walk/verify" all 2>&1 || status=$?
+		# The marker opens a line of its own, also after an output that ends without a newline.
+		printf '\n[gate/walk] verify exited %s\n' "$status"
+	} > "$log.tmp"
+	clean=yes
+	still "$commit" || clean=no
+	[ "$clean" = yes ] || printf '[gate/walk] the build left %s moved or dirty\n' "$walk" >> "$log.tmp"
+	if [ "$clean" = yes ] && [ "$status" -eq 0 ] && "$check" --walk-green "$strand" "$commit" "$log.tmp"; then
+		mv "$log.tmp" "$log"
+		rm -f "$log.failed"
+		rm -rf "$log.failed-reports"
+		rm -f "$log.stamp" "$log.tick"
+		printf '%s BUILD SUCCESSFUL\n' "$short"
+	else
+		mv "$log.tmp" "$log.failed"
+		rm -f "$log"
+		rm -rf "$log.failed-reports"
+		if [ -n "$failed_reports" ]; then
+			mkdir "$log.failed-reports"
+			keep_failed_reports "$log"
+		fi
+		rm -f "$log.stamp" "$log.tick"
+		printf '%s BUILD FAILED (log: %s)\n' "$short" "$log.failed"
+		failed=1
+		if [ "$clean" = no ]; then
+			printf 'the build left %s moved or dirty, so no later commit is built there\n' "$walk"
+			break
+		fi
+	fi
+done
+
+exit "$failed"

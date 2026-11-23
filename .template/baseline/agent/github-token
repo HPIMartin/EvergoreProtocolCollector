@@ -1,0 +1,80 @@
+#!/bin/sh
+# Mints an installation token of the agent seat's GitHub App for one repository and prints it on
+# a line of its own: github-token <owner>/<repository>. The App's id comes from AGENT_APP_ID, the
+# path of its private key from AGENT_APP_KEY. The app token is signed with openssl and reaches
+# curl, which reads no config file, only as a header file of mode 0600 in a temporary directory
+# of mode 0700 that a trap removes on exit and on HUP, INT and TERM, so no secret stands on a
+# command line or stays behind. Refuses, with exit 2 and before any call, a malformed repository,
+# an app id that is no number, a key it cannot read and a missing curl, jq or openssl; a key that
+# cannot sign, a refused call and an answer without a token end with exit 1.
+set -eu
+set +x
+umask 077
+
+usage() {
+	printf 'usage: github-token <owner>/<repository>\n' >&2
+	exit 2
+}
+
+fail() {
+	printf 'github-token: %s\n' "$1" >&2
+	exit "${2:-1}"
+}
+
+[ $# -eq 1 ] || usage
+repository=$1
+case "$repository" in
+	*[!A-Za-z0-9_./-]* | */*/*) usage ;;
+	[A-Za-z0-9]*/[A-Za-z0-9]*) ;;
+	*) usage ;;
+esac
+case "${AGENT_APP_ID:-}" in
+	'' | *[!0-9]*) fail 'AGENT_APP_ID is not set to a number' 2 ;;
+esac
+[ -r "${AGENT_APP_KEY:-}" ] || fail 'AGENT_APP_KEY names no readable key' 2
+for tool in curl jq openssl; do
+	command -v "$tool" >/dev/null 2>&1 || fail "$tool is missing" 2
+done
+
+work=
+remove_work() { [ -z "$work" ] || rm -rf "$work"; }
+trap 'remove_work' EXIT
+trap 'remove_work; exit 129' HUP
+trap 'remove_work; exit 130' INT
+trap 'remove_work; exit 143' TERM
+work=$(mktemp -d)
+
+base64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+
+now=$(date +%s)
+printf '{"alg":"RS256","typ":"JWT"}' > "$work/header.json"
+printf '{"iat":%s,"exp":%s,"iss":"%s"}' "$((now - 60))" "$((now + 540))" "$AGENT_APP_ID" > "$work/claims.json"
+header=$(base64url < "$work/header.json")
+claims=$(base64url < "$work/claims.json")
+[ -n "$header" ] && [ -n "$claims" ] || fail 'the app token could not be encoded'
+signed="$header.$claims"
+printf '%s' "$signed" | openssl dgst -sha256 -sign "$AGENT_APP_KEY" -out "$work/signature" \
+	|| fail 'the key could not sign the app token'
+signature=$(base64url < "$work/signature")
+[ -n "$signature" ] || fail 'the app token could not be encoded'
+printf 'Authorization: Bearer %s.%s\n' "$signed" "$signature" > "$work/authorization"
+
+api() {
+	curl --disable --silent --show-error --fail --connect-timeout 10 --max-time 30 \
+		--header 'Accept: application/vnd.github+json' \
+		--header 'X-GitHub-Api-Version: 2022-11-28' --header "@$work/authorization" "$@"
+}
+
+api --output "$work/installation.json" "https://api.github.com/repos/$repository/installation" \
+	|| fail "GitHub refused the installation lookup for $repository"
+installation=$(jq -r '.id // empty' "$work/installation.json")
+case "$installation" in
+	'' | *[!0-9]*) fail "the App is not installed on $repository" ;;
+esac
+jq -n --arg name "${repository#*/}" '{repositories: [$name]}' > "$work/request.json"
+api --request POST --data "@$work/request.json" --output "$work/token.json" \
+	"https://api.github.com/app/installations/$installation/access_tokens" \
+	|| fail 'GitHub refused the token request'
+token=$(jq -r '.token // empty' "$work/token.json")
+[ -n "$token" ] || fail 'GitHub returned no token'
+printf '%s\n' "$token"

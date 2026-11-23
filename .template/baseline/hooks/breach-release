@@ -1,0 +1,87 @@
+#!/bin/sh
+# The author's way out for a recorded commit that already sits on the protected branch, where no
+# rewrite may take it out of the history: it appends a release line for the commit to the breach
+# record, after which breach-guard ignores it, and the fix follows as an ordinary commit. A commit
+# only a strand reaches leaves by a rewrite of that strand instead. The record is never rewritten.
+# The CLAUDECODE check keeps an agent from releasing by mistake; it is a courtesy, not a boundary.
+# usage: sh hooks/breach-release <commit>
+set -eu
+
+# > **ADAPT:** the protected branch: the one branch whose recorded commits the author releases
+# > instead of rewriting them away.
+protected_branch='main'
+
+hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+refuse() {
+	printf '[breach-release] %s\n' "$1" >&2
+	exit 1
+}
+
+if [ -n "${CLAUDECODE:-}" ]; then
+	refuse "CLAUDECODE is set, so Claude Code runs this. Releasing a recorded commit is the author's act (handbook §7): the author reads the commit and runs this in a shell of their own."
+fi
+
+[ "$#" -eq 1 ] || refuse 'usage: hooks/breach-release <commit>'
+
+top=$(git rev-parse --show-toplevel 2>/dev/null) || refuse "$(pwd) is not inside a git work tree."
+cd "$top"
+
+case $1 in
+	-*) id='' ;;
+	*) id=$(git rev-parse -q --verify "$1^{commit}") || id='' ;;
+esac
+[ -n "$id" ] || refuse "$1 is not a commit."
+
+# The record is gate-record; an entry an older recorder writes to gate-breach counts too, and its
+# release goes to gate-record like any other (breach-guard reads both).
+common=$(git rev-parse --git-common-dir)
+record="$common/gate-record"
+set --
+for file in "$common/gate-breach" "$record"; do
+	[ -e "$file" ] || [ -L "$file" ] || continue
+	{ [ -f "$file" ] && [ -r "$file" ]; } || refuse "cannot read the breach record $file."
+	set -- "$@" "$file"
+done
+{ [ "$#" -gt 0 ] && sed 's/[[:space:]]*$//' "$@" | grep -qxF -- "$id"; } || refuse "$id is not recorded; there is nothing to release."
+
+# Whether the entry is still live is breach-guard's answer, so the record has one reader: the
+# commit reaches itself, so it is live exactly when the query names it.
+answer_status=0
+answer=$(sh "$hooks_dir/breach-guard" --reaches "$id" 2>&1) || answer_status=$?
+case $answer_status in
+	0) refuse "$id is already released." ;;
+	1)
+		named=$(printf '%s\n' "$answer" | sed -n '1s/^.*reaches recorded commit(s)://p')
+		case " $named " in
+			*" $id "*) ;;
+			*) refuse "$id is already released." ;;
+		esac
+		;;
+	*) refuse "breach-guard could not answer for $id: $answer" ;;
+esac
+
+git merge-base --is-ancestor "$id" "refs/heads/$protected_branch" 2>/dev/null \
+	|| refuse "$protected_branch does not reach $id. A recorded commit only a strand reaches leaves by a rewrite of that strand (the way out pre-commit prints), never by a release."
+
+name=$(git config user.name || true)
+case $name in
+	*[![:space:]]*) ;;
+	*) refuse 'user.name is empty or blank, and the release line names who released the commit.' ;;
+esac
+newline='
+'
+cr=$(printf '\r')
+case $name in
+	*"$newline"*|*"$cr"*) refuse 'user.name holds a line break (a newline or a CR), and the release must stay one line of the record.' ;;
+esac
+
+# The newline before the line keeps a line a writer cut short, or one saved without its final
+# newline, off this one, so breach-guard reads that line as malformed and this one as a release.
+# The append is checked, so a record that cannot take the line (one the author cannot write, a full
+# disk) is said instead of the shell's own error.
+if ! (printf '\nreleased %s %s %s\n' "$id" "$(date -u +%Y-%m-%d)" "$name" >> "$record") 2>/dev/null; then
+	refuse "the release of $id is NOT recorded: the breach record $record could not be appended to, so breach-guard still refuses on its account."
+fi
+printf '[breach-release] released %s (%s); breach-guard no longer refuses on its account.\n' "$id" "$(git log -1 --format=%s "$id")"
+printf 'The fix follows as an ordinary commit.\n'

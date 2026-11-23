@@ -2,7 +2,7 @@
 set -eu
 
 usage() {
-	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln\n' >&2
+	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln|stop\n' >&2
 	exit 2
 }
 
@@ -20,8 +20,17 @@ if [ "$cmd" = focus ]; then
 fi
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+case "$root" in
+	*\"*)
+		printf '[verify] %s holds a double quote, which Gradle drops from its options, so no daemon registry of this tree can be named\n' "$root" >&2
+		exit 2
+		;;
+esac
 cd "$root"
 target=${target#"$root"/}
+
+GRADLE_OPTS="${GRADLE_OPTS:+$GRADLE_OPTS }-Dorg.gradle.daemon.registry.base=\"$root/registry.local.d\""
+export GRADLE_OPTS
 
 run() {
 	"$@" || exit 1
@@ -49,14 +58,79 @@ report() {
 	printf '[verify] %s reported findings (exit %s)\n' "$1" "$status"
 }
 
+# > **ADAPT:** the machine-wide build lock. It serializes the builds and test runs of every
+# > worktree of this project on the machine, so only one of them runs at a time; every worktree of
+# > the machine must name the same file.
+build_lock="/tmp/{{PROJECT_NAME}}-build.lock"
+build_lock_taken=""
+
+fd_holds_build_lock() {
+	[ "/proc/$$/fd/$1" -ef "$build_lock" ] && grep -q '^lock:.*FLOCK' "/proc/$$/fdinfo/$1" 2>/dev/null
+}
+
+release_build_lock() {
+	if [ -n "$build_lock_taken" ]; then
+		flock -u 9
+	fi
+}
+
+end_by_signal() {
+	release_build_lock
+	trap - "$1"
+	kill -s "$1" $$
+	exit 1
+}
+
+hold_build_lock() {
+	if ! command -v flock >/dev/null 2>&1 || [ ! -d "/proc/$$/fdinfo" ]; then
+		printf '[verify] this run takes no build lock: the machine lacks flock or /proc\n' >&2
+		return 0
+	fi
+	for fd in /proc/$$/fd/*; do
+		if fd_holds_build_lock "${fd##*/}"; then
+			return 0
+		fi
+	done
+	while :; do
+		[ -e "$build_lock" ] || (umask 022 && touch "$build_lock") 2>/dev/null || true
+		if ! (exec 9<"$build_lock") 2>/dev/null; then
+			printf '[verify] cannot read %s, the machine-wide build lock; its owner can make it readable\n' "$build_lock" >&2
+			exit 1
+		fi
+		exec 9<"$build_lock"
+		if ! flock -n 9; then
+			printf '[verify] waiting for %s: another build on this machine holds it\n' "$build_lock" >&2
+			flock 9 || exit 1
+		fi
+		if [ "/proc/$$/fd/9" -ef "$build_lock" ]; then
+			build_lock_taken=1
+			trap release_build_lock EXIT
+			trap 'end_by_signal HUP' HUP
+			trap 'end_by_signal INT' INT
+			trap 'end_by_signal TERM' TERM
+			return 0
+		fi
+	done
+}
+
 every_tag='@wip or not @wip'
 
 case "$cmd" in
-	format|focus|bdd|all|outdated|vuln) ;;
+	format|focus|bdd|all|outdated|vuln|stop) ;;
 	*) usage ;;
 esac
 
+if [ "$cmd" = stop ]; then
+	[ -x ./gradlew ] || exit 0
+	run ./gradlew --console=plain --stop
+	exit 0
+fi
+
 require ./gradlew
+
+case "$cmd" in
+	focus|bdd|all|vuln) hold_build_lock ;;
+esac
 
 case "$cmd" in
 	format)
@@ -80,11 +154,14 @@ case "$cmd" in
 	all)
 		run ./gradlew clean build --no-build-cache --console=plain
 		results=$(mktemp)
-		trap 'rm -f "$results"' EXIT
-		# ADAPT: this prune list is a deny-list. Extend it to every directory your build never
-		# writes into (worktrees, vendored trees, a nested tool build such as tools/codegen/build),
-		# or the count reports someone else's run, and prefer your build tool's own test summary
-		# wherever it prints one.
+		trap 'release_build_lock; rm -f "$results"' EXIT
+		trap 'rm -f "$results"; end_by_signal HUP' HUP
+		trap 'rm -f "$results"; end_by_signal INT' INT
+		trap 'rm -f "$results"; end_by_signal TERM' TERM
+		# > **ADAPT:** this prune list is a deny-list. Extend it to every directory your build
+		# > never writes into (worktrees, vendored trees, a nested tool build such as
+		# > tools/codegen/build), or the count reports someone else's run, and prefer your build
+		# > tool's own test summary wherever it prints one.
 		if ! find . -type d \
 				\( -name .git -o -name .claude -o -name .template -o -name node_modules \) -prune \
 				-o -path '*/build/test-results/*' -name 'TEST-*.xml' -print > "$results"; then
@@ -94,13 +171,13 @@ case "$cmd" in
 		printf '[verify] executed test classes: %s\n' "$(wc -l < "$results" | tr -d ' ')"
 		;;
 	outdated)
-		# ADAPT: needs the com.github.ben-manes.versions plugin. Without it, use
-		# ./gradlew --refresh-dependencies dependencies and read the resolved versions.
+		# > **ADAPT:** needs the com.github.ben-manes.versions plugin. Without it, use
+		# > ./gradlew --refresh-dependencies dependencies and read the resolved versions.
 		report ./gradlew --quiet --console=plain dependencyUpdates
 		;;
 	vuln)
-		# ADAPT: OWASP dependency-check plugin; trivy fs --scanners vuln . is the plugin-free
-		# alternative.
+		# > **ADAPT:** OWASP dependency-check plugin; trivy fs --scanners vuln . is the plugin-free
+		# > alternative.
 		report ./gradlew --console=plain dependencyCheckAnalyze
 		;;
 esac

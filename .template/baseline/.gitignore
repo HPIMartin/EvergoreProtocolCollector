@@ -15,6 +15,7 @@ ai-dev-process-template-*.tar.gz
 /artifacts/
 /build/
 .venv/
+__pycache__/
 # Secrets and keystores never reach the repo (engineering-handbook §7). A committed placeholder
 # template needs a negation, e.g. !secrets.local.properties.template
 *.local.*

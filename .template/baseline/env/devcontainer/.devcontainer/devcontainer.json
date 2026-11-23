@@ -1,30 +1,54 @@
 {
-	// ADAPT: project name; pick an image and toolchain features for your stack (pin explicit versions).
+	// ADAPT: project name; the base image in the Dockerfile and toolchain features for your stack
+	// (pin explicit versions).
 	"name": "{{PROJECT_NAME}}",
-	"image": "mcr.microsoft.com/devcontainers/base:bookworm",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
 	"features": {
 		// ADAPT: your stack's toolchains, pinned exactly per the stacks/ preset (example, Java):
 		// "ghcr.io/devcontainers/features/java:1": { "version": "25" }
+		// MODULE guard
+		// The shell-shape guard (agent/) needs python3 3.9 or newer, which the base image lacks.
+		"ghcr.io/devcontainers/features/python:1": { "version": "3.13.2", "installTools": false },
+		// /MODULE guard
 		// The node feature below is itself only a stack example; replace or remove it.
-		"ghcr.io/devcontainers/features/node:1": { "version": "22.14.0" }
+		"ghcr.io/devcontainers/features/node:1": { "version": "22.14.0", "nodeGypDependencies": false }
 	},
-	// Persistent per-project Claude home: survives container rebuilds (auth, memory, local settings).
+	// CLAUDE_CONFIG_DIR and the .claude-home mount: the persistent per-project Claude home, which
+	// survives container rebuilds (auth, memory, local settings).
 	"containerEnv": {
+		// MODULE volumes
+		// The worktree root on the named volume (dev-environment.md, "Worktrees on a volume").
+		"AGENT_WORKTREES": "/worktrees",
+		// /MODULE volumes
 		"CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
 	},
 	"mounts": [
+		// MODULE volumes
+		// The named volume that holds the agent worktrees, mounted on the worktree root.
+		"source={{PROJECT_NAME}}-worktrees,target=/worktrees,type=volume",
+		// /MODULE volumes
 		"source=${localWorkspaceFolder}/.devcontainer/.claude-home,target=/home/vscode/.claude,type=bind"
 	],
-	// Wires the repo git hooks. ADAPT: append a warm-up run ("... && ./verify all") once the
-	// project has a verify script, so the first real build finds a warm cache.
+	// Wires the repo git hooks and sets push.default to nothing.
+	// MODULE volumes
+	// The last two links are the volumes module's: the registration setting and the volume's owner
+	// (dev-environment.md, "Worktrees on a volume").
+	// /MODULE volumes
+	// ADAPT: append a warm-up, a build without tests in the stack's own form, so the first real
+	// build finds a warm cache. Not one that runs the tests: the chain stops at its first failure
+	// by design, so a red test would abort container creation.
 	// The CI preset (ci/gitlab/) builds this same folder into the pipeline image, where lifecycle
 	// commands do not run: whatever the build needs belongs in "features" or a Dockerfile.
-	"postCreateCommand": "git config core.hooksPath hooks",
+	"postCreateCommand": "git config core.hooksPath hooks && git config push.default nothing && git config gc.worktreePruneExpire never && sudo chown -R vscode:vscode /worktrees",
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"Anthropic.claude-code"
-				// ADAPT: stack extensions (example: "vscjava.vscode-java-pack")
+				"Anthropic.claude-code",
+				"eamodio.gitlens"
+				// ADAPT: both above are recommended (dev-environment.md, variant A); add the stack's
+				// own, the project's choice (example: "vscjava.vscode-java-pack")
 			],
 			"settings": {
 				"files.eol": "\n"

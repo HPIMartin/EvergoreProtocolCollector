@@ -1,0 +1,192 @@
+#!/bin/sh
+# The last gate before commits leave this checkout, for every pusher, the author and an agent alike.
+# git runs it with the remote's name and URL (the URL twice for a push to a URL that is no
+# configured remote) and one line per ref on stdin, `<local ref> <local oid> <remote ref> <remote
+# oid>`; a non-zero exit refuses the whole push. It refuses a remote ref other than
+# refs/heads/<branch_prefix>*, refs/heads/<mainline> and refs/tags/*, the deletion of
+# refs/heads/<mainline>, a pushed tip that reaches a commit the hooks recorded as a breach
+# (hooks/breach-guard --reaches), and in the pushed range a commit whose subject starts with [wip]
+# in any case after blanks, a merge commit and a commit hooks/content-gate refuses. Every finding of
+# every ref is reported before the refusal.
+# The breach record is this clone's own: a commit recorded in another clone is unknown here.
+# The pushed range of a ref is every commit its local oid reaches that no remote-tracking ref of the
+# remote reaches, nor the remote oid where this repository holds that commit: the refs under
+# refs/remotes/<name>/ for a named remote, every remote-tracking ref of any remote for a push to a
+# URL. A commit an earlier ref of the same push reached is not read twice.
+# The range trusts those refs: a commit a remote-tracking ref still holds after the remote lost it,
+# or, for a push to a URL, one another remote holds, is left out. A remote oid this repository lacks
+# only widens the range. A first push to an empty remote, or to one with no remote-tracking refs,
+# reads the whole history the pushed tip reaches, one content-gate run per commit: slow on a long
+# history, and it refuses an old commit that fails today's gate and an old merge commit.
+# A deletion carries no commits and a tag that points at no commit has no range, so the ref rules
+# alone judge both. A git read that fails refuses the push, never an empty range that passes, and
+# so does a breach record that cannot be read.
+# content-gate and breach-guard read a work tree, so a push of commits from a bare repository is
+# refused.
+# git's environment is kept: it names the pushing repository, the one content-gate must read.
+# GIT_NO_REPLACE_OBJECTS is set for this hook and content-gate: the push sends the real objects, so
+# a replace ref must not show either of them another commit in their place.
+# --no-verify skips this hook, as it skips every hook.
+set -uf
+GIT_NO_REPLACE_OBJECTS=1
+export GIT_NO_REPLACE_OBJECTS
+
+# > **ADAPT:** the prefix of the agent branches (handbook §7, "Branching"); /adopt sets it.
+branch_prefix='claude/'
+
+# > **ADAPT:** the mainline branch (handbook §7, "Branching"); /adopt sets it.
+mainline='main'
+
+unreadable() {
+	printf '\n[pre-push] git failed to read %s, so nothing it holds was checked and the push is refused. Fix what git reports above and push again.\n' "$1" >&2
+	exit 1
+}
+
+[ $# -eq 2 ] || {
+	printf '\n[pre-push] git passes a remote and its URL, but this run got %s argument(s), so the push is refused.\n' "$#" >&2
+	exit 1
+}
+remote=$1
+
+hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd) || unreadable 'the folder that holds this hook'
+
+remotes=$(git remote) || unreadable 'the configured remotes'
+if printf '%s\n' "$remotes" | grep -Fxq -- "$remote"; then
+	held_by="--remotes=$remote"
+else
+	held_by=--remotes
+fi
+
+if [ -n "$branch_prefix" ]; then
+	allowed="refs/heads/$branch_prefix*, refs/heads/$mainline and refs/tags/*"
+else
+	allowed="refs/heads/$mainline and refs/tags/* (the agent branch prefix is empty)"
+fi
+
+report=''
+finding() {
+	report=$(printf '%s\n[pre-push] %s' "$report" "$1")
+}
+
+pushable() {
+	case "$1" in
+		refs/tags/?* | "refs/heads/$mainline") return 0 ;;
+	esac
+	[ -n "$branch_prefix" ] || return 1
+	case "$1" in
+		"refs/heads/$branch_prefix"?*) return 0 ;;
+	esac
+	return 1
+}
+
+is_zero() {
+	case "$1" in
+		*[!0]*) return 1 ;;
+		*) return 0 ;;
+	esac
+}
+
+commit_of() {
+	kind=$(git cat-file -t "$1") || unreadable "the object pushed to $2"
+	case "$kind" in
+		commit) printf '%s' "$1" ;;
+		tag)
+			target=$(git rev-parse --verify "$1^{}") || unreadable "the object the tag pushed to $2 points at"
+			kind=$(git cat-file -t "$target") || unreadable "the kind of the object the tag pushed to $2 points at"
+			[ "$kind" != commit ] || printf '%s' "$target"
+			;;
+	esac
+}
+
+check_range() {
+	ref=$1
+	held_tip=$3
+	set -- "$2"
+	[ -z "$held_tip" ] || set -- "$@" "^$held_tip"
+	for earlier in $reached; do
+		set -- "$@" "^$earlier"
+	done
+	range=$(git log --no-show-signature --format='%H %P|%s' "$@" --not "$held_by" --) \
+		|| unreadable "the commits pushed to $ref"
+	range_ifs=$IFS
+	IFS='
+'
+	for line in $range; do
+		IFS=$range_ifs
+		ids=${line%%|*}
+		sha=${ids%% *}
+		subject=${line#*|}
+		short=$(git rev-parse --short "$sha") || unreadable "commit $sha"
+		case "$ids" in
+			*' '*' '*)
+				finding "$ref: commit $short is a merge commit, which never belongs in the history (handbook §7). Rebuild the branch without it, then push again."
+				;;
+		esac
+		if printf '%s\n' "$subject" | grep -qi '^[[:blank:]]*\[wip\]'; then
+			finding "$ref: commit $short '$subject' is a [wip] commit, which never leaves this checkout. Fold it into a finished commit, then push again."
+		fi
+		if ! gate=$("$hooks_dir/content-gate" --commit "$sha" 2>&1); then
+			finding "$ref: commit $short fails the content gate, which a pushed commit passes as a committed one does. Rewrite it without the finding, then push again. The gate reports:$gate"
+		fi
+		IFS='
+'
+	done
+	IFS=$range_ifs
+}
+
+# The guard's first line names the tip and every recorded commit it reaches; its way out follows.
+# An answer that is neither 0 nor 1 means the record could not be read.
+check_breach() {
+	answer=0
+	recorded=$("$hooks_dir/breach-guard" --reaches "$2" 2>&1 >/dev/null) || answer=$?
+	case "$answer" in
+		0) ;;
+		1) finding "$1: the pushed tip reaches a commit the hooks recorded as a breach, which never leaves this checkout. The guard reports:
+$recorded" ;;
+		*)
+			printf '%s\n' "$recorded" >&2
+			unreadable "the breach record for the tip pushed to $1"
+			;;
+	esac
+}
+
+updates=$(cat) || unreadable 'the refs git is pushing'
+reached=''
+oldifs=$IFS
+IFS='
+'
+for update in $updates; do
+	IFS=$oldifs
+	set -- $update
+	[ $# -eq 4 ] || unreadable "the pushed ref line '$update'"
+	local_oid=$2
+	remote_ref=$3
+	remote_oid=$4
+	if is_zero "$local_oid" && [ "$remote_ref" = "refs/heads/$mainline" ]; then
+		finding "deleting $remote_ref is refused: the mainline is never deleted by a push. A mainline that must go is removed on the remote itself."
+	elif is_zero "$local_oid"; then
+		pushable "$remote_ref" \
+			|| finding "deleting $remote_ref is refused: a push from here reaches only $allowed. A ref outside them is changed on the remote itself."
+	else
+		pushable "$remote_ref" \
+			|| finding "a push to $remote_ref is refused: a push from here reaches only $allowed. Push the work to one of those refs."
+		tip=$(commit_of "$local_oid" "$remote_ref") || exit 1
+		if [ -n "$tip" ]; then
+			known=''
+			if ! is_zero "$remote_oid"; then
+				known=$(git rev-parse --verify --quiet "$remote_oid^{commit}" 2>/dev/null) || known=''
+			fi
+			check_breach "$remote_ref" "$tip"
+			check_range "$remote_ref" "$tip" "$known"
+			reached="$reached
+$tip"
+		fi
+	fi
+	IFS='
+'
+done
+IFS=$oldifs
+
+[ -n "$report" ] || exit 0
+printf '%s\n' "$report" >&2
+exit 1

@@ -1,6 +1,7 @@
 #!/bin/sh
-# Fast pre-commit quality gate. Deliberately excludes the test run and the full build to keep the
-# TDD micro-commit loop fast; every commit is already green by the time it is made.
+# The pre-commit quality gate. It leaves the project's test run and its build out, to keep the TDD
+# micro-commit loop fast; every commit is already green by the time it is made. A commit that
+# touches a tooling folder with a self-test runs that folder's whole suite (hooks/self-test-legs).
 # Active via: git config core.hooksPath hooks (wire that into the devcontainer postCreate).
 set -eu
 
@@ -12,22 +13,39 @@ reject() {
 	exit 1
 }
 
+# A merge git left in progress (refused by pre-merge-commit, stopped by --no-commit, or halted on a
+# conflict) would be concluded here as a merge commit; work lands by rebase and fast-forward only.
+if [ -f "$(git rev-parse --git-path MERGE_HEAD)" ]; then
+	reject "a merge is in progress and this commit would conclude it as a merge commit. Run 'git merge --abort' and land by rebase and fast-forward (handbook §7)."
+fi
+
+# A rebase stopped at a conflict is finished by `git rebase --continue`; a commit or an amend there
+# would fold the conflicted state into the wrong commit. An edit or reword stop is none: git writes
+# rebase-merge/amend there, but at a fixup or squash conflict stop too, so the last done line naming
+# the edit or the reword is what tells them apart. A fixup or squash whose message editor failed
+# leaves the same files as its conflict stop and is refused alike; `git rebase --continue` finishes
+# it. --git-path resolves each path in a linked worktree too.
+stopped_at_edit() {
+	[ -f "$(git rev-parse --git-path rebase-merge/amend)" ] \
+		&& tail -n 1 "$(git rev-parse --git-path rebase-merge/done)" 2>/dev/null | grep -qE '^(edit|reword)'
+}
+
+stopped_at_conflict() {
+	{ [ -d "$(git rev-parse --git-path rebase-merge)" ] || [ -d "$(git rev-parse --git-path rebase-apply)" ]; } \
+		&& git rev-parse -q --verify REBASE_HEAD >/dev/null \
+		&& ! stopped_at_edit
+}
+
+if stopped_at_conflict; then
+	reject "a rebase stopped here, at a conflict or at a fixup or squash that could not finish. Run 'git rebase --continue', after resolving any conflict, never a commit or an amend, which would fold this state into the wrong commit."
+fi
+
 "$hooks_dir/breach-guard"
 
 "$hooks_dir/content-gate" --staged
 
-if git diff --cached --name-only --diff-filter=ACMD -- 'hooks/*' | grep -q .; then
-	printf '[pre-commit] hook self-test...\n'
-	"$hooks_dir/self-test" >/dev/null 2>&1 || reject "hooks/self-test fails, so the gate no longer blocks what it claims to block. Run 'hooks/self-test' and read its output."
-fi
-
-# Guarded on the staged paths, not on the script: a commit that removes stacks/self-test must run
-# into the leg rather than switch it off.
-if git diff --cached --name-only --diff-filter=ACMD -- 'stacks/*' | grep -q .; then
-	printf '[pre-commit] stacks self-test...\n'
-	[ -f stacks/self-test ] || reject "stacks/self-test is missing, so nothing proves the stack presets' contract. Restore it."
-	sh stacks/self-test >/dev/null 2>&1 || reject "stacks/self-test fails, so a stack preset no longer honours the contract the hooks rely on. Run 'sh stacks/self-test' and read its output."
-fi
+# The self-test legs run the staged suites of the folders the commit touches (self-test-legs).
+"$hooks_dir/self-test-legs" pre-commit
 
 # The agent entry files carry one section verbatim. It is compared from the staged blobs, falling
 # back to HEAD for the file the commit does not touch, so editing one of the two alone is caught.

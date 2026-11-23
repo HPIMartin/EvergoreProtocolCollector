@@ -1,0 +1,111 @@
+#!/bin/sh
+# The push route of the unattended agent seat: push <worktree> pushes the branch a linked worktree
+# has checked out to origin under its lease; push <worktree> <expected remote tip> leases on that
+# tip instead, for the push after a reset-free fold; push --delete <branch> deletes a landed branch
+# on origin from the checkout that holds this file, only where origin's main, read live, is
+# refs/remotes/origin/main and a local branch of that name holds no commit it lacks. It runs only
+# where AGENT_SEAT reads unattended and the prefix below is not empty, refuses main whatever the
+# prefix, the primary checkout, a detached head, a branch outside the prefix or with an upstream, a
+# missing origin or refs/remotes/origin/main, an origin whose push URLs are other than its one
+# fetch URL, and a commit whose subject starts with [wip] in any case after blanks, and pushes that
+# one branch ref alone: never main, a tag or an upstream setting.
+set -u
+
+# > **ADAPT:** the prefix of the agent branches (handbook §7, "Branching"); /adopt sets it.
+branch_prefix='claude/'
+
+refuse() {
+	printf 'push: %s\n' "$1" >&2
+	exit 2
+}
+
+on_prefix() {
+	[ "$1" != main ] || refuse "the branch 'main' is never pushed or deleted"
+	case "$1" in
+		"$branch_prefix"*) ;;
+		*) refuse "the branch '$1' is no $branch_prefix branch" ;;
+	esac
+}
+
+has_origin() {
+	git -C "$1" remote get-url origin > /dev/null 2>&1 || refuse "the repository has no remote 'origin'"
+}
+
+pushes_where_it_fetches() {
+	[ "$(git -C "$1" remote get-url --push --all origin 2> /dev/null)" = "$(git -C "$1" remote get-url origin 2> /dev/null)" ] \
+		|| refuse "origin's push URL differs from its fetch URL, so what the lease reads is not where the push goes"
+}
+
+has_origin_main() {
+	git -C "$1" rev-parse --verify --quiet refs/remotes/origin/main > /dev/null \
+		|| refuse 'refs/remotes/origin/main is missing; fetch origin first'
+}
+
+usage='usage: push <worktree> [<expected remote tip>] | push --delete <branch>'
+case "$#:${1:-}" in
+	2:--delete) mode=delete ;;
+	[12]:-* | [12]:) refuse "$usage" ;;
+	[12]:*) mode=push ;;
+	*) refuse "$usage" ;;
+esac
+[ "${AGENT_SEAT:-}" = unattended ] \
+	|| refuse 'only the unattended agent seat pushes, and AGENT_SEAT does not read unattended'
+[ -n "$branch_prefix" ] || refuse "the block's prefix is empty, so agent/push pushes and deletes nothing"
+
+if [ "$mode" = delete ]; then
+	branch=$2
+	on_prefix "$branch"
+	git check-ref-format --branch "$branch" > /dev/null 2>&1 || refuse "'$branch' is no valid branch name"
+	checkout=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || refuse 'the folder that holds agent/ is gone'
+	git -C "$checkout" rev-parse > /dev/null 2>&1 || refuse "$checkout is no git checkout"
+	has_origin "$checkout"
+	pushes_where_it_fetches "$checkout"
+	has_origin_main "$checkout"
+	origin_main=$(git -C "$checkout" ls-remote origin refs/heads/main 2> /dev/null | awk -F '\t' '$2 == "refs/heads/main" { print $1 }')
+	[ -n "$origin_main" ] && [ "$origin_main" = "$(git -C "$checkout" rev-parse refs/remotes/origin/main)" ] \
+		|| refuse "refs/remotes/origin/main is not origin's main; fetch origin first"
+	tip=$(git -C "$checkout" rev-parse --verify --quiet "refs/remotes/origin/$branch") || {
+		printf "push: origin holds no branch '%s' as the last fetch saw it; nothing to delete\n" "$branch"
+		exit 0
+	}
+	git -C "$checkout" merge-base --is-ancestor "$tip" refs/remotes/origin/main \
+		|| refuse "refs/remotes/origin/main does not hold the tip of '$branch'; only a landed branch is deleted"
+	if git -C "$checkout" rev-parse --verify --quiet "refs/heads/$branch" > /dev/null; then
+		git -C "$checkout" merge-base --is-ancestor "refs/heads/$branch" refs/remotes/origin/main \
+			|| refuse "the local branch '$branch' holds commits origin/main lacks; it has not landed"
+	fi
+	git -C "$checkout" push --no-follow-tags "--force-with-lease=refs/heads/$branch:$tip" origin ":refs/heads/$branch"
+	exit
+fi
+
+worktree=$1
+if [ $# -eq 2 ]; then
+	case "$2" in
+		*[!0-9a-f]*) refuse "'$2' is no commit hash of 7 to 64 lowercase hex digits" ;;
+	esac
+	[ "${#2}" -ge 7 ] && [ "${#2}" -le 64 ] || refuse "'$2' is no commit hash of 7 to 64 lowercase hex digits"
+fi
+git -C "$worktree" rev-parse > /dev/null 2>&1 || refuse "$worktree is no git worktree"
+[ "$(git -C "$worktree" rev-parse --absolute-git-dir)" != "$(git -C "$worktree" rev-parse --path-format=absolute --git-common-dir)" ] \
+	|| refuse 'the primary checkout is shared; push from a linked worktree'
+head_ref=$(git -C "$worktree" symbolic-ref --quiet HEAD) || head_ref=
+case "$head_ref" in
+	refs/heads/?*) branch=${head_ref#refs/heads/} ;;
+	*) refuse 'the worktree has a detached head, so there is no branch to push' ;;
+esac
+on_prefix "$branch"
+git -C "$worktree" rev-parse --verify --quiet HEAD > /dev/null || refuse 'the worktree has no commit'
+has_origin "$worktree"
+pushes_where_it_fetches "$worktree"
+for key in remote merge; do
+	if git -C "$worktree" config --get "branch.$branch.$key" > /dev/null 2>&1; then
+		refuse "the branch '$branch' has an upstream (branch.$branch.$key is set), so the landing's merged check would read the wrong ref"
+	fi
+done
+has_origin_main "$worktree"
+if git -C "$worktree" log --format=%s refs/remotes/origin/main..HEAD | grep -qi '^[[:blank:]]*\[wip\]'; then
+	refuse 'origin/main..HEAD holds a [wip] commit, which is never pushed'
+fi
+lease=--force-with-lease
+[ $# -eq 1 ] || lease="--force-with-lease=refs/heads/$branch:$2"
+git -C "$worktree" push --no-follow-tags "$lease" --force-if-includes origin "refs/heads/$branch:refs/heads/$branch"

@@ -10,25 +10,58 @@ usage() {
 	exit 2
 }
 
+# A git read that fails would otherwise look like an empty change and pass, so it refuses in every
+# mode; post-commit and post-rewrite record any refusal of a commit.
+unreadable() {
+	printf '\n[gate] git failed to read %s, so nothing it holds was checked. Fix what git reports above and run the gate again.\n' "$1" >&2
+	exit 1
+}
+
 [ $# -ge 1 ] || usage
 mode=$1
 case "$mode" in
 	--staged) [ $# -eq 1 ] || usage; label='staged content' ;;
-	--commit) [ $# -eq 2 ] || usage; sha=$2; label="commit $(git rev-parse --short "$sha")" ;;
+	--commit)
+		[ $# -eq 2 ] || usage
+		sha=$2
+		short=$(git rev-parse --short --verify --quiet "$sha^{commit}") || unreadable "commit $sha"
+		label="commit $short" ;;
 	*) usage ;;
 esac
 
-cd "$(git rev-parse --show-toplevel)"
+top=$(git rev-parse --show-toplevel) || unreadable 'the top of the work tree'
+cd "$top"
 
 # > **ADAPT:** the extension families every check below keys off, one per comment syntax:
 # > `comment_slash_ext` for `//` and `/* */`, `comment_hash_ext` for `#`, `comment_xml_ext` for
-# > `<!-- -->`. `docstring_ext` adds the triple-quoted-string rules and the `directive_allow_re`
-# > exemption for tool directives. The self-test's fixtures must use the same extensions.
+# > `<!-- -->`. In a shell script, `*.sh` or recognised by its shebang, and in `*.yml` and `*.yaml`
+# > a `#` opens a comment only at the start of a word. `docstring_ext` adds the triple-quoted-string
+# > rules and the `directive_allow_re` exemption for tool directives. The self-test's fixtures must
+# > use the same extensions.
 comment_slash_ext='*.java *.kt *.kts *.ts *.tsx *.js *.jsx *.mjs *.cjs *.cs *.cpp *.cc *.cxx *.hpp *.hh *.h *.c'
-comment_hash_ext='*.py *.cmake CMakeLists.txt *.toml'
+comment_hash_ext='*.py *.cmake CMakeLists.txt *.toml *.sh *.yml *.yaml'
 comment_xml_ext='*.csproj *.props *.targets'
 docstring_ext='*.py'
-directive_allow_re='^#[[:space:]]*(noqa|type|pragma|fmt|ruff|pyright|mypy|pylint|isort|nosec)(:[[:space:]]*[^[:space:]]*)?[[:space:]]*$'
+# A directive passes with its usual body and nothing after it: one token after its colon, a comma
+# list of rule codes after `noqa:`, of Bandit IDs after `nosec`, of names after `pylint: <option>=`
+# or inside `ignore[...]`, or `pragma: no cover` and `no branch`. Each list is written item first,
+# `(item, )*item`: mawk 1.3.4 misses a repeated group that opens with `[[:space:]]*` once it repeats
+# zero times. The value reaches awk through -v, so it holds no backslash.
+directive_allow_re='^#[[:space:]]*((noqa|type|pragma|fmt|ruff|pyright|mypy|pylint|isort|nosec)(:[[:space:]]*[^[:space:]]*)?|(ruff:[[:space:]]*)?noqa:[[:space:]]*([A-Z]+[0-9]+[[:space:]]*,[[:space:]]*)*[A-Z]+[0-9]+|nosec([[:space:]]+|:[[:space:]]*)(B[0-9]+[[:space:]]*,[[:space:]]*)*B[0-9]+|pylint:[[:space:]]*[a-z-]+=([A-Za-z0-9_-]+[[:space:]]*,[[:space:]]*)*[A-Za-z0-9_-]+|(type|pyright):[[:space:]]*ignore[[]([A-Za-z0-9_-]+[[:space:]]*,[[:space:]]*)*[A-Za-z0-9_-]+]|pragma:[[:space:]]*no[[:space:]]+(cover|branch))[[:space:]]*$'
+
+# > **ADAPT:** the shipped tooling directories whose scripts keep their comments (handbook §3): each
+# > holds a script with a self-test of its own. Add a project tooling directory of that kind here.
+# > Only the comment scan skips them; every other scan reads them.
+comment_exempt_dirs='stacks/ agent/'
+# MODULE gate
+comment_exempt_dirs="$comment_exempt_dirs gate/"
+# /MODULE gate
+# MODULE agent-seat
+comment_exempt_dirs="$comment_exempt_dirs land/"
+# /MODULE agent-seat
+
+# A file without an extension whose first line runs one of these shells is scanned as a shell script.
+shell_shebang_re='^#![[:space:]]*([^[:space:]]*/)?(env[[:space:]]+)?(sh|bash|dash|zsh)([[:space:]]|$)'
 
 # > **ADAPT:** where production source lives and what marks a test. A file is production source when
 # > it starts with one of `production_trees`, starts with none of `test_trees` and matches none of
@@ -45,29 +78,33 @@ print_allow_paths=''
 print_allow_paths=${CONTENT_GATE_PRINT_ALLOW-$print_allow_paths}
 
 # > **ADAPT:** the debug-output constructs of each family. Whatever a stack writes to the console
-# > instead of to the project logger belongs here.
+# > instead of to the project logger belongs here. Each opens with a left boundary: a free name
+# > (`print(`, `printf(`, `puts(`) counts after no letter, digit, `_` or `.`, so `Blueprint(` and
+# > `snprintf(` pass; a qualified one (`System.out.`, `console.log`) after no letter, digit or `_`.
 debug_print_re() {
 	case "$1" in
-		*.java|*.kt|*.kts) printf '%s' 'System\.(out|err)\.|printStackTrace' ;;
-		*.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs) printf '%s' 'console\.(log|debug)' ;;
-		*.cs) printf '%s' 'Console\.(Write|Error)' ;;
-		*.c|*.cc|*.cpp|*.cxx|*.h|*.hh|*.hpp) printf '%s' 'printf\(|puts\(|std::(cout|cerr)' ;;
-		*.py) printf '%s' 'print\(|breakpoint\(\)|import pdb' ;;
+		*.java|*.kt|*.kts) printf '%s' '(^|[^A-Za-z0-9_])(System\.(out|err)\.|printStackTrace)' ;;
+		*.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs) printf '%s' '(^|[^A-Za-z0-9_])console\.(log|debug)' ;;
+		*.cs) printf '%s' '(^|[^A-Za-z0-9_])Console\.(Write|Error)' ;;
+		*.c|*.cc|*.cpp|*.cxx|*.h|*.hh|*.hpp) printf '%s' '(^|[^A-Za-z0-9_.])(printf|puts)\(|(^|[^A-Za-z0-9_])std::(cout|cerr)' ;;
+		*.py) printf '%s' '(^|[^A-Za-z0-9_.])(print\(|breakpoint\(\)|import pdb)' ;;
 	esac
 }
 
 # > **ADAPT:** the constructs refused in production source only. C# shown: the null-forgiving
 # > operator overrides the compiler's nullability answer, which a test may do and production may not.
+# > It counts before `.`, `;`, `)`, `,`, `[` or `]`, so `!=` and the `!` of `"Done!"` pass.
 production_smell_re() {
 	case "$1" in
-		*.cs) printf '%s' '[]A-Za-z0-9_)]![^=]' ;;
+		*.cs) printf '%s' '[]A-Za-z0-9_)]![].;),[]' ;;
 	esac
 }
 
 source_ext="$comment_slash_ext $comment_hash_ext $comment_xml_ext"
 
 # hooks/ holds the detection patterns themselves and .template/ holds the adopted template's
-# baseline; neither is the project's own source, so every scan skips both.
+# baseline; neither is the project's own source, so every scan but the conflict-marker scan skips
+# both.
 scan_exclude=':(exclude)hooks/* :(exclude).template/*'
 
 matches_any() {
@@ -123,21 +160,38 @@ verdict() {
 	exit 1
 }
 
+# Every diff below is plain whatever the repository configures: no external driver, colour or
+# textconv, binary files as text, renames detected (-M) but no copies, type changes (T) kept. Each of
+# those would otherwise hide the lines a commit adds or misname their file. A rename that edits
+# nothing adds no lines, so the stock a file already carried is not read as new.
+diff_flags='-M --no-ext-diff --no-color --no-textconv --text --diff-filter=AMRT'
+
 # The prefixes are forced rather than inherited: a repository with diff.noprefix set would otherwise
-# emit '+++ <path>', and the header parser below reads the path at a fixed offset. R joins the filter
-# because a renamed file reports as R and would otherwise leave every scan; detection stays on, so a
-# rename that edits nothing adds no lines and the file's existing stock is not read as new.
-added_lines() {
+# emit '+++ <path>', and the header parsers below read the path at a fixed offset. A patch header
+# names a non-ASCII path unquoted under core.quotepath=off; the file lists use -z instead.
+# --inter-hunk-context=0 keeps every hunk apart: under diff.interHunkContext git joins hunks that
+# lie close and prints the lines between them as context.
+patch_flags="-U0 --inter-hunk-context=0 $diff_flags --src-prefix=a/ --dst-prefix=b/"
+patch_git() { git -c core.quotepath=off "$@"; }
+
+changed_raw() {
 	case "$mode" in
-		--staged) git diff --cached -U0 --diff-filter=ACMR --src-prefix=a/ --dst-prefix=b/ -- $source_ext $scan_exclude ;;
-		--commit) git show -U0 --format= --diff-merges=first-parent --diff-filter=ACMR --src-prefix=a/ --dst-prefix=b/ "$sha" -- $source_ext $scan_exclude ;;
+		--staged) git diff --cached --raw -z $diff_flags -- . "$@" ;;
+		--commit) git diff-tree -r --root --no-commit-id --raw -z --diff-merges=first-parent $diff_flags "$sha" -- . "$@" ;;
 	esac
 }
 
-changed_files() {
+added_lines() {
 	case "$mode" in
-		--staged) git diff --cached --name-only --diff-filter=ACMR -- . $scan_exclude ;;
-		--commit) git diff-tree -r --root --no-commit-id --name-only --diff-merges=first-parent --diff-filter=ACMR "$sha" -- . $scan_exclude ;;
+		--staged) patch_git diff --cached $patch_flags -- . $scan_exclude ;;
+		--commit) patch_git show --format= --diff-merges=first-parent $patch_flags "$sha" -- . $scan_exclude ;;
+	esac
+}
+
+all_added_lines() {
+	case "$mode" in
+		--staged) patch_git diff --cached $patch_flags ;;
+		--commit) patch_git show --format= --diff-merges=first-parent $patch_flags "$sha" ;;
 	esac
 }
 
@@ -148,18 +202,70 @@ file_content() {
 	esac
 }
 
-staged=$(changed_files || true)
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
+
+# A raw entry is ':<old mode> <new mode> <old id> <new id> <status>' and then one path, or two for a
+# rename, each ended by NUL. A gitlink (mode 160000) is a submodule's commit, which this repository
+# does not hold, so it is kept apart rather than read.
+changed_raw $scan_exclude > "$scratch/raw" || unreadable "the changed files of the $label"
+
+# Under -z a newline can only stand inside a path, and the list below is split at newlines, which
+# would scan the wrong file or none.
+if [ "$(tr -cd '\n' < "$scratch/raw" | wc -c | tr -d ' ')" -ne 0 ]; then
+	printf '\n[gate] %s: a path holding a newline cannot be scanned, so the gate refuses it. Rename the path.\n' "$label" >&2
+	exit 1
+fi
+: > "$scratch/gitlinks"
+# Prints each entry's new path, a gitlink's into the file named by $1.
+new_paths() {
+	tr '\000' '\n' | awk -v links="$1" '
+		want == 0 { split($0, field, " "); new_mode = field[2]; status = substr(field[5], 1, 1); want = (status == "R" || status == "C") ? 2 : 1; next }
+		{ want--; if (want == 0) { if (new_mode == "160000") print > links; else print } }
+	'
+}
+new_paths "$scratch/gitlinks" < "$scratch/raw" > "$scratch/files"
+staged=$(cat "$scratch/files")
 
 keystore_files=$(printf '%s\n' "$staged" | grep -iE '\.(pfx|p12|jks|pem|key)$' || true)
 [ -z "$keystore_files" ] || note "refusing to commit key/keystore file(s):
 $keystore_files
 Keys and credentials belong in a gitignored *.local.* file or a secret store, never the repo."
 
+# An .env file holds the values of one machine; its template, which holds placeholders, is shared.
+env_files=$(printf '%s\n' "$staged" | grep -E '(^|/)\.env(\.[^/]*)?$' | grep -vE '(^|/)\.env\.(example|sample|template)$' || true)
+[ -z "$env_files" ] || note "refusing to commit environment file(s):
+$env_files
+Commit a .env.example with placeholders instead; the real values stay out of the repo."
+
+# Claude Code's home, which the devcontainer mounts inside the work tree, holds its login token and
+# transcripts; only the home's own .gitignore, which keeps the rest out, belongs in the repo. The
+# check reads every changed path, hooks/ and .template/ included: no scan exemption covers a token.
+changed_raw > "$scratch/raw-all" || unreadable "the changed files of the $label"
+claude_home_files=$(new_paths "$scratch/gitlinks-all" < "$scratch/raw-all" | grep -iE '(^|/)\.devcontainer/\.claude-home/|(^|/)\.credentials\.json$' | grep -viE '(^|/)\.devcontainer/\.claude-home/\.gitignore$' || true)
+[ -z "$claude_home_files" ] || note "refusing to commit Claude Code's home or a credentials file:
+$claude_home_files
+Claude Code keeps its login token and transcripts there; no secret is committed (handbook §7)."
+
 pem_re='-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----'
 aws_re='AKIA[0-9A-Z]{16}'
-cred_re="(password|passwd|secret|api[_-]?key)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{3,}"
+# The prefix alone, as a document names it, is no token: a kind and twenty characters must follow,
+# and no letter, digit, _ or - may precede it, so kebab-case text such as task-ant-... passes; an
+# escape before it (\n of a JSON string, %20 of a URL) still counts as a boundary.
+anthropic_re='(^|[^A-Za-z0-9_-]|\\[nrt]|%[0-9A-Fa-f]{2})sk-ant-[a-z0-9]+-[A-Za-z0-9_-]{20,}'
+# The credential patterns match regardless of case (PASSWORD, apiKey, clientSecret), in a grep of
+# their own so the PEM and AWS patterns keep theirs. A config format needs no quotes around a value,
+# so there an unquoted value of eight characters or more counts too. A reference to the environment
+# (`${NAME}`, `$NAME`), quoted or not, is no value.
+cred_re="(password|passwd|secret|api[_-]?key)[[:space:]]*[:=][[:space:]]*[\"'][^\"'\$][^\"']{2,}"
+cred_bare_re="(password|passwd|secret|api[_-]?key)[[:space:]]*[:=][[:space:]]*[^\"'\$[:space:]][^[:space:]]{7,}"
+cred_bare_names='*.properties *.yml *.yaml .env .env.*'
 email_re='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
-email_allow='@(example|test|invalid|localhost)\.[A-Za-z]+$|@localhost$'
+# > **ADAPT:** the addresses the e-mail scan lets through: the reserved example, test and invalid
+# > domains, localhost, and `git@`, the user of an SSH remote (`git@github.com:org/repo.git`). Each
+# > entry is matched against `<line>:<address>`. Add the domains your fixtures use; never a domain
+# > that receives mail.
+email_allow='^[0-9]+:git@|@(example|test|invalid|localhost)\.[A-Za-z]+$|@localhost$'
 host_re="(/home/|/Users/)[A-Za-z0-9._-]+/|[Cc]:\\\\+Users"
 # > **ADAPT:** allowlist for host-path false positives, e.g. your devcontainer user's home.
 host_allow='/home/vscode/'
@@ -167,6 +273,42 @@ host_allow='/home/vscode/'
 # non-secret test token).
 token_url='\?token=[A-Za-z0-9._-]+'
 token_assign="(valid[_-]?token|api[_-]?token|auth[_-]?token|access[_-]?token|secret[_-]?token|bearer[_-]?token)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{3,}"
+
+# A file's header runs from its `diff --git` line to its first hunk, so an added line that opens with
+# `++ ` is never read as a `+++ ` header. A context line counts as a line of the new file too, so
+# a hunk that holds one all the same numbers the added lines after it right.
+scan_added='
+	/^diff --git / { header = 1; next }
+	header && /^\+\+\+ / { path = substr($0, 7); sub(/\t$/, "", path); next }
+	/^@@/ {
+		header = 0
+		match($0, /\+[0-9]+/)
+		line = substr($0, RSTART + 1, RLENGTH - 1) + 0
+		next
+	}
+	!header && /^\+/ { print path "\t" line; line++; next }
+	!header && /^ / { line++ }
+'
+
+added_lines > "$scratch/patch" || unreadable "the diff of the $label"
+awk "$scan_added" "$scratch/patch" | sort -u > "$scratch/added"
+
+# Smells count on the lines the diff adds, as comments do: a smell a file already carried stands
+# until a commit edits its line, so an unrelated edit of that file is never refused for it. Reads
+# grep -n output and keeps the lines whose number the diff adds to the given path; the path goes
+# through the environment, since awk -v would read its backslashes as escapes.
+added_only() {
+	smell_path=$1 awk -v added="$scratch/added" '
+		BEGIN {
+			path = ENVIRON["smell_path"]
+			while ((getline entry < added) > 0) {
+				tab = index(entry, "\t")
+				if (substr(entry, 1, tab - 1) == path) keep[substr(entry, tab + 1)] = 1
+			}
+		}
+		{ if (substr($0, 1, index($0, ":") - 1) in keep) print }
+	'
+}
 
 findings=""
 smells=""
@@ -179,21 +321,36 @@ for f in $staged; do
 		*.png|*.ico|*.jar|*.exe|*.sqlite|*.gz|*.zip|*.jks|*.p12|*.pfx|*.woff|*.woff2|*.ttf) IFS='
 '; continue ;;
 	esac
-	blob=$(file_content "$f" 2>/dev/null) || { IFS='
-'; continue; }
-	hits=$(printf '%s\n' "$blob" | grep -nIE -e "$pem_re" -e "$aws_re" -e "$cred_re" || true)
-	hosts=$(printf '%s\n' "$blob" | grep -nIoE "$host_re" | grep -viE "$host_allow" || true)
-	emails=$(printf '%s\n' "$blob" | grep -nIoE "$email_re" | grep -viE "$email_allow" || true)
+	blob=$(file_content "$f") || unreadable "$f in the $label"
+	hits=$(printf '%s\n' "$blob" | grep -nIE -e "$pem_re" -e "$aws_re" -e "$anthropic_re" || true)
+	if matches_any "${f##*/}" $cred_bare_names; then
+		creds=$(printf '%s\n' "$blob" | grep -niIE -e "$cred_re" -e "$cred_bare_re" || true)
+	else
+		creds=$(printf '%s\n' "$blob" | grep -niIE -e "$cred_re" || true)
+	fi
+	hosts=$(printf '%s\n' "$blob" | grep -nIoE "$host_re" || true)
+	emails=$(printf '%s\n' "$blob" | grep -nIoE "$email_re" || true)
+	# grep -v '' drops every line, so an emptied allowlist lets nothing through instead of
+	# switching its scan off.
+	if [ -n "$hosts" ] && [ -n "$host_allow" ]; then
+		hosts=$(printf '%s\n' "$hosts" | grep -viE "$host_allow" || true)
+	fi
+	if [ -n "$emails" ] && [ -n "$email_allow" ]; then
+		emails=$(printf '%s\n' "$emails" | grep -viE "$email_allow" || true)
+	fi
 	tokens=""
 	if is_production_source "$f"; then
 		tokens=$(printf '%s\n' "$blob" | grep -niIE -e "$token_url" -e "$token_assign" || true)
 	fi
-	if [ -n "$hits$hosts$emails$tokens" ]; then
-		findings=$(printf '%s\n--- %s ---\n%s\n%s\n%s\n%s\n' "$findings" "$f" "$hits" "$hosts" "$emails" "$tokens")
+	if [ -n "$hits$creds$hosts$emails$tokens" ]; then
+		findings=$(printf '%s\n--- %s ---\n%s\n%s\n%s\n%s\n%s\n' "$findings" "$f" "$hits" "$creds" "$hosts" "$emails" "$tokens")
 	fi
 	code=""
 	if matches_any "$f" $source_ext; then
 		code=$(printf '%s\n' "$blob" | grep -nIE "$(smell_re "$f")" || true)
+	fi
+	if [ -n "$code" ]; then
+		code=$(printf '%s\n' "$code" | added_only "$f")
 	fi
 	if [ -n "$code" ]; then
 		smells=$(printf '%s\n--- %s ---\n%s\n' "$smells" "$f" "$code")
@@ -202,6 +359,21 @@ for f in $staged; do
 '
 done
 IFS=$oldifs
+
+# A conflict marker is a line the diff adds that opens with <<<<<<<, ||||||| or >>>>>>>, in any path,
+# hooks/ and .template/ included: a commit never carries an unresolved conflict. A lone ======= is a
+# Markdown heading underline, and a marker quoted after the start of a line is prose.
+all_added_lines > "$scratch/all.patch" || unreadable "the diff of the $label"
+markers=$(awk '
+	/^diff --git / { header = 1; next }
+	header && /^\+\+\+ / { path = substr($0, 7); sub(/\t$/, "", path); next }
+	/^@@/ { header = 0; next }
+	!header && /^\+(<<<<<<<|>>>>>>>|\|\|\|\|\|\|\|)/ { print path ": " substr($0, 2) }
+' "$scratch/all.patch")
+[ -z "$markers" ] || note "conflict marker(s) added:
+$markers
+A conflict is resolved before it is committed: remove every marker line, then stage the file again."
+
 [ -z "$(printf '%s' "$findings" | tr -d '[:space:]')" ] || note "possible secret or personal/host data:
 $findings
 If this is real, remove it (use a gitignored *.local.* file or a secret store, injected at runtime)."
@@ -254,45 +426,92 @@ scan_slash='
 '
 
 # The hash family: # opens a comment outside a quoted literal. A line-1 shebang is the interpreter,
-# not prose, so it is exempt. With docstring=1 the scanner also tracks triple-quoted strings and
-# reports the ones opened at statement position: a string standing where a statement belongs is a
-# docstring or a no-op, never a value.
+# not prose, so it is exempt. An ADAPT note passes: a full-line comment that opens with the literal
+# `# > **ADAPT:**` and the full-line `# >` blockquote lines that continue it, each `# >` followed
+# by a blank or the line's end. The first line of any other form ends the note and is scanned, so
+# the one pass cannot carry a plain comment along with it. With docstring=1 the scanner also tracks
+# triple-quoted strings and reports the ones opened at statement position: a string standing where a
+# statement belongs is a docstring or a no-op, never a value. Statement position is a line start
+# outside every bracket; the scanner counts ( [ { against ) ] } outside strings and comments, so a
+# string that opens a line inside a call, a parenthesis or a literal is a value. With word=1
+# (shell, YAML) a # opens a comment only at the start of a word, so `$#` and `${x#y}` are code: in
+# YAML after a blank, in shell also after ; & | ( ). With shell=1 a backslash escapes the next
+# character, a single-quoted string knows no escapes while a $'...' string does, a here-string
+# (<<<) is a word, and the lines of a here-document are its data up to its delimiter word. With
+# yaml=1 a single-quoted string knows no escapes either; '' is a quote inside it. Each line starts
+# outside any string, so a string that spans lines is read wrongly on its later lines; with
+# docstring=1 a backslash that ends a line inside a quote carries the string onto the next line, as
+# Python does, so a bracket in the continued string does not count.
 scan_hash='
-	BEGIN { state = 0; tq = ""; dq3 = "\"\"\""; sq3 = "\047\047\047" }
+	BEGIN { state = 0; tq = ""; dq3 = "\"\"\""; sq3 = "\047\047\047"; adapt = 0; doc_end = ""; depth = 0 }
 	{
 		if (NR == 1 && substr($0, 1, 2) == "#!") next
-		if (docstring && tq == "") {
-			head = $0
-			sub(/^[[:space:]]*/, "", head)
+		if (doc_end != "") {
+			closing = $0
+			if (doc_tabs) sub(/^\t+/, "", closing)
+			if (closing == doc_end) { doc_end = "" }
+			next
+		}
+		carry = 0
+		head = $0
+		sub(/^[[:space:]]*/, "", head)
+		if (tq == "" && state == 0 && substr(head, 1, 1) == "#") {
+			if (substr(head, 1, 14) == "# > **ADAPT:**") { adapt = 1; next }
+			if (adapt && head ~ /^# >([[:space:]]|$)/) next
+			adapt = 0
+		} else {
+			adapt = 0
+		}
+		if (docstring && tq == "" && state == 0 && depth == 0) {
 			sub(/^[rbufRBUF]+/, "", head)
 			if (substr(head, 1, 3) == dq3 || substr(head, 1, 3) == sq3) { print path "\t" NR }
 		}
 		i = 1
 		n = length($0)
+		prev = " "
 		while (i <= n) {
 			c = substr($0, i, 1)
 			if (tq != "") {
-				if (substr($0, i, 3) == tq) { tq = ""; i += 3; continue }
+				if (substr($0, i, 3) == tq) { tq = ""; i += 3; prev = "x"; continue }
 				i++
 				continue
 			}
 			if (state == 0) {
 				if (docstring && (substr($0, i, 3) == dq3 || substr($0, i, 3) == sq3)) { tq = substr($0, i, 3); i += 3; continue }
-				if (c == "#") { comment_text = substr($0, i); if (allow_re == "" || comment_text !~ allow_re) { print path "\t" NR } break }
+				if (c == "#" && (!word || prev ~ (yaml ? "[[:space:]]" : "[[:space:];&|()]"))) { comment_text = substr($0, i); if (allow_re == "" || comment_text !~ allow_re) { print path "\t" NR } break }
+				if (shell && c == "\\") { i += 2; prev = "x"; continue }
+				if (shell && substr($0, i, 3) == "<<<") { i += 3; prev = "<"; continue }
+				if (shell && substr($0, i, 2) == "<<") {
+					rest = substr($0, i + 2)
+					doc_tabs = 0
+					if (substr(rest, 1, 1) == "-") { doc_tabs = 1; rest = substr(rest, 2) }
+					sub(/^[[:space:]]*/, "", rest)
+					if (match(rest, /^[\\\047"]?[A-Za-z_]/) && match(rest, /^[^[:space:];&|()<>]+/)) {
+						doc_end = substr(rest, RSTART, RLENGTH)
+						gsub(/[\\\047"]/, "", doc_end)
+					}
+					i += 2
+					prev = "<"
+					continue
+				}
+				if (shell && c == "$" && substr($0, i + 1, 1) == "\047") { state = 3; i += 2; continue }
 				if (c == "\"") { state = 1; i++; continue }
 				if (c == "\047") { state = 2; i++; continue }
+				if (docstring && (c == "(" || c == "[" || c == "{")) depth++
+				if (docstring && (c == ")" || c == "]" || c == "}") && depth > 0) depth--
+				prev = c
 				i++
-			} else if (state == 1) {
-				if (c == "\\") { i += 2; continue }
-				if (c == "\"") { state = 0 }
+			} else if (state == 1 || state == 3) {
+				if (c == "\\") { if (i == n) carry = 1; i += 2; continue }
+				if ((state == 1 && c == "\"") || (state == 3 && c == "\047")) { state = 0; prev = "x" }
 				i++
 			} else {
-				if (c == "\\") { i += 2; continue }
-				if (c == "\047") { state = 0 }
+				if (c == "\\" && !shell && !yaml) { if (i == n) carry = 1; i += 2; continue }
+				if (c == "\047") { state = 0; prev = "x" }
 				i++
 			}
 		}
-		if (state == 1 || state == 2) { state = 0 }
+		if (!(docstring && carry)) state = 0
 	}
 '
 
@@ -313,28 +532,35 @@ scan_xml='
 	}
 '
 
-scan_added='
-	/^\+\+\+ / { path = substr($0, 7); sub(/\t$/, "", path); next }
-	/^--- / { next }
-	/^@@/ {
-		match($0, /\+[0-9]+/)
-		line = substr($0, RSTART + 1, RLENGTH - 1) + 0
-		next
-	}
-	/^\+/ { print path "\t" line; line++ }
-'
-
-scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT
-added_lines 2>/dev/null | awk "$scan_added" | sort -u > "$scratch/added"
 cut -f1 "$scratch/added" | sort -u > "$scratch/paths"
 : > "$scratch/comments"
 while IFS= read -r path; do
 	[ -n "$path" ] || continue
-	if matches_any "$path" $comment_slash_ext; then
-		file_content "$path" 2>/dev/null | awk -v path="$path" "$scan_slash" >> "$scratch/comments"
+	if starts_with_any "$path" $comment_exempt_dirs; then continue; fi
+	if [ -s "$scratch/gitlinks" ] && grep -Fxq -- "$path" "$scratch/gitlinks"; then continue; fi
+	slash=0
+	hash=0
+	xml=0
+	shell=0
+	shebang=0
+	if matches_any "$path" $comment_slash_ext; then slash=1; fi
+	if matches_any "$path" $comment_hash_ext; then hash=1; fi
+	if matches_any "$path" $comment_xml_ext; then xml=1; fi
+	case "$path" in *.sh) shell=1 ;; esac
+	if [ "$slash$hash$xml" = 000 ]; then
+		case "${path##*/}" in *.*) continue ;; esac
+		shebang=1
 	fi
-	if matches_any "$path" $comment_hash_ext; then
+	file_content "$path" > "$scratch/post" || unreadable "$path in the $label"
+	if [ "$shebang" -eq 1 ]; then
+		head -n 1 "$scratch/post" | grep -qE "$shell_shebang_re" || continue
+		hash=1
+		shell=1
+	fi
+	if [ "$slash" -eq 1 ]; then
+		awk -v path="$path" "$scan_slash" "$scratch/post" >> "$scratch/comments"
+	fi
+	if [ "$hash" -eq 1 ]; then
 		# The docstring extensions are the family whose tool directives are configuration, not prose.
 		docstring=0
 		allow_re=''
@@ -342,10 +568,14 @@ while IFS= read -r path; do
 			docstring=1
 			allow_re=$directive_allow_re
 		fi
-		file_content "$path" 2>/dev/null | awk -v path="$path" -v docstring="$docstring" -v allow_re="$allow_re" "$scan_hash" >> "$scratch/comments"
+		yaml=0
+		case "$path" in *.yml|*.yaml) yaml=1 ;; esac
+		word=$((shell + yaml))
+		awk -v path="$path" -v docstring="$docstring" -v allow_re="$allow_re" -v word="$word" -v shell="$shell" -v yaml="$yaml" \
+			"$scan_hash" "$scratch/post" >> "$scratch/comments"
 	fi
-	if matches_any "$path" $comment_xml_ext; then
-		file_content "$path" 2>/dev/null | awk -v path="$path" "$scan_xml" >> "$scratch/comments"
+	if [ "$xml" -eq 1 ]; then
+		awk -v path="$path" "$scan_xml" "$scratch/post" >> "$scratch/comments"
 	fi
 done < "$scratch/paths"
 sort -u "$scratch/comments" > "$scratch/comments.sorted"
@@ -357,7 +587,8 @@ while IFS= read -r hit; do
 	[ -n "$hit" ] || continue
 	path=${hit%%	*}
 	line=${hit##*	}
-	body=$(file_content "$path" 2>/dev/null | sed -n "${line}p")
+	post=$(file_content "$path") || unreadable "$path in the $label"
+	body=$(printf '%s\n' "$post" | sed -n "${line}p")
 	comments=$(printf '%s\n%s:%s:%s' "$comments" "$path" "$line" "$body")
 done < "$scratch/hits"
 

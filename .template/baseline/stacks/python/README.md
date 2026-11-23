@@ -8,8 +8,9 @@
 
 ## `verify`
 
-Copy [verify](verify) to the repo root. Every command goes through **uv**: `uv run` materializes the
-locked environment before it runs the tool, so no step depends on an activated venv.
+Copy [verify](verify) to the repo root. Every command goes through **uv**: `uv run` adds and
+updates what the lock file names before it runs the tool, so no step depends on an activated venv;
+it removes nothing (below).
 
 | Subcommand | Command |
 |---|---|
@@ -17,10 +18,15 @@ locked environment before it runs the tool, so no step depends on an activated v
 | `focus <file>` | `uv run pytest -v <file>` |
 | `focus <x.feature>` | `uv run pytest -v tests/steps/test_<stem>.py` |
 | `bdd` | `uv run pytest -v -m wip` |
-| `all` | ruff format check, ruff check, `uv run pyright`, `uv run pytest -v -m "not wip and not characterization" --junitxml=artifacts/test-results/pytest.xml` |
+| `all` | `uv sync --locked`, ruff format check, ruff check, `uv run pyright`, `uv run pytest -v -m "not wip and not characterization" --junitxml=artifacts/test-results/pytest.xml` |
 | `outdated` | `uv pip list --outdated` and `uv lock --upgrade --dry-run` |
 | `vuln` | `uv run pip-audit` |
+| `stop` | nothing, exit 0: a build leaves no process running |
 
+- `uv run` syncs inexactly: a package the lock file no longer names stays installed and importable.
+  `all` therefore opens with `uv sync --locked`, which removes it and refuses a lock file that
+  `pyproject.toml` has moved past, so a commit that drops a dependency its code still imports fails
+  there.
 - Proof of execution for `all`: `-v` prints one line per test id and the `N passed` summary;
   `artifacts/test-results/pytest.xml` is what CI publishes.
 - `-p no:cacheprovider` turns pytest's cache off, so no run is shaped by a previous one.
@@ -65,7 +71,8 @@ reach the gitignored probe directory.
 ## pytest-bdd wiring
 
 - **Dependencies:** `pytest`, `pytest-bdd` in the dev dependency group; versions live in
-  `pyproject.toml` and `uv.lock`.
+  `pyproject.toml` and `uv.lock`. pytest-bdd 8 or later: earlier versions do not filter by an
+  `Examples` block's tag.
 - **Layout:** feature files in `tests/features/`, step modules in `tests/steps/`. A feature
   `tests/features/<stem>.feature` pairs with `tests/steps/test_<stem>.py`, which is what lets
   `verify focus <x.feature>` find the run.
@@ -84,29 +91,51 @@ reach the gitignored probe directory.
 
   pytest-bdd turns every Gherkin tag into a pytest marker, so `@wip` becomes `-m wip`. Registering
   both markers is mandatory here: an unregistered mark raises a warning, and warnings are errors.
-- **Step-definition shape**, driven through ports with in-memory fakes (handbook §5), no comments
-  and no docstrings (`hooks/content-gate` refuses both):
+- **Step-definition shape**, each actor driven through its real surface against a fresh real
+  service (handbook §5): a page object over the browser for a screen, a client for an API. No
+  comments and no docstrings (`hooks/content-gate` refuses both):
 
   ```python
+  from collections.abc import Iterator
+
+  import pytest
   from pytest_bdd import given, parsers, scenarios, then, when
 
-  scenarios("monthly_contribution.feature")
+  scenarios("contribution_overview.feature")
 
 
-  @given(parsers.parse('customer "{customer}" placed orders worth {total:d} this month'), target_fixture="orders")
-  def orders_of(customer: str, total: int) -> InMemoryOrders:
-      return InMemoryOrders([Order(customer, total)])
+  @pytest.fixture
+  def service() -> Iterator[RunningService]:
+      with RunningService.fresh() as running:
+          yield running
 
 
-  @when("the manager opens the monthly overview", target_fixture="overview")
-  def opened_overview(orders: InMemoryOrders) -> MonthlyOverview:
-      return monthly_overview(orders)
+  @given(
+      parsers.parse(
+          'the order book holds an order from "{customer}" worth {worth:d} placed on {placed_at}'
+      )
+  )
+  def an_order(service: RunningService, customer: str, worth: int, placed_at: str) -> None:
+      service.orders.place(Order(customer, worth, scenario_time(placed_at)))
 
 
-  @then(parsers.parse('the contribution column for "{customer}" shows {expected:d}'))
-  def contribution_shows(overview: MonthlyOverview, customer: str, expected: int) -> None:
+  @when("the manager opens the contribution overview", target_fixture="overview")
+  def opened_overview(browser: Browser, service: RunningService) -> ContributionOverviewPage:
+      return ContributionOverviewPage.open_in(browser, service)
+
+
+  @then(parsers.parse("the manager sees {expected:d} in {customer}'s contribution column"))
+  def manager_sees(overview: ContributionOverviewPage, customer: str, expected: int) -> None:
       assert overview.contribution_of(customer) == expected
   ```
+
+  `Browser` is the project's own wrapper over its browser driver (the java-gradle preset ships
+  one). `RunningService` is its own class: the `service` fixture starts a fresh service before
+  each scenario and stops it after, and `orders.place` writes through the service's real write
+  path.
+
+  > **ADAPT:** a project that chose the in-memory model at adoption drives ports with in-memory
+  > fakes instead: the `given` records into an in-memory port and the `when` runs the query over it.
 
 ## Probe location (agent throwaway code, build-run-deploy.md)
 
@@ -118,12 +147,13 @@ reach the gitignored probe directory.
 
 ## Git gate settings
 
-- `production_trees='src/'` and `test_trees='tests/'` match the shipped defaults for a src-layout
-  package; a flat layout names its package directory instead.
+- `production_trees='src/'` and `test_trees='tests/'` fit a src-layout package, and the shipped
+  defaults (`src/ include/ Assets/` and `src/test/ tests/ test/`) already cover both; a flat layout
+  names its package directory instead.
 - `print_allow_paths` covers a CLI entry point whose stdout is the interface; `print` stays a smell
   everywhere else.
 
-## Toolchain pinning (single-sourcing, dev-environment.md)
+## Toolchain pinning (dev-environment.md, "Toolchain version")
 
 - `.python-version` pins the interpreter uv provisions; `requires-python` in `pyproject.toml` states
   the same floor; `uv.lock` is committed and authoritative for every dependency.

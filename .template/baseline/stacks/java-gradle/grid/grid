@@ -1,0 +1,72 @@
+#!/bin/sh
+set -eu
+
+network=acceptance-grid
+alias=acceptance-service
+SELENIUM_TAG=4.49.0-20260909
+export SELENIUM_TAG
+wait_seconds=120
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+usage() {
+	printf 'usage: grid/grid up|down\n' >&2
+	exit 2
+}
+
+own_name() {
+	if ! command -v docker >/dev/null 2>&1; then
+		printf '[grid] docker is not installed or not on the PATH. grid/grid needs the docker command and a reachable Docker daemon, so it is an attended-session recipe.\n' >&2
+		exit 1
+	fi
+	id=$(hostname)
+	if ! name=$(docker inspect --type container --format '{{.Name}}' "$id" 2>/dev/null); then
+		name=''
+	fi
+	name=${name#/}
+	if [ -z "$name" ]; then
+		printf '[grid] cannot name this container: docker inspect of "%s" answered no name. grid/grid needs a session that runs inside a container and reaches the host Docker daemon, so it is an attended-session recipe.\n' "$id" >&2
+		exit 1
+	fi
+	printf '%s\n' "$name"
+}
+
+joined() {
+	if ! members=$(docker network inspect "$network" --format '{{range .Containers}}{{.Name}}{{"\n"}}{{end}}' 2>/dev/null); then
+		return 1
+	fi
+	printf '%s\n' "$members" | grep -qxF "$1"
+}
+
+hub_healthy() {
+	hub=$(docker compose -f "$here/compose.yaml" ps --quiet selenium-hub 2>/dev/null) || return 1
+	[ -n "$hub" ] || return 1
+	health=$(docker inspect --type container --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$hub" 2>/dev/null) || return 1
+	[ "$health" = healthy ]
+}
+
+[ $# -eq 1 ] || usage
+
+case "$1" in
+	up)
+		self=$(own_name)
+		if ! docker compose -f "$here/compose.yaml" up --detach --wait --wait-timeout "$wait_seconds" || ! hub_healthy; then
+			printf '[grid] the grid did not start, or its hub did not report ready within %s s; joined nothing. docker logs %s-selenium-hub-1 shows why, and grid/grid down stops what runs.\n' \
+				"$wait_seconds" "$(sed -n 's/^name: //p' "$here/compose.yaml")" >&2
+			exit 1
+		fi
+		if ! joined "$self"; then
+			docker network connect --alias "$alias" "$network" "$self"
+		fi
+		printf '[grid] hub http://selenium-hub:4444, the service is reached as %s\n' "$alias"
+		;;
+	down)
+		self=$(own_name)
+		if joined "$self"; then
+			docker network disconnect "$network" "$self"
+		fi
+		docker compose -f "$here/compose.yaml" down
+		;;
+	*)
+		usage
+		;;
+esac

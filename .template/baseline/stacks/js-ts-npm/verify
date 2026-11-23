@@ -2,7 +2,7 @@
 set -eu
 
 usage() {
-	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln\n' >&2
+	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln|stop\n' >&2
 	exit 2
 }
 
@@ -49,12 +49,75 @@ report() {
 	printf '[verify] %s reported findings (exit %s)\n' "$1" "$status"
 }
 
+# > **ADAPT:** the machine-wide build lock. It serializes the builds and test runs of every
+# > worktree of this project on the machine, so only one of them runs at a time; every worktree of
+# > the machine must name the same file.
+build_lock="/tmp/{{PROJECT_NAME}}-build.lock"
+build_lock_taken=""
+
+fd_holds_build_lock() {
+	[ "/proc/$$/fd/$1" -ef "$build_lock" ] && grep -q '^lock:.*FLOCK' "/proc/$$/fdinfo/$1" 2>/dev/null
+}
+
+release_build_lock() {
+	if [ -n "$build_lock_taken" ]; then
+		flock -u 9
+	fi
+}
+
+end_by_signal() {
+	release_build_lock
+	trap - "$1"
+	kill -s "$1" $$
+	exit 1
+}
+
+hold_build_lock() {
+	if ! command -v flock >/dev/null 2>&1 || [ ! -d "/proc/$$/fdinfo" ]; then
+		printf '[verify] this run takes no build lock: the machine lacks flock or /proc\n' >&2
+		return 0
+	fi
+	for fd in /proc/$$/fd/*; do
+		if fd_holds_build_lock "${fd##*/}"; then
+			return 0
+		fi
+	done
+	while :; do
+		[ -e "$build_lock" ] || (umask 022 && touch "$build_lock") 2>/dev/null || true
+		if ! (exec 9<"$build_lock") 2>/dev/null; then
+			printf '[verify] cannot read %s, the machine-wide build lock; its owner can make it readable\n' "$build_lock" >&2
+			exit 1
+		fi
+		exec 9<"$build_lock"
+		if ! flock -n 9; then
+			printf '[verify] waiting for %s: another build on this machine holds it\n' "$build_lock" >&2
+			flock 9 || exit 1
+		fi
+		if [ "/proc/$$/fd/9" -ef "$build_lock" ]; then
+			build_lock_taken=1
+			trap release_build_lock EXIT
+			trap 'end_by_signal HUP' HUP
+			trap 'end_by_signal INT' INT
+			trap 'end_by_signal TERM' TERM
+			return 0
+		fi
+	done
+}
+
 case "$cmd" in
-	format|focus|bdd|all|outdated|vuln) ;;
+	format|focus|bdd|all|outdated|vuln|stop) ;;
 	*) usage ;;
 esac
 
+# > **ADAPT:** stop ends what the build tool leaves running after a build; a stack that leaves
+# > nothing running answers it with 0.
+[ "$cmd" != stop ] || exit 0
+
 require npm
+
+case "$cmd" in
+	focus|bdd|all|vuln) hold_build_lock ;;
+esac
 
 case "$cmd" in
 	format)
@@ -70,6 +133,7 @@ case "$cmd" in
 		run npm run --silent bdd -- --profile wip
 		;;
 	all)
+		run npm ci
 		mkdir -p artifacts/test-results
 		run npm run --silent format:check
 		run npm run --silent lint
@@ -83,7 +147,7 @@ case "$cmd" in
 		report npm outdated
 		;;
 	vuln)
-		# ADAPT: --audit-level tunes what is printed, never whether this fails.
+		# > **ADAPT:** --audit-level tunes what is printed, never whether this fails.
 		report npm audit
 		;;
 esac

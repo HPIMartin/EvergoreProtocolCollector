@@ -1,0 +1,148 @@
+#!/bin/sh
+# Runs gh's pull request commands as the agent seat's GitHub App: gh pr <subcommand> <arguments>,
+# for the repository the origin of the checkout that holds this file names on GitHub, with a token
+# from github-token handed to gh in GH_TOKEN, never on a command line. Admits create, edit, view,
+# list, diff, checks, comment and close. Behind the subcommand it admits only these words: the
+# options --base and --head with a branch name (letters, digits and ._/- only, no .., no leading
+# -), --json with field names joined by commas, --title with any text and --body-file with a path,
+# each value as the next word or after =, and --comments alone; and at most one selector, a
+# number, #<number> or a branch name, which create and list do not take. close takes one pull
+# request number and closes only a pull request of the origin's own repository whose head branch
+# starts with the prefix below. gh runs as gh pr <subcommand> -R github.com/<owner>/<repo> and the
+# words, the subcommand first so that no alias or extension named -R runs in its place; with
+# GH_CONFIG_DIR an empty folder of its own, made under umask 077 and removed on exit and on HUP,
+# INT and TERM, so that no alias, http_unix_socket or host of a gh configuration applies; with
+# GH_NO_UPDATE_NOTIFIER and GH_PROMPT_DISABLED set and GH_PAGER=cat, so that no pager the
+# environment names receives the token; and without GH_FORCE_TTY, GH_HOST, GH_REPO, GH_DEBUG,
+# DEBUG and every other token variable. Runs only where AGENT_SEAT reads unattended, as agent/push
+# does. Refuses, with exit 2 and before minting, every other command and word, a call off the
+# seat and an origin off GitHub, and after reading it a pull request from another repository or of
+# any other head.
+set -eu
+set +x
+umask 077
+
+# > **ADAPT:** the dependency bot's branch prefix; /adopt sets it.
+bot_prefix='dependabot/'
+
+refuse() {
+	printf 'gh: %s\n' "$1" >&2
+	exit 2
+}
+
+forms='agent/gh takes --base and --head with a branch name, --json with field names joined by commas,'
+forms="$forms --title with any text, --body-file with a path, each value as the next word or after =,"
+forms="$forms --comments alone, and at most one selector, a number, #<number> or a branch name, none"
+forms="$forms for create and list; a branch name holds letters, digits and ._/- only, no .. and no leading -"
+
+not_admitted() {
+	refuse "'$1' is not admitted here: $forms"
+}
+
+branch_name() {
+	case "$1" in
+		'' | -* | *..* | *[!A-Za-z0-9._/-]*) return 1 ;;
+	esac
+}
+
+admitted_value() {
+	case "$1" in
+		--base | --head) branch_name "$2" ;;
+		--json)
+			case "$2" in
+				'' | ,* | *, | *,,* | *[!A-Za-z,]*) return 1 ;;
+			esac
+			;;
+	esac
+}
+
+admitted_selector() {
+	case "$1" in
+		\# | \#*[!0-9]*) return 1 ;;
+		\#*) ;;
+		*) branch_name "$1" ;;
+	esac
+}
+
+admitted_words() {
+	takes_selector=$1
+	shift 3
+	selectors=0
+	while [ $# -gt 0 ]; do
+		word=$1
+		shift
+		case "$word" in
+			--comments) ;;
+			--base | --head | --title | --json | --body-file)
+				[ $# -gt 0 ] || refuse "'$word' without its value is not admitted here: $forms"
+				admitted_value "$word" "$1" || not_admitted "$1"
+				shift
+				;;
+			--base=* | --head=* | --title=* | --json=* | --body-file=*)
+				admitted_value "${word%%=*}" "${word#*=}" || not_admitted "$word"
+				;;
+			*)
+				[ "$selectors" -eq 0 ] && [ "$takes_selector" = yes ] && admitted_selector "$word" || not_admitted "$word"
+				selectors=1
+				;;
+		esac
+	done
+}
+
+[ "${1:-}" = pr ] || refuse 'only pull request commands run here: agent/gh pr <subcommand> <arguments>'
+subcommand=${2:-}
+case "$subcommand" in
+	create | list) admitted_words no "$@" ;;
+	edit | view | diff | checks | comment) admitted_words yes "$@" ;;
+	close)
+		close_usage='pr close takes one pull request number and nothing else: agent/gh pr close <number>'
+		[ $# -eq 3 ] || refuse "$close_usage"
+		case "$3" in
+			'' | *[!0-9]*) refuse "$close_usage" ;;
+		esac
+		[ -n "$bot_prefix" ] || refuse 'the prefix of the dependency bot is empty, so no pull request closes here'
+		;;
+	*) refuse "'pr $subcommand' is none of create, edit, view, list, diff, checks, comment and close" ;;
+esac
+[ "${AGENT_SEAT:-}" = unattended ] \
+	|| refuse 'only the unattended agent seat runs pull request commands, and AGENT_SEAT does not read unattended'
+
+agent_dir=$(dirname "$0")
+origin=$(git -C "$agent_dir" remote get-url origin 2>/dev/null) || refuse 'the checkout has no origin'
+origin=${origin%/}
+case "$origin" in
+	*@github.com:*) repository=${origin#*@github.com:} ;;
+	https://github.com/* | ssh://*@github.com/*) repository=${origin#*github.com/} ;;
+	*) refuse "the origin '$origin' is not on GitHub" ;;
+esac
+repository=${repository%.git}
+
+token=$(sh "$agent_dir/github-token" "$repository")
+unset GH_HOST GH_REPO GITHUB_TOKEN GH_ENTERPRISE_TOKEN GITHUB_ENTERPRISE_TOKEN GH_DEBUG DEBUG GH_FORCE_TTY
+GH_NO_UPDATE_NOTIFIER=1
+GH_PROMPT_DISABLED=1
+GH_PAGER=cat
+export GH_NO_UPDATE_NOTIFIER GH_PROMPT_DISABLED GH_PAGER
+
+config=
+remove_config() { [ -z "$config" ] || rm -rf "$config"; }
+trap 'remove_config' EXIT
+trap 'remove_config; exit 129' HUP
+trap 'remove_config; exit 130' INT
+trap 'remove_config; exit 143' TERM
+config=$(mktemp -d)
+GH_CONFIG_DIR=$config
+export GH_CONFIG_DIR
+
+if [ "$subcommand" = close ]; then
+	answer=$(GH_TOKEN=$token gh pr view -R "github.com/$repository" "$3" --json headRefName,isCrossRepository \
+		--jq '"\(.isCrossRepository) \(.headRefName)"')
+	head=${answer#* }
+	[ "${answer%% *}" = false ] || refuse "pull request $3 comes from another repository, so it stays open"
+	case "$head" in
+		"$bot_prefix"?*) ;;
+		*) refuse "pull request $3 has the head '$head', no $bot_prefix branch, so it stays open" ;;
+	esac
+fi
+shift 2
+GH_TOKEN=$token gh pr "$subcommand" -R "github.com/$repository" "$@"

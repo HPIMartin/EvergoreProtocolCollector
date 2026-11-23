@@ -2,7 +2,7 @@
 set -eu
 
 usage() {
-	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln\n' >&2
+	printf 'usage: verify format|focus <path>|bdd|all|outdated|vuln|stop\n' >&2
 	exit 2
 }
 
@@ -49,12 +49,107 @@ report() {
 	printf '[verify] %s reported findings (exit %s)\n' "$1" "$status"
 }
 
+# > **ADAPT:** the machine-wide build lock. It serializes the builds and test runs of every
+# > worktree of this project on the machine, so only one of them runs at a time; every worktree of
+# > the machine must name the same file.
+build_lock="/tmp/{{PROJECT_NAME}}-build.lock"
+build_lock_taken=""
+
+fd_holds_build_lock() {
+	[ "/proc/$$/fd/$1" -ef "$build_lock" ] && grep -q '^lock:.*FLOCK' "/proc/$$/fdinfo/$1" 2>/dev/null
+}
+
+release_build_lock() {
+	if [ -n "$build_lock_taken" ]; then
+		flock -u 9
+	fi
+}
+
+end_by_signal() {
+	release_build_lock
+	trap - "$1"
+	kill -s "$1" $$
+	exit 1
+}
+
+hold_build_lock() {
+	if ! command -v flock >/dev/null 2>&1 || [ ! -d "/proc/$$/fdinfo" ]; then
+		printf '[verify] this run takes no build lock: the machine lacks flock or /proc\n' >&2
+		return 0
+	fi
+	for fd in /proc/$$/fd/*; do
+		if fd_holds_build_lock "${fd##*/}"; then
+			return 0
+		fi
+	done
+	while :; do
+		[ -e "$build_lock" ] || (umask 022 && touch "$build_lock") 2>/dev/null || true
+		if ! (exec 9<"$build_lock") 2>/dev/null; then
+			printf '[verify] cannot read %s, the machine-wide build lock; its owner can make it readable\n' "$build_lock" >&2
+			exit 1
+		fi
+		exec 9<"$build_lock"
+		if ! flock -n 9; then
+			printf '[verify] waiting for %s: another build on this machine holds it\n' "$build_lock" >&2
+			flock 9 || exit 1
+		fi
+		if [ "/proc/$$/fd/9" -ef "$build_lock" ]; then
+			build_lock_taken=1
+			trap release_build_lock EXIT
+			trap 'end_by_signal HUP' HUP
+			trap 'end_by_signal INT' INT
+			trap 'end_by_signal TERM' TERM
+			return 0
+		fi
+	done
+}
+
 case "$cmd" in
-	format|focus|bdd|all|outdated|vuln) ;;
+	format|focus|bdd|all|outdated|vuln|stop) ;;
 	*) usage ;;
 esac
 
+# > **ADAPT:** stop ends what the build tool leaves running after a build; a stack that leaves
+# > nothing running answers it with 0.
+[ "$cmd" != stop ] || exit 0
+
+nearest_test_project() {
+	case "$1" in
+		/*) dir="" ;;
+		*) dir=$(dirname -- "$1") ;;
+	esac
+	while [ -n "$dir" ]; do
+		for csproj in "$dir"/*.csproj; do
+			if [ -f "$csproj" ]; then
+				if ! grep -qE 'Microsoft\.NET\.Test\.Sdk|MSTest\.Sdk|<IsTestProject>[[:space:]]*true' "$csproj"; then
+					printf '[verify] %s lies in %s, which is no test project (no Microsoft.NET.Test.Sdk, MSTest.Sdk or IsTestProject): focus a file of a test project\n' \
+						"$1" "${csproj#./}" >&2
+					exit 2
+				fi
+				printf '%s\n' "${csproj#./}"
+				return 0
+			fi
+		done
+		if [ "$dir" = . ]; then
+			dir=""
+		else
+			dir=$(dirname -- "$dir")
+		fi
+	done
+	printf '[verify] %s lies in no test project: no *.csproj in its folder or above it in this tree\n' "$1" >&2
+	exit 2
+}
+
+test_project=""
+if [ "$cmd" = focus ]; then
+	test_project=$(nearest_test_project "$target") || exit 2
+fi
+
 require dotnet
+
+case "$cmd" in
+	focus|bdd|all|vuln) hold_build_lock ;;
+esac
 
 case "$cmd" in
 	format)
@@ -63,10 +158,13 @@ case "$cmd" in
 	focus)
 		case "$target" in
 			*.feature)
-				run dotnet test --filter "FullyQualifiedName~$(basename "$target" .feature)Feature"
+				run dotnet test "$test_project" \
+					--filter "FullyQualifiedName~$(basename "$target" .feature)Feature" \
+					-- RunConfiguration.TreatNoTestsAsError=true
 				;;
 			*)
-				run dotnet test --filter "FullyQualifiedName~$(basename "$target" .cs)"
+				run dotnet test "$test_project" --filter "FullyQualifiedName~$(basename "$target" .cs)" \
+					-- RunConfiguration.TreatNoTestsAsError=true
 				;;
 		esac
 		;;
@@ -76,8 +174,8 @@ case "$cmd" in
 	all)
 		run dotnet format --verify-no-changes
 		run dotnet build --no-incremental
-		# ADAPT: the junit logger comes from the JunitXml.TestLogger package; drop it where the
-		# pipeline reads trx instead.
+		# > **ADAPT:** the junit logger comes from the JunitXml.TestLogger package; drop it where
+		# > the pipeline reads trx instead.
 		run dotnet test --no-build \
 			--filter "TestCategory!=wip&TestCategory!=characterization" \
 			--logger "console;verbosity=normal" \

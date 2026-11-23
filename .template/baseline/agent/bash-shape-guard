@@ -1,0 +1,826 @@
+#!/usr/bin/env python3
+# The shell-shape guard: a PreToolUse hook that refuses command shapes of the Bash and Monitor
+# tools which hide what runs or run unprompted outside the permission rules, and approves a few
+# exact shapes of the Bash tool alone: the fold and the checkout of an agent worktree. Refusals
+# are a shape aid, not a security boundary; approvals are a strict, fail-closed boundary. Since
+# no agent pushes, it refuses a git command whose subcommand is push, send-pack, http-push, or
+# subtree with a later word push, behind every global option it reads past, the programs
+# git-push, git-send-pack and git-http-push, and the program git-subtree with a word push; a
+# spelling it cannot read meets the permission rules. It compares Linux paths only: a path in any
+# other form (a drive letter, a backslash) is never approved and falls to the permission rules.
+# It needs python3 3.9 or newer, started with -I, so PYTHONPATH and the folder of this file shadow
+# no module it imports. Run with --state, it prints "active", "inactive: <reason>" or
+# "misconfigured: <reason>" for the session-start report instead; run with --root, it prints the
+# worktree root in use, escaped as in a JSON string, and where it ignores a set AGENT_WORKTREES, a
+# second line "AGENT_WORKTREES ignored: <reason>". Before --state says active, it checks that
+# APPROVALS names only approvals it knows and that the worktree root does not hold the project
+# directory, and runs four canned calls through the hook's code, a switch in the primary checkout
+# and a git output into /etc or into the project it must refuse and a git status it must pass, so
+# a value of the ADAPT block that makes it raise or answer wrongly reads misconfigured, the error
+# escaped as in a JSON string. The hook runs the same check before it approves and approves
+# nothing where it fails; it still refuses, except a call on which a value makes it raise, which
+# goes on to the permission rules. A checkout, restore or switch whose -C path git cannot resolve
+# when the hook runs, a folder the same command makes among them, is refused: the guard cannot
+# tell it from the primary checkout.
+# MODULE agent-seat
+# With the agent-seat module it also approves agent/push and agent/gh, and its push refusal names
+# agent/push as the seat's one way to push. Of agent/gh it approves only the words agent/gh
+# admits: the same options, values and selectors. A body file of agent/gh must lie in the output
+# directory as written and as resolved when the guard reads it; a link made after that is not
+# seen.
+# /MODULE agent-seat
+import contextlib
+import functools
+import getpass
+import json
+import os
+import posixpath
+import re
+import shlex
+import subprocess
+import sys
+
+# > **ADAPT:** the guard's values; /adopt sets ENVIRONMENT from the environment answer only.
+# > OUTPUT_DIRECTORY: where a command that names git may write; <uid> becomes the user id, or the
+# > user name where the system has no user id. WORKTREE_ROOT: the worktree root where
+# > AGENT_WORKTREES names none, under the project directory or an absolute path; the guard takes
+# > AGENT_WORKTREES where it is an absolute path in canonical form (no . or .. segment, no //, no
+# > backslash), is not /, and neither it nor its resolved path lies in or contains the project
+# > directory, as written or resolved. APPROVALS: the approvals switched on, each on its own:
+# > `fold` and `checkout`, and with the agent-seat module `push` and `gh`. ENVIRONMENT:
+# > devcontainer, native (active only where the project pins python in .tool-versions) or
+# > inactive. GUIDE_FILE and GUIDE_HEADING: where the knowledge base explains the shapes; each
+# > refusal names them.
+OUTPUT_DIRECTORY = "/tmp/claude-<uid>"
+WORKTREE_ROOT = ".claude/worktrees"
+APPROVALS = "fold checkout push gh"
+ENVIRONMENT = "devcontainer"
+GUIDE_FILE = "working-with-ai-agents.md"
+GUIDE_HEADING = "Command shapes that keep an auto-mode session unattended"
+
+MAX_COMMAND = 16384
+MAX_APPROVED = 4096
+ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(\[[^]]*\])?\+?=")
+HEREDOC = re.compile(r"<<[ \t]*\S")
+COMMENT = re.compile(r"#[^\n]*")
+REDIRECT = re.compile(r"(\{[A-Za-z_]\w*\}|[0-9]*|&)[<>]+[&|]?")
+OPERATOR_START = re.compile(r"(\{[A-Za-z_]\w*\}|[0-9]*|&)[<>]*")
+HASH = re.compile(r"[0-9a-f]{7,64}")
+FORCED_BRANCH = re.compile(r"--forc|-\w*[DfMC]")
+FORCED_MOVES = {"checkout": ("B", "bBt", ("--ignore-other-worktrees",)),
+                "switch": ("C", "cCt", ("--force-create", "--ignore-other-worktrees")),
+                "worktree add": ("B", "bB", ())}
+SHORTEST_ABBREVIATION = {"--force-create": "--force-", "--ignore-other-worktrees": "--i"}
+WORKTREE_ADD_FLAGS = {"--force": "f", "--detach": "d"}
+KNOWN_APPROVALS = {"fold", "checkout"}
+EXEC = re.compile(r"--ex|-\w*x")
+OUTPUT = re.compile(r"--output(=|$)")
+MOVES_REPOSITORY = re.compile(r"GIT_(DIR|WORK_TREE|COMMON_DIR|NAMESPACE|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES"
+                              r"|CONFIG\w*)\+?=")
+VALUED_OPTIONS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--config-env", "--super-prefix",
+                  "--attr-source", "--shallow-file"}
+KEYWORDS = {"{", "!", "if", "then", "elif", "else", "while", "until", "do"}
+RESERVED = KEYWORDS | {"time", "function", "coproc"}
+COMPOUND = {"{", "if", "while", "until", "for", "select", "case"}
+SETTERS = {"export", "declare", "readonly", "local", "typeset", "read", "for", "select", "let", "mapfile",
+           "readarray", "getopts"}
+ENV_OPTIONS = {"-i": "flag", "-0": "flag", "-v": "flag", "-u": "value", "-C": "moves", "-S": "split", "-": "flag",
+               "--ignore-environment": "flag", "--null": "flag", "--debug": "flag", "--unset": "value",
+               "--chdir": "moves", "--split-string": "split", "--list-signal-handling": "flag",
+               "--block-signal": "flag", "--default-signal": "flag", "--ignore-signal": "flag", "--help": "idle",
+               "--version": "idle"}
+COMMAND_OPTIONS = {"-p": "flag", "-v": "idle", "-V": "idle"}
+TIME_OPTIONS = {"-a": "flag", "-p": "flag", "-q": "flag", "-v": "flag", "-f": "value", "-o": "value", "-V": "idle",
+                "--append": "flag", "--portability": "flag", "--quiet": "flag", "--verbose": "flag",
+                "--format": "value", "--output": "value", "--version": "idle", "--help": "idle"}
+EXEC_OPTIONS = {"-a": "value", "-c": "flag", "-l": "flag"}
+NOHUP_OPTIONS = {"--help": "idle", "--version": "idle"}
+TIMEOUT_OPTIONS = {"-k": "value", "-s": "value", "-v": "flag", "-f": "flag", "-p": "flag", "--kill-after": "value",
+                   "--signal": "value", "--verbose": "flag", "--foreground": "flag", "--preserve-status": "flag",
+                   "--help": "idle", "--version": "idle", "<duration>": "operand"}
+NICE_OPTIONS = {"-n": "value", "--adjustment": "value", "--help": "idle", "--version": "idle",
+                "<adjustment>": "operand"}
+NICE_ADJUSTMENT = re.compile(r"-[-+]?[0-9]+")
+STDBUF_OPTIONS = {"-i": "value", "-o": "value", "-e": "value", "--input": "value", "--output": "value",
+                  "--error": "value", "--help": "idle", "--version": "idle"}
+SETSID_OPTIONS = {"-c": "flag", "-f": "flag", "-w": "flag", "--ctty": "flag", "--fork": "flag", "--wait": "flag",
+                  "--help": "idle", "--version": "idle"}
+WRAPPERS = {"env": ENV_OPTIONS, "command": COMMAND_OPTIONS, "builtin": {}, "eval": {}, "time": TIME_OPTIONS,
+            "exec": EXEC_OPTIONS, "nohup": NOHUP_OPTIONS, "timeout": TIMEOUT_OPTIONS, "nice": NICE_OPTIONS,
+            "stdbuf": STDBUF_OPTIONS, "setsid": SETSID_OPTIONS}
+VALUED = {"value", "moves", "split"}
+SEPARATORS = ";&|\n()"
+WORD_BOUNDARY = ("", " ", "\t", "\n", ";", "&", "|", "(", ")")
+EVALUATION = ("the command evaluates text as code ($(…), a backtick, ${…}, $((…)), $[…], ((…)), [[…]], or "
+              "test or [ with -v or -R), which hides what runs; compute the value in a step of its own and write "
+              "it literally")
+PLAIN = re.compile(r"""([A-Za-z0-9._/,-]|'[^']*'|"[^"$`\\]*"| )*""")
+PLAIN_CHARACTER = "[A-Za-z0-9._/,=%~^@:+-]"
+PLAIN_PIECE = PLAIN_CHARACTER + r"|'[^']*'|" + r'"[^"$`\\]*"'
+WORD_END = r"(?=[ \t;&|\n]|$)"
+REDIRECT_START = r"(?<![^ \t;&|\n])"
+GUIDE = f'{GUIDE_FILE}, "{GUIDE_HEADING}"'
+READ_TOOLS = {"Bash", "Monitor"}
+APPROVED_TOOL = "Bash"
+PUSH_SUBCOMMANDS = {"push", "send-pack", "http-push"}
+PUSH_ROUTE = ""
+REACHING_OPTIONS = ("--git-dir", "--work-tree")
+# MODULE agent-seat
+PUSH_PREFIX = re.compile(r"branch_prefix='([A-Za-z0-9._/-]*)'")
+PUSHED_BRANCH = re.compile(r"[A-Za-z0-9._/-]+")
+PUSH_ROUTE = "; on the agent seat a push runs only through agent/push"
+GH_PR = {"create", "edit", "view", "list", "diff", "checks", "comment"}
+GH_UNSELECTED = {"create", "list"}
+GH_VALUED = {"--base", "--head", "--title", "--json", "--body-file"}
+GH_BRANCH = re.compile(r"(?!-)(?!.*\.\.)[A-Za-z0-9._/-]+")
+GH_FIELDS = re.compile(r"[A-Za-z]+(,[A-Za-z]+)*")
+GH_NUMBER = re.compile(r"#[0-9]+")
+PR_NUMBER = re.compile(r"[0-9]+")
+KNOWN_APPROVALS |= {"push", "gh"}
+# /MODULE agent-seat
+
+
+def user():
+    if hasattr(os, "getuid"):
+        return str(os.getuid())
+    with contextlib.suppress(Exception):
+        return getpass.getuser()
+    return "user"
+
+
+def output_directory():
+    return OUTPUT_DIRECTORY.replace("<uid>", user()).rstrip("/")
+
+
+@functools.lru_cache(maxsize=None)
+def plain_command():
+    target = (rf"(?:/dev/null|{re.escape(output_directory())}"
+              rf"(?:/[A-Za-z0-9_,=%~^@:+-][A-Za-z0-9._,=%~^@:+-]*)+){WORD_END}")
+    return re.compile(rf"(?:[ \t]|&&|[;|\n]|{REDIRECT_START}(?:[0-9]?>>?|&>>?)[ \t]*{target}"
+                      rf"|{REDIRECT_START}[0-9]?>&[0-9]{WORD_END}"
+                      rf"|{REDIRECT_START}[0-9]?<[ \t]*{PLAIN_CHARACTER}+{WORD_END}|{PLAIN_PIECE})*")
+
+
+def as_directories(*paths):
+    return [path.rstrip("/") + "/" for path in paths]
+
+
+def ignored_because(value, project):
+    if not value.startswith("/"):
+        return "it is no absolute path"
+    if value == "/":
+        return "it is /"
+    if "//" in value or "\\" in value or posixpath.normpath(value) != value.removesuffix("/"):
+        return "it is not in canonical form (a . or .. segment, a // or a backslash)"
+    values = as_directories(value, posixpath.realpath(value))
+    projects = as_directories(normal(os.environ.get("CLAUDE_PROJECT_DIR", project)), project)
+    if any(place.startswith(home) for place in values for home in projects):
+        return "it lies in the project directory"
+    if any(home.startswith(place) for place in values for home in projects):
+        return "it contains the project directory"
+    return None
+
+
+def root_choice(project):
+    value = os.environ.get("AGENT_WORKTREES", "")
+    taken = value.removesuffix("/") + "/"
+    reason = ignored_because(value, project) if value else None
+    if value and not reason:
+        return taken, None
+    root = WORKTREE_ROOT if posixpath.isabs(WORKTREE_ROOT) else project + "/" + WORKTREE_ROOT
+    return posixpath.normpath(root) + "/", reason
+
+
+def worktree_root(project):
+    return root_choice(project)[0]
+
+
+def heredoc_at(command, index):
+    return HEREDOC.match(command, index) and command[index - 1:index] != "<" and command[index + 2:index + 3] != "<"
+
+
+def marked_word(word, quoted):
+    text = "".join(word)
+    return "\0" + text if quoted and REDIRECT.match(text) else text
+
+
+def evaluates(command):
+    quote, index, escaped = None, 0, None
+    while index < len(command):
+        char = command[index]
+        if char == "\\" and quote != "'":
+            index, escaped = index + 2, index + 1
+            continue
+        if quote in ("'", "$'"):
+            quote = None if char == "'" else quote
+        elif char == "$" and command[index + 1:index + 2] == "$":
+            index += 1
+        elif char == "`" or char == "$" and command[index + 1:index + 2] in ("(", "{", "["):
+            return True
+        elif quote == '"':
+            quote = None if char == '"' else quote
+        elif char == "#" and command[index - 1:index] in WORD_BOUNDARY and escaped != index - 1:
+            index = COMMENT.match(command, index).end()
+            continue
+        elif command.startswith(("((", "[["), index) and command[index - 1:index] in WORD_BOUNDARY + ("!",):
+            return True
+        elif command.startswith("$'", index):
+            quote, index = "$'", index + 1
+        elif char in "'\"":
+            quote = char
+        index += 1
+    return False
+
+
+def scan(command):
+    statements, words, word = [], [], None
+    quote, heredoc, substitution, quoted = None, False, False, False
+    operator_at = -2
+    index = 0
+    while index < len(command):
+        char = command[index]
+        if word is None and char == "#":
+            index = COMMENT.match(command, index).end()
+            continue
+        heredoc = heredoc or quote not in ("'", "$'") and heredoc_at(command, index)
+        step, text = 1, None
+        if char == "\\" and quote != "'":
+            step, text = 2, command[index + 1:index + 2]
+        elif quote is not None:
+            quote, text = (None, "") if char == quote[-1] else (quote, None)
+        elif command.startswith("$'", index):
+            quote, step, text, quoted = "$'", 2, "", True
+        elif char in "'\"":
+            quote, text, quoted = char, "", True
+        elif (char in "<>" or command.startswith("&>", index)) and word is not None \
+                and not OPERATOR_START.fullmatch("".join(word)):
+            words.append(marked_word(word, quoted))
+            word, quoted = None, False
+        elif (char in " \t" or char in SEPARATORS) \
+                and not (char in "&|" and operator_at == index - 1) \
+                and not command.startswith("&>", index):
+            substitution = substitution or char == "(" and operator_at == index - 1
+            if word is not None:
+                words.append(marked_word(word, quoted))
+                word, quoted = None, False
+            if char in SEPARATORS:
+                statements.append(words)
+                words = []
+            index += 1
+            continue
+        operator_at = index if char in "<>" else operator_at
+        word = [] if word is None else word
+        word.append(command[index:index + step] if text is None else text)
+        index += step
+    if word is not None:
+        words.append(marked_word(word, quoted))
+    statements.append(words)
+    return statements, heredoc, substitution
+
+
+def names_git(command):
+    return "git" in re.sub("[^A-Za-z0-9]", "", command)
+
+
+def refusal(command, project):
+    if len(command) > MAX_COMMAND:
+        return f"the command is longer than {MAX_COMMAND} characters; split it into steps ({GUIDE})"
+    if "\\\n" in command:
+        return f"a line continuation hides how bash joins the words; write the command on one line ({GUIDE})"
+    if evaluates(command):
+        return f"{EVALUATION} ({GUIDE})"
+    statements, heredoc, substitution = scan(command)
+    if heredoc:
+        return ("a heredoc carries a script or file body inside the command; write it with the Write "
+                f"tool into the scratchpad and run it by path ({GUIDE})")
+    if substitution:
+        return f"a process substitution hides the command around it; write to a file and read it ({GUIDE})"
+    if names_git(command) and not plain_command().fullmatch(command):
+        return ("a command that names git runs unprompted only in plain words: letters, digits, ._/,=%~^@:+-, "
+                "text in single quotes and text in double quotes without $, a backtick or a backslash, joined by ;, "
+                "&&, ||, | or a line break, with output only to /dev/null, a descriptor or "
+                f"{OUTPUT_DIRECTORY.rstrip('/')}/; write it that way or split it ({GUIDE})")
+    reasons = (judged(words, project) for words in statements)
+    return next((reason for reason in reasons if reason), None)
+
+
+def judged(words, project):
+    with contextlib.suppress(ValueError):
+        command, effects = program(command_words(unredirected(words)))
+        if "split" in effects:
+            return ("'env -S' builds the command it runs from one string, expanding ${…} in it, so the permission "
+                    f"rules cannot see that command and it waits on the author; write the words directly ({GUIDE})")
+        return statement_refusal(command, project, "moves" in effects)
+
+
+def unredirected(words):
+    kept, rest = [], iter(words)
+    for word in rest:
+        if REDIRECT.fullmatch(word):
+            next(rest, None)
+        elif not REDIRECT.match(word):
+            kept.append(word)
+    return kept
+
+
+def command_words(words):
+    while words:
+        if words[0] in KEYWORDS:
+            words = words[1:]
+        elif words[0] == "function":
+            words = words[2:]
+        elif words[0] == "coproc":
+            words = words[2:] if words[2:3] and words[2] in COMPOUND else words[1:]
+        elif timed := timed_words(words):
+            words = timed
+        else:
+            break
+    return words
+
+
+def timed_words(words):
+    rest = words[1:]
+    rest = rest[1:] if rest[:1] == ["-p"] else rest
+    rest = rest[1:] if rest[:1] == ["--"] else rest
+    return rest if words[:1] == ["time"] and rest[:1] and rest[0] in RESERVED else None
+
+
+def program(words):
+    effects = set()
+    while len(words) > 1:
+        name = posixpath.basename(words[0])
+        if ASSIGNMENT.match(words[0]):
+            if MOVES_REPOSITORY.match(words[0]):
+                effects.add("moves")
+            words = words[1:]
+        elif name in WRAPPERS:
+            operands = wrapper_operands(words[1:], WRAPPERS[name])
+            if operands is None:
+                return [], effects
+            words, kinds = operands
+            effects |= kinds
+            if name == "env":
+                settings, words = env_settings(words)
+                effects |= {"moves" for setting in settings if MOVES_REPOSITORY.match(setting)}
+        else:
+            break
+    return words, effects
+
+
+def env_settings(words):
+    count = next((index for index, word in enumerate(words) if "=" not in word), len(words))
+    return words[:count], words[count:]
+
+
+def wrapper_operands(words, options):
+    kinds = set()
+    while words and words[0].startswith("-") and words[0] not in ("-", "--"):
+        if "<adjustment>" in options and NICE_ADJUSTMENT.fullmatch(words[0]):
+            words = words[1:]
+            continue
+        option = option_kinds(words[0], options)
+        if option is None or "idle" in option[0]:
+            return None
+        found, takes_next = option
+        if "split" in found:
+            return [], {"split"}
+        kinds |= found
+        words = words[2:] if takes_next else words[1:]
+    if words[:1] == ["--"]:
+        words = words[1:]
+    if words[:1] == ["-"] and "-" in options:
+        words = words[1:]
+    if "<duration>" in options:
+        words = words[1:]
+    return words, kinds
+
+
+def long_option(name, options):
+    if name in options:
+        return name
+    names = [option for option in options if option.startswith(name)]
+    return names[0] if len(names) == 1 else None
+
+
+def option_kinds(word, options):
+    if word.startswith("--"):
+        name, joined, _ = word.partition("=")
+        kind = options.get(long_option(name, options))
+        if kind is None:
+            return None
+        return {kind}, kind in VALUED and not joined
+    kinds = set()
+    for position in range(1, len(word)):
+        kind = options.get("-" + word[position])
+        if kind is None:
+            return None
+        kinds.add(kind)
+        if kind in VALUED:
+            return kinds, position == len(word) - 1
+    return kinds, False
+
+
+def statement_refusal(words, project, moved):
+    if not words:
+        return None
+    if words[0] in SETTERS or words[:2] == ["printf", "-v"] or all(ASSIGNMENT.match(word) for word in words):
+        return (f"'{words[0]}' sets a shell variable for a later command, so that command matches no "
+                f"allow rule; write the literal value into it ({GUIDE})")
+    if posixpath.basename(words[0]) in ("test", "[") and any(word in ("-v", "-R") for word in words[1:]):
+        return f"{EVALUATION} ({GUIDE})"
+    if posixpath.basename(words[0]) == "xargs":
+        return ("xargs runs a command the permission rules cannot see, so it waits on the author; "
+                f"use 'find … -exec … {{}} +' or 'grep -r' ({GUIDE})")
+    name = posixpath.basename(words[0])
+    if name.startswith("git-"):
+        words = ["git", name.removeprefix("git-"), *words[1:]]
+    elif name != "git":
+        return None
+    if moved:
+        return ("an environment prefix that moves git's directories or configuration hides where git runs; "
+                f"name the worktree with -C ({GUIDE})")
+    return git_refusal(words[1:], project)
+
+
+def normal(path):
+    return re.sub("^//", "/", posixpath.normpath(path))
+
+
+def git_places(path):
+    with contextlib.suppress(OSError):
+        answer = subprocess.run(["git", "-C", path, "rev-parse", "--absolute-git-dir", "--show-toplevel"],
+                                capture_output=True, text=True)
+        places = answer.stdout.splitlines()
+        if answer.returncode == 0 and len(places) == 2 and all(places):
+            return places
+    return None
+
+
+def in_primary(path, project):
+    return (path + "/").startswith(project + "/") and not path.startswith(worktree_root(project))
+
+
+def forced_move(subcommand, arguments):
+    if subcommand == "worktree" and arguments[:1] == ["add"]:
+        subcommand, arguments = "worktree add", arguments[1:]
+    if subcommand not in FORCED_MOVES:
+        return False
+    options = arguments[:arguments.index("--")] if "--" in arguments else arguments
+    return any(forced_option(word, *FORCED_MOVES[subcommand]) for word in options)
+
+
+def forced_option(word, letter, valued, long_options):
+    if word.startswith("--"):
+        name = word.partition("=")[0]
+        return any(option.startswith(name) and name.startswith(SHORTEST_ABBREVIATION[option])
+                   for option in long_options)
+    if not word.startswith("-"):
+        return False
+    for flag in word[1:]:
+        if flag == letter:
+            return True
+        if flag in valued:
+            return False
+    return False
+
+
+def forced_worktree(subcommand, arguments):
+    if subcommand != "worktree" or arguments[:1] != ["add"]:
+        return False
+    flags, words = set(), iter(arguments[1:])
+    for word in words:
+        if word == "--":
+            break
+        if word.startswith("--"):
+            flags = worktree_long_flags(word, flags, words)
+        elif word.startswith("-"):
+            flags = worktree_short_flags(word, flags, words)
+    return "f" in flags and not flags & {"d", "b"}
+
+
+def worktree_long_flags(word, flags, words):
+    name, joined, _ = word.partition("=")
+    negated = name.startswith("--no-")
+    base = "--" + name[len("--no-"):] if negated else name
+    if len(base) <= 2:
+        return flags
+    if "--reason".startswith(base) and not negated and not joined:
+        next(words, None)
+    named = {flag for option, flag in WORKTREE_ADD_FLAGS.items() if option.startswith(base)}
+    return flags - named if negated else flags | named
+
+
+def worktree_short_flags(word, flags, words):
+    for position, flag in enumerate(word[1:], 2):
+        if flag in "bB":
+            return flags | {"b"} if word[position:] or next(words, None) is not None else flags
+        flags = flags | {flag}
+    return flags
+
+
+def refused_configuration(words):
+    while words and words[0].startswith("-"):
+        option, words = words[0], words[1:]
+        if option.startswith("--config-env="):
+            option, words = "--config-env", [option.partition("=")[2], *words]
+        key, _, value = (words or [""])[0].partition("=")
+        if option in ("-c", "--config-env") and (aliasing(key) or including(key) or hooking(key)):
+            return option, key, value
+        if option in VALUED_OPTIONS:
+            words = words[1:]
+    return None
+
+
+def aliasing(key):
+    return key.lower().startswith("alias.")
+
+
+def including(key):
+    lowered = key.lower()
+    return lowered == "include.path" or lowered.startswith("includeif.") and lowered.endswith(".path")
+
+
+def hooking(key):
+    return key.lower() == "core.hookspath"
+
+
+def configuration_refusal(option, key, value):
+    if aliasing(key):
+        name = key[len("alias."):]
+        runs = f"'{value}'" if option == "-c" else f"what the variable {value} holds"
+        return (f"{option} alias.{name} makes 'git {name}' run {runs}, which the guard and the permission rules "
+                f"cannot see; run that subcommand itself ({GUIDE})")
+    if hooking(key):
+        hooks = f"'{value}'" if option == "-c" else f"the folder the variable {value} names"
+        return (f"{option} {key} makes git run the hooks in {hooks} in place of the project's, which gate every "
+                f"commit; drop it ({GUIDE})")
+    source = f"'{value}'" if option == "-c" else f"the file the variable {value} names"
+    return (f"{option} {key} makes git read configuration from {source}, where an alias can hide the subcommand; "
+            f"drop it ({GUIDE})")
+
+
+def git_refusal(words, project):
+    configured = refused_configuration(words)
+    if configured:
+        return configuration_refusal(*configured)
+    paths, options = [], []
+    while words and words[0].startswith("-"):
+        option, words = words[0], words[1:]
+        if option == "-C" and words:
+            paths.append(words[0])
+        else:
+            options.append(option)
+        if option in VALUED_OPTIONS:
+            words = words[1:]
+    subcommand, arguments = (words or [""])[0], words[1:]
+    if subcommand in ("reset", "clean"):
+        return f"'git {subcommand}' discards work and stays on the deny floor in every form; fold instead ({GUIDE})"
+    if subcommand in PUSH_SUBCOMMANDS or subcommand == "subtree" and "push" in arguments:
+        return f"a push publishes work, and no agent pushes (handbook §7){PUSH_ROUTE} ({GUIDE})"
+    if subcommand == "branch" and any(FORCED_BRANCH.match(argument) for argument in arguments):
+        return ("a forced branch deletion or move rewrites a branch git would protect; delete with -d "
+                f"({GUIDE})")
+    if forced_move(subcommand, arguments):
+        return ("-B, -C, --force-create or --ignore-other-worktrees resets a branch or takes one another worktree "
+                f"holds, main included; create a new branch with -b or -c ({GUIDE})")
+    if forced_worktree(subcommand, arguments):
+        return ("'git worktree add --force' checks out a branch another worktree holds, main included; add --detach "
+                f"or create a new branch with -b ({GUIDE})")
+    if any(OUTPUT.match(argument) for argument in options + arguments):
+        return f"'--output' writes a file the write rules do not see; let the output go to the terminal ({GUIDE})"
+    if subcommand == "rebase" and any(EXEC.match(argument) for argument in arguments):
+        return ("'git rebase --exec' runs a command the permission rules cannot see; run each step as its own "
+                f"call ({GUIDE})")
+    if project is None:
+        return None
+    if any(normal(path).startswith(worktree_root(project)) for path in paths) \
+            and (len(paths) > 1 or options):
+        return ("behind an agent worktree's -C, no other global option may follow; name one -C and the "
+                f"subcommand ({GUIDE})")
+    if subcommand not in ("checkout", "restore", "switch"):
+        return None
+    primary = (f"'git {subcommand}' runs only as 'git -C <absolute path of your own worktree> {subcommand}', never in "
+               f"the primary checkout other sessions share ({GUIDE})")
+    if len(paths) != 1 or not paths[0].startswith("/") \
+            or any(option.partition("=")[0] in REACHING_OPTIONS for option in options) \
+            or in_primary(normal(paths[0]), project):
+        return primary
+    places = git_places(paths[0])
+    if places is None:
+        return (f"git cannot resolve {paths[0]} as a work tree when the hook runs, so the guard cannot tell it from "
+                f"the primary checkout; where the same command makes the folder, make it in a call of its own first "
+                f"({GUIDE})")
+    git_directory, top = places
+    if git_directory in (project + "/.git", posixpath.realpath(project + "/.git")) \
+            or posixpath.realpath(top) == project:
+        return primary
+    return None
+
+
+def plain_words(command):
+    return shlex.split(command) if PLAIN.fullmatch(command) else None
+
+
+def text_of(path):
+    try:
+        with open(path) as file:
+            return file.read()
+    except OSError:
+        return ""
+
+
+def linked(path, project):
+    root = worktree_root(project)
+    if not path.startswith(root) or "/" in path[len(root):]:
+        return None
+    prefix = "gitdir: " + project + "/.git/worktrees/"
+    pointer = text_of(path + "/.git")
+    name = pointer[len(prefix):].removesuffix("\n") if pointer.startswith(prefix) else ""
+    gitdir = project + "/.git/worktrees/" + name
+    return gitdir if "/" not in name and text_of(gitdir + "/gitdir") == path + "/.git\n" else None
+
+
+def restorable(path):
+    return bool(path) and not path.startswith((":", "/")) and not re.search(r"[*?\[\\]", path) \
+        and not any(part in (".", "..") for part in path.split("/"))
+
+
+def checkout_words(words):
+    if "--" in words:
+        paths = words.index("--")
+        return len(words) > paths + 1 and all(HASH.fullmatch(word) for word in words[:paths]) \
+            and all(restorable(word) for word in words[paths + 1:])
+    return len(words) == 2 and words.count("--detach") == 1 and any(HASH.fullmatch(word) for word in words)
+
+
+# MODULE agent-seat
+def push_prefix(project):
+    matches = (PUSH_PREFIX.fullmatch(line) for line in text_of(project + "/agent/push").splitlines())
+    return next((match.group(1) for match in matches if match), None)
+
+
+def deleted_branch(name, project):
+    prefix = push_prefix(project)
+    return bool(prefix) and name != "main" and bool(PUSHED_BRANCH.fullmatch(name)) \
+        and name.startswith(prefix) and len(name) > len(prefix) and ".." not in name \
+        and all(part and not part.startswith(".") and not part.endswith((".", ".lock"))
+                for part in name.split("/"))
+
+
+def pushed(words, project):
+    if words[:1] != [project + "/agent/push"]:
+        return False
+    if words[1:2] == ["--delete"]:
+        return len(words) == 3 and deleted_branch(words[2], project)
+    return len(words) in (2, 3) and bool(linked(words[1], project)) \
+        and all(HASH.fullmatch(word) for word in words[2:])
+
+
+def gh_body_file(path):
+    inside = output_directory() + "/"
+    return path.startswith(inside) and ".." not in path.split("/") and posixpath.realpath(path).startswith(inside)
+
+
+def gh_value(option, value):
+    if option in ("--base", "--head"):
+        return bool(GH_BRANCH.fullmatch(value))
+    if option == "--json":
+        return bool(GH_FIELDS.fullmatch(value))
+    return option == "--title" or gh_body_file(value)
+
+
+def gh_arguments(words, selectable):
+    rest, selectors = iter(words), 0
+    for word in rest:
+        option, joined, value = word.partition("=")
+        if option in GH_VALUED:
+            value = value if joined else next(rest, None)
+            if value is None or not gh_value(option, value):
+                return False
+        elif word != "--comments":
+            selectors += 1
+            if not selectable or selectors > 1 or not (GH_NUMBER.fullmatch(word) or GH_BRANCH.fullmatch(word)):
+                return False
+    return True
+
+
+def gh_pr(words, project):
+    if words[:2] != [project + "/agent/gh", "pr"] or len(words) < 3:
+        return False
+    if words[2] == "close":
+        return len(words) == 4 and bool(PR_NUMBER.fullmatch(words[3]))
+    return words[2] in GH_PR and gh_arguments(words[3:], words[2] not in GH_UNSELECTED)
+# /MODULE agent-seat
+
+
+def approval(command, project):
+    words = None if project is None or len(command) > MAX_APPROVED else plain_words(command)
+    approved = APPROVALS.split()
+    if words is None:
+        return None
+    if "fold" in approved and len(words) == 3 and words[0] == project + "/agent/fold" \
+            and linked(words[1], project) and HASH.fullmatch(words[2]):
+        return "agent/fold"
+    if "checkout" in approved and words[:2] == ["git", "-C"] and words[3:4] == ["checkout"] \
+            and linked(words[2], project) and checkout_words(words[4:]):
+        return "git checkout"
+    # MODULE agent-seat
+    if "push" in approved and pushed(words, project):
+        return "agent/push"
+    if "gh" in approved and gh_pr(words, project):
+        return "agent/gh pr " + words[2]
+    # /MODULE agent-seat
+
+
+def pinned_python(project):
+    return any(line.split()[:1] == ["python"] for line in text_of(project + "/.tool-versions").splitlines())
+
+
+def inactive(project):
+    return ENVIRONMENT == "inactive" or ENVIRONMENT == "native" and (project is None or not pinned_python(project))
+
+
+def project_directory():
+    value = os.environ.get("CLAUDE_PROJECT_DIR")
+    return posixpath.realpath(value) if value and value.startswith("/") else None
+
+
+def state():
+    project = project_directory()
+    if ENVIRONMENT == "inactive":
+        return "inactive: the block marks the environment inactive"
+    if not os.environ.get("CLAUDE_PROJECT_DIR"):
+        return "inactive: CLAUDE_PROJECT_DIR is unset"
+    if project is None:
+        return ("inactive: CLAUDE_PROJECT_DIR is no Linux path, so the hooks run no guard; run by hand, it keeps "
+                "its refusals with no approvals and no primary-checkout refusals")
+    if inactive(project):
+        return "inactive: the native environment pins no python in .tool-versions"
+    failure = canned_failure(project)
+    if failure:
+        effect = ("a call it raises on goes on to the permission rules unrefused, and it approves nothing"
+                  if failure.startswith("the guard raises") else "it refuses as before and approves nothing")
+        return f"misconfigured: {failure}; {effect} until the values of its ADAPT block are fixed"
+    return "active"
+
+
+def canned_failure(project):
+    commands = (f"git -C {shlex.quote(project)} switch x", "git status", "git log > /etc/bash-shape-guard.txt",
+                f"git log > {shlex.quote(project + '/bash-shape-guard.txt')}")
+    try:
+        unknown = [word for word in APPROVALS.split() if word not in KNOWN_APPROVALS]
+        verdicts = [(bool(refusal(command, project)), bool(approval(command, project))) for command in commands]
+        holds_project = (project + "/").startswith(worktree_root(project).rstrip("/") + "/")
+    except Exception as error:
+        return json.dumps(f"the guard raises {type(error).__name__} ({error}) on a canned call")[1:-1]
+    if unknown:
+        known = ", ".join(sorted(KNOWN_APPROVALS))
+        return json.dumps(f"APPROVALS names {unknown[0]}, which is no approval the guard knows ({known})")[1:-1]
+    if holds_project:
+        return "the worktree root holds the project directory, so the primary checkout would read as a worktree"
+    if verdicts != [(True, False), (False, False), (True, False), (True, False)]:
+        return ("the guard answers a canned call wrongly: a switch in the primary checkout and git output into /etc "
+                "or the project must be refused, git status must pass")
+    return None
+
+
+def root_report():
+    project = project_directory()
+    if project is None:
+        return "none: CLAUDE_PROJECT_DIR is unset or no Linux path, so the guard approves nothing"
+    root, reason = root_choice(project)
+    shown = json.dumps(root)[1:-1]
+    return shown if reason is None else f"{shown}\nAGENT_WORKTREES ignored: {reason}"
+
+
+def main():
+    if sys.argv[1:] == ["--state"]:
+        print(state())
+        return 0
+    if sys.argv[1:] == ["--root"]:
+        print(root_report())
+        return 0
+    try:
+        payload = json.load(sys.stdin)
+        tool = payload.get("tool_name")
+        command = payload["tool_input"]["command"] if tool in READ_TOOLS else None
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return 0
+    project = project_directory()
+    if inactive(project):
+        return 0
+    reason = refusal(command, project) if isinstance(command, str) else None
+    shape = None
+    if isinstance(command, str) and tool == APPROVED_TOOL and project is not None and not canned_failure(project):
+        with contextlib.suppress(ValueError):
+            shape = approval(command, project)
+    if reason:
+        print(f"bash-shape-guard: {reason}.", file=sys.stderr)
+    if shape:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
+                                                "permissionDecisionReason": f"bash-shape-guard: {shape}"}}))
+    return 2 if reason else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

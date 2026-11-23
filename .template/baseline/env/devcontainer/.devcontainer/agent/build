@@ -1,0 +1,145 @@
+#!/bin/sh
+set -eu
+
+# > **ADAPT:** the devcontainers CLI that builds the devcontainer image; /adopt pins the current one.
+devcontainer_cli=@devcontainers/cli@0.90.0
+# > **ADAPT:** the repository's URL, which the image's `org.opencontainers.image.source` label
+# > names; /adopt fills the placeholder.
+source_url='{{REPOSITORY_URL}}'
+
+fail() {
+	printf '[agent-build] %s\n' "$*" >&2
+	exit 1
+}
+
+usage() {
+	printf 'usage: %s --tag <image:tag>\n' "$0" >&2
+	exit 2
+}
+
+image_reference() {
+	newline='
+'
+	case $1 in *"$newline"*) return 1 ;; esac
+	name=$1
+	case ${1##*/} in *:*) name=${1%:*} ;; esac
+	[ "${#name}" -le 255 ] || return 1
+	host_part='[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?'
+	path_part='[a-z0-9]+(([_.]|__|-+)[a-z0-9]+)*'
+	printf '%s\n' "$1" | LC_ALL=C grep -Eqx \
+		"($host_part(\\.$host_part)*(:[0-9]+)?/)?$path_part(/$path_part)*(:[A-Za-z0-9_][A-Za-z0-9_.-]{0,127})?"
+}
+
+[ $# -eq 2 ] && [ "$1" = --tag ] && image_reference "$2" || usage
+tag=$2
+
+temporary=$(mktemp -d) || fail "no temporary folder can be made for the snapshot"
+base=
+cleanup() {
+	cleaned=0
+	if [ -n "$base" ]; then
+		if present=$(docker image ls --quiet --filter "reference=$base"); then
+			[ -z "$present" ] || docker image rm "$base" >/dev/null || cleaned=1
+		else
+			cleaned=1
+		fi
+	fi
+	rm -rf "$temporary"
+	[ ! -e "$temporary" ] || cleaned=1
+	return "$cleaned"
+}
+trap 'status=$?; trap - EXIT; cleanup || status=1; exit $status' EXIT
+trap 'exit 1' HUP INT PIPE QUIT TERM
+
+GIT_NO_REPLACE_OBJECTS=1
+GIT_GRAFT_FILE=$temporary/no-grafts
+export GIT_NO_REPLACE_OBJECTS GIT_GRAFT_FILE
+
+agent_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P) || fail "the folder build sits in cannot be entered"
+[ "$(git rev-parse --is-inside-work-tree 2>/dev/null || true)" = true ] || fail "run from the repository root of a git checkout"
+[ -z "$(git rev-parse --show-prefix)" ] || fail "run from the repository root"
+root=$(pwd -P)
+temporary_dir=$(CDPATH= cd -- "$temporary" && pwd -P) || fail "the temporary folder $temporary cannot be entered"
+temporary=$temporary_dir
+case $temporary_dir/ in
+	"$root"/*) fail "the temporary folder $temporary_dir lies inside the checkout $root, where the snapshot would read as a change; set TMPDIR to a folder outside it" ;;
+esac
+case $agent_dir in
+	"$root/env/devcontainer/.devcontainer/agent")
+		devcontainer_dir=env/devcontainer/.devcontainer
+		workspace_dir=env/devcontainer ;;
+	"$root/.devcontainer/agent")
+		devcontainer_dir=.devcontainer
+		workspace_dir=. ;;
+	*) fail "build sits in $agent_dir, which is neither env/devcontainer/.devcontainer/agent/ nor .devcontainer/agent/ of the repository root $root" ;;
+esac
+agent_path=$devcontainer_dir/agent
+[ -f "$devcontainer_dir/devcontainer.json" ] ||
+	fail "$devcontainer_dir/ holds no devcontainer.json, so there is no devcontainer image to build the agent layer on"
+
+require_clean_checkout() {
+	changes=$(git -c core.fsmonitor=false status --porcelain --untracked-files=all --ignore-submodules=none) ||
+		fail "git cannot read the checkout's status"
+	[ -z "$changes" ] || fail "the checkout has changes the revision labels would not name"
+	index=$(git -c core.fsmonitor=false ls-files -v) || fail "git cannot read the checkout's index"
+	! printf '%s\n' "$index" | LC_ALL=C grep -q '^[a-zS] ' ||
+		fail "the checkout hides changes from git status (assume-unchanged, skip-worktree or a sparse checkout)"
+}
+
+require_clean_checkout
+[ "$(git rev-parse --is-shallow-repository)" = false ] ||
+	fail "the clone is shallow, where the last $devcontainer_dir/ commit reads as its boundary commit"
+
+revision=$(git rev-parse HEAD)
+devcontainer_revision=$(git log -1 --no-show-signature --format=%H -- "$devcontainer_dir/")
+[ -n "$devcontainer_revision" ] || fail "$devcontainer_dir/ was never committed, so no commit can name it"
+
+committed_lockfile=$(git ls-tree --name-only "$revision" -- "$devcontainer_dir/devcontainer-lock.json") ||
+	fail "git cannot read whether a devcontainer-lock.json is committed"
+if [ -n "$committed_lockfile" ]; then
+	lockfile_flag=--frozen-lockfile
+else
+	lockfile_flag=--no-lockfile
+fi
+
+object_format=$(git rev-parse --show-object-format) || fail "git cannot name the checkout's object format"
+objects=$(git rev-parse --path-format=absolute --git-path objects) || fail "git cannot name the checkout's object store"
+snapshot=$temporary/snapshot
+snapshot_repository=$temporary/repository
+snapshot_git() (
+	for leaked in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do
+		unset "$leaked"
+	done
+	GIT_NO_REPLACE_OBJECTS=1
+	GIT_GRAFT_FILE=$temporary/no-grafts
+	GIT_CONFIG_NOSYSTEM=1
+	GIT_CONFIG_GLOBAL=$temporary/no-global-config
+	GIT_ATTR_NOSYSTEM=1
+	export GIT_NO_REPLACE_OBJECTS GIT_GRAFT_FILE GIT_CONFIG_NOSYSTEM GIT_CONFIG_GLOBAL GIT_ATTR_NOSYSTEM
+	git -c core.attributesFile="$temporary/no-attributes" -c init.defaultBranch=snapshot "$@"
+)
+snapshot_git init -q --object-format="$object_format" "$snapshot_repository" ||
+	fail "git cannot make the snapshot's repository"
+printf '%s\n' "$objects" > "$snapshot_repository/.git/objects/info/alternates" ||
+	fail "the snapshot's repository cannot borrow the checkout's object store"
+snapshot_git -C "$snapshot_repository" read-tree "$revision" || fail "git cannot read $revision into the snapshot's index"
+snapshot_git -C "$snapshot_repository" checkout-index -a --prefix="$snapshot/" ||
+	fail "git cannot write the snapshot of $revision"
+
+base=agent-seat-base:$revision-$(od -An -N8 -tx8 /dev/urandom | tr -d ' ')
+printf '[agent-build] devcontainer image %s\n' "$base"
+npx --yes "$devcontainer_cli" build --workspace-folder "$snapshot/$workspace_dir" "$lockfile_flag" --image-name "$base"
+require_clean_checkout
+[ "$(git rev-parse HEAD)" = "$revision" ] || fail "HEAD moved during the devcontainer build"
+
+printf '[agent-build] agent layer %s\n' "$tag"
+docker build \
+	--build-arg BASE="$base" \
+	--label org.opencontainers.image.revision="$revision" \
+	--label agent-seat.devcontainer.revision="$devcontainer_revision" \
+	--label org.opencontainers.image.source="$source_url" \
+	--file "$snapshot/$agent_path/Dockerfile" \
+	--tag "$tag" \
+	"$snapshot/$agent_path"
+
+printf '[agent-build] built %s at %s (%s/ at %s)\n' "$tag" "$revision" "$devcontainer_dir" "$devcontainer_revision"

@@ -1,0 +1,182 @@
+#!/bin/sh
+# The self-test legs of the gate, one script for the two hooks that run before their commit exists:
+# pre-commit for `git commit` and pre-applypatch for `git am`, so a patch cannot land a weakened
+# suite or tool either. Exits 1 with the reason on stderr when a leg refuses.
+# usage: hooks/self-test-legs <calling hook>, whose name opens every line it prints.
+set -eu
+
+[ "$#" -eq 1 ] || { printf 'usage: hooks/self-test-legs <calling hook>\n' >&2; exit 2; }
+caller=$1
+
+cd "$(git rev-parse --show-toplevel)"
+
+reject() {
+	printf '\n[%s] %s\n' "$caller" "$1" >&2
+	exit 1
+}
+
+# Each leg runs the self-test of the staged tree, never the work tree's copy: a weakened suite or
+# tool staged beside a good copy on disk, or a self-test taken out of the index alone, must run into
+# its leg. The legs share one copy of the staged tree, a repository of its own in a scratch
+# directory that borrows this repository's object store, so its files and its `git ls-files -s`
+# carry the staged modes. git exports GIT_DIR, GIT_INDEX_FILE and others to its hooks, which would
+# point the copy back at this repository, so nothing run there sees them.
+copy_root=
+copy=
+
+in_copy() (
+	for leaked in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do
+		unset "$leaked"
+	done
+	cd "$copy" && "$@"
+)
+
+make_copy() {
+	[ -z "$copy" ] || return 0
+	tree=$(git write-tree) || reject "git could not write the staged tree, so no self-test could run on it. Fix what git reports above."
+	format=$(git rev-parse --show-object-format) || reject "git could not name its object format, so no self-test could run on the staged tree. Fix what git reports above."
+	objects=$(git rev-parse --path-format=absolute --git-path objects) || reject "git could not name its object store, so no self-test could run on the staged tree. Fix what git reports above."
+	copy_root=$(mktemp -d) || reject "no scratch directory could be made, so no self-test could run on the staged tree."
+	trap 'rm -rf "$copy_root"' EXIT
+	trap 'exit 1' HUP INT TERM
+	copy="$(cd "$copy_root" && pwd -P)/tree" || reject "the scratch directory $copy_root cannot be entered, so no self-test could run on the staged tree."
+	# The copy takes the repository's object format, so it can read the borrowed objects. Its own
+	# core.autocrlf=false keeps a global setting from writing its scripts with CRLF; the staged
+	# tree's attributes and filters still apply to the checkout. The refresh leaves its index
+	# matching its files, for a suite that asks git whether its tree is clean.
+	{
+		mkdir "$copy" &&
+		in_copy git init -q --object-format="$format" &&
+		mkdir -p "$copy/.git/objects/info" &&
+		printf '%s\n' "$objects" > "$copy/.git/objects/info/alternates" &&
+		in_copy git config core.autocrlf false &&
+		in_copy git read-tree "$tree" &&
+		in_copy git checkout-index -a &&
+		in_copy git update-index -q --refresh
+	} > "$copy_root/copy.log" 2>&1 || reject "the staged tree could not be checked out for its self-tests: $(tail -n 1 "$copy_root/copy.log")"
+}
+
+# A leg is guarded on the staged paths, a type change included (a file turned into a link), never
+# on the script it runs: a commit that removes or replaces its self-test must run into the leg
+# rather than switch it off. Only a commit that leaves nothing of the folder in the index, as when
+# a project drops a module, skips the leg. A link staged at the folder's own path, or at a folder
+# above it, leaves nothing of the folder either, yet brings a copy of its tools back at the same
+# path, so it refuses instead.
+# A suite that does not parse fails. A suite exits 2 where it cannot run (an old git, no python3),
+# which is no proof of a weakened tool, and says why on its last line, which opens with its own
+# name: `hook self-test: `, `agent self-test: `, `gate self-test: `, `module filter self-test: `.
+# Only that pair reads as "cannot run here"; any other exit 2, such as a shell's own error, whose
+# line opens with the script's path, is a failure.
+# Arguments: the folder, what nothing then proves, what a failure means, a hint on what the suite
+# needs (it closes both the cannot-run and the failure refusal, since a missing tool can show as
+# failing cases too), then the paths that trigger the leg.
+run_leg() {
+	leg=$1
+	unproven=$2
+	broken=$3
+	hint=$4
+	shift 4
+	git diff --cached --name-only --diff-filter=ACMDRT -- "$leg" "$@" | grep -q . || return 0
+	folder=
+	rest=$leg/
+	while [ -n "$rest" ]; do
+		folder=${folder:+$folder/}${rest%%/*}
+		rest=${rest#*/}
+		folder_mode=$(git ls-files -s -- "$folder" | awk -F '\t' -v path="$folder" '$2 == path { split($1, field, " "); print field[1] }')
+		if [ "$folder_mode" = 120000 ]; then
+			reject "$folder is staged as a link (mode 120000), so $unproven. Stage the folder itself."
+		fi
+	done
+	if ! git ls-files -- "$leg/" | grep -q .; then
+		printf '[%s] %s self-test skipped: the commit leaves nothing of %s/ in the index.\n' "$caller" "$leg" "$leg" >&2
+		return 0
+	fi
+	printf '[%s] %s self-test...\n' "$caller" "$leg"
+	mode=$(git ls-files -s -- "$leg/self-test" | awk -F '\t' -v path="$leg/self-test" '$2 == path { split($1, field, " "); print field[1] }')
+	case "$mode" in
+		'') reject "$leg/self-test is missing, so $unproven. Restore it." ;;
+		100644|100755) ;;
+		*) reject "$leg/self-test is staged as no regular file (mode $mode), so $unproven. Stage the script itself." ;;
+	esac
+	make_copy
+	out="$copy_root/suite.out"
+	if ! in_copy sh -n "$copy/$leg/self-test" > "$out" 2>&1; then
+		reject "$leg/self-test fails on the staged files, so $broken: sh cannot parse it: $(awk 'NF { last = $0 } END { print last }' "$out"). Fix the syntax error."
+	fi
+	status=0
+	in_copy sh "$copy/$leg/self-test" < /dev/null > "$out" 2>&1 || status=$?
+	[ "$status" -ne 0 ] || return 0
+	last=$(awk 'NF { last = $0 } END { print last }' "$out")
+	if [ "$status" -eq 2 ] && printf '%s\n' "$last" | grep -q '^[a-z][a-z ]* self-test: '; then
+		reject "$leg/self-test cannot run here: $last$hint."
+	fi
+	awk -v caller="$caller" '
+		/^ *FAIL/ { n++; if (n <= 20) print "[" caller "] " $0 }
+		END { if (n > 20) printf "[%s]   ... and %d more FAIL line(s)\n", caller, n - 20 }
+	' "$out" >&2
+	reject "$leg/self-test fails on the staged files, so $broken. Read its FAIL lines above and run 'sh $leg/self-test' for its whole output$hint."
+}
+
+# A case of the hooks suite stages each preset's verify at the root, as the adoption commit does,
+# so a preset's verify runs the hooks leg too.
+run_leg hooks 'nothing proves the gate blocks what it claims to block' \
+	'the gate no longer blocks what it claims to block' '' 'hooks/*' 'stacks/*/verify'
+
+run_leg stacks "nothing proves the stack presets' contract" \
+	'a stack preset no longer honours the contract the hooks rely on' '' 'stacks/*'
+
+# The agent tools ship their own self-test (agent/self-test), the same leg.
+agent_needs=
+# MODULE guard
+# With the guard module the self-test covers the shell-shape guard and needs python3 3.9 or newer.
+agent_needs='; it needs python3 3.9 or newer, so a host without one commits in the container'
+# /MODULE guard
+# MODULE agent-seat
+agent_needs="$agent_needs; with the agent-seat module it also needs jq and openssl"
+# /MODULE agent-seat
+run_leg agent 'nothing proves the agent tools refuse what they claim to refuse' \
+	'an agent tool no longer refuses what it claims to refuse' "$agent_needs" 'agent/*'
+
+# MODULE agent-seat
+# The landing script ships its own self-test (land/self-test), the same leg; it says it cannot run
+# with `land self-test: ` on its last line. The landing workflow that runs it rides along: the
+# template's copy under ci/github/ and an adopter's under .github/.
+run_leg land 'nothing proves the landing refuses what it claims to refuse' \
+	'the landing no longer refuses what it claims to refuse' \
+	'; it needs jq, so a host without it commits in the container' \
+	'land/*' ci/github/.github/workflows/land.yml .github/workflows/land.yml
+# /MODULE agent-seat
+
+# MODULE agent-seat
+# The agent image ships its own self-test beside its build, the same leg; it says it cannot run with
+# `agent image self-test: ` on its last line. Two calls, one per path the image lives under:
+# env/devcontainer/.devcontainer/agent/ in the template, .devcontainer/agent/ in an adopted project.
+# Each runs on its own folder only. In the template a commit there runs the module filter's leg
+# below too, since that leg reads the devcontainer payload.
+run_leg env/devcontainer/.devcontainer/agent \
+	'nothing proves the agent image build refuses what it claims to refuse' \
+	'the agent image build no longer refuses what it claims to refuse' '' \
+	'env/devcontainer/.devcontainer/agent/*'
+run_leg .devcontainer/agent \
+	'nothing proves the agent image build refuses what it claims to refuse' \
+	'the agent image build no longer refuses what it claims to refuse' '' \
+	'.devcontainer/agent/*'
+# /MODULE agent-seat
+
+# The module filter /adopt runs ships its own self-test beside it, the same leg. While the index
+# holds that folder, a staged .claude/settings.json or devcontainer payload file runs it too, since
+# the manifest's rows name lines there; an adopted project holds no such folder, so those files run
+# no leg there and print no skip line.
+set -- '.claude/skills/adopt/*'
+if git ls-files -- .claude/skills/adopt/ | grep -q .; then
+	set -- "$@" .claude/settings.json 'env/devcontainer/.devcontainer/*'
+fi
+run_leg .claude/skills/adopt 'nothing proves the module filter takes out only what a dropped module owns' \
+	'the module filter no longer takes out only what a dropped module owns' '' "$@"
+
+# MODULE gate
+# The gate module's dossier check ships its own self-test; the same leg keeps a weakened check, or
+# its proof's deletion, from landing.
+run_leg gate 'nothing proves the dossier check refuses what it claims to refuse' \
+	'the dossier check no longer refuses what it claims to refuse' '' 'gate/*'
+# /MODULE gate

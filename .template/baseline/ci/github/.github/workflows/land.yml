@@ -1,0 +1,71 @@
+name: land
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+jobs:
+  land:
+    # > **ADAPT:** on an organisation's repository the owner is no user, so no /land is honoured
+    # > until the project lists its permitted landers in a repository variable and checks the
+    # > commenter against it in place of the owner check, here and in land/land.
+    if: >-
+      github.event.issue.pull_request
+      && startsWith(github.event.comment.body, '/land')
+      && github.event.comment.user.login == github.repository_owner
+      && github.event.comment.performed_via_github_app == null
+    concurrency:
+      group: land
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    environment: landing
+    timeout-minutes: 10
+    steps:
+      - name: Mint the landing app's token
+        id: token
+        # > **ADAPT:** pin the current release of actions/create-github-app-token by its commit hash.
+        uses: actions/create-github-app-token@{{CREATE_GITHUB_APP_TOKEN_COMMIT}}
+        with:
+          client-id: ${{ vars.LAND_APP_CLIENT_ID }}
+          private-key: ${{ secrets.LAND_APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-workflows: write
+          permission-checks: read
+          permission-statuses: read
+
+      - name: Authenticate git with the token
+        env:
+          TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          credential=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
+          echo "::add-mask::$credential"
+          header="AUTHORIZATION: basic $credential"
+          echo "::add-mask::$header"
+          {
+            echo "GIT_CONFIG_COUNT=1"
+            echo "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader"
+            echo "GIT_CONFIG_VALUE_0=$header"
+          } >> "$GITHUB_ENV"
+
+      - name: Fetch land/ from the default branch
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          git init -q source
+          git -C source fetch -q --depth=1 --no-tags "https://github.com/$REPOSITORY.git" "$SOURCE_SHA"
+          git -C source checkout -q FETCH_HEAD -- land
+
+      - name: Land
+        env:
+          LAND_EVENT: ${{ github.event_path }}
+          LAND_REPO: ${{ github.repository }}
+          LAND_REMOTE: https://github.com/${{ github.repository }}.git
+          LAND_TARGET: ${{ vars.LAND_TARGET }}
+          LAND_TOKEN: ${{ steps.token.outputs.token }}
+        run: sh source/land/land

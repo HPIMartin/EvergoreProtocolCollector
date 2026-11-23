@@ -1,0 +1,68 @@
+module agent-seat the unattended agent seat on GitHub
+module gate the mechanical review gate: the dossier check, the walk, the tip evidence and the scenario check
+module guard the shell-shape guard and the session check for the agent's Bash and Monitor commands
+module security-lens the security lens on changes to the authentication surface
+module acceptance web-UI acceptance: a real browser per scenario, the orphan sweep and the grid recipe
+module volumes the agent worktrees on a named volume of the devcontainer
+needs agent-seat guard
+needs security-lens gate
+asks agent-seat a GitHub origin
+asks agent-seat only on the author's request
+asks agent-seat the devcontainer variant
+asks agent-seat a Debian devcontainer image whose user is vscode
+asks agent-seat a landing branch called main
+asks guard python3 3.9 or newer where Claude Code runs
+asks security-lens an authentication surface
+asks acceptance a UI surface
+asks volumes the devcontainer variant
+path agent-seat agent/push
+path agent-seat agent/gh
+path agent-seat agent/github-token
+path agent-seat land/
+path agent-seat ci/github/
+path agent-seat hooks/pre-push
+path agent-seat env/devcontainer/.devcontainer/agent/
+path gate gate/
+path guard agent/bash-shape-guard
+path guard agent/session-check
+path security-lens gate/lens-request
+path security-lens .claude/agents/falsifier-security.md
+json agent-seat .claude/settings.json Bash(git fetch --prune origin)
+json gate .claude/settings.json Bash(/workspaces/{{PROJECT_NAME}}/.claude/worktrees/*/gate/dossier-check*)
+json gate .claude/settings.json Bash(/workspaces/{{PROJECT_NAME}}/.claude/worktrees/*/gate/walk*)
+json gate .claude/settings.json Bash(/workspaces/{{PROJECT_NAME}}/.claude/worktrees/*/gate/tip-evidence*)
+json gate .claude/settings.json Bash(/workspaces/{{PROJECT_NAME}}/.claude/worktrees/*/gate/scenario-check*)
+json gate .claude/settings.json Bash(sh gate/*)
+json gate .claude/settings.json Bash(sh gate/*..*)
+json gate+security-lens .claude/settings.json Bash(/workspaces/{{PROJECT_NAME}}/.claude/worktrees/*/gate/lens-request*)
+json volumes .claude/settings.json Edit(//worktrees/**)
+json volumes .claude/settings.json Bash(/worktrees/*/verify*)
+json volumes .claude/settings.json Bash(/worktrees/..*)
+json volumes .claude/settings.json Bash(/worktrees/*/..*)
+json volumes .claude/settings.json /worktrees
+json gate+volumes .claude/settings.json Bash(/worktrees/*/gate/dossier-check*)
+json gate+volumes .claude/settings.json Bash(/worktrees/*/gate/walk*)
+json gate+volumes .claude/settings.json Bash(/worktrees/*/gate/tip-evidence*)
+json gate+volumes .claude/settings.json Bash(/worktrees/*/gate/scenario-check*)
+json gate+security-lens+volumes .claude/settings.json Bash(/worktrees/*/gate/lens-request*)
+key guard .claude/settings.json hooks
+hook guard .claude/settings.json case \"$CLAUDE_PROJECT_DIR\" in /*) ;; *) exit 0 ;; esac; g=\"$CLAUDE_PROJECT_DIR/agent/bash-shape-guard\"; [ -r \"$g\" ] && [ \"$(python3 -I -c 'import sys; print(sys.version_info >= (3, 9))' 2> /dev/null)\" = True ] && { python3 -I \"$g\"; [ $? -ne 2 ] || exit 2; }; exit 0
+hook guard .claude/settings.json case \"$CLAUDE_PROJECT_DIR\" in /*) s=\"$CLAUDE_PROJECT_DIR/agent/session-check\"; [ -f \"$s\" ] && sh \"$s\" ;; *) m='agent guard inactive: CLAUDE_PROJECT_DIR is empty or no Linux path, so the hooks run no guard and its refusals are off'; printf '{\"systemMessage\":\"%s\",\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"%s\"}}\\n' \"$m\" \"$m\" ;; esac; exit 0
+cut agent-seat agent/bash-shape-guard  push gh
+cut agent-seat agent/bash-shape-guard , and with the agent-seat module `push` and `gh`
+cut volumes env/devcontainer/.devcontainer/devcontainer.json  && git config gc.worktreePruneExpire never && sudo chown -R vscode:vscode /worktrees
+cut volumes agent/session-check /worktrees
+trace gate .claude/settings.json gate/
+trace security-lens .claude/settings.json lens-request
+trace volumes .claude/settings.json /worktrees
+trace guard .claude/settings.json agent/bash-shape-guard
+trace guard .claude/settings.json agent/session-check
+trace volumes env/devcontainer/.devcontainer/devcontainer.json /worktrees
+trace volumes env/devcontainer/.devcontainer/devcontainer.json AGENT_WORKTREES
+trace volumes env/devcontainer/.devcontainer/devcontainer.json gc.worktreePruneExpire
+trace agent-seat .claude/settings.json fetch --prune origin)
+installs env/devcontainer/.devcontainer/ .devcontainer/
+installs env/native/.tool-versions .tool-versions
+skip .claude/skills/adopt/
+skip .git/
+skip .template/
