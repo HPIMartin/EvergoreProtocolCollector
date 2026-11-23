@@ -21,7 +21,6 @@ src/main/java/dev/schoenberg/evergore/protocolParser/application/AdminKey.java
 src/main/java/dev/schoenberg/evergore/protocolParser/application/ChangePassword
 src/main/java/dev/schoenberg/evergore/protocolParser/application/ChooseNewPassword.java
 src/main/java/dev/schoenberg/evergore/protocolParser/application/CreateAccounts.java
-src/main/java/dev/schoenberg/evergore/protocolParser/application/IssuedPasswords.java
 src/main/java/dev/schoenberg/evergore/protocolParser/application/LogIn
 src/main/java/dev/schoenberg/evergore/protocolParser/application/Login
 src/main/java/dev/schoenberg/evergore/protocolParser/application/Password
