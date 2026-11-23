@@ -752,6 +752,8 @@ command) inside guardrails. Two files:
     - `Bash(sh hooks/*..*)` and `Bash(sh -n hooks/*..*)` give the script allows the same `..`
       guard the worktree `verify` allow has: a script path, or an argument, holding `..` is
       refused, while the plain forms run (probe record, rows 86 to 88, 100, 101, 111).
+    - `Bash(sh deploy/*..*)` gives the project's `Bash(sh deploy/*)` allow the same `..` guard
+      (derived from those rows, not probed).
     <!-- MODULE gate -->
     - With the gate module, `Bash(sh gate/*)` runs its scripts from the primary checkout.
       - `Bash(sh gate/*..*)` gives it the same `..` guard.

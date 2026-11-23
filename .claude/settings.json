@@ -126,6 +126,7 @@
 			"Bash(sh hooks/*..*)",
 			"Bash(sh -n hooks/*..*)",
 			"Bash(sh gate/*..*)",
+			"Bash(sh deploy/*..*)",
 			"Bash(sh hooks/*breach-release*)",
 			"Bash(hooks/breach-release*)",
 			"Bash(./hooks/breach-release*)",
