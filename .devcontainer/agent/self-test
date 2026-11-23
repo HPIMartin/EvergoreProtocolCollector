@@ -833,6 +833,7 @@ r=0
 	'ARG BASE=base-image-required-pass-build-arg-base' \
 	'FROM ${BASE}' \
 	'LABEL devcontainer.metadata="[]"' \
+	'ENV AGENT_WORKTREES=""' \
 	'USER root' \
 	'RUN --mount=type=bind,source=provision,target=/tmp/provision sh /tmp/provision' \
 	'USER vscode' \
@@ -841,7 +842,7 @@ r=0
 	'RUN --mount=type=bind,source=install-claude-code,target=/tmp/install-claude-code sh /tmp/install-claude-code' \
 	'WORKDIR /workspaces' \
 	'CMD ["sleep", "infinity"]')" ] || r=1
-check 'the Dockerfile is exactly the blanked devcontainer metadata, provision as root, install-claude-code as vscode with ~/.local/bin on PATH and the auto-updater off, /workspaces and sleep infinity' "$r"
+check 'the Dockerfile is exactly the blanked devcontainer metadata, an empty AGENT_WORKTREES, provision as root, install-claude-code as vscode with ~/.local/bin on PATH and the auto-updater off, /workspaces and sleep infinity' "$r"
 
 docker_fingerprint=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 

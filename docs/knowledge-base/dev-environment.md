@@ -197,9 +197,15 @@
     registration (handbook §7).
 <!-- /MODULE volumes -->
 <!-- MODULE agent-seat+volumes -->
-- **The agent seat leaves `AGENT_WORKTREES` unset,** so its root is the default of handbook §7.
-  - The agent image blanks the `devcontainer.metadata` label ("The agent image", below).
-  - That label carries `containerEnv` and the mounts, so the seat inherits neither.
+- **The agent seat runs with `AGENT_WORKTREES` empty,** which the guard and
+  `agent/session-check` read as unset, so its root is the default of handbook §7.
+  - The devcontainers CLI writes `containerEnv` into the devcontainer image as `ENV` (measured
+    2026-11-23 with `docker image inspect` on the PC's devcontainer image).
+  - So the agent image inherits `AGENT_WORKTREES=/worktrees` (measured 2026-11-23 on the seat's
+    image of `561491a8`).
+  - The agent image sets it empty ("The agent image", below; author decision 2026-11-23).
+  - The blank `devcontainer.metadata` label keeps the volume's mount off the seat, not the
+    variable.
   - A volume for the seat would change its mounts and environment.
   - The agent machine's administration owns those.
 <!-- /MODULE agent-seat+volumes -->
@@ -442,6 +448,12 @@ home.
     devcontainer's `Dockerfile`, its `firefox-esr` included.
   - It blanks the inherited `devcontainer.metadata` label to `[]` (author decision 2026-10-12;
     why: below).
+<!-- /MODULE agent-seat -->
+<!-- MODULE agent-seat+volumes -->
+  - It sets `AGENT_WORKTREES` empty (author decision 2026-11-23; why: "What the blank label does
+    not undo", below).
+<!-- /MODULE agent-seat+volumes -->
+<!-- MODULE agent-seat -->
   - It runs exactly two scripts, each bind-mounted for its step only:
     - `provision` runs as root, then `install-claude-code` as `vscode`;
     - `~/.local/bin` is on the `PATH`.
@@ -455,13 +467,30 @@ home.
     customizations, beside the base image's and each feature's entries.
 <!-- /MODULE agent-seat -->
 <!-- MODULE agent-seat+volumes -->
-  - It holds the named volume on `/worktrees` and `AGENT_WORKTREES` too, which the seat leaves
-    unset ("Worktrees on a volume", above).
+  - It holds the named volume on `/worktrees` and `AGENT_WORKTREES` too ("Worktrees on a
+    volume", above).
 <!-- /MODULE agent-seat+volumes -->
 <!-- MODULE agent-seat -->
   - `docker-outside-of-docker` adds the host socket mount to it.
   - With the label blank no devcontainer tool applies any of them, so none mounts the host's socket
-    into the agent container: what the agent container mounts and sets is the agent machine's.
+    into the agent container: what the agent container mounts is the agent machine's.
+- **What the blank label does not undo:** the devcontainers CLI also writes each feature's
+  environment and the devcontainer's `containerEnv` into the image as `ENV`, and a derived image
+  inherits it (measured 2026-11-23 with `docker image inspect` on the PC's devcontainer image).
+  - So the agent container's environment is the image's `ENV` plus what the agent machine sets.
+  - A `containerEnv` entry reaches the seat this way unless the agent `Dockerfile` overrides it.
+<!-- /MODULE agent-seat -->
+<!-- MODULE agent-seat+volumes -->
+  - The agent `Dockerfile` sets `AGENT_WORKTREES` empty.
+    - Why: the seat's image of `561491a8` carried `AGENT_WORKTREES=/worktrees` (measured
+      2026-11-23).
+    - A container of it printed that value although it had no `/worktrees` directory.
+    - A set value makes `/worktrees` the guard's root and leaves the worktrees under
+      `.claude/worktrees/` outside it.
+    - `ENV` cannot unset a variable; the guard and `agent/session-check` read an empty value as
+      unset.
+<!-- /MODULE agent-seat+volumes -->
+<!-- MODULE agent-seat -->
 - **`provision`**, as root, with every version, the Debian release and the key's fingerprint as
   constants in the script:
   - refuses before any call unless `/etc/os-release` names `ID=debian` and the codename of its

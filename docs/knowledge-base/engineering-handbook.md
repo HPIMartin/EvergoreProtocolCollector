@@ -815,8 +815,8 @@ worktrees (own directory + HEAD + index) make parallel work safe.
     <!-- /MODULE agent-seat -->
 - **The worktree root holds every worktree an agent creates:** strand, walk, lens and run worktrees
   alike.
-  - The root is `$AGENT_WORKTREES` where the environment sets it, else
-    `<project root>/.claude/worktrees/`.
+  - The root is `$AGENT_WORKTREES` where the environment sets it to a path the guard takes, else
+    `<project root>/.claude/worktrees/`; an empty value reads as unset.
   - The variable names an absolute directory outside every checkout.
     - Why: `.gitignore` covers the default alone; anywhere else inside a checkout, a worktree is
       that checkout's untracked content.
