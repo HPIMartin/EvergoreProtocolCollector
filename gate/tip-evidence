@@ -57,7 +57,7 @@ lock_take "$dossier/tip-evidence.lock" "another run holds $dossier"
 
 guard=
 if [ -n "$docs_guard_test" ]; then
-	guards=$(git -C "$strand" ls-files -z -- "*$docs_guard_test.*" | tr '\0' '\n' \
+	guards=$(git -C "$strand" ls-files -z -- "*$docs_guard_test.*" ':(exclude).template' | tr '\0' '\n' \
 		| awk -v name="$docs_guard_test" '{ base = $0; sub(/^.*\//, "", base); sub(/\.[^.]*$/, "", base); if (base == name) print }')
 	guard=$(printf '%s\n' "$guards" | head -n 1)
 	[ "$(printf '%s\n' "$guards" | awk 'NF { n++ } END { print n + 0 }')" -le 1 ] \

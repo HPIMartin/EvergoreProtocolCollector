@@ -869,7 +869,8 @@ authentication surface ("Cadence").
       - The output names both.
     - A block with no `docs_guard_test` gets no `kb-guard.log`; the output says so.
     - The docs guard test is the one file `<docs_guard_test>.<ext>` the strand holds, in any
-      directory.
+      directory outside `.template/` (author decision 2026-11-23).
+      - Why: the template baseline holds a preset file of that name.
       - It lists the files NUL-separated, so a path holding a quote or a backslash reaches `verify`
         as it is.
       - It refuses, with exit 2 and before any run, a strand that holds more than one.

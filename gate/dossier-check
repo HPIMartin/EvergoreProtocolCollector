@@ -16,7 +16,7 @@ set -eu
 # > blanks and each below a walk worktree, of the test reports a failed build leaves, one for each
 # > stack of a composed project, which gate/walk keeps beside its log; empty keeps none.
 # > `docs_guard_test` is also the name gate/tip-evidence finds the test by: the one file
-# > `<docs_guard_test>.<ext>` in any directory. The helpers in this directory read `base_ref`,
+# > `<docs_guard_test>.<ext>` in any directory outside `.template/`. The helpers here read `base_ref`,
 # > `features_dir`, the walk and docs guard values and `bdd_leg` from here through `--value`, and
 # > judge a walk log through `--walk-green`.
 base_ref='refs/heads/main'

@@ -5844,6 +5844,15 @@ if guarded_strand evidence_guard_twice; then
 	check "tip evidence refuses a strand that holds the docs guard test twice, before it runs anything" "$r"
 fi
 
+if guarded_strand evidence_guard_baseline; then
+	write_file .template/baseline/stacks/java-gradle/kb-guard/KbCitationGuardTest.java 'class KbCitationGuardTest {' '}'
+	commit_all 'Keep the template baseline'
+	evidenced
+	if [ "$evidence_status" -eq 0 ] && grep -qx 'focus src/test/java/dev/example/arch/KbCitationGuardTest.java' "$GATE_BUILDS" \
+		&& ! printed 'more than one'; then r=0; else r=1; fi
+	check "tip evidence leaves a docs guard test under the template baseline out of its search" "$r"
+fi
+
 if new_walked_strand evidence_guard_nonascii; then
 	configured guard-nonascii "docs_guard_test='KbCitationGuardTest'"
 	write_file 'src/test/java/dév/KbCitationGuardTest.java' 'class KbCitationGuardTest {' '}'
