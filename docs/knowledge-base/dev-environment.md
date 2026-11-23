@@ -479,6 +479,11 @@ home.
   inherits it (measured 2026-11-23 with `docker image inspect` on the PC's devcontainer image).
   - So the agent container's environment is the image's `ENV` plus what the agent machine sets.
   - A `containerEnv` entry reaches the seat this way unless the agent `Dockerfile` overrides it.
+  - `CLAUDE_CONFIG_DIR` stays inherited, `/home/vscode/.claude`, the folder Claude Code uses by
+    default (author decision 2026-11-23).
+    - With it set, Claude Code keeps `.claude.json` in that folder too, as the PC's
+      `.claude-home` shows; the running seat works with it, and a change would move its login
+      state.
 <!-- /MODULE agent-seat -->
 <!-- MODULE agent-seat+volumes -->
   - The agent `Dockerfile` sets `AGENT_WORKTREES` empty.
