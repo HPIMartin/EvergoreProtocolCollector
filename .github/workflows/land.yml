@@ -6,23 +6,26 @@ on:
 
 permissions: {}
 
-concurrency:
-  group: land
-  cancel-in-progress: false
-
 jobs:
   land:
+    # > **ADAPT:** on an organisation's repository the owner is no user, so no /land is honoured
+    # > until the project lists its permitted landers in a repository variable and checks the
+    # > commenter against it in place of the owner check, here and in land/land.
     if: >-
       github.event.issue.pull_request
       && startsWith(github.event.comment.body, '/land')
       && github.event.comment.user.login == github.repository_owner
       && github.event.comment.performed_via_github_app == null
+    concurrency:
+      group: land
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     environment: landing
     timeout-minutes: 10
     steps:
       - name: Mint the landing app's token
         id: token
+        # > **ADAPT:** pin the current release of actions/create-github-app-token by its commit hash.
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
           client-id: ${{ vars.LAND_APP_CLIENT_ID }}
@@ -31,6 +34,7 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
           permission-issues: write
+          permission-workflows: write
           permission-checks: read
           permission-statuses: read
 
@@ -38,7 +42,9 @@ jobs:
         env:
           TOKEN: ${{ steps.token.outputs.token }}
         run: |
-          header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+          credential=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
+          echo "::add-mask::$credential"
+          header="AUTHORIZATION: basic $credential"
           echo "::add-mask::$header"
           {
             echo "GIT_CONFIG_COUNT=1"

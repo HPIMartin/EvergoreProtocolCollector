@@ -1,13 +1,27 @@
 #!/bin/sh
+# Proves the landing workflow's scripts: land/land, each case against a bare repository of its own
+# as the remote and a stand-in for the GitHub API that answers from the case's files and records
+# what land posts; and land/github-api against a stand-in for curl that records its arguments and
+# the header file it is handed, so no case reaches GitHub. The cases run copies of land/land whose
+# ADAPT lines take the values of the fixtures below, so they hold under every value a project sets.
+# Needs sh, git, jq and mktemp; refuses with exit 2 and a named message where one is missing, so a
+# host without them runs no case and says why.
 set -eu
 
+for tool in git jq mktemp; do
+	command -v "$tool" > /dev/null 2>&1 || {
+		printf 'land self-test: no %s on PATH; the landing scripts need sh, git, jq and mktemp, so no case ran\n' "$tool" >&2
+		exit 2
+	}
+done
+
 land_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-land="$land_dir/land"
+land_live="$land_dir/land"
 
 for leaked in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do
 	unset "$leaked"
 done
-command -v jq >/dev/null 2>&1 || { printf 'land self-test: jq is missing\n' >&2; exit 1; }
+unset LAND_EVENT LAND_REPO LAND_TARGET LAND_REMOTE LAND_TOKEN LAND_API GITHUB_RUN_ATTEMPT
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -22,21 +36,44 @@ check() {
 	fi
 }
 
+land_copy() {
+	mkdir -p "$work/land-$1"
+	sed -e "s#^branch_prefix=.*#branch_prefix='$2'#" -e "s#^required_check=.*#required_check='$3'#" \
+		-e "s#^required_check_app=.*#required_check_app='github-actions'#" "$land_live" > "$work/land-$1/land"
+	printf '%s\n' "$work/land-$1/land"
+}
+land_claude=$(land_copy claude claude/ '')
+land_agent=$(land_copy agent agent/ '')
+land_empty=$(land_copy empty '' '')
+land_build=$(land_copy build claude/ build)
+
+workflow="$land_dir/../.github/workflows/land.yml"
+[ -f "$workflow" ] || workflow="$land_dir/../ci/github/.github/workflows/land.yml"
+
+# A stand-in for the GitHub API: a GET answers from the case's file of the path, a POST records
+# the body it posts, and with a post.fail file every POST fails.
 cat > "$work/api" <<'STUB'
 #!/bin/sh
 set -eu
 key=$(printf '%s' "$2" | tr '/?=&' '____')
 case "$1" in
 	GET) cat "$LAND_STUB/$key" ;;
-	POST) jq -r '.body' "$3" >> "$LAND_STUB/posted" ;;
+	POST) [ ! -f "$LAND_STUB/post.fail" ] || exit 1
+		jq -r '.body' "$3" >> "$LAND_STUB/posted" ;;
 esac
 STUB
 chmod +x "$work/api"
 
 new_case() {
 	case_dir="$work/$1"
+	prefix=${2:-claude/}
 	remote="$case_dir/remote.git"
+	land_remote=$remote
 	stub="$case_dir/stub"
+	land=$land_claude
+	blank=
+	attempt=1
+	land_path=$PATH
 	mkdir -p "$case_dir/seed" "$stub"
 	git init -q --bare "$remote"
 	git -C "$case_dir/seed" init -q -b main
@@ -44,16 +81,17 @@ new_case() {
 	git -C "$case_dir/seed" config user.name Land
 	git -C "$case_dir/seed" commit -q --allow-empty -m 'Seed main'
 	git -C "$case_dir/seed" tag v1
-	git -C "$case_dir/seed" branch claude/land-probe
-	git -C "$case_dir/seed" switch -q -c claude/topic
+	git -C "$case_dir/seed" branch "${prefix}land-probe"
+	git -C "$case_dir/seed" switch -q -c "${prefix}topic"
 	git -C "$case_dir/seed" commit -q --allow-empty -m 'Add the topic'
-	git -C "$case_dir/seed" push -q "$remote" main claude/land-probe claude/topic v1
+	git -C "$case_dir/seed" push -q "$remote" main "${prefix}land-probe" "${prefix}topic" v1
 	main_before=$(git -C "$remote" rev-parse refs/heads/main)
-	head=$(git -C "$remote" rev-parse refs/heads/claude/topic)
+	probe_before=$main_before
+	head=$(git -C "$remote" rev-parse "refs/heads/${prefix}topic")
 	target=main
 	write_event created "/land $head" octo User null true
-	write_pull open octo/repo main claude/topic "$head"
-	write_runs 1 '[{"name":"build","status":"completed","conclusion":"success"}]'
+	write_pull open octo/repo main "${prefix}topic" "$head"
+	write_runs 1 '[{"name":"build","status":"completed","conclusion":"success","app":{"slug":"github-actions"}}]'
 	write_status 0 pending
 }
 
@@ -80,19 +118,21 @@ write_status() {
 
 run_land() {
 	set +e
-	LAND_EVENT="$case_dir/event.json" LAND_REPO=octo/repo LAND_TARGET=$target LAND_REMOTE="$remote" \
-		LAND_API="$work/api" LAND_STUB="$stub" sh "$land" > "$case_dir/out" 2>&1
+	LAND_EVENT="$case_dir/event.json" LAND_REPO=octo/repo LAND_TARGET=$target LAND_REMOTE="$land_remote" \
+		LAND_API="$work/api" LAND_STUB="$stub" GITHUB_RUN_ATTEMPT=$attempt \
+		env ${blank:+"$blank="} PATH="$land_path" /bin/sh "$land" > "$case_dir/out" 2>&1
 	status=$?
 	set -e
 }
 
 ref_of() { git -C "$remote" rev-parse --verify -q "refs/heads/$1" || printf 'absent'; }
-posted() { cat "$stub/posted" 2>/dev/null || true; }
+posted() { cat "$stub/posted" 2> /dev/null || true; }
 
 expect_refused() {
 	run_land
 	r=0
-	[ "$status" -ne 0 ] && [ "$(ref_of main)" = "$main_before" ] && [ "$(ref_of claude/topic)" = "$head" ] \
+	[ "$status" -ne 0 ] && [ "$(ref_of main)" = "$main_before" ] && [ "$(ref_of "${prefix}topic")" = "$head" ] \
+		&& [ "$(ref_of "${prefix}land-probe")" = "$probe_before" ] \
 		&& posted | grep '^Not landed: ' | grep -qF "$2" || r=1
 	check "$1" "$r"
 }
@@ -100,8 +140,17 @@ expect_refused() {
 expect_ignored() {
 	run_land
 	r=0
-	[ "$status" -eq 0 ] && [ "$(ref_of main)" = "$main_before" ] && [ "$(ref_of claude/topic)" = "$head" ] \
+	[ "$status" -eq 0 ] && [ "$(ref_of main)" = "$main_before" ] && [ "$(ref_of "${prefix}topic")" = "$head" ] \
 		&& [ -z "$(posted)" ] || r=1
+	check "$1" "$r"
+}
+
+expect_landed() {
+	run_land
+	r=0
+	[ "$status" -eq 0 ] && [ "$(ref_of "$target")" = "$head" ] && [ "$(ref_of "${prefix}topic")" = absent ] \
+		&& { [ "$target" = main ] || [ "$(ref_of main)" = "$main_before" ]; } \
+		&& posted | grep -qF "Landed \`$head\` on \`$target\` as a fast-forward." || r=1
 	check "$1" "$r"
 }
 
@@ -122,7 +171,6 @@ run_land
 r=0
 [ "$status" -eq 0 ] && [ "$(ref_of claude/land-probe)" = "$head" ] && [ "$(ref_of main)" = "$main_before" ] || r=1
 check 'the probe target is landed on and main is left alone' "$r"
-
 
 new_case moved-after-landing
 cat > "$remote/hooks/post-receive" <<HOOK
@@ -221,22 +269,22 @@ run_land
 r=0
 [ "$status" -ne 0 ] && [ "$(ref_of main)" = "$main_before" ] && [ "$(ref_of feature/topic)" = "$head" ] \
 	&& posted | grep -qF 'is not a `claude/<topic>` branch' || r=1
-check 'a head branch outside claude/ is refused' "$r"
+check 'a head branch outside the prefix is refused' "$r"
 
 new_case dotted
 write_pull open octo/repo main claude/../main "$head"
 run_land
 r=0
 [ "$status" -ne 0 ] && [ "$(ref_of main)" = "$main_before" ] && posted | grep -q 'not a plain branch name' || r=1
-check 'a head branch name git refuses is refused before any git command reads it' "$r"
+check 'a head branch name git refuses is refused as no plain branch name' "$r"
 
 new_case red-check
 write_runs 2 '[{"name":"build","status":"completed","conclusion":"success"},{"name":"lint","status":"completed","conclusion":"failure"}]'
-expect_refused 'a failed check run is refused' 'check runs not green on the head: lint.'
+expect_refused 'a failed check run is refused' 'check runs not green on the head: `lint`.'
 
 new_case pending-check
 write_runs 1 '[{"name":"build","status":"in_progress","conclusion":null}]'
-expect_refused 'an unfinished check run is refused' 'check runs not green on the head: build.'
+expect_refused 'an unfinished check run is refused' 'check runs not green on the head: `build`.'
 
 new_case second-page
 write_runs 101 '[{"name":"build","status":"completed","conclusion":"success"}]'
@@ -248,10 +296,7 @@ expect_refused 'a failed commit status is refused' 'the combined commit status'
 
 new_case no-checks
 write_runs 0 '[]'
-run_land
-r=0
-[ "$status" -eq 0 ] && [ "$(ref_of main)" = "$head" ] || r=1
-check 'a head without any check lands' "$r"
+expect_landed 'without a required check a head with no check run lands'
 
 new_case not-fast-forward
 git -C "$case_dir/seed" switch -q main
@@ -265,6 +310,358 @@ git -C "$case_dir/seed" commit -q --allow-empty -m 'Push after the check'
 git -C "$case_dir/seed" push -q "$remote" claude/topic
 head=$(git -C "$remote" rev-parse refs/heads/claude/topic)
 expect_refused 'a branch that moved while the landing was checked is refused' 'moved while the landing was checked'
+
+r=0
+[ "$(grep -c "^branch_prefix='[^']*'\$" "$land_live")" = 1 ] \
+	&& [ "$(grep -c "^required_check='[^']*'\$" "$land_live")" = 1 ] \
+	&& [ "$(grep -c "^required_check_app='[^']*'\$" "$land_live")" = 1 ] || r=1
+check 'land/land holds one branch_prefix, required_check and required_check_app line for a project to set' "$r"
+
+new_case prefix-lands agent/
+land=$land_agent
+expect_landed 'a head branch under the prefix land/land names lands'
+
+new_case prefix-outside
+land=$land_agent
+expect_refused 'a head branch outside the prefix land/land names is refused' 'is not a `agent/<topic>` branch'
+
+new_case prefix-probe agent/
+land=$land_agent
+target=agent/land-probe
+write_pull open octo/repo agent/land-probe agent/topic "$head"
+expect_landed "the land-probe branch under the prefix is a landing target"
+
+new_case prefix-other-probe
+land=$land_agent
+target=claude/land-probe
+write_pull open octo/repo claude/land-probe claude/topic "$head"
+expect_refused 'a land-probe branch under another prefix is no landing target' 'is neither `main` nor `agent/land-probe`'
+
+new_case prefix-empty
+land=$land_empty
+expect_refused 'an empty prefix in land/land lands nothing' 'the branch prefix in land/land is empty'
+
+new_case required-missing
+land=$land_build
+write_runs 1 '[{"name":"build (ubuntu)","status":"completed","conclusion":"success","app":{"slug":"github-actions"}}]'
+expect_refused 'a head without a check run of exactly the required name is refused' 'the required check `build`'
+
+new_case required-failed
+land=$land_build
+write_runs 1 '[{"name":"build","status":"completed","conclusion":"failure","app":{"slug":"github-actions"}}]'
+expect_refused 'a head whose required check failed is refused' 'the required check `build`'
+
+new_case required-unfinished
+land=$land_build
+write_runs 1 '[{"name":"build","status":"in_progress","conclusion":null,"app":{"slug":"github-actions"}}]'
+expect_refused 'a head whose required check is unfinished is refused' 'the required check `build`'
+
+new_case required-success
+land=$land_build
+expect_landed 'a head whose required check succeeded lands'
+
+new_case required-other-app
+land=$land_build
+write_runs 1 '[{"name":"build","status":"completed","conclusion":"success","app":{"slug":"other-app"}}]'
+expect_refused 'a required check run by another app than the one land/land names is refused' 'the required check `build`'
+
+new_case neutral-skipped
+write_runs 2 '[{"name":"a","status":"completed","conclusion":"neutral"},{"name":"b","status":"completed","conclusion":"skipped"}]'
+expect_landed 'neutral and skipped check runs do not hold a landing'
+
+new_case forged-run-name
+write_runs 1 '[{"name":"lint\n\nLanded `0000000000000000000000000000000000000000` on `main` as a fast-forward. @octo/everyone","status":"completed","conclusion":"failure"}]'
+run_land
+r=0
+[ "$status" -ne 0 ] && [ "$(ref_of main)" = "$main_before" ] && [ "$(posted | wc -l | tr -d ' ')" = 1 ] \
+	&& posted | grep -q '^Not landed: check runs not green on the head: ' \
+	&& ! posted | grep -q '@' && [ "$(posted | tr -cd '`' | wc -c | tr -d ' ')" = 2 ] || r=1
+check 'a check run name reaches the answer on one line, without mentions, inside one code span' "$r"
+
+new_case runs-no-json
+printf '<html>busy</html>\n' > "$stub/repos_octo_repo_commits_${head}_check-runs_per_page_100"
+expect_refused 'a check-runs answer that is no JSON is refused with an answer' 'the check runs could not be read'
+
+new_case runs-element
+write_runs 1 '[1]'
+expect_refused 'a check-runs answer whose runs are no objects is refused with an answer' 'the check runs could not be read'
+
+new_case run-name-link
+write_runs 1 '[{"name":"see https://evil.example/x","status":"completed","conclusion":"failure"}]'
+run_land
+r=0
+[ "$status" -ne 0 ] && posted | grep -qF 'check runs not green on the head: `see https___evil.example_x`.' \
+	&& ! posted | grep -q 'https:' || r=1
+check 'a check run name posts no link' "$r"
+
+new_case status-shape
+printf '{"total_count":"0","state":"failure"}\n' > "$stub/repos_octo_repo_commits_${head}_status"
+expect_refused 'a status answer whose total count is no number is refused' 'the commit statuses could not be read'
+
+new_case status-no-json
+printf '<html>busy</html>\n' > "$stub/repos_octo_repo_commits_${head}_status"
+expect_refused 'a status answer that is no JSON is refused as unreadable' 'the commit statuses could not be read'
+
+new_case runs-unreadable
+mv "$stub/repos_octo_repo_commits_${head}_check-runs_per_page_100" "$stub/repos_octo_repo_commits_${head}_check-runs_per_page_100.gone"
+expect_refused 'check runs that cannot be read are refused' 'the check runs could not be read'
+
+new_case status-unreadable
+mv "$stub/repos_octo_repo_commits_${head}_status" "$stub/repos_octo_repo_commits_${head}_status.gone"
+expect_refused 'commit statuses that cannot be read are refused' 'the commit statuses could not be read'
+
+new_case pull-unreadable
+mv "$stub/repos_octo_repo_pulls_7" "$stub/repos_octo_repo_pulls_7.gone"
+expect_refused 'a pull request that cannot be read is refused' 'the pull request could not be read'
+
+new_case fetch-fails
+land_remote="$case_dir/missing.git"
+expect_refused 'branches that cannot be fetched are refused' 'the branches could not be fetched'
+
+new_case push-refused
+printf '#!/bin/sh\nexit 1\n' > "$remote/hooks/pre-receive"
+chmod +x "$remote/hooks/pre-receive"
+expect_refused 'a refused push is refused with an answer' 'the fast-forward push to `main` was refused'
+
+new_case main-moved-before-push
+git -C "$case_dir/seed" switch -q main
+git -C "$case_dir/seed" commit -q --allow-empty -m 'Move main between the fetch and the push'
+git -C "$case_dir/seed" push -q "$remote" main:refs/heads/elsewhere
+moved=$(git -C "$remote" rev-parse refs/heads/elsewhere)
+land_path="$case_dir/bin:$PATH"
+mkdir -p "$case_dir/bin"
+cat > "$case_dir/bin/git" <<WRAPPER
+#!/bin/sh
+case " \$* " in
+	*" push "*)
+		[ -e "$case_dir/moved" ] || { : > "$case_dir/moved"; "$(command -v git)" -C "$remote" update-ref refs/heads/main $moved; } ;;
+esac
+exec "$(command -v git)" "\$@"
+WRAPPER
+chmod +x "$case_dir/bin/git"
+main_before=$moved
+expect_refused 'a main that moves between the fetch and the push is kept: the landing push never forces' \
+	'the fast-forward push to `main` was refused'
+
+new_case re-run
+attempt=2
+expect_refused 'a re-run of the landing job is refused, since it replays the stored comment' \
+	'a re-run replays the old command; comment /land again.'
+
+new_case re-run-ten
+attempt=10
+expect_refused 'a tenth attempt of the landing job is refused as a re-run' \
+	'a re-run replays the old command; comment /land again.'
+
+new_case attempt-unset
+attempt=
+expect_refused 'a run whose GITHUB_RUN_ATTEMPT is empty is refused as a re-run' \
+	'a re-run replays the old command; comment /land again.'
+
+new_case tab
+write_event created "/land	$head" octo User null true
+expect_refused 'a /land followed by a tab is refused with the usage' 'the command reads'
+
+new_case newline
+write_event created "/land
+$head" octo User null true
+expect_refused 'a /land followed by a line break is refused with the usage' 'the command reads'
+
+new_case two-spaces
+write_event created "/land  $head" octo User null true
+expect_refused 'a /land followed by two spaces is refused with the usage' 'the command reads'
+
+new_case statuses-green
+write_status 2 success
+expect_landed 'a head whose commit statuses exist and read success lands'
+
+new_case refusal-unposted
+write_event created '/land' octo User null true
+touch "$stub/post.fail"
+run_land
+r=0
+[ "$status" -eq 1 ] && [ "$(ref_of main)" = "$main_before" ] && grep -q '^land: the refusal could not be posted$' "$case_dir/out" || r=1
+check 'a refusal that cannot be posted still refuses and says so' "$r"
+
+new_case result-unposted
+touch "$stub/post.fail"
+run_land
+r=0
+[ "$status" -eq 0 ] && [ "$(ref_of main)" = "$head" ] && grep -q '^land: the result could not be posted$' "$case_dir/out" || r=1
+check 'a landing whose result cannot be posted lands and says so' "$r"
+
+for input in LAND_EVENT LAND_REPO LAND_TARGET LAND_REMOTE; do
+	new_case "no-$input"
+	blank=$input
+	run_land
+	r=0
+	[ "$status" -eq 2 ] && [ "$(ref_of main)" = "$main_before" ] && [ -z "$(posted)" ] \
+		&& [ "$(cat "$case_dir/out")" = "land: $input is not set" ] || r=1
+	check "land/land without $input exits 2 before it reads the event" "$r"
+done
+
+new_case no-jq
+land_path="$case_dir/bin"
+mkdir -p "$land_path"
+ln -s "$(command -v dirname)" "$land_path/dirname"
+run_land
+r=0
+[ "$status" -eq 2 ] && [ "$(ref_of main)" = "$main_before" ] && [ -z "$(posted)" ] \
+	&& [ "$(cat "$case_dir/out")" = 'land: jq is missing' ] || r=1
+check 'land/land without jq exits 2 before it reads the event' "$r"
+
+r=0
+! grep -q '^concurrency:' "$workflow" && grep -A 1 '^    concurrency:$' "$workflow" | grep -q '^      group: land$' || r=1
+check 'land.yml joins the concurrency group in the job, not the workflow' "$r"
+
+r=0
+grep -A 2 '^    concurrency:$' "$workflow" | grep -q '^      cancel-in-progress: false$' || r=1
+check 'land.yml lets no newer run cancel a running landing' "$r"
+
+r=0
+grep -q '^          permission-workflows: write$' "$workflow" || r=1
+check 'land.yml asks for the workflows write permission' "$r"
+
+r=0
+mask_line=$(grep -nF 'echo "::add-mask::$credential"' "$workflow" | cut -d: -f1)
+header_line=$(grep -nF 'header="AUTHORIZATION: basic $credential"' "$workflow" | cut -d: -f1)
+[ -n "$mask_line" ] && [ -n "$header_line" ] && [ "$mask_line" -lt "$header_line" ] || r=1
+check 'land.yml masks the bare credential before it writes the header line' "$r"
+
+api_live="$land_dir/github-api"
+api_bin="$work/api-bin"
+api_token=ghs_landing_token_example
+mkdir -p "$api_bin"
+cat > "$api_bin/curl" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" >> "$API_STUB/argv"
+previous=
+for argument in "$@"; do
+	if [ "$previous" = --header ]; then
+		case "$argument" in
+			@*) file=${argument#@}
+				printf '%s\n' "$file" >> "$API_STUB/header-files"
+				cat "$file" >> "$API_STUB/headers"
+				stat -c %a "$file" >> "$API_STUB/modes" ;;
+		esac
+	fi
+	previous=$argument
+done
+if [ -f "$API_STUB/interrupt" ]; then
+	kill -TERM "$PPID"
+fi
+printf '{}\n'
+STUB
+chmod +x "$api_bin/curl"
+
+api_case() {
+	stub="$work/api-$1"
+	mkdir -p "$stub"
+	api_shell=sh
+	token=$api_token
+}
+
+run_api() {
+	set +e
+	(
+		umask 022
+		PATH="$api_bin:$PATH" API_STUB="$stub" LAND_TOKEN=$token $api_shell "$api_live" "$@" > "$stub/out" 2> "$stub/err"
+	)
+	status=$?
+	set -e
+}
+
+header_gone() {
+	[ -s "$stub/header-files" ] || return 1
+	while IFS= read -r file; do
+		[ ! -e "$file" ] && [ ! -e "$(dirname "$file")" ] || return 1
+	done < "$stub/header-files"
+}
+
+api_case get
+run_api GET repos/octo/repo/pulls/7
+r=0
+[ "$status" -eq 0 ] && [ "$(cat "$stub/out")" = '{}' ] \
+	&& grep -qF -- '--header X-GitHub-Api-Version: 2022-11-28' "$stub/argv" \
+	&& grep -qF -- '--header Accept: application/vnd.github+json' "$stub/argv" \
+	&& ! grep -qF -- '--request' "$stub/argv" \
+	&& [ "$(sed -n 's/.* //p' "$stub/argv")" = https://api.github.com/repos/octo/repo/pulls/7 ] || r=1
+check 'github-api GETs the path from the GitHub API in JSON and API version 2022-11-28' "$r"
+r=0
+[ -s "$stub/argv" ] && ! grep -qF "$api_token" "$stub/argv" || r=1
+check 'github-api puts no token on the command line of curl' "$r"
+r=0
+[ "$(cat "$stub/headers" 2> /dev/null)" = "Authorization: Bearer $api_token" ] || r=1
+check 'github-api hands curl the bearer header in a file' "$r"
+r=0
+[ "$(cat "$stub/modes" 2> /dev/null)" = 600 ] || r=1
+check 'github-api writes the header file readable by its owner alone, under umask 022' "$r"
+r=0
+header_gone || r=1
+check 'github-api leaves no header file and no directory of it after a run' "$r"
+r=0
+[ "$(grep -c '^--disable ' "$stub/argv")" = 1 ] || r=1
+check 'github-api lets curl read no config file' "$r"
+
+api_case post
+printf '{"body":"x"}\n' > "$stub/payload.json"
+run_api POST repos/octo/repo/issues/7/comments "$stub/payload.json"
+r=0
+[ "$status" -eq 0 ] \
+	&& grep -qF -- "--request POST --data @$stub/payload.json https://api.github.com/repos/octo/repo/issues/7/comments" "$stub/argv" \
+	&& ! grep -qF "$api_token" "$stub/argv" && header_gone || r=1
+check 'github-api POSTs the payload file to the path, with the token in a header file it removes' "$r"
+
+api_case interrupted
+touch "$stub/interrupt"
+run_api GET repos/octo/repo/pulls/7
+r=0
+[ "$status" -eq 143 ] && header_gone || r=1
+check 'github-api ended by TERM during a call leaves no header file and exits 143' "$r"
+
+r=0
+traps=$(grep '^trap ' "$api_live" || :)
+for signal in EXIT HUP INT TERM; do
+	printf '%s\n' "$traps" | grep -q "^trap 'remove_work[;'].* $signal\$" || r=1
+done
+grep -qF 'remove_work() { [ -z "$work" ] || rm -rf "$work"; }' "$api_live" || r=1
+check 'github-api removes its header directory in a trap on EXIT, HUP, INT and TERM' "$r"
+
+api_case traced
+api_shell='sh -x'
+run_api GET repos/octo/repo/pulls/7
+r=0
+[ "$status" -eq 0 ] && [ -s "$stub/err" ] && ! grep -qF "$api_token" "$stub/err" || r=1
+check 'github-api traced with sh -x writes no token to its trace' "$r"
+
+api_case unknown-method
+run_api DELETE repos/octo/repo/git/refs/heads/main
+r=0
+[ "$status" -eq 2 ] && [ ! -e "$stub/argv" ] && [ "$(cat "$stub/err")" = 'github-api: unknown method DELETE' ] || r=1
+check 'github-api refuses an unknown method before any call' "$r"
+
+api_case no-token
+token=
+run_api GET repos/octo/repo/pulls/7
+r=0
+[ "$status" -eq 2 ] && [ ! -e "$stub/argv" ] && [ "$(cat "$stub/err")" = 'github-api: LAND_TOKEN is not set' ] || r=1
+check 'github-api refuses a call without LAND_TOKEN before any call' "$r"
+
+for missing in git jq mktemp; do
+	farm="$work/farm-no-$missing"
+	mkdir -p "$farm"
+	for tool in git jq mktemp; do
+		[ "$tool" = "$missing" ] || ln -s "$(command -v "$tool")" "$farm/$tool"
+	done
+	set +e
+	PATH="$farm" /bin/sh "$land_dir/self-test" > "$work/farm-out" 2> "$work/farm-err"
+	status=$?
+	set -e
+	r=0
+	[ "$status" -eq 2 ] && [ ! -s "$work/farm-out" ] \
+		&& [ "$(cat "$work/farm-err")" = "land self-test: no $missing on PATH; the landing scripts need sh, git, jq and mktemp, so no case ran" ] || r=1
+	check "the land self-test runs no case without $missing and names it" "$r"
+done
 
 if [ "$failures" -ne 0 ]; then
 	printf 'land self-test: %s case(s) failed\n' "$failures"

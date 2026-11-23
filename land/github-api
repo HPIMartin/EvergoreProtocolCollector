@@ -1,14 +1,36 @@
 #!/bin/sh
+# Calls GitHub's REST API for land/land with the token in LAND_TOKEN: github-api GET <path> prints
+# the answer to a GET of https://api.github.com/<path>; github-api POST <path> <file> posts the
+# file's JSON there. The token reaches curl, which reads no config file, only as a header file of
+# mode 0600 in a temporary directory of mode 0700, made under umask 077, that a trap removes on
+# exit and on HUP, INT and TERM, so no token stands on a command line or stays behind. Refuses,
+# with exit 2 and before any call, a missing LAND_TOKEN and a method other than GET or POST; an
+# HTTP error fails the call.
 set -eu
+set +x
+umask 077
 
 [ -n "${LAND_TOKEN:-}" ] || { printf 'github-api: LAND_TOKEN is not set\n' >&2; exit 2; }
-method=$1
-path=$2
+method=${1:-}
+path=${2:-}
 payload=${3:-}
-set -- --silent --show-error --fail --header 'Accept: application/vnd.github+json' \
-	--header 'X-GitHub-Api-Version: 2022-11-28' --header "Authorization: Bearer $LAND_TOKEN"
+case "$method" in
+	GET | POST) ;;
+	*) printf 'github-api: unknown method %s\n' "$method" >&2; exit 2 ;;
+esac
+
+work=
+remove_work() { [ -z "$work" ] || rm -rf "$work"; }
+trap 'remove_work' EXIT
+trap 'remove_work; exit 129' HUP
+trap 'remove_work; exit 130' INT
+trap 'remove_work; exit 143' TERM
+work=$(mktemp -d)
+printf 'Authorization: Bearer %s\n' "$LAND_TOKEN" > "$work/authorization"
+
+set -- --disable --silent --show-error --fail --header 'Accept: application/vnd.github+json' \
+	--header 'X-GitHub-Api-Version: 2022-11-28' --header "@$work/authorization"
 case "$method" in
 	GET) curl "$@" "https://api.github.com/$path" ;;
 	POST) curl "$@" --request POST --data "@$payload" "https://api.github.com/$path" ;;
-	*) printf 'github-api: unknown method %s\n' "$method" >&2; exit 2 ;;
 esac
