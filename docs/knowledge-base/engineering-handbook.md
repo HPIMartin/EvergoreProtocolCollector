@@ -761,9 +761,10 @@ feature work, through the `/bdd-catch-up` skill (author decision 2026-11-23):
     - Why: a reviewed commit can be reverted.
     - A file a template upgrade removes stays the author's call (`template-upgrade`).
     - The old `.template/baseline/` an upgrade replaces is its strand's own to retire.
-  - **An empty directory a removal leaves behind goes with `rmdir`**, which refuses a directory
-    that is not empty, so the safety sits in the command (what it meets: working-with-ai-agents.md,
-    "Permissions & autonomy").
+  - **An empty directory a removal leaves behind is handed to the author** like any other leftover
+    (author decision 2026-11-23).
+    - Why: the managed policy denies `rmdir` on every seat, and a managed deny outranks the
+      project's allow (working-with-ai-agents.md, "Managed settings").
   - **A copy of production data a strand works on stays under its worktree's own `build/`**, never
     in `/tmp` or a session scratchpad, so it goes with the worktree.
   - **The development scaffolding is the agent's own, and it cleans it up itself, without asking:**
@@ -773,8 +774,7 @@ feature work, through the `/bdd-catch-up` skill (author decision 2026-11-23):
     them).
     - Deliberately *git-native*, never `rm`: `git branch -d` refuses a branch that is not fully
       merged, so the safety lives in the command instead of in the agent's judgment.
-    - A directory a removal leaves behind empty under the worktree root goes with `rmdir`, which
-      refuses anything that is not empty, so the same safety holds (author decision 2026-09-27).
+    - A directory a removal leaves behind under the worktree root goes to the author (above).
     - After a landing, at the cleanup point of its model ("Landing models" below), removing the
       worktree and deleting the branch is part of the landing, not a separate request.
     - The commits live on in `main`, and the reflog still holds deleted tips for a while.

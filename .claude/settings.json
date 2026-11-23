@@ -18,7 +18,6 @@
 			"Bash(git fetch origin)",
 			"Bash(git fetch --prune origin)",
 			"Bash(git for-each-ref:*)",
-			"Bash(rmdir:*)",
 			"Bash(./verify:*)",
 			"Bash(/workspaces/EvergoreProtocolCollector/.claude/worktrees/*/verify*)",
 			"Bash(/workspaces/EvergoreProtocolCollector/.claude/worktrees/*/gate/dossier-check*)",

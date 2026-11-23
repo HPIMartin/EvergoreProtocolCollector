@@ -879,13 +879,10 @@ command) inside guardrails. Two files:
       `git read-tree -u --reset` and `git checkout-index -f` match no rule and meet the classifier,
       or a prompt outside auto mode (probe record, "Rule probe of 2026-11-14: deletion and push
       spellings", R1 to R4; the two git forms derived: no allow names them).
-    - `Bash(rm:*)` does not match `rmdir`; without an allow, `rmdir` meets the harness's own path
-      check, a prompt or in auto mode the classifier (probe record, row 8 and S9; auto mode
-      documented, below).
-      - Under `Bash(rmdir:*)` it runs in both modes, and on a directory that is not empty it
-        removes nothing (probe record, S9, S10), so the allow can discard nothing.
-      - Whether the allow also passes the path check for a directory outside the working
-        directories is not probed.
+    - `Bash(rm:*)` does not match `rmdir`, but the managed policy denies it ("Managed settings",
+      below), so the project carries no `rmdir` allow (author decision 2026-11-23).
+      - Under an allow and no managed deny, `rmdir` ran in both modes and removed nothing from a
+        directory that was not empty (probe record, S9, S10).
     - A `git -C` form goes past the twins and meets the classifier, or a prompt outside auto mode,
       when:
       - a global option leads (`git --no-pager -C <path> push`; probe record, CN1);
@@ -1060,6 +1057,13 @@ command) inside guardrails. Two files:
   - **Its push denies** match the common literal spellings of a push naming `main` or `master`, a
     force without a lease (`--force`, a standalone `-f`), a `+` refspec, `--all`, `--mirror` and
     `--prune`, and only in commands that begin with `git push` and spell those words unquoted.
+  - **It denies `rmdir`, `rm -f` and `rm -rf` on every seat** (`Bash(rmdir *)`,
+    `Bash(rm -f *)`, `Bash(rm -rf *)`; the author's reading of the policy, 2026-11-23).
+    - Measured 2026-11-23 on the PC: `rmdir` of an empty folder was denied outright, not
+      prompted.
+    - So the cleanup hands an empty leftover directory to the author (handbook §7).
+    - Lifting the deny is a request to the company's Claude admins, which only the author can
+      make.
   - **A push that neither list denies and the guard does not refuse meets the auto-mode
     classifier** (outside auto mode, a prompt).
     - Such a push is a spelling the guard cannot read ("The stance", above).
@@ -1225,8 +1229,7 @@ command) inside guardrails. Two files:
       `./gradlew` and `nohup ./gradlew`, the npm commands, `npx vitest`, `npx eslint`,
       `npx prettier` and `npx tsc`, `sqlite3`, the git commands the TDD loop writes with
       (`git add`, `git commit`), the hook activation `git config core.hooksPath hooks`, the fetch
-      `git fetch origin`, `git config push.default nothing` and the cleanup's `rmdir`; the sync
-      runs under `sh hooks/*`.
+      `git fetch origin` and `git config push.default nothing`; the sync runs under `sh hooks/*`.
     - It stays when it names one of the project's own read commands: `git for-each-ref`, the read
       `git config core.hooksPath`, `java -version` and `java --version`, `npm -v`, `npm ls`,
       `npm view`, `npm outdated` and `npm audit`.
@@ -1265,8 +1268,10 @@ command) inside guardrails. Two files:
 - **Autonomous cleanup runs inside the same floor;** what the agent removes, and when, is handbook
   §7's rule ("Deleting project content is the author's act", and the gateway's step 5) and the
   playbook's "Gateway hand-off and cleanup (the agent's side)".
-  - That is git-native or `rmdir`, on purpose: `git branch -d` refuses a branch that is not
-    merged and `rmdir` a directory that is not empty, so the safety sits in the command.
+  - That is git-native, on purpose: `git branch -d` refuses a branch that is not merged, so the
+    safety sits in the command.
+  - A directory a removal leaves behind goes to the author, since the managed policy denies
+    `rmdir` (handbook §7).
   - `rm` (all forms) and `git branch -D` stay on the deny floor ("Autonomy within guardrails").
   - **A dirty worktree is refused only without `--force`:** `git worktree remove --force`
     discards it, so a forced removal rests on the agent's judgment.

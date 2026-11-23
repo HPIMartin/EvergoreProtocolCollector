@@ -401,11 +401,12 @@ and lands through the gateway; no commit is made on `main`
 - **Clean up landed strands immediately, without asking:** once `origin/main` holds a strand's tip
   and the primary checkout's `main` has fast-forwarded to it (`sh hooks/sync-main`), `./verify
   stop` in its worktree, then `git worktree remove <path>` and `git branch -d <branch>`, then
-  `git worktree prune`, and `rmdir` a directory the removal left behind empty (handbook §7). This
-  is the agent's own scaffolding and the agent owns it (handbook §7); the commits live on in
-  `main`, the branch label and worktree are pure redundancy, and the reflog still holds deleted
-  tips for a while. The safety is in the command, not in judgment: `git branch -d` refuses a
-  branch that is not fully merged, and `git branch -D` stays denied. Never reach for `rm` here.
+  `git worktree prune`, and hand a directory the removal left behind to the author (handbook
+  §7). This is the agent's own scaffolding and the agent owns it (handbook §7); the commits live
+  on in `main`, the branch label and worktree are pure redundancy, and the reflog still holds
+  deleted tips for a while. The safety is in the command, not in judgment: `git branch -d`
+  refuses a branch that is not fully merged, and `git branch -D` stays denied. Never reach for
+  `rm` here.
   <!-- MODULE agent-seat -->
   - On the agent seat the branch's copy on `origin` goes too, with `agent/push --delete <branch>`,
     once its current tip is in `origin/main` (handbook §7, "Landing models").
