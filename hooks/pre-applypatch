@@ -1,7 +1,8 @@
 #!/bin/sh
 # `git am` applies its patch and commits it without running any of the commit hooks, so this is
 # where the gate gets its say: pre-applypatch runs on the applied index before the commit exists,
-# and a non-zero exit refuses it outright rather than recording it after the fact.
+# and a non-zero exit refuses it outright rather than recording it after the fact. It runs the same
+# self-test legs as pre-commit, so a patch cannot land a weakened suite.
 set -eu
 
 cd "$(git rev-parse --show-toplevel)"
@@ -9,6 +10,7 @@ hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 "$hooks_dir/breach-guard"
 "$hooks_dir/content-gate" --staged
+"$hooks_dir/self-test-legs" pre-applypatch
 
 if ! "$hooks_dir/format-gate"; then
 	printf '\n[pre-applypatch] format/style gate failed. Fix the patch and apply it again.\n' >&2

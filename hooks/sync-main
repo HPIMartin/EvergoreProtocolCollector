@@ -1,0 +1,234 @@
+#!/bin/sh
+# Syncs the primary checkout's main with origin's, as handbook §7, "`main` follows `origin/main`",
+# sets out: it fetches origin, runs every check of the sync on the refs that fetch brought, and
+# fast-forwards main to exactly the origin/main it checked, named by its object id. Run it as
+# `sh hooks/sync-main` from the primary checkout at each fixed point the handbook names. It takes
+# no argument, and it reads the repository of the current directory, never the one it sits in.
+# Exits 0 where main is in step: fast-forwarded, already at origin/main, or ahead of it in the
+# local landing model.
+# Exits 1 at a stop of the sync, nothing resolved, with main and origin/main by their ids on the
+# last line: the fetch failed; origin/main is missing after it, or the fetch did not bring origin's
+# main at the id origin/main holds; a name stands in for main or origin/main; the two have
+# diverged; main holds what origin/main lacks in a hub model; git refused the fast-forward; main
+# did not end at the commit checked, or HEAD left main.
+# Exits 2 where it does not sync: an argument; a landing model below that is neither local nor
+# hub; a git older than 2.31, or one whose version it cannot read; no git work tree; a linked
+# worktree; a grafts file; HEAD not on the branch main; main without a commit; a change or an
+# untracked file in the checkout; no remote origin; a remote group named origin; a fetch refspec
+# of origin that maps anything but a branch onto its own name under refs/remotes/origin/, or none
+# that brings main, or a negative one that leaves main out; a read git fails.
+# It writes nothing but what the fetch writes (remote-tracking refs, the tags it follows,
+# FETCH_HEAD) and the fast-forward of main. It drops git's own repository variables (GIT_DIR,
+# GIT_GRAFT_FILE, GIT_CONFIG_PARAMETERS and the rest of `git rev-parse --local-env-vars`) and
+# GIT_NAMESPACE, and reads the history without replace refs.
+set -eu
+
+# > **ADAPT:** the landing model "Project choices" in CLAUDE.md names (handbook §7, "Landing
+# > models"): local, where main may run ahead of origin/main, or hub, for both hub models; /adopt
+# > sets it from its question 12.
+landing_model='hub'
+
+# The case folding of the stand-in check below is ASCII's in every locale.
+LC_ALL=C
+export LC_ALL
+
+say() { printf '[sync-main] %s\n' "$1"; }
+
+cannot() {
+	printf '[sync-main] %s\n' "$1" >&2
+	exit 2
+}
+
+# Both ids go to the author at every stop; a ref git cannot read shows as none.
+stop() {
+	printf '[sync-main] stop: %s\n' "$1" >&2
+	main_id=$(git show-ref --verify --hash refs/heads/main 2>/dev/null) || main_id=none
+	origin_id=$(git show-ref --verify --hash refs/remotes/origin/main 2>/dev/null) || origin_id=none
+	printf '[sync-main] main %s, origin/main %s\n' "$main_id" "$origin_id" >&2
+	exit 1
+}
+
+[ "$#" -eq 0 ] || cannot 'usage: sh hooks/sync-main (it takes no argument)'
+case $landing_model in
+	local|hub) ;;
+	*) cannot "the landing model '$landing_model' is neither local nor hub (the ADAPT line in hooks/sync-main)" ;;
+esac
+
+# The reads below use options that arrived in git 2.31, the minimum the hooks need; an older git
+# prints such an option back as text.
+version=$(git --version 2>/dev/null) || cannot 'git could not name its version'
+numbers=$(printf '%s\n' "$version" | sed -n 's/^git version \([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1 \2/p')
+# One pair of numbers of at most nine digits each, or the comparison below could not be made.
+case $numbers in
+	'' | *' '*' '* | *[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*)
+		cannot "git names its version '$version', which the sync cannot read"
+		;;
+esac
+major=${numbers% *}
+minor=${numbers#* }
+# It passes only where the comparison says so, so a comparison that errs refuses.
+if [ "$major" -gt 2 ] || { [ "$major" -eq 2 ] && [ "$minor" -ge 31 ]; }; then
+	:
+else
+	cannot "$version is older than git 2.31, the minimum the sync needs"
+fi
+
+# A variable that points git at another repository, another history or other configuration would
+# change what the checks read: each of git's own goes, GIT_NAMESPACE with them, since it changes
+# which refs a file-path origin serves, and replace refs count for nothing, so the checks and the
+# fast-forward read the history as it was committed.
+own_variables=$(git rev-parse --local-env-vars) || cannot 'git could not name its own repository variables'
+unset $own_variables GIT_NAMESPACE
+GIT_NO_REPLACE_OBJECTS=1
+export GIT_NO_REPLACE_OBJECTS
+
+top=$(git rev-parse --show-toplevel 2>/dev/null) || cannot "$(pwd) is not inside a git work tree"
+
+git_dir=$(git rev-parse --path-format=absolute --git-dir) || cannot 'git could not name the git dir'
+common_dir=$(git rev-parse --path-format=absolute --git-common-dir) || cannot 'git could not name the common git dir'
+[ "$git_dir" = "$common_dir" ] || cannot "$top is a linked worktree; the sync runs in the primary checkout"
+[ ! -s "$common_dir/info/grafts" ] \
+	|| cannot "the grafts file $common_dir/info/grafts gives commits other parents than they hold; the sync reads the history as it was committed"
+
+head_ref=$(git symbolic-ref -q HEAD) || head_ref='a detached HEAD'
+[ "$head_ref" = refs/heads/main ] || cannot "the checkout is on $head_ref, not on refs/heads/main; the sync runs on main"
+git show-ref --verify --quiet refs/heads/main || cannot 'main has no commit yet'
+
+changes=$(git --no-optional-locks status --porcelain --untracked-files=normal) \
+	|| cannot 'git could not read the state of the checkout'
+[ -z "$changes" ] || cannot 'the checkout holds a change or an untracked file; the sync runs in the clean primary checkout'
+
+# The configuration is read as text: git refuses to describe a remote whose refspec it cannot parse.
+status=0
+git config --get remote.origin.url >/dev/null || status=$?
+case $status in
+	0) ;;
+	1) cannot 'there is no remote origin; a project without origin does not sync (handbook §7, the ADAPT note under "`main` follows `origin/main`")' ;;
+	*) cannot 'git could not read the url of origin' ;;
+esac
+
+# A remote group of the name makes `git fetch origin` fetch its remotes, by refspecs no check reads.
+status=0
+git config --get-all remotes.origin >/dev/null || status=$?
+case $status in
+	0) cannot 'a remote group named origin makes the fetch read other remotes; the sync fetches the remote origin alone' ;;
+	1) ;;
+	*) cannot 'git could not read the remote groups' ;;
+esac
+
+# A refspec decides what the fetch writes: one that maps a tag or another branch onto origin/main,
+# or anything onto a local branch, would move what the checks below read, or main itself.
+status=0
+refspecs=$(git config --get-all remote.origin.fetch) || status=$?
+case $status in
+	0|1) ;;
+	*) cannot 'git could not read the fetch refspecs of origin' ;;
+esac
+brings_main=no
+while IFS= read -r spec; do
+	case $spec in
+		'') continue ;;
+		^*)
+			case refs/heads/main in
+				${spec#^}) cannot "the negative fetch refspec '$spec' of origin leaves main out, so origin/main would not move" ;;
+			esac
+			continue
+			;;
+	esac
+	mapping=${spec#+}
+	source=${mapping%%:*}
+	destination=${mapping#*:}
+	case $mapping in
+		refs/heads/?*:refs/remotes/origin/?*) ;;
+		*) cannot "the fetch refspec '$spec' of origin does not map a branch onto refs/remotes/origin/; the sync reads the default, +refs/heads/*:refs/remotes/origin/*" ;;
+	esac
+	[ "${source#refs/heads/}" = "${destination#refs/remotes/origin/}" ] \
+		|| cannot "the fetch refspec '$spec' of origin maps a branch onto another name; the sync reads the default, +refs/heads/*:refs/remotes/origin/*"
+	case ${source#refs/heads/} in
+		'*'|main) brings_main=yes ;;
+	esac
+done <<EOF
+$refspecs
+EOF
+[ "$brings_main" = yes ] || cannot 'no fetch refspec of origin brings main; the sync reads the default, +refs/heads/*:refs/remotes/origin/*'
+
+prune=''
+# MODULE agent-seat
+# On the seat the fetch also drops the remote-tracking ref of every branch origin no longer holds, a
+# landed strand's among them (handbook §7).
+[ "${AGENT_SEAT:-}" != unattended ] || prune=--prune
+# /MODULE agent-seat
+git fetch $prune origin >&2 || stop 'the fetch from origin failed'
+new=$(git show-ref --verify --hash refs/remotes/origin/main 2>/dev/null) || stop 'origin/main is missing after the fetch'
+# Without --prune a remote-tracking ref outlives the branch origin dropped, so origin/main counts
+# only where this fetch brought origin's main at that very id.
+awk -F '\t' -v id="$new" -v line="branch 'main' of " \
+	'$1 == id && index($3, line) == 1 { found = 1 } END { exit !found }' "$git_dir/FETCH_HEAD" \
+	|| stop "this fetch brought no main of origin at $new, the id origin/main holds"
+
+# The checks read the refs the fetch brought. git resolves a file of the name directly in the
+# common git dir, refs/<name>, a tag and a local branch before a remote-tracking ref (handbook §7).
+names='refs/main refs/origin/main refs/heads/main refs/heads/origin/main refs/tags/main refs/tags/origin/main refs/remotes/origin/main'
+listed=$(git for-each-ref --ignore-case --format='%(refname)' $names) \
+	|| cannot 'git could not list the refs that could stand in for main or origin/main'
+# for-each-ref also lists the refs below a name, such as refs/main/x, which stand in for nothing.
+for ref in $listed; do
+	case " $names " in
+		*" $(printf '%s' "$ref" | tr '[:upper:]' '[:lower:]') "*) ;;
+		*) continue ;;
+	esac
+	case $ref in
+		refs/heads/main|refs/remotes/origin/main) ;;
+		*) stop "$ref could stand in for main or origin/main: rename or delete it (handbook §7)" ;;
+	esac
+done
+for name in main origin/main; do
+	if [ -f "$common_dir/$name" ] || [ -L "$common_dir/$name" ]; then
+		stop "the file $name in the common git dir $common_dir could stand in for main or origin/main: rename or delete it (handbook §7)"
+	fi
+done
+# What git itself resolves the two names to also catches a stand-in no list above shows, such as a
+# packed-refs line 'main' without the refs/ prefix. Both branches exist here, so a name git cannot
+# resolve is a read that failed; an ambiguous one exits 0 with an empty answer, which stops.
+for name in main origin/main; do
+	resolved=$(git rev-parse --verify --symbolic-full-name "$name" 2>/dev/null) \
+		|| cannot "git could not resolve $name"
+	case "$name:$resolved" in
+		main:refs/heads/main|origin/main:refs/remotes/origin/main) ;;
+		*) stop "git resolves $name to '$resolved', not to the branch, so something stands in for it: rename or delete it (handbook §7)" ;;
+	esac
+done
+
+old=$(git show-ref --verify --hash refs/heads/main 2>/dev/null) || cannot 'git could not read main'
+if [ "$old" = "$new" ]; then
+	say "main is at origin/main, $new"
+	exit 0
+fi
+
+status=0
+git merge-base --is-ancestor "$old" "$new" || status=$?
+case $status in
+	0) ;;
+	1)
+		status=0
+		git merge-base --is-ancestor "$new" "$old" || status=$?
+		case $status in
+			0) ;;
+			1) stop 'main and origin/main have diverged, so main cannot fast-forward' ;;
+			*) cannot 'git could not compare main with origin/main' ;;
+		esac
+		ahead=$(git rev-list --count "$new..$old") || cannot 'git could not count the commits main holds beyond origin/main'
+		[ "$landing_model" = local ] \
+			|| stop "main holds $ahead commit(s) origin/main lacks; in the hub models main never runs ahead"
+		say "main runs $ahead commit(s) ahead of origin/main, $new, at $old; the author pushes it"
+		exit 0
+		;;
+	*) cannot 'git could not compare main with origin/main' ;;
+esac
+
+git merge --ff-only -q "$new" >&2 || stop "git refused the fast-forward to $new"
+landed=$(git show-ref --verify --hash refs/heads/main 2>/dev/null) || landed=none
+[ "$landed" = "$new" ] || stop "main is at $landed after the fast-forward, not at the commit checked, $new"
+head_ref=$(git symbolic-ref -q HEAD) || head_ref='a detached HEAD'
+[ "$head_ref" = refs/heads/main ] || stop "the checkout is on $head_ref after the fast-forward, not on refs/heads/main"
+say "main fast-forwarded from $old to $new"

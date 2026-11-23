@@ -1,0 +1,51 @@
+#!/bin/sh
+# git runs this after `git merge` and `git pull` succeed, --no-verify or not. A merge commit never
+# belongs in the history (handbook §7); the one pre-merge-commit could not refuse, because
+# --no-verify skipped it, is recorded here so pre-commit refuses to grow history on top of it. A
+# fast-forward or a squash writes no commit and records nothing, even onto a merge already in the
+# base. A merge after which HEAD reaches a recorded commit, a fast-forward included, gets a warning.
+# git ignores this hook's exit status: the record, not the status, is what blocks.
+set -eu
+
+# A squash ($1 = 1) writes no commit; HEAD stays where it was.
+[ "${1:-0}" = 0 ] || exit 0
+
+cd "$(git rev-parse --show-toplevel)"
+hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+# A fast-forward records nothing, yet it can carry a commit recorded elsewhere onto this branch,
+# after which pre-commit refuses every commit here. The merge cannot be refused any more, so it is
+# said now, loudly, with the way out.
+reach_status=0
+reach=$("$hooks_dir/breach-guard" --reaches HEAD 2>&1) || reach_status=$?
+if [ "$reach_status" -eq 1 ]; then
+	printf '\n[post-merge] WARNING: %s now reaches commit(s) the hooks recorded, so every further commit on it is refused until they are gone. Rewrite them away where this is a strand; on the protected branch only the author releases them.\n%s\n' "$(git rev-parse --abbrev-ref HEAD)" "$reach" >&2
+fi
+
+git rev-parse -q --verify HEAD^2 >/dev/null || exit 0
+head=$(git rev-parse HEAD)
+
+# A fast-forward lands on a commit that already existed: the fetched head of a pull, or one another
+# branch, remote or tag reaches. A merge this command wrote is reachable from the current branch
+# only.
+fetched=$(sed -n '1s/[[:space:]].*//p' "$(git rev-parse --git-path FETCH_HEAD)" 2>/dev/null || true)
+[ "$head" != "$fetched" ] || exit 0
+current=$(git symbolic-ref -q HEAD || true)
+if git for-each-ref --contains "$head" --format='%(refname)' refs/heads refs/remotes refs/tags \
+	| grep -Fvqx "$current"; then
+	exit 0
+fi
+
+# The newline before the id keeps a line a writer cut short, or one saved without its final newline,
+# off the id, so breach-guard reads that line as malformed instead of as part of this one.
+# The append is checked: a record that cannot take the id (one the committer cannot write, a full
+# disk) would otherwise lose the breach behind the shell's own error, so the verdict that closes the
+# message says it is NOT recorded instead.
+record="$(git rev-parse --git-common-dir)/gate-record"
+if (printf '\n%s\n' "$head" >> "$record") 2>/dev/null; then
+	verdict='every further commit is refused until it is gone.'
+else
+	verdict="$head is NOT recorded: the breach record $record could not be appended to, so no hook refuses on its account."
+fi
+printf '\n[post-merge] a merge commit was written past the merge hook.\n[post-merge] %s\n' "$verdict" >&2
+exit 1

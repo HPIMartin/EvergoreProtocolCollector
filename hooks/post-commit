@@ -1,10 +1,11 @@
 #!/bin/sh
 # git asks pre-commit only for `git commit`. A cherry-pick and a revert build their commit
 # themselves, so no hook can refuse it; this runs afterwards, with the refs already moved, records
-# what it finds and lets pre-commit refuse to grow history on top of it. A rebase is left to
+# what it finds and lets pre-commit refuse to grow history on top of it. A rebase's picks are left to
 # post-rewrite, which sees the pre-images and can tell a new violation from replayed history, and a
 # plain or amended `git commit` is left alone: pre-commit either ran or was deliberately bypassed
-# with --no-verify, which stays the documented emergency valve.
+# with --no-verify, which stays the documented emergency valve. A merge commit is the exception,
+# recorded whatever built it.
 # The reflog is what tells those paths apart; git ignores this hook's exit status, so the record,
 # not the status, is what blocks.
 set -eu
@@ -12,6 +13,31 @@ set -eu
 cd "$(git rev-parse --show-toplevel)"
 hooks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 common_dir=$(git rev-parse --git-common-dir)
+
+# The newline before the id keeps a line a writer cut short, or one saved without its final
+# newline, off the id, so breach-guard reads that line as malformed instead of as part of this one.
+# The append is checked: a record that cannot take the id (one the committer cannot write, a full
+# disk) would otherwise lose the breach behind the shell's own error, so the verdict that closes
+# the message says it is NOT recorded instead.
+record_head() {
+	record="$common_dir/gate-record"
+	head=$(git rev-parse HEAD)
+	if (printf '\n%s\n' "$head" >> "$record") 2>/dev/null; then
+		verdict='every further commit is refused until it is gone.'
+	else
+		verdict="$head is NOT recorded: the breach record $record could not be appended to, so no hook refuses on its account."
+	fi
+}
+
+# A merge commit never belongs in the history (handbook §7). A `git commit` that concludes a merge
+# with --no-verify and a rebase todo's `merge` line both get past the refusing hooks, so it is
+# recorded here; a rebase that wrote one then stops at its next commit, and `git rebase --abort`
+# is the way out.
+if git rev-parse -q --verify HEAD^2 >/dev/null; then
+	record_head
+	printf '\n[post-commit] a merge commit was written past the hooks.\n[post-commit] %s\n' "$verdict" >&2
+	exit 1
+fi
 
 case "$(git reflog -1 --format=%gs 2>/dev/null || true)" in
 	cherry-pick:*|revert:*) ;;
@@ -34,8 +60,8 @@ if ! "$hooks_dir/format-gate" >/dev/null 2>&1; then
 fi
 
 if [ "$failed" -eq 1 ]; then
-	git rev-parse HEAD >> "$common_dir/gate-breach"
+	record_head
 	printf '\n[post-commit] this %s built its commit without asking a hook, and it fails the gate:\n%s\n' "$(git reflog -1 --format=%gs | cut -d: -f1)" "$report" >&2
-	printf '[post-commit] every further commit is refused until it is gone.\n' >&2
+	printf '[post-commit] %s\n' "$verdict" >&2
 	exit 1
 fi
