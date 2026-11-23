@@ -169,6 +169,7 @@ so the script needs no second stack of its own.
 - Exit code 0 or 1; a usage error exits 2. A relative `focus` path resolves against the caller's
   directory. `all` prints the executed test-class count, so a cached or skipped run cannot pass as a
   green one ([testing.md](testing.md), "Proving a run really executed").
+  - `stop` takes no lock and works without `./gradlew`; it exits 0 where nothing runs.
 - `focus`, `bdd`, `all` and `vuln` take the machine-wide lock `/tmp/epc-build.lock` (`flock`) once
   their arguments and tools have checked out, and hold it until the run ends, so only one of them
   runs on the machine at a time (a gate build beside another failed its frontend stage, decision
@@ -177,12 +178,23 @@ so the script needs no second stack of its own.
   - A run started inside a process that already holds the lock (`flock /tmp/epc-build.lock
     ./verify …`, or one `./verify` run under another) finds the held descriptor among the ones it
     inherited (`/proc/<pid>/fdinfo` lists its lock) and goes on instead of waiting for itself.
+    - It finds the descriptor only where every process in between kept it open: a program that
+      closes inherited descriptors (Python's `subprocess` by default, a JVM) makes the inner run
+      wait for the outer one for good.
+  - Where `flock` or `/proc/<pid>/fdinfo` is missing, the script prints one note and runs without
+    the lock.
   - The file is opened for reading only, so one that another user (a root session) created still
     serves; an unreadable one stops the run with `[verify] cannot read …`, exit 1.
-  - The lock is released when the last process holding it ends: a run killed together with its
-    Gradle client or `npm` releases it at once, an orphaned or hung one holds it until it ends;
-    `fuser -v /tmp/epc-build.lock` lists every process that has it open, holders and waiters
+  - The run that took the lock releases it when it ends, also where a process it started lives on
+    with the descriptor.
+  - A HUP, INT or TERM releases it once the foreground tool has ended; the run then ends by that
+    same signal.
+  - A run killed by `SIGKILL` leaves the lock to the processes holding the descriptor, until the
+    last of them ends.
+  - `fuser -v /tmp/epc-build.lock` lists every process that has it open, holders and waiters
     alike.
+  - The lock serializes the runs of one container.
+    - Why: each container has its own `/tmp`, so two containers hold two locks.
   - Never delete the file while a build runs: the next run would start beside the holder. A run that
     waited on the deleted file notices and queues on the new one.
   - A direct `./gradlew` or `npm` run takes no lock.
@@ -219,6 +231,7 @@ gated by its own `hooks/`.
 
 The mechanics of the suite (which hook refuses and which records, the breach record and the stamp,
 what `content-gate` scans per language family) live in [`hooks/README.md`](../../hooks/README.md).
+
 This project's configuration and legs on top of the shipped suite:
 
 - **`content-gate` config block:** production source is `src/main/` and `frontend/src/` (a
@@ -229,35 +242,63 @@ This project's configuration and legs on top of the shipped suite:
   `.java`, `.ts` and `.tsx` an added comment line in `build.gradle.kts` is refused too; the
   existing stock stands until a commit edits it. Known residue: a TypeScript regular-expression
   literal containing `//`.
+  - `comment_exempt_dirs` names `stacks/`, `agent/` and this project's `deploy/` and `release/`,
+    plus `gate/` and `land/`: their scripts keep their comments (handbook §3).
+  - `email_allow` keeps the shipped value ([`hooks/README.md`](../../hooks/README.md)).
 - **`commit-msg`:** the ticket-key leg is off (`ticket_key_re` empty); the project has no ticket
   system ([open-questions.md](../open-questions.md)).
+- **`sync-main`:** `landing_model` is `hub`.
+- **`pre-push`:** `branch_prefix` is `claude/`, `mainline` is `main`.
 - **`format-gate`:** calls `./verify format` (above) whenever the wrapper is present and
   executable; a throwaway repository without one commits, which is what lets `hooks/self-test`
   stub it.
-- **The deploy leg in `pre-commit`:** whenever a commit touches `deploy/`, `sh deploy/self-test`
-  must exist and pass, the same shape as the `hooks/` and `stacks/` legs, so neither a weakened
-  deploy check nor its deletion can land; `hooks/self-test` carries four cases for it.
-- **The gate leg in `pre-commit`:** whenever a commit touches `gate/`, `sh gate/self-test` must
-  exist and pass, the same shape, so neither a weakened gate dossier check nor its deletion can
-  land ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier"); `hooks/self-test`
-  carries four cases for it.
-- **The release leg in `pre-commit`:** whenever a commit touches `release/`, `sh release/self-test`
-  must exist and pass, the same shape, so neither a weakened release comparison nor its deletion can
-  land ([testing.md](testing.md), "1:1 against the production instance"); `hooks/self-test` carries
-  four cases for it.
-- **The land leg in `pre-commit`:** whenever a commit touches `land/` or
-  `.github/workflows/land.yml`, `sh land/self-test` must exist and pass, the same shape, so neither
-  a weakened landing nor its deletion can land ("The landing workflow" below); `hooks/self-test`
-  carries five cases for it.
-- **The agent leg in `pre-commit`:** whenever a commit touches `agent/`, `sh agent/self-test` must
-  exist and pass, the same shape, so neither a weakened token minting nor its deletion can land,
-  short of a rename inside `agent/` or a partly staged change, which every leg lets through (the
-  legs' staged-blob gap, an accepted limit) ([dev-environment.md](dev-environment.md), "Where agents run");
-  `hooks/self-test` carries four cases for it.
-- **The agent image leg in `pre-commit`:** whenever a commit touches `.devcontainer/agent/`,
+- **The self-test legs** live in `hooks/self-test-legs`, which `pre-commit` and `pre-applypatch`
+  call; each leg runs the self-test of a copy of the staged tree, never the work tree's.
+  - A commit that leaves nothing of the folder in the index skips its leg; a link staged at the
+    folder refuses.
+  - This project's `deploy` and `release` legs are two `run_leg` calls at its end
+    ([`hooks/README.md`](../../hooks/README.md), "Adding a leg").
+- **The deploy leg:** whenever a commit touches `deploy/`, `sh deploy/self-test` must exist and
+  pass, the same shape as the `hooks/` and `stacks/` legs, so neither a weakened deploy check nor
+  its deletion can land; `hooks/self-test` holds the leg's cases.
+- **The gate leg:** whenever a commit touches `gate/`, `sh gate/self-test` must exist and pass, the
+  same shape, so neither a weakened gate dossier check nor its deletion can land
+  ([multi-agent-playbook.md](multi-agent-playbook.md), "The gate dossier"); `hooks/self-test`
+  holds the leg's cases.
+- **The release leg:** whenever a commit touches `release/`, `sh release/self-test` must exist and
+  pass, the same shape, so neither a weakened release comparison nor its deletion can land
+  ([testing.md](testing.md), "1:1 against the production instance"); `hooks/self-test` holds the
+  leg's cases.
+- **The land leg:** whenever a commit touches `land/` or `.github/workflows/land.yml`,
+  `sh land/self-test` must exist and pass, the same shape, so neither a weakened landing nor its
+  deletion can land ("The landing workflow" below); `hooks/self-test` holds the leg's cases.
+  <!-- MODULE agent-seat -->
+  - It needs `jq`, so a host without it commits such a change in the container.
+  <!-- /MODULE agent-seat -->
+- **The agent leg:** whenever a commit touches `agent/`, `sh agent/self-test` must exist and pass,
+  the same shape, so neither a weakened agent tool (the shell-shape guard, `agent/push`,
+  `agent/gh`, `agent/github-token`) nor its deletion can land
+  ([dev-environment.md](dev-environment.md), "Where agents run"); `hooks/self-test` holds the
+  leg's cases.
+  <!-- MODULE guard -->
+  - It needs `python3` 3.9 or newer for the shell-shape guard
+    ([dev-environment.md](dev-environment.md), "Python for the guard"), so a host without one
+    commits such a change in the container.
+  <!-- /MODULE guard -->
+  <!-- MODULE agent-seat -->
+  - It needs `jq` and `openssl` too, and refuses without them before any case runs.
+  <!-- /MODULE agent-seat -->
+- **The agent image leg:** whenever a commit touches `.devcontainer/agent/`,
   `sh .devcontainer/agent/self-test` must exist and pass, as for `agent/` above, so neither a
-  weakened agent image nor its deletion can land ([dev-environment.md](dev-environment.md), "The agent
-  image"); `hooks/self-test` carries five cases for it, a changed file among them.
+  weakened agent image nor its deletion can land ([dev-environment.md](dev-environment.md), "The
+  agent image"); `hooks/self-test` holds the leg's cases.
+  <!-- MODULE agent-seat -->
+  - It needs `git` and `ssh-keygen`, and refuses without them before any case runs.
+  <!-- /MODULE agent-seat -->
+<!-- MODULE agent-seat -->
+- **`hooks/pre-push`** gates every push, the author's and an agent's alike: what it refuses and its
+  limits, [`hooks/README.md`](../../hooks/README.md), `pre-push`.
+<!-- /MODULE agent-seat -->
 - **The SHARED-section leg** compares `CLAUDE.md` with `agent-entry-template.md` whenever a commit
   touches either, and the wrapper has to record the template's version ([README.md](README.md),
   step 0).
@@ -265,7 +306,7 @@ This project's configuration and legs on top of the shipped suite:
   every commit that touches `hooks/`; it needs no Gradle, so a host session can run it:
   `sh hooks/self-test`.
 
-`--no-verify` bypasses the hooks; reserve it for genuine emergencies. The hooks are a git-level
+`--no-verify` bypasses the hooks; reserve it for a genuine emergency on the author's word. The hooks are a git-level
 safety net complementing the harness-level checks (`.claude/`); the full `./verify all` (with
 tests) remains the gate for landing on `main`.
 
@@ -273,10 +314,14 @@ tests) remains the gate for landing on `main`.
 
 The author lands a reviewed strand by commenting `/land <sha>` on its pull request; the workflow
 pushes exactly that commit onto the target as a fast-forward (handbook §7, the review gateway). The
-author has set it up, as the author states it: the App with its key in the environment `landing`,
-the App as a bypass of the `main` and `agent-namespace` rulesets ([git-state.md](git-state.md),
-"What GitHub enforces") and `LAND_TARGET`, which reads `main`; a missing piece fails the run before
-any push.
+author has set it up, as the author states it, and a missing piece fails the run before any push:
+
+- the App with its key in the environment `landing`;
+- the App's repository permission "Workflows: Read & write";
+  - Why: the landing token carries it ("Credential" below).
+- the App as a bypass of the `main` and `agent-namespace` rulesets ([git-state.md](git-state.md),
+  "What GitHub enforces");
+- `LAND_TARGET`, which reads `main`.
 
 - **Pieces:** `.github/workflows/land.yml` (trigger, token, fetch), `land/land` (every decision),
   `land/github-api` (the REST calls), `land/self-test` (one case per rule, run against a local bare
@@ -284,26 +329,49 @@ any push.
 - **Trigger:** `issue_comment`, created. GitHub runs that event with the workflow file and `land/`
   of the default branch, so a `claude/` branch cannot rewrite the landing it is landed by; the job
   fetches `land/` from `github.sha`, the default branch's head, never from the pull request.
+- **It ignores, with no answer,** a comment that is not new, not on a pull request, not by the
+  repository owner, not a `User`'s, or posted through an app (`performed_via_github_app` set: an
+  agent's comment through the Claude GitHub App in the owner's name).
+  - A `/land` followed by a no-break or other Unicode space passes the job's `if` and is then
+    ignored with no answer.
 - **It lands only when all of these hold**, and answers every refusal of the owner's command on the
   pull request:
-  - the comment is new, on a pull request, by the repository owner, a `User`, with
-    `performed_via_github_app` empty (an agent's comment through the Claude GitHub App in the
-    owner's name is ignored), and reads exactly `/land <sha>` with all 40 lowercase hex digits (a
-    prefix is refused: an agent can craft a second commit sharing a short one);
+  - the run is the workflow run's first attempt (`GITHUB_RUN_ATTEMPT` is 1);
+    - Why: a re-run replays the stored comment under the first run's `land/`, so it is refused and
+      asks for a new `/land`.
+  - the `branch_prefix` line of `land/land` is not empty;
+  - the comment reads `/land`, one space and all 40 lowercase hex digits, on one line;
+    - Why: an agent can craft a second commit sharing a short prefix, so a prefix is refused.
+  - nothing follows the digits but ASCII white space;
   - the pull request is open, its head branch matches `claude/<topic>`, passes
     `git check-ref-format`, lives in this repository and is not the target, and its base is the
     target;
   - the head commit is the commented SHA, and the fetched branch still holds it;
-  - every check run on the head is completed as success, neutral or skipped (more than one page of
-    them is refused), and the combined status is success where any status exists; a head with no
-    check at all passes, until a CI workflow reports one (**A4**);
+  - every check run on the head is completed as success, neutral or skipped, and the combined
+    status is success where any status exists;
+    - the check runs fit on one page of 100, and an answer of the wrong shape is refused as
+      unreadable;
+    - a head with no check run lands while the `required_check` line of `land/land` is empty (CI
+      with a named check: **A4**);
   - the target is an ancestor of the head.
 - **It then** runs `git push origin <sha>:refs/heads/<target>` without force, deletes the head
   branch leased on `<sha>` (a branch that moved after the landing is kept and named), and answers
   with the result. Tags are never pushed.
-- **Target:** the repository variable `LAND_TARGET`, `claude/land-probe` or `main`; any other value,
-  or none, refuses. `claude/land-probe` is the probe: with `LAND_TARGET` set to it, a pull request
-  based on it proves the workflow end to end without touching `main`.
+- **An answer that names check runs** reduces each name to letters, digits, spaces and `._()+-`
+  inside a code span.
+  - Why: a run's name carries no landing line, mention or link into the App's answer.
+- **Target:** the repository variable `LAND_TARGET`, `claude/land-probe` or `main`; any other value
+  refuses. `claude/land-probe` is the probe: with `LAND_TARGET` set to it, a pull request based on
+  it proves the workflow end to end without touching `main`.
+  - An unset or empty `LAND_TARGET` stops `land/land` with exit 2 before it reads the event, so the
+    pull request gets no answer.
+- **Required check:** the `required_check` line of `land/land`, empty until the CI that builds every
+  pull request head names one (**A4**).
+  - The run must come from the app `required_check_app` names, `github-actions`.
+  - A named limit: a workflow the seat pushes on a strand's branch runs as `github-actions` too and
+    can post a run of that name.
+  - `required_check` names the pipeline's last job.
+    - Why: `land/land` reads only the runs that exist when the command runs.
 - **The owner's comments pass the app check** from the browser and from GitHub Mobile.
   - Both carry an empty `performed_via_github_app`.
 - GitHub marks a pull request landed this way as merged.
@@ -315,10 +383,20 @@ any push.
   "What GitHub enforces"). The workflow's own `GITHUB_TOKEN` gets no permission. git
   authenticates through an `http.extraheader` passed in `GIT_CONFIG_*` variables and masked in the
   log, so no credential sits in a remote URL.
-- **Serialized:** one landing at a time (`concurrency: land`). GitHub keeps one run waiting behind
-  the running one and cancels an older waiting run for a newer one, so a cancelled `/land` is
-  commented again; a waiting landing whose base the first one moved is refused as not a
-  fast-forward.
+  - The token carries the App's Workflows write permission: `land.yml` mints it with
+    `permission-workflows: write`.
+    - Why: GitHub refuses an App's push that changes `.github/workflows/` without it.
+  - A named limit: the bypass covers each whole ruleset, so the App's token could force-push or
+    delete `main`; only `land/land` keeps its push a fast-forward.
+  - `land/github-api` hands the token to curl in a header file of mode 0600, never on a command
+    line.
+- **Serialized:** one landing at a time.
+  - The job, not the workflow, joins the group `land`.
+    - Why: a comment that is no `/land` cancels no waiting landing.
+  - GitHub keeps one job waiting and cancels an older waiting one for a newer one.
+  - Any owner comment that starts with `/land`, in any case, passes the job's `if`, so a waiting
+    `/land` it replaces is commented again.
+  - A waiting landing whose base the first one moved is refused as not a fast-forward.
 
 ## Run via Docker (primary path)
 
@@ -422,6 +500,50 @@ any push.
 - **Never delete the previous release's image** on the home server: it *is* the rollback target.
   `docker image prune -a` and `docker rmi` on the old tag remove the ability to roll back.
 
+## Release & deploy
+
+The release checklist and the one exception to delivering only CI-produced artifacts. The steps
+live in "Versioning & release tags" above and in "Which stand is running?" and "Deploy to the home
+server" below.
+
+**The release checklist, in order**
+
+1. Gate: the release revision is green in `./verify all`, and its image builds ("Versioning &
+   release tags", the release gate).
+2. Dry run: `deploy/epc-deploy deploy --dry-run` ("Deploy to the home server").
+3. Rehearsal of the deploy and the rollback ("Deploy to the home server", "Rehearsing on the work
+   machine").
+4. Release comparison of the previous release against the candidate ([testing.md](testing.md),
+   "Scripted comparison").
+5. Rollback statement: what a rollback moves back, for the one step it was proven on ("Deploy to
+   the home server", step 7).
+6. Deploy, behind the pre-flights of `deploy/epc-deploy` ("Deploy to the home server", the
+   "Order" bullet).
+7. Verify ("Deploy to the home server", step 6).
+8. Tag, the author's act ("Versioning & release tags").
+9. The running state recorded in a trailing `[doc]` commit ("Which stand is running?").
+
+**Delivering without CI**
+
+- The default is handbook §7's rule: deliver only CI-produced artifacts ("Always able to build,
+  not always allowed to deliver").
+- The project has no CI and no registry, so it ships an image built on the work machine, and only
+  when all three hold:
+  - it was built from a revision that passed the release gate;
+  - it carries the version and revision labels ("Versioning & release tags");
+  - after the transfer, its layer digests and those labels are compared on both machines before
+    the running container is touched ("Deploy to the home server", step 4).
+
+**Schema changes expand only**
+
+- The new column or table goes beside the old, never in its place (`V4`'s `timeStampEpochMillis`
+  beside `timeStamp`, "Schema migrations (Flyway)" below).
+- The release writes both, the old exactly as the previous release writes it.
+- At every start the new release fills each value the new still lacks from the old.
+- The old goes later as its own backlog row, once the release is stable (as the row that drops the
+  old timestamp columns, **D26**).
+  - Why: while the old stands, the previous release stays a working rollback target.
+
 ## Which stand is running?
 
 ```sh
@@ -484,6 +606,7 @@ EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDENTIALS_PASSWORD=… \
 - **Order:** build with the labels → read the running container → check the ssh user's access to
   the database → transfer and compare layers and labels → secure the rollback tag → mount
   pre-flight → prove the stop → back up → replace → verify.
+  - A refusal before the transfer ends saying that nothing was transferred or stopped.
 - **Rollback** is `deploy/epc-deploy rollback … --image <the pre- tag> --backup <name> --yes`. The
   deploy prints that exact line both when it finishes and when it fails; the rollback prints what
   each of its two halves means (step 7) and refuses without `--yes`.
@@ -497,6 +620,8 @@ EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDENTIALS_PASSWORD=… \
 - **What the self-test does not prove:** the transport, the real filesystem permissions and real
   Docker semantics are stubbed, because the home server is not reachable from the work machine's
   agent session.
+- **A guard is never weakened to get a release out.** The way past a refusal is the author's call,
+  recorded as a decision row in [open-questions.md](../open-questions.md).
 - **Every release starts with `--dry-run` as its own step.**
 - **A release is scheduled with time to read a log.**
 - **Password-based hosts:** the home server is reached by password only (its user has no
@@ -541,18 +666,18 @@ EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDENTIALS_PASSWORD=… \
   and its `pre-` tag stay as they are):
   1. `docker stop epc`, then copy the directory whole with owners and modes kept
      (`sudo rsync -a <old>/ <new>/`), so the backups and superseded copies come along and uid 1200
-     can still write (release step 3); only `sudo` keeps an owner other than the copying user.
+     can still write (deploy step 3); only `sudo` keeps an owner other than the copying user.
   2. `docker rename epc epc-old && docker update --restart no epc-old`: the old container stays as
      the rollback to the old directory, and nothing starts it by itself.
-  3. Recreate `epc` with exactly the parameters `epc-deploy` uses (release step 5: image, `-p 80:8080`,
-     `--restart unless-stopped`, the 0600 env file with the three secrets and `TZ=UTC`), only the
-     `-v <new>:/database` changed.
-  4. Verify as in release step 6 (health `200`, an api call without a login `401`).
+  3. Recreate `epc` with exactly the parameters `epc-deploy` uses (deploy step 5: image,
+     `-p 80:8080`, `--restart unless-stopped`, the 0600 env file with the three secrets and
+     `TZ=UTC`), only the `-v <new>:/database` changed.
+  4. Verify as in deploy step 6 (health `200`, an api call without a login `401`).
   5. Set `EPC_DEPLOY_DATABASE_DIR` in `deploy.local.env` to the new directory, so the next
      deploy's pre-flight matches. `epc-old` does not bother the next deploy, which only touches
      `epc`; remove it once the new directory has run for a while.
 - **The home server's database directory lives on the system disk.**
-  - Its ownership and mode are those of release step 3.
+  - Its ownership and mode are those of deploy step 3.
 - **The repository and the work machine hold the authoritative copies of the release files.**
 
 **Rehearsing on the work machine** (repeat before every release; nothing on the home server is
@@ -587,7 +712,7 @@ touched):
   - So neither the `/run/desktop/mnt/host` path nor the `host.docker.internal` rewrite applies
     there, and the shim only drops the target.
   - The bind mount lies on a Linux filesystem, so the copy gets the home server's ownership and
-    mode (release step 3); the seat has no `sudo`, so a throwaway container running as root sets
+    mode (deploy step 3); the seat has no `sudo`, so a throwaway container running as root sets
     them.
 
 Runs against the Docker host daemon, from a host shell or from the devcontainer, whose `docker`
@@ -1373,6 +1498,25 @@ operator always has an admin login, also before any account holds the admin role
   as one grouped pull request, a major alone) and
   `.github/rulesets/`, a reconstruction of the three live rulesets ([git-state.md](git-state.md),
   "What GitHub enforces").
+- **Dependency updates:** a Dependabot update (`.github/dependabot.yml`) lands like any other
+  change.
+  - It lands as a strand commit through the hooks, the gate and the fast-forward, never by the
+    merge button.
+    - Why: the merge button skips the hooks and the gate, and lands outside every landing model
+      of handbook §7.
+  - The strand reproduces the update with the project's own tools instead of checking out or
+    cherry-picking the bot's branch, which is data ([working-with-ai-agents.md](working-with-ai-agents.md),
+    "Instruction sources").
+  - It takes the bot's newest grouped update, plus every newer version the declared ranges allow
+    when the strand lands.
+  - It raises each declared range to the version it locks.
+    - Why: the bot's in-range pull requests are then superseded, and none opens again right after
+      the landing.
+  - It claims handbook §5's build/infra exemption in its plan, as §5 requires.
+  - The bot's pull request is superseded; `/plan-next` (check 4) names it.
+  <!-- MODULE agent-seat -->
+  - The seat closes it in that check, with `agent/gh pr close <number>`.
+  <!-- /MODULE agent-seat -->
 - **The `npm` ecosystem ignores a semver-major `@types/node`** until the Node runtime's major
   rises (`nodeVersion` in `gradle.properties`): types for a higher major allow APIs the pinned
   runtime lacks.

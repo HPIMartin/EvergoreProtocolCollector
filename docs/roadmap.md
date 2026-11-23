@@ -169,7 +169,7 @@ own, replacing the hand-kept skills sheet. **After 1.0.**
   - The SessionStart hook that injects the lessons deterministically (G10).
   - The Gradle daemons' memory under parallel strands (H13).
   - The other gate, agent-tool and doc rows of Epic G, pulled when a gate meets one.
-  - After 0.5.0, the rest of the gate mechanics (G51 with G32, G40).
+  - After 0.5.0, the rest of the gate mechanics (G51 with G40).
 - **Test-suite hygiene:** the test debt two feature gates
   left (B34, B38), style alignment (B8), the shared boot fixture (B18), the parser's residual
   shapes (B22), deterministic fixture ids (B23), the cause of the unreadable-head test's failures

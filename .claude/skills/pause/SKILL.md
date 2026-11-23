@@ -11,8 +11,9 @@ running subagent tasks to complete, but never abort them either.
    - Send every running subagent (implementer / falsifier / reviewer / ...) a message (SendMessage):
      "PAUSE: finish only the atomic micro-step you are in (let a running build or shell command
      complete, never kill it), then stop; do not start the next step. Commit the micro-step if it is
-     green and its message is pre-approved; otherwise park all uncommitted work as ONE
-     `[wip] <short state>` commit on your worktree branch via `git commit --no-verify`. Reply with
+     green, with the plan's message or your own where it names none; otherwise park all
+     uncommitted work as ONE `[wip] <short state>` commit on your worktree branch via
+     `git commit --no-verify`. Reply with
      3 lines: what is committed, what is parked as [wip], the exact next step."
    - NEVER abort a subagent (no TaskStop, no kill/kill -9) and never kill its shells or builds:
      no work may be lost.
@@ -20,6 +21,12 @@ running subagent tasks to complete, but never abort them either.
 
 2. Capture reality:
    - `git status` and `git diff --stat` (redirect to a file + Read if Bash stdout isn't surfaced).
+<!-- MODULE guard -->
+     With the guard module a command that names git writes only into the guard's output target: run
+     `id -u`, then `mkdir -p /tmp/claude-<uid>` (no git named, so the rules decide), then
+     `git status > /tmp/claude-<uid>/status.txt 2>&1`; where the author set another output
+     target, that folder takes the place of `/tmp/claude-<uid>`.
+<!-- /MODULE guard -->
    - `git worktree list`: note every in-flight strand (worktree path + branch) a subagent works in.
    - `git fetch --prune origin` (a failed fetch is noted, never waited on), then
      `git branch -r --list 'origin/claude/*'`: note per strand
@@ -39,8 +46,8 @@ running subagent tasks to complete, but never abort them either.
 4. Park, don't gate (the rules and their why: handbook §7, the "`[wip]` parking commits" bullet):
    - Pause never waits for a confirmation.
    - The parking commit goes on the strand's branch, never on `main`.
-   - Work sitting in the primary checkout first moves to a new `claude/<topic>` branch
-     (`git switch -c`).
+   - Work sitting in the primary checkout, this pause note included, first moves to a new
+     `claude/<topic>` branch (`git switch -c`).
    - Glance over the diff for secrets or personal/host data before parking.
    - Commit anything uncommitted, green or not, as ONE parking commit `[wip] <one-line state>` via
      `git commit --no-verify`, the only sanctioned non-emergency bypass.

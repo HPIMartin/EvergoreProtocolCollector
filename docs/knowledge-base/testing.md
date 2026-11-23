@@ -141,6 +141,29 @@
 | `GeckoDriverExecutableTest` | Pins `GeckoDriverExecutable`: parallel first starts look the driver up once; a look-up that failed, answered no executable or answered a non-executable file is tried again, and so is a kept driver that lost its executable bit or vanished; a driver pinned by its system property is taken before one on the PATH, which is taken without a look-up; with neither, the driver is looked up. | pure unit |
 | Fakes & stubs | `LoggerSpy` (records info/warn/error messages), `FakeMetaInformationRepository` (in-memory map), `EvaluationResultFixture` (builds an `EvaluationResult` one component method at a time, an empty list for each component it is not told, and passes every list through unchanged), `BankRepositoryStub` / `StorageRepositoryStub` (thin subclasses of the generic `LedgerRepositoryStub`), `RecordingWebDriver` (scriptable Selenium `WebDriver`: click targets, elements a page does not carry, and a `stopNavigating` that freezes the browser where it is), `MutableClock`/`CountingSleeper` (wait timeouts without real time), `ThrowawayDatabaseFactory` (opt-in through the `test.throwaway-database-path` property: a context booted with it keeps its `Configuration` on that file under `build/tmp/test/`, never on `database/temp.sqlite`, and an initial delay no suite outlasts, because the scheduled job outlives `close()` and would otherwise open a real Firefox and try to sign in to the live game once its 30 s ran out, orphaning the browser when the JVM exits; measured 2026-09-23: a JVM kept alive 45 s past the two startup-validator classes spawned two geckodrivers ~37 s after their boots without it, none with it), `SpiedLoggerFactory` (opt-in through `test.spied-logger`: a `LoggerSpy` replaces the `Logger` bean, so a test injects the spy of its own context; a `@MockBean` logger fails where the service logs at its start, because under `rebuildContext = true` the context, and that first call, comes before the test instance and binds the previous instance's spy), `FixedRandom` (fills every draw with ones, so a drawn admin key is known) and `FixedAdminKeyFactory` (opt-in through `test.fixed-admin-key`: the admin key drawn from it), `SqliteFile` (raw SQL on the throwaway file behind a repository test, over a connection of its own, an exclusive lock taken without waiting, the commits a piece of work cost, off the file change counter, and a column's committed values over a fresh connection). Hand-written, no mocking framework. | helpers (no `@Test`) |
 
+**The shell suites beside the build** (each leg and its refusals:
+[build-run-deploy.md](build-run-deploy.md), "Git hooks"):
+
+- `hooks/self-test-legs` runs the template's legs and two of the project's, each on a copy of the
+  staged tree:
+  - `deploy`, which runs `sh deploy/self-test` whenever a commit touches `deploy/`;
+  - `release`, which runs `sh release/self-test` whenever a commit touches `release/`.
+- `hooks/self-test` holds the template's cases and the project's appended ones:
+  - a commit that deletes a key file passes;
+  - a credential literal added to a tracked file leaves no commit;
+  - a rebase that commits a credential literal into a nested path or the root commit is recorded;
+  - `content-gate` passes a commit that adds only the template baseline;
+  - the host-path allowlist lets the production image's `/home/app/` through;
+  - the deploy and release legs refuse a failing or removed self-test, pass a passing one and run
+    nothing for a commit outside their folder;
+  - `content-gate` passes a comment in a script under `deploy/` or `release/`.
+- `gate/self-test` holds the template's cases and the project's appended ones:
+  - a path git quotes, in a fold of a lens report, in a strand that changes a `src` path and in a
+    doc-only strand;
+  - `grid/compose.yaml` read as a frontend build file;
+  - the `release/` Python test paths the dossier check counts as tests;
+  - the project's own `gate/authentication-surface` read against the repository.
+
 ### Instants beside their text
 
 - `UtcDateStringTypeTest` writes UTC with the milliseconds as six ASCII digits:
@@ -467,6 +490,8 @@ richer variant (boot against a real prod snapshot) is `ProductionSnapshotRecompu
 but **opt-in**, because the snapshot it needs carries guild members' data (PII) and stays
 **gitignored**. See the next section.
 
+Agent rules for snapshots: [dev-environment.md](dev-environment.md), "Where agents run".
+
 ## 1:1 against the production instance
 
 The release gate before deploying: run the previous release and the candidate on **copies of the
@@ -576,7 +601,8 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
   - It takes about a minute.
   - Interrupting it with INT, TERM or HUP, also twice, still stops every side its tests started.
   - It fails when it finds no test.
-  - `pre-commit` runs it too ([build-run-deploy.md](build-run-deploy.md), "Git hooks").
+  - `pre-commit` runs it on the staged tree, through `hooks/self-test-legs`
+    ([build-run-deploy.md](build-run-deploy.md), "Git hooks").
 - **The report:**
   - It lists every finding first.
   - Then it says that no deviation is expected and that the run instants are not compared.
@@ -1163,12 +1189,18 @@ of the Gradle command are load-bearing:
 - **A test for an injected seam asserts that the seam was driven**, not only the outcome it enables:
   count the fake's calls, read the fake clock. If the assertion would still pass with the production
   collaborator wired in, the test is fake-green.
+- **A test the author excepted to wait on real time says so in its inventory row:** "waits on the
+  wall clock, by author decision", with the reason.
+  - Why: handbook §6 allows the exception only by decision.
+- **A tool, a guard or an on-demand check resolves a rule through the production class that holds
+  it**, never through a copy.
+  - Why: a guard on its own copy reports differences production does not have (handbook §3).
 - **BDD comes first and is mandatory** (handbook §5, author decisions 2026-09-20 and 2026-09-27): a feature with
   observable behavior begins with Gherkin scenarios in `src/test/resources/features/`, gated by the
   scenario gate, **confirmed by the author as the complete acceptance**, and committed `@wip`
   before any production code; TDD cycles drive them green, step definitions in
-  `dev.schoenberg.evergore.protocolParser.acceptance` included, and the feature is armed (`@wip`
-  removed) when they pass. `RunAcceptanceScenariosTest` is the one acceptance runner for the whole
+  `dev.schoenberg.evergore.protocolParser.acceptance` included, and the cycle that turns the last
+  one green arms them (`@wip` removed). `RunAcceptanceScenariosTest` is the one acceptance runner for the whole
   system, backend and SPA; the frontend keeps its Vitest unit tests only. Its step definitions
   drive the member and the admin through the browser and the operator over HTTP and JSON
   (handbook §5). `./verify bdd` runs the `@wip` scenarios, `./verify all` the armed ones; a
