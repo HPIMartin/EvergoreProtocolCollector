@@ -2,7 +2,7 @@
 set -eu
 
 # > **ADAPT:** the Claude Code version the agent image installs; /adopt pins the current one.
-version=2.1.296
+version=2.1.330
 installer_url=https://claude.ai/install.sh
 
 fail() {
