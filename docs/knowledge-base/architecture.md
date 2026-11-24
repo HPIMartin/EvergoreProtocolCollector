@@ -417,8 +417,9 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     waits on the queue;
   - a batch whose write fails is logged as an error with its count and counted as lost, and the
     thread writes on;
-  - closing it queues an end mark and waits for that thread, which writes every record queued
-    before the mark;
+  - closing it queues an end mark and awaits the end of that thread, which writes every record
+    queued before the mark, within the close bound of `UsageWriting`, through the `ThreadEnd` it
+    was started with, so a test decides when the bound has passed without a clock;
   - a record recorded once the close began is counted as lost; one that races the close, queued
     behind the mark, is neither written nor counted, a miss the count of a process that ends
     anyway does not show.

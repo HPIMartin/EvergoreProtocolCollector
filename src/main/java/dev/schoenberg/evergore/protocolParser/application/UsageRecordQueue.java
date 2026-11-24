@@ -1,5 +1,6 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,19 +24,23 @@ public class UsageRecordQueue implements AutoCloseable {
 	private final Semaphore freePlaces;
 	private final UsageRecordRepository repository;
 	private final int batchSize;
+	private final Duration closeBound;
+	private final ThreadEnd threadEnd;
 	private final Logger logger;
 	private Thread writer;
 	private volatile boolean closed;
 
-	private UsageRecordQueue(UsageRecordRepository repository, UsageWriting writing, Logger logger) {
+	private UsageRecordQueue(UsageRecordRepository repository, UsageWriting writing, ThreadEnd threadEnd, Logger logger) {
 		this.repository = repository;
 		this.batchSize = writing.batchSize();
+		this.closeBound = writing.closeBound();
 		this.freePlaces = new Semaphore(writing.capacity());
+		this.threadEnd = threadEnd;
 		this.logger = logger;
 	}
 
-	public static UsageRecordQueue start(UsageRecordRepository repository, UsageWriting writing, ThreadFactory threads, Logger logger) {
-		UsageRecordQueue queue = new UsageRecordQueue(repository, writing, logger);
+	public static UsageRecordQueue start(UsageRecordRepository repository, UsageWriting writing, ThreadFactory threads, ThreadEnd threadEnd, Logger logger) {
+		UsageRecordQueue queue = new UsageRecordQueue(repository, writing, threadEnd, logger);
 		queue.writer = threads.newThread(queue::writeUntilTheEnd);
 		queue.writer.start();
 		return queue;
@@ -57,7 +62,7 @@ public class UsageRecordQueue implements AutoCloseable {
 	public void close() {
 		closed = true;
 		waiting.add(END);
-		silentThrow(() -> writer.join());
+		silentThrow(() -> threadEnd.awaited(writer, closeBound));
 	}
 
 	private void writeUntilTheEnd() {

@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +20,21 @@ class UsageRecordQueueTest {
 
 	private final RecordingUsageRecords repository = new RecordingUsageRecords();
 	private final LoggerSpy logger = new LoggerSpy();
+	private final List<String> awaitedEnds = new CopyOnWriteArrayList<>();
+	private final ThreadEnd joining = (thread, bound) -> {
+		awaitedEnds.add(thread.getName() + " within " + bound);
+		thread.join();
+		return true;
+	};
+
+	@Test
+	void closingAwaitsTheEndOfTheWriterThreadWithinTheCloseBound() {
+		UsageRecordQueue tested = startedWith(WRITING);
+
+		tested.close();
+
+		assertThat(awaitedEnds).containsExactly("usage-writer-test within PT10S");
+	}
 
 	@Test
 	void closingWritesEveryRecordRecordedBeforeItInTheOrderTheyCame() {
@@ -90,7 +106,7 @@ class UsageRecordQueueTest {
 	}
 
 	private UsageRecordQueue startedWith(UsageWriting writing) {
-		return UsageRecordQueue.start(repository, writing, runnable -> new Thread(runnable, "usage-writer-test"), logger);
+		return UsageRecordQueue.start(repository, writing, runnable -> new Thread(runnable, "usage-writer-test"), joining, logger);
 	}
 
 	private static UsageRecord login(String accountKey) {
