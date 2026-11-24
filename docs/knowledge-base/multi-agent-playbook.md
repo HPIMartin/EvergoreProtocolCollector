@@ -728,10 +728,20 @@ authentication surface ("Cadence").
       - Every build therefore starts cold.
       - It calls `./verify stop` in the worktree, where the worktree has a `verify`, before it
         removes it.
-      - Then it waits for every process whose working directory lies in the worktree to leave: 30
-        tries, each a scan and a sleep of 1 s.
+      - Then it waits for every process whose working directory lies in the worktree's
+        `registry.local.d` to leave: 30 tries, each a scan and a sleep of 1 s.
         - Why: `./verify stop` returns before the daemon exits, and the daemon rewrites its
-          registry in the worktree while it exits, so git would find the directory not empty.
+          registry there while it exits, so git would find the directory not empty.
+        - Measured on 2026-11-25, for a Gradle 9.5.1 daemon started by `./verify`:
+          - its working directory is the worktree root while it builds;
+          - it switches to `registry.local.d/9.5.1` when the build ends;
+          - it exits 1 to 2 s later from there.
+        - A process that works elsewhere in the worktree, a caller's shell included, is not waited
+          for.
+        - A process in a deleted directory of the registry path is not waited for.
+          - Why: git removes the worktree under it.
+        - Where `registry.local.d` does not exist yet it waits for nothing.
+          - Why: a daemon that has not created it cannot rewrite it.
       - It refuses, naming the process id, where one still works there after the wait.
       - Where `/proc` is missing it waits for nothing.
       - A named limit: a process of another user, or one hidden by `hidepid`, cannot be read, so it

@@ -4841,34 +4841,67 @@ walked_at() {
 	"$gate_copy/walk" "$repo" "$1" > "$work/out" 2>&1 && walk_status=0 || walk_status=$?
 }
 
-# A fake daemon of the walk worktree waits on a fifo with its working directory in the registry
-# directory of the worktree; the sleep shim of the rig releases it on the walk's first poll, so no
-# case waits for real time, and the git shim records whether the daemon had left when git removed
-# the worktree.
-daemon_rig() {
+# The sleep shim of the rig counts the walk's polls without waiting for them. A fake daemon of the
+# walk worktree waits on a fifo with its working directory in the registry directory of the
+# worktree; the sleep shim releases it on the walk's first poll where the case asks, and the git
+# shim records whether the daemon had left when git removed the worktree.
+sleep_rig() {
 	rig="$work/$case_name-rig"
 	step mkdir -p "$rig"
+	write_file "$rig/sleep" '#!/bin/sh' 'echo s >> "$GATE_SLEEPS"' \
+		'if [ -n "${GATE_RELEASE:-}" ] && [ "$(wc -l < "$GATE_SLEEPS")" -eq 1 ]; then printf "x\n" > "$GATE_FIFO"; fi'
+	step chmod +x "$rig/sleep"
+	GATE_SLEEPS="$rig/sleeps"
+	export GATE_SLEEPS
+	: > "$GATE_SLEEPS"
+}
+
+daemon_rig() {
+	sleep_rig
 	step mkfifo "$rig/fifo"
 	write_file "$rig/git" '#!/bin/sh' \
 		'case " $* " in *" worktree remove "*) if [ -e "$GATE_MARKER" ]; then echo seen; else echo missing; fi >> "$GATE_REMOVALS" ;; esac' \
 		"exec \"$(real_tool git)\" \"\$@\""
-	write_file "$rig/sleep" '#!/bin/sh' 'echo s >> "$GATE_SLEEPS"' \
-		'if [ -n "${GATE_RELEASE:-}" ] && [ "$(wc -l < "$GATE_SLEEPS")" -eq 1 ]; then printf "x\n" > "$GATE_FIFO"; fi'
-	step chmod +x "$rig/git" "$rig/sleep"
+	step chmod +x "$rig/git"
 	GATE_FIFO="$rig/fifo"
 	GATE_MARKER="$rig/marker"
 	GATE_HOLDER="$rig/holders"
 	GATE_REMOVALS="$rig/removals"
-	GATE_SLEEPS="$rig/sleeps"
-	export GATE_FIFO GATE_MARKER GATE_HOLDER GATE_REMOVALS GATE_SLEEPS
+	export GATE_FIFO GATE_MARKER GATE_HOLDER GATE_REMOVALS
 	: > "$GATE_HOLDER"
 	: > "$GATE_REMOVALS"
-	: > "$GATE_SLEEPS"
 }
 
 release_daemons() {
 	printf 'x\n' 1<> "$GATE_FIFO"
+	rig_done
+}
+
+rig_done() {
 	unset GATE_FIFO GATE_MARKER GATE_HOLDER GATE_REMOVALS GATE_SLEEPS
+}
+
+sleeps() { wc -l < "$GATE_SLEEPS"; }
+
+holder_in() {
+	step mkdir -p "$1"
+	(cd "$1" && exec "$(real_tool sleep)" 600) > /dev/null 2>&1 &
+	holder=$!
+}
+
+holder_leaves() {
+	kill "$holder" 2> /dev/null || true
+	wait "$holder" 2> /dev/null || true
+}
+
+two_commits_with_a_walk() {
+	write_file src/main/Second.java 'class Second {' '}'
+	commit_all 'Add the second'
+	sleep_rig
+	walked "$1"
+	step mkdir -p "$work/$1-walk/registry.local.d"
+	write_file src/main/Third.java 'class Third {' '}'
+	commit_all 'Add the third'
 }
 
 builds() { grep -c '^all ' "$GATE_BUILDS" || true; }
@@ -5583,6 +5616,72 @@ if new_walked_strand walk_waits_for_daemon; then
 	release_daemons
 	if [ "$walk_status" -eq 0 ] && [ "$removals" = seen ]; then r=0; else r=1; fi
 	check "the walk waits until no process works in the worktree before it cuts it anew" "$r"
+fi
+
+if new_walked_strand walk_caller_in_worktree; then
+	two_commits_with_a_walk walk_caller_in_worktree
+	step cd "$work/walk_caller_in_worktree-walk"
+	PATH="$rig:$PATH" walked walk_caller_in_worktree
+	step cd "$repo"
+	slept=$(sleeps)
+	rig_done
+	if [ "$walk_status" -eq 0 ] && [ "$slept" -eq 0 ]; then r=0; else r=1; fi
+	check "the walk cuts a worktree anew without waiting for a caller whose working directory lies in it" "$r"
+fi
+
+if new_walked_strand walk_deleted_holder; then
+	write_file src/main/Second.java 'class Second {' '}'
+	commit_all 'Add the second'
+	sleep_rig
+	walked walk_deleted_holder
+	holder_in "$work/walk_deleted_holder-walk/registry.local.d/held"
+	step git worktree remove "$work/walk_deleted_holder-walk"
+	step git worktree add -q --detach "$work/walk_deleted_holder-walk" main
+	step mkdir -p "$work/walk_deleted_holder-walk/registry.local.d"
+	write_file src/main/Third.java 'class Third {' '}'
+	commit_all 'Add the third'
+	PATH="$rig:$PATH" walked walk_deleted_holder
+	holder_leaves
+	slept=$(sleeps)
+	rig_done
+	if [ "$walk_status" -eq 0 ] && [ "$slept" -eq 0 ]; then r=0; else r=1; fi
+	check "the walk cuts a worktree anew without waiting for a process whose working directory is a deleted directory of an earlier worktree at its path" "$r"
+fi
+
+if new_walked_strand walk_beside_registry; then
+	two_commits_with_a_walk walk_beside_registry
+	holder_in "$work/walk_beside_registry-walk/registry.local.d-x"
+	PATH="$rig:$PATH" walked walk_beside_registry
+	holder_leaves
+	slept=$(sleeps)
+	rig_done
+	if [ "$walk_status" -eq 0 ] && [ "$slept" -eq 0 ]; then r=0; else r=1; fi
+	check "the walk cuts a worktree anew without waiting for a process in a directory beside the registry directory" "$r"
+fi
+
+if new_walked_strand walk_outside_registry; then
+	two_commits_with_a_walk walk_outside_registry
+	holder_in "$work/walk_outside_registry-walk/src/main"
+	PATH="$rig:$PATH" walked walk_outside_registry
+	holder_leaves
+	slept=$(sleeps)
+	rig_done
+	if [ "$walk_status" -eq 0 ] && [ "$slept" -eq 0 ]; then r=0; else r=1; fi
+	check "the walk cuts a worktree anew without waiting for a process that works in the worktree outside its registry directory" "$r"
+fi
+
+if new_walked_strand walk_no_registry; then
+	write_file src/main/Second.java 'class Second {' '}'
+	commit_all 'Add the second'
+	sleep_rig
+	walked walk_no_registry
+	write_file src/main/Third.java 'class Third {' '}'
+	commit_all 'Add the third'
+	PATH="$rig:$PATH" walked walk_no_registry
+	slept=$(sleeps)
+	rig_done
+	if [ "$walk_status" -eq 0 ] && [ "$slept" -eq 0 ]; then r=0; else r=1; fi
+	check "the walk cuts a worktree anew without waiting where it has no registry directory yet" "$r"
 fi
 
 # A library one build installs into a directory git ignores serves no other build: the walk cuts its
