@@ -1,5 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.businessLogic.usage;
 
+import java.util.Arrays;
+import java.util.List;
+
 public enum UsageKind {
 	LOGIN,
 	PAGE_LOAD,
@@ -15,5 +18,9 @@ public enum UsageKind {
 	OVERVIEW_SORT,
 	LEDGER_SORT,
 	LEDGER_PAGE,
-	NOTICE_UNDERSTOOD
+	NOTICE_UNDERSTOOD;
+
+	public static List<UsageKind> uses() {
+		return Arrays.stream(values()).filter(kind -> kind != NOTICE_UNDERSTOOD).toList();
+	}
 }

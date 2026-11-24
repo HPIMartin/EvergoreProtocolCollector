@@ -1,10 +1,14 @@
 package dev.schoenberg.evergore.protocolParser.database.usage;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.j256.ormlite.dao.Dao;
 
@@ -20,6 +24,7 @@ public class UsageRecordDatabaseRepository implements UsageRecordRepository, Usa
 	private static final String ACCOUNT_COLUMN = "account_key";
 	private static final String AT_COLUMN = "at_epoch_millis";
 	private static final String WHAT_COLUMN = "what";
+	private static final long ZONE_OFFSET_STEP_MILLIS = 15 * 60 * 1000;
 
 	private final SqliteDatabase database;
 
@@ -55,6 +60,27 @@ public class UsageRecordDatabaseRepository implements UsageRecordRepository, Usa
 			counts.computeIfAbsent(row[0], account -> new EnumMap<>(UsageKind.class)).put(UsageKind.valueOf(row[1]), Integer.parseInt(row[2]));
 		}
 		return counts;
+	}
+
+	@Override
+	public Map<String, Set<LocalDate>> daysUsedSince(Instant from, ZoneId zone) {
+		Dao<UsageRecordEntry, String> records = database.dao(UsageRecordEntry.class);
+		List<String[]> rows = silentThrow(() -> records
+				.queryBuilder()
+				.distinct()
+				.selectRaw(ACCOUNT_COLUMN, AT_COLUMN + " / " + ZONE_OFFSET_STEP_MILLIS)
+				.where()
+				.ge(AT_COLUMN, from.toEpochMilli())
+				.and()
+				.in(WHAT_COLUMN, UsageKind.uses())
+				.queryRaw()
+				.getResults());
+		Map<String, Set<LocalDate>> days = new HashMap<>();
+		for (String[] row : rows) {
+			LocalDate day = Instant.ofEpochMilli(Long.parseLong(row[1]) * ZONE_OFFSET_STEP_MILLIS).atZone(zone).toLocalDate();
+			days.computeIfAbsent(row[0], account -> new HashSet<>()).add(day);
+		}
+		return days;
 	}
 
 	private static UsageRecordEntry entryOf(UsageRecord record) {

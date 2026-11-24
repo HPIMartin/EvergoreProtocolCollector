@@ -191,7 +191,12 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
       table refuses stores none of its batch;
     - the same adapter implements the read port `application/UsageRecordReader`, which the writer
       never needs: the count of each account's records of each kind from a moment on, grouped in
-      SQL.
+      SQL; and each account's days of use in a zone, every kind but the notice understood
+      (`UsageKind.uses()`) making a day:
+      - SQL has no zone rules, so the query reads the distinct quarters of an hour each account
+        used, and Java names their days in the zone;
+      - every zone offset in use today, and every change of one, falls on a quarter of an hour,
+        so a quarter lies in one day, and the rows grow with the time, not with the use.
 - **Business logic (framework-free):** ports `BankRepository` and `StorageRepository` (each the
   generic `base/LedgerRepository` over its entry record, declaring nothing of its own),
   `MetaInformationRepository` · records `BankEntry`, `StorageEntry`, `MetaInformation` ·
