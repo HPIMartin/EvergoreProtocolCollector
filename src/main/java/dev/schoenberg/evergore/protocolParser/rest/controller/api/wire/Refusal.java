@@ -14,6 +14,8 @@ public record Refusal(@JsonProperty("refusal") String refusal) {
 	public static final Refusal SAME_AS_BEFORE = new Refusal("same-as-before");
 	public static final Refusal UNKNOWN_ROLE = new Refusal("unknown-role");
 	public static final Refusal OWN_ADMIN_ROLE = new Refusal("own-admin-role");
+	public static final Refusal RUNNING = new Refusal("running");
+	public static final Refusal TOO_EARLY = new Refusal("too-early");
 
 	public static Refusal of(PasswordRefusal refusal) {
 		return refusal.accept(new PasswordRefusalVisitor<>() {
