@@ -22,13 +22,32 @@ class UsageRecordQueueTest {
 
 	@Test
 	void closingWritesEveryRecordRecordedBeforeItInTheOrderTheyCame() {
-		UsageRecordQueue tested = UsageRecordQueue.start(repository, WRITING, runnable -> new Thread(runnable, "usage-writer-test"), logger);
+		UsageRecordQueue tested = startedWith(WRITING);
 		List<UsageRecord> recorded = List.of(login("aurora"), login("boreas"), login("ceres"));
 
 		recorded.forEach(tested::record);
 		tested.close();
 
 		assertThat(repository.records()).containsExactlyElementsOf(recorded);
+	}
+
+	@Test
+	void writesTheWaitingRecordsInBatchesUpToTheBatchSizeInTheOrderTheyCame() {
+		UsageRecordQueue tested = startedWith(new UsageWriting(10, 2, Duration.ofSeconds(10)));
+		repository.holdTheFirstBatch();
+		tested.record(login("aurora"));
+		repository.awaitTheFirstBatchWriting();
+
+		List.of("boreas", "ceres", "dione", "eos", "fenrir").forEach(accountKey -> tested.record(login(accountKey)));
+		repository.releaseTheFirstBatch();
+		tested.close();
+
+		assertThat(repository.batches())
+				.containsExactly(List.of(login("aurora")), List.of(login("boreas"), login("ceres")), List.of(login("dione"), login("eos")), List.of(login("fenrir")));
+	}
+
+	private UsageRecordQueue startedWith(UsageWriting writing) {
+		return UsageRecordQueue.start(repository, writing, runnable -> new Thread(runnable, "usage-writer-test"), logger);
 	}
 
 	private static UsageRecord login(String accountKey) {

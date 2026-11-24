@@ -18,14 +18,16 @@ public class UsageRecordQueue implements AutoCloseable {
 
 	private final BlockingQueue<UsageRecord> waiting = new LinkedBlockingQueue<>();
 	private final UsageRecordRepository repository;
+	private final int batchSize;
 	private Thread writer;
 
-	private UsageRecordQueue(UsageRecordRepository repository) {
+	private UsageRecordQueue(UsageRecordRepository repository, int batchSize) {
 		this.repository = repository;
+		this.batchSize = batchSize;
 	}
 
 	public static UsageRecordQueue start(UsageRecordRepository repository, UsageWriting writing, ThreadFactory threads, Logger logger) {
-		UsageRecordQueue queue = new UsageRecordQueue(repository);
+		UsageRecordQueue queue = new UsageRecordQueue(repository, writing.batchSize());
 		queue.writer = threads.newThread(queue::writeUntilTheEnd);
 		queue.writer.start();
 		return queue;
@@ -46,7 +48,7 @@ public class UsageRecordQueue implements AutoCloseable {
 		while (!ended) {
 			List<UsageRecord> batch = new ArrayList<>();
 			batch.add(silentThrow(waiting::take));
-			waiting.drainTo(batch);
+			waiting.drainTo(batch, batchSize - 1);
 			ended = batch.removeIf(record -> record == END);
 			if (!batch.isEmpty()) {
 				repository.addAll(batch);
