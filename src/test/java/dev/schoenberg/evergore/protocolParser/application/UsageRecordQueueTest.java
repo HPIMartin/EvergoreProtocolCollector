@@ -46,6 +46,22 @@ class UsageRecordQueueTest {
 				.containsExactly(List.of(login("aurora")), List.of(login("boreas"), login("ceres")), List.of(login("dione"), login("eos")), List.of(login("fenrir")));
 	}
 
+	@Test
+	void takesRecordsUpToItsCapacityWhileAWriteHangsAndDropsAndCountsTheOneOverIt() {
+		UsageRecordQueue tested = startedWith(new UsageWriting(3, 500, Duration.ofSeconds(10)));
+		repository.holdTheFirstBatch();
+		tested.record(login("aurora"));
+		repository.awaitTheFirstBatchWriting();
+
+		List.of("boreas", "ceres", "dione", "eos").forEach(accountKey -> tested.record(login(accountKey)));
+		long lostWhileTheWriteHangs = tested.lostSinceStart();
+		repository.releaseTheFirstBatch();
+		tested.close();
+
+		assertThat(lostWhileTheWriteHangs).isEqualTo(1);
+		assertThat(repository.records()).containsExactly(login("aurora"), login("boreas"), login("ceres"), login("dione"));
+	}
+
 	private UsageRecordQueue startedWith(UsageWriting writing) {
 		return UsageRecordQueue.start(repository, writing, runnable -> new Thread(runnable, "usage-writer-test"), logger);
 	}
