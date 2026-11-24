@@ -80,7 +80,7 @@ date-range queries.
    for a col5 of exactly 0 while col6 puts 44 % of those deposits in hunt loot, which only adds up
    if his hunt-loot deposits carried value. Either the sheet drifted from the announced rule, or
    col6 estimates a share of something other than col3, which is the other half of the open hunt-loot
-   estimate formula (**D-4**).
+   estimate formula (an open question, open-questions.md).
 3. Are there **other tabs** in the workbook (raw protocol, item price list, per-month history)?
 4. Are the **item gold values** in `EvergoreItem` the source of truth, or were sheet values
    maintained separately (and possibly drifted)?

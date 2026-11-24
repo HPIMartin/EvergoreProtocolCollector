@@ -276,6 +276,8 @@ home.
     that wait too.
 - **Stop daemons with `./verify stop`**, after a batch of builds and before a worktree is removed,
   so nothing its builds left running outlives it.
+  - `./verify stop` returns before the daemon has exited; a removal right after it can fail
+    (multi-agent-playbook.md, the walk's cut).
 - **Never `./gradlew --stop`:** it stops every daemon of the shared registry, other sessions' direct
   Gradle runs included.
 

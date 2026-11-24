@@ -164,7 +164,7 @@ so the script needs no second stack of its own.
 | `./verify all` | `./gradlew clean build --no-build-cache --console=plain` (Java and frontend tests, lint, format, the armed scenarios), then the count of `TEST-*.xml` under `build/test-results/` | before every gate, after every rebase |
 | `./verify outdated` | refuses, since no Gradle freshness task is installed; Dependabot's ecosystems: "CI / dev environment" below | the modernisation track, on demand |
 | `./verify vuln` | `./gradlew vulnScan` (Trivy over both dependency graphs, below), report-only | on demand; gating is a delivery decision |
-| `./verify stop` | `./gradlew --stop` against the worktree's own daemon registry | after a batch of builds; before the worktree is removed |
+| `./verify stop` | `./gradlew --stop` against the worktree's own daemon registry | after a batch of builds; before the worktree is removed; it returns before the daemon has exited |
 
 - Exit code 0 or 1; a usage error exits 2. A relative `focus` path resolves against the caller's
   directory. `all` prints the executed test-class count, so a cached or skipped run cannot pass as a
