@@ -51,6 +51,14 @@ public class Collections {
 		return Optional.ofNullable(runningSince);
 	}
 
+	public synchronized Optional<Instant> nextStartByHandFrom() {
+		if (runningSince != null || lastStart == null) {
+			return Optional.empty();
+		}
+		Instant from = lastStart.plus(HOUR_BETWEEN_STARTS_BY_HAND);
+		return clock.instant().isBefore(from) ? Optional.of(from) : Optional.empty();
+	}
+
 	private void runStartedByHand() {
 		try {
 			collection.run();
@@ -73,11 +81,11 @@ public class Collections {
 		if (runningSince != null) {
 			return new StartOutcome.AlreadyRunning(runningSince);
 		}
-		Instant now = clock.instant();
-		if (lastStart != null && now.isBefore(lastStart.plus(HOUR_BETWEEN_STARTS_BY_HAND))) {
-			return new StartOutcome.TooEarly(lastStart.plus(HOUR_BETWEEN_STARTS_BY_HAND));
+		Optional<Instant> acceptedFrom = nextStartByHandFrom();
+		if (acceptedFrom.isPresent()) {
+			return new StartOutcome.TooEarly(acceptedFrom.get());
 		}
-		begin(now);
+		begin(clock.instant());
 		return new StartOutcome.Started();
 	}
 

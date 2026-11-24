@@ -213,6 +213,34 @@ class CollectionsTest {
 	}
 
 	@Test
+	void namesTheMomentFromWhichAStartByHandIsAcceptedOnlyWithinTheHourOfTheLastStart() {
+		Optional<Instant> beforeAnyStart = tested.nextStartByHandFrom();
+		tested.runDaily();
+		clock.passMinutes(59);
+		Optional<Instant> at59Minutes = tested.nextStartByHandFrom();
+		clock.passMinutes(1);
+
+		Optional<Instant> at60Minutes = tested.nextStartByHandFrom();
+
+		assertThat(beforeAnyStart).isEmpty();
+		assertThat(at59Minutes).contains(START.plusSeconds(3600));
+		assertThat(at60Minutes).isEmpty();
+	}
+
+	@Test
+	void namesNoMomentWhileACollectionRunsAndOneOnceItHasFinishedWithinTheHour() {
+		tested.startByHand();
+		clock.passMinutes(30);
+		Optional<Instant> whileRunning = tested.nextStartByHandFrom();
+
+		background.runHeldTasks();
+		Optional<Instant> afterwards = tested.nextStartByHandFrom();
+
+		assertThat(whileRunning).isEmpty();
+		assertThat(afterwards).contains(START.plusSeconds(3600));
+	}
+
+	@Test
 	void reportsTheStartOfTheCollectionStartedByHandOnlyWhileItRuns() {
 		tested.startByHand();
 		clock.passMinutes(5);
