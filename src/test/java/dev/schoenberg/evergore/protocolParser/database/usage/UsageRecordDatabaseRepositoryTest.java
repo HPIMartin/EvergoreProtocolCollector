@@ -4,6 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
@@ -82,6 +83,24 @@ class UsageRecordDatabaseRepositoryTest {
 
 		assertThat(refusal).isNotNull();
 		assertThat(databaseFile.committedTexts("usage_record", ROW)).isEmpty();
+	}
+
+	@Test
+	void countsTheRecordsOfEachAccountAndKindFromTheGivenMomentOn() {
+		Instant from = Instant.parse("2026-11-10T11:00:00Z");
+		tested
+				.addAll(List
+						.of(record("aurora", from.minusMillis(1), UsageKind.LOGIN), record("aurora", from, UsageKind.LOGIN),
+								record("aurora", from.plusSeconds(60), UsageKind.PAGE_LOAD), record("aurora", from.plusSeconds(120), UsageKind.PAGE_LOAD),
+								record("boreas", from.plusSeconds(60), UsageKind.LOGOUT)));
+
+		Map<String, Map<UsageKind, Integer>> counts = tested.countsSince(from);
+
+		assertThat(counts).isEqualTo(Map.of("aurora", Map.of(UsageKind.LOGIN, 1, UsageKind.PAGE_LOAD, 2), "boreas", Map.of(UsageKind.LOGOUT, 1)));
+	}
+
+	private static UsageRecord record(String accountKey, Instant at, UsageKind kind) {
+		return new UsageRecord(accountKey, at, kind, Optional.empty());
 	}
 
 	private static Configuration configurationFor(String databasePath) {

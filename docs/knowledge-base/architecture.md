@@ -188,7 +188,10 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
       fifteen kinds of `businessLogic/usage/UsageKind`, held by a `CHECK`) and `detail`;
     - `detail` is the one nullable column: the record holds it as an `Optional<String>`;
     - the port takes a batch of records, written in one `SqliteDatabase` transaction: a record the
-      table refuses stores none of its batch.
+      table refuses stores none of its batch;
+    - the same adapter implements the read port `application/UsageRecordReader`, which the writer
+      never needs: the count of each account's records of each kind from a moment on, grouped in
+      SQL.
 - **Business logic (framework-free):** ports `BankRepository` and `StorageRepository` (each the
   generic `base/LedgerRepository` over its entry record, declaring nothing of its own),
   `MetaInformationRepository` · records `BankEntry`, `StorageEntry`, `MetaInformation` ·
