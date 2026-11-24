@@ -19,6 +19,7 @@ import dev.schoenberg.evergore.protocolParser.application.ChooseNewPassword;
 import dev.schoenberg.evergore.protocolParser.application.CreateAccounts;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
+import dev.schoenberg.evergore.protocolParser.application.GuildCollection;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 import dev.schoenberg.evergore.protocolParser.application.ListAccounts;
 import dev.schoenberg.evergore.protocolParser.application.LogIn;
@@ -102,6 +103,12 @@ public class ApplicationFactory {
 	public EvergoreDataEvaluator evergoreDataEvaluator(MetaInformationRepository metaRepo, StorageRepository storageRepo, BankRepository bankRepo, KnownAvatars knownAvatars,
 			Clock clock, Logger logger) {
 		return new EvergoreDataEvaluator(metaRepo, storageRepo, bankRepo, knownAvatars, clock, logger);
+	}
+
+	@Singleton
+	public GuildCollection guildCollection(EvergoreDataExtractor dataExtractor, EvergoreDataEvaluator evaluation, CreateAccounts createAccounts, PostCollectionHook hook,
+			LastRunStatus lastRunStatus, Clock clock, Logger logger) {
+		return new GuildCollection(dataExtractor, evaluation, createAccounts, hook, lastRunStatus, clock, logger);
 	}
 
 	@Singleton

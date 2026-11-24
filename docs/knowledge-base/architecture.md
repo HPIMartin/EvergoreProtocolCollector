@@ -7,7 +7,7 @@
 ## Data-flow (the one use case that matters)
 
 ```
-@Scheduled (24h)  EvergoreDataCollectorJob
+@Scheduled (24h)  EvergoreDataCollectorJob  ▶  GuildCollection.run()   (the steps below)
         │
         ▼
    EvergoreDataExtractor.loadData()
@@ -63,7 +63,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
 
 - **Entry/lifecycle:** `Application` (boots Micronaut) · `ApplicationFactory` (`@Factory` composition
   root: builds the one `SqliteDatabase` and the un-annotated repositories on it, the framework-free
-  `application` use-cases, `FileLoader`, no-op hooks) · `EvergoreDataCollectorJob` (`@Scheduled`).
+  `application` use-cases, `FileLoader`, no-op hooks) · `EvergoreDataCollectorJob` (`@Scheduled`, waits
+  the initial delay, then runs `GuildCollection`).
   The schema belongs to Flyway: `SqliteDatabase.open` runs the versioned migrations in
   `src/main/resources/db/migration` before it opens the connection source, so no caller can reach
   an unmigrated database.
