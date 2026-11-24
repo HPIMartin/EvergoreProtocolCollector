@@ -78,6 +78,17 @@ class UsageRecordQueueTest {
 		assertThat(logger.errorThrowables()).containsExactly(RecordingUsageRecords.FAILURE);
 	}
 
+	@Test
+	void countsARecordRecordedAfterTheCloseAsLostAndWritesNothingOfIt() {
+		UsageRecordQueue tested = startedWith(WRITING);
+		tested.close();
+
+		tested.record(login("aurora"));
+
+		assertThat(tested.lostSinceStart()).isEqualTo(1);
+		assertThat(repository.records()).isEmpty();
+	}
+
 	private UsageRecordQueue startedWith(UsageWriting writing) {
 		return UsageRecordQueue.start(repository, writing, runnable -> new Thread(runnable, "usage-writer-test"), logger);
 	}

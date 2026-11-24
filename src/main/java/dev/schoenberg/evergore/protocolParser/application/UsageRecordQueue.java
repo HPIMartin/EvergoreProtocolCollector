@@ -25,6 +25,7 @@ public class UsageRecordQueue implements AutoCloseable {
 	private final int batchSize;
 	private final Logger logger;
 	private Thread writer;
+	private volatile boolean closed;
 
 	private UsageRecordQueue(UsageRecordRepository repository, UsageWriting writing, Logger logger) {
 		this.repository = repository;
@@ -41,7 +42,7 @@ public class UsageRecordQueue implements AutoCloseable {
 	}
 
 	public void record(UsageRecord record) {
-		if (freePlaces.tryAcquire()) {
+		if (!closed && freePlaces.tryAcquire()) {
 			waiting.add(record);
 		} else {
 			lost.incrementAndGet();
@@ -54,6 +55,7 @@ public class UsageRecordQueue implements AutoCloseable {
 
 	@Override
 	public void close() {
+		closed = true;
 		waiting.add(END);
 		silentThrow(() -> writer.join());
 	}
