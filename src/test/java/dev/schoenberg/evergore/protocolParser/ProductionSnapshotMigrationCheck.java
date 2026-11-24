@@ -59,7 +59,7 @@ class ProductionSnapshotMigrationCheck {
 
 		assertThat(counts()).isEqualTo(countsBefore);
 		assertThat(digests()).isEqualTo(digestsBefore);
-		assertThat(tableNames()).containsExactlyInAnyOrder("bankEntries", "flyway_schema_history", "metaInformation", "storageEntries");
+		assertThat(tableNames()).containsExactlyInAnyOrder("account", "bankEntries", "flyway_schema_history", "metaInformation", "storageEntries", "usage_record");
 		EVERY_ROW
 				.keySet()
 				.forEach(table -> requiredColumnsOf(table).forEach(column -> assertThat(isNotNull(table, column)).describedAs("%s.%s is NOT NULL", table, column).isTrue()));
@@ -79,8 +79,8 @@ class ProductionSnapshotMigrationCheck {
 		migrate();
 
 		assertThat(query("SELECT name FROM sqlite_master WHERE type = 'index' AND sql IS NOT NULL AND tbl_name <> 'flyway_schema_history' ORDER BY name"))
-				.containsExactly("bankEntries_avatar_timeStampEpochMillis_idx", "bankEntries_avatar_timeStamp_idx", "storageEntries_avatar_timeStampEpochMillis_idx",
-						"storageEntries_avatar_timeStamp_idx");
+				.containsExactly("account_name_key_idx", "bankEntries_avatar_timeStampEpochMillis_idx", "bankEntries_avatar_timeStamp_idx",
+						"storageEntries_avatar_timeStampEpochMillis_idx", "storageEntries_avatar_timeStamp_idx", "usage_record_account_key_at_epoch_millis_idx");
 		assertThat(planOfTheLedgerPage("bankEntries")).containsExactly("SEARCH bankEntries USING INDEX bankEntries_avatar_timeStampEpochMillis_idx (avatar=?)");
 		assertThat(planOfTheLedgerPage("storageEntries")).containsExactly("SEARCH storageEntries USING INDEX storageEntries_avatar_timeStampEpochMillis_idx (avatar=?)");
 	}
