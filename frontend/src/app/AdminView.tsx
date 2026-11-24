@@ -6,6 +6,7 @@ import type { AdminStatus, Role } from '../domain'
 import { formatTimestamp, Link, roundTripDetail } from '../ui'
 
 import { AccountList } from './AccountList.tsx'
+import { CollectionPanel } from './CollectionPanel.tsx'
 import { hrefOf } from './href.ts'
 import { LoadedView } from './LoadedView.tsx'
 import { requestKeyOf } from './requestKey.ts'
@@ -50,6 +51,14 @@ export function AdminView({ api, onFollow }: AdminViewProps) {
 
   function setRole(name: string, role: Role): Promise<void> {
     return unlessRefused(() => api.setRole(name, role))
+  }
+
+  function startCollection(): Promise<void> {
+    return unlessRefused(() => api.startCollection())
+  }
+
+  function readStatus(): Promise<AdminStatus> {
+    return unlessRefused(() => api.adminStatus())
   }
 
   return (
@@ -100,40 +109,17 @@ export function AdminView({ api, onFollow }: AdminViewProps) {
                 detail: abstention.item,
               }))}
             />
-            <CollectionPanel status={status} />
+            <CollectionPanel
+              status={status}
+              start={startCollection}
+              readStatus={readStatus}
+            />
             <AccountList accounts={accounts} reset={reset} setRole={setRole} />
             <UsageSection api={api} />
           </>
         )}
       </LoadedView>
     </section>
-  )
-}
-
-interface CollectionPanelProps {
-  readonly status: AdminStatus
-}
-
-function CollectionPanel({ status }: CollectionPanelProps) {
-  if (status.collectionRunningSince !== null) {
-    return (
-      <p data-testid="collection-state">
-        {`Sammlung läuft seit ${formatTimestamp(status.collectionRunningSince.toISOString())}`}
-      </p>
-    )
-  }
-  if (status.nextCollectionFrom !== null) {
-    return (
-      <p data-testid="collection-state">
-        {`Nächste Sammlung ab ${formatTimestamp(status.nextCollectionFrom.toISOString())} möglich.`}
-      </p>
-    )
-  }
-
-  return (
-    <button type="button" data-testid="start-collection">
-      Jetzt sammeln
-    </button>
   )
 }
 

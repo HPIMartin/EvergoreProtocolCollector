@@ -9,7 +9,12 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ProtocolApi } from '../api'
-import { Forbidden, RequestFailed, Unauthorized } from '../api'
+import {
+  CollectionRefused,
+  Forbidden,
+  RequestFailed,
+  Unauthorized,
+} from '../api'
 import type { Account, AdminStatus, Role, Usage, UsageCounts } from '../domain'
 import { LOAD_FAILED_MESSAGE } from '../ui'
 
@@ -1031,6 +1036,167 @@ describe('the findings of the last recompute on the admin page', () => {
     expect(shown).toEqual({
       state: 'Nächste Sammlung ab 02.01.2026 14:00 möglich.',
       button: null,
+    })
+  })
+})
+
+const RUNNING_SINCE_13_00 = {
+  ...NO_FACTS,
+  collectionRunningSince: new Date('2026-01-02T12:00:00Z'),
+}
+
+const NEXT_FROM_14_00 = {
+  ...NO_FACTS,
+  nextCollectionFrom: new Date('2026-01-02T13:00:00Z'),
+}
+
+interface StartingApi {
+  readonly api: ProtocolApi
+  readonly starts: () => number
+}
+
+function apiStarting(
+  statusReads: readonly AdminStatus[],
+  startCollection: () => Promise<void>,
+): StartingApi {
+  let starts = 0
+  let reads = 0
+
+  return {
+    api: {
+      ...apiListing([]),
+      adminStatus: () =>
+        Promise.resolve(
+          statusReads[Math.min(reads++, statusReads.length - 1)] ?? NO_FACTS,
+        ),
+      startCollection: () => {
+        starts++
+
+        return startCollection()
+      },
+    },
+    starts: () => starts,
+  }
+}
+
+async function clickStart(): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByTestId('start-collection'))
+  })
+}
+
+function shownNotice(): string | null {
+  return screen.queryByTestId('collection-notice')?.textContent ?? null
+}
+
+describe('starting a collection from the admin page', () => {
+  it('asks the service once and then says since when the collection runs', async () => {
+    const starting = apiStarting([NO_FACTS, RUNNING_SINCE_13_00], () =>
+      Promise.resolve(),
+    )
+    await adminViewWith(starting.api)
+
+    await clickStart()
+
+    const starts = starting.starts()
+    const shown = shownCollection()
+    expect({ starts, shown }).toEqual({
+      starts: 1,
+      shown: { state: 'Sammlung läuft seit 02.01.2026 13:00', button: null },
+    })
+  })
+
+  it('offers no second start while the first one is still asked for', async () => {
+    let answer: () => void = () => undefined
+    const pending = new Promise<void>((resolve) => {
+      answer = resolve
+    })
+    const starting = apiStarting([NO_FACTS, RUNNING_SINCE_13_00], () => pending)
+    await adminViewWith(starting.api)
+    await clickStart()
+
+    const button = screen.getByTestId('start-collection')
+    await act(async () => {
+      fireEvent.click(button)
+    })
+    const whileAsking = {
+      starts: starting.starts(),
+      disabled: button.hasAttribute('disabled'),
+    }
+    await act(async () => {
+      answer()
+    })
+
+    const afterwards = shownCollection()
+    expect({ whileAsking, afterwards }).toEqual({
+      whileAsking: { starts: 1, disabled: true },
+      afterwards: {
+        state: 'Sammlung läuft seit 02.01.2026 13:00',
+        button: null,
+      },
+    })
+  })
+
+  it('says a collection already runs when the service refuses the start for it, and since when', async () => {
+    const starting = apiStarting([NO_FACTS, RUNNING_SINCE_13_00], () =>
+      Promise.reject(new CollectionRefused('running')),
+    )
+    await adminViewWith(starting.api)
+
+    await clickStart()
+
+    const notice = shownNotice()
+    const shown = shownCollection()
+    expect({ notice, shown }).toEqual({
+      notice: 'Es läuft bereits eine Sammlung.',
+      shown: { state: 'Sammlung läuft seit 02.01.2026 13:00', button: null },
+    })
+  })
+
+  it('says from when a start is possible when the service refuses it as too early', async () => {
+    const starting = apiStarting([NO_FACTS, NEXT_FROM_14_00], () =>
+      Promise.reject(new CollectionRefused('too-early')),
+    )
+    await adminViewWith(starting.api)
+
+    await clickStart()
+
+    const notice = shownNotice()
+    const shown = shownCollection()
+    expect({ notice, shown }).toEqual({
+      notice: null,
+      shown: {
+        state: 'Nächste Sammlung ab 02.01.2026 14:00 möglich.',
+        button: null,
+      },
+    })
+  })
+
+  it('shows the refusal of the role when the start is refused with 403', async () => {
+    const starting = apiStarting([NO_FACTS], () =>
+      Promise.reject(new Forbidden()),
+    )
+    await adminViewWith(starting.api)
+
+    await clickStart()
+
+    const messages = shownMessages()
+    expect(messages).toEqual(['Diese Seite ist dem Admin vorbehalten.'])
+  })
+
+  it('says the start failed and keeps the button when the service fails otherwise', async () => {
+    const starting = apiStarting([NO_FACTS], () =>
+      Promise.reject(new RequestFailed(500)),
+    )
+    await adminViewWith(starting.api)
+
+    await clickStart()
+
+    const notice = shownNotice()
+    const shown = shownCollection()
+    expect({ notice, shown }).toEqual({
+      notice: LOAD_FAILED_MESSAGE,
+      shown: { state: null, button: 'Jetzt sammeln' },
     })
   })
 })

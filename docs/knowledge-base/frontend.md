@@ -193,11 +193,19 @@ Five top-level folders under `frontend/src/`:
   beurteilbar (Rezept ungelesen)" lists each `avatar: item` the guild could not judge for lack of a
   read recipe. A round trip of fewer than one piece is refused as a malformed answer
   (`roundTripFrom`), as the server refuses to build one.
-  Under them the collection panel (`app/AdminView.tsx`) shows the state of the collection as the status read it, one of
-  three: the button „Jetzt sammeln“ (`start-collection`), when no collection runs and no start is
-  held back; „Sammlung läuft seit <start>“ (`collection-state`) while `collectionRunningSince` is
-  set; „Nächste Sammlung ab <moment> möglich.“ (`collection-state`) while `nextCollectionFrom` is
-  set. The page does not poll (decision 2026-10-31).
+  Under them the collection panel (`app/CollectionPanel.tsx`) shows the state of the collection as the
+  status read it:
+  - the button „Jetzt sammeln“ (`start-collection`), when no collection runs and no start is held back;
+  - „Sammlung läuft seit <start>“ (`collection-state`) while `collectionRunningSince` is set;
+  - „Nächste Sammlung ab <moment> möglich.“ (`collection-state`) while `nextCollectionFrom` is set;
+  - the button asks `startCollection` of the API port once and is disabled while it asks, so a
+    second click starts nothing;
+  - then the panel reads the status again (`adminStatus`) and shows the state it finds;
+  - a 409 `running` adds „Es läuft bereits eine Sammlung.“ (`collection-notice`);
+  - a 409 `too-early` adds nothing, the re-read state says „Nächste Sammlung ab …“;
+  - 401 and 403 replace the page as for the accounts;
+  - any other failure shows `LOAD_FAILED_MESSAGE` in the notice and keeps the button;
+  - the page does not poll (decision 2026-10-31).
   It states facts only; the UP/DOWN verdict over them stays `/health`'s job.
   Deliberately not in `navigationOf`'s link set, so a guild member never sees it; reachable only by
   its direct URL. The page and the endpoint it reads need a login.
