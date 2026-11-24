@@ -6,4 +6,6 @@ public sealed interface StartOutcome {
 	record Started() implements StartOutcome {}
 
 	record AlreadyRunning(Instant since) implements StartOutcome {}
+
+	record TooEarly(Instant from) implements StartOutcome {}
 }

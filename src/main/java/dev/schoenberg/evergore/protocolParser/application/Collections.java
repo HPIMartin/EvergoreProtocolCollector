@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.Executor;
@@ -8,11 +9,14 @@ import java.util.concurrent.Executor;
 import dev.schoenberg.evergore.protocolParser.Logger;
 
 public class Collections {
+	private static final Duration HOUR_BETWEEN_STARTS_BY_HAND = Duration.ofHours(1);
+
 	private final GuildCollection collection;
 	private final Executor background;
 	private final Clock clock;
 	private final Logger logger;
 	private Instant runningSince;
+	private Instant lastStart;
 
 	public Collections(GuildCollection collection, Executor background, Clock clock, Logger logger) {
 		this.collection = collection;
@@ -22,7 +26,7 @@ public class Collections {
 	}
 
 	public void runDaily() {
-		if (beginUnlessRunning().isPresent()) {
+		if (!beginDaily()) {
 			logger.info("Daily collection skipped: a collection is already running.");
 			return;
 		}
@@ -35,13 +39,12 @@ public class Collections {
 	}
 
 	public StartOutcome startByHand() {
-		Optional<Instant> alreadyRunningSince = beginUnlessRunning();
-		if (alreadyRunningSince.isPresent()) {
-			return new StartOutcome.AlreadyRunning(alreadyRunningSince.get());
+		StartOutcome outcome = beginByHand();
+		if (outcome instanceof StartOutcome.Started) {
+			logger.info("Collection started by hand.");
+			background.execute(this::runStartedByHand);
 		}
-		logger.info("Collection started by hand.");
-		background.execute(this::runStartedByHand);
-		return new StartOutcome.Started();
+		return outcome;
 	}
 
 	public synchronized Optional<Instant> runningSince() {
@@ -58,12 +61,29 @@ public class Collections {
 		}
 	}
 
-	private synchronized Optional<Instant> beginUnlessRunning() {
+	private synchronized boolean beginDaily() {
 		if (runningSince != null) {
-			return Optional.of(runningSince);
+			return false;
 		}
-		runningSince = clock.instant();
-		return Optional.empty();
+		begin(clock.instant());
+		return true;
+	}
+
+	private synchronized StartOutcome beginByHand() {
+		if (runningSince != null) {
+			return new StartOutcome.AlreadyRunning(runningSince);
+		}
+		Instant now = clock.instant();
+		if (lastStart != null && now.isBefore(lastStart.plus(HOUR_BETWEEN_STARTS_BY_HAND))) {
+			return new StartOutcome.TooEarly(lastStart.plus(HOUR_BETWEEN_STARTS_BY_HAND));
+		}
+		begin(now);
+		return new StartOutcome.Started();
+	}
+
+	private void begin(Instant now) {
+		runningSince = now;
+		lastStart = now;
 	}
 
 	private synchronized void end() {

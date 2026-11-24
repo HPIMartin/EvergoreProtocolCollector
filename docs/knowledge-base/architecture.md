@@ -67,7 +67,10 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   the initial delay, then asks `Collections`, the one owner of the collection that runs, to run the
   daily collection through `GuildCollection`). `Collections` holds, in memory only, the start of the
   one running collection: a start by hand runs on a background executor and answers `StartOutcome`
-  (`Started`, or `AlreadyRunning` with the start of the run); a failed run by hand is logged as
+  (`Started`; `AlreadyRunning` with the start of the run; `TooEarly` with the moment from which a
+  start is accepted, an hour after the start of the last collection, daily or by hand, counted from
+  the start also when that run failed; a refused start or a skipped daily collection counts as no
+  start; the last start is forgotten at a restart); a failed run by hand is logged as
   `Collection started by hand failed.` and ends the run. A daily collection that falls due while one
   runs is skipped with a log line and not made up.
   The schema belongs to Flyway: `SqliteDatabase.open` runs the versioned migrations in

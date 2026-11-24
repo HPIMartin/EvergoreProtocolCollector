@@ -145,6 +145,74 @@ class CollectionsTest {
 	}
 
 	@Test
+	void refusesAStartByHand59MinutesAndAcceptsOneAt60MinutesAfterTheStartOfTheLastCollectionStartedByHand() {
+		tested.startByHand();
+		background.runHeldTasks();
+		clock.passMinutes(59);
+		StartOutcome at59Minutes = tested.startByHand();
+		clock.passMinutes(1);
+
+		StartOutcome at60Minutes = tested.startByHand();
+
+		assertThat(at59Minutes).isEqualTo(new StartOutcome.TooEarly(START.plusSeconds(3600)));
+		assertThat(at60Minutes).isEqualTo(new StartOutcome.Started());
+	}
+
+	@Test
+	void refusesAStartByHand59MinutesAndAcceptsOneAt60MinutesAfterTheStartOfTheDailyCollection() {
+		tested.runDaily();
+		clock.passMinutes(59);
+		StartOutcome at59Minutes = tested.startByHand();
+		clock.passMinutes(1);
+
+		StartOutcome at60Minutes = tested.startByHand();
+
+		assertThat(at59Minutes).isEqualTo(new StartOutcome.TooEarly(START.plusSeconds(3600)));
+		assertThat(at60Minutes).isEqualTo(new StartOutcome.Started());
+	}
+
+	@Test
+	void countsTheHourFromTheStartOfACollectionThatFailed() {
+		collection.failure = new IllegalStateException("recompute failed");
+		tested.startByHand();
+		background.runHeldTasks();
+		clock.passMinutes(30);
+
+		StartOutcome outcome = tested.startByHand();
+
+		assertThat(outcome).isEqualTo(new StartOutcome.TooEarly(START.plusSeconds(3600)));
+	}
+
+	@Test
+	void countsARefusedStartByHandAsNoStart() {
+		tested.startByHand();
+		background.runHeldTasks();
+		clock.passMinutes(30);
+		tested.startByHand();
+		clock.passMinutes(30);
+
+		StartOutcome outcome = tested.startByHand();
+
+		assertThat(outcome).isEqualTo(new StartOutcome.Started());
+	}
+
+	@Test
+	void countsASkippedDailyCollectionAsNoStart() {
+		tested.startByHand();
+		clock.passMinutes(30);
+		tested.runDaily();
+		background.runHeldTasks();
+		clock.passMinutes(29);
+		StartOutcome at59Minutes = tested.startByHand();
+		clock.passMinutes(1);
+
+		StartOutcome at60Minutes = tested.startByHand();
+
+		assertThat(at59Minutes).isEqualTo(new StartOutcome.TooEarly(START.plusSeconds(3600)));
+		assertThat(at60Minutes).isEqualTo(new StartOutcome.Started());
+	}
+
+	@Test
 	void reportsTheStartOfTheCollectionStartedByHandOnlyWhileItRuns() {
 		tested.startByHand();
 		clock.passMinutes(5);
@@ -185,6 +253,7 @@ class CollectionsTest {
 	void acceptsAStartByHandAfterTheDailyCollectionFailed() {
 		collection.failure = new IllegalStateException("recompute failed");
 		catchThrowable(() -> tested.runDaily());
+		clock.passMinutes(60);
 
 		StartOutcome outcome = tested.startByHand();
 
