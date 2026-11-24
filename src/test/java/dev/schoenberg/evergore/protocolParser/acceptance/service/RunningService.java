@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import io.micronaut.context.ApplicationContext;
@@ -49,6 +50,8 @@ public class RunningService {
 	private EmbeddedServer server;
 	private boolean asDeployed;
 	private int collectionsRun;
+	private Thread dailyCollection;
+	private AtomicReference<Throwable> dailyCollectionFailure;
 
 	public RunningService(GameProtocols protocols, ScenarioTime time, LedgerFaults faults, ScenarioDatabase database, ServiceLog log, OperatorSettings settings,
 			ScenarioPasswords passwords) {
@@ -156,6 +159,40 @@ public class RunningService {
 		ManualTaskScheduler scheduler = context.getBean(ManualTaskScheduler.class);
 		collectionsRun++;
 		return OwnThread.call(() -> faults.duringCollection(scheduler::runRepeatingJobs));
+	}
+
+	public void startTheDailyCollectionInTheBackground() {
+		ManualTaskScheduler scheduler = context.getBean(ManualTaskScheduler.class);
+		collectionsRun++;
+		AtomicReference<Throwable> failure = new AtomicReference<>();
+		dailyCollectionFailure = failure;
+		dailyCollection = Thread.ofPlatform().start(() -> {
+			try {
+				faults.duringCollection(scheduler::runRepeatingJobs);
+			} catch (RuntimeException | Error e) {
+				failure.set(e);
+			}
+		});
+	}
+
+	public void awaitTheDailyCollectionInTheBackground() {
+		if (dailyCollection == null) {
+			return;
+		}
+		try {
+			dailyCollection.join();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException("Interrupted while the daily collection ran", e);
+		}
+		dailyCollection = null;
+		if (dailyCollectionFailure.get() instanceof RuntimeException failure) {
+			throw failure;
+		}
+	}
+
+	public void awaitTheCollectionsStartedByHand() {
+		context.getBean(TrackedCollections.class).awaitFinished();
 	}
 
 	public void storeWhatTheGameProtocolsShow() {

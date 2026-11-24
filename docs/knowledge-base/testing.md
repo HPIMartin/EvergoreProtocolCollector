@@ -87,6 +87,8 @@
 | `AdminKeyAnnouncementTest` | The announcement logs the key once when the service starts, through the `LoggerSpy`. | pure unit |
 | `AdminKeyAtStartTest` | Starts a real application context with the `LoggerSpy` and finds exactly one admin key line of 43 characters in the log before anything asked for the key. | adapter |
 | `LoginPageEndpointTest` | Boots the server on its own fixture DB copy: the login page and its own files are served with no login, a dashboard page opened without a login is sent on to the login page, an API request without a login is refused with 401 instead, and an unknown path below the login page answers without the dashboard. | `@MicronautTest` integration |
+| `GameProtocolsTest` | The acceptance game's held answer (`GameProtocols`), asked from a second thread with no sleep; its cases stand in the list below the table. | pure unit |
+| `TrackedCollectionsTest` | The acceptance executor of the collections: `awaitFinished()` returns only once the collections it was given finished, and a collection runs inside the fault window where saving the figures can be refused. | pure unit |
 | `ScenarioTimeTest` | The acceptance world's clock: `has run` moves it unless a `the clocks … read` step pinned it, and an explicit set moves it even then. | pure unit |
 | `ServiceLogTest` | Pure unit tests of the acceptance world's reader of the service's log: it names the admin key the service announced, the key of the latest start when the service was started more than once, and fails when the service named no key. | pure unit |
 | `ApplicationExceptionHandlerTest` | Unit tests asserting each `ProtocolParserException` subclass maps to its HTTP status via the visitor, plus the `onUnknown` branch, plus that the logged path carries **no** token query parameter, plus the log severity per mapped status (client error → one `info` line, server error → `error` with the exception) and that a failing response mapping is still logged with its trace before it propagates. `accept` is `abstract`, so a new exception subclass is a compile error rather than a silent fallback. | pure unit |
@@ -178,6 +180,11 @@
   - a collection running answers 409 `running`, a start within the hour 409 `too-early`.
 - `AdminStatusControllerTest`, the collection fields (its other cases stand in its row):
   - `collectionRunningSince` and `nextCollectionFrom` are read from a stubbed `Collections`, each `null` while the other is set.
+- `GameProtocolsTest`:
+  - a read waits until the release: a second thread asks and the test waits for it to be asked;
+  - only the reads asked before the release wait;
+  - a held read of an unreachable game throws after the release;
+  - awaiting an answer nobody holds is refused.
 
 - `GuildCollectionTest`:
   - a successful cycle records `lastSuccessfulScrape` and `lastSuccessfulRecompute`;
@@ -274,6 +281,9 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
     shows:` (or `storage`) replaces that page with its text line for line, lines no entry can hold
     included; a movement recorded into a page shown as text fails the step. `the game cannot be
     reached` makes the read throw, as a failed sign-in does.
+  - The game can be slow to answer: `holdTheNextAnswer()` makes a read wait until `release()`;
+    `awaitAsked()` returns once a read waits, so a step knows the collection is running without a
+    sleep; a held read that finds the game unreachable throws after the release.
   - A ledger table under `Given` (`the guild bank ledger holds:`) writes its rows into the
     protocol and stores them through the real `EvergoreDataExtractor` at once: "the ledger holds"
     means the stored ledger, whether or not a collection follows. A later collection reads the
@@ -324,6 +334,11 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   runs it when a step says the collection runs, through the same runnable the scheduler would
   call. The step asserts exactly one job ran; Micronaut's health monitor, the only other
   fixed-delay job, is switched off in this context (`micronaut.health.monitor.enabled`).
+  A daily collection can be fired on a thread of its own (`RunningService.startTheDailyCollectionInTheBackground`).
+- **A collection started by hand runs on `TrackedCollections`**, which replaces the `collections`
+  executor in the acceptance context:
+  - it runs each collection inside the fault window of `LedgerFaults` as the daily one does;
+  - `awaitFinished()` waits for every collection it was given, so a step that says "finished" knows it is.
 - **The service as the operator deploys it**: the startup scenarios and the throttle restart the
   service without the `test` environment, so `application.yml`'s throttle defaults hold and the
   secrets come from `OperatorSettings` through a property source with Micronaut's
