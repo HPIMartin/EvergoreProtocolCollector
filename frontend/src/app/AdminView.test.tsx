@@ -995,4 +995,52 @@ describe('the findings of the last recompute on the admin page', () => {
       complaints: 0,
     })
   })
+
+  it('offers the start of a collection to the admin and to no login the admin status refuses', async () => {
+    await adminViewWith(apiReporting(NO_FACTS))
+    const toTheAdmin = shownCollection()
+    cleanup()
+
+    await adminViewWith(apiRefusingTheAdminStatus(new Forbidden()))
+    const toAMember = shownCollection()
+
+    expect({ toTheAdmin, toAMember }).toEqual({
+      toTheAdmin: { state: null, button: 'Jetzt sammeln' },
+      toAMember: { state: null, button: null },
+    })
+  })
+
+  it('says since when a collection runs in place of the button', async () => {
+    const collectionRunningSince = new Date('2026-01-02T12:00:00Z')
+    await adminViewWith(apiReporting({ ...NO_FACTS, collectionRunningSince }))
+
+    const shown = shownCollection()
+
+    expect(shown).toEqual({
+      state: 'Sammlung läuft seit 02.01.2026 13:00',
+      button: null,
+    })
+  })
+
+  it('says from when the next start is possible in place of the button', async () => {
+    const nextCollectionFrom = new Date('2026-01-02T13:00:00Z')
+    await adminViewWith(apiReporting({ ...NO_FACTS, nextCollectionFrom }))
+
+    const shown = shownCollection()
+
+    expect(shown).toEqual({
+      state: 'Nächste Sammlung ab 02.01.2026 14:00 möglich.',
+      button: null,
+    })
+  })
 })
+
+function shownCollection(): {
+  readonly state: string | null
+  readonly button: string | null
+} {
+  return {
+    state: screen.queryByTestId('collection-state')?.textContent ?? null,
+    button: screen.queryByTestId('start-collection')?.textContent ?? null,
+  }
+}

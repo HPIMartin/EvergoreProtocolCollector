@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react'
 
 import type { ProtocolApi } from '../api'
 import { Forbidden, Unauthorized } from '../api'
-import type { Role } from '../domain'
+import type { AdminStatus, Role } from '../domain'
 import { formatTimestamp, Link, roundTripDetail } from '../ui'
 
 import { AccountList } from './AccountList.tsx'
@@ -100,12 +100,40 @@ export function AdminView({ api, onFollow }: AdminViewProps) {
                 detail: abstention.item,
               }))}
             />
+            <CollectionPanel status={status} />
             <AccountList accounts={accounts} reset={reset} setRole={setRole} />
             <UsageSection api={api} />
           </>
         )}
       </LoadedView>
     </section>
+  )
+}
+
+interface CollectionPanelProps {
+  readonly status: AdminStatus
+}
+
+function CollectionPanel({ status }: CollectionPanelProps) {
+  if (status.collectionRunningSince !== null) {
+    return (
+      <p data-testid="collection-state">
+        {`Sammlung läuft seit ${formatTimestamp(status.collectionRunningSince.toISOString())}`}
+      </p>
+    )
+  }
+  if (status.nextCollectionFrom !== null) {
+    return (
+      <p data-testid="collection-state">
+        {`Nächste Sammlung ab ${formatTimestamp(status.nextCollectionFrom.toISOString())} möglich.`}
+      </p>
+    )
+  }
+
+  return (
+    <button type="button" data-testid="start-collection">
+      Jetzt sammeln
+    </button>
   )
 }
 

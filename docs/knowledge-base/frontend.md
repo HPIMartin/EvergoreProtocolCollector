@@ -193,6 +193,11 @@ Five top-level folders under `frontend/src/`:
   beurteilbar (Rezept ungelesen)" lists each `avatar: item` the guild could not judge for lack of a
   read recipe. A round trip of fewer than one piece is refused as a malformed answer
   (`roundTripFrom`), as the server refuses to build one.
+  Under them the collection panel (`app/AdminView.tsx`) shows the state of the collection as the status read it, one of
+  three: the button „Jetzt sammeln“ (`start-collection`), when no collection runs and no start is
+  held back; „Sammlung läuft seit <start>“ (`collection-state`) while `collectionRunningSince` is
+  set; „Nächste Sammlung ab <moment> möglich.“ (`collection-state`) while `nextCollectionFrom` is
+  set. The page does not poll (decision 2026-10-31).
   It states facts only; the UP/DOWN verdict over them stays `/health`'s job.
   Deliberately not in `navigationOf`'s link set, so a guild member never sees it; reachable only by
   its direct URL. The page and the endpoint it reads need a login.
