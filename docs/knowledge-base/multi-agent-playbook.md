@@ -730,6 +730,11 @@ authentication surface ("Cadence").
         removes it.
       - Then it waits for every process whose working directory lies in the worktree's
         `registry.local.d` to leave: 30 tries, each a scan and a sleep of 1 s.
+        - `GATE_WALK_WAIT_TRIES` sets the number of tries.
+          - A value with a character other than a digit, or of more than four digits, is refused
+            at the start, naming the setting.
+          - An empty value takes the default.
+        - `gate/self-test` sets a small one for its refusal case and pins the default of 30.
         - Why: `./verify stop` returns before the daemon exits, and the daemon rewrites its
           registry there while it exits, so git would find the directory not empty.
         - Measured on 2026-11-25, for a Gradle 9.5.1 daemon started by `./verify`:

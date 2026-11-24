@@ -77,6 +77,9 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 [ $# -eq 2 ] || usage
+case "${GATE_WALK_WAIT_TRIES:-30}" in
+	*[!0-9]*|?????*) refuse "GATE_WALK_WAIT_TRIES is '$GATE_WALK_WAIT_TRIES', not a whole number of 0 to 9999 tries" ;;
+esac
 strand=$(git -C "$1" rev-parse --show-toplevel) || refuse "$1 is no git worktree"
 walk=$(absolute "$2")
 walk=${walk%/}
@@ -150,9 +153,10 @@ fi
 # walk left there serves it, the files git ignores included. git removes a worktree only while it
 # holds no untracked and no changed file. The build tool is stopped first, but verify stop only asks
 # the daemons to stop, and one still rewrites its registry below the worktree while it exits, so the
-# walk waits for every process working in its registry directory to leave. The wait is bounded at 30 tries of 1 s, well
-# above an exit that takes a few seconds, and below the point where a stuck process would hold the
-# walk for minutes; where /proc is missing there is nothing to read, so nothing is waited for.
+# walk waits for every process working in its registry directory to leave. The wait is bounded at
+# 30 tries of 1 s (GATE_WALK_WAIT_TRIES), well above an exit that takes a few seconds, and below the
+# point where a stuck process would hold the walk for minutes; where /proc is missing there is
+# nothing to read, so nothing is waited for.
 process_in_registry() {
 	for link in /proc/[0-9]*/cwd; do
 		there=$(readlink "$link" 2> /dev/null) || continue
@@ -174,7 +178,7 @@ wait_for_processes_to_leave() {
 	registry=$(physical "$walk/registry.local.d") || return 0
 	tries=0
 	while process_in_registry; do
-		[ "$tries" -lt 30 ] || refuse "process $holder still works in $walk after verify stop, so it is not cut anew for $1"
+		[ "$tries" -lt "${GATE_WALK_WAIT_TRIES:-30}" ] || refuse "process $holder still works in $walk after verify stop, so it is not cut anew for $1"
 		tries=$((tries + 1))
 		sleep 1
 	done

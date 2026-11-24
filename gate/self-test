@@ -5684,6 +5684,57 @@ if new_walked_strand walk_no_registry; then
 	check "the walk cuts a worktree anew without waiting where it has no registry directory yet" "$r"
 fi
 
+if new_walked_strand walk_refuses_a_holder; then
+	two_commits_with_a_walk walk_refuses_a_holder
+	daemon_rig
+	GATE_WALK_WAIT_TRIES=3 PATH="$rig:$PATH" walked walk_refuses_a_holder
+	slept=$(sleeps)
+	first_holder=$(sed -n 1p "$GATE_HOLDER")
+	removals=$(cat "$GATE_REMOVALS")
+	release_daemons
+	if [ "$walk_status" -eq 2 ] && [ "$slept" -eq 3 ] && [ -z "$removals" ] && [ -d "$work/walk_refuses_a_holder-walk" ] \
+		&& printed "process $first_holder still works in .*-walk after verify stop, so it is not cut anew"; then r=0; else r=1; fi
+	check "the walk refuses, naming the process, where one still works in the registry directory after the number of tries its setting names" "$r"
+fi
+
+if new_walked_strand walk_wait_default; then
+	two_commits_with_a_walk walk_wait_default
+	daemon_rig
+	PATH="$rig:$PATH" walked walk_wait_default
+	slept=$(sleeps)
+	release_daemons
+	if [ "$walk_status" -eq 2 ] && [ "$slept" -eq 30 ]; then r=0; else r=1; fi
+	check "the walk waits 30 tries for a process in the registry directory unless its setting says otherwise" "$r"
+fi
+
+if new_walked_strand walk_bad_wait_tries; then
+	two_commits_with_a_walk walk_bad_wait_tries
+	daemon_rig
+	stops_before=$(stops)
+	refusals=0
+	for bad_tries in abc 1.5 -1 10000 99999999999999999999; do
+		GATE_WALK_WAIT_TRIES=$bad_tries PATH="$rig:$PATH" walked walk_bad_wait_tries
+		if [ "$walk_status" -eq 2 ] && printed 'GATE_WALK_WAIT_TRIES .*not a whole number of 0 to 9999 tries' && ! printed 'still works'; then
+			refusals=$((refusals + 1))
+		fi
+	done
+	slept=$(sleeps)
+	stops_after=$(stops)
+	release_daemons
+	if [ "$refusals" -eq 5 ] && [ "$slept" -eq 0 ] && [ "$stops_after" -eq "$stops_before" ]; then r=0; else r=1; fi
+	check "the walk refuses a number of tries that is no whole number of 0 to 9999, naming the setting, before it waits or stops anything" "$r"
+fi
+
+if new_walked_strand walk_empty_wait_tries; then
+	two_commits_with_a_walk walk_empty_wait_tries
+	daemon_rig
+	GATE_WALK_WAIT_TRIES= PATH="$rig:$PATH" walked walk_empty_wait_tries
+	slept=$(sleeps)
+	release_daemons
+	if [ "$walk_status" -eq 2 ] && [ "$slept" -eq 30 ]; then r=0; else r=1; fi
+	check "the walk waits 30 tries for a process in the registry directory where its setting is empty" "$r"
+fi
+
 # A library one build installs into a directory git ignores serves no other build: the walk cuts its
 # worktree anew for every commit it builds, so each starts without what another left.
 if new_walked_strand walk_leftover_of_commit; then
