@@ -1,8 +1,8 @@
 CREATE TABLE `usage_record` (
 	`id` INTEGER,
-	`account_key` VARCHAR,
-	`at_epoch_millis` INTEGER,
-	`what` VARCHAR,
+	`account_key` VARCHAR NOT NULL,
+	`at_epoch_millis` INTEGER NOT NULL,
+	`what` VARCHAR NOT NULL,
 	`detail` VARCHAR
 );
 

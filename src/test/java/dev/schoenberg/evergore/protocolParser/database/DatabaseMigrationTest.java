@@ -63,6 +63,13 @@ class DatabaseMigrationTest {
 	}
 
 	@Test
+	void anEmptyDatabaseRefusesAUsageRecordWithoutItsAccountItsTimeOrWhatItRecords() {
+		migrate();
+
+		assertRejectsNullInEveryColumn("usage_record", "account_key, at_epoch_millis, what", List.of("'aurora'", "1", "'LOGIN'"));
+	}
+
+	@Test
 	void anEmptyDatabaseRefusesANullInEveryLedgerColumn() {
 		migrate();
 
