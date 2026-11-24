@@ -1,0 +1,19 @@
+package dev.schoenberg.evergore.protocolParser.businessLogic.usage;
+
+public enum UsageKind {
+	LOGIN,
+	PAGE_LOAD,
+	LOGOUT,
+	VIEW_OVERVIEW,
+	VIEW_BANK,
+	VIEW_STORAGE,
+	VIEW_EXPLANATION,
+	VIEW_ADMIN,
+	VIEW_PASSWORD_CHANGE,
+	VIEW_NONE,
+	LAST_COLUMN_SWITCH,
+	OVERVIEW_SORT,
+	LEDGER_SORT,
+	LEDGER_PAGE,
+	NOTICE_UNDERSTOOD
+}
