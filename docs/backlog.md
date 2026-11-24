@@ -324,6 +324,18 @@ doc is intentionally **not** committed; its value lives here.
 Wrong doc text a strand could not clear, one bullet per file, filed and cleared as DOC-5 says
 ([knowledge-base/README.md](knowledge-base/README.md), "Doc conventions").
 
+- `docs/knowledge-base/dev-environment.md`:
+  - "The agent seat runs with `AGENT_WORKTREES` empty" holds three facts in one bullet (DOC-1).
+  - The last sub-bullet under "The agent `Dockerfile` sets `AGENT_WORKTREES` empty" holds two
+    facts: `ENV` cannot unset, and the guard reads empty as unset (DOC-1).
+  - The `CLAUDE_CONFIG_DIR` sub-bullet under "What the blank label does not undo" holds four facts
+    (DOC-1).
+- `docs/knowledge-base/working-with-ai-agents.md`:
+  - The sub-bullet "Under an allow and no managed deny, `rmdir` ran in both modes …" cites S9 for
+    a directory that was not empty; only S10 shows that case, S9 shows both modes (DOC-2).
+  - "Autonomous cleanup" restates that the managed policy denies `rmdir`, which "Managed
+    settings" holds (DOC-4).
+
 ---
 
 ## Dependency notes
