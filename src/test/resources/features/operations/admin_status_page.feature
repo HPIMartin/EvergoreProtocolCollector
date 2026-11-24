@@ -69,7 +69,6 @@ Feature: The admin page: how the collections are going
         | daily collection | the daily collection ran at 02.01.2026 05:00 | 02.01.2026 05:00 | the admin page    | the admin opens the admin page               |
         | daily collection | the daily collection ran at 02.01.2026 05:00 | 02.01.2026 05:00 | the health report | the operator asks the service for its health |
 
-      @wip
       Examples:
         | which                                  | collection                                                                                             | moment           | surface           | reading                                      |
         | collection started on the admin page   | the admin started a collection on the admin page at 02.01.2026 13:00 and that collection has finished | 02.01.2026 13:00 | the admin page    | the admin opens the admin page               |

@@ -55,7 +55,6 @@ Feature: Who the service lets in
         | what                          | answer  | result                      |
         | the role "admin" for "Aurora" | refuses | refused for lacking a login |
 
-      @wip
       Examples:
         | what         | answer  | result                      |
         | a collection | refuses | refused for lacking a login |

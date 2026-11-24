@@ -1,4 +1,3 @@
-@wip
 Feature: Starting a collection on the admin page
   Besides the daily collection, the admin starts a collection on the admin page with the button
   "Jetzt sammeln": it reads the game, recomputes the figures and creates the accounts like the daily

@@ -351,8 +351,9 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   or falls due:
   - sets the scenario clock;
   - holds the game's next answer;
-  - starts the collection, on the admin page through the button of the first browser (the daily one on
-    a thread of its own);
+  - starts the collection, on the admin page through the button of the first browser, or of the second where it
+    says "on another browser";
+  - starts the daily collection on a thread of its own;
   - waits until it asks the game, so it runs;
   - "finishes" or "has finished" releases the game and waits for it;
   - a daily collection that falls due while one runs is fired at once and skipped;

@@ -121,7 +121,6 @@ Feature: Collecting the guild protocols from the game
 
   Rule: Every run recomputes the figures from the whole history
 
-    @wip
     Scenario Outline: <which> brings a movement made after the last collection into the figures
       Boreas's movement of 12:00 comes after the daily collection of 05:00 and reaches the figures
       only through a later collection.

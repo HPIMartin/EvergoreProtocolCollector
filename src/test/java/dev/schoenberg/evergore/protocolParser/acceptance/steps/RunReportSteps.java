@@ -59,6 +59,14 @@ public class RunReportSteps {
 		assertThat(reportOn(surface).lastSuccessfulScrape()).contains(instantOf(moment));
 	}
 
+	@Then("the operator finds {surface} dating the last successful scrape at {moment}")
+	public void theOperatorFindsDatingTheLastSuccessfulScrape(Surface surface, LocalDateTime moment) {
+		if (surface == Surface.HEALTH_REPORT) {
+			health.ask();
+		}
+		datesTheLastSuccessfulScrape(surface, moment);
+	}
+
 	@Then("{surface} dates the last successful recompute at {moment}")
 	public void datesTheLastSuccessfulRecompute(Surface surface, LocalDateTime moment) {
 		assertThat(reportOn(surface).lastSuccessfulRecompute()).contains(instantOf(moment));

@@ -39,9 +39,8 @@ Feature: Accounts for the members, and the admin
         | later                                  | collection                                                                                             |
         | the next daily collection              | the daily collection ran at 05.01.2026 05:00                                                           |
 
-      @wip
       Examples:
-        | later                                  | collection                                                                                             |
+        | later                                | collection                                                                                             |
         | a collection started on the admin page | the admin started a collection on the admin page at 04.01.2026 13:00 and that collection has finished |
 
     Scenario: The password a reset issued to one account does not log in to another
@@ -131,7 +130,6 @@ Feature: Accounts for the members, and the admin
         | what                          |
         | the role "admin" for "Aurora" |
 
-      @wip
       Examples:
         | what         |
         | a collection |

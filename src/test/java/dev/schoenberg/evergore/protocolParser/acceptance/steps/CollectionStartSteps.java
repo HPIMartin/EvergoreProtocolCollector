@@ -109,6 +109,16 @@ public class CollectionStartSteps {
 		thatCollectionFinishes();
 	}
 
+	@Given("the admin has started a collection on the admin page at {moment} on another browser")
+	public void theAdminHasStartedACollectionOnAnotherBrowser(LocalDateTime moment) {
+		startOnTheAdminPage(secondBrowser.browser(), moment);
+	}
+
+	@Given("the admin started a collection on the admin page on another browser at {moment}")
+	public void theAdminStartedACollectionOnAnotherBrowser(LocalDateTime moment) {
+		startOnTheAdminPage(secondBrowser.browser(), moment);
+	}
+
 	@Given("that collection has finished")
 	public void thatCollectionHasFinished() {
 		thatCollectionFinishes();
@@ -169,9 +179,33 @@ public class CollectionStartSteps {
 		service.restart();
 	}
 
+	@Given("the admin has opened the admin page at {moment}, which offers {string}")
+	public void theAdminHasOpenedTheAdminPageAtWhichOffers(LocalDateTime moment, String button) {
+		time.setTo(moment);
+		openTheAdminPageOffering(button);
+	}
+
+	@Given("the admin has opened the admin page {int} minutes after the start of the daily collection, which offers {string}")
+	public void theAdminHasOpenedTheAdminPageAfterTheDailyCollection(int minutes, String button) {
+		time.setTo(runs.dailyStart().plusMinutes(minutes));
+		openTheAdminPageOffering(button);
+	}
+
 	@Given("the admin has opened the admin page while that collection was running")
 	public void theAdminHasOpenedTheAdminPageWhileThatCollectionWasRunning() {
 		secondBrowser.browser().opening().openAsTheAdmin(ADMIN_PAGE);
+	}
+
+	@When("the admin starts a collection on the page opened before, while that collection runs")
+	public void theAdminStartsACollectionOnThePageOpenedBefore() {
+		browser.collectionStart().click();
+		viewed.lookAt(browser);
+	}
+
+	@When("the admin starts a collection on the page opened before, {int} minutes after the start of that collection")
+	public void theAdminStartsACollectionOnThePageOpenedBeforeAfterThatCollection(int minutes) {
+		time.setTo(runs.lastStart().plusMinutes(minutes));
+		theAdminStartsACollectionOnThePageOpenedBefore();
 	}
 
 	@When("the admin opens the admin page {int} minutes after starting a collection on it at {moment}, while it runs")
@@ -248,6 +282,12 @@ public class CollectionStartSteps {
 		runs.dailyStarted(moment, log.lines().size());
 		service.startTheDailyCollectionInTheBackground();
 		protocols.awaitAsked();
+	}
+
+	private void openTheAdminPageOffering(String button) {
+		openTheAdminPage();
+
+		assertThat(shownOn(browser).startButton()).isEqualTo(button);
 	}
 
 	private void openTheAdminPage() {
