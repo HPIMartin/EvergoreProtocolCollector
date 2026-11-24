@@ -29,6 +29,7 @@ public class UsageRecordQueue implements AutoCloseable {
 	private final Logger logger;
 	private Thread writer;
 	private volatile boolean closed;
+	private volatile int inWrite;
 
 	private UsageRecordQueue(UsageRecordRepository repository, UsageWriting writing, ThreadEnd threadEnd, Logger logger) {
 		this.repository = repository;
@@ -62,7 +63,11 @@ public class UsageRecordQueue implements AutoCloseable {
 	public void close() {
 		closed = true;
 		waiting.add(END);
-		silentThrow(() -> threadEnd.awaited(writer, closeBound));
+		if (!silentThrow(() -> threadEnd.awaited(writer, closeBound))) {
+			long notWritten = inWrite + waiting.stream().filter(record -> record != END).count();
+			lost.addAndGet(notWritten);
+			logger.warn("Closed with " + notWritten + " usage records not written");
+		}
 	}
 
 	private void writeUntilTheEnd() {
@@ -80,11 +85,14 @@ public class UsageRecordQueue implements AutoCloseable {
 	}
 
 	private void write(List<UsageRecord> batch) {
+		inWrite = batch.size();
 		try {
 			repository.addAll(batch);
 		} catch (RuntimeException failure) {
 			lost.addAndGet(batch.size());
 			logger.error("Lost " + batch.size() + " usage records: their write failed", failure);
+		} finally {
+			inWrite = 0;
 		}
 	}
 }

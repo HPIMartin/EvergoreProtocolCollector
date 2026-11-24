@@ -105,8 +105,28 @@ class UsageRecordQueueTest {
 		assertThat(repository.records()).isEmpty();
 	}
 
+	@Test
+	void closingWhenTheBoundPassesDuringAHangingWriteLogsAndCountsTheRecordsNotWritten() {
+		UsageRecordQueue tested = startedWith(WRITING, (thread, bound) -> false);
+		repository.holdTheFirstBatch();
+		tested.record(login("aurora"));
+		repository.awaitTheFirstBatchWriting();
+		tested.record(login("boreas"));
+		tested.record(login("ceres"));
+
+		tested.close();
+		repository.releaseTheFirstBatch();
+
+		assertThat(logger.warnMessages()).containsExactly("Closed with 3 usage records not written");
+		assertThat(tested.lostSinceStart()).isEqualTo(3);
+	}
+
 	private UsageRecordQueue startedWith(UsageWriting writing) {
-		return UsageRecordQueue.start(repository, writing, runnable -> new Thread(runnable, "usage-writer-test"), joining, logger);
+		return startedWith(writing, joining);
+	}
+
+	private UsageRecordQueue startedWith(UsageWriting writing, ThreadEnd threadEnd) {
+		return UsageRecordQueue.start(repository, writing, runnable -> new Thread(runnable, "usage-writer-test"), threadEnd, logger);
 	}
 
 	private static UsageRecord login(String accountKey) {
