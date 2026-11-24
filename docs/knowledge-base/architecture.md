@@ -415,6 +415,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - at most the capacity of `UsageWriting` records wait, held by a semaphore that taking a record
     never blocks on: a record over it is dropped and counted (`lostSinceStart`), so a request never
     waits on the queue;
+  - a batch whose write fails is logged as an error with its count and counted as lost, and the
+    thread writes on;
   - closing it queues an end mark and waits for that thread, which writes every record queued
     before the mark.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·

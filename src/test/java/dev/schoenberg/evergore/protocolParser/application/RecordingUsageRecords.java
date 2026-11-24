@@ -10,18 +10,29 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageRecord;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 
 class RecordingUsageRecords implements UsageRecordRepository {
+	static final IllegalStateException FAILURE = new IllegalStateException("the disk is full");
+
 	private final List<List<UsageRecord>> batches = new CopyOnWriteArrayList<>();
+	private final AtomicBoolean failsTheFirstBatch = new AtomicBoolean();
 	private final AtomicBoolean holdsTheFirstBatch = new AtomicBoolean();
 	private final CountDownLatch firstBatchWriting = new CountDownLatch(1);
 	private final CountDownLatch firstBatchReleased = new CountDownLatch(1);
 
 	@Override
 	public void addAll(List<UsageRecord> batch) {
+		if (failsTheFirstBatch.getAndSet(false)) {
+			firstBatchWriting.countDown();
+			throw FAILURE;
+		}
 		if (holdsTheFirstBatch.getAndSet(false)) {
 			firstBatchWriting.countDown();
 			silentThrow(() -> firstBatchReleased.await());
 		}
 		batches.add(List.copyOf(batch));
+	}
+
+	void failTheFirstBatch() {
+		failsTheFirstBatch.set(true);
 	}
 
 	void holdTheFirstBatch() {

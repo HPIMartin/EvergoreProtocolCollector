@@ -62,6 +62,22 @@ class UsageRecordQueueTest {
 		assertThat(repository.records()).containsExactly(login("aurora"), login("boreas"), login("ceres"), login("dione"));
 	}
 
+	@Test
+	void logsAndCountsTheRecordsOfABatchWhoseWriteFailsAndWritesTheNext() {
+		UsageRecordQueue tested = startedWith(WRITING);
+		repository.failTheFirstBatch();
+		tested.record(login("aurora"));
+		repository.awaitTheFirstBatchWriting();
+
+		tested.record(login("boreas"));
+		tested.close();
+
+		assertThat(repository.records()).containsExactly(login("boreas"));
+		assertThat(tested.lostSinceStart()).isEqualTo(1);
+		assertThat(logger.errorMessages()).containsExactly("Lost 1 usage records: their write failed");
+		assertThat(logger.errorThrowables()).containsExactly(RecordingUsageRecords.FAILURE);
+	}
+
 	private UsageRecordQueue startedWith(UsageWriting writing) {
 		return UsageRecordQueue.start(repository, writing, runnable -> new Thread(runnable, "usage-writer-test"), logger);
 	}

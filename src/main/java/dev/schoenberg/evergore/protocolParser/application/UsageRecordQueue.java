@@ -23,16 +23,18 @@ public class UsageRecordQueue implements AutoCloseable {
 	private final Semaphore freePlaces;
 	private final UsageRecordRepository repository;
 	private final int batchSize;
+	private final Logger logger;
 	private Thread writer;
 
-	private UsageRecordQueue(UsageRecordRepository repository, UsageWriting writing) {
+	private UsageRecordQueue(UsageRecordRepository repository, UsageWriting writing, Logger logger) {
 		this.repository = repository;
 		this.batchSize = writing.batchSize();
 		this.freePlaces = new Semaphore(writing.capacity());
+		this.logger = logger;
 	}
 
 	public static UsageRecordQueue start(UsageRecordRepository repository, UsageWriting writing, ThreadFactory threads, Logger logger) {
-		UsageRecordQueue queue = new UsageRecordQueue(repository, writing);
+		UsageRecordQueue queue = new UsageRecordQueue(repository, writing, logger);
 		queue.writer = threads.newThread(queue::writeUntilTheEnd);
 		queue.writer.start();
 		return queue;
@@ -65,8 +67,17 @@ public class UsageRecordQueue implements AutoCloseable {
 			ended = batch.removeIf(record -> record == END);
 			freePlaces.release(batch.size());
 			if (!batch.isEmpty()) {
-				repository.addAll(batch);
+				write(batch);
 			}
+		}
+	}
+
+	private void write(List<UsageRecord> batch) {
+		try {
+			repository.addAll(batch);
+		} catch (RuntimeException failure) {
+			lost.addAndGet(batch.size());
+			logger.error("Lost " + batch.size() + " usage records: their write failed", failure);
 		}
 	}
 }
