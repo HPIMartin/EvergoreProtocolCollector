@@ -148,12 +148,39 @@ fi
 
 # Each build starts in a worktree cut anew at its commit, so nothing an earlier build or an earlier
 # walk left there serves it, the files git ignores included. git removes a worktree only while it
-# holds no untracked and no changed file, and the build tool is stopped first, so it keeps no file
-# there open.
+# holds no untracked and no changed file. The build tool is stopped first, but verify stop only asks
+# the daemons to stop, and one still rewrites its registry below the worktree while it exits, so the
+# walk waits for every process working there to leave. The wait is bounded at 30 tries of 1 s, well
+# above an exit that takes a few seconds, and below the point where a stuck process would hold the
+# walk for minutes; where /proc is missing there is nothing to read, so nothing is waited for.
+process_in_walk() {
+	walk_real=$(physical "$walk") && [ -n "$walk_real" ] || return 1
+	for link in /proc/[0-9]*/cwd; do
+		holder=${link#/proc/}
+		holder=${holder%/cwd}
+		[ "$holder" != "$$" ] || continue
+		there=$(readlink "$link" 2> /dev/null) || continue
+		case "$there/" in
+			"$walk_real"/*) printf '%s\n' "$holder"; return 0 ;;
+		esac
+	done
+	return 1
+}
+
+wait_for_processes_to_leave() {
+	tries=0
+	while holder=$(process_in_walk); do
+		[ "$tries" -lt 30 ] || refuse "process $holder still works in $walk after verify stop, so it is not cut anew for $1"
+		tries=$((tries + 1))
+		sleep 1
+	done
+}
+
 cut_anew() {
 	if [ -e "$walk" ]; then
 		if [ -x "$walk/verify" ]; then
 			"$walk/verify" stop > /dev/null 2>&1 || true
+			wait_for_processes_to_leave "$2"
 		fi
 		gone=$(git -C "$strand" worktree remove "$walk" 2>&1) \
 			|| refuse "git cannot remove $walk, so it is not cut anew for $2: $gone"

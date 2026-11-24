@@ -726,7 +726,16 @@ authentication surface ("Cadence").
       - Why: nothing an earlier build or an earlier walk left there serves the build, the files
         git ignores included, so a commit that is not green alone gets no proof log.
       - Every build therefore starts cold.
-      - It calls `./verify stop` in the worktree before it removes it.
+      - It calls `./verify stop` in the worktree, where the worktree has a `verify`, before it
+        removes it.
+      - Then it waits for every process whose working directory lies in the worktree to leave: 30
+        tries, each a scan and a sleep of 1 s.
+        - Why: `./verify stop` returns before the daemon exits, and the daemon rewrites its
+          registry in the worktree while it exits, so git would find the directory not empty.
+      - It refuses, naming the process id, where one still works there after the wait.
+      - Where `/proc` is missing it waits for nothing.
+      - A named limit: a process of another user, or one hidden by `hidepid`, cannot be read, so it
+        is not waited for, and git's own refusal stands.
       - It refuses, naming git's reason, where git cannot remove the worktree.
       - A named limit: git removes no worktree in which a build initialized a submodule without
         `--force`, which the walk does not pass, so the walk of such a strand ends at its second
@@ -783,7 +792,8 @@ authentication surface ("Cadence").
         taken over removes the taker's lock when it ends.
       - A named limit: a process id that lives again after a restart holds the lock until the
         author removes it, since the deny floor refuses an agent's `rm`.
-    - It calls `./verify stop` when it ends, so no build tool keeps the walk worktree busy.
+    - It calls `./verify stop` when it ends and does not wait for the daemon.
+    - The cut of the next walk waits for it.
 - **`kb-guard.log`:** whenever a commit is proven by a run on other docs than its own (a docs-only
   fold, a `[doc]` commit), a `./verify focus` run of `KbCitationGuardTest`, the block's
   `docs_guard_test`, at the tip, since that test reads the KB prose.

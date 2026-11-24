@@ -4785,7 +4785,10 @@ walked_strand_files() {
 		'if [ "$1" = bdd ] && [ -n "${GATE_BDD_DIRTIES:-}" ]; then echo "class Stray {}" > src/main/Stray.java; fi' \
 		'if [ "$1" = bdd ] && [ -n "${GATE_BDD_MOVES:-}" ]; then echo "class Moved {}" > src/main/Moved.java; git add -A; git commit -q --no-verify -m "Move the tip"; fi' \
 		'case "$1" in' \
-		'	stop) printf "stop %s\n" "$root" >> "$GATE_BUILDS"; exit 0 ;;' \
+		'	stop)' \
+		'		printf "stop %s\n" "$root" >> "$GATE_BUILDS"' \
+		'		if [ -n "${GATE_FIFO:-}" ]; then mkdir -p registry.local.d/9.5.1; (cd registry.local.d/9.5.1 && read _ < "$GATE_FIFO"; : > "$GATE_MARKER") > /dev/null 2>&1 & printf "%s\n" "$!" >> "$GATE_HOLDER"; fi' \
+		'		exit 0 ;;' \
 		'	focus)' \
 		'		printf "focus %s\n" "$2" >> "$GATE_BUILDS"' \
 		'		target=$2; case "$target" in /*) ;; *) target=$root/$target ;; esac' \
@@ -4836,6 +4839,36 @@ walked() {
 
 walked_at() {
 	"$gate_copy/walk" "$repo" "$1" > "$work/out" 2>&1 && walk_status=0 || walk_status=$?
+}
+
+# A fake daemon of the walk worktree waits on a fifo with its working directory in the registry
+# directory of the worktree; the sleep shim of the rig releases it on the walk's first poll, so no
+# case waits for real time, and the git shim records whether the daemon had left when git removed
+# the worktree.
+daemon_rig() {
+	rig="$work/$case_name-rig"
+	step mkdir -p "$rig"
+	step mkfifo "$rig/fifo"
+	write_file "$rig/git" '#!/bin/sh' \
+		'case " $* " in *" worktree remove "*) if [ -e "$GATE_MARKER" ]; then echo seen; else echo missing; fi >> "$GATE_REMOVALS" ;; esac' \
+		"exec \"$(real_tool git)\" \"\$@\""
+	write_file "$rig/sleep" '#!/bin/sh' 'echo s >> "$GATE_SLEEPS"' \
+		'if [ -n "${GATE_RELEASE:-}" ] && [ "$(wc -l < "$GATE_SLEEPS")" -eq 1 ]; then printf "x\n" > "$GATE_FIFO"; fi'
+	step chmod +x "$rig/git" "$rig/sleep"
+	GATE_FIFO="$rig/fifo"
+	GATE_MARKER="$rig/marker"
+	GATE_HOLDER="$rig/holders"
+	GATE_REMOVALS="$rig/removals"
+	GATE_SLEEPS="$rig/sleeps"
+	export GATE_FIFO GATE_MARKER GATE_HOLDER GATE_REMOVALS GATE_SLEEPS
+	: > "$GATE_HOLDER"
+	: > "$GATE_REMOVALS"
+	: > "$GATE_SLEEPS"
+}
+
+release_daemons() {
+	printf 'x\n' 1<> "$GATE_FIFO"
+	unset GATE_FIFO GATE_MARKER GATE_HOLDER GATE_REMOVALS GATE_SLEEPS
 }
 
 builds() { grep -c '^all ' "$GATE_BUILDS" || true; }
@@ -5539,6 +5572,17 @@ if new_walked_strand walk_stops_failed; then
 	walked walk_stops_failed
 	if [ "$walk_status" -eq 1 ] && [ "$(stops)" -eq 2 ]; then r=0; else r=1; fi
 	check "the walk stops what a build left running before it cuts the worktree anew, and again after a failed build" "$r"
+fi
+
+if new_walked_strand walk_waits_for_daemon; then
+	write_file src/main/Second.java 'class Second {' '}'
+	commit_all 'Add the second'
+	daemon_rig
+	PATH="$rig:$PATH" GATE_RELEASE=1 walked walk_waits_for_daemon
+	removals=$(cat "$GATE_REMOVALS")
+	release_daemons
+	if [ "$walk_status" -eq 0 ] && [ "$removals" = seen ]; then r=0; else r=1; fi
+	check "the walk waits until no process works in the worktree before it cuts it anew" "$r"
 fi
 
 # A library one build installs into a directory git ignores serves no other build: the walk cuts its
