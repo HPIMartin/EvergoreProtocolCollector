@@ -3,9 +3,11 @@ package dev.schoenberg.evergore.protocolParser.rest.controller.api;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
+import dev.schoenberg.evergore.protocolParser.application.Collections;
 import dev.schoenberg.evergore.protocolParser.application.EvaluationResultFixture;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
@@ -30,8 +32,29 @@ class AdminStatusControllerTest {
 	private final StorageRepositoryStub storageRepo = new StorageRepositoryStub();
 	private final LastRunStatus lastRunStatus = new LastRunStatus();
 	private final FakeMetaInformationRepository metaRepo = new FakeMetaInformationRepository();
+	private final StubbedCollections collections = new StubbedCollections();
 	private final AdminStatusController tested = new AdminStatusController(new AvatarContributions(new KnownAvatars(bankRepo, storageRepo), metaRepo, bankRepo, storageRepo),
-			lastRunStatus);
+			lastRunStatus, collections);
+
+	@Test
+	void reportsSinceWhenTheRunningCollectionStartedAndNoMomentForTheNextStart() {
+		collections.runningSince = Optional.of(Instant.parse("2026-01-02T13:00:00Z"));
+
+		AdminStatus status = tested.status();
+
+		assertThat(status.collectionRunningSince()).isEqualTo(Instant.parse("2026-01-02T13:00:00Z"));
+		assertThat(status.nextCollectionFrom()).isNull();
+	}
+
+	@Test
+	void reportsFromWhenTheNextStartByHandIsPossibleAndNoRunningCollection() {
+		collections.nextStartFrom = Optional.of(Instant.parse("2026-01-02T14:00:00Z"));
+
+		AdminStatus status = tested.status();
+
+		assertThat(status.nextCollectionFrom()).isEqualTo(Instant.parse("2026-01-02T14:00:00Z"));
+		assertThat(status.collectionRunningSince()).isNull();
+	}
 
 	@Test
 	void listsUnknownItemsAndUnrefreshedMembersInGermanOrderEachNameOnce() {
@@ -71,5 +94,24 @@ class AdminStatusControllerTest {
 
 	private void record(EvaluationResultFixture fixture) {
 		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), fixture.build());
+	}
+
+	private static class StubbedCollections extends Collections {
+		Optional<Instant> runningSince = Optional.empty();
+		Optional<Instant> nextStartFrom = Optional.empty();
+
+		StubbedCollections() {
+			super(null, null, null, null);
+		}
+
+		@Override
+		public Optional<Instant> runningSince() {
+			return runningSince;
+		}
+
+		@Override
+		public Optional<Instant> nextStartByHandFrom() {
+			return nextStartFrom;
+		}
 	}
 }

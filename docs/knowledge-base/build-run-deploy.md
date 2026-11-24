@@ -1344,7 +1344,12 @@ answered (measured on Micronaut 4.10.9).
   second question.
 - **`/api/v1/admin/status`** answers `{lastUpdated, lastSuccessfulScrape, lastScrapeFailure,
   lastSuccessfulRecompute, lastRecomputeFailure, unknownItemNames, failedAvatarNames, roundTrips,
-  roundTripAbstentions}`:
+  roundTripAbstentions, collectionRunningSince, nextCollectionFrom}`:
+  - `collectionRunningSince` is the start of the collection that runs now, daily or by hand, else
+    `null`;
+  - `nextCollectionFrom` is the moment from which a start by hand is accepted, only while the hour
+    after the last start has not passed and no collection runs, else `null`;
+  - both are in-memory like the outcomes and `null` again after a restart;
   - `lastUpdated` is persisted: the meta store's last-completed-evaluation stamp, shown on `/admin`,
     not on the members' overview;
   - the four outcome instants, the two name lists and the two round-trip arrays are in-memory, the

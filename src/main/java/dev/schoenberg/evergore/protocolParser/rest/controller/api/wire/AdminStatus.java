@@ -9,4 +9,5 @@ public record AdminStatus(@JsonProperty("lastUpdated") Instant lastUpdated, @Jso
 		@JsonProperty("lastScrapeFailure") Instant lastScrapeFailure, @JsonProperty("lastSuccessfulRecompute") Instant lastSuccessfulRecompute,
 		@JsonProperty("lastRecomputeFailure") Instant lastRecomputeFailure, @JsonProperty("unknownItemNames") List<String> unknownItemNames,
 		@JsonProperty("failedAvatarNames") List<String> failedAvatarNames, @JsonProperty("roundTrips") List<RoundTripWire> roundTrips,
-		@JsonProperty("roundTripAbstentions") List<RoundTripAbstentionWire> roundTripAbstentions) {}
+		@JsonProperty("roundTripAbstentions") List<RoundTripAbstentionWire> roundTripAbstentions, @JsonProperty("collectionRunningSince") Instant collectionRunningSince,
+		@JsonProperty("nextCollectionFrom") Instant nextCollectionFrom) {}

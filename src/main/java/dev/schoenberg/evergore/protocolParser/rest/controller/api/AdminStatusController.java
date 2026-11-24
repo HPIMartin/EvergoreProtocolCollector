@@ -7,6 +7,7 @@ import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Produces;
 
+import dev.schoenberg.evergore.protocolParser.application.Collections;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 import dev.schoenberg.evergore.protocolParser.businessLogic.GermanOrder;
 import dev.schoenberg.evergore.protocolParser.businessLogic.contribution.AvatarContributions;
@@ -24,10 +25,12 @@ public class AdminStatusController {
 
 	private final AvatarContributions contributions;
 	private final LastRunStatus lastRunStatus;
+	private final Collections collections;
 
-	public AdminStatusController(AvatarContributions contributions, LastRunStatus lastRunStatus) {
+	public AdminStatusController(AvatarContributions contributions, LastRunStatus lastRunStatus, Collections collections) {
 		this.contributions = contributions;
 		this.lastRunStatus = lastRunStatus;
+		this.collections = collections;
 	}
 
 	@Get
@@ -38,7 +41,8 @@ public class AdminStatusController {
 
 		return new AdminStatus(lastUpdated(recompute), snapshot.lastSuccessfulScrape().orElse(null), snapshot.lastScrapeFailure().orElse(null),
 				snapshot.lastSuccessfulRecompute().orElse(null), snapshot.lastRecomputeFailure().orElse(null), GermanOrder.distinctSorted(snapshot.unknownItemNames()),
-				GermanOrder.distinctSorted(snapshot.failedAvatarNames()), roundTripsOf(snapshot), roundTripAbstentionsOf(snapshot));
+				GermanOrder.distinctSorted(snapshot.failedAvatarNames()), roundTripsOf(snapshot), roundTripAbstentionsOf(snapshot), collections.runningSince().orElse(null),
+				collections.nextStartByHandFrom().orElse(null));
 	}
 
 	private static List<RoundTripWire> roundTripsOf(LastRunStatus.Snapshot snapshot) {

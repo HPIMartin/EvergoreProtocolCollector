@@ -48,7 +48,7 @@ class AdminStatusEmptyStateEndpointTest {
 		assertThat(body)
 				.isEqualTo("{\"lastUpdated\":null,\"lastSuccessfulScrape\":null,\"lastScrapeFailure\":null,"
 						+ "\"lastSuccessfulRecompute\":null,\"lastRecomputeFailure\":null,\"unknownItemNames\":[],\"failedAvatarNames\":[],"
-						+ "\"roundTrips\":[],\"roundTripAbstentions\":[]}");
+						+ "\"roundTrips\":[],\"roundTripAbstentions\":[],\"collectionRunningSince\":null,\"nextCollectionFrom\":null}");
 	}
 
 	@MockBean(Configuration.class)

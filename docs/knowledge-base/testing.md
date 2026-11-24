@@ -53,7 +53,7 @@
 | `CollectionThreadsTest` | Pure unit tests: the thread of a collection started by hand is named `collection` and is a daemon, so a stopping service does not wait for it. | pure unit |
 | `EvergoreDataCollectorJobTest` | Pure unit test: the initial delay restores the interrupt flag on interruption instead of swallowing it, proven via a positive-delay `Configuration` (interrupting the current thread first, `TimeUnit.SECONDS.sleep` with a positive argument throws immediately without an actual wait, `sleep(0)` does not throw at all and so cannot pin this). | pure unit |
 | `HealthEndpointTest` | Boots the real Micronaut `EmbeddedServer`; mocks the extractor (no-op `loadData`), config (zero delay, test DB path), and hooks (BootSignalRecorder pattern). Asserts: `GET /health` returns **exactly 200** without a login; response body for the admin key's login contains `lastRun` + `lastSuccessfulRecompute`; `/healthz` is **not** served as the health endpoint (401, so a prefix match cannot inherit the exemption, and the router is held to the rule `PublicPathsTest` states at unit level). The access scope itself lives in `AccessScopeTest`, not here. | `@MicronautTest` integration |
-| `CollectionControllerTest` | Boots the real `EmbeddedServer` with a stubbed `Collections` (counts the starts, answers what the test sets): `POST /api/v1/admin/collection` answers 202 and starts one collection; only the admin role starts one (no login 401, a member's login 403, then the admin's 202 with one start in all); a collection running answers 409 `running`, a start within the hour 409 `too-early`. | Micronaut |
+| `CollectionControllerTest` | Boots the real `EmbeddedServer` with a stubbed `Collections` (counts the starts, answers what the test sets); its cases stand in the list below the table. | `@MicronautTest` integration |
 | `AdminStatusEndpointTest` | Boots the real Micronaut `EmbeddedServer` against the fixture DB with the scraper stubbed; asserts `GET /api/v1/admin/status` answers 200 with the admin key's login, 403 with a member's login and 401 without one, and that after recording a scrape outcome and a recompute outcome (with its unknown items and failed avatars) on `LastRunStatus` the body carries a non-null `lastUpdated` and the matching outcome instants plus the deduplicated, sorted `unknownItemNames`/`failedAvatarNames`. A recompute carrying a round trip and an abstention serves them as `{avatar, item, quantity}`/`{avatar, item}` entries under `roundTrips`/`roundTripAbstentions`, `item` being the catalog's `ingameName`. | `@MicronautTest` integration |
 | `AdminUsageControllerTest` | Boots the real Micronaut context on a copy of the test database and stores accounts and usage records through the real repositories: `/api/v1/admin/usage` answers each account's counts in both windows, the guild row, the admin key's row, the Berlin day of the first record and the records lost since the start, and an account without records with zeros and a latest use present as `null`. | `@MicronautTest` integration |
 | `AdminUsageControllerMappingTest` | Calls the controller over a report with records lost since the start: the answer carries the report's count, not a fixed one. | pure unit |
@@ -172,6 +172,12 @@
     and `TooEarly` names the moment from which it is accepted;
   - a collection that failed still counts for the hour, a refused start by hand and a skipped daily collection count as no start;
   - `nextStartByHandFrom()` names that moment only while the hour since the last start has not passed and no collection runs.
+- `CollectionControllerTest`:
+  - `POST /api/v1/admin/collection` answers 202 and starts one collection;
+  - only the admin role starts one: no login 401, a member's login 403, then the admin's 202 with one start in all;
+  - a collection running answers 409 `running`, a start within the hour 409 `too-early`.
+- `AdminStatusControllerTest`, the collection fields (its other cases stand in its row):
+  - `collectionRunningSince` and `nextCollectionFrom` are read from a stubbed `Collections`, each `null` while the other is set.
 
 - `GuildCollectionTest`:
   - a successful cycle records `lastSuccessfulScrape` and `lastSuccessfulRecompute`;
