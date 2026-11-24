@@ -28,6 +28,8 @@ const NO_FACTS: AdminStatus = {
   failedAvatarNames: [],
   roundTrips: [],
   roundTripAbstentions: [],
+  collectionRunningSince: null,
+  nextCollectionFrom: null,
 }
 
 const NOTHING_USED: UsageCounts = {

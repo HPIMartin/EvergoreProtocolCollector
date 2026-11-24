@@ -688,6 +688,8 @@ const adminStatusBody = {
   failedAvatarNames: ['Alrik', 'Zwerg'],
   roundTrips: [{ avatar: 'Alrik', item: 'Federn', quantity: 100 }],
   roundTripAbstentions: [{ avatar: 'Zwerg', item: 'Erz' }],
+  collectionRunningSince: null,
+  nextCollectionFrom: null,
 }
 
 describe('the admin status wire shape', () => {
@@ -704,6 +706,8 @@ describe('the admin status wire shape', () => {
       failedAvatarNames: ['Alrik', 'Zwerg'],
       roundTrips: [{ avatar: 'Alrik', item: 'Federn', quantity: 100 }],
       roundTripAbstentions: [{ avatar: 'Zwerg', item: 'Erz' }],
+      collectionRunningSince: null,
+      nextCollectionFrom: null,
     })
   })
 
@@ -718,6 +722,8 @@ describe('the admin status wire shape', () => {
       failedAvatarNames: [],
       roundTrips: [],
       roundTripAbstentions: [],
+      collectionRunningSince: null,
+      nextCollectionFrom: null,
     })
 
     expect(status).toStrictEqual({
@@ -730,7 +736,39 @@ describe('the admin status wire shape', () => {
       failedAvatarNames: [],
       roundTrips: [],
       roundTripAbstentions: [],
+      collectionRunningSince: null,
+      nextCollectionFrom: null,
     })
+  })
+
+  it('reads since when a collection runs and from when the next start by hand is possible', () => {
+    const status = adminStatusFrom({
+      ...adminStatusBody,
+      collectionRunningSince: '2026-08-05T11:00:00Z',
+      nextCollectionFrom: '2026-08-05T12:00:00Z',
+    })
+
+    expect({
+      running: status.collectionRunningSince,
+      next: status.nextCollectionFrom,
+    }).toStrictEqual({
+      running: new Date('2026-08-05T11:00:00Z'),
+      next: new Date('2026-08-05T12:00:00Z'),
+    })
+  })
+
+  it('refuses a body whose collection start is no instant', () => {
+    const reading = () =>
+      adminStatusFrom({ ...adminStatusBody, collectionRunningSince: 'gestern' })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it('refuses a body without the moment of the next start by hand', () => {
+    const reading = () =>
+      adminStatusFrom({ ...adminStatusBody, nextCollectionFrom: undefined })
+
+    expect(reading).toThrow(MalformedResponse)
   })
 
   it('refuses a body whose unknown item names are not strings', () => {

@@ -122,6 +122,11 @@ export function adminStatusFrom(body: unknown): AdminStatus {
       'roundTripAbstentions',
       roundTripAbstentionFrom,
     ),
+    collectionRunningSince: optionalInstantFrom(
+      envelope,
+      'collectionRunningSince',
+    ),
+    nextCollectionFrom: optionalInstantFrom(envelope, 'nextCollectionFrom'),
   }
 }
 

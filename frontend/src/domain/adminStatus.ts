@@ -8,6 +8,8 @@ export interface AdminStatus {
   readonly failedAvatarNames: readonly string[]
   readonly roundTrips: readonly RoundTrip[]
   readonly roundTripAbstentions: readonly RoundTripAbstention[]
+  readonly collectionRunningSince: Date | null
+  readonly nextCollectionFrom: Date | null
 }
 
 export interface RoundTrip {

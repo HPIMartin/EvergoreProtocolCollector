@@ -424,6 +424,8 @@ const ADMIN_STATUS_BODY = JSON.stringify({
   failedAvatarNames: ['Zwerg'],
   roundTrips: [{ avatar: 'Alrik', item: 'Federn', quantity: 100 }],
   roundTripAbstentions: [{ avatar: 'Zwerg', item: 'Erz' }],
+  collectionRunningSince: null,
+  nextCollectionFrom: null,
 })
 
 const FAILED_RUN_ADMIN_STATUS_BODY = JSON.stringify({
@@ -436,6 +438,8 @@ const FAILED_RUN_ADMIN_STATUS_BODY = JSON.stringify({
   failedAvatarNames: [],
   roundTrips: [],
   roundTripAbstentions: [],
+  collectionRunningSince: null,
+  nextCollectionFrom: null,
 })
 
 const NEVER_COLLECTED_ADMIN_STATUS_BODY = JSON.stringify({
@@ -448,6 +452,8 @@ const NEVER_COLLECTED_ADMIN_STATUS_BODY = JSON.stringify({
   failedAvatarNames: [],
   roundTrips: [],
   roundTripAbstentions: [],
+  collectionRunningSince: null,
+  nextCollectionFrom: null,
 })
 
 interface Answer {

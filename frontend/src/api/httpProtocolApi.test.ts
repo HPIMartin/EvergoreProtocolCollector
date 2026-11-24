@@ -95,6 +95,8 @@ const ADMIN_STATUS_BODY = JSON.stringify({
   failedAvatarNames: [],
   roundTrips: [],
   roundTripAbstentions: [],
+  collectionRunningSince: null,
+  nextCollectionFrom: null,
 })
 
 const ACCOUNTS_BODY = JSON.stringify([
