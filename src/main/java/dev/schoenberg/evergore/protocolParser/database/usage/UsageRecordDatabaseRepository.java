@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.j256.ormlite.dao.Dao;
@@ -81,6 +82,31 @@ public class UsageRecordDatabaseRepository implements UsageRecordRepository, Usa
 			days.computeIfAbsent(row[0], account -> new HashSet<>()).add(day);
 		}
 		return days;
+	}
+
+	@Override
+	public Map<String, Instant> latestUses() {
+		Dao<UsageRecordEntry, String> records = database.dao(UsageRecordEntry.class);
+		List<String[]> rows = silentThrow(() -> records
+				.queryBuilder()
+				.selectRaw(ACCOUNT_COLUMN, "max(" + AT_COLUMN + ")")
+				.groupBy(ACCOUNT_COLUMN)
+				.where()
+				.in(WHAT_COLUMN, UsageKind.uses())
+				.queryRaw()
+				.getResults());
+		Map<String, Instant> latest = new HashMap<>();
+		for (String[] row : rows) {
+			latest.put(row[0], Instant.ofEpochMilli(Long.parseLong(row[1])));
+		}
+		return latest;
+	}
+
+	@Override
+	public Optional<Instant> firstRecord() {
+		Dao<UsageRecordEntry, String> records = database.dao(UsageRecordEntry.class);
+		String[] row = silentThrow(() -> records.queryBuilder().selectRaw("min(" + AT_COLUMN + ")").queryRawFirst());
+		return Optional.ofNullable(row[0]).map(millis -> Instant.ofEpochMilli(Long.parseLong(millis)));
 	}
 
 	private static UsageRecordEntry entryOf(UsageRecord record) {

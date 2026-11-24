@@ -137,6 +137,38 @@ class UsageRecordDatabaseRepositoryTest {
 		assertThat(days).isEqualTo(Map.of("aurora", Set.of(LocalDate.parse("2026-01-12"))));
 	}
 
+	@Test
+	void givesTheLatestUseOfEachAccountOverAllTheTimeLeavingOutANoticeUnderstood() {
+		Instant first = Instant.parse("2026-01-10T12:00:00Z");
+		tested
+				.addAll(List
+						.of(record("aurora", first, UsageKind.LOGIN), record("aurora", first.plusSeconds(60), UsageKind.PAGE_LOAD),
+								record("aurora", first.plusSeconds(120), UsageKind.NOTICE_UNDERSTOOD), record("boreas", first, UsageKind.LOGOUT)));
+
+		Map<String, Instant> latest = tested.latestUses();
+
+		assertThat(latest).isEqualTo(Map.of("aurora", first.plusSeconds(60), "boreas", first));
+	}
+
+	@Test
+	void givesTheMomentOfTheFirstRecordOfAnyKind() {
+		Instant first = Instant.parse("2026-01-10T12:00:00Z");
+		tested.addAll(List.of(record("boreas", first.plusSeconds(60), UsageKind.LOGIN), record("aurora", first, UsageKind.NOTICE_UNDERSTOOD)));
+
+		Optional<Instant> firstRecord = tested.firstRecord();
+
+		assertThat(firstRecord).contains(first);
+	}
+
+	@Test
+	void givesNoLatestUseAndNoFirstRecordWithoutRecords() {
+		Map<String, Instant> latest = tested.latestUses();
+		Optional<Instant> firstRecord = tested.firstRecord();
+
+		assertThat(latest).isEmpty();
+		assertThat(firstRecord).isEmpty();
+	}
+
 	private static UsageRecord record(String accountKey, Instant at, UsageKind kind) {
 		return new UsageRecord(accountKey, at, kind, Optional.empty());
 	}

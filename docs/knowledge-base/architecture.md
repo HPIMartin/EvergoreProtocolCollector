@@ -196,7 +196,9 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
       - SQL has no zone rules, so the query reads the distinct quarters of an hour each account
         used, and Java names their days in the zone;
       - every zone offset in use today, and every change of one, falls on a quarter of an hour,
-        so a quarter lies in one day, and the rows grow with the time, not with the use.
+        so a quarter lies in one day, and the rows grow with the time, not with the use;
+    - and over all the time: each account's latest use, of the same kinds, and the moment of the
+      first record of any kind.
 - **Business logic (framework-free):** ports `BankRepository` and `StorageRepository` (each the
   generic `base/LedgerRepository` over its entry record, declaring nothing of its own),
   `MetaInformationRepository` · records `BankEntry`, `StorageEntry`, `MetaInformation` ·
