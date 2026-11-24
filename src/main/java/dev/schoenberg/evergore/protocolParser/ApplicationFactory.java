@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser;
 
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
@@ -61,6 +62,7 @@ import dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseReposito
 import dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.database.usage.UsageRecordDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.helper.concurrent.CollectionThreads;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import dev.schoenberg.evergore.protocolParser.helper.config.PasswordHashConfiguration;
 import dev.schoenberg.evergore.protocolParser.helper.config.UsageWritingConfiguration;
@@ -75,6 +77,7 @@ import dev.schoenberg.evergore.protocolParser.helper.selenium.FileLoader;
 @Factory
 public class ApplicationFactory {
 	private static final String USAGE_WRITER = "usage-writer";
+	private static final String COLLECTION_EXECUTOR = "collections";
 
 	@Singleton
 	public FileLoader fileLoader(Configuration config, Logger logger) {
@@ -114,12 +117,15 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public Collections collections(GuildCollection collection, Clock clock, Logger logger) {
-		return new Collections(collection, Executors.newSingleThreadExecutor(runnable -> {
-			Thread thread = new Thread(runnable, "collection");
-			thread.setDaemon(true);
-			return thread;
-		}), clock, logger);
+	public Collections collections(GuildCollection collection, @Named(COLLECTION_EXECUTOR) ExecutorService executor, Clock clock, Logger logger) {
+		return new Collections(collection, executor, clock, logger);
+	}
+
+	@Singleton
+	@Named(COLLECTION_EXECUTOR)
+	@Bean(preDestroy = "shutdown")
+	public ExecutorService collectionExecutor() {
+		return Executors.newSingleThreadExecutor(new CollectionThreads());
 	}
 
 	@Singleton

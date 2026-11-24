@@ -65,17 +65,22 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   root: builds the one `SqliteDatabase` and the un-annotated repositories on it, the framework-free
   `application` use-cases, `FileLoader`, no-op hooks) · `EvergoreDataCollectorJob` (`@Scheduled`, waits
   the initial delay, then asks `Collections`, the one owner of the collection that runs, to run the
-  daily collection through `GuildCollection`). `Collections` holds, in memory only, the start of the
-  one running collection: a start by hand runs on a background executor and answers `StartOutcome`
-  (`Started`; `AlreadyRunning` with the start of the run; `TooEarly` with the moment from which a
-  start is accepted, an hour after the start of the last collection, daily or by hand, counted from
-  the start also when that run failed; a refused start or a skipped daily collection counts as no
-  start; the last start is forgotten at a restart); a failed run by hand is logged as
-  `Collection started by hand failed.` and ends the run. A daily collection that falls due while one
-  runs is skipped with a log line and not made up.
-  The schema belongs to Flyway: `SqliteDatabase.open` runs the versioned migrations in
-  `src/main/resources/db/migration` before it opens the connection source, so no caller can reach
-  an unmigrated database.
+  daily collection through `GuildCollection`).
+  - `Collections` holds, in memory only, the start of the one running collection.
+  - A start by hand runs on a background executor of its own (`ApplicationFactory`: one daemon thread
+    named `collection`, `CollectionThreads`, shut down when the service stops).
+  - `Collection started by hand.` is logged before the hand-over to that executor.
+  - A start by hand answers `StartOutcome`: `Started`; `AlreadyRunning` with the start of the run;
+    `TooEarly` with the moment from which a start is accepted.
+  - A start by hand is accepted an hour after the start of the last collection, daily or by hand,
+    counted from the start also when that run failed.
+  - A refused start or a skipped daily collection counts as no start.
+  - The last start is forgotten at a restart.
+  - A failed run by hand is logged as `Collection started by hand failed.` and ends the run.
+  - A daily collection that falls due while one runs is skipped with a log line and not made up.
+  - The schema belongs to Flyway: `SqliteDatabase.open` runs the versioned migrations in
+    `src/main/resources/db/migration` before it opens the connection source, so no caller can reach
+    an unmigrated database.
 - **Application use-cases (framework-free):** `application/{EvergoreDataExtractor,EvergoreDataEvaluator}`
   (collect + evaluate coordinators) · `application/LastRunStatus` (monitoring seam: what the
   last run reached, see the pipeline above) · `application/CreateAccounts` (the account step of the
