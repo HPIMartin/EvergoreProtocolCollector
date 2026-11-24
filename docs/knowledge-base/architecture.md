@@ -187,7 +187,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
       `account_key`, `at_epoch_millis` (UTC epoch milliseconds), `what` (one of the
       fifteen kinds of `businessLogic/usage/UsageKind`, held by a `CHECK`) and `detail`;
     - `detail` is the one nullable column: the record holds it as an `Optional<String>`;
-    - the port takes a batch of records.
+    - the port takes a batch of records, written in one `SqliteDatabase` transaction: a record the
+      table refuses stores none of its batch.
 - **Business logic (framework-free):** ports `BankRepository` and `StorageRepository` (each the
   generic `base/LedgerRepository` over its entry record, declaring nothing of its own),
   `MetaInformationRepository` · records `BankEntry`, `StorageEntry`, `MetaInformation` ·

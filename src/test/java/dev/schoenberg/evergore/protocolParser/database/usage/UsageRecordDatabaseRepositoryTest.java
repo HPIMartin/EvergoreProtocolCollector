@@ -19,6 +19,7 @@ import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 class UsageRecordDatabaseRepositoryTest {
 	private static final String FRESH_DB_PATH = "build/tmp/test/usageRecordRepositoryTest.sqlite";
@@ -59,6 +60,28 @@ class UsageRecordDatabaseRepositoryTest {
 		tested.addAll(List.of(new UsageRecord("boreas", OPENED, UsageKind.LOGIN, Optional.empty()), new UsageRecord("boreas", OPENED, UsageKind.PAGE_LOAD, Optional.empty())));
 
 		assertThat(databaseFile.committedTexts("usage_record", "ifnull(id, '-')")).containsExactly("1", "2", "3");
+	}
+
+	@Test
+	void writesABatchInOneCommit() {
+		List<UsageRecord> batch = List
+				.of(new UsageRecord("aurora", LOGGED_IN, UsageKind.LOGIN, Optional.empty()), new UsageRecord("aurora", LOGGED_IN, UsageKind.PAGE_LOAD, Optional.empty()),
+						new UsageRecord("aurora", OPENED, UsageKind.LOGOUT, Optional.empty()));
+
+		int commits = databaseFile.commitsDuring(() -> tested.addAll(batch));
+
+		assertThat(commits).isEqualTo(1);
+	}
+
+	@Test
+	void aBatchWithARefusedRecordStoresNoneOfItsRecords() {
+		List<UsageRecord> batch = List
+				.of(new UsageRecord("aurora", LOGGED_IN, UsageKind.LOGIN, Optional.empty()), new UsageRecord(null, OPENED, UsageKind.PAGE_LOAD, Optional.empty()));
+
+		Throwable refusal = catchThrowable(() -> tested.addAll(batch));
+
+		assertThat(refusal).isNotNull();
+		assertThat(databaseFile.committedTexts("usage_record", ROW)).isEmpty();
 	}
 
 	private static Configuration configurationFor(String databasePath) {

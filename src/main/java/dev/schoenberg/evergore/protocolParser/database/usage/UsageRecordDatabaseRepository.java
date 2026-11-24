@@ -8,8 +8,6 @@ import dev.schoenberg.evergore.protocolParser.application.UsageRecordRepository;
 import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageRecord;
 import dev.schoenberg.evergore.protocolParser.database.SqliteDatabase;
 
-import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
-
 public class UsageRecordDatabaseRepository implements UsageRecordRepository {
 	private final SqliteDatabase database;
 
@@ -20,7 +18,12 @@ public class UsageRecordDatabaseRepository implements UsageRecordRepository {
 	@Override
 	public void addAll(List<UsageRecord> batch) {
 		Dao<UsageRecordEntry, String> records = database.dao(UsageRecordEntry.class);
-		batch.forEach(record -> silentThrow(() -> records.create(entryOf(record))));
+		database.inTransaction(() -> {
+			for (UsageRecord record : batch) {
+				records.create(entryOf(record));
+			}
+			return batch.size();
+		});
 	}
 
 	private static UsageRecordEntry entryOf(UsageRecord record) {
