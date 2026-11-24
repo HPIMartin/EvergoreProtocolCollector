@@ -1,5 +1,5 @@
 CREATE TABLE `usage_record` (
-	`id` INTEGER,
+	`id` INTEGER PRIMARY KEY,
 	`account_key` VARCHAR NOT NULL,
 	`at_epoch_millis` INTEGER NOT NULL,
 	`what` VARCHAR NOT NULL CHECK (`what` IN ('LOGIN', 'PAGE_LOAD', 'LOGOUT', 'VIEW_OVERVIEW', 'VIEW_BANK', 'VIEW_STORAGE',

@@ -53,6 +53,14 @@ class UsageRecordDatabaseRepositoryTest {
 				.containsExactly("aurora|" + LOGGED_IN.toEpochMilli() + "|LOGIN|-", "aurora|" + OPENED.toEpochMilli() + "|VIEW_BANK|Boreas");
 	}
 
+	@Test
+	void givesEachStoredRecordTheNextIdAcrossBatches() {
+		tested.addAll(List.of(new UsageRecord("aurora", LOGGED_IN, UsageKind.LOGIN, Optional.empty())));
+		tested.addAll(List.of(new UsageRecord("boreas", OPENED, UsageKind.LOGIN, Optional.empty()), new UsageRecord("boreas", OPENED, UsageKind.PAGE_LOAD, Optional.empty())));
+
+		assertThat(databaseFile.committedTexts("usage_record", "ifnull(id, '-')")).containsExactly("1", "2", "3");
+	}
+
 	private static Configuration configurationFor(String databasePath) {
 		return new Configuration() {
 			@Override
