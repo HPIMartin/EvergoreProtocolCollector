@@ -23,6 +23,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.operator.LoginRequests;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.ServiceRequests;
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.CollectionRuns;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.HealthReport;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.OperatorSettings;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
@@ -40,12 +41,15 @@ public class ClientLoginSteps {
 	private static final String OVERVIEWS_FIGURES = "/api/v1/avatars";
 	private static final String ADMINS_STATUS_FIGURES = "/api/v1/admin/status";
 	private static final String ACCOUNTS = "/api/v1/admin/accounts";
+	private static final String COLLECTION = "/api/v1/admin/collection";
 	private static final String RESET_OF = "the reset of the password of";
 	private static final String ROLE_FOR = "the role";
 	private static final String A_CLIENT = "198.51.100.1";
 	private static final String ADMIN = "admin";
 	private static final String NOT_ISSUED = "Not-Issued-1!";
 	private static final int SERVED = 200;
+	private static final int ACCEPTED = 202;
+	private static final int CONFLICT = 409;
 	private static final int UNAUTHORIZED = 401;
 	private static final int BAD_REQUEST = 400;
 	private static final int FOUND = 302;
@@ -62,6 +66,7 @@ public class ClientLoginSteps {
 	private final HealthReport health;
 	private final ServiceLog log;
 	private final ScenarioTime time;
+	private final CollectionRuns runs;
 	private Answer earlierLoginAnswer;
 	private String issuedLogin;
 	private String copiedLogin;
@@ -69,9 +74,10 @@ public class ClientLoginSteps {
 	private Instant clientLoggedInAt;
 
 	public ClientLoginSteps(LoginRequests logins, ServiceRequests requests, Accounts accounts, ClientAnswer received, OperatorSettings settings, RunningService service,
-			ScenarioTime time, HealthReport health, ServiceLog log) {
-		this.time = time;
+			ScenarioTime time, HealthReport health, ServiceLog log, CollectionRuns runs) {
 		this.log = log;
+		this.time = time;
+		this.runs = runs;
 		this.health = health;
 		this.logins = logins;
 		this.requests = requests;
@@ -88,7 +94,7 @@ public class ClientLoginSteps {
 
 	@ParameterType("the login page|a file the login page loads|the overview's figures|the movements of the bank ledger of \"Aurora\"|the admin's status figures|a file the dashboard loads"
 			+ "|the change of a password with the current one|the descriptions of the service's interface for programs \\(Swagger, ReDoc and RapiDoc\\)"
-			+ "|an interface address the service does not serve|the list of accounts|the reset of the password of \"[^\"]+\""
+			+ "|an interface address the service does not serve|the list of accounts|a collection|the reset of the password of \"[^\"]+\""
 			+ "|the name it is logged in under|the health check|the guild's usage figures|the role \"(?:member|admin|superuser)\" for \"[^\"]+\"")
 	public List<Asking> askedFor(String phrase) {
 		return switch (phrase) {
@@ -104,6 +110,7 @@ public class ClientLoginSteps {
 			case "the name it is logged in under" -> List.of(Asking.get("/api/v1/me"));
 			case "the health check" -> List.of(Asking.get("/health"));
 			case "the guild's usage figures" -> List.of(Asking.get("/api/v1/admin/usage"));
+			case "a collection" -> List.of(Asking.post(COLLECTION));
 			default -> otherAskings(phrase);
 		};
 	}
@@ -267,6 +274,46 @@ public class ClientLoginSteps {
 	public void aClientHasLoggedInAfterChoosing(String name, String password) {
 		accounts.choosePasswordInPlaceOfTheIssuedOne(name, password);
 		aClientHasLoggedIn(name, password);
+	}
+
+	@Given("a client logged in as {string} with the password {string} has asked for a collection with its login {int} minutes after the start of the daily collection")
+	public void aClientLoggedInHasAskedForACollectionAfterTheDailyCollection(String name, String password, int minutes) {
+		aClientHasLoggedIn(name, password);
+		theClientHasAskedForACollectionWithItsLoginAfterTheDailyCollection(minutes);
+	}
+
+	@Given("a client without a login has asked for a collection {int} minutes after the start of the daily collection")
+	public void aClientWithoutALoginHasAskedForACollectionAfterTheDailyCollection(int minutes) {
+		time.setTo(runs.dailyStart().plusMinutes(minutes));
+		received.remember(requests.ask(Asking.post(COLLECTION), Map.of(AcceptanceClientIp.HEADER, A_CLIENT)));
+	}
+
+	@Given("the client has asked for a collection with its login {int} minutes after the start of the daily collection")
+	public void theClientHasAskedForACollectionWithItsLoginAfterTheDailyCollection(int minutes) {
+		time.setTo(runs.dailyStart().plusMinutes(minutes));
+		received.remember(logins.asking(Asking.post(COLLECTION), issuedLogin));
+	}
+
+	@Given("the client has asked for a collection with its login while that collection was running")
+	public void theClientHasAskedForACollectionWithItsLoginWhileThatCollectionWasRunning() {
+		received.remember(logins.asking(Asking.post(COLLECTION), issuedLogin));
+	}
+
+	@Then("the operator finds the client's request accepted")
+	public void theOperatorFindsTheClientsRequestAccepted() {
+		assertThat(received.current().status()).as(received.current().body()).isEqualTo(ACCEPTED);
+	}
+
+	@Then("the operator finds the client's request refused for a collection already running")
+	public void theOperatorFindsTheClientsRequestRefusedForACollectionAlreadyRunning() {
+		assertThat(received.current().status()).isEqualTo(CONFLICT);
+		assertThat(received.current().body()).contains("\"refusal\":\"running\"");
+	}
+
+	@Then("the operator finds the client's request refused for a collection started within the last hour")
+	public void theOperatorFindsTheClientsRequestRefusedForACollectionStartedWithinTheLastHour() {
+		assertThat(received.current().status()).isEqualTo(CONFLICT);
+		assertThat(received.current().body()).contains("\"refusal\":\"too-early\"");
 	}
 
 	@Given("a client without a login has asked for {askedFor}")

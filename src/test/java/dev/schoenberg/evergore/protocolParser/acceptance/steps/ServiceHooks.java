@@ -10,6 +10,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.browser.Browsers;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.SecondBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.GameProtocols;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioDatabase;
 
 public class ServiceHooks {
@@ -17,8 +18,10 @@ public class ServiceHooks {
 	private final MemberBrowser browser;
 	private final SecondBrowser secondBrowser;
 	private final ScenarioDatabase database;
+	private final GameProtocols protocols;
 
-	public ServiceHooks(RunningService service, MemberBrowser browser, SecondBrowser secondBrowser, ScenarioDatabase database) {
+	public ServiceHooks(RunningService service, MemberBrowser browser, SecondBrowser secondBrowser, ScenarioDatabase database, GameProtocols protocols) {
+		this.protocols = protocols;
 		this.service = service;
 		this.browser = browser;
 		this.secondBrowser = secondBrowser;
@@ -40,9 +43,14 @@ public class ServiceHooks {
 	public void stopTheService() {
 		try {
 			try {
-				browser.leave();
+				try {
+					browser.leave();
+				} finally {
+					secondBrowser.browser().leave();
+				}
 			} finally {
-				secondBrowser.browser().leave();
+				protocols.release();
+				service.awaitTheCollectionsEnded();
 			}
 		} finally {
 			service.stop();

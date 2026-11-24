@@ -191,6 +191,13 @@ public class RunningService {
 		}
 	}
 
+	public void awaitTheCollectionsEnded() {
+		if (isRunning()) {
+			awaitTheCollectionsStartedByHand();
+			awaitTheDailyCollectionInTheBackground();
+		}
+	}
+
 	public void awaitTheCollectionsStartedByHand() {
 		context.getBean(TrackedCollections.class).awaitFinished();
 	}

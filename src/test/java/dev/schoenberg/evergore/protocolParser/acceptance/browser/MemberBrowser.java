@@ -32,6 +32,7 @@ public final class MemberBrowser {
 	private final PasswordChange passwordChange;
 	private final AccountResets accountResets;
 	private final AccountRoles accountRoles;
+	private final CollectionStart collectionStart;
 	private final LoggingOut loggingOut;
 	private final RequestsWithoutALogin requestsWithoutALogin;
 	private final ShiftedClock shiftedClock;
@@ -49,6 +50,7 @@ public final class MemberBrowser {
 		this.passwordChange = new PasswordChange(this);
 		this.accountResets = new AccountResets(this);
 		this.accountRoles = new AccountRoles(this);
+		this.collectionStart = new CollectionStart(this);
 		this.loggingOut = new LoggingOut(this);
 		this.requestsWithoutALogin = new RequestsWithoutALogin(this);
 		this.shiftedClock = new ShiftedClock(() -> driver);
@@ -199,6 +201,10 @@ public final class MemberBrowser {
 
 	public AccountRoles accountRoles() {
 		return accountRoles;
+	}
+
+	public CollectionStart collectionStart() {
+		return collectionStart;
 	}
 
 	public boolean adminPageIsOpen() {

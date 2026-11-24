@@ -7,11 +7,13 @@ import java.time.LocalTime;
 import io.cucumber.java.en.Given;
 
 import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.CollectionRuns;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.GameProtocols;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.LedgerFaults;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
 
+import static dev.schoenberg.evergore.protocolParser.businessLogic.Constants.APP_ZONE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class CollectionSteps {
@@ -24,8 +26,10 @@ public class CollectionSteps {
 	private final ScenarioTime time;
 	private final LedgerFaults faults;
 	private final ServiceLog log;
+	private final CollectionRuns runs;
 
-	public CollectionSteps(RunningService service, GameProtocols protocols, ScenarioTime time, LedgerFaults faults, ServiceLog log) {
+	public CollectionSteps(RunningService service, GameProtocols protocols, ScenarioTime time, LedgerFaults faults, ServiceLog log, CollectionRuns runs) {
+		this.runs = runs;
 		this.service = service;
 		this.protocols = protocols;
 		this.time = time;
@@ -48,6 +52,7 @@ public class CollectionSteps {
 
 	private void runTheCollection() {
 		int logged = log.lines().size();
+		runs.dailyStarted(LocalDateTime.ofInstant(time.now(), APP_ZONE), logged);
 		int collections = service.runTheDailyCollection();
 
 		assertThat(collections).as("the daily collections the service scheduled").isEqualTo(1);

@@ -34,4 +34,5 @@ return JSON.stringify({
     issued: cellOf(row, 'account-issued'),
   })),
   question: textOf(document.querySelector('[data-testid=reset-question]')),
+  startButton: textOf(document.querySelector('[data-testid=start-collection]')),
 })

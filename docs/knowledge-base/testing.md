@@ -334,11 +334,29 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   runs it when a step says the collection runs, through the same runnable the scheduler would
   call. The step asserts exactly one job ran; Micronaut's health monitor, the only other
   fixed-delay job, is switched off in this context (`micronaut.health.monitor.enabled`).
-  A daily collection can be fired on a thread of its own (`RunningService.startTheDailyCollectionInTheBackground`).
+  A daily collection can be fired on a thread of its own (`RunningService.startTheDailyCollectionInTheBackground`);
+  a step that says a daily collection starts (and runs until a step finishes it) fires it that way and
+  joins it (`RunningService.awaitTheDailyCollectionInTheBackground`) when a step finishes it.
 - **A collection started by hand runs on `TrackedCollections`**, which replaces the `collections`
   executor in the acceptance context:
   - it runs each collection inside the fault window of `LedgerFaults` as the daily one does;
   - `awaitFinished()` waits for every collection it was given, so a step that says "finished" knows it is.
+  - The fault window is per thread (`LedgerFaults`), so a page read during a held collection is no
+    part of it.
+  - `CollectionRuns` remembers each collection's start and the log's size at that moment, which the
+    steps "N minutes after the start of the daily collection", "… of the collection started at
+    13:00", "since the start of that collection" and "since the start of the collection of <moment>"
+    read.
+- **Starting a collection (`CollectionStartSteps`)**: a step that says a collection starts, started
+  or falls due:
+  - sets the scenario clock;
+  - holds the game's next answer;
+  - starts the collection, on the admin page through the button of the first browser (the daily one on
+    a thread of its own);
+  - waits until it asks the game, so it runs;
+  - "finishes" or "has finished" releases the game and waits for it;
+  - a daily collection that falls due while one runs is fired at once and skipped;
+  - the release and the wait also end each scenario (`ServiceHooks`), so no collection outlives its service.
 - **The service as the operator deploys it**: the startup scenarios and the throttle restart the
   service without the `test` environment, so `application.yml`'s throttle defaults hold and the
   secrets come from `OperatorSettings` through a property source with Micronaut's

@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 
 public class LedgerFaults {
 	private final Set<String> unreadableMembers = ConcurrentHashMap.newKeySet();
-	private volatile boolean collecting;
+	private final ThreadLocal<Boolean> collecting = ThreadLocal.withInitial(() -> false);
 	private volatile boolean figuresWithheld;
 	private volatile boolean figuresRefused;
 
@@ -35,20 +35,20 @@ public class LedgerFaults {
 	}
 
 	public <T> T duringCollection(Supplier<T> collection) {
-		collecting = true;
+		collecting.set(true);
 		try {
 			return collection.get();
 		} finally {
-			collecting = false;
+			collecting.remove();
 		}
 	}
 
 	public <T> T guardLedger(Class<T> port, T ledger) {
-		return guard(port, ledger, arguments -> collecting && namesAnUnreadableMember(arguments));
+		return guard(port, ledger, arguments -> collecting.get() && namesAnUnreadableMember(arguments));
 	}
 
 	public <T> T guardFigures(Class<T> port, T figures) {
-		return guard(port, figures, arguments -> collecting ? figuresRefused : figuresWithheld);
+		return guard(port, figures, arguments -> collecting.get() ? figuresRefused : figuresWithheld);
 	}
 
 	private boolean namesAnUnreadableMember(Object[] arguments) {
