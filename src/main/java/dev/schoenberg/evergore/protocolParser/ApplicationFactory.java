@@ -16,6 +16,7 @@ import dev.schoenberg.evergore.protocolParser.application.AdminKey;
 import dev.schoenberg.evergore.protocolParser.application.ChangePassword;
 import dev.schoenberg.evergore.protocolParser.application.ChangeRole;
 import dev.schoenberg.evergore.protocolParser.application.ChooseNewPassword;
+import dev.schoenberg.evergore.protocolParser.application.Collections;
 import dev.schoenberg.evergore.protocolParser.application.CreateAccounts;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataEvaluator;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
@@ -109,6 +110,11 @@ public class ApplicationFactory {
 	public GuildCollection guildCollection(EvergoreDataExtractor dataExtractor, EvergoreDataEvaluator evaluation, CreateAccounts createAccounts, PostCollectionHook hook,
 			LastRunStatus lastRunStatus, Clock clock, Logger logger) {
 		return new GuildCollection(dataExtractor, evaluation, createAccounts, hook, lastRunStatus, clock, logger);
+	}
+
+	@Singleton
+	public Collections collections(GuildCollection collection, Logger logger) {
+		return new Collections(collection, logger);
 	}
 
 	@Singleton

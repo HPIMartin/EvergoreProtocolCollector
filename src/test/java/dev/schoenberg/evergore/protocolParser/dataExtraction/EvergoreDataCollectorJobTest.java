@@ -7,6 +7,7 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
+import dev.schoenberg.evergore.protocolParser.application.Collections;
 import dev.schoenberg.evergore.protocolParser.application.GuildCollection;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 
@@ -20,7 +21,8 @@ class EvergoreDataCollectorJobTest {
 	@Test
 	void restoresInterruptFlagWhenInitialDelayIsInterrupted() {
 		GuildCollection collection = new GuildCollection(null, null, null, () -> {}, null, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
-		EvergoreDataCollectorJob interruptibleJob = new EvergoreDataCollectorJob(new PositiveDelayConfiguration(), collection);
+		Collections collections = new Collections(collection, new LoggerSpy());
+		EvergoreDataCollectorJob interruptibleJob = new EvergoreDataCollectorJob(new PositiveDelayConfiguration(), collections);
 		Thread.currentThread().interrupt();
 		try {
 			assertThatThrownBy(() -> interruptibleJob.scheduleEvery24Hours()).isInstanceOf(RuntimeException.class);
