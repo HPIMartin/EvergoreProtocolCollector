@@ -407,6 +407,11 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - `helper/security/AdminKeyAnnouncement` writes it on the `StartupEvent` through `Logger`;
   - its format, the log line and its lifetime: [build-run-deploy.md](build-run-deploy.md), "The
     console admin key".
+- **Writing the usage records:** `application/UsageRecordQueue` takes each record into a queue and
+  returns, and a thread of its own, from the `ThreadFactory` it is started with, writes what waits
+  through `UsageRecordRepository`:
+  - closing it queues an end mark and waits for that thread, which writes every record queued
+    before the mark.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.
