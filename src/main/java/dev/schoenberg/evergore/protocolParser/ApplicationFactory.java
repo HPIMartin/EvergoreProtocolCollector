@@ -2,7 +2,9 @@ package dev.schoenberg.evergore.protocolParser;
 
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.util.concurrent.ThreadFactory;
 
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 
 import io.micronaut.context.annotation.Bean;
@@ -28,6 +30,10 @@ import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
 import dev.schoenberg.evergore.protocolParser.application.ResetPassword;
 import dev.schoenberg.evergore.protocolParser.application.RestingAccounts;
 import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
+import dev.schoenberg.evergore.protocolParser.application.ThreadEnd;
+import dev.schoenberg.evergore.protocolParser.application.UsageRecordQueue;
+import dev.schoenberg.evergore.protocolParser.application.UsageRecordRepository;
+import dev.schoenberg.evergore.protocolParser.application.UsageWriting;
 import dev.schoenberg.evergore.protocolParser.application.ValidLogins;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.KnownAvatars;
@@ -46,8 +52,10 @@ import dev.schoenberg.evergore.protocolParser.database.account.AccountDatabaseRe
 import dev.schoenberg.evergore.protocolParser.database.bank.BankDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.database.metaInformation.MetaInformationDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.database.storage.StorageDatabaseRepository;
+import dev.schoenberg.evergore.protocolParser.database.usage.UsageRecordDatabaseRepository;
 import dev.schoenberg.evergore.protocolParser.helper.config.Configuration;
 import dev.schoenberg.evergore.protocolParser.helper.config.PasswordHashConfiguration;
+import dev.schoenberg.evergore.protocolParser.helper.config.UsageWritingConfiguration;
 import dev.schoenberg.evergore.protocolParser.helper.fileLoader.AlternativeFileLoaderWrapper;
 import dev.schoenberg.evergore.protocolParser.helper.fileLoader.DiscFileLoader;
 import dev.schoenberg.evergore.protocolParser.helper.fileLoader.ResourceFileLoader;
@@ -58,6 +66,8 @@ import dev.schoenberg.evergore.protocolParser.helper.selenium.FileLoader;
 
 @Factory
 public class ApplicationFactory {
+	private static final String USAGE_WRITER = "usage-writer";
+
 	@Singleton
 	public FileLoader fileLoader(Configuration config, Logger logger) {
 		return new AlternativeFileLoaderWrapper(new DiscFileLoader(config), new ResourceFileLoader(), logger);
@@ -118,6 +128,30 @@ public class ApplicationFactory {
 	@Singleton
 	public AccountDatabaseRepository accountDatabaseRepository(SqliteDatabase database) {
 		return new AccountDatabaseRepository(database);
+	}
+
+	@Singleton
+	public UsageRecordDatabaseRepository usageRecordDatabaseRepository(SqliteDatabase database) {
+		return new UsageRecordDatabaseRepository(database);
+	}
+
+	@Singleton
+	@Named(USAGE_WRITER)
+	public ThreadFactory usageWriterThreads() {
+		return Thread.ofPlatform().name(USAGE_WRITER).factory();
+	}
+
+	@Singleton
+	public ThreadEnd threadEnd() {
+		return Thread::join;
+	}
+
+	@Singleton
+	@Bean(preDestroy = "close")
+	public UsageRecordQueue usageRecordQueue(UsageRecordRepository repository, UsageWritingConfiguration configuration, @Named(USAGE_WRITER) ThreadFactory threads,
+			ThreadEnd threadEnd, Logger logger) {
+		UsageWriting writing = new UsageWriting(configuration.capacity(), configuration.batchSize(), configuration.closeBound());
+		return UsageRecordQueue.start(repository, writing, threads, threadEnd, logger);
 	}
 
 	@Singleton
