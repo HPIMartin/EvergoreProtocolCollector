@@ -70,6 +70,19 @@ class DatabaseMigrationTest {
 	}
 
 	@Test
+	void anEmptyDatabaseTakesAUsageRecordOfEveryListedKindAndRefusesAnyOther() {
+		migrate();
+		List<String> kinds = List
+				.of("LOGIN", "PAGE_LOAD", "LOGOUT", "VIEW_OVERVIEW", "VIEW_BANK", "VIEW_STORAGE", "VIEW_EXPLANATION", "VIEW_ADMIN", "VIEW_PASSWORD_CHANGE", "VIEW_NONE",
+						"LAST_COLUMN_SWITCH", "OVERVIEW_SORT", "LEDGER_SORT", "LEDGER_PAGE", "NOTICE_UNDERSTOOD");
+		kinds.forEach(kind -> execute("INSERT INTO usage_record (account_key, at_epoch_millis, what) VALUES ('aurora', 1, '" + kind + "')"));
+
+		assertThatThrownBy(() -> execute("INSERT INTO usage_record (account_key, at_epoch_millis, what) VALUES ('aurora', 1, 'VIEW_CASTLE')"))
+				.hasMessageContaining("CHECK constraint failed");
+		assertThat(dump("SELECT COUNT(*) FROM usage_record", 1)).containsExactly(kinds.size() + "|");
+	}
+
+	@Test
 	void anEmptyDatabaseRefusesANullInEveryLedgerColumn() {
 		migrate();
 
