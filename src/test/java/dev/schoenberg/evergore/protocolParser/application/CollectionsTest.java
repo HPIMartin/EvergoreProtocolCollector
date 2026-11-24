@@ -109,6 +109,42 @@ class CollectionsTest {
 	}
 
 	@Test
+	void skipsTheDailyCollectionWhileACollectionStartedByHandRuns() {
+		tested.startByHand();
+		clock.passMinutes(30);
+
+		tested.runDaily();
+		background.runHeldTasks();
+
+		assertThat(collection.runs).isEqualTo(1);
+		assertThat(logger.infoMessages()).containsExactly("Collection started by hand.", "Daily collection skipped: a collection is already running.");
+	}
+
+	@Test
+	void doesNotMakeUpASkippedDailyCollectionButRunsTheNextOne() {
+		tested.startByHand();
+		tested.runDaily();
+		background.runHeldTasks();
+		clock.passMinutes(24 * 60);
+
+		tested.runDaily();
+
+		assertThat(collection.runs).isEqualTo(2);
+		assertThat(logger.infoMessages()).containsExactly("Collection started by hand.", "Daily collection skipped: a collection is already running.", "Daily collection started.");
+	}
+
+	@Test
+	void keepsTheStartOfTheRunningCollectionWhenTheDailyCollectionIsSkipped() {
+		tested.startByHand();
+		clock.passMinutes(30);
+
+		tested.runDaily();
+		Optional<Instant> stillRunningSince = tested.runningSince();
+
+		assertThat(stillRunningSince).contains(START);
+	}
+
+	@Test
 	void reportsTheStartOfTheCollectionStartedByHandOnlyWhileItRuns() {
 		tested.startByHand();
 		clock.passMinutes(5);

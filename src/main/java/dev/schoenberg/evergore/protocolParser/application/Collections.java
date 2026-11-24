@@ -22,7 +22,10 @@ public class Collections {
 	}
 
 	public void runDaily() {
-		begin();
+		if (beginUnlessRunning().isPresent()) {
+			logger.info("Daily collection skipped: a collection is already running.");
+			return;
+		}
 		logger.info("Daily collection started.");
 		try {
 			collection.run();
@@ -32,11 +35,9 @@ public class Collections {
 	}
 
 	public StartOutcome startByHand() {
-		synchronized (this) {
-			if (runningSince != null) {
-				return new StartOutcome.AlreadyRunning(runningSince);
-			}
-			begin();
+		Optional<Instant> alreadyRunningSince = beginUnlessRunning();
+		if (alreadyRunningSince.isPresent()) {
+			return new StartOutcome.AlreadyRunning(alreadyRunningSince.get());
 		}
 		logger.info("Collection started by hand.");
 		background.execute(this::runStartedByHand);
@@ -57,8 +58,12 @@ public class Collections {
 		}
 	}
 
-	private synchronized void begin() {
+	private synchronized Optional<Instant> beginUnlessRunning() {
+		if (runningSince != null) {
+			return Optional.of(runningSince);
+		}
 		runningSince = clock.instant();
+		return Optional.empty();
 	}
 
 	private synchronized void end() {
