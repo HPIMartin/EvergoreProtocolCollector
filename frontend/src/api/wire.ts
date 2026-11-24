@@ -14,6 +14,7 @@ import type {
 } from '../domain'
 import { isRole, isTransferType } from '../domain'
 
+import type { CollectionRefusalReason } from './apiErrors.ts'
 import { MalformedResponse } from './apiErrors.ts'
 
 export type WireObject = Record<string, unknown>
@@ -77,6 +78,17 @@ export function accountsFrom(body: unknown): Account[] {
 
 export function issuedPasswordFrom(body: unknown): string {
   return stringFrom(objectFrom(body), 'password')
+}
+
+export function collectionRefusalFrom(body: unknown): CollectionRefusalReason {
+  const reason = stringFrom(objectFrom(body), 'refusal')
+  if (reason !== 'running' && reason !== 'too-early') {
+    throw new MalformedResponse(
+      'The API refused a start with a reason the contract does not name',
+    )
+  }
+
+  return reason
 }
 
 function accountFrom(item: unknown): Account {

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { BankEntry, LedgerVisitor, StorageEntry } from '../domain'
 
 import {
+  CollectionRefused,
   Forbidden,
   MalformedResponse,
   NoSuchPage,
@@ -612,4 +613,58 @@ describe('the HTTP protocol API', () => {
 
     await expect(resetting).rejects.toBeInstanceOf(MalformedResponse)
   })
+
+  it('posts a start to the collection address and takes a 202 as accepted', async () => {
+    const fetched = answering(202, null)
+    const tested = httpProtocolApi(fetched.get, fetched.post)
+
+    await tested.startCollection()
+
+    expect(fetched.posted).toStrictEqual([
+      { url: '/api/v1/admin/collection', body: '' },
+    ])
+  })
+
+  it.each(['running', 'too-early'] as const)(
+    'throws a refusal with the reason %s for a 409 that names it',
+    async (reason) => {
+      const fetched = answering(409, JSON.stringify({ refusal: reason }))
+      const tested = httpProtocolApi(fetched.get, fetched.post)
+
+      const starting = tested.startCollection()
+
+      await expect(starting).rejects.toStrictEqual(
+        new CollectionRefused(reason),
+      )
+    },
+  )
+
+  it.each([
+    ['no reason', '{}'],
+    ['a reason the contract does not name', '{"refusal":"later"}'],
+    ['no JSON', 'busy'],
+  ])('refuses a 409 that holds %s', async (_label, body) => {
+    const fetched = answering(409, body)
+    const tested = httpProtocolApi(fetched.get, fetched.post)
+
+    const starting = tested.startCollection()
+
+    await expect(starting).rejects.toBeInstanceOf(MalformedResponse)
+  })
+
+  it.each([
+    [401, Unauthorized],
+    [403, Forbidden],
+    [500, RequestFailed],
+  ])(
+    'throws a %d on the collection route as its error',
+    async (status, error) => {
+      const fetched = answering(status, null)
+      const tested = httpProtocolApi(fetched.get, fetched.post)
+
+      const starting = tested.startCollection()
+
+      await expect(starting).rejects.toBeInstanceOf(error)
+    },
+  )
 })

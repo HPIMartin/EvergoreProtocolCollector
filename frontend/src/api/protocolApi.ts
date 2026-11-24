@@ -19,6 +19,7 @@ export interface ProtocolApi {
   adminUsage: () => Promise<Usage>
   resetPassword: (name: string) => Promise<string>
   setRole: (name: string, role: Role) => Promise<void>
+  startCollection: () => Promise<void>
   bankEntries: (
     avatar: string,
     window: PageWindow,

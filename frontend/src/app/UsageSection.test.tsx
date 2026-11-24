@@ -79,6 +79,7 @@ function apiAnswering(usage: Usage, asked: string[] = []): ProtocolApi {
     },
     resetPassword: unused,
     setRole: unused,
+    startCollection: unused,
     bankEntries: unused,
     storageEntries: unused,
   }

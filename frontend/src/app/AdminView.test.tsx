@@ -57,6 +57,7 @@ function apiRefusingTheAdminStatus(reason: Error): ProtocolApi {
     adminUsage: refused,
     resetPassword: refused,
     setRole: refused,
+    startCollection: refused,
     bankEntries: refused,
     storageEntries: refused,
   }
@@ -76,6 +77,7 @@ function apiListing(
     adminUsage: () => Promise.resolve(NO_USAGE),
     resetPassword,
     setRole,
+    startCollection: unused,
     bankEntries: unused,
     storageEntries: unused,
   }

@@ -23,3 +23,14 @@ export class NoSuchPage extends Error {
 }
 
 export class MalformedResponse extends Error {}
+
+export type CollectionRefusalReason = 'running' | 'too-early'
+
+export class CollectionRefused extends Error {
+  readonly reason: CollectionRefusalReason
+
+  constructor(reason: CollectionRefusalReason) {
+    super(`The API refused the start of a collection: ${reason}`)
+    this.reason = reason
+  }
+}

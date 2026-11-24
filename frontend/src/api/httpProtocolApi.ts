@@ -2,6 +2,7 @@ import type { Ledger, Page } from '../domain'
 import { entriesOf, unknownAvatar } from '../domain'
 
 import {
+  CollectionRefused,
   Forbidden,
   MalformedResponse,
   NoSuchPage,
@@ -16,6 +17,7 @@ import {
   accountsFrom,
   adminStatusFrom,
   bankPageFrom,
+  collectionRefusalFrom,
   issuedPasswordFrom,
   overviewFrom,
   storagePageFrom,
@@ -29,10 +31,12 @@ const AVATARS = '/api/v1/avatars'
 const ADMIN_STATUS = '/api/v1/admin/status'
 const ADMIN_ACCOUNTS = '/api/v1/admin/accounts'
 const ADMIN_USAGE = '/api/v1/admin/usage'
+const ADMIN_COLLECTION = '/api/v1/admin/collection'
 const UNAUTHORIZED = 401
 const FORBIDDEN = 403
 const BAD_REQUEST = 400
 const NOT_FOUND = 404
+const CONFLICT = 409
 
 export function httpProtocolApi(get: HttpGet, post: HttpPost): ProtocolApi {
   function urlOf(
@@ -63,14 +67,18 @@ export function httpProtocolApi(get: HttpGet, post: HttpPost): ProtocolApi {
     }
   }
 
-  async function bodyOf(response: Response): Promise<unknown> {
-    refuseUnlessOk(response)
-
+  async function jsonOf(response: Response): Promise<unknown> {
     try {
       return await response.json()
     } catch {
       throw new MalformedResponse('The API answered a body that is not JSON')
     }
+  }
+
+  async function bodyOf(response: Response): Promise<unknown> {
+    refuseUnlessOk(response)
+
+    return jsonOf(response)
   }
 
   async function ledgerOf<E>(
@@ -113,6 +121,15 @@ export function httpProtocolApi(get: HttpGet, post: HttpPost): ProtocolApi {
           JSON.stringify({ role }),
         ),
       )
+    },
+    startCollection: async () => {
+      const response = await post(ADMIN_COLLECTION, '')
+      if (response.status === CONFLICT) {
+        throw new CollectionRefused(
+          collectionRefusalFrom(await jsonOf(response)),
+        )
+      }
+      refuseUnlessOk(response)
     },
     bankEntries: (avatar, window, sort = null) =>
       ledgerOf('bank', avatar, window, sort, bankPageFrom),
