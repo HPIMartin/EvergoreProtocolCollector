@@ -65,7 +65,10 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   root: builds the one `SqliteDatabase` and the un-annotated repositories on it, the framework-free
   `application` use-cases, `FileLoader`, no-op hooks) · `EvergoreDataCollectorJob` (`@Scheduled`, waits
   the initial delay, then asks `Collections`, the one owner of the collection that runs, to run the
-  daily collection through `GuildCollection`).
+  daily collection through `GuildCollection`). `Collections` holds, in memory only, the start of the
+  one running collection: a start by hand runs on a background executor and answers `StartOutcome`
+  (`Started`, or `AlreadyRunning` with the start of the run); a failed run by hand is logged as
+  `Collection started by hand failed.` and ends the run.
   The schema belongs to Flyway: `SqliteDatabase.open` runs the versioned migrations in
   `src/main/resources/db/migration` before it opens the connection source, so no caller can reach
   an unmigrated database.

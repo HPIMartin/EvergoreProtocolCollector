@@ -114,12 +114,12 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public Collections collections(GuildCollection collection, Logger logger) {
+	public Collections collections(GuildCollection collection, Clock clock, Logger logger) {
 		return new Collections(collection, Executors.newSingleThreadExecutor(runnable -> {
 			Thread thread = new Thread(runnable, "collection");
 			thread.setDaemon(true);
 			return thread;
-		}), logger);
+		}), clock, logger);
 	}
 
 	@Singleton

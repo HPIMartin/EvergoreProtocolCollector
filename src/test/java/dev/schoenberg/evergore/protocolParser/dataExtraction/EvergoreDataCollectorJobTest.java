@@ -21,7 +21,7 @@ class EvergoreDataCollectorJobTest {
 	@Test
 	void restoresInterruptFlagWhenInitialDelayIsInterrupted() {
 		GuildCollection collection = new GuildCollection(null, null, null, () -> {}, null, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
-		Collections collections = new Collections(collection, Runnable::run, new LoggerSpy());
+		Collections collections = new Collections(collection, Runnable::run, Clock.fixed(FIXED_NOW, ZoneOffset.UTC), new LoggerSpy());
 		EvergoreDataCollectorJob interruptibleJob = new EvergoreDataCollectorJob(new PositiveDelayConfiguration(), collections);
 		Thread.currentThread().interrupt();
 		try {
