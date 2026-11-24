@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser;
 
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 import jakarta.inject.Named;
@@ -114,7 +115,11 @@ public class ApplicationFactory {
 
 	@Singleton
 	public Collections collections(GuildCollection collection, Logger logger) {
-		return new Collections(collection, logger);
+		return new Collections(collection, Executors.newSingleThreadExecutor(runnable -> {
+			Thread thread = new Thread(runnable, "collection");
+			thread.setDaemon(true);
+			return thread;
+		}), logger);
 	}
 
 	@Singleton
