@@ -16,7 +16,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageRecord;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 
-public class UsageRecordQueue implements AutoCloseable {
+public class UsageRecordQueue implements UsageRecording, AutoCloseable {
 	private static final UsageRecord END = new UsageRecord("", Instant.EPOCH, null, Optional.empty());
 
 	private final BlockingQueue<UsageRecord> waiting = new LinkedBlockingQueue<>();
@@ -47,6 +47,7 @@ public class UsageRecordQueue implements AutoCloseable {
 		return queue;
 	}
 
+	@Override
 	public void record(UsageRecord record) {
 		if (!closed && freePlaces.tryAcquire()) {
 			waiting.add(record);

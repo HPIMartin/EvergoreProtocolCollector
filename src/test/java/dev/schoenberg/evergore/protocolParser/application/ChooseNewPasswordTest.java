@@ -35,7 +35,8 @@ class ChooseNewPasswordTest {
 	private final PrefixHasher hasher = new PrefixHasher(trail);
 	private final RecordingLogins logins = new RecordingLogins();
 	private final LoginGenerations generations = new LoginGenerations();
-	private final LoginStart loginStart = new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC));
+	private final RecordedUsage usage = new RecordedUsage();
+	private final LoginStart loginStart = new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC), usage);
 	private final BankRepositoryStub bank = new BankRepositoryStub();
 	private final ChooseNewPassword tested = new ChooseNewPassword(new PasswordCheck(accounts, hasher, HASH_NOBODY_HOLDS), accounts, hasher, new PasswordRule(), loginStart,
 			new RestingAccounts(bank, new StorageRepositoryStub()));
@@ -218,7 +219,7 @@ class ChooseNewPasswordTest {
 		ResetPassword reset = new ResetPassword(accounts, () -> "Reissued-2026!", hasher, generations);
 		AccountRepository resettingAfterTheChoice = new AccountsThatRunAfterTheChoice(accounts, () -> reset.forAccount("Boreas"));
 		ChooseNewPassword overtaken = new ChooseNewPassword(new PasswordCheck(resettingAfterTheChoice, hasher, HASH_NOBODY_HOLDS), resettingAfterTheChoice, hasher,
-				new PasswordRule(), new LoginStart(resettingAfterTheChoice, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC)),
+				new PasswordRule(), new LoginStart(resettingAfterTheChoice, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC), usage),
 				new RestingAccounts(bank, new StorageRepositoryStub()));
 
 		overtaken.with("Boreas", ISSUED, NEW_CHOICE);

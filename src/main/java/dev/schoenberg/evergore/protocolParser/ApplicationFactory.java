@@ -33,6 +33,7 @@ import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
 import dev.schoenberg.evergore.protocolParser.application.ThreadEnd;
 import dev.schoenberg.evergore.protocolParser.application.UsageRecordQueue;
 import dev.schoenberg.evergore.protocolParser.application.UsageRecordRepository;
+import dev.schoenberg.evergore.protocolParser.application.UsageRecording;
 import dev.schoenberg.evergore.protocolParser.application.UsageWriting;
 import dev.schoenberg.evergore.protocolParser.application.ValidLogins;
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
@@ -195,8 +196,8 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public LoginStart loginStart(AccountRepository accounts, SignedLogins signedLogins, LoginGenerations generations, Clock clock) {
-		return new LoginStart(accounts, signedLogins, generations, clock);
+	public LoginStart loginStart(AccountRepository accounts, SignedLogins signedLogins, LoginGenerations generations, Clock clock, UsageRecording usage) {
+		return new LoginStart(accounts, signedLogins, generations, clock, usage);
 	}
 
 	@Singleton

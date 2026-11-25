@@ -20,6 +20,8 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankEntry;
 import dev.schoenberg.evergore.protocolParser.businessLogic.banking.BankRepositoryStub;
 import dev.schoenberg.evergore.protocolParser.businessLogic.base.TransferType;
 import dev.schoenberg.evergore.protocolParser.businessLogic.storage.StorageRepositoryStub;
+import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageKind;
+import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageRecord;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,8 +38,9 @@ class LogInTest {
 	private final LoginGenerations generations = new LoginGenerations();
 	private final AdminKey adminKey = AdminKey.drawn(new FixedRandom());
 	private final BankRepositoryStub bank = new BankRepositoryStub();
-	private final LogIn tested = new LogIn(new PasswordCheck(accounts, hasher, HASH_NOBODY_HOLDS), new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC)),
-			adminKey, new RestingAccounts(bank, new StorageRepositoryStub()));
+	private final RecordedUsage usage = new RecordedUsage();
+	private final LogIn tested = new LogIn(new PasswordCheck(accounts, hasher, HASH_NOBODY_HOLDS),
+			new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC), usage), adminKey, new RestingAccounts(bank, new StorageRepositoryStub()));
 
 	@ParameterizedTest
 	@CsvSource({"admin", "ADMIN", "Admin"})
@@ -277,6 +280,15 @@ class LogInTest {
 		LogInOutcome outcome = tested.with("admin", ADMIN_KEY);
 
 		assertThat(outcome).isEqualTo(new LogInOutcome.LoggedIn("admin-key-login-admin"));
+	}
+
+	@Test
+	void recordsALoginOfTheAccountAtTheMomentOfTheClockUnderItsFoldedName() {
+		accounts.hold(account("Ärger", "Winter-2026!", PasswordState.CHOSEN, Role.MEMBER));
+
+		tested.with("ÄRGER", "Winter-2026!");
+
+		assertThat(usage.records()).containsExactly(new UsageRecord("ärger", NOW, UsageKind.LOGIN, Optional.empty()));
 	}
 
 	private void movedOn(String avatar, int daysBeforeTheNewestMovement) {

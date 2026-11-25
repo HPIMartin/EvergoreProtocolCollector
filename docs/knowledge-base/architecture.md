@@ -439,6 +439,10 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - a record recorded once the close began is counted as lost; one that races the close, queued
     behind the mark, is neither written nor counted, a miss the count of a process that ends
     anyway does not show.
+- **Recording the usage:** each place that records hands a `UsageRecord` to the port
+  `application/UsageRecording`, which the queue implements, so no request waits for its record:
+  - `application/LoginStart` records a login of an account under its folded name (`LoginName`'s
+    key), at the moment of the service's clock.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.
