@@ -15,7 +15,7 @@ import { isTransferType } from '../domain'
 
 import { MalformedResponse } from './apiErrors.ts'
 
-type WireObject = Record<string, unknown>
+export type WireObject = Record<string, unknown>
 
 export function overviewFrom(body: unknown): Overview {
   const envelope = objectFrom(body)
@@ -136,7 +136,7 @@ function roundTripAbstentionFrom(item: unknown): RoundTripAbstention {
   }
 }
 
-function arrayFrom<E>(
+export function arrayFrom<E>(
   source: WireObject,
   field: string,
   itemFrom: (item: unknown) => E,
@@ -289,7 +289,7 @@ function storageEntryFrom(item: unknown): StorageEntry {
   }
 }
 
-function objectFrom(value: unknown): WireObject {
+export function objectFrom(value: unknown): WireObject {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new MalformedResponse(
       'The API answered something that is not an object',
@@ -332,7 +332,7 @@ function booleanFrom(source: WireObject, field: string): boolean {
   return value
 }
 
-function stringFrom(source: WireObject, field: string): string {
+export function stringFrom(source: WireObject, field: string): string {
   const value = source[field]
   if (typeof value !== 'string') {
     throw new MalformedResponse(
@@ -354,7 +354,10 @@ function instantFrom(source: WireObject, field: string): Date {
   return instant
 }
 
-function optionalInstantFrom(source: WireObject, field: string): Date | null {
+export function optionalInstantFrom(
+  source: WireObject,
+  field: string,
+): Date | null {
   return source[field] === null ? null : instantFrom(source, field)
 }
 
