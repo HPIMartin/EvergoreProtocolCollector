@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class LogInTest {
 	private static final Instant NOW = Instant.parse("2026-01-05T10:00:00Z");
-	private static final String HASH_OF_NO_PASSWORD = "hashed:a password nobody holds";
+	private static final String HASH_NOBODY_HOLDS = "hashed:a password nobody holds";
 	private static final String ADMIN_KEY = FixedRandom.ADMIN_KEY_OF_ONES;
 	private static final int DAYS_BEFORE_THE_NEWEST_MOVEMENT = 30;
 
@@ -36,8 +36,8 @@ class LogInTest {
 	private final LoginGenerations generations = new LoginGenerations();
 	private final AdminKey adminKey = AdminKey.drawn(new FixedRandom());
 	private final BankRepositoryStub bank = new BankRepositoryStub();
-	private final LogIn tested = new LogIn(new PasswordCheck(accounts, hasher, HASH_OF_NO_PASSWORD),
-			new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC)), adminKey, new RestingAccounts(bank, new StorageRepositoryStub()));
+	private final LogIn tested = new LogIn(new PasswordCheck(accounts, hasher, HASH_NOBODY_HOLDS), new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC)),
+			adminKey, new RestingAccounts(bank, new StorageRepositoryStub()));
 
 	@ParameterizedTest
 	@CsvSource({"admin", "ADMIN", "Admin"})

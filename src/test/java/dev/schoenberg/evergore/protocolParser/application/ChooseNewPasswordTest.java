@@ -26,9 +26,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ChooseNewPasswordTest {
 	private static final Instant NOW = Instant.parse("2026-01-05T10:00:00Z");
-	private static final String HASH_OF_NO_PASSWORD = "hashed:a password nobody holds";
+	private static final String HASH_NOBODY_HOLDS = "hashed:a password nobody holds";
 	private static final String ISSUED = "Issued-2026!";
-	private static final String NEW_PASSWORD = "Sommer-2026!";
+	private static final String NEW_CHOICE = "Sommer-2026!";
 
 	private final List<String> trail = new ArrayList<>();
 	private final InMemoryAccounts accounts = new InMemoryAccounts(trail);
@@ -37,14 +37,14 @@ class ChooseNewPasswordTest {
 	private final LoginGenerations generations = new LoginGenerations();
 	private final LoginStart loginStart = new LoginStart(accounts, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC));
 	private final BankRepositoryStub bank = new BankRepositoryStub();
-	private final ChooseNewPassword tested = new ChooseNewPassword(new PasswordCheck(accounts, hasher, HASH_OF_NO_PASSWORD), accounts, hasher, new PasswordRule(), loginStart,
+	private final ChooseNewPassword tested = new ChooseNewPassword(new PasswordCheck(accounts, hasher, HASH_NOBODY_HOLDS), accounts, hasher, new PasswordRule(), loginStart,
 			new RestingAccounts(bank, new StorageRepositoryStub()));
 
 	@Test
 	void logsInWithTheNewPasswordAfterTheRightIssuedOne() {
 		accounts.hold(issuedAccount("Boreas"));
 
-		LogInOutcome outcome = tested.with("boreas", ISSUED, NEW_PASSWORD);
+		LogInOutcome outcome = tested.with("boreas", ISSUED, NEW_CHOICE);
 
 		assertThat(outcome).isEqualTo(new LogInOutcome.LoggedIn("login-Boreas-MEMBER-0"));
 	}
@@ -53,13 +53,13 @@ class ChooseNewPasswordTest {
 	void letsTheMemberChooseThePasswordHeldBeforeAResetAgain() {
 		String reissued = "Reissued-2026!";
 		accounts.hold(issuedAccount("Boreas"));
-		tested.with("Boreas", ISSUED, NEW_PASSWORD);
+		tested.with("Boreas", ISSUED, NEW_CHOICE);
 		new ResetPassword(accounts, () -> reissued, hasher, generations).forAccount("Boreas");
 
-		LogInOutcome outcome = tested.with("Boreas", reissued, NEW_PASSWORD);
+		LogInOutcome outcome = tested.with("Boreas", reissued, NEW_CHOICE);
 
 		assertThat(outcome).isEqualTo(new LogInOutcome.LoggedIn("login-Boreas-MEMBER-1"));
-		assertThat(accounts.held("boreas").passwordHash()).isEqualTo("hashed:" + NEW_PASSWORD);
+		assertThat(accounts.held("boreas").passwordHash()).isEqualTo("hashed:" + NEW_CHOICE);
 	}
 
 	@Test
@@ -67,7 +67,7 @@ class ChooseNewPasswordTest {
 		accounts.hold(issuedAccount("Boreas"));
 		hasher.runDuringTheNextVerification(() -> generations.bumpWhileAt("boreas", 0, () -> {}));
 
-		LogInOutcome outcome = tested.with("Boreas", ISSUED, NEW_PASSWORD);
+		LogInOutcome outcome = tested.with("Boreas", ISSUED, NEW_CHOICE);
 
 		assertThat(outcome).isEqualTo(new LogInOutcome.LoggedIn("login-Boreas-MEMBER-0"));
 	}
@@ -76,16 +76,16 @@ class ChooseNewPasswordTest {
 	void replacesTheIssuedPasswordByTheHashOfTheNewOneAsChosen() {
 		accounts.hold(issuedAccount("Boreas"));
 
-		tested.with("Boreas", ISSUED, NEW_PASSWORD);
+		tested.with("Boreas", ISSUED, NEW_CHOICE);
 
-		assertThat(accounts.held("boreas")).isEqualTo(new Account("Boreas", "hashed:" + NEW_PASSWORD, PasswordState.CHOSEN, Role.MEMBER, Optional.of(NOW)));
+		assertThat(accounts.held("boreas")).isEqualTo(new Account("Boreas", "hashed:" + NEW_CHOICE, PasswordState.CHOSEN, Role.MEMBER, Optional.of(NOW)));
 	}
 
 	@Test
 	void hashesTheNewPasswordBeforeItsTransactionsBegin() {
 		accounts.hold(issuedAccount("Boreas"));
 
-		tested.with("Boreas", ISSUED, NEW_PASSWORD);
+		tested.with("Boreas", ISSUED, NEW_CHOICE);
 
 		assertThat(trail).containsExactly("verify", "hash", "replaceIssuedPassword", "recordLastLogin");
 	}
@@ -94,7 +94,7 @@ class ChooseNewPasswordTest {
 	void refusesAWrongIssuedPasswordAsAWrongPassword() {
 		accounts.hold(issuedAccount("Boreas"));
 
-		LogInOutcome outcome = tested.with("Boreas", "Winter-2026!", NEW_PASSWORD);
+		LogInOutcome outcome = tested.with("Boreas", "Winter-2026!", NEW_CHOICE);
 
 		assertThat(outcome).isEqualTo(new LogInOutcome.Refused());
 		assertThat(accounts.held("boreas")).isEqualTo(issuedAccount("Boreas"));
@@ -103,7 +103,7 @@ class ChooseNewPasswordTest {
 
 	@Test
 	void refusesAnUnknownNameAsAWrongPasswordAfterOneCheck() {
-		LogInOutcome outcome = tested.with("Zephyr", ISSUED, NEW_PASSWORD);
+		LogInOutcome outcome = tested.with("Zephyr", ISSUED, NEW_CHOICE);
 
 		assertThat(outcome).isEqualTo(new LogInOutcome.Refused());
 		assertThat(hasher.verifications()).isEqualTo(1);
@@ -114,7 +114,7 @@ class ChooseNewPasswordTest {
 		Account chosen = new Account("Aurora", "hashed:" + ISSUED, PasswordState.CHOSEN, Role.MEMBER, Optional.empty());
 		accounts.hold(chosen);
 
-		LogInOutcome outcome = tested.with("Aurora", ISSUED, NEW_PASSWORD);
+		LogInOutcome outcome = tested.with("Aurora", ISSUED, NEW_CHOICE);
 
 		assertThat(outcome).isEqualTo(new LogInOutcome.Refused());
 		assertThat(accounts.held("aurora")).isEqualTo(chosen);
@@ -174,10 +174,10 @@ class ChooseNewPasswordTest {
 				return hasher.verify(clear, encoded);
 			}
 		};
-		ChooseNewPassword loser = new ChooseNewPassword(new PasswordCheck(accounts, hasher, HASH_OF_NO_PASSWORD), accounts, hasherWhoseHashIsOvertaken, new PasswordRule(),
+		ChooseNewPassword loser = new ChooseNewPassword(new PasswordCheck(accounts, hasher, HASH_NOBODY_HOLDS), accounts, hasherWhoseHashIsOvertaken, new PasswordRule(),
 				loginStart, new RestingAccounts(bank, new StorageRepositoryStub()));
 
-		LogInOutcome outcome = loser.with("Boreas", ISSUED, NEW_PASSWORD);
+		LogInOutcome outcome = loser.with("Boreas", ISSUED, NEW_CHOICE);
 
 		assertThat(outcome).isEqualTo(new LogInOutcome.Refused());
 		assertThat(accounts.held("boreas")).isEqualTo(winner);
@@ -190,7 +190,7 @@ class ChooseNewPasswordTest {
 		ResetPassword reset = new ResetPassword(accounts, () -> "Reissued-2026!", hasher, generations);
 		hasher.runDuringTheNextVerification(() -> reset.forAccount("Boreas"));
 
-		LogInOutcome outcome = tested.with("Boreas", ISSUED, NEW_PASSWORD);
+		LogInOutcome outcome = tested.with("Boreas", ISSUED, NEW_CHOICE);
 
 		assertThat(outcome).isEqualTo(new LogInOutcome.Refused());
 		assertThat(accounts.held("boreas").passwordHash()).isEqualTo("hashed:Reissued-2026!");
@@ -205,7 +205,7 @@ class ChooseNewPasswordTest {
 		bank.seedEntries("Boreas", List.of(new BankEntry(newest.minus(Duration.ofDays(31)), "Boreas", 300, TransferType.ENTNAHME)));
 		bank.seedEntries("Aurora", List.of(new BankEntry(newest, "Aurora", 1000, TransferType.EINLAGERUNG)));
 
-		LogInOutcome outcome = tested.with("Boreas", ISSUED, NEW_PASSWORD);
+		LogInOutcome outcome = tested.with("Boreas", ISSUED, NEW_CHOICE);
 
 		assertThat(outcome).isEqualTo(new LogInOutcome.Resting());
 		assertThat(accounts.held("boreas")).isEqualTo(issuedAccount("Boreas"));
@@ -217,11 +217,11 @@ class ChooseNewPasswordTest {
 		accounts.hold(issuedAccount("Boreas"));
 		ResetPassword reset = new ResetPassword(accounts, () -> "Reissued-2026!", hasher, generations);
 		AccountRepository resettingAfterTheChoice = new AccountsThatRunAfterTheChoice(accounts, () -> reset.forAccount("Boreas"));
-		ChooseNewPassword overtaken = new ChooseNewPassword(new PasswordCheck(resettingAfterTheChoice, hasher, HASH_OF_NO_PASSWORD), resettingAfterTheChoice, hasher,
+		ChooseNewPassword overtaken = new ChooseNewPassword(new PasswordCheck(resettingAfterTheChoice, hasher, HASH_NOBODY_HOLDS), resettingAfterTheChoice, hasher,
 				new PasswordRule(), new LoginStart(resettingAfterTheChoice, logins, generations, Clock.fixed(NOW, ZoneOffset.UTC)),
 				new RestingAccounts(bank, new StorageRepositoryStub()));
 
-		overtaken.with("Boreas", ISSUED, NEW_PASSWORD);
+		overtaken.with("Boreas", ISSUED, NEW_CHOICE);
 
 		assertThat(accounts.held("boreas").lastLogin()).isEmpty();
 	}
