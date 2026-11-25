@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import type { ProtocolApi } from '../api'
 import { Forbidden, RequestFailed, Unauthorized } from '../api'
-import type { Account, AdminStatus } from '../domain'
+import type { Account, AdminStatus, Usage, UsageCounts } from '../domain'
 import { LOAD_FAILED_MESSAGE } from '../ui'
 
 import { AdminView } from './AdminView.tsx'
@@ -28,6 +28,21 @@ const NO_FACTS: AdminStatus = {
   failedAvatarNames: [],
   roundTrips: [],
   roundTripAbstentions: [],
+}
+
+const NOTHING_USED: UsageCounts = {
+  logins: 0,
+  pageLoads: 0,
+  logouts: 0,
+  daysUsed: 0,
+  latestUse: null,
+}
+
+const NO_USAGE: Usage = {
+  lastThirtyDays: { accounts: [], guild: NOTHING_USED, adminKey: NOTHING_USED },
+  allTheTime: { accounts: [], guild: NOTHING_USED, adminKey: NOTHING_USED },
+  recordedSince: null,
+  lostSinceStart: 0,
 }
 
 function apiRefusingTheAdminStatus(reason: Error): ProtocolApi {
@@ -54,7 +69,7 @@ function apiListing(
     overview: unused,
     adminStatus: () => Promise.resolve(NO_FACTS),
     adminAccounts: () => Promise.resolve(accounts),
-    adminUsage: unused,
+    adminUsage: () => Promise.resolve(NO_USAGE),
     resetPassword,
     bankEntries: unused,
     storageEntries: unused,
@@ -137,6 +152,14 @@ describe('AdminView', () => {
       'textContent',
       'Admin',
     )
+  })
+
+  it('shows the usage of the app below the accounts', async () => {
+    await adminViewWith(apiListing([ALRIK]))
+
+    const heading = screen.getByTestId('usage-title').textContent
+
+    expect(heading).toBe('Nutzung')
   })
 
   it('headlines the account list „Konten“', async () => {

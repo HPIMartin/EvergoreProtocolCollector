@@ -1589,7 +1589,11 @@ describe('App', () => {
       roundTripAbstentions: screen.getByTestId('round-trip-abstentions')
         .textContent,
     }).toStrictEqual({
-      askedFor: ['/api/v1/admin/status', '/api/v1/admin/accounts'],
+      askedFor: [
+        '/api/v1/admin/status',
+        '/api/v1/admin/accounts',
+        '/api/v1/admin/usage',
+      ],
       unknownItemNames: 'Unbekannte Items: Unobtainium',
       failedAvatarNames: 'Nicht aktualisierte Avatare: Zwerg',
       roundTrips: 'Verdacht auf Warenkreislauf: Alrik: 100 × Federn',

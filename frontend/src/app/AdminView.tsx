@@ -7,6 +7,7 @@ import { describeAbstention, describeRoundTrip, formatTimestamp } from '../ui'
 import { AccountList } from './AccountList.tsx'
 import { LoadedView } from './LoadedView.tsx'
 import { requestKeyOf } from './requestKey.ts'
+import { UsageSection } from './UsageSection.tsx'
 import { failureOf, useLoad } from './useLoad.ts'
 
 export interface AdminViewProps {
@@ -79,6 +80,7 @@ export function AdminView({ api }: AdminViewProps) {
               names={status.roundTripAbstentions.map(describeAbstention)}
             />
             <AccountList accounts={accounts} reset={reset} />
+            <UsageSection api={api} />
           </>
         )}
       </LoadedView>

@@ -256,7 +256,8 @@ Five top-level folders under `frontend/src/`:
     `account-rests` and `account-last-login`.
   - None is a `p`, so the admin page reader that collects `p[data-testid]` reads the status facts
     only.
-- **`/admin` shows the usage** (`app/UsageSection.tsx`, its own load of `/api/v1/admin/usage`):
+- **`/admin` shows the usage** (`app/UsageSection.tsx`, its own load of `/api/v1/admin/usage`, below
+  the accounts once the status and the accounts have loaded):
   - Under „Nutzung“ a table with „Name“, „Anmeldungen“, „Seite geladen“, „Tage genutzt“,
     „Zuletzt“ and „Abgemeldet“ holds one row per account, in the order the service sent.
   - The footer holds the row „Gilde“ and below it the row „admin“ of the admin key.
