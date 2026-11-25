@@ -6,7 +6,10 @@ import java.util.Optional;
 import jakarta.inject.Singleton;
 
 import io.micronaut.core.async.publisher.Publishers;
+import io.micronaut.http.HttpMethod;
 import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpStatus;
+import io.micronaut.http.MediaType;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.annotation.Filter;
 import io.micronaut.http.filter.HttpServerFilter;
@@ -42,9 +45,16 @@ public class PageLoadRecordingFilter implements HttpServerFilter {
 	@Override
 	public Publisher<MutableHttpResponse<?>> doFilter(HttpRequest<?> request, ServerFilterChain chain) {
 		return Publishers.map(chain.proceed(request), response -> {
-			request.getAttribute(LoginAttribute.NAME, Login.class).ifPresent(this::recordAPageLoadOf);
+			if (isANavigation(request) && response.getStatus() == HttpStatus.OK) {
+				request.getAttribute(LoginAttribute.NAME, Login.class).ifPresent(this::recordAPageLoadOf);
+			}
 			return response;
 		});
+	}
+
+	private boolean isANavigation(HttpRequest<?> request) {
+		return request.getMethod() == HttpMethod.GET && request.accept().contains(MediaType.TEXT_HTML_TYPE)
+				&& spaNavigationPaths.isSpaOwned(canonicalizer.canonicalize(request.getPath()));
 	}
 
 	private void recordAPageLoadOf(Login login) {

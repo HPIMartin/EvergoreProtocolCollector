@@ -448,7 +448,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     and a login of the admin key under `admin`;
   - `application/LogOut` records a logout under the folded name of the login's account;
   - `rest/filter/PageLoadRecordingFilter` records a page load under the folded name of the
-    request's login once its answer is there.
+    request's login once its answer is there: a `GET` that wants HTML, of a path the SPA owns
+    (`SpaNavigationPaths`), answered with 200, the SPA shell of an unknown path included.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.
