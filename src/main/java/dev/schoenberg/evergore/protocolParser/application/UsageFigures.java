@@ -1,12 +1,21 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
+import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.GermanOrder;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
+import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageKind;
 
 public class UsageFigures {
+	private static final int DAYS_OF_THE_RECENT_WINDOW = 30;
+	private static final Instant START_OF_ALL_THE_TIME = Instant.EPOCH;
+
 	private final AccountRepository accounts;
 	private final UsageRecordReader records;
 	private final Clock clock;
@@ -18,13 +27,17 @@ public class UsageFigures {
 	}
 
 	public UsageReport report() {
-		List<AccountUsage> everyAccount = accounts
-				.allAccounts()
-				.stream()
-				.map(Account::avatar)
-				.sorted(GermanOrder.NAMES)
-				.map(name -> new AccountUsage(name, UsageCounts.NONE))
-				.toList();
-		return new UsageReport(new UsageWindow(everyAccount), new UsageWindow(everyAccount));
+		List<Account> everyAccount = accounts.allAccounts().stream().sorted(Comparator.comparing(Account::avatar, GermanOrder.NAMES)).toList();
+		Instant recentStart = clock.instant().atZone(Constants.APP_ZONE).minusDays(DAYS_OF_THE_RECENT_WINDOW).toInstant();
+		return new UsageReport(windowFrom(recentStart, everyAccount), windowFrom(START_OF_ALL_THE_TIME, everyAccount));
+	}
+
+	private UsageWindow windowFrom(Instant start, List<Account> everyAccount) {
+		Map<String, Map<UsageKind, Integer>> counts = records.countsSince(start);
+		return new UsageWindow(everyAccount.stream().map(account -> new AccountUsage(account.avatar(), countsOf(counts.getOrDefault(account.nameKey(), Map.of())))).toList());
+	}
+
+	private static UsageCounts countsOf(Map<UsageKind, Integer> kinds) {
+		return new UsageCounts(kinds.getOrDefault(UsageKind.LOGIN, 0), kinds.getOrDefault(UsageKind.PAGE_LOAD, 0), kinds.getOrDefault(UsageKind.LOGOUT, 0), 0, Optional.empty());
 	}
 }
