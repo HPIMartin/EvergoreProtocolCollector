@@ -256,6 +256,12 @@ Five top-level folders under `frontend/src/`:
     `account-rests` and `account-last-login`.
   - None is a `p`, so the admin page reader that collects `p[data-testid]` reads the status facts
     only.
+- **`/admin` shows the usage** (`app/UsageSection.tsx`, its own load of `/api/v1/admin/usage`):
+  - Under „Nutzung“ a table with „Name“, „Anmeldungen“, „Seite geladen“, „Tage genutzt“,
+    „Zuletzt“ and „Abgemeldet“ holds one row per account, in the order the service sent.
+  - The footer holds the row „Gilde“ and below it the row „admin“ of the admin key.
+  - „noch nie“ stands for no latest use; a latest use is in the page's timestamp format.
+  - Hooks: `usage-title`, `usage`, per row `usage-row`, `usage-guild` and `usage-admin-key`.
 - The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
   malformed escape is "no view", not a crash.
 - **Every view that loads data passes through one of six outcomes** (`useLoad` + `LoadedView`):
