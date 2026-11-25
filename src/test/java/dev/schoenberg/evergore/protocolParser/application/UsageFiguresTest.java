@@ -2,6 +2,7 @@ package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Optional;
@@ -51,6 +52,20 @@ class UsageFiguresTest {
 
 		assertThat(report.lastThirtyDays().accounts()).containsExactly(new AccountUsage("Aurora", new UsageCounts(2, 5, 1, 0, Optional.empty())));
 		assertThat(report.allTheTime().accounts()).containsExactly(new AccountUsage("Aurora", new UsageCounts(3, 7, 2, 0, Optional.empty())));
+	}
+
+	@Test
+	void countsTheBerlinDaysOfEachAccountInEachWindowAndGivesItsLatestUseOverAllTheTimeInBoth() {
+		accounts.hold(account("Aurora"));
+		records.days(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, "aurora", LocalDate.parse("2026-04-01"), LocalDate.parse("2026-04-03"));
+		records.days(ALL_THE_TIME, "aurora", LocalDate.parse("2026-02-01"), LocalDate.parse("2026-04-01"), LocalDate.parse("2026-04-03"));
+		Instant latest = Instant.parse("2026-04-03T19:15:00Z");
+		records.latest("aurora", latest);
+
+		UsageReport report = tested.report();
+
+		assertThat(report.lastThirtyDays().accounts()).containsExactly(new AccountUsage("Aurora", new UsageCounts(0, 0, 0, 2, Optional.of(latest))));
+		assertThat(report.allTheTime().accounts()).containsExactly(new AccountUsage("Aurora", new UsageCounts(0, 0, 0, 3, Optional.of(latest))));
 	}
 
 	private static Account account(String avatar) {

@@ -454,7 +454,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
 - **The usage figures:** `application/UsageFigures` reads the port `UsageRecordReader` and lists
   every account (`AccountRepository`) in German order (`GermanOrder.NAMES`) with its
   `UsageCounts`, for the last 30 days (from the same Berlin time 30 calendar days back) and for
-  all the time (`UsageReport`, `UsageWindow`).
+  all the time (`UsageReport`, `UsageWindow`): the days of use count Berlin days in the window,
+  and the latest use is over all the time in both.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.

@@ -2,10 +2,12 @@ package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.GermanOrder;
@@ -34,10 +36,16 @@ public class UsageFigures {
 
 	private UsageWindow windowFrom(Instant start, List<Account> everyAccount) {
 		Map<String, Map<UsageKind, Integer>> counts = records.countsSince(start);
-		return new UsageWindow(everyAccount.stream().map(account -> new AccountUsage(account.avatar(), countsOf(counts.getOrDefault(account.nameKey(), Map.of())))).toList());
+		Map<String, Set<LocalDate>> days = records.daysUsedSince(start, Constants.APP_ZONE);
+		Map<String, Instant> latest = records.latestUses();
+		return new UsageWindow(everyAccount.stream().map(account -> new AccountUsage(account.avatar(), countsOf(counts, days, latest, account.nameKey()))).toList());
 	}
 
-	private static UsageCounts countsOf(Map<UsageKind, Integer> kinds) {
-		return new UsageCounts(kinds.getOrDefault(UsageKind.LOGIN, 0), kinds.getOrDefault(UsageKind.PAGE_LOAD, 0), kinds.getOrDefault(UsageKind.LOGOUT, 0), 0, Optional.empty());
+	private static UsageCounts countsOf(Map<String, Map<UsageKind, Integer>> counts, Map<String, Set<LocalDate>> days, Map<String, Instant> latest, String key) {
+		return countsOf(counts.getOrDefault(key, Map.of()), days.getOrDefault(key, Set.of()), Optional.ofNullable(latest.get(key)));
+	}
+
+	private static UsageCounts countsOf(Map<UsageKind, Integer> kinds, Set<LocalDate> days, Optional<Instant> latestUse) {
+		return new UsageCounts(kinds.getOrDefault(UsageKind.LOGIN, 0), kinds.getOrDefault(UsageKind.PAGE_LOAD, 0), kinds.getOrDefault(UsageKind.LOGOUT, 0), days.size(), latestUse);
 	}
 }
