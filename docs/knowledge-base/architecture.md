@@ -243,7 +243,7 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
 - **REST** (what each endpoint answers: [build-run-deploy.md](build-run-deploy.md), "HTTP
   endpoints"; the JSON contract: [frontend.md](frontend.md)):
   - `rest/controller/api/*` is the JSON API under `/api/v1`: `AvatarSummariesController`,
-    `AvatarEntriesController`, `AdminStatusController`, `LoginController`;
+    `AvatarEntriesController`, `AdminStatusController`, `AdminUsageController`, `LoginController`;
   - `AdminStatusController` keeps the operator's facts apart from the login-protected member-facing
     overview;
   - `rest/controller/api/wire/*` holds the published contract types plus `TransferTypeWireNames`;

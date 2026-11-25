@@ -24,6 +24,7 @@ import dev.schoenberg.evergore.protocolParser.application.LogIn;
 import dev.schoenberg.evergore.protocolParser.application.LogOut;
 import dev.schoenberg.evergore.protocolParser.application.LoginGenerations;
 import dev.schoenberg.evergore.protocolParser.application.LoginStart;
+import dev.schoenberg.evergore.protocolParser.application.LostUsageRecords;
 import dev.schoenberg.evergore.protocolParser.application.PasswordCheck;
 import dev.schoenberg.evergore.protocolParser.application.PasswordGenerator;
 import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
@@ -31,7 +32,9 @@ import dev.schoenberg.evergore.protocolParser.application.ResetPassword;
 import dev.schoenberg.evergore.protocolParser.application.RestingAccounts;
 import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
 import dev.schoenberg.evergore.protocolParser.application.ThreadEnd;
+import dev.schoenberg.evergore.protocolParser.application.UsageFigures;
 import dev.schoenberg.evergore.protocolParser.application.UsageRecordQueue;
+import dev.schoenberg.evergore.protocolParser.application.UsageRecordReader;
 import dev.schoenberg.evergore.protocolParser.application.UsageRecordRepository;
 import dev.schoenberg.evergore.protocolParser.application.UsageRecording;
 import dev.schoenberg.evergore.protocolParser.application.UsageWriting;
@@ -208,6 +211,11 @@ public class ApplicationFactory {
 	@Singleton
 	public ListAccounts listAccounts(AccountRepository accounts, RestingAccounts restingAccounts) {
 		return new ListAccounts(accounts, restingAccounts);
+	}
+
+	@Singleton
+	public UsageFigures usageFigures(AccountRepository accounts, UsageRecordReader records, LostUsageRecords lost, Clock clock) {
+		return new UsageFigures(accounts, records, lost, clock);
 	}
 
 	@Singleton
