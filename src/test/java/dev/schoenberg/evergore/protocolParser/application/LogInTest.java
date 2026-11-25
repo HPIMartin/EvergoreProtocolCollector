@@ -311,6 +311,20 @@ class LogInTest {
 		assertThat(usage.records()).isEmpty();
 	}
 
+	@Test
+	void recordsNoLoginForAWrongPasswordAnIssuedPasswordOrAnAccountThatRests() {
+		accounts.hold(account("Aurora", "Sommer-2026!", PasswordState.CHOSEN, Role.MEMBER));
+		accounts.hold(account("Boreas", "Issued-2026!", PasswordState.ISSUED, Role.MEMBER));
+		accounts.hold(account("Calix", "Sommer-2026!", PasswordState.CHOSEN, Role.MEMBER));
+		movedOn("Calix", DAYS_BEFORE_THE_NEWEST_MOVEMENT + 1);
+
+		tested.with("Aurora", "Winter-2026!");
+		tested.with("Boreas", "Issued-2026!");
+		tested.with("Calix", "Sommer-2026!");
+
+		assertThat(usage.records()).isEmpty();
+	}
+
 	private void movedOn(String avatar, int daysBeforeTheNewestMovement) {
 		Instant newest = Instant.parse("2026-01-31T12:00:00Z");
 		bank.seedEntries(avatar, List.of(new BankEntry(newest.minus(Duration.ofDays(daysBeforeTheNewestMovement)), avatar, 300, TransferType.ENTNAHME)));
