@@ -58,6 +58,13 @@ class LogInTest {
 	}
 
 	@Test
+	void recordsALoginOfTheAdminKeyUnderTheNameAdminAtTheMomentOfTheClock() {
+		tested.with("ADMIN", ADMIN_KEY);
+
+		assertThat(usage.records()).containsExactly(new UsageRecord("admin", NOW, UsageKind.LOGIN, Optional.empty()));
+	}
+
+	@Test
 	void refusesAnyOtherPasswordUnderTheNameAdmin() {
 		LogInOutcome outcome = tested.with("admin", "Sommer-2026!");
 

@@ -40,6 +40,7 @@ public class LoginStart {
 	}
 
 	public LogInOutcome startForTheAdminKey() {
+		usage.record(new UsageRecord(AdminKey.NAME, clock.instant(), UsageKind.LOGIN, Optional.empty()));
 		return new LogInOutcome.LoggedIn(signedLogins.issueForTheAdminKey(AdminKey.NAME));
 	}
 }
