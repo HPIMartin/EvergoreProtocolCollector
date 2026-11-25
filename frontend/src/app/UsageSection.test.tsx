@@ -9,8 +9,11 @@ import {
 import { afterEach, describe, expect, it } from 'vitest'
 
 import type { ProtocolApi } from '../api'
+import { Forbidden, RequestFailed, Unauthorized } from '../api'
 import type { Usage, UsageCounts, UsageWindow } from '../domain'
+import { LOAD_FAILED_MESSAGE } from '../ui'
 
+import { LoginNavigation } from './LoginRequired.tsx'
 import { UsageSection } from './UsageSection.tsx'
 
 afterEach(cleanup)
@@ -78,6 +81,14 @@ function apiAnswering(usage: Usage, asked: string[] = []): ProtocolApi {
     bankEntries: unused,
     storageEntries: unused,
   }
+}
+
+function apiRefusing(reason: Error): ProtocolApi {
+  return { ...apiAnswering(USAGE), adminUsage: () => Promise.reject(reason) }
+}
+
+function shownMessages(): string[] {
+  return textsOf(screen.queryAllByTestId('status-panel'))
 }
 
 async function usageSectionWith(api: ProtocolApi): Promise<void> {
@@ -179,5 +190,35 @@ describe('the usage section', () => {
       recordedSince: 'Noch keine Aufzeichnung.',
       lost: 'Seit dem Start verloren: 3',
     })
+  })
+
+  it.each([
+    {
+      reason: new Forbidden(),
+      message: 'Diese Seite ist dem Admin vorbehalten.',
+    },
+    { reason: new RequestFailed(500), message: LOAD_FAILED_MESSAGE },
+  ])('answers a refused or failed load with „$message“', async (refusal) => {
+    await usageSectionWith(apiRefusing(refusal.reason))
+    const messages = shownMessages()
+
+    expect(messages).toStrictEqual([refusal.message])
+  })
+
+  it('sends to the login page when the login has ended', async () => {
+    const navigatedTo: string[] = []
+    render(
+      <LoginNavigation.Provider
+        value={(target) => {
+          navigatedTo.push(target)
+        }}
+      >
+        <UsageSection api={apiRefusing(new Unauthorized())} />
+      </LoginNavigation.Provider>,
+    )
+    await act(async () => undefined)
+    const pages = navigatedTo.map((target) => target.split('?')[0])
+
+    expect(pages).toStrictEqual(['/login'])
   })
 })

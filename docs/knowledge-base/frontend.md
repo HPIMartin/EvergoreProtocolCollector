@@ -265,6 +265,8 @@ Five top-level folders under `frontend/src/`:
   - Above the switch stands „Aufgezeichnet seit <Tag>“ or „Noch keine Aufzeichnung.“
     (`usage-recorded-since`), and „Seit dem Start verloren: n“ (`usage-lost`) only while n > 0;
     both are `div`s, not `p`s, for the reason the account hooks are none.
+  - Its load has the six outcomes of every view (below) apart from the page's own, so a refused
+    or failed usage leaves the status and the accounts standing.
   - „noch nie“ stands for no latest use; a latest use is in the page's timestamp format.
   - Hooks: `usage-title`, `usage`, per row `usage-row`, `usage-guild` and `usage-admin-key`.
 - The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
