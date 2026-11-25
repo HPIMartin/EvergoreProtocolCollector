@@ -44,6 +44,15 @@ class PageLoadRecordingFilterTest {
 		assertThat(usage.records()).containsExactly(new UsageRecord("ärger", NOW, UsageKind.PAGE_LOAD, Optional.empty()));
 	}
 
+	@Test
+	void recordsNoPageLoadForANavigationWithoutALogin() {
+		MutableHttpRequest<?> request = HttpRequest.GET("/overview").accept(MediaType.TEXT_HTML_TYPE);
+
+		FirstAnswer.of(tested.doFilter(request, answering(HttpStatus.OK)));
+
+		assertThat(usage.records()).isEmpty();
+	}
+
 	@ParameterizedTest
 	@CsvSource({"GET, /api/v1/overview, text/html", "GET, /assets/index.js, text/html", "GET, /favicon.ico, text/html", "GET, /health, text/html", "GET, /login, text/html",
 			"GET, /overview, application/json", "POST, /overview, text/html"})
