@@ -68,6 +68,30 @@ class UsageFiguresTest {
 		assertThat(report.allTheTime().accounts()).containsExactly(new AccountUsage("Aurora", new UsageCounts(0, 0, 0, 3, Optional.of(latest))));
 	}
 
+	@Test
+	void addsUpTheAccountsInTheGuildRowCountingTheDaysAnyMemberUsedTheAppAndLeavingTheAdminKeyOut() {
+		accounts.hold(account("Aurora"));
+		accounts.hold(account("Boreas"));
+		records.counts(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, "aurora", UsageKind.LOGIN, 2);
+		records.counts(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, "aurora", UsageKind.PAGE_LOAD, 3);
+		records.counts(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, "aurora", UsageKind.LOGOUT, 1);
+		records.counts(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, "boreas", UsageKind.LOGIN, 1);
+		records.counts(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, "boreas", UsageKind.PAGE_LOAD, 4);
+		records.counts(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, AdminKey.NAME, UsageKind.LOGIN, 5);
+		records.days(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, "aurora", LocalDate.parse("2026-04-01"), LocalDate.parse("2026-04-03"));
+		records.days(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, "boreas", LocalDate.parse("2026-04-03"), LocalDate.parse("2026-04-04"));
+		records.days(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, AdminKey.NAME, LocalDate.parse("2026-04-02"));
+		Instant latestOfAMember = Instant.parse("2026-04-04T08:00:00Z");
+		records.latest("aurora", Instant.parse("2026-04-03T19:15:00Z"));
+		records.latest("boreas", latestOfAMember);
+		records.latest(AdminKey.NAME, Instant.parse("2026-04-05T09:00:00Z"));
+
+		UsageReport report = tested.report();
+
+		assertThat(report.lastThirtyDays().guild()).isEqualTo(new UsageCounts(3, 7, 1, 3, Optional.of(latestOfAMember)));
+		assertThat(report.allTheTime().guild()).isEqualTo(new UsageCounts(0, 0, 0, 0, Optional.of(latestOfAMember)));
+	}
+
 	private static Account account(String avatar) {
 		return new Account(avatar, "hashed:" + avatar, PasswordState.CHOSEN, Role.MEMBER, Optional.empty());
 	}

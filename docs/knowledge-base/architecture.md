@@ -455,7 +455,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   every account (`AccountRepository`) in German order (`GermanOrder.NAMES`) with its
   `UsageCounts`, for the last 30 days (from the same Berlin time 30 calendar days back) and for
   all the time (`UsageReport`, `UsageWindow`): the days of use count Berlin days in the window,
-  and the latest use is over all the time in both.
+  and the latest use is over all the time in both; the guild row adds up the accounts, counts
+  the days any member used the app and names their latest use, the admin key in none of it.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.

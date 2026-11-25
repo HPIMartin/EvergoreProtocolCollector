@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.ToIntFunction;
+import java.util.stream.Collectors;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.Constants;
 import dev.schoenberg.evergore.protocolParser.businessLogic.GermanOrder;
@@ -38,7 +40,19 @@ public class UsageFigures {
 		Map<String, Map<UsageKind, Integer>> counts = records.countsSince(start);
 		Map<String, Set<LocalDate>> days = records.daysUsedSince(start, Constants.APP_ZONE);
 		Map<String, Instant> latest = records.latestUses();
-		return new UsageWindow(everyAccount.stream().map(account -> new AccountUsage(account.avatar(), countsOf(counts, days, latest, account.nameKey()))).toList());
+		List<AccountUsage> usage = everyAccount.stream().map(account -> new AccountUsage(account.avatar(), countsOf(counts, days, latest, account.nameKey()))).toList();
+		return new UsageWindow(usage, guildOf(everyAccount, usage, days));
+	}
+
+	private static UsageCounts guildOf(List<Account> everyAccount, List<AccountUsage> usage, Map<String, Set<LocalDate>> days) {
+		List<UsageCounts> members = usage.stream().map(AccountUsage::counts).toList();
+		Set<LocalDate> daysAnyMemberUsedTheApp = everyAccount.stream().flatMap(account -> days.getOrDefault(account.nameKey(), Set.of()).stream()).collect(Collectors.toSet());
+		return new UsageCounts(sum(members, UsageCounts::logins), sum(members, UsageCounts::pageLoads), sum(members, UsageCounts::logouts), daysAnyMemberUsedTheApp.size(),
+				members.stream().map(UsageCounts::latestUse).flatMap(Optional::stream).max(Comparator.naturalOrder()));
+	}
+
+	private static int sum(List<UsageCounts> members, ToIntFunction<UsageCounts> figure) {
+		return members.stream().mapToInt(figure).sum();
 	}
 
 	private static UsageCounts countsOf(Map<String, Map<UsageKind, Integer>> counts, Map<String, Set<LocalDate>> days, Map<String, Instant> latest, String key) {
