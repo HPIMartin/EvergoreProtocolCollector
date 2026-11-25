@@ -14,18 +14,20 @@ import dev.schoenberg.evergore.protocolParser.acceptance.browser.ShownAccount;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class AdminSteps {
-	private static final String ADMIN = "/admin";
 	private static final String NAME_SEPARATOR = ", ";
+	private static final String USAGE_SETTLED = "(() => { const title = document.querySelector('[data-testid=usage-title]'); if (title === null) { return true }"
+			+ " const section = title.parentElement; if (section.querySelector('[data-testid=usage]') !== null) { return true }"
+			+ " const panel = section.querySelector('[data-testid=status-panel]'); return panel !== null && panel.textContent.trim() !== 'Wird geladen…' })()";
 
-	private final MemberBrowser browser;
+	private final AdminsBrowser admins;
 
-	public AdminSteps(MemberBrowser browser) {
-		this.browser = browser;
+	public AdminSteps(AdminsBrowser admins) {
+		this.admins = admins;
 	}
 
 	@When("the admin opens the admin page")
 	public void theAdminOpensTheAdminPage() {
-		browser.opening().openAsTheAdmin(ADMIN);
+		admins.openTheAdminPage();
 	}
 
 	@Then("the admin page reads {string}")
@@ -71,6 +73,8 @@ public class AdminSteps {
 	}
 
 	private AdminPage adminPage() {
+		MemberBrowser browser = admins.current();
+		browser.awaitUntil(USAGE_SETTLED);
 		return browser.read("read-admin.js", AdminPage.class);
 	}
 }

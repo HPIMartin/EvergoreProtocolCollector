@@ -1,4 +1,3 @@
-@wip
 Feature: Who uses the app, and when
   The guild leadership wants to see how the guild uses the app before it decides what to build
   next. The service records every login, every page of the dashboard a browser loads and every
@@ -12,8 +11,8 @@ Feature: Who uses the app, and when
   role open, shows under "Nutzung" one row per account, a resting one included, in the order "The
   health report: what the last recompute found" gives every name list there, with how often it
   logged in, loaded a page and logged out, on how many days it used the app, each of a login, a
-  loaded page, a logout and a view or option of "What the guild uses" alone making a day while
-  nothing else does, and the moment it last did so. Above the table it reads "Aufgezeichnet seit"
+  loaded page and a logout alone making a day while nothing else does, and the moment it last did
+  so. Above the table it reads "Aufgezeichnet seit"
   and the day of the oldest record it holds, the admin key's included. The days and the time the
   table covers are in "The time the usage covers". The guild row below the accounts adds up their
   counts, an account with the admin role like every other, counts the days on which any member

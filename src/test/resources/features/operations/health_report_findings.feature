@@ -57,7 +57,9 @@ Feature: The health report: what the last recompute found
 
   Rule: Every name list on the admin page and in the health report is in German alphabetical order
     "Ärger" comes before "Zorn", as in the overview. The admin page's list of accounts ("The admin
-    page lists the accounts") follows the same order.
+    page lists the accounts") and its usage rows ("Who uses the app, and when") follow the same
+    order; no member has used the app here, and the admin looks with the admin key, whose use is no
+    member's.
     The admin page shows no list of items worth nothing.
 
     Scenario Outline: <surface> lists <list> in German alphabetical order
@@ -96,7 +98,6 @@ Feature: The health report: what the last recompute found
         | the health report | the operator asks the service for its health | the pairs not judgeable                          | "Ärger: Kristallat", "Zorn: Kristallat"               |
         | the health report | the operator asks the service for its health | the items worth nothing                          | "Übungsstück-Ätherrüstung", "Übungsstück-Wollrüstung" |
 
-      @wip
       Examples: the usage of each account ("Who uses the app, and when")
         | surface        | reading                        | list                         | order                                      |
         | the admin page | the admin opens the admin page | the accounts under "Nutzung" | "Ähre", "Ärger", "Boreas", "Zeder", "Zorn" |

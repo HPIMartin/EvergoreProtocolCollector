@@ -41,7 +41,6 @@ Feature: Who the service lets in
         | the descriptions of the service's interface for programs (Swagger, ReDoc and RapiDoc) | refuses | refused for lacking a login |
         | an interface address the service does not serve                                       | refuses | refused for lacking a login |
 
-      @wip
       Examples:
         | what                      | answer  | result                      |
         | the guild's usage figures | refuses | refused for lacking a login |

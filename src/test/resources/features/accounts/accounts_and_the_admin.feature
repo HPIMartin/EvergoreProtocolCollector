@@ -113,7 +113,6 @@ Feature: Accounts for the members, and the admin
         | the list of accounts                  |
         | the reset of the password of "Boreas" |
 
-      @wip
       Examples:
         | what                                  |
         | the guild's usage figures             |

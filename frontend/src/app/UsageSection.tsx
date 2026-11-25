@@ -30,15 +30,15 @@ export function UsageSection({ api }: UsageSectionProps) {
       <LoadedView load={load}>
         {(usage) => (
           <>
-            <div data-testid="usage-recorded-since">
+            <p data-testid="usage-recorded-since">
               {usage.recordedSince === null
                 ? 'Noch keine Aufzeichnung.'
                 : `Aufgezeichnet seit ${germanDayOf(usage.recordedSince)}`}
-            </div>
+            </p>
             {usage.lostSinceStart > 0 && (
-              <div data-testid="usage-lost">
+              <p data-testid="usage-lost">
                 {`Seit dem Start verloren: ${formatCount(usage.lostSinceStart)}`}
-              </div>
+              </p>
             )}
             <OptionSwitch
               legend="Zeitraum"

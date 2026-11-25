@@ -2,7 +2,8 @@ Feature: The admin page lists the accounts
   The admin page lists every account, in German alphabetical order like every name list there
   ("The health report: what the last recompute found"), with "ruht" beside a resting one and the
   moment of its latest login, or "noch nie".
-  A login counts from the moment the service lets the member in: a wrong password does not count,
+  Every login the service lets in counts, each on its own, as the latest login and under
+  "Anmeldungen" ("Who uses the app, and when"): a wrong password does not count,
   nor a password a reset issued until the member has chosen a new one in its place, nor a login the
   service refuses because the account rests. A reset keeps the latest login shown. Only the admin
   role sees the list ("Accounts for the members, and the admin"); a reset is in "Resetting a
@@ -31,19 +32,20 @@ Feature: The admin page lists the accounts
         | Boreas |      | noch nie         |
         | Calix  | ruht | noch nie         |
 
-    Scenario Outline: After <what>, the admin page gives <avatar>'s latest login as <shown>
+    Scenario Outline: After <what>, the admin page gives <avatar>'s latest login as <shown> and counts <logins> under "Anmeldungen"
       Given the admin has reset the password of "<avatar>"
       And <what>
       When the admin opens the admin page
       Then the admin page gives "<shown>" as the latest login of "<avatar>"
+      And the admin page gives "<logins>" as <avatar>'s "Anmeldungen" over the last 30 days
 
       Examples:
-        | avatar | what                                                                                                                      | shown            |
-        | Boreas | a member has tried to log in as "Boreas" with a wrong password                                                            | noch nie         |
-        | Boreas | a member has entered the name "Boreas" and the password the reset issued on the login page                                | noch nie         |
-        | Boreas | Boreas has chosen "Winter-2026!" in place of the password the reset issued                                                | 31.12.2026 12:00 |
-        | Boreas | Boreas has chosen "Winter-2026!" in place of the password the reset issued and logged in with it again 2 hours later      | 31.12.2026 14:00 |
-        | Calix  | a member has entered the name "Calix" and the password the reset issued on the login page and been told the account rests | noch nie         |
+        | avatar | what                                                                                                                      | shown            | logins |
+        | Boreas | a member has tried to log in as "Boreas" with a wrong password                                                            | noch nie         | 0      |
+        | Boreas | a member has entered the name "Boreas" and the password the reset issued on the login page                                | noch nie         | 0      |
+        | Boreas | Boreas has chosen "Winter-2026!" in place of the password the reset issued                                                | 31.12.2026 12:00 | 1      |
+        | Boreas | Boreas has chosen "Winter-2026!" in place of the password the reset issued and logged in with it again 2 hours later      | 31.12.2026 14:00 | 2      |
+        | Calix  | a member has entered the name "Calix" and the password the reset issued on the login page and been told the account rests | noch nie         | 0      |
 
     Scenario: A reset keeps the latest login shown
       "Boreas has chosen the password" says only which password the account holds, as "Accounts

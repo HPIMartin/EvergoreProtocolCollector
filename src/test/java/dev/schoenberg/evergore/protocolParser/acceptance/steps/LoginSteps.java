@@ -13,6 +13,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.UsageActors;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class LoginSteps {
 	private static final String CHOOSING_ANEW_HEADING = "Neues Passwort wählen";
 	private static final String ONE_MINUTE_LESS_THAN = "one minute less than ";
+	private static final String MINUTES = " minutes";
 	private static final String WRONG_GUESS = "Wrong-Password-1!";
 	private static final String RESTING_MESSAGE = "Dein Konto ruht, bis das Protokoll wieder einen Vorgang von dir zeigt.";
 	private static final String LOGIN_PAGE = "/login";
@@ -31,11 +33,13 @@ public class LoginSteps {
 	private final ScenarioTime time;
 	private final RunningService service;
 	private final ServiceLog log;
+	private final UsageActors actors;
 	private Instant loggedInAt;
 	private Instant firstRequest;
 	private String nameEntered;
 
-	public LoginSteps(MemberBrowser browser, SecondBrowser secondBrowser, Accounts accounts, ScenarioTime time, RunningService service, ServiceLog log) {
+	public LoginSteps(MemberBrowser browser, SecondBrowser secondBrowser, Accounts accounts, ScenarioTime time, RunningService service, ServiceLog log, UsageActors actors) {
+		this.actors = actors;
 		this.service = service;
 		this.log = log;
 		this.time = time;
@@ -44,8 +48,12 @@ public class LoginSteps {
 		this.accounts = accounts;
 	}
 
-	@ParameterType("\\d+ days?|one minute less than \\d+ days")
+	@ParameterType("\\d+ days?|one minute less than \\d+ days|\\d+ hours and \\d+ minutes")
 	public Duration loginAge(String age) {
+		if (age.endsWith(MINUTES)) {
+			String[] words = age.split(" ");
+			return Duration.ofHours(Long.parseLong(words[0])).plusMinutes(Long.parseLong(words[3]));
+		}
 		if (age.startsWith(ONE_MINUTE_LESS_THAN)) {
 			return Duration.ofDays(Long.parseLong(age.substring(ONE_MINUTE_LESS_THAN.length()).split(" ")[0])).minusMinutes(1);
 		}
@@ -109,6 +117,7 @@ public class LoginSteps {
 	@Given("the admin has logged in as {string} with the password {string}")
 	public void theAdminHasLoggedInWithThePassword(String name, String password) {
 		logIn(name, password);
+		actors.adminLoggedIn(loggedInAt, browser);
 	}
 
 	@Given("a member has logged in as {string} with the password {string} on two browsers")
@@ -181,5 +190,6 @@ public class LoginSteps {
 		nameEntered = name;
 		loggedInAt = time.now();
 		browser.loginForm().logIn(name, password);
+		actors.memberLoggedIn(name, loggedInAt, browser);
 	}
 }

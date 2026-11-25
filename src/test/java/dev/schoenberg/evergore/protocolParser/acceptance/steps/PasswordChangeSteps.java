@@ -10,6 +10,8 @@ import dev.schoenberg.evergore.protocolParser.acceptance.browser.SecondBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.Answer;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.LoginRequests;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.UsageActors;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ViewedBrowser;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
@@ -23,8 +25,13 @@ public class PasswordChangeSteps {
 	private final Accounts accounts;
 	private final LoginRequests logins;
 	private final ViewedBrowser viewed;
+	private final UsageActors actors;
+	private final ScenarioTime time;
 
-	public PasswordChangeSteps(MemberBrowser browser, SecondBrowser secondBrowser, Accounts accounts, LoginRequests logins, ViewedBrowser viewed) {
+	public PasswordChangeSteps(MemberBrowser browser, SecondBrowser secondBrowser, Accounts accounts, LoginRequests logins, ViewedBrowser viewed, UsageActors actors,
+			ScenarioTime time) {
+		this.actors = actors;
+		this.time = time;
 		this.viewed = viewed;
 		this.browser = browser;
 		this.secondBrowser = secondBrowser;
@@ -75,6 +82,7 @@ public class PasswordChangeSteps {
 	@Given("another member has logged in as {string} with the password {string}")
 	public void anotherMemberHasLoggedIn(String name, String password) {
 		secondBrowser.browser().loginForm().logIn(name, password);
+		actors.memberLoggedIn(name, time.now(), secondBrowser.browser());
 	}
 
 	@When("the other member opens the overview")

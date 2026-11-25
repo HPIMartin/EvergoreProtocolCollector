@@ -6,7 +6,9 @@ Feature: Access with a login
   explanation page shows none of the guild's figures but needs a login as well: the valuation rules
   it explains are meant for the members. The frame's logout is a button, not a link. How the login
   itself works is in "Logging in and out". A ledger shows 100 movements a page. Where another
-  feature's member or admin opens a page, they do so with a login of an account that does not rest.
+  feature's member opens a page, they do so with a login of an account that does not rest; where a
+  feature names no login of the admin, the admin opens the page with the admin key, logging in at
+  that moment, and where it names one, the admin opens the page with that login.
 
   Background:
     Given Aurora has 150 movements in the guild bank ledger

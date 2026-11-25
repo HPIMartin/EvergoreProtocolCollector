@@ -9,7 +9,9 @@ import io.cucumber.java.en.When;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.Answer;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.LoginRequests;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.UsageActors;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,9 +25,13 @@ public class AdminKeySteps {
 	private final ServiceLog log;
 	private final LoginRequests logins;
 	private final MemberBrowser browser;
+	private final UsageActors actors;
+	private final ScenarioTime time;
 	private String keyNamedBefore;
 
-	public AdminKeySteps(ServiceLog log, LoginRequests logins, MemberBrowser browser) {
+	public AdminKeySteps(ServiceLog log, LoginRequests logins, MemberBrowser browser, UsageActors actors, ScenarioTime time) {
+		this.actors = actors;
+		this.time = time;
 		this.log = log;
 		this.logins = logins;
 		this.browser = browser;
@@ -49,6 +55,7 @@ public class AdminKeySteps {
 	@Given("the admin has logged in as {string} with the admin key the service's log names")
 	public void theAdminHasLoggedInWithTheAdminKey(String name) {
 		browser.loginForm().logIn(name, log.adminKeyNamed());
+		actors.adminLoggedIn(time.now(), browser);
 	}
 
 	@When("the admin logs in as {string} with the admin key the service's log names")

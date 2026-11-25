@@ -1,6 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.acceptance.steps;
 
 import java.net.URLEncoder;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +25,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.HealthReport;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.OperatorSettings;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.rest.filter.AcceptanceClientIp;
@@ -56,13 +59,16 @@ public class ClientLoginSteps {
 	private final RunningService service;
 	private final HealthReport health;
 	private final ServiceLog log;
+	private final ScenarioTime time;
 	private Answer earlierLoginAnswer;
 	private String issuedLogin;
 	private String copiedLogin;
 	private String returnTarget;
+	private Instant clientLoggedInAt;
 
 	public ClientLoginSteps(LoginRequests logins, ServiceRequests requests, Accounts accounts, ClientAnswer received, OperatorSettings settings, RunningService service,
-			HealthReport health, ServiceLog log) {
+			ScenarioTime time, HealthReport health, ServiceLog log) {
+		this.time = time;
 		this.log = log;
 		this.health = health;
 		this.logins = logins;
@@ -80,7 +86,8 @@ public class ClientLoginSteps {
 
 	@ParameterType("the login page|a file the login page loads|the overview's figures|the movements of the bank ledger of \"Aurora\"|the admin's status figures|a file the dashboard loads"
 			+ "|the change of a password with the current one|the descriptions of the service's interface for programs \\(Swagger, ReDoc and RapiDoc\\)"
-			+ "|an interface address the service does not serve|the list of accounts|the reset of the password of \"[^\"]+\"")
+			+ "|an interface address the service does not serve|the list of accounts|the reset of the password of \"[^\"]+\""
+			+ "|the name it is logged in under|the health check|the guild's usage figures")
 	public List<Asking> askedFor(String phrase) {
 		return switch (phrase) {
 			case "the login page" -> List.of(Asking.get("/login"));
@@ -92,6 +99,9 @@ public class ClientLoginSteps {
 			case "the change of a password with the current one" -> List.of(Asking.get("/api/v1/password"));
 			case "an interface address the service does not serve" -> List.of(Asking.get("/api/v1/unknown"));
 			case "the list of accounts" -> List.of(Asking.get(ACCOUNTS));
+			case "the name it is logged in under" -> List.of(Asking.get("/api/v1/me"));
+			case "the health check" -> List.of(Asking.get("/health"));
+			case "the guild's usage figures" -> List.of(Asking.get("/api/v1/admin/usage"));
 			default -> phrase.startsWith(RESET_OF) ? List.of(Asking.post(LoginRequests.resetAddressOf(nameIn(phrase)))) : swaggerAddresses();
 		};
 	}
@@ -228,6 +238,7 @@ public class ClientLoginSteps {
 
 		assertThat(answer.status()).as("the login: " + answer.body()).isEqualTo(SERVED);
 		issuedLogin = LoginRequests.loginValueIn(answer);
+		clientLoggedInAt = time.now();
 	}
 
 	@Given("a client has logged in as {string} with the admin key the service's log names")
@@ -368,6 +379,12 @@ public class ClientLoginSteps {
 	@Then("the operator finds the login cleared from the client's browser")
 	public void theOperatorFindsTheLoginClearedFromTheClientsBrowser() {
 		assertThat(setCookie()).startsWith(LoginRequests.SESSION_COOKIE + "=;").contains("Max-Age=0");
+	}
+
+	@When("the client asks for {askedFor} with its login {int} day(s) after logging in")
+	public void theClientAsksForWithItsLoginAfterLoggingIn(List<Asking> askings, int days) {
+		time.setTo(clientLoggedInAt.plus(Duration.ofDays(days)));
+		theClientAsksForWithItsLogin(askings);
 	}
 
 	@When("the client asks for {askedFor} with its login")

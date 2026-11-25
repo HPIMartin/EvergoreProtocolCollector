@@ -1,7 +1,5 @@
-@wip
 Feature: The time the usage covers
-  The usage on the admin page ("Who uses the app, and when", "What the guild uses") counts calendar
-  days in Berlin. The admin page opens on "Letzte 30 Tage", which runs back 30 calendar days in
+  The usage on the admin page ("Who uses the app, and when") counts calendar days in Berlin. The admin page opens on "Letzte 30 Tage", which runs back 30 calendar days in
   Berlin from the moment the admin looks, to the same time of day, and switches to "Alles", all the
   time recorded, and back; every figure follows the time chosen, but "Zuletzt" names the latest use
   over all the time recorded, and "Aufgezeichnet seit" names its day whichever time is chosen. The

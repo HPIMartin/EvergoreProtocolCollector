@@ -354,9 +354,16 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - The admin reads through the same `MemberBrowser`.
   - `read-admin.js` also returns the account list's rows (`ShownAccount`: name, `ruht` mark, latest
     login, the password a reset issued).
-  - `read-admin.js` also returns the reset question the page asks.
-  - `the admin opens the admin page` logs in with the admin key every time, since a member's login
-    in the same browser replaced the admin's.
+  - `read-admin.js` also returns the reset question the page asks; reading waits until the usage
+    section has its table or its outcome.
+  - `read-usage.js` returns the usage table (`UsageTable`): the window chosen, the column heads, and
+    each row with its kind (account, guild, admin key) and cells.
+  - `the admin opens the admin page` reuses the login the admin holds (`AdminsBrowser`, from
+    `UsageActors`: the admin key's, or an admin account's on another browser), so a usage count
+    sees no extra login; without one it logs in with the admin key, and a member's login in the
+    same browser drops the admin's.
+  - `UsageActors` keeps each actor's login moment and browser for the steps that act "N days
+    after logging in"; a member who logs in "after the admin" does so on the second browser.
   - No separate pool exists per actor (handbook §5).
 - **`MemberBrowser` hands out its parts** through accessors.
   - `opening()`: `DashboardOpening`, which opens a page logged in with the admin key from the

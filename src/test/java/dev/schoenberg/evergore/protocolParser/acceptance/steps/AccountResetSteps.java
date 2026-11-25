@@ -13,7 +13,9 @@ import dev.schoenberg.evergore.protocolParser.acceptance.browser.MemberBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.SecondBrowser;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.ShownAccount;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.Accounts;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
+import dev.schoenberg.evergore.protocolParser.acceptance.world.UsageActors;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ViewedBrowser;
 
 import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVERVIEW;
@@ -28,8 +30,12 @@ public class AccountResetSteps {
 	private final Accounts accounts;
 	private final ViewedBrowser viewed;
 	private final ServiceLog log;
+	private final UsageActors actors;
+	private final ScenarioTime time;
 
-	public AccountResetSteps(MemberBrowser browser, SecondBrowser secondBrowser, Accounts accounts, ViewedBrowser viewed, ServiceLog log) {
+	public AccountResetSteps(MemberBrowser browser, SecondBrowser secondBrowser, Accounts accounts, ViewedBrowser viewed, ServiceLog log, UsageActors actors, ScenarioTime time) {
+		this.actors = actors;
+		this.time = time;
 		this.browser = browser;
 		this.secondBrowser = secondBrowser;
 		this.accounts = accounts;
@@ -86,6 +92,7 @@ public class AccountResetSteps {
 	@Given("the admin has logged in as {string} with the password {string} on another browser")
 	public void theAdminHasLoggedInOnAnotherBrowser(String name, String password) {
 		secondBrowser.browser().loginForm().logIn(name, password);
+		actors.adminLoggedIn(time.now(), secondBrowser.browser());
 	}
 
 	@When("the admin logs in as {string} with the admin key on another browser and opens the admin page there")
