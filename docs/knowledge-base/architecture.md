@@ -443,7 +443,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   `application/UsageRecording`, which the queue implements, so no request waits for its record:
   - `application/LoginStart` records a login of an account under its folded name (`LoginName`'s
     key), at the moment of the service's clock, unless a change of the password overtook its check,
-    and a login of the admin key under `admin`.
+    and a login of the admin key under `admin`;
+  - `application/LogOut` records a logout under the folded name of the login's account.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.

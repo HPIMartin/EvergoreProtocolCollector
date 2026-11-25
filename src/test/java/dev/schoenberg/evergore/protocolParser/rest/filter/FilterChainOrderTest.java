@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.application.LogOut;
 import dev.schoenberg.evergore.protocolParser.application.LoginGenerations;
+import dev.schoenberg.evergore.protocolParser.application.RecordedUsage;
 import dev.schoenberg.evergore.protocolParser.application.ValidLogins;
 import dev.schoenberg.evergore.protocolParser.helper.config.RateLimitConfiguration;
 import dev.schoenberg.evergore.protocolParser.helper.config.SecurityConfiguration;
@@ -42,7 +43,7 @@ class FilterChainOrderTest {
 	}
 
 	private LoginReadingFilter loginReadingFilter() {
-		return new LoginReadingFilter(new ValidLogins(new NoSignedLogins(), new LoginGenerations(), new LogOut(Clock.systemUTC())));
+		return new LoginReadingFilter(new ValidLogins(new NoSignedLogins(), new LoginGenerations(), new LogOut(Clock.systemUTC(), new RecordedUsage())));
 	}
 
 	private RateLimitFilter rateLimitFilter() {

@@ -5,12 +5,15 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginSource;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Role;
+import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageKind;
+import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageRecord;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -18,7 +21,8 @@ class LogOutTest {
 	private static final Instant MADE = Instant.parse("2026-01-05T10:00:00Z");
 
 	private final PassingClock clock = new PassingClock(MADE);
-	private final LogOut tested = new LogOut(clock);
+	private final RecordedUsage usage = new RecordedUsage();
+	private final LogOut tested = new LogOut(clock, usage);
 
 	@Test
 	void endsTheLoginThatLoggedOut() {
@@ -66,6 +70,15 @@ class LogOutTest {
 		tested.of(loginWith("second", clock.instant()));
 
 		assertThat(tested.hasEnded(first)).isTrue();
+	}
+
+	@Test
+	void recordsALogoutOfTheAccountAtTheMomentOfTheClockUnderItsFoldedName() {
+		clock.passes(Duration.ofMinutes(5));
+
+		tested.of(new Login("Ärger", Role.MEMBER, 0, LoginSource.ACCOUNT, "first", MADE, MADE.plus(Login.LIFETIME)));
+
+		assertThat(usage.records()).containsExactly(new UsageRecord("ärger", MADE.plus(Duration.ofMinutes(5)), UsageKind.LOGOUT, Optional.empty()));
 	}
 
 	private static Login loginWith(String id, Instant madeAt) {

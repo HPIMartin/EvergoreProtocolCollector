@@ -181,8 +181,8 @@ public class ApplicationFactory {
 	}
 
 	@Singleton
-	public LogOut logOut(Clock clock) {
-		return new LogOut(clock);
+	public LogOut logOut(Clock clock, UsageRecording usage) {
+		return new LogOut(clock, usage);
 	}
 
 	@Singleton

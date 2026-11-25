@@ -17,6 +17,7 @@ import org.reactivestreams.Publisher;
 
 import dev.schoenberg.evergore.protocolParser.application.LogOut;
 import dev.schoenberg.evergore.protocolParser.application.LoginGenerations;
+import dev.schoenberg.evergore.protocolParser.application.RecordedUsage;
 import dev.schoenberg.evergore.protocolParser.application.SignedLogins;
 import dev.schoenberg.evergore.protocolParser.application.ValidLogins;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Login;
@@ -38,7 +39,7 @@ class LoginReadingFilterTest {
 		return passedThrough;
 	};
 	private final LoginGenerations generations = new LoginGenerations();
-	private final LoginReadingFilter tested = new LoginReadingFilter(new ValidLogins(new SignsOnlyOneValue(), generations, new LogOut(Clock.systemUTC())));
+	private final LoginReadingFilter tested = new LoginReadingFilter(new ValidLogins(new SignsOnlyOneValue(), generations, new LogOut(Clock.systemUTC(), new RecordedUsage())));
 
 	@Test
 	void putsTheLoginOfTheSessionCookieOnTheRequest() {

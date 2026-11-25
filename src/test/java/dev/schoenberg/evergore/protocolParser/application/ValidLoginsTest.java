@@ -19,7 +19,7 @@ class ValidLoginsTest {
 
 	private final RecordingLogins signed = new RecordingLogins();
 	private final LoginGenerations generations = new LoginGenerations();
-	private final LogOut logOut = new LogOut(Clock.fixed(MADE, ZoneOffset.UTC));
+	private final LogOut logOut = new LogOut(Clock.fixed(MADE, ZoneOffset.UTC), new RecordedUsage());
 	private final ValidLogins tested = new ValidLogins(signed, generations, logOut);
 
 	@Test
