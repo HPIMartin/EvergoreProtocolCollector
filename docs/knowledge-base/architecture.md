@@ -260,6 +260,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - the filter `AccessFilter` lets a public path or a login through;
   - the filter `LoginBodyLimitFilter` answers 413 to a body the login's paths do not take (what
     it refuses: [build-run-deploy.md](build-run-deploy.md), "The login API");
+  - the filter `PageLoadRecordingFilter`, the innermost, records a page load from the answer
+    (below, "Recording the usage");
   - `ApplicationExceptionHandler` dispatches via the `TransferType`/exception visitors, no
     `instanceof`;
   - `BareErrorResponseProcessor` replaces Micronaut's `ErrorResponseProcessor`, so no error
@@ -444,7 +446,9 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - `application/LoginStart` records a login of an account under its folded name (`LoginName`'s
     key), at the moment of the service's clock, unless a change of the password overtook its check,
     and a login of the admin key under `admin`;
-  - `application/LogOut` records a logout under the folded name of the login's account.
+  - `application/LogOut` records a logout under the folded name of the login's account;
+  - `rest/filter/PageLoadRecordingFilter` records a page load under the folded name of the
+    request's login once its answer is there.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.

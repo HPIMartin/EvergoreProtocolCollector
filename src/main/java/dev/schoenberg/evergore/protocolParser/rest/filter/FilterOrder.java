@@ -6,7 +6,8 @@ enum FilterOrder {
 	RATE_LIMIT(3),
 	UNREADABLE_REQUEST(4),
 	ACCESS(5),
-	LOGIN_BODY_LIMIT(6);
+	LOGIN_BODY_LIMIT(6),
+	PAGE_LOAD_RECORDING(7);
 
 	private final int position;
 

@@ -30,12 +30,16 @@ class FilterChainOrderTest {
 	private final PathCanonicalizer canonicalizer = new PathCanonicalizer();
 
 	@Test
-	void logsThenReadsTheLoginThenThrottlesThenAnswersAnUnreadableRequestThenChecksTheAccessThenLimitsTheLoginBody() {
+	void logsThenReadsTheLoginThenThrottlesThenAnswersAnUnreadableRequestThenChecksTheAccessThenLimitsTheLoginBodyThenRecordsAPageLoad() {
 		List<Integer> orders = List
 				.of(auditLogFilter().getOrder(), loginReadingFilter().getOrder(), rateLimitFilter().getOrder(), new UnreadableRequestFilter().getOrder(), accessFilter().getOrder(),
-						new LoginBodyLimitFilter(canonicalizer).getOrder());
+						new LoginBodyLimitFilter(canonicalizer).getOrder(), pageLoadRecordingFilter().getOrder());
 
-		assertThat(orders).containsExactly(1, 2, 3, 4, 5, 6);
+		assertThat(orders).containsExactly(1, 2, 3, 4, 5, 6, 7);
+	}
+
+	private PageLoadRecordingFilter pageLoadRecordingFilter() {
+		return new PageLoadRecordingFilter(canonicalizer, new SpaNavigationPaths(), new RecordedUsage(), Clock.systemUTC());
 	}
 
 	private RequestAuditLogFilter auditLogFilter() {
