@@ -154,4 +154,30 @@ describe('the usage section', () => {
       asked: ['usage'],
     })
   })
+
+  it('names the day the records start and no lost records while none are lost', async () => {
+    await usageSectionWith(apiAnswering(USAGE))
+
+    expect({
+      recordedSince: screen.getByTestId('usage-recorded-since').textContent,
+      lost: screen.queryByTestId('usage-lost'),
+    }).toStrictEqual({
+      recordedSince: 'Aufgezeichnet seit 01.11.2026',
+      lost: null,
+    })
+  })
+
+  it('says that nothing is recorded yet and how many records were lost since the start', async () => {
+    await usageSectionWith(
+      apiAnswering({ ...USAGE, recordedSince: null, lostSinceStart: 3 }),
+    )
+
+    expect({
+      recordedSince: screen.getByTestId('usage-recorded-since').textContent,
+      lost: screen.getByTestId('usage-lost').textContent,
+    }).toStrictEqual({
+      recordedSince: 'Noch keine Aufzeichnung.',
+      lost: 'Seit dem Start verloren: 3',
+    })
+  })
 })

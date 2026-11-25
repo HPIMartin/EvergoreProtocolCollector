@@ -30,6 +30,16 @@ export function UsageSection({ api }: UsageSectionProps) {
       <LoadedView load={load}>
         {(usage) => (
           <>
+            <div data-testid="usage-recorded-since">
+              {usage.recordedSince === null
+                ? 'Noch keine Aufzeichnung.'
+                : `Aufgezeichnet seit ${germanDayOf(usage.recordedSince)}`}
+            </div>
+            {usage.lostSinceStart > 0 && (
+              <div data-testid="usage-lost">
+                {`Seit dem Start verloren: ${formatCount(usage.lostSinceStart)}`}
+              </div>
+            )}
             <OptionSwitch
               legend="Zeitraum"
               name="usage-window"
@@ -43,6 +53,12 @@ export function UsageSection({ api }: UsageSectionProps) {
       </LoadedView>
     </section>
   )
+}
+
+function germanDayOf(calendarDay: string): string {
+  const [year, month, day] = calendarDay.split('-')
+
+  return `${day ?? ''}.${month ?? ''}.${year ?? ''}`
 }
 
 interface UsageTableProps {
