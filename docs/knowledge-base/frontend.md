@@ -260,6 +260,8 @@ Five top-level folders under `frontend/src/`:
   - Under „Nutzung“ a table with „Name“, „Anmeldungen“, „Seite geladen“, „Tage genutzt“,
     „Zuletzt“ and „Abgemeldet“ holds one row per account, in the order the service sent.
   - The footer holds the row „Gilde“ and below it the row „admin“ of the admin key.
+  - The switch „Zeitraum“ (`switch-usage-window`) starts on „Letzte 30 Tage“; „Alles“ shows the
+    other window of the same answer, so switching asks nothing.
   - „noch nie“ stands for no latest use; a latest use is in the page's timestamp format.
   - Hooks: `usage-title`, `usage`, per row `usage-row`, `usage-guild` and `usage-admin-key`.
 - The avatar segment is percent-encoded when a link is built and decoded when a path is read; a

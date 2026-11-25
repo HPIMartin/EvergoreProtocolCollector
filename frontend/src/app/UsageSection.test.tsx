@@ -1,4 +1,11 @@
-import { act, cleanup, render, screen, within } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import type { ProtocolApi } from '../api'
@@ -46,14 +53,27 @@ const USAGE: Usage = {
   lostSinceStart: 0,
 }
 
+const ALL_THE_TIME: UsageWindow = {
+  accounts: [
+    { name: 'Aurora', counts: { ...AURORA, logins: 9, daysUsed: 5 } },
+    { name: 'Boreas', counts: NONE },
+  ],
+  guild: { ...AURORA, logins: 9, daysUsed: 5 },
+  adminKey: NONE,
+}
+
 const unused = (): Promise<never> => Promise.reject(new Error('unused'))
 
-function apiAnswering(usage: Usage): ProtocolApi {
+function apiAnswering(usage: Usage, asked: string[] = []): ProtocolApi {
   return {
     overview: unused,
     adminStatus: unused,
     adminAccounts: unused,
-    adminUsage: () => Promise.resolve(usage),
+    adminUsage: () => {
+      asked.push('usage')
+
+      return Promise.resolve(usage)
+    },
     resetPassword: unused,
     bankEntries: unused,
     storageEntries: unused,
@@ -79,6 +99,12 @@ function shownTable(): { headers: string[]; rows: string[][] } {
   }
 }
 
+function selectedWindow(): string {
+  const selected = screen.getByRole('radio', { checked: true })
+
+  return selected.parentElement?.textContent ?? ''
+}
+
 describe('the usage section', () => {
   it('shows each account in the order given with its figures, then the guild and below it the admin key', async () => {
     await usageSectionWith(apiAnswering(USAGE))
@@ -99,6 +125,33 @@ describe('the usage section', () => {
         ['Gilde', '3', '7', '2', '30.12.2026 21:14', '1'],
         ['admin', '1', '2', '1', '31.12.2026 09:02', '0'],
       ],
+    })
+  })
+
+  it('starts on the last 30 days and shows all the time on the switch without asking again', async () => {
+    const asked: string[] = []
+    await usageSectionWith(
+      apiAnswering({ ...USAGE, allTheTime: ALL_THE_TIME }, asked),
+    )
+    const selectedFirst = selectedWindow()
+    const auroraFirst = shownTable().rows[0]
+
+    fireEvent.click(screen.getByLabelText('Alles'))
+    const selectedThen = selectedWindow()
+    const auroraThen = shownTable().rows[0]
+
+    expect({
+      selectedFirst,
+      auroraFirst,
+      selectedThen,
+      auroraThen,
+      asked,
+    }).toStrictEqual({
+      selectedFirst: 'Letzte 30 Tage',
+      auroraFirst: ['Aurora', '3', '7', '2', '30.12.2026 21:14', '1'],
+      selectedThen: 'Alles',
+      auroraThen: ['Aurora', '9', '7', '5', '30.12.2026 21:14', '1'],
+      asked: ['usage'],
     })
   })
 })
