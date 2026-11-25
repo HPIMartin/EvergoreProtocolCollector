@@ -6,11 +6,9 @@ import java.util.Optional;
 import jakarta.inject.Singleton;
 
 import io.micronaut.core.async.publisher.Publishers;
-import io.micronaut.http.HttpMethod;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
-import io.micronaut.http.MediaType;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.annotation.Filter;
 import io.micronaut.http.filter.HttpServerFilter;
@@ -35,13 +33,13 @@ public class AccessFilter implements HttpServerFilter {
 
 	private final PathCanonicalizer canonicalizer;
 	private final PublicPaths publicPaths;
-	private final SpaNavigationPaths spaNavigationPaths;
+	private final SpaNavigations navigations;
 	private final Logger logger;
 
-	public AccessFilter(PathCanonicalizer canonicalizer, PublicPaths publicPaths, SpaNavigationPaths spaNavigationPaths, Logger logger) {
+	public AccessFilter(PathCanonicalizer canonicalizer, PublicPaths publicPaths, SpaNavigations navigations, Logger logger) {
 		this.canonicalizer = canonicalizer;
 		this.publicPaths = publicPaths;
-		this.spaNavigationPaths = spaNavigationPaths;
+		this.navigations = navigations;
 		this.logger = logger;
 	}
 
@@ -65,14 +63,10 @@ public class AccessFilter implements HttpServerFilter {
 		}
 
 		logger.info("Access rejected");
-		if (isANavigation(request, path)) {
+		if (navigations.isOne(request)) {
 			return Publishers.just(HttpResponse.status(HttpStatus.FOUND).header(LOCATION, loginAddressFor(path, request)));
 		}
 		throw new AccessNotAllowed();
-	}
-
-	private boolean isANavigation(HttpRequest<?> request, String canonicalPath) {
-		return request.getMethod() == HttpMethod.GET && spaNavigationPaths.isSpaOwned(canonicalPath) && request.accept().contains(MediaType.TEXT_HTML_TYPE);
 	}
 
 	private static String loginAddressFor(String canonicalPath, HttpRequest<?> request) {

@@ -6,10 +6,8 @@ import java.util.Optional;
 import jakarta.inject.Singleton;
 
 import io.micronaut.core.async.publisher.Publishers;
-import io.micronaut.http.HttpMethod;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
-import io.micronaut.http.MediaType;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.annotation.Filter;
 import io.micronaut.http.filter.HttpServerFilter;
@@ -25,14 +23,12 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageRecord;
 @Singleton
 @Filter("/**")
 public class PageLoadRecordingFilter implements HttpServerFilter {
-	private final PathCanonicalizer canonicalizer;
-	private final SpaNavigationPaths spaNavigationPaths;
+	private final SpaNavigations navigations;
 	private final UsageRecording usage;
 	private final Clock clock;
 
-	public PageLoadRecordingFilter(PathCanonicalizer canonicalizer, SpaNavigationPaths spaNavigationPaths, UsageRecording usage, Clock clock) {
-		this.canonicalizer = canonicalizer;
-		this.spaNavigationPaths = spaNavigationPaths;
+	public PageLoadRecordingFilter(SpaNavigations navigations, UsageRecording usage, Clock clock) {
+		this.navigations = navigations;
 		this.usage = usage;
 		this.clock = clock;
 	}
@@ -45,16 +41,11 @@ public class PageLoadRecordingFilter implements HttpServerFilter {
 	@Override
 	public Publisher<MutableHttpResponse<?>> doFilter(HttpRequest<?> request, ServerFilterChain chain) {
 		return Publishers.map(chain.proceed(request), response -> {
-			if (isANavigation(request) && response.getStatus() == HttpStatus.OK) {
+			if (navigations.isOne(request) && response.getStatus() == HttpStatus.OK) {
 				request.getAttribute(LoginAttribute.NAME, Login.class).ifPresent(this::recordAPageLoadOf);
 			}
 			return response;
 		});
-	}
-
-	private boolean isANavigation(HttpRequest<?> request) {
-		return request.getMethod() == HttpMethod.GET && request.accept().contains(MediaType.TEXT_HTML_TYPE)
-				&& spaNavigationPaths.isSpaOwned(canonicalizer.canonicalize(request.getPath()));
 	}
 
 	private void recordAPageLoadOf(Login login) {

@@ -39,7 +39,7 @@ class FilterChainOrderTest {
 	}
 
 	private PageLoadRecordingFilter pageLoadRecordingFilter() {
-		return new PageLoadRecordingFilter(canonicalizer, new SpaNavigationPaths(), new RecordedUsage(), Clock.systemUTC());
+		return new PageLoadRecordingFilter(new SpaNavigations(canonicalizer, new SpaNavigationPaths()), new RecordedUsage(), Clock.systemUTC());
 	}
 
 	private RequestAuditLogFilter auditLogFilter() {
@@ -60,6 +60,6 @@ class FilterChainOrderTest {
 	private AccessFilter accessFilter() {
 		SecurityConfiguration configuration = new SecurityConfiguration(List.of());
 
-		return new AccessFilter(canonicalizer, new PublicPaths(configuration), new SpaNavigationPaths(), logger);
+		return new AccessFilter(canonicalizer, new PublicPaths(configuration), new SpaNavigations(canonicalizer, new SpaNavigationPaths()), logger);
 	}
 }

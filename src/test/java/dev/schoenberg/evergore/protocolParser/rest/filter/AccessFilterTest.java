@@ -44,7 +44,8 @@ class AccessFilterTest {
 	};
 	private final LoggerSpy logger = new LoggerSpy();
 	private final SecurityConfiguration configuration = new SecurityConfiguration(List.of("/login", "/health", "/assets/**"));
-	private final AccessFilter tested = new AccessFilter(new PathCanonicalizer(), new PublicPaths(configuration), new SpaNavigationPaths(), logger);
+	private final AccessFilter tested = new AccessFilter(new PathCanonicalizer(), new PublicPaths(configuration),
+			new SpaNavigations(new PathCanonicalizer(), new SpaNavigationPaths()), logger);
 
 	@Test
 	void passesARequestForAPublicPathWithoutALogin() {

@@ -32,7 +32,8 @@ class PageLoadRecordingFilterTest {
 	private static final Login AERGER = new Login("Ärger", Role.MEMBER, 0, LoginSource.ACCOUNT, "id", NOW, NOW.plus(Login.LIFETIME));
 
 	private final RecordedUsage usage = new RecordedUsage();
-	private final PageLoadRecordingFilter tested = new PageLoadRecordingFilter(new PathCanonicalizer(), new SpaNavigationPaths(), usage, Clock.fixed(NOW, ZoneOffset.UTC));
+	private final PageLoadRecordingFilter tested = new PageLoadRecordingFilter(new SpaNavigations(new PathCanonicalizer(), new SpaNavigationPaths()), usage,
+			Clock.fixed(NOW, ZoneOffset.UTC));
 
 	@Test
 	void recordsAPageLoadUnderTheFoldedNameOfTheLoginsAccountForANavigationAnsweredWithThePage() {
