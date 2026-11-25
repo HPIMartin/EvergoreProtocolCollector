@@ -18,9 +18,9 @@ import static dev.schoenberg.evergore.protocolParser.acceptance.steps.Pages.OVER
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class LoginSteps {
-	private static final String CHOOSING_A_NEW_PASSWORD = "Neues Passwort wählen";
+	private static final String CHOOSING_ANEW_HEADING = "Neues Passwort wählen";
 	private static final String ONE_MINUTE_LESS_THAN = "one minute less than ";
-	private static final String WRONG_PASSWORD = "Wrong-Password-1!";
+	private static final String WRONG_GUESS = "Wrong-Password-1!";
 	private static final String RESTING_MESSAGE = "Dein Konto ruht, bis das Protokoll wieder einen Vorgang von dir zeigt.";
 	private static final String LOGIN_PAGE = "/login";
 	private static final String REQUEST_LOGGED = "Client IP: ";
@@ -142,12 +142,12 @@ public class LoginSteps {
 	public void aMemberHasEnteredTheNameAndTheIssuedPassword(String name) {
 		logIn(name, accounts.issuedTo(name));
 
-		assertThat(browser.ledger().heading()).isEqualTo(CHOOSING_A_NEW_PASSWORD);
+		assertThat(browser.ledger().heading()).isEqualTo(CHOOSING_ANEW_HEADING);
 	}
 
 	@Given("a member has tried to log in as {string} with a wrong password")
 	public void aMemberHasTriedToLogInWithAWrongPassword(String name) {
-		logIn(name, WRONG_PASSWORD);
+		logIn(name, WRONG_GUESS);
 	}
 
 	@Given("a/the member has entered the name {string} and the password the reset issued on the login page and been told the account rests")
