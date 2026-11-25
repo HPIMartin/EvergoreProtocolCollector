@@ -291,6 +291,19 @@ class LogInTest {
 		assertThat(usage.records()).containsExactly(new UsageRecord("ärger", NOW, UsageKind.LOGIN, Optional.empty()));
 	}
 
+	@Test
+	void recordsNoLoginWhereAPasswordChangeOvertakesTheCheck() {
+		accounts.hold(account("Aurora", "Sommer-2026!", PasswordState.CHOSEN, Role.MEMBER));
+		hasher.runDuringTheNextVerification(() -> {
+			accounts.replacePassword("aurora", "hashed:Herbst-2026!", PasswordState.CHOSEN);
+			generations.bumpWhileAt("aurora", 0, () -> {});
+		});
+
+		tested.with("Aurora", "Sommer-2026!");
+
+		assertThat(usage.records()).isEmpty();
+	}
+
 	private void movedOn(String avatar, int daysBeforeTheNewestMovement) {
 		Instant newest = Instant.parse("2026-01-31T12:00:00Z");
 		bank.seedEntries(avatar, List.of(new BankEntry(newest.minus(Duration.ofDays(daysBeforeTheNewestMovement)), avatar, 300, TransferType.ENTNAHME)));

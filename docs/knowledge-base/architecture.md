@@ -442,7 +442,7 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
 - **Recording the usage:** each place that records hands a `UsageRecord` to the port
   `application/UsageRecording`, which the queue implements, so no request waits for its record:
   - `application/LoginStart` records a login of an account under its folded name (`LoginName`'s
-    key), at the moment of the service's clock.
+    key), at the moment of the service's clock, unless a change of the password overtook its check.
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.
