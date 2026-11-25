@@ -457,7 +457,9 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   all the time (`UsageReport`, `UsageWindow`): the days of use count Berlin days in the window,
   and the latest use is over all the time in both; the guild row adds up the accounts, counts
   the days any member used the app and names their latest use, the admin key in none of it; the
-  admin key (`AdminKey.NAME`) has a row of its own in each window.
+  admin key (`AdminKey.NAME`) has a row of its own in each window; the report adds the Berlin day
+  of the first record and the queue's count of records lost since the start (port
+  `LostUsageRecords`).
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.

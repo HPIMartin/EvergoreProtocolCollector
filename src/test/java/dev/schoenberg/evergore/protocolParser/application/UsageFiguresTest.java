@@ -20,10 +20,11 @@ class UsageFiguresTest {
 	private static final Instant NOW = Instant.parse("2026-04-05T10:00:00Z");
 	private static final Instant SAME_BERLIN_TIME_THIRTY_DAYS_BACK = Instant.parse("2026-03-06T11:00:00Z");
 	private static final Instant ALL_THE_TIME = Instant.EPOCH;
+	private static final long LOST_SINCE_THE_START = 3;
 
 	private final InMemoryAccounts accounts = new InMemoryAccounts(new ArrayList<>());
 	private final CannedUsageReader records = new CannedUsageReader();
-	private final UsageFigures tested = new UsageFigures(accounts, records, Clock.fixed(NOW, ZoneOffset.UTC));
+	private final UsageFigures tested = new UsageFigures(accounts, records, () -> LOST_SINCE_THE_START, Clock.fixed(NOW, ZoneOffset.UTC));
 
 	@Test
 	void listsEveryAccountInGermanOrderWithNothingCountedWhileItHasNoRecords() {
@@ -105,6 +106,16 @@ class UsageFiguresTest {
 
 		assertThat(report.lastThirtyDays().adminKey()).isEqualTo(new UsageCounts(1, 2, 0, 1, Optional.of(latest)));
 		assertThat(report.allTheTime().adminKey()).isEqualTo(new UsageCounts(4, 0, 0, 0, Optional.of(latest)));
+	}
+
+	@Test
+	void givesTheBerlinDayOfTheFirstRecordAndHowManyRecordsWereLostSinceTheStart() {
+		records.first(Instant.parse("2026-03-31T22:30:00Z"));
+
+		UsageReport report = tested.report();
+
+		assertThat(report.recordedSince()).contains(LocalDate.parse("2026-04-01"));
+		assertThat(report.lostSinceStart()).isEqualTo(LOST_SINCE_THE_START);
 	}
 
 	private static Account account(String avatar) {

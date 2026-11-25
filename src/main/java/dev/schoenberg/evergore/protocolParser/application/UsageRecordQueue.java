@@ -16,7 +16,7 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageRecord;
 
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 
-public class UsageRecordQueue implements UsageRecording, AutoCloseable {
+public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoCloseable {
 	private static final UsageRecord END = new UsageRecord("", Instant.EPOCH, null, Optional.empty());
 
 	private final BlockingQueue<UsageRecord> waiting = new LinkedBlockingQueue<>();
@@ -56,6 +56,7 @@ public class UsageRecordQueue implements UsageRecording, AutoCloseable {
 		}
 	}
 
+	@Override
 	public long lostSinceStart() {
 		return lost.get();
 	}

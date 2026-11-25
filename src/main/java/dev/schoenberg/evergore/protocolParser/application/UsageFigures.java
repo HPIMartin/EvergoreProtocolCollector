@@ -22,18 +22,21 @@ public class UsageFigures {
 
 	private final AccountRepository accounts;
 	private final UsageRecordReader records;
+	private final LostUsageRecords lost;
 	private final Clock clock;
 
-	public UsageFigures(AccountRepository accounts, UsageRecordReader records, Clock clock) {
+	public UsageFigures(AccountRepository accounts, UsageRecordReader records, LostUsageRecords lost, Clock clock) {
 		this.accounts = accounts;
 		this.records = records;
+		this.lost = lost;
 		this.clock = clock;
 	}
 
 	public UsageReport report() {
 		List<Account> everyAccount = accounts.allAccounts().stream().sorted(Comparator.comparing(Account::avatar, GermanOrder.NAMES)).toList();
 		Instant recentStart = clock.instant().atZone(Constants.APP_ZONE).minusDays(DAYS_OF_THE_RECENT_WINDOW).toInstant();
-		return new UsageReport(windowFrom(recentStart, everyAccount), windowFrom(START_OF_ALL_THE_TIME, everyAccount));
+		return new UsageReport(windowFrom(recentStart, everyAccount), windowFrom(START_OF_ALL_THE_TIME, everyAccount),
+				records.firstRecord().map(first -> first.atZone(Constants.APP_ZONE).toLocalDate()), lost.lostSinceStart());
 	}
 
 	private UsageWindow windowFrom(Instant start, List<Account> everyAccount) {
