@@ -92,6 +92,21 @@ class UsageFiguresTest {
 		assertThat(report.allTheTime().guild()).isEqualTo(new UsageCounts(0, 0, 0, 0, Optional.of(latestOfAMember)));
 	}
 
+	@Test
+	void givesTheAdminKeyARowOfItsOwnInEachWindow() {
+		records.counts(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, AdminKey.NAME, UsageKind.LOGIN, 1);
+		records.counts(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, AdminKey.NAME, UsageKind.PAGE_LOAD, 2);
+		records.counts(ALL_THE_TIME, AdminKey.NAME, UsageKind.LOGIN, 4);
+		records.days(SAME_BERLIN_TIME_THIRTY_DAYS_BACK, AdminKey.NAME, LocalDate.parse("2026-04-02"));
+		Instant latest = Instant.parse("2026-04-02T07:02:00Z");
+		records.latest(AdminKey.NAME, latest);
+
+		UsageReport report = tested.report();
+
+		assertThat(report.lastThirtyDays().adminKey()).isEqualTo(new UsageCounts(1, 2, 0, 1, Optional.of(latest)));
+		assertThat(report.allTheTime().adminKey()).isEqualTo(new UsageCounts(4, 0, 0, 0, Optional.of(latest)));
+	}
+
 	private static Account account(String avatar) {
 		return new Account(avatar, "hashed:" + avatar, PasswordState.CHOSEN, Role.MEMBER, Optional.empty());
 	}

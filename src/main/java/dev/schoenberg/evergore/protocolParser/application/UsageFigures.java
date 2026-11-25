@@ -41,7 +41,7 @@ public class UsageFigures {
 		Map<String, Set<LocalDate>> days = records.daysUsedSince(start, Constants.APP_ZONE);
 		Map<String, Instant> latest = records.latestUses();
 		List<AccountUsage> usage = everyAccount.stream().map(account -> new AccountUsage(account.avatar(), countsOf(counts, days, latest, account.nameKey()))).toList();
-		return new UsageWindow(usage, guildOf(everyAccount, usage, days));
+		return new UsageWindow(usage, guildOf(everyAccount, usage, days), countsOf(counts, days, latest, AdminKey.NAME));
 	}
 
 	private static UsageCounts guildOf(List<Account> everyAccount, List<AccountUsage> usage, Map<String, Set<LocalDate>> days) {
