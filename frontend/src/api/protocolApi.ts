@@ -5,6 +5,7 @@ import type {
   Ledger,
   Overview,
   StorageEntry,
+  Usage,
 } from '../domain'
 
 import type { LedgerSort } from './ledgerSort.ts'
@@ -14,6 +15,7 @@ export interface ProtocolApi {
   overview: (window: PageWindow) => Promise<Overview>
   adminStatus: () => Promise<AdminStatus>
   adminAccounts: () => Promise<Account[]>
+  adminUsage: () => Promise<Usage>
   resetPassword: (name: string) => Promise<string>
   bankEntries: (
     avatar: string,

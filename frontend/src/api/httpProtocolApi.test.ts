@@ -102,6 +102,21 @@ const ACCOUNTS_BODY = JSON.stringify([
   { name: 'Zwerg', rests: true, lastLogin: null },
 ])
 
+const NO_USAGE = {
+  logins: 0,
+  pageLoads: 0,
+  logouts: 0,
+  daysUsed: 0,
+  latestUse: null,
+}
+
+const USAGE_BODY = JSON.stringify({
+  lastThirtyDays: { accounts: [], guild: NO_USAGE, adminKey: NO_USAGE },
+  allTheTime: { accounts: [], guild: NO_USAGE, adminKey: NO_USAGE },
+  recordedSince: '2026-01-10',
+  lostSinceStart: 2,
+})
+
 interface Posted {
   readonly url: string
   readonly body: string
@@ -256,6 +271,23 @@ describe('the HTTP protocol API', () => {
     }).toStrictEqual({
       urls: ['/api/v1/admin/status'],
       unknownItemNames: ['Unobtainium'],
+    })
+  })
+
+  it('reads the usage figures without any parameter', async () => {
+    const fetched = answering(200, USAGE_BODY)
+    const tested = httpProtocolApi(fetched.get, fetched.post)
+
+    const usage = await tested.adminUsage()
+
+    expect({
+      urls: fetched.urls,
+      recordedSince: usage.recordedSince,
+      lostSinceStart: usage.lostSinceStart,
+    }).toStrictEqual({
+      urls: ['/api/v1/admin/usage'],
+      recordedSince: '2026-01-10',
+      lostSinceStart: 2,
     })
   })
 

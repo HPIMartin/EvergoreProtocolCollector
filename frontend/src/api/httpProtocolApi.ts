@@ -11,6 +11,7 @@ import {
 import type { LedgerSort } from './ledgerSort.ts'
 import type { PageWindow } from './pageWindow.ts'
 import type { ProtocolApi } from './protocolApi.ts'
+import { usageFrom } from './usageWire.ts'
 import {
   accountsFrom,
   adminStatusFrom,
@@ -27,6 +28,7 @@ export type HttpPost = (url: string, body: string) => Promise<Response>
 const AVATARS = '/api/v1/avatars'
 const ADMIN_STATUS = '/api/v1/admin/status'
 const ADMIN_ACCOUNTS = '/api/v1/admin/accounts'
+const ADMIN_USAGE = '/api/v1/admin/usage'
 const UNAUTHORIZED = 401
 const FORBIDDEN = 403
 const BAD_REQUEST = 400
@@ -93,6 +95,7 @@ export function httpProtocolApi(get: HttpGet, post: HttpPost): ProtocolApi {
       adminStatusFrom(await bodyOf(await get(ADMIN_STATUS))),
     adminAccounts: async () =>
       accountsFrom(await bodyOf(await get(ADMIN_ACCOUNTS))),
+    adminUsage: async () => usageFrom(await bodyOf(await get(ADMIN_USAGE))),
     resetPassword: async (name) =>
       issuedPasswordFrom(
         await bodyOf(
