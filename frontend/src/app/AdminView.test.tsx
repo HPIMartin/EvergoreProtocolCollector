@@ -158,8 +158,33 @@ describe('AdminView', () => {
     await adminViewWith(apiListing([ALRIK]))
 
     const heading = screen.getByTestId('usage-title').textContent
+    const order = screen
+      .getAllByTestId(/^(accounts|usage-title)$/)
+      .map((element) => element.dataset['testid'])
 
-    expect(heading).toBe('Nutzung')
+    expect({ heading, order }).toStrictEqual({
+      heading: 'Nutzung',
+      order: ['accounts', 'usage-title'],
+    })
+  })
+
+  it('keeps the status and the accounts standing when the usage fails to load', async () => {
+    await adminViewWith({
+      ...apiListing([ALRIK]),
+      adminUsage: () => Promise.reject(new RequestFailed(500)),
+    })
+
+    const shown = {
+      lastUpdated: screen.getByTestId('last-updated').textContent,
+      names: accountRows().map(([name]) => name),
+      messages: shownMessages(),
+    }
+
+    expect(shown).toStrictEqual({
+      lastUpdated: 'Stand: noch kein Abgleich gelaufen',
+      names: ['Alrik'],
+      messages: [LOAD_FAILED_MESSAGE],
+    })
   })
 
   it('headlines the account list „Konten“', async () => {
