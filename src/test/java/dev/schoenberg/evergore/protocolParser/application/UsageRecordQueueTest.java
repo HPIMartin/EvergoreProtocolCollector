@@ -55,6 +55,24 @@ class UsageRecordQueueTest {
 	}
 
 	@Test
+	void closingAfterTheWriterThreadDiedCountsAndWarnsOfTheRecordsLeftWaiting() {
+		List<Thread> writers = new CopyOnWriteArrayList<>();
+		UsageRecordQueue tested = UsageRecordQueue.start(repository, WRITING, runnable -> {
+			Thread thread = new Thread(runnable, "usage-writer-test");
+			writers.add(thread);
+			return thread;
+		}, joining, logger);
+		writers.getFirst().interrupt();
+		silentThrow(() -> writers.getFirst().join());
+
+		tested.record(login("aurora"));
+		tested.close();
+
+		assertThat(tested.lostSinceStart()).isEqualTo(1);
+		assertThat(logger.warnMessages()).containsExactly("Closed with 1 usage records not written");
+	}
+
+	@Test
 	void closingWritesEveryRecordRecordedBeforeItInTheOrderTheyCame() {
 		UsageRecordQueue tested = startedWith(WRITING);
 		List<UsageRecord> recorded = List.of(login("aurora"), login("boreas"), login("ceres"));

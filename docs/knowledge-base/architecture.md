@@ -442,9 +442,9 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     `UsageWritingConfiguration` and `Thread::join` as its `ThreadEnd`, and the context closes it
     before the `SqliteDatabase` it writes through, so the records waiting at a shutdown reach the
     file;
-  - a record recorded once the close began is counted as lost; one that races the close, queued
-    behind the mark, is neither written nor counted, a miss the count of a process that ends
-    anyway does not show.
+  - a record recorded once the close began is counted as lost; the close counts and warns of every
+    record still waiting when it returns, one that raced the close behind the mark or one a writer
+    thread that died left, so none goes uncounted.
 - **Recording the usage:** each place that records hands a `UsageRecord` to the port
   `application/UsageRecording`, which the queue implements, so no request waits for its record:
   - `application/LoginStart` records a login of an account under its folded name (`LoginName`'s

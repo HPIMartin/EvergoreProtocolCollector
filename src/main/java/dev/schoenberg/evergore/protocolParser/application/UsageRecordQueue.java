@@ -78,8 +78,9 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 	public void close() {
 		closed = true;
 		waiting.add(END);
-		if (!silentThrow(() -> threadEnd.awaited(writer, closeBound))) {
-			long notWritten = inWrite + waiting.stream().mapToInt(Waiting::records).sum();
+		boolean ended = silentThrow(() -> threadEnd.awaited(writer, closeBound));
+		long notWritten = (ended ? 0 : inWrite) + waiting.stream().mapToInt(Waiting::records).sum();
+		if (notWritten > 0) {
 			lost.addAndGet(notWritten);
 			logger.warn("Closed with " + notWritten + " usage records not written");
 		}
