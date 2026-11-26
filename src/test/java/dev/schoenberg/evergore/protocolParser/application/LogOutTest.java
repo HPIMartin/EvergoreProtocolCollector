@@ -81,6 +81,16 @@ class LogOutTest {
 		assertThat(usage.records()).containsExactly(new UsageRecord("ärger", MADE.plus(Duration.ofMinutes(5)), UsageKind.LOGOUT, Optional.empty()));
 	}
 
+	@Test
+	void recordsOneLogoutForALoginEndedTwice() {
+		Login login = loginWith("first", MADE);
+		tested.of(login);
+
+		tested.of(login);
+
+		assertThat(usage.records()).hasSize(1);
+	}
+
 	private static Login loginWith(String id, Instant madeAt) {
 		return new Login("Aurora", Role.MEMBER, 0, LoginSource.ACCOUNT, id, madeAt, madeAt.plus(Login.LIFETIME));
 	}

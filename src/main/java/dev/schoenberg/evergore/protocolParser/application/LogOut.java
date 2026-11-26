@@ -24,8 +24,9 @@ public class LogOut {
 	public void of(Login login) {
 		Instant now = clock.instant();
 		expiryOfEndedLogins.values().removeIf(expiry -> !expiry.isAfter(now));
-		expiryOfEndedLogins.put(login.id(), login.expiresAt());
-		usage.record(new UsageRecord(new LoginName(login.accountName()).key(), now, UsageKind.LOGOUT, Optional.empty()));
+		if (expiryOfEndedLogins.putIfAbsent(login.id(), login.expiresAt()) == null) {
+			usage.record(new UsageRecord(new LoginName(login.accountName()).key(), now, UsageKind.LOGOUT, Optional.empty()));
+		}
 	}
 
 	public boolean hasEnded(Login login) {

@@ -450,7 +450,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - `application/LoginStart` records a login of an account under its folded name (`LoginName`'s
     key), at the moment of the service's clock, unless a change of the password overtook its check,
     and a login of the admin key under `admin`;
-  - `application/LogOut` records a logout under the folded name of the login's account;
+  - `application/LogOut` records a logout under the folded name of the login's account, once per
+    login;
   - `rest/filter/PageLoadRecordingFilter` records a page load under the folded name of the
     request's login once its answer is there: a navigation (`SpaNavigations`) answered with 200,
     the SPA shell of an unknown path included.
