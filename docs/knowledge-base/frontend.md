@@ -196,6 +196,13 @@ Five top-level folders under `frontend/src/`:
   It states facts only; the UP/DOWN verdict over them stays `/health`'s job.
   Deliberately not in `navigationOf`'s link set, so a guild member never sees it; reachable only by
   its direct URL. The page and the endpoint it reads need a login.
+  - The member's name in each entry of the three member lists ("Verdacht auf Warenkreislauf",
+    "Nicht beurteilbar (Rezept ungelesen)", "Nicht aktualisierte Avatare") is a `Link` to that
+    member's storage ledger (decision 2026-10-31).
+  - Nothing else in an entry is a link.
+  - The unknown items ("Unbekannte Items") are plain text.
+  - Each entry is a `span[data-testid=finding]` inside its list's `p`, joined by literal ", " text,
+    so the `p`'s visible text stays `heading: entry, entry`.
 - **`/admin` lists the accounts** (decision 2026-10-26):
   - Under „Konten“ a table with „Name“, „Rolle“, „Ruht“ and „Letzte Anmeldung“ holds one row per account.
   - „Rolle“ shows „Mitglied“ for the role `member` and „Admin“ for `admin`.

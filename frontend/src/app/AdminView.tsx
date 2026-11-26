@@ -75,10 +75,10 @@ export function AdminView({ api }: AdminViewProps) {
               heading="Unbekannte Items"
               names={status.unknownItemNames}
             />
-            <NameList
+            <FindingList
               testId="failed-avatar-names"
               heading="Nicht aktualisierte Avatare"
-              names={status.failedAvatarNames}
+              findings={status.failedAvatarNames.map((member) => ({ member }))}
             />
             <FindingList
               testId="round-trips"
@@ -143,7 +143,7 @@ function NameList({ testId, heading, names }: NameListProps) {
 
 interface Finding {
   readonly member: string
-  readonly detail: string
+  readonly detail?: string
 }
 
 interface FindingListProps {
@@ -165,7 +165,7 @@ function FindingList({ testId, heading, findings }: FindingListProps) {
           {position === 0 ? '' : ', '}
           <span data-testid="finding">
             <Link href={hrefOf(storagePath(member))}>{member}</Link>
-            {`: ${detail}`}
+            {detail === undefined ? null : `: ${detail}`}
           </span>
         </Fragment>
       ))}

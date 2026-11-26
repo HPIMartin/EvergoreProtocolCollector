@@ -919,6 +919,52 @@ describe('the findings of the last recompute on the admin page', () => {
     })
   })
 
+  it("leads each member whose figures could not be refreshed to that member's storage ledger", async () => {
+    await adminViewWith(
+      apiReporting({ ...NO_FACTS, failedAvatarNames: ['Calix'] }),
+    )
+
+    const shown = findingsIn('failed-avatar-names')
+
+    expect(shown).toEqual({
+      paragraph: 'Nicht aktualisierte Avatare: Calix',
+      entries: [
+        { text: 'Calix', links: [['Calix', '/avatars/Calix/storage']] },
+      ],
+    })
+  })
+
+  it('encodes a name that holds a reserved character in the address of its storage ledger', async () => {
+    await adminViewWith(
+      apiReporting({ ...NO_FACTS, failedAvatarNames: ['a/b?c#d%e'] }),
+    )
+
+    const shown = findingsIn('failed-avatar-names')
+
+    expect(shown.entries).toEqual([
+      {
+        text: 'a/b?c#d%e',
+        links: [['a/b?c#d%e', '/avatars/a%2Fb%3Fc%23d%25e/storage']],
+      },
+    ])
+  })
+
+  it('lets no unknown item lead anywhere', async () => {
+    await adminViewWith(
+      apiReporting({ ...NO_FACTS, unknownItemNames: ['Unobtainium'] }),
+    )
+
+    const shown = {
+      paragraph: screen.getByTestId('unknown-item-names').textContent,
+      links: screen.queryAllByRole('link'),
+    }
+
+    expect(shown).toEqual({
+      paragraph: 'Unbekannte Items: Unobtainium',
+      links: [],
+    })
+  })
+
   it('shows two identical findings, each under a key of its own', async () => {
     const errors = vi
       .spyOn(console, 'error')
