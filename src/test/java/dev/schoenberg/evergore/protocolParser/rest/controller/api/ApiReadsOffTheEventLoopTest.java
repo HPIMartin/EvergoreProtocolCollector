@@ -109,7 +109,8 @@ class ApiReadsOffTheEventLoopTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {AvatarSummariesController.PATH, BANK_ROUTE, "/api/v1/avatars/" + AVATAR + "/storage", AdminStatusController.PATH, AccountsController.PATH})
+	@ValueSource(strings = {AvatarSummariesController.PATH, BANK_ROUTE, "/api/v1/avatars/" + AVATAR + "/storage", AdminStatusController.PATH, AccountsController.PATH,
+			AdminUsageController.PATH})
 	void readsTheDatabaseOnAPlatformThreadThatIsNoEventLoop(String route) {
 		int status = statusWithALogin(route);
 
@@ -256,6 +257,7 @@ class ApiReadsOffTheEventLoopTest {
 
 			@Override
 			public List<Account> allAccounts() {
+				witnessRead();
 				return accounts;
 			}
 
