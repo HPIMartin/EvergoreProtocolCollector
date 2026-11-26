@@ -450,7 +450,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     file;
   - a record recorded once the close began is counted as lost; the close counts and warns of every
     record still waiting when it returns, one that raced the close behind the mark or one a writer
-    thread that died left, so none goes uncounted.
+    thread that died left, and the batch in a write that ended the thread, so none goes
+    uncounted.
 - **Recording the usage:** each place that records hands a `UsageRecord` to the port
   `application/UsageRecording`, which the queue implements, so no request waits for its record:
   - `application/LoginStart` records a login of an account under its folded name (`LoginName`'s

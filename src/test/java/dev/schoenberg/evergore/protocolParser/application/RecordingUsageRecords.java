@@ -28,7 +28,8 @@ class RecordingUsageRecords implements UsageRecordRepository {
 
 	@Override
 	public void addAll(List<UsageRecord> batch) {
-		boolean second = batchesTaken.incrementAndGet() == 2;
+		int number = batchesTaken.incrementAndGet();
+		boolean second = number == 2;
 		if (failsTheFirstBatch.getAndSet(false)) {
 			firstBatchWriting.countDown();
 			throw FAILURE;
@@ -36,9 +37,9 @@ class RecordingUsageRecords implements UsageRecordRepository {
 		if (holdsTheFirstBatch.getAndSet(false)) {
 			firstBatchWriting.countDown();
 			silentThrow(() -> firstBatchReleased.await());
-			if (breaksTheFirstBatch.get()) {
-				throw BREAK;
-			}
+		}
+		if (number == 1 && breaksTheFirstBatch.get()) {
+			throw BREAK;
 		}
 		if (second && breaksTheSecondBatch.get()) {
 			throw BREAK;
@@ -56,6 +57,10 @@ class RecordingUsageRecords implements UsageRecordRepository {
 
 	void holdTheFirstBatch() {
 		holdsTheFirstBatch.set(true);
+	}
+
+	void breakTheFirstBatch() {
+		breaksTheFirstBatch.set(true);
 	}
 
 	void holdAndBreakTheFirstBatch() {

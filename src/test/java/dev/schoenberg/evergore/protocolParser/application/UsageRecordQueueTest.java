@@ -126,6 +126,18 @@ class UsageRecordQueueTest {
 	}
 
 	@Test
+	void closingAfterTheWriterThreadDiedInAWriteCountsAndWarnsOfTheRecordsOfThatWrite() {
+		UsageRecordQueue tested = startedWith(WRITING);
+		repository.breakTheFirstBatch();
+		tested.record(login("aurora"));
+
+		tested.close();
+
+		assertThat(tested.lostSinceStart()).isEqualTo(1);
+		assertThat(logger.warnMessages()).containsExactly("Closed with 1 usage records not written");
+	}
+
+	@Test
 	void closingAfterTheWriterThreadDiedCountsAndWarnsOfTheRecordsLeftWaiting() {
 		List<Thread> writers = new CopyOnWriteArrayList<>();
 		UsageRecordQueue tested = startedRecordingTheWriterIn(writers);

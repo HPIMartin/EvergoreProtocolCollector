@@ -84,8 +84,8 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 			closed = true;
 			waiting.add(END);
 		}
-		boolean ended = silentThrow(() -> threadEnd.awaited(writer, closeBound));
-		long notWritten = (ended ? 0 : inWrite) + waiting.stream().mapToInt(Waiting::records).sum();
+		silentThrow(() -> threadEnd.awaited(writer, closeBound));
+		long notWritten = inWrite + waiting.stream().mapToInt(Waiting::records).sum();
 		if (notWritten > 0) {
 			lost.addAndGet(notWritten);
 			logger.warn("Closed with " + notWritten + " usage records not written");
@@ -130,9 +130,8 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 		} catch (RuntimeException failure) {
 			lost.addAndGet(batch.size());
 			logger.error("Lost " + batch.size() + " usage records: their write failed", failure);
-		} finally {
-			inWrite = 0;
 		}
+		inWrite = 0;
 	}
 
 	private interface Waiting {
