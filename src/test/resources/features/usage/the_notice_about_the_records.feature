@@ -1,4 +1,3 @@
-@wip
 Feature: The notice about the usage records
   Every member learns of the usage records ("Who uses the app, and when", "What the guild uses")
   from a notice on every view of the dashboard, with a link to the explanation page, which says what
@@ -23,6 +22,7 @@ Feature: The notice about the usage records
 
   Rule: The notice stands on every view until the member answers "Verstanden"
 
+    @wip
     Scenario Outline: The notice stands on <view> for a member who has not answered it
       Given a member has logged in as "Aurora" with the password "Sommer-2026!"
       When the member opens <view>
@@ -39,17 +39,20 @@ Feature: The notice about the usage records
         | the admin page                     |
         | a page the dashboard does not have |
 
+    @wip
     Scenario: A notice the member has not answered stands at a later login
       Given a member has logged in as "Aurora" with the password "Sommer-2026!"
       And the member has logged out
       When a member logs in as "Aurora" with the password "Sommer-2026!"
       Then the page says "Hinweis: Die App zeichnet auf, wann ihr euch anmeldet und welche Ansichten und Optionen ihr nutzt, damit wir sehen, was die Gilde braucht. IP-Adressen zeichnet sie dabei nicht auf. Mehr dazu auf der Seite „So entstehen eure Zahlen“."
 
+    @wip
     Scenario: The notice's link leads to the explanation page
       Given a member has logged in as "Aurora" with the password "Sommer-2026!"
       When the member follows the notice's link "So entstehen eure Zahlen"
       Then the page is headed "So entstehen eure Zahlen"
 
+    @wip
     Scenario: Answering "Verstanden" removes the notice from the page
       Given a member has logged in as "Aurora" with the password "Sommer-2026!"
       When the member answers the notice with "Verstanden"
@@ -57,6 +60,7 @@ Feature: The notice about the usage records
       And the page does not say "Hinweis: Die App zeichnet auf"
       And the page offers no button "Verstanden"
 
+    @wip
     Scenario Outline: After "Verstanden", the notice stands on no other view <where>
       Given a member has logged in as "Aurora" with the password "Sommer-2026!"
       And the member has answered the notice with "Verstanden"
@@ -71,6 +75,7 @@ Feature: The notice about the usage records
 
   Rule: "Verstanden" ends the notice for the account, and for no other
 
+    @wip
     Scenario Outline: After "Verstanden", the notice does not come back at a later login <where>
       Given a member has logged in as "Aurora" with the password "Sommer-2026!"
       And the member has answered the notice with "Verstanden"
@@ -84,6 +89,7 @@ Feature: The notice about the usage records
         | on another browser             | the member has logged out            | a member logs in as "Aurora" with the password "Sommer-2026!" on another browser |
         | after a restart of the service | the service has been restarted since | a member logs in as "Aurora" with the password "Sommer-2026!"                    |
 
+    @wip
     Scenario Outline: After Aurora answered the notice, <who> still sees it
       Given Boreas's account has the role "<role>"
       And a member has logged in as "Aurora" with the password "Sommer-2026!"
@@ -104,6 +110,7 @@ Feature: The notice about the usage records
 
   Rule: The records are written after the notice has been answered too
 
+    @wip
     Scenario: A member who answered the notice still has what she does afterwards counted
       Aurora lands on the overview after logging in, one loaded page, answers the notice and
       reloads the overview, the second.
