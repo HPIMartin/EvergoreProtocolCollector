@@ -766,8 +766,11 @@ git config core.hooksPath hooks
     its two closing checks, where `HOME` may be unset.
     - Why: a checkout another user owns opens to git only through a `safe.directory` of that
       configuration.
-  - It unsets the hooks' own seam variables: `CONTENT_GATE_PRINT_ALLOW` and the three
-    `COMMIT_MSG_TICKET_*`.
+  - It unsets the hooks' own seam variables: `AGENT_SEAT`, `CONTENT_GATE_PRINT_ALLOW` and the
+    three `COMMIT_MSG_TICKET_*`.
+    - Why `AGENT_SEAT`: under `AGENT_SEAT=unattended` `hooks/sync-main` fetches with `--prune`,
+      which drops the stale remote-tracking ref the two sync cases of a dropped main expect to
+      stay.
   - It runs under `LC_ALL=C`.
     - Why: the checks for a leaked shell message read its English wording.
   - A failing control case, a clean commit, ends the run.

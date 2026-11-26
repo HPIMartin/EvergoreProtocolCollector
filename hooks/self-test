@@ -21,7 +21,7 @@ done
 
 # The hooks' own seams: a value the caller exported would stand in for a shipped one in every case
 # that does not set it.
-unset CONTENT_GATE_PRINT_ALLOW COMMIT_MSG_TICKET_KEY_RE COMMIT_MSG_TICKET_POSITION COMMIT_MSG_TICKET_REQUIRED
+unset AGENT_SEAT CONTENT_GATE_PRINT_ALLOW COMMIT_MSG_TICKET_KEY_RE COMMIT_MSG_TICKET_POSITION COMMIT_MSG_TICKET_REQUIRED
 
 # The cases on the minimum ask for the version check alone by an argument, never by a variable: the
 # hooks/ leg and assemble.sh pass none, and an environment they inherit must not skip a case.
