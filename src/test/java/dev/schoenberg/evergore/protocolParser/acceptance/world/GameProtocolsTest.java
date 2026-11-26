@@ -18,6 +18,7 @@ class GameProtocolsTest {
 		AtomicReference<PageContents> answer = new AtomicReference<>();
 		Thread asking = Thread.ofPlatform().start(() -> answer.set(tested.pageContents()));
 		tested.awaitAsked();
+		awaitWaitingOrDone(asking);
 		PageContents whileHeld = answer.get();
 
 		tested.release();
@@ -47,6 +48,7 @@ class GameProtocolsTest {
 		AtomicReference<Throwable> failure = new AtomicReference<>();
 		Thread asking = Thread.ofPlatform().start(() -> failure.set(catchThrowable(tested::pageContents)));
 		tested.awaitAsked();
+		awaitWaitingOrDone(asking);
 		Throwable whileHeld = failure.get();
 
 		tested.release();
@@ -61,5 +63,11 @@ class GameProtocolsTest {
 		Throwable refused = catchThrowable(tested::awaitAsked);
 
 		assertThat(refused).isInstanceOf(AssertionError.class);
+	}
+
+	private static void awaitWaitingOrDone(Thread thread) {
+		while (thread.getState() != Thread.State.TIMED_WAITING && thread.getState() != Thread.State.TERMINATED) {
+			Thread.onSpinWait();
+		}
 	}
 }

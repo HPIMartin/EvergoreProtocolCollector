@@ -32,12 +32,16 @@ class TrackedCollectionsTest {
 			finished.set(true);
 		});
 		started.await();
+		Thread awaiting = Thread.ofPlatform().start(tested::awaitFinished);
+		awaitWaitingOrDone(awaiting);
+		boolean returnedWhileHeld = awaiting.getState() == Thread.State.TERMINATED;
 		boolean finishedWhileHeld = finished.get();
 
 		go.countDown();
-		tested.awaitFinished();
+		awaiting.join();
 		tested.awaitFinished();
 
+		assertThat(returnedWhileHeld).isFalse();
 		assertThat(finishedWhileHeld).isFalse();
 		assertThat(finished.get()).isTrue();
 	}
@@ -56,6 +60,12 @@ class TrackedCollectionsTest {
 
 	private interface Figures {
 		String save();
+	}
+
+	private static void awaitWaitingOrDone(Thread thread) {
+		while (thread.getState() != Thread.State.WAITING && thread.getState() != Thread.State.TERMINATED) {
+			Thread.onSpinWait();
+		}
 	}
 
 	private static void awaitUninterruptibly(CountDownLatch latch) {
