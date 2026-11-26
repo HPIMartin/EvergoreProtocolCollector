@@ -362,6 +362,9 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
     `UsageActors`: the admin key's, or an admin account's on another browser), so a usage count
     sees no extra login; without one it logs in with the admin key, and a member's login in the
     same browser drops the admin's.
+  - Before the admin opens the admin page and before the operator asks for the usage figures, the
+    glue awaits the usage records written (`RunningService.awaitTheUsageWritten`, the queue's
+    `awaitWritten`), so a slow write cannot turn a scenario red.
   - `UsageActors` keeps each actor's login moment and browser for the steps that act "N days
     after logging in"; a member who logs in "after the admin" does so on the second browser.
   - No separate pool exists per actor (handbook §5).

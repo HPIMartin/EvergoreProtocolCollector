@@ -22,6 +22,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.browser.ShownAccount;
 import dev.schoenberg.evergore.protocolParser.acceptance.browser.UsageTable;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.Answer;
 import dev.schoenberg.evergore.protocolParser.acceptance.operator.LoginRequests;
+import dev.schoenberg.evergore.protocolParser.acceptance.service.RunningService;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ScenarioTime;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
 import dev.schoenberg.evergore.protocolParser.acceptance.world.UsageActors;
@@ -49,8 +50,10 @@ public class UsageSteps {
 	private final ScenarioTime time;
 	private final LoginRequests logins;
 	private final ServiceLog log;
+	private final RunningService service;
 
-	public UsageSteps(AdminsBrowser admins, SecondBrowser secondBrowser, UsageActors actors, ScenarioTime time, LoginRequests logins, ServiceLog log) {
+	public UsageSteps(AdminsBrowser admins, SecondBrowser secondBrowser, UsageActors actors, ScenarioTime time, LoginRequests logins, ServiceLog log, RunningService service) {
+		this.service = service;
 		this.admins = admins;
 		this.secondBrowser = secondBrowser;
 		this.actors = actors;
@@ -221,6 +224,7 @@ public class UsageSteps {
 	@Then("the operator finds {string} as {word}'s {string} in the guild's usage figures, asked for with the admin key")
 	public void theOperatorFindsInTheGuildsUsageFigures(String expected, String name, String column) {
 		String login = LoginRequests.loginValueIn(logins.logIn("admin", log.adminKeyNamed()));
+		service.awaitTheUsageWritten();
 		Answer answer = logins.asking(USAGE_FIGURES, login);
 
 		assertThat(answer.status()).as("the usage figures: " + answer.body()).isEqualTo(200);

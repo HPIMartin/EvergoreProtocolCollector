@@ -23,6 +23,7 @@ import dev.schoenberg.evergore.protocolParser.acceptance.world.ServiceLog;
 import dev.schoenberg.evergore.protocolParser.application.AccountRepository;
 import dev.schoenberg.evergore.protocolParser.application.EvergoreDataExtractor;
 import dev.schoenberg.evergore.protocolParser.application.PasswordHasher;
+import dev.schoenberg.evergore.protocolParser.application.UsageRecordQueue;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.LoginName;
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.PasswordState;
 
@@ -168,6 +169,10 @@ public class RunningService {
 
 		assertThat(accounts.findByNameKey(nameKey)).as("the account of %s", avatar).isPresent();
 		OwnThread.run(() -> accounts.replacePassword(nameKey, hasher.hash(password), PasswordState.CHOSEN));
+	}
+
+	public void awaitTheUsageWritten() {
+		OwnThread.run(context.getBean(UsageRecordQueue.class)::awaitWritten);
 	}
 
 	public int collectionsRun() {
