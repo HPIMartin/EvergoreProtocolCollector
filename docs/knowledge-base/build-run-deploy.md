@@ -1349,6 +1349,7 @@ answered (measured on Micronaut 4.10.9).
     `null`;
   - `nextCollectionFrom` is the moment from which a start by hand is accepted, only while the hour
     after the last start has not passed and no collection runs, else `null`;
+  - both keys come from one reading, so an answer carries at most one of them;
   - both are in-memory like the outcomes and `null` again after a restart;
   - `lastUpdated` is persisted: the meta store's last-completed-evaluation stamp, shown on `/admin`,
     not on the members' overview;

@@ -57,6 +57,10 @@ public class Collections {
 		}
 	}
 
+	public synchronized CollectionState state() {
+		return new CollectionState(runningSince(), nextStartByHandFrom());
+	}
+
 	public synchronized Optional<Instant> runningSince() {
 		return Optional.ofNullable(runningSince);
 	}

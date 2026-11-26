@@ -77,6 +77,7 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - A refused start or a skipped daily collection counts as no start.
   - The last start is forgotten at a restart.
   - A failed run by hand is logged as `Collection started by hand failed.` and ends the run.
+  - `Collections.state()` gives the running start and the next start by hand in one reading, so a status never mixes the two.
   - A start by hand that the executor refuses is taken back:
     - nothing runs;
     - the start counts as none.

@@ -322,6 +322,27 @@ class CollectionsTest {
 	}
 
 	@Test
+	void statesTheRunningStartAndNoNextStartWhileACollectionRuns() {
+		tested.startByHand();
+		clock.passMinutes(5);
+
+		CollectionState state = tested.state();
+
+		assertThat(state).isEqualTo(new CollectionState(Optional.of(START), Optional.empty()));
+	}
+
+	@Test
+	void statesTheNextStartAndNoRunningStartOnceTheCollectionEndedWithinTheHour() {
+		tested.startByHand();
+		background.runHeldTasks();
+		clock.passMinutes(5);
+
+		CollectionState state = tested.state();
+
+		assertThat(state).isEqualTo(new CollectionState(Optional.empty(), Optional.of(START.plusSeconds(3600))));
+	}
+
+	@Test
 	void freesTheCollectionAndRethrowsWhenTheExecutorRefusesAStartByHand() {
 		RejectedExecutionException refused = new RejectedExecutionException("shut down");
 		Collections refusing = new Collections(collection, task -> {

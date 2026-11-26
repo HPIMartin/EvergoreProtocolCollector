@@ -7,6 +7,7 @@ import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Produces;
 
+import dev.schoenberg.evergore.protocolParser.application.CollectionState;
 import dev.schoenberg.evergore.protocolParser.application.Collections;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
 import dev.schoenberg.evergore.protocolParser.businessLogic.GermanOrder;
@@ -38,11 +39,12 @@ public class AdminStatusController {
 	public AdminStatus status() {
 		GuildContributions recompute = contributions.ofEveryKnownAvatar();
 		LastRunStatus.Snapshot snapshot = lastRunStatus.snapshot();
+		CollectionState collectionState = collections.state();
 
 		return new AdminStatus(lastUpdated(recompute), snapshot.lastSuccessfulScrape().orElse(null), snapshot.lastScrapeFailure().orElse(null),
 				snapshot.lastSuccessfulRecompute().orElse(null), snapshot.lastRecomputeFailure().orElse(null), GermanOrder.distinctSorted(snapshot.unknownItemNames()),
-				GermanOrder.distinctSorted(snapshot.failedAvatarNames()), roundTripsOf(snapshot), roundTripAbstentionsOf(snapshot), collections.runningSince().orElse(null),
-				collections.nextStartByHandFrom().orElse(null));
+				GermanOrder.distinctSorted(snapshot.failedAvatarNames()), roundTripsOf(snapshot), roundTripAbstentionsOf(snapshot), collectionState.runningSince().orElse(null),
+				collectionState.nextStartByHandFrom().orElse(null));
 	}
 
 	private static List<RoundTripWire> roundTripsOf(LastRunStatus.Snapshot snapshot) {

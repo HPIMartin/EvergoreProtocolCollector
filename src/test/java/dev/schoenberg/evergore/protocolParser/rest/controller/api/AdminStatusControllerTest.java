@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
+import dev.schoenberg.evergore.protocolParser.application.CollectionState;
 import dev.schoenberg.evergore.protocolParser.application.Collections;
 import dev.schoenberg.evergore.protocolParser.application.EvaluationResultFixture;
 import dev.schoenberg.evergore.protocolParser.application.LastRunStatus;
@@ -33,8 +34,8 @@ class AdminStatusControllerTest {
 	private final LastRunStatus lastRunStatus = new LastRunStatus();
 	private final FakeMetaInformationRepository metaRepo = new FakeMetaInformationRepository();
 	private final StubbedCollections collections = new StubbedCollections();
-	private final AdminStatusController tested = new AdminStatusController(new AvatarContributions(new KnownAvatars(bankRepo, storageRepo), metaRepo, bankRepo, storageRepo),
-			lastRunStatus, collections);
+	private final AvatarContributions contributions = new AvatarContributions(new KnownAvatars(bankRepo, storageRepo), metaRepo, bankRepo, storageRepo);
+	private final AdminStatusController tested = new AdminStatusController(contributions, lastRunStatus, collections);
 
 	@Test
 	void reportsSinceWhenTheRunningCollectionStartedAndNoMomentForTheNextStart() {
@@ -54,6 +55,17 @@ class AdminStatusControllerTest {
 
 		assertThat(status.nextCollectionFrom()).isEqualTo(Instant.parse("2026-01-02T14:00:00Z"));
 		assertThat(status.collectionRunningSince()).isNull();
+	}
+
+	@Test
+	void readsTheRunningCollectionAndTheNextStartFromOneStateOfTheCollections() {
+		Collections snapshotOnly = new SnapshotOnlyCollections(new CollectionState(Optional.of(Instant.parse("2026-01-02T13:00:00Z")), Optional.empty()));
+		AdminStatusController reading = new AdminStatusController(contributions, lastRunStatus, snapshotOnly);
+
+		AdminStatus status = reading.status();
+
+		assertThat(status.collectionRunningSince()).isEqualTo(Instant.parse("2026-01-02T13:00:00Z"));
+		assertThat(status.nextCollectionFrom()).isNull();
 	}
 
 	@Test
@@ -94,6 +106,30 @@ class AdminStatusControllerTest {
 
 	private void record(EvaluationResultFixture fixture) {
 		lastRunStatus.recordSuccessfulRecompute(Instant.parse("2026-06-21T12:00:00Z"), fixture.build());
+	}
+
+	private static class SnapshotOnlyCollections extends Collections {
+		private final CollectionState state;
+
+		SnapshotOnlyCollections(CollectionState state) {
+			super(null, null, null, null);
+			this.state = state;
+		}
+
+		@Override
+		public CollectionState state() {
+			return state;
+		}
+
+		@Override
+		public Optional<Instant> runningSince() {
+			throw new AssertionError("The status must read the collection state in one reading");
+		}
+
+		@Override
+		public Optional<Instant> nextStartByHandFrom() {
+			throw new AssertionError("The status must read the collection state in one reading");
+		}
 	}
 
 	private static class StubbedCollections extends Collections {

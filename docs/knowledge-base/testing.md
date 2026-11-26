@@ -181,12 +181,15 @@
   - a start by hand that the executor refuses frees the owner;
   - such a start rethrows the refusal, also for an executor that was shut down;
   - such a start counts as no start.
+  - `state()` names the running start and no next start while a collection runs, and the next start and no running start once it
+    ended within the hour.
 - `CollectionControllerTest`:
   - `POST /api/v1/admin/collection` answers 202 and starts one collection;
   - only the admin role starts one: no login 401, a member's login 403, then the admin's 202 with one start in all;
   - a collection running answers 409 `running`, a start within the hour 409 `too-early`.
 - `AdminStatusControllerTest`, the collection fields (its other cases stand in its row):
   - `collectionRunningSince` and `nextCollectionFrom` are read from a stubbed `Collections`, each `null` while the other is set.
+  - the two collection fields come from one `Collections.state()` reading, not from two.
 - `GameProtocolsTest`:
   - a read waits until the release: a second thread asks and the test waits for it to be asked;
   - only the reads asked before the release wait;
