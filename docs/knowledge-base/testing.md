@@ -205,7 +205,8 @@
   - the hook still runs after a failed scrape as long as the recompute that follows succeeds;
   - the run's unknown items and failed avatars go to `LastRunStatus` in the same `recordSuccessfulRecompute` call;
   - the accounts of every known avatar are created after the recompute and after a failed scrape too, none when the recompute fails;
-  - a failure while creating the accounts is logged as an error, keeps the recompute's outcome and still lets the hook run.
+  - a failure while creating the accounts is logged as an error, keeps the recompute's outcome and still lets the hook run;
+  - the read of the game is logged as `Extraction started...` and `Extraction finished!`, without calling the collection scheduled.
 
 **The shell suites beside the build** (each leg and its refusals:
 [build-run-deploy.md](build-run-deploy.md), "Git hooks"):

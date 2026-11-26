@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class CollectionSteps {
 	private static final LocalTime COLLECTION_TIME = LocalTime.of(5, 0);
-	private static final String READ_THE_GAME = "Scheduled extraction finished!";
+	private static final String READ_THE_GAME = "Extraction finished!";
 	private static final LocalDate FIRST_DAY = LocalDate.of(2026, 1, 1);
 
 	private final RunningService service;

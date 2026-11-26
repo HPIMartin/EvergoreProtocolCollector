@@ -33,11 +33,11 @@ public class GuildCollection {
 	}
 
 	private void scrape() {
-		logger.info("Scheduled extraction started...");
+		logger.info("Extraction started...");
 		try {
 			dataExtractor.loadData();
 			lastRunStatus.recordSuccessfulScrape(clock.instant());
-			logger.info("Scheduled extraction finished!");
+			logger.info("Extraction finished!");
 		} catch (RuntimeException e) {
 			logger.error("Scrape failed; the recompute still runs on the stored rows.", e);
 			lastRunStatus.recordScrapeFailure(clock.instant());

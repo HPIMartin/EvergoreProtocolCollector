@@ -96,6 +96,13 @@ class GuildCollectionTest {
 	}
 
 	@Test
+	void logsTheReadOfTheGameWithoutCallingTheCollectionScheduled() {
+		tested.run();
+
+		assertThat(logger.infoMessages()).contains("Extraction started...", "Extraction finished!");
+	}
+
+	@Test
 	void recordsSuccessfulScrapeAndRecomputeAfterASuccessfulRun() {
 		tested.run();
 
