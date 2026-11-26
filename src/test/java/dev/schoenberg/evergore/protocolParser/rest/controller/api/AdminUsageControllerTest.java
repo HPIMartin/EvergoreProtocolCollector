@@ -99,7 +99,8 @@ class AdminUsageControllerTest {
 		assertThat(response.getStatus()).isEqualTo(200);
 		JSONObject recent = new JSONObject(response.getBody()).getJSONObject("lastThirtyDays");
 		assertThat(countsOf(recent, "Zaungast")).isEqualTo(List.of(0, 0, 0, 0));
-		assertThat(accountNamed(recent, "Zaungast").getJSONObject("counts").isNull("latestUse")).isTrue();
+		JSONObject counts = accountNamed(recent, "Zaungast").getJSONObject("counts");
+		assertThat(List.of(counts.has("latestUse"), counts.isNull("latestUse"))).isEqualTo(List.of(true, true));
 	}
 
 	private static UsageRecord record(String account, Instant at, UsageKind what) {
