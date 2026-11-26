@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UsageRecordQueueTest {
 	private static final Instant LOGGED_IN = Instant.parse("2026-11-01T20:15:00Z");
 	private static final UsageWriting WRITING = new UsageWriting(10, 500, Duration.ofSeconds(10));
+	private static final Duration HANG_GUARD = Duration.ofSeconds(10);
 
 	private final RecordingUsageRecords repository = new RecordingUsageRecords();
 	private final LoggerSpy logger = new LoggerSpy();
@@ -77,13 +78,39 @@ class UsageRecordQueueTest {
 	}
 
 	@Test
+	void awaitingTheWrittenRecordsReturnsAtOnceAfterTheWriterThreadDied() {
+		List<Thread> writers = new CopyOnWriteArrayList<>();
+		UsageRecordQueue tested = startedRecordingTheWriterIn(writers);
+		writers.getFirst().interrupt();
+		silentThrow(() -> writers.getFirst().join());
+
+		Thread awaiting = Thread.ofPlatform().daemon().start(tested::awaitWritten);
+		boolean returned = silentThrow(() -> awaiting.join(HANG_GUARD));
+		tested.close();
+
+		assertThat(returned).isTrue();
+	}
+
+	@Test
+	void awaitingTheWrittenRecordsReturnsWhenTheWriterThreadDiesInTheWriteBeforeIt() {
+		UsageRecordQueue tested = startedWith(WRITING);
+		repository.holdAndBreakTheFirstBatch();
+		tested.record(login("aurora"));
+		repository.awaitTheFirstBatchWriting();
+		Thread awaiting = Thread.ofPlatform().daemon().start(tested::awaitWritten);
+		settledStateOf(awaiting);
+
+		repository.releaseTheFirstBatch();
+		boolean returned = silentThrow(() -> awaiting.join(HANG_GUARD));
+		tested.close();
+
+		assertThat(returned).isTrue();
+	}
+
+	@Test
 	void closingAfterTheWriterThreadDiedCountsAndWarnsOfTheRecordsLeftWaiting() {
 		List<Thread> writers = new CopyOnWriteArrayList<>();
-		UsageRecordQueue tested = UsageRecordQueue.start(repository, WRITING, runnable -> {
-			Thread thread = new Thread(runnable, "usage-writer-test");
-			writers.add(thread);
-			return thread;
-		}, joining, logger);
+		UsageRecordQueue tested = startedRecordingTheWriterIn(writers);
 		writers.getFirst().interrupt();
 		silentThrow(() -> writers.getFirst().join());
 
@@ -177,6 +204,14 @@ class UsageRecordQueueTest {
 
 		assertThat(logger.warnMessages()).containsExactly("Closed with 3 usage records not written");
 		assertThat(tested.lostSinceStart()).isEqualTo(3);
+	}
+
+	private UsageRecordQueue startedRecordingTheWriterIn(List<Thread> writers) {
+		return UsageRecordQueue.start(repository, WRITING, runnable -> {
+			Thread thread = new Thread(runnable, "usage-writer-test");
+			writers.add(thread);
+			return thread;
+		}, joining, logger);
 	}
 
 	private UsageRecordQueue startedWith(UsageWriting writing) {

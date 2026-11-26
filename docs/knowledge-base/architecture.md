@@ -439,6 +439,9 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - `awaitWritten` queues a mark and returns once the thread has passed it, so every record queued
     before it is written (or counted as lost); the acceptance glue awaits it before the admin or the
     operator reads the figures, so no scenario hinges on how fast the thread writes;
+  - once the thread has ended, at the close or by dying, it passes every mark still waiting, and
+    `awaitWritten` returns at once: the close and the end of the thread take the same lock as the
+    queuing of a mark, so no mark waits behind the end;
   - `ApplicationFactory` starts it on a platform thread named `usage-writer` with the values of
     `UsageWritingConfiguration` and `Thread::join` as its `ThreadEnd`, and the context closes it
     before the `SqliteDatabase` it writes through, so the records waiting at a shutdown reach the

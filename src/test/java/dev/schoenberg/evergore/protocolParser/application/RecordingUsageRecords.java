@@ -12,12 +12,14 @@ import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.Exc
 
 class RecordingUsageRecords implements UsageRecordRepository {
 	static final IllegalStateException FAILURE = new IllegalStateException("the disk is full");
+	static final Error BREAK = new Error("the writer thread breaks");
 
 	private final List<List<UsageRecord>> batches = new CopyOnWriteArrayList<>();
 	private final AtomicInteger batchesTaken = new AtomicInteger();
 	private final AtomicBoolean failsTheFirstBatch = new AtomicBoolean();
 	private final AtomicBoolean holdsTheFirstBatch = new AtomicBoolean();
 	private final AtomicBoolean holdsTheSecondBatch = new AtomicBoolean();
+	private final AtomicBoolean breaksTheFirstBatch = new AtomicBoolean();
 	private final CountDownLatch firstBatchWriting = new CountDownLatch(1);
 	private final CountDownLatch firstBatchReleased = new CountDownLatch(1);
 	private final CountDownLatch secondBatchWriting = new CountDownLatch(1);
@@ -33,6 +35,9 @@ class RecordingUsageRecords implements UsageRecordRepository {
 		if (holdsTheFirstBatch.getAndSet(false)) {
 			firstBatchWriting.countDown();
 			silentThrow(() -> firstBatchReleased.await());
+			if (breaksTheFirstBatch.get()) {
+				throw BREAK;
+			}
 		}
 		if (second && holdsTheSecondBatch.get()) {
 			secondBatchWriting.countDown();
@@ -47,6 +52,11 @@ class RecordingUsageRecords implements UsageRecordRepository {
 
 	void holdTheFirstBatch() {
 		holdsTheFirstBatch.set(true);
+	}
+
+	void holdAndBreakTheFirstBatch() {
+		holdsTheFirstBatch.set(true);
+		breaksTheFirstBatch.set(true);
 	}
 
 	void awaitTheFirstBatchWriting() {

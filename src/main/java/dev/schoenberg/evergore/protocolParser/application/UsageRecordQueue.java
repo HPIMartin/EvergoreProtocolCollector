@@ -24,6 +24,7 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 	};
 
 	private final BlockingQueue<Waiting> waiting = new LinkedBlockingQueue<>();
+	private final Object endOfTheWriter = new Object();
 	private final AtomicLong lost = new AtomicLong();
 	private final Semaphore freePlaces;
 	private final UsageRecordRepository repository;
@@ -33,6 +34,7 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 	private final Logger logger;
 	private Thread writer;
 	private volatile boolean closed;
+	private boolean writerEnded;
 	private volatile int inWrite;
 
 	private UsageRecordQueue(UsageRecordRepository repository, UsageWriting writing, ThreadEnd threadEnd, Logger logger) {
@@ -61,11 +63,13 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 	}
 
 	public void awaitWritten() {
-		if (closed) {
-			return;
-		}
 		Mark mark = new Mark(new CountDownLatch(1));
-		waiting.add(mark);
+		synchronized (endOfTheWriter) {
+			if (closed || writerEnded) {
+				return;
+			}
+			waiting.add(mark);
+		}
 		silentThrow(() -> mark.written().await());
 	}
 
@@ -76,8 +80,10 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 
 	@Override
 	public void close() {
-		closed = true;
-		waiting.add(END);
+		synchronized (endOfTheWriter) {
+			closed = true;
+			waiting.add(END);
+		}
 		boolean ended = silentThrow(() -> threadEnd.awaited(writer, closeBound));
 		long notWritten = (ended ? 0 : inWrite) + waiting.stream().mapToInt(Waiting::records).sum();
 		if (notWritten > 0) {
@@ -87,6 +93,17 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 	}
 
 	private void writeUntilTheEnd() {
+		try {
+			writeBatchesUntilTheEnd();
+		} finally {
+			synchronized (endOfTheWriter) {
+				writerEnded = true;
+			}
+			waiting.forEach(Waiting::passed);
+		}
+	}
+
+	private void writeBatchesUntilTheEnd() {
 		boolean ended = false;
 		while (!ended) {
 			List<Waiting> taken = new ArrayList<>();
