@@ -12,6 +12,7 @@ import dev.schoenberg.evergore.protocolParser.LoggerSpy;
 import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageKind;
 import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageRecord;
 
+import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class UsageRecordQueueTest {
@@ -34,6 +35,23 @@ class UsageRecordQueueTest {
 		tested.close();
 
 		assertThat(awaitedEnds).containsExactly("usage-writer-test within PT10S");
+	}
+
+	@Test
+	void awaitingTheWrittenRecordsReturnsOnlyOnceEveryRecordRecordedBeforeIsWritten() {
+		UsageRecordQueue tested = startedWith(WRITING);
+		repository.holdTheFirstBatch();
+		tested.record(login("aurora"));
+		repository.awaitTheFirstBatchWriting();
+		Thread awaiting = Thread.ofPlatform().start(tested::awaitWritten);
+
+		Thread.State whileTheWriteHangs = settledStateOf(awaiting);
+		repository.releaseTheFirstBatch();
+		silentThrow(() -> awaiting.join());
+		tested.close();
+
+		assertThat(whileTheWriteHangs).isEqualTo(Thread.State.WAITING);
+		assertThat(repository.records()).containsExactly(login("aurora"));
 	}
 
 	@Test
@@ -131,5 +149,14 @@ class UsageRecordQueueTest {
 
 	private static UsageRecord login(String accountKey) {
 		return new UsageRecord(accountKey, LOGGED_IN, UsageKind.LOGIN, Optional.empty());
+	}
+
+	private static Thread.State settledStateOf(Thread thread) {
+		Thread.State state = thread.getState();
+		while (state != Thread.State.WAITING && state != Thread.State.TERMINATED) {
+			Thread.onSpinWait();
+			state = thread.getState();
+		}
+		return state;
 	}
 }

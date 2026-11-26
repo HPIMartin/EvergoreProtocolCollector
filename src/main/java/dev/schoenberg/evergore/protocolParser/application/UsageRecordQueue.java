@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
@@ -59,6 +60,15 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 		}
 	}
 
+	public void awaitWritten() {
+		if (closed) {
+			return;
+		}
+		Mark mark = new Mark(new CountDownLatch(1));
+		waiting.add(mark);
+		silentThrow(() -> mark.written().await());
+	}
+
 	@Override
 	public long lostSinceStart() {
 		return lost.get();
@@ -88,6 +98,7 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 			if (!batch.isEmpty()) {
 				write(batch);
 			}
+			taken.forEach(Waiting::passed);
 		}
 	}
 
@@ -112,6 +123,15 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 
 		default boolean ends() {
 			return false;
+		}
+
+		default void passed() {}
+	}
+
+	private record Mark(CountDownLatch written) implements Waiting {
+		@Override
+		public void passed() {
+			written.countDown();
 		}
 	}
 
