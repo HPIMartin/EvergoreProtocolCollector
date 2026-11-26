@@ -3,12 +3,7 @@ import { Fragment, useState } from 'react'
 import type { ProtocolApi } from '../api'
 import { Forbidden, Unauthorized } from '../api'
 import type { Role } from '../domain'
-import {
-  describeAbstention,
-  formatTimestamp,
-  Link,
-  roundTripDetail,
-} from '../ui'
+import { formatTimestamp, Link, roundTripDetail } from '../ui'
 
 import { AccountList } from './AccountList.tsx'
 import { hrefOf } from './href.ts'
@@ -93,10 +88,13 @@ export function AdminView({ api }: AdminViewProps) {
                 detail: roundTripDetail(roundTrip),
               }))}
             />
-            <NameList
+            <FindingList
               testId="round-trip-abstentions"
               heading="Nicht beurteilbar (Rezept ungelesen)"
-              names={status.roundTripAbstentions.map(describeAbstention)}
+              findings={status.roundTripAbstentions.map((abstention) => ({
+                member: abstention.avatar,
+                detail: abstention.item,
+              }))}
             />
             <AccountList accounts={accounts} reset={reset} setRole={setRole} />
             <UsageSection api={api} />

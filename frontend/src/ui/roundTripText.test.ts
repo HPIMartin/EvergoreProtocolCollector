@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { describeAbstention, roundTripDetail } from './roundTripText.ts'
+import { roundTripDetail } from './roundTripText.ts'
 
 describe('describing a round trip', () => {
   it('names the quantity and the item', () => {
@@ -21,13 +21,5 @@ describe('describing a round trip', () => {
     })
 
     expect(text).toBe('1.234 × Federn')
-  })
-})
-
-describe('describing a round-trip abstention', () => {
-  it('names the avatar and the item', () => {
-    const text = describeAbstention({ avatar: 'Alrik', item: 'Federn' })
-
-    expect(text).toBe('Alrik: Federn')
   })
 })

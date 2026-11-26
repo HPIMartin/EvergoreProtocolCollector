@@ -902,6 +902,23 @@ describe('the findings of the last recompute on the admin page', () => {
     })
   })
 
+  it("leads the name in each pair not judgeable, and only the name, to that member's storage ledger", async () => {
+    const roundTripAbstentions = [{ avatar: 'Brynja', item: 'Kristallat' }]
+    await adminViewWith(apiReporting({ ...NO_FACTS, roundTripAbstentions }))
+
+    const shown = findingsIn('round-trip-abstentions')
+
+    expect(shown).toEqual({
+      paragraph: 'Nicht beurteilbar (Rezept ungelesen): Brynja: Kristallat',
+      entries: [
+        {
+          text: 'Brynja: Kristallat',
+          links: [['Brynja', '/avatars/Brynja/storage']],
+        },
+      ],
+    })
+  })
+
   it('shows two identical findings, each under a key of its own', async () => {
     const errors = vi
       .spyOn(console, 'error')
