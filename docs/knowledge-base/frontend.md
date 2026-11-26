@@ -199,6 +199,7 @@ Five top-level folders under `frontend/src/`:
   - The member's name in each entry of the three member lists ("Verdacht auf Warenkreislauf",
     "Nicht beurteilbar (Rezept ungelesen)", "Nicht aktualisierte Avatare") is a `Link` to that
     member's storage ledger (decision 2026-10-31).
+  - The `Link` is followed inside the shell (`onFollow`).
   - Nothing else in an entry is a link.
   - The unknown items ("Unbekannte Items") are plain text.
   - Each entry is a `span[data-testid=finding]` inside its list's `p`, joined by literal ", " text,

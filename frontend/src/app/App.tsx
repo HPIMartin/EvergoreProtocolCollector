@@ -44,7 +44,7 @@ export function App({
 
   const view: RouteVisitor<ReactNode> = {
     overview: () => <OverviewView api={api} onFollow={follow} />,
-    admin: () => <AdminView api={api} />,
+    admin: () => <AdminView api={api} onFollow={follow} />,
     explanation: () => <ExplanationView />,
     password: () =>
       account?.canChangePassword === false ? (

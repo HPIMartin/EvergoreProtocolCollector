@@ -1601,6 +1601,34 @@ describe('App', () => {
     })
   })
 
+  it("follows a member's name on the admin page to that member's storage ledger without leaving the shell", async () => {
+    const server = serving((path) => ({
+      status: 200,
+      body: path.startsWith('/api/v1/avatars/')
+        ? STORAGE_BODY
+        : path === '/api/v1/admin/accounts'
+          ? '[]'
+          : ADMIN_STATUS_BODY,
+    }))
+    await shellAt('/admin', server)
+    const name = within(screen.getByTestId('round-trips')).getByRole('link', {
+      name: 'Alrik',
+    })
+
+    await act(async () => {
+      fireEvent.click(name)
+    })
+
+    const lastAsked = server.askedFor.at(-1)
+    expect({
+      address: window.location.pathname + window.location.search,
+      lastAsked,
+    }).toStrictEqual({
+      address: '/avatars/Alrik/storage',
+      lastAsked: '/api/v1/avatars/Alrik/storage?page=0&size=100',
+    })
+  })
+
   it('shows the password of the admin who reset the own account and asks to log in at the next navigation', async () => {
     let ended = false
     const server = serving((path) => {

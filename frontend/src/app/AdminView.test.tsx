@@ -120,7 +120,7 @@ function shownRoleOf(row: HTMLElement): string | null {
 }
 
 async function adminViewWith(api: ProtocolApi): Promise<void> {
-  render(<AdminView api={api} />)
+  render(<AdminView api={api} onFollow={() => undefined} />)
   await act(async () => undefined)
 }
 
@@ -333,7 +333,10 @@ describe('AdminView', () => {
           navigatedTo.push(target)
         }}
       >
-        <AdminView api={apiListing([ALRIK], unused, unauthorized)} />
+        <AdminView
+          api={apiListing([ALRIK], unused, unauthorized)}
+          onFollow={() => undefined}
+        />
       </LoginNavigation.Provider>,
     )
     await act(async () => undefined)
@@ -687,7 +690,10 @@ describe('the password a reset issued on the admin page', () => {
           navigatedTo.push(target)
         }}
       >
-        <AdminView api={apiListing([ALRIK], unauthorized)} />
+        <AdminView
+          api={apiListing([ALRIK], unauthorized)}
+          onFollow={() => undefined}
+        />
       </LoginNavigation.Provider>,
     )
     await act(async () => undefined)

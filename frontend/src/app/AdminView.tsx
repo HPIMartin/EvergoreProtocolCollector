@@ -15,9 +15,10 @@ import { failureOf, useLoad } from './useLoad.ts'
 
 export interface AdminViewProps {
   readonly api: ProtocolApi
+  readonly onFollow: (href: string) => void
 }
 
-export function AdminView({ api }: AdminViewProps) {
+export function AdminView({ api, onFollow }: AdminViewProps) {
   const load = useLoad(
     async () => {
       const [status, accounts] = await Promise.all([
@@ -78,11 +79,13 @@ export function AdminView({ api }: AdminViewProps) {
             <FindingList
               testId="failed-avatar-names"
               heading="Nicht aktualisierte Avatare"
+              onFollow={onFollow}
               findings={status.failedAvatarNames.map((member) => ({ member }))}
             />
             <FindingList
               testId="round-trips"
               heading="Verdacht auf Warenkreislauf"
+              onFollow={onFollow}
               findings={status.roundTrips.map((roundTrip) => ({
                 member: roundTrip.avatar,
                 detail: roundTripDetail(roundTrip),
@@ -91,6 +94,7 @@ export function AdminView({ api }: AdminViewProps) {
             <FindingList
               testId="round-trip-abstentions"
               heading="Nicht beurteilbar (Rezept ungelesen)"
+              onFollow={onFollow}
               findings={status.roundTripAbstentions.map((abstention) => ({
                 member: abstention.avatar,
                 detail: abstention.item,
@@ -150,9 +154,15 @@ interface FindingListProps {
   readonly testId: string
   readonly heading: string
   readonly findings: readonly Finding[]
+  readonly onFollow: (href: string) => void
 }
 
-function FindingList({ testId, heading, findings }: FindingListProps) {
+function FindingList({
+  testId,
+  heading,
+  findings,
+  onFollow,
+}: FindingListProps) {
   if (findings.length === 0) {
     return null
   }
@@ -164,7 +174,9 @@ function FindingList({ testId, heading, findings }: FindingListProps) {
         <Fragment key={`${position}: ${member}`}>
           {position === 0 ? '' : ', '}
           <span data-testid="finding">
-            <Link href={hrefOf(storagePath(member))}>{member}</Link>
+            <Link href={hrefOf(storagePath(member))} onFollow={onFollow}>
+              {member}
+            </Link>
             {detail === undefined ? null : `: ${detail}`}
           </span>
         </Fragment>

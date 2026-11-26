@@ -1,4 +1,3 @@
-@wip
 Feature: The admin page leads to the members it names
   Every member the admin page names in what the last recompute found leads to that member's
   storage ledger, so the admin follows a finding without typing the name on another page: a
