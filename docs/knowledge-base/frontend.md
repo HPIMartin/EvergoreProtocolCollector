@@ -263,8 +263,7 @@ Five top-level folders under `frontend/src/`:
   - The footer holds the row „Gilde“ and below it the row „admin“ of the admin key.
   - The switch „Zeitraum“ (`switch-usage-window`) starts on „Letzte 30 Tage“; „Alles“ shows the
     other window of the same answer, so switching asks nothing.
-  - „Letzte 30 Tage“ reaches back to the same Berlin time 30 days ago, so its days of use can
-    count 31 Berlin days (build-run-deploy.md, "HTTP endpoints").
+  - The window „Letzte 30 Tage“ covers: build-run-deploy.md, "HTTP endpoints".
   - Above the switch stands „Aufgezeichnet seit <Tag>“ or „Noch keine Aufzeichnung.“
     (`usage-recorded-since`).
   - Between that line and the switch stands „Seit dem Start verloren: n“ (`usage-lost`), only

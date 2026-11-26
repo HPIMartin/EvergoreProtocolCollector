@@ -457,9 +457,10 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - `application/LogOut` records a logout under the folded name of the login's account, once per
     login;
   - `rest/filter/PageLoadRecordingFilter` records a page load under the folded name of the
-    request's login once its answer is there: a navigation (`SpaNavigations`) answered with 200,
-    the SPA shell of an unknown path included, or with 304, a page the browser shows from its cache
-    after asking.
+    request's login once its answer is there:
+    - a navigation (`SpaNavigations`) answered with 200, the SPA shell of an unknown path
+      included;
+    - a navigation answered with 304, a page the browser shows from its cache after asking.
 - **The usage figures:** `application/UsageFigures` reads the port `UsageRecordReader`:
   - it lists every account (`AccountRepository`) in German order (`GermanOrder.NAMES`) with its
     `UsageCounts`, for the last 30 days and for all the time (`UsageReport`, `UsageWindow`; the
