@@ -1001,17 +1001,32 @@ describe('the findings of the last recompute on the admin page', () => {
     })
   })
 
-  it('offers the start of a collection to the admin and to no login the admin status refuses', async () => {
+  it('offers the start of a collection to the admin', async () => {
     await adminViewWith(apiReporting(NO_FACTS))
-    const toTheAdmin = shownCollection()
-    cleanup()
 
-    await adminViewWith(apiRefusingTheAdminStatus(new Forbidden()))
-    const toAMember = shownCollection()
+    const shown = shownCollection()
 
-    expect({ toTheAdmin, toAMember }).toEqual({
-      toTheAdmin: { state: null, button: 'Jetzt sammeln' },
-      toAMember: { state: null, button: null },
+    expect(shown).toEqual({ state: null, button: 'Jetzt sammeln' })
+  })
+
+  it('offers no start of a collection and asks for none where the admin status is refused with 403', async () => {
+    let starts = 0
+    const api: ProtocolApi = {
+      ...apiRefusingTheAdminStatus(new Forbidden()),
+      startCollection: () => {
+        starts++
+
+        return Promise.resolve()
+      },
+    }
+    await adminViewWith(api)
+
+    const messages = shownMessages()
+    const shown = shownCollection()
+    expect({ messages, shown, starts }).toEqual({
+      messages: ['Diese Seite ist dem Admin vorbehalten.'],
+      shown: { state: null, button: null },
+      starts: 0,
     })
   })
 
