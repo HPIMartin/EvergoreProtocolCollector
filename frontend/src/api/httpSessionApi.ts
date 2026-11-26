@@ -15,12 +15,12 @@ export interface SessionApi {
 
 const ME = '/api/v1/me'
 const LOGOUT = '/api/v1/logout'
-const PASSWORD = '/api/v1/password'
+const PASSWORD_PATH = '/api/v1/password'
 const UNAUTHORIZED = 401
 const BAD_REQUEST = 400
 const FORBIDDEN = 403
 const TOO_MANY_REQUESTS = 429
-const WRONG_CURRENT_PASSWORD = 'wrong-current-password'
+const WRONG_CURRENT_PASSWORD_REFUSAL = 'wrong-current-password'
 const NO_ACCOUNT = 'no-account'
 const PASSWORD_REFUSALS: readonly PasswordRefusal[] = [
   'breaks-the-rule',
@@ -51,7 +51,7 @@ export function httpSessionApi(get: HttpGet, post: HttpPost): SessionApi {
     },
     changePassword: async (currentPassword, newPassword) => {
       const response = await post(
-        PASSWORD,
+        PASSWORD_PATH,
         JSON.stringify({ currentPassword, newPassword }),
       )
       if (response.status === BAD_REQUEST) {
@@ -103,8 +103,8 @@ function meFrom(body: unknown): Me {
 
 function refusalFrom(body: unknown): ChangePasswordAnswer {
   const refusal = fieldOf(body, 'refusal')
-  if (refusal === WRONG_CURRENT_PASSWORD) {
-    return WRONG_CURRENT_PASSWORD
+  if (refusal === WRONG_CURRENT_PASSWORD_REFUSAL) {
+    return WRONG_CURRENT_PASSWORD_REFUSAL
   }
   const found = PASSWORD_REFUSALS.find((candidate) => candidate === refusal)
   if (found === undefined) {

@@ -24,12 +24,12 @@ export interface LoginApi {
 }
 
 const LOGIN = '/api/v1/login'
-const NEW_PASSWORD = '/api/v1/login/new-password'
+const NEW_PASSWORD_PATH = '/api/v1/login/new-password'
 const BAD_REQUEST = 400
 const UNAUTHORIZED = 401
 const FORBIDDEN = 403
 const TOO_MANY_REQUESTS = 429
-const CHOOSE_NEW_PASSWORD = 'choose-new-password'
+const CHOOSE_NEW_PASSWORD_STEP = 'choose-new-password'
 const PASSWORD_REFUSALS: readonly PasswordRefusal[] = [
   'breaks-the-rule',
   'same-as-before',
@@ -50,13 +50,13 @@ export function httpLoginApi(post: HttpPost): LoginApi {
       }
       const body = await bodyOf(okOrThrown(response))
 
-      return fieldOf(body, 'step') === CHOOSE_NEW_PASSWORD
-        ? CHOOSE_NEW_PASSWORD
+      return fieldOf(body, 'step') === CHOOSE_NEW_PASSWORD_STEP
+        ? CHOOSE_NEW_PASSWORD_STEP
         : loggedInFrom(body)
     },
     chooseNewPassword: async (name, issuedPassword, newPassword, next) => {
       const response = await post(
-        NEW_PASSWORD,
+        NEW_PASSWORD_PATH,
         JSON.stringify({
           name,
           issuedPassword,

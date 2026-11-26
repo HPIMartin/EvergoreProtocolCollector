@@ -24,7 +24,7 @@ import static io.micronaut.http.MediaType.APPLICATION_JSON;
 @Controller(LoginController.PATH)
 public class LoginController {
 	public static final String PATH = "/api/v1/login";
-	public static final String NEW_PASSWORD = "/new-password";
+	public static final String NEW_PASSWORD_PATH = "/new-password";
 
 	private final LogIn logIn;
 	private final ChooseNewPassword chooseNewPassword;
@@ -43,7 +43,7 @@ public class LoginController {
 		return outcome.accept(new Answer(ReturnTarget.of(request.next())));
 	}
 
-	@Post(NEW_PASSWORD)
+	@Post(NEW_PASSWORD_PATH)
 	@Consumes(APPLICATION_JSON)
 	@Produces(APPLICATION_JSON)
 	public HttpResponse<?> chooseNewPassword(@Body NewPasswordRequest request) {

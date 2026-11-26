@@ -5,7 +5,7 @@ const AVATARS = 'avatars'
 const OVERVIEW = 'overview'
 const ADMIN = 'admin'
 const EXPLANATION = 'explanation'
-const PASSWORD = 'password'
+const PASSWORD_SEGMENT = 'password'
 const BANK = 'bank'
 const STORAGE = 'storage'
 const LEDGER_SEGMENT_COUNT = 3
@@ -44,7 +44,7 @@ export function explanationPath(): string {
 }
 
 export function passwordPath(): string {
-  return `${SEPARATOR}${PASSWORD}`
+  return `${SEPARATOR}${PASSWORD_SEGMENT}`
 }
 
 export function bankPath(avatar: string): string {
@@ -143,7 +143,7 @@ function onlyTheExplanationPage(segments: readonly string[]): boolean {
 }
 
 function onlyThePasswordPage(segments: readonly string[]): boolean {
-  return segments.length === 1 && segments[0] === PASSWORD
+  return segments.length === 1 && segments[0] === PASSWORD_SEGMENT
 }
 
 function ledgerRouteOf(
