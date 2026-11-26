@@ -178,6 +178,9 @@
   - a daily collection that comes between the check and the mark of a start by hand is skipped;
   - the second thread starts from the clock's reading inside the owner's lock;
   - the test waits until that thread is blocked on that lock, with no timeout.
+  - a start by hand that the executor refuses frees the owner;
+  - such a start rethrows the refusal, also for an executor that was shut down;
+  - such a start counts as no start.
 - `CollectionControllerTest`:
   - `POST /api/v1/admin/collection` answers 202 and starts one collection;
   - only the admin role starts one: no login 401, a member's login 403, then the admin's 202 with one start in all;

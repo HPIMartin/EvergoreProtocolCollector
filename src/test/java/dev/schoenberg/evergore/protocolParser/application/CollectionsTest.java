@@ -11,6 +11,10 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -315,6 +319,49 @@ class CollectionsTest {
 		assertThat(outcome).isEqualTo(new StartOutcome.Started());
 		assertThat(collection.runs).isZero();
 		assertThat(logger.infoMessages()).contains("Daily collection skipped: a collection is already running.");
+	}
+
+	@Test
+	void freesTheCollectionAndRethrowsWhenTheExecutorRefusesAStartByHand() {
+		RejectedExecutionException refused = new RejectedExecutionException("shut down");
+		Collections refusing = new Collections(collection, task -> {
+			throw refused;
+		}, clock, logger);
+
+		Throwable thrown = catchThrowable(refusing::startByHand);
+		refusing.runDaily();
+
+		assertThat(thrown).isSameAs(refused);
+		assertThat(collection.runs).isEqualTo(1);
+		assertThat(refusing.runningSince()).isEmpty();
+	}
+
+	@Test
+	void countsAStartByHandTheExecutorRefusedAsNoStart() {
+		AtomicBoolean refuse = new AtomicBoolean(true);
+		Collections refusingOnce = new Collections(collection, task -> {
+			if (refuse.getAndSet(false)) {
+				throw new RejectedExecutionException("shut down");
+			}
+			background.execute(task);
+		}, clock, logger);
+		catchThrowable(refusingOnce::startByHand);
+
+		StartOutcome again = refusingOnce.startByHand();
+
+		assertThat(again).isEqualTo(new StartOutcome.Started());
+	}
+
+	@Test
+	void freesTheCollectionWhenItsExecutorWasShutDown() {
+		ExecutorService shutDown = Executors.newSingleThreadExecutor();
+		shutDown.shutdown();
+		Collections onShutDownExecutor = new Collections(collection, shutDown, clock, logger);
+
+		Throwable thrown = catchThrowable(onShutDownExecutor::startByHand);
+
+		assertThat(thrown).isInstanceOf(RejectedExecutionException.class);
+		assertThat(onShutDownExecutor.runningSince()).isEmpty();
 	}
 
 	private static void startAndAwaitBlockedOnOrDone(Thread thread, Object lockOwner) {

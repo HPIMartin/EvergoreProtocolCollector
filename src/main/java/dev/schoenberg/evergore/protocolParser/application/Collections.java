@@ -17,6 +17,7 @@ public class Collections {
 	private final Logger logger;
 	private Instant runningSince;
 	private Instant lastStart;
+	private Instant lastStartBeforeThisRun;
 
 	public Collections(GuildCollection collection, Executor background, Clock clock, Logger logger) {
 		this.collection = collection;
@@ -42,9 +43,18 @@ public class Collections {
 		StartOutcome outcome = beginByHand();
 		if (outcome instanceof StartOutcome.Started) {
 			logger.info("Collection started by hand.");
-			background.execute(this::runStartedByHand);
+			handOverToTheBackground();
 		}
 		return outcome;
+	}
+
+	private void handOverToTheBackground() {
+		try {
+			background.execute(this::runStartedByHand);
+		} catch (RuntimeException | Error e) {
+			abandonStart();
+			throw e;
+		}
 	}
 
 	public synchronized Optional<Instant> runningSince() {
@@ -90,8 +100,14 @@ public class Collections {
 	}
 
 	private void begin(Instant now) {
+		lastStartBeforeThisRun = lastStart;
 		runningSince = now;
 		lastStart = now;
+	}
+
+	private synchronized void abandonStart() {
+		runningSince = null;
+		lastStart = lastStartBeforeThisRun;
 	}
 
 	private synchronized void end() {

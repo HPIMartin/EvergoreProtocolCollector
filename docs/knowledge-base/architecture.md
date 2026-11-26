@@ -77,6 +77,10 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - A refused start or a skipped daily collection counts as no start.
   - The last start is forgotten at a restart.
   - A failed run by hand is logged as `Collection started by hand failed.` and ends the run.
+  - A start by hand that the executor refuses is taken back:
+    - nothing runs;
+    - the start counts as none.
+  - The refusal of the executor is rethrown to the caller.
   - A daily collection that falls due while one runs is skipped with a log line and not made up.
   - The schema belongs to Flyway: `SqliteDatabase.open` runs the versioned migrations in
     `src/main/resources/db/migration` before it opens the connection source, so no caller can reach
