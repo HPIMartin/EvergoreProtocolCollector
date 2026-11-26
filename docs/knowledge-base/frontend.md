@@ -271,6 +271,9 @@ Five top-level folders under `frontend/src/`:
   - Its load has the six outcomes of every view (below) apart from the page's own, so a refused
     or failed usage leaves the status and the accounts standing.
   - „noch nie“ stands for no latest use; a latest use is in the page's timestamp format.
+  - `usageFrom` in `api/usageWire.ts` refuses an answer without either window, without a row
+    or a field, with a count that is no whole number of at least 0, a first day that is no
+    calendar day (`YYYY-MM-DD`), a name that is no string or a latest use that is no instant.
   - Hooks: `usage-title`, `usage`, per row `usage-row`, `usage-guild` and `usage-admin-key`.
 - The avatar segment is percent-encoded when a link is built and decoded when a path is read; a
   malformed escape is "no view", not a crash.
@@ -506,7 +509,7 @@ service's only read surface.
 | `GET /api/v1/avatars/{avatar}/bank` | That avatar's bank entries, newest first unless `sort` names another order. |
 | `GET /api/v1/avatars/{avatar}/storage` | That avatar's storage entries, newest first unless `sort` names another order. |
 | `GET /api/v1/admin/accounts` | Behind the admin role like the status; its shape is in build-run-deploy.md, "HTTP endpoints" (`accountsFrom` reads it; the page is under the views above). |
-| `GET /api/v1/admin/usage` | Behind the admin role like the status; its shape is in build-run-deploy.md, "HTTP endpoints". the API's `adminUsage` asks for it and `usageFrom` in `api/usageWire.ts` reads it into `Usage` and refuses an answer without either window, a count that is no whole number of at least 0, a first day that is no calendar day (`YYYY-MM-DD`) or a latest use that is no instant. |
+| `GET /api/v1/admin/usage` | Behind the admin role like the status; its shape is in build-run-deploy.md, "HTTP endpoints". The API's `adminUsage` asks for it and `usageFrom` in `api/usageWire.ts` reads it into `Usage`. |
 | `GET /api/v1/admin/status` | Behind a login with the admin role (a member's login is answered 403, which the admin page shows as „Diese Seite ist dem Admin vorbehalten.“): `lastUpdated`, `lastSuccessfulScrape`, `lastScrapeFailure`, `lastSuccessfulRecompute`, `lastRecomputeFailure`, `unknownItemNames`, `failedAvatarNames`, `roundTrips`, `roundTripAbstentions`, every key always rendered (the two round-trip arrays as `[]` rather than `null` when empty). The operator-facing facts; see below. |
 
 - **One envelope for every collection**: `page`, `size`, `totalCount`, `items`. `/api/v1/avatars`

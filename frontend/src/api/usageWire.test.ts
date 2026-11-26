@@ -175,6 +175,43 @@ describe('the usage wire shape', () => {
     },
   )
 
+  it.each(['logins', 'pageLoads', 'logouts', 'daysUsed'])(
+    'refuses a %s of "3", which is no number',
+    (field) => {
+      const body = usageBody({
+        lastThirtyDays: windowBody({ guild: countsBody({ [field]: '3' }) }),
+      })
+      const reading = () => usageFrom(body)
+
+      expect(reading).toThrow(MalformedResponse)
+    },
+  )
+
+  it.each(['recordedSince', 'lostSinceStart'])(
+    'refuses a body without %s',
+    (field) => {
+      const reading = () => usageFrom(usageBody({ [field]: undefined }))
+
+      expect(reading).toThrow(MalformedResponse)
+    },
+  )
+
+  it.each(['guild', 'adminKey'])('refuses a window without the %s', (row) => {
+    const body = usageBody({ allTheTime: windowBody({ [row]: undefined }) })
+    const reading = () => usageFrom(body)
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
+  it.each([undefined, 7])('refuses an account with the name %s', (name) => {
+    const body = usageBody({
+      allTheTime: windowBody({ accounts: [{ name, counts: countsBody() }] }),
+    })
+    const reading = () => usageFrom(body)
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
   it.each([-1, 2.5, '4'])('refuses a count of lost records of %s', (lost) => {
     const reading = () => usageFrom(usageBody({ lostSinceStart: lost }))
 
