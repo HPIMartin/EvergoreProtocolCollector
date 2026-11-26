@@ -3,6 +3,7 @@ package dev.schoenberg.evergore.protocolParser.application;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -299,6 +300,17 @@ class LogInTest {
 	}
 
 	@Test
+	void recordsTheLoginAtTheMomentItWritesAsTheLastLogin() {
+		accounts.hold(account("Aurora", "Sommer-2026!", PasswordState.CHOSEN, Role.MEMBER));
+		LogIn onATickingClock = new LogIn(new PasswordCheck(accounts, hasher, HASH_NOBODY_HOLDS), new LoginStart(accounts, logins, generations, new TickingClock(NOW), usage),
+				adminKey, new RestingAccounts(bank, new StorageRepositoryStub()));
+
+		onATickingClock.with("Aurora", "Sommer-2026!");
+
+		assertThat(usage.records().getFirst().at()).isEqualTo(accounts.held("aurora").lastLogin().orElseThrow());
+	}
+
+	@Test
 	void recordsNoLoginWhereAPasswordChangeOvertakesTheCheck() {
 		accounts.hold(account("Aurora", "Sommer-2026!", PasswordState.CHOSEN, Role.MEMBER));
 		hasher.runDuringTheNextVerification(() -> {
@@ -333,5 +345,30 @@ class LogInTest {
 
 	private static Account account(String avatar, String password, PasswordState state, Role role) {
 		return new Account(avatar, "hashed:" + password, state, role, Optional.empty());
+	}
+
+	private static final class TickingClock extends Clock {
+		private Instant next;
+
+		private TickingClock(Instant first) {
+			next = first;
+		}
+
+		@Override
+		public Instant instant() {
+			Instant now = next;
+			next = next.plus(Duration.ofMinutes(1));
+			return now;
+		}
+
+		@Override
+		public ZoneId getZone() {
+			return ZoneOffset.UTC;
+		}
+
+		@Override
+		public Clock withZone(ZoneId zone) {
+			throw new UnsupportedOperationException();
+		}
 	}
 }

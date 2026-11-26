@@ -1,6 +1,7 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Optional;
 
 import dev.schoenberg.evergore.protocolParser.businessLogic.account.Account;
@@ -33,8 +34,9 @@ public class LoginStart {
 
 	private String loginValueFor(Account account, long generationSeenBeforeTheCheck) {
 		if (generations.of(account.nameKey()) == generationSeenBeforeTheCheck) {
-			accounts.recordLastLogin(account.nameKey(), clock.instant());
-			usage.record(new UsageRecord(account.nameKey(), clock.instant(), UsageKind.LOGIN, Optional.empty()));
+			Instant now = clock.instant();
+			accounts.recordLastLogin(account.nameKey(), now);
+			usage.record(new UsageRecord(account.nameKey(), now, UsageKind.LOGIN, Optional.empty()));
 		}
 		return signedLogins.issue(account.avatar(), account.role(), generationSeenBeforeTheCheck);
 	}
