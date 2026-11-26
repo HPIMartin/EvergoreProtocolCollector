@@ -263,6 +263,8 @@ Five top-level folders under `frontend/src/`:
   - The footer holds the row „Gilde“ and below it the row „admin“ of the admin key.
   - The switch „Zeitraum“ (`switch-usage-window`) starts on „Letzte 30 Tage“; „Alles“ shows the
     other window of the same answer, so switching asks nothing.
+  - „Letzte 30 Tage“ reaches back to the same Berlin time 30 days ago, so its days of use can
+    count 31 Berlin days (architecture.md, "The usage figures").
   - Above the switch stands „Aufgezeichnet seit <Tag>“ or „Noch keine Aufzeichnung.“
     (`usage-recorded-since`), and „Seit dem Start verloren: n“ (`usage-lost`) only while n > 0;
     both are `p`s, since they are facts the admin page reads out like the status's.
