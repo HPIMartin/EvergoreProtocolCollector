@@ -1,5 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
+import java.lang.management.LockInfo;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -288,11 +291,67 @@ class CollectionsTest {
 		assertThat(outcome).isEqualTo(new StartOutcome.Started());
 	}
 
+	@Test
+	void refusesAStartByHandThatComesBetweenTheCheckAndTheMarkOfTheDailyCollection() {
+		AtomicReference<StartOutcome> askedByHand = new AtomicReference<>();
+		Thread button = new Thread(() -> askedByHand.set(tested.startByHand()));
+		clock.onNextReading(() -> startAndAwaitBlockedOnOrDone(button, tested));
+		collection.whileRunning = () -> joined(button);
+
+		tested.runDaily();
+
+		assertThat(askedByHand.get()).isEqualTo(new StartOutcome.AlreadyRunning(START));
+		assertThat(background.held()).isZero();
+	}
+
+	@Test
+	void skipsTheDailyCollectionThatComesBetweenTheCheckAndTheMarkOfAStartByHand() {
+		Thread dailyTick = new Thread(() -> tested.runDaily());
+		clock.onNextReading(() -> startAndAwaitBlockedOnOrDone(dailyTick, tested));
+
+		StartOutcome outcome = tested.startByHand();
+		joined(dailyTick);
+
+		assertThat(outcome).isEqualTo(new StartOutcome.Started());
+		assertThat(collection.runs).isZero();
+		assertThat(logger.infoMessages()).contains("Daily collection skipped: a collection is already running.");
+	}
+
+	private static void startAndAwaitBlockedOnOrDone(Thread thread, Object lockOwner) {
+		thread.start();
+		while (thread.getState() != Thread.State.TERMINATED && !isBlockedOn(lockOwner, thread)) {
+			Thread.onSpinWait();
+		}
+	}
+
+	private static boolean isBlockedOn(Object lockOwner, Thread thread) {
+		ThreadInfo info = ManagementFactory.getThreadMXBean().getThreadInfo(thread.threadId());
+		if (info == null || info.getThreadState() != Thread.State.BLOCKED) {
+			return false;
+		}
+		LockInfo lock = info.getLockInfo();
+		return lock != null && lock.getIdentityHashCode() == System.identityHashCode(lockOwner);
+	}
+
+	private static void joined(Thread thread) {
+		try {
+			thread.join();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException("Interrupted while a thread of the test ran", e);
+		}
+	}
+
 	private static class SettableClock extends Clock {
 		private Instant now;
+		private Runnable onNextReading = () -> {};
 
 		SettableClock(Instant now) {
 			this.now = now;
+		}
+
+		void onNextReading(Runnable hook) {
+			onNextReading = hook;
 		}
 
 		void passMinutes(long minutes) {
@@ -301,6 +360,9 @@ class CollectionsTest {
 
 		@Override
 		public Instant instant() {
+			Runnable hook = onNextReading;
+			onNextReading = () -> {};
+			hook.run();
 			return now;
 		}
 

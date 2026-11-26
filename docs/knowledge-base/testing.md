@@ -174,6 +174,10 @@
     and `TooEarly` names the moment from which it is accepted;
   - a collection that failed still counts for the hour, a refused start by hand and a skipped daily collection count as no start;
   - `nextStartByHandFrom()` names that moment only while the hour since the last start has not passed and no collection runs.
+  - a start by hand that comes between the check and the mark of the daily collection is refused;
+  - a daily collection that comes between the check and the mark of a start by hand is skipped;
+  - the second thread starts from the clock's reading inside the owner's lock;
+  - the test waits until that thread is blocked on that lock, with no timeout.
 - `CollectionControllerTest`:
   - `POST /api/v1/admin/collection` answers 202 and starts one collection;
   - only the admin role starts one: no login 401, a member's login 403, then the admin's 202 with one start in all;
