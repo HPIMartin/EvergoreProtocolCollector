@@ -77,6 +77,16 @@ class PageLoadRecordingFilterTest {
 		assertThat(usage.records()).isEmpty();
 	}
 
+	@Test
+	void recordsAPageLoadForANavigationTheBrowserShowsFromItsCacheAfterAsking() {
+		MutableHttpRequest<?> request = HttpRequest.GET("/").accept(MediaType.TEXT_HTML_TYPE);
+		request.setAttribute(LoginAttribute.NAME, AERGER);
+
+		FirstAnswer.of(tested.doFilter(request, answering(HttpStatus.NOT_MODIFIED)));
+
+		assertThat(usage.records()).containsExactly(new UsageRecord("ärger", NOW, UsageKind.PAGE_LOAD, Optional.empty()));
+	}
+
 	private static ServerFilterChain answering(HttpStatus status) {
 		return request -> Publishers.just(HttpResponse.status(status));
 	}

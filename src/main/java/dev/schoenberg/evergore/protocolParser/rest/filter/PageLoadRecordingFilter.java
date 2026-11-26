@@ -41,11 +41,15 @@ public class PageLoadRecordingFilter implements HttpServerFilter {
 	@Override
 	public Publisher<MutableHttpResponse<?>> doFilter(HttpRequest<?> request, ServerFilterChain chain) {
 		return Publishers.map(chain.proceed(request), response -> {
-			if (navigations.isOne(request) && response.getStatus() == HttpStatus.OK) {
+			if (navigations.isOne(request) && showsThePage(response.getStatus())) {
 				request.getAttribute(LoginAttribute.NAME, Login.class).ifPresent(this::recordAPageLoadOf);
 			}
 			return response;
 		});
+	}
+
+	private static boolean showsThePage(HttpStatus status) {
+		return status == HttpStatus.OK || status == HttpStatus.NOT_MODIFIED;
 	}
 
 	private void recordAPageLoadOf(Login login) {
