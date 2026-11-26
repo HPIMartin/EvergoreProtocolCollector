@@ -53,6 +53,10 @@ git config core.hooksPath hooks
     - It matches them regardless of case (`PASSWORD`, `apiKey`, `clientSecret`).
     - It matches them before `:` or `=`.
     - A quoted value of three characters or more counts.
+      - A test source is exempt: a test may carry a quoted test password.
+      - Named limit: a quoted password value in a test-source config file (`password: "..."` in
+        `src/test/resources/app.yml`) is therefore not scanned, since the quoted rule skips test
+        sources and the unquoted rule needs an unquoted value.
     - In `*.properties`, `*.yml`, `*.yaml`, `.env` and `.env.*` an unquoted value of eight
       characters or more counts too.
     - Why: a config format needs no quotes around a value.
@@ -259,6 +263,10 @@ git config core.hooksPath hooks
   - The rules that bind production code only (the hard-coded-token scan and `production_smell_re`,
     shipped with the C# null-forgiving operator) key off exactly that.
     - A test may therefore carry a non-secret test token where production source may not.
+    - The quoted credential literal is scanned outside a test source (`test_trees` and
+      `test_name_re`), not in production source alone; the unquoted value of a config file stays
+      scanned in a test source too.
+    - A test may therefore carry a test password where production source and config may not.
     - A test may therefore override the compiler's nullability answer where production source may
       not.
   - The C# null-forgiving operator counts before `.`, `;`, `)`, `,`, `[` or `]`: `x!.y`, `x!;`,

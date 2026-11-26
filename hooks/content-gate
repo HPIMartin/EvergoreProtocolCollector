@@ -125,10 +125,15 @@ starts_with_any() {
 	return 1
 }
 
+is_test_source() {
+	if starts_with_any "$1" $test_trees; then return 0; fi
+	if printf '%s' "$1" | grep -qE "$test_name_re"; then return 0; fi
+	return 1
+}
+
 is_production_source() {
 	if ! starts_with_any "$1" $production_trees; then return 1; fi
-	if starts_with_any "$1" $test_trees; then return 1; fi
-	if printf '%s' "$1" | grep -qE "$test_name_re"; then return 1; fi
+	if is_test_source "$1"; then return 1; fi
 	return 0
 }
 
@@ -256,7 +261,8 @@ anthropic_re='(^|[^A-Za-z0-9_-]|\\[nrt]|%[0-9A-Fa-f]{2})sk-ant-[a-z0-9]+-[A-Za-z
 # The credential patterns match regardless of case (PASSWORD, apiKey, clientSecret), in a grep of
 # their own so the PEM and AWS patterns keep theirs. A config format needs no quotes around a value,
 # so there an unquoted value of eight characters or more counts too. A reference to the environment
-# (`${NAME}`, `$NAME`), quoted or not, is no value.
+# (`${NAME}`, `$NAME`), quoted or not, is no value. A quoted value is not scanned in a test source
+# (a test legitimately carries a test password), the unquoted value of a config file still is.
 cred_re="(password|passwd|secret|api[_-]?key)[[:space:]]*[:=][[:space:]]*[\"'][^\"'\$][^\"']{2,}"
 cred_bare_re="(password|passwd|secret|api[_-]?key)[[:space:]]*[:=][[:space:]]*[^\"'\$[:space:]][^[:space:]]{7,}"
 cred_bare_names='*.properties *.yml *.yaml .env .env.*'
@@ -324,7 +330,13 @@ for f in $staged; do
 	blob=$(file_content "$f") || unreadable "$f in the $label"
 	hits=$(printf '%s\n' "$blob" | grep -nIE -e "$pem_re" -e "$aws_re" -e "$anthropic_re" || true)
 	if matches_any "${f##*/}" $cred_bare_names; then
-		creds=$(printf '%s\n' "$blob" | grep -niIE -e "$cred_re" -e "$cred_bare_re" || true)
+		if is_test_source "$f"; then
+			creds=$(printf '%s\n' "$blob" | grep -niIE -e "$cred_bare_re" || true)
+		else
+			creds=$(printf '%s\n' "$blob" | grep -niIE -e "$cred_re" -e "$cred_bare_re" || true)
+		fi
+	elif is_test_source "$f"; then
+		creds=""
 	else
 		creds=$(printf '%s\n' "$blob" | grep -niIE -e "$cred_re" || true)
 	fi

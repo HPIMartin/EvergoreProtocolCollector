@@ -720,6 +720,36 @@ write_file tests/test_client.py 'auth_token = "not-a-real-value"'
 if accepts "Add the client test"; then r=0; else r=1; fi
 check "a test may hard-code an auth token assignment" "$r"
 
+new_repo prodpasswordliteral
+write_file src/main/java/dev/x/Login.java 'class Login {' '	static final String PASSWORD = "Sommer-2026!";' '}'
+if refuses "Add the login class"; then r=0; else r=1; fi
+check "a password literal in production source leaves no commit behind" "$r"
+
+new_repo testpasswordliteral
+write_file src/test/java/dev/x/LoginTest.java 'class LoginTest {' '	static final String PASSWORD = "Sommer-2026!";' '}'
+if accepts "Add the login test"; then r=0; else r=1; fi
+check "a test may hard-code a password literal" "$r"
+
+new_repo testpasswordproperties
+write_file src/test/resources/app.properties 'password=Sommer-2026'
+if refuses "Add the test properties"; then r=0; else r=1; fi
+check "an unquoted password value in a test properties file leaves no commit behind" "$r"
+
+new_repo testnamepassword
+write_file frontend/src/api/x.test.ts "const PASSWORD = 'Sommer-2026!'"
+if accepts "Add the api test"; then r=0; else r=1; fi
+check "a test source known by its name may hard-code a password literal" "$r"
+
+new_repo prodtestutilspassword
+write_file frontend/src/test-utils/x.ts "const PASSWORD = 'Sommer-2026!'"
+if refuses "Add the test utilities"; then r=0; else r=1; fi
+check "a password literal in a production folder that only looks like a test folder leaves no commit behind" "$r"
+
+new_repo prodtestdatapassword
+write_file src/main/java/dev/x/TestData.java 'class TestData {' '	static final String PASSWORD = "Sommer-2026!";' '}'
+if refuses "Add the test data class"; then r=0; else r=1; fi
+check "a password literal in a production class that only looks like a test class leaves no commit behind" "$r"
+
 new_repo printallow_default
 write_file cli/main.py 'def run():' '	print("x")'
 if refuses "Add the cli entry point"; then r=0; else r=1; fi

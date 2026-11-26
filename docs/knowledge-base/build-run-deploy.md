@@ -245,6 +245,9 @@ This project's configuration and legs on top of the shipped suite:
   - `comment_exempt_dirs` names `stacks/`, `agent/` and this project's `deploy/` and `release/`,
     plus `gate/` and `land/`: their scripts keep their comments (handbook §3).
   - `email_allow` keeps the shipped value ([`hooks/README.md`](../../hooks/README.md)).
+  - A test source is exempt from the quoted credential scan, so a test may carry a test password;
+    the unquoted password value of a test's `.properties` or `.yml` file is still refused, and a
+    quoted one in a test config file is not scanned (named limit, `hooks/README.md`).
 - **`commit-msg`:** the ticket-key leg is off (`ticket_key_re` empty); the project has no ticket
   system ([open-questions.md](../open-questions.md)).
 - **`sync-main`:** `landing_model` is `hub`.
