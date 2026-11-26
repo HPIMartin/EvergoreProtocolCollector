@@ -1153,6 +1153,22 @@ describe('starting a collection from the admin page', () => {
     })
   })
 
+  it('drops the notice that a collection runs when the status read afterwards shows none', async () => {
+    const starting = apiStarting([NO_FACTS, NO_FACTS], () =>
+      Promise.reject(new CollectionRefused('running')),
+    )
+    await adminViewWith(starting.api)
+
+    await clickStart()
+
+    const notice = shownNotice()
+    const shown = shownCollection()
+    expect({ notice, shown }).toEqual({
+      notice: null,
+      shown: { state: null, button: 'Jetzt sammeln' },
+    })
+  })
+
   it('says from when a start is possible when the service refuses it as too early', async () => {
     const starting = apiStarting([NO_FACTS, NEXT_FROM_14_00], () =>
       Promise.reject(new CollectionRefused('too-early')),

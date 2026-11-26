@@ -47,7 +47,11 @@ export function CollectionPanel({
           setNotice(ALREADY_RUNNING_MESSAGE)
         }
       }
-      setState(stateOf(await readStatus()))
+      const reread = stateOf(await readStatus())
+      setState(reread)
+      if (reread.runningSince === null && reread.nextFrom === null) {
+        setNotice(null)
+      }
     } catch {
       setNotice(LOAD_FAILED_MESSAGE)
     } finally {

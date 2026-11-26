@@ -202,6 +202,7 @@ Five top-level folders under `frontend/src/`:
     second click starts nothing;
   - then the panel reads the status again (`adminStatus`) and shows the state it finds;
   - a 409 `running` adds „Es läuft bereits eine Sammlung.“ (`collection-notice`);
+  - the re-read drops that notice when it finds neither a running collection nor a next start;
   - a 409 `too-early` adds nothing, the re-read state says „Nächste Sammlung ab …“;
   - 401 and 403 replace the page as for the accounts;
   - any other failure shows `LOAD_FAILED_MESSAGE` in the notice and keeps the button;
