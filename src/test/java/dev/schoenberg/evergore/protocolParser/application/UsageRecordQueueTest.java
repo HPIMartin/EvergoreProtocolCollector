@@ -108,6 +108,24 @@ class UsageRecordQueueTest {
 	}
 
 	@Test
+	void awaitingTheWrittenRecordsReturnsWhenTheWriterThreadDiesInTheWriteOfItsOwnBatch() {
+		UsageRecordQueue tested = startedWith(WRITING);
+		repository.holdTheFirstBatch();
+		repository.breakTheSecondBatch();
+		tested.record(login("aurora"));
+		repository.awaitTheFirstBatchWriting();
+		tested.record(login("boreas"));
+		Thread awaiting = Thread.ofPlatform().daemon().start(tested::awaitWritten);
+		settledStateOf(awaiting);
+
+		repository.releaseTheFirstBatch();
+		boolean returned = silentThrow(() -> awaiting.join(HANG_GUARD));
+		tested.close();
+
+		assertThat(returned).isTrue();
+	}
+
+	@Test
 	void closingAfterTheWriterThreadDiedCountsAndWarnsOfTheRecordsLeftWaiting() {
 		List<Thread> writers = new CopyOnWriteArrayList<>();
 		UsageRecordQueue tested = startedRecordingTheWriterIn(writers);

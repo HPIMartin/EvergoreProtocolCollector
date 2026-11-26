@@ -113,10 +113,13 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 			taken.forEach(entry -> entry.addTo(batch));
 			ended = taken.stream().anyMatch(Waiting::ends);
 			freePlaces.release(batch.size());
-			if (!batch.isEmpty()) {
-				write(batch);
+			try {
+				if (!batch.isEmpty()) {
+					write(batch);
+				}
+			} finally {
+				taken.forEach(Waiting::passed);
 			}
-			taken.forEach(Waiting::passed);
 		}
 	}
 
