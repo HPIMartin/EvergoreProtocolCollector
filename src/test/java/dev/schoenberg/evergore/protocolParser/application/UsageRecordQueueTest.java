@@ -55,6 +55,28 @@ class UsageRecordQueueTest {
 	}
 
 	@Test
+	void awaitingTheWrittenRecordsWaitsWhileTheBatchItWasTakenWithIsWritten() {
+		UsageRecordQueue tested = startedWith(WRITING);
+		repository.holdTheFirstBatch();
+		repository.holdTheSecondBatch();
+		tested.record(login("aurora"));
+		repository.awaitTheFirstBatchWriting();
+		tested.record(login("boreas"));
+		Thread awaiting = Thread.ofPlatform().start(tested::awaitWritten);
+		settledStateOf(awaiting);
+		repository.releaseTheFirstBatch();
+		repository.awaitTheSecondBatchWriting();
+
+		Thread.State whileItsBatchIsWritten = settledStateOf(awaiting);
+		repository.releaseTheSecondBatch();
+		silentThrow(() -> awaiting.join());
+		tested.close();
+
+		assertThat(whileItsBatchIsWritten).isEqualTo(Thread.State.WAITING);
+		assertThat(repository.batches()).containsExactly(List.of(login("aurora")), List.of(login("boreas")));
+	}
+
+	@Test
 	void closingAfterTheWriterThreadDiedCountsAndWarnsOfTheRecordsLeftWaiting() {
 		List<Thread> writers = new CopyOnWriteArrayList<>();
 		UsageRecordQueue tested = UsageRecordQueue.start(repository, WRITING, runnable -> {
