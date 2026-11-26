@@ -139,6 +139,31 @@ describe('the usage section', () => {
     })
   })
 
+  it('keeps the order the service sent, where the browser would sort otherwise', async () => {
+    const sent: UsageWindow = {
+      ...LAST_THIRTY_DAYS,
+      accounts: [
+        { name: 'Zwerg', counts: NONE },
+        { name: 'Ärger', counts: NONE },
+        { name: 'Aurora', counts: NONE },
+      ],
+    }
+    await usageSectionWith(apiAnswering({ ...USAGE, lastThirtyDays: sent }))
+    const names = shownTable().rows.map((row) => row[0])
+
+    expect(names).toStrictEqual(['Zwerg', 'Ärger', 'Aurora', 'Gilde', 'admin'])
+  })
+
+  it('shows the guild and the admin key alone while no account is listed', async () => {
+    const noAccounts: UsageWindow = { ...LAST_THIRTY_DAYS, accounts: [] }
+    await usageSectionWith(
+      apiAnswering({ ...USAGE, lastThirtyDays: noAccounts }),
+    )
+    const names = shownTable().rows.map((row) => row[0])
+
+    expect(names).toStrictEqual(['Gilde', 'admin'])
+  })
+
   it('starts on the last 30 days and shows all the time on the switch without asking again', async () => {
     const asked: string[] = []
     await usageSectionWith(
@@ -149,19 +174,24 @@ describe('the usage section', () => {
 
     fireEvent.click(screen.getByLabelText('Alles'))
     const selectedThen = selectedWindow()
-    const auroraThen = shownTable().rows[0]
+    const rowsThen = shownTable().rows
 
     expect({
       selectedFirst,
       auroraFirst,
       selectedThen,
-      auroraThen,
+      rowsThen,
       asked,
     }).toStrictEqual({
       selectedFirst: 'Letzte 30 Tage',
       auroraFirst: ['Aurora', '3', '7', '2', '30.12.2026 21:14', '1'],
       selectedThen: 'Alles',
-      auroraThen: ['Aurora', '9', '7', '5', '30.12.2026 21:14', '1'],
+      rowsThen: [
+        ['Aurora', '9', '7', '5', '30.12.2026 21:14', '1'],
+        ['Boreas', '0', '0', '0', 'noch nie', '0'],
+        ['Gilde', '9', '7', '5', '30.12.2026 21:14', '1'],
+        ['admin', '0', '0', '0', 'noch nie', '0'],
+      ],
       asked: ['usage'],
     })
   })
@@ -180,7 +210,7 @@ describe('the usage section', () => {
 
   it('says that nothing is recorded yet and how many records were lost since the start', async () => {
     await usageSectionWith(
-      apiAnswering({ ...USAGE, recordedSince: null, lostSinceStart: 3 }),
+      apiAnswering({ ...USAGE, recordedSince: null, lostSinceStart: 1 }),
     )
 
     expect({
@@ -188,7 +218,7 @@ describe('the usage section', () => {
       lost: screen.getByTestId('usage-lost').textContent,
     }).toStrictEqual({
       recordedSince: 'Noch keine Aufzeichnung.',
-      lost: 'Seit dem Start verloren: 3',
+      lost: 'Seit dem Start verloren: 1',
     })
   })
 
