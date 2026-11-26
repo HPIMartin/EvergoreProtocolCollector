@@ -29,6 +29,7 @@ public class CollectionStartSteps {
 	private static final String COLLECTION = "/api/v1/admin/collection";
 	private static final String READ_ADMIN = "read-admin.js";
 	private static final int REFUSED_AS_CONFLICTING = 409;
+	private static final String LOADED_PAGE_STARTS_WITH = "Stand: ";
 
 	private final RunningService service;
 	private final GameProtocols protocols;
@@ -228,7 +229,10 @@ public class CollectionStartSteps {
 
 	@Then("the admin page offers no {string}")
 	public void theAdminPageOffersNo(String button) {
-		assertThat(shownOn(browser).startButton()).isNotEqualTo(button);
+		AdminPage page = shownOn(browser);
+
+		assertLoaded(page);
+		assertThat(page.startButton()).isNotEqualTo(button);
 	}
 
 	@Then("the admin page reads no {string}")
@@ -243,7 +247,10 @@ public class CollectionStartSteps {
 
 	@Then("the page opened before still offers no {string}")
 	public void thePageOpenedBeforeStillOffersNo(String button) {
-		assertThat(shownOn(secondBrowser.browser()).startButton()).isNotEqualTo(button);
+		AdminPage page = shownOn(secondBrowser.browser());
+
+		assertLoaded(page);
+		assertThat(page.startButton()).isNotEqualTo(button);
 	}
 
 	@Then("the operator finds one line {string} in the service's log")
@@ -303,6 +310,10 @@ public class CollectionStartSteps {
 
 	private List<String> linesSince(LocalDateTime start) {
 		return log.lines().subList(runs.logSizeAtStartOf(start), log.lines().size());
+	}
+
+	private static void assertLoaded(AdminPage page) {
+		assertThat(page.messages()).as("the loaded admin page").anyMatch(message -> message != null && message.startsWith(LOADED_PAGE_STARTS_WITH));
 	}
 
 	private static AdminPage shownOn(MemberBrowser on) {

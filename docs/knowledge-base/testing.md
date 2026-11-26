@@ -375,6 +375,8 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   - "finishes" or "has finished" releases the game and waits for it;
   - a daily collection that falls due while one runs is fired at once and skipped;
   - the release and the wait also end each scenario (`ServiceHooks`), so no collection outlives its service.
+  - the negative steps `the admin page offers no "X"` and `the page opened before still offers no "X"` first check that the page is
+    the loaded admin page, so a blank page fails them.
 - **The service as the operator deploys it**: the startup scenarios and the throttle restart the
   service without the `test` environment, so `application.yml`'s throttle defaults hold and the
   secrets come from `OperatorSettings` through a property source with Micronaut's
