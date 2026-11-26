@@ -1200,6 +1200,53 @@ describe('starting a collection from the admin page', () => {
     expect(messages).toEqual(['Diese Seite ist dem Admin vorbehalten.'])
   })
 
+  it('sends the admin to the login page with its own address as the way back when the start is refused with 401', async () => {
+    window.history.replaceState(null, '', '/admin')
+    const navigatedTo: string[] = []
+    const starting = apiStarting([NO_FACTS], () =>
+      Promise.reject(new Unauthorized()),
+    )
+    render(
+      <LoginNavigation.Provider
+        value={(target) => {
+          navigatedTo.push(target)
+        }}
+      >
+        <AdminView api={starting.api} onFollow={() => undefined} />
+      </LoginNavigation.Provider>,
+    )
+    await act(async () => undefined)
+
+    await clickStart()
+
+    const messages = shownMessages()
+    expect({ navigatedTo, messages }).toEqual({
+      navigatedTo: ['/login?next=%2Fadmin'],
+      messages: ['Weiter zur Anmeldung…'],
+    })
+  })
+
+  it('says the data could not be loaded and keeps the button when the status read after an accepted start fails', async () => {
+    let reads = 0
+    const api: ProtocolApi = {
+      ...apiStarting([NO_FACTS], () => Promise.resolve()).api,
+      adminStatus: () =>
+        ++reads === 1
+          ? Promise.resolve(NO_FACTS)
+          : Promise.reject(new RequestFailed(500)),
+    }
+    await adminViewWith(api)
+
+    await clickStart()
+
+    const notice = shownNotice()
+    const shown = shownCollection()
+    expect({ notice, shown }).toEqual({
+      notice: LOAD_FAILED_MESSAGE,
+      shown: { state: null, button: 'Jetzt sammeln' },
+    })
+  })
+
   it('says the start failed and keeps the button when the service fails otherwise', async () => {
     const starting = apiStarting([NO_FACTS], () =>
       Promise.reject(new RequestFailed(500)),
