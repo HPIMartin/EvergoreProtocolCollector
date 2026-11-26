@@ -1,10 +1,8 @@
 package dev.schoenberg.evergore.protocolParser.application;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
@@ -17,9 +15,14 @@ import dev.schoenberg.evergore.protocolParser.businessLogic.usage.UsageRecord;
 import static dev.schoenberg.evergore.protocolParser.helper.exceptionWrapper.ExceptionWrapper.silentThrow;
 
 public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoCloseable {
-	private static final UsageRecord END = new UsageRecord("", Instant.EPOCH, null, Optional.empty());
+	private static final Waiting END = new Waiting() {
+		@Override
+		public boolean ends() {
+			return true;
+		}
+	};
 
-	private final BlockingQueue<UsageRecord> waiting = new LinkedBlockingQueue<>();
+	private final BlockingQueue<Waiting> waiting = new LinkedBlockingQueue<>();
 	private final AtomicLong lost = new AtomicLong();
 	private final Semaphore freePlaces;
 	private final UsageRecordRepository repository;
@@ -50,7 +53,7 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 	@Override
 	public void record(UsageRecord record) {
 		if (!closed && freePlaces.tryAcquire()) {
-			waiting.add(record);
+			waiting.add(new Recorded(record));
 		} else {
 			lost.incrementAndGet();
 		}
@@ -66,7 +69,7 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 		closed = true;
 		waiting.add(END);
 		if (!silentThrow(() -> threadEnd.awaited(writer, closeBound))) {
-			long notWritten = inWrite + waiting.stream().filter(record -> record != END).count();
+			long notWritten = inWrite + waiting.stream().mapToInt(Waiting::records).sum();
 			lost.addAndGet(notWritten);
 			logger.warn("Closed with " + notWritten + " usage records not written");
 		}
@@ -75,10 +78,12 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 	private void writeUntilTheEnd() {
 		boolean ended = false;
 		while (!ended) {
+			List<Waiting> taken = new ArrayList<>();
+			taken.add(silentThrow(waiting::take));
+			waiting.drainTo(taken, batchSize - 1);
 			List<UsageRecord> batch = new ArrayList<>();
-			batch.add(silentThrow(waiting::take));
-			waiting.drainTo(batch, batchSize - 1);
-			ended = batch.removeIf(record -> record == END);
+			taken.forEach(entry -> entry.addTo(batch));
+			ended = taken.stream().anyMatch(Waiting::ends);
 			freePlaces.release(batch.size());
 			if (!batch.isEmpty()) {
 				write(batch);
@@ -95,6 +100,30 @@ public class UsageRecordQueue implements UsageRecording, LostUsageRecords, AutoC
 			logger.error("Lost " + batch.size() + " usage records: their write failed", failure);
 		} finally {
 			inWrite = 0;
+		}
+	}
+
+	private interface Waiting {
+		default int records() {
+			return 0;
+		}
+
+		default void addTo(List<UsageRecord> batch) {}
+
+		default boolean ends() {
+			return false;
+		}
+	}
+
+	private record Recorded(UsageRecord record) implements Waiting {
+		@Override
+		public int records() {
+			return 1;
+		}
+
+		@Override
+		public void addTo(List<UsageRecord> batch) {
+			batch.add(record);
 		}
 	}
 }
