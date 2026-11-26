@@ -59,6 +59,15 @@ class SpaHistoryFallbackTest {
 	}
 
 	@Test
+	void servesTheSpaShellAtTheStartAddressWithoutLettingTheBrowserKeepIt() {
+		HttpResponse<String> response = getHtml("/");
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getBody()).isEqualTo(bundledIndexHtml());
+		assertThat(response.getHeaders().getFirst("Cache-Control")).isEqualTo("private, max-age=0");
+	}
+
+	@Test
 	void servesTheSpaShellForAClientRouteWithADotInAMiddleSegment() {
 		HttpResponse<String> response = getHtml("/avatars/Dr.Who/details");
 

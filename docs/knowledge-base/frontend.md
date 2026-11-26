@@ -655,6 +655,9 @@ service's only read surface.
     `static/ui`.
   - Micronaut serves the SPA as static resources, with a catch-all fallback to `index.html` for
     unknown navigation paths (client-side routing).
+  - `micronaut.server.netty.responses.file.cache-seconds: 0` lets the browser keep no page or
+    file without asking again: a page it shows from its cache still asks and gets 304, so the
+    usage records count it as loaded (author decision 2026-11-26).
   - The client routes (`/overview`, `/avatars/{avatar}/bank`, `/avatars/{avatar}/storage`,
     `/explanation`, `/password`, `/admin`) are the SPA's.
 - **The login page is a second bundle** (`login.html`, `src/login/main.tsx`,

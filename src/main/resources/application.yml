@@ -3,6 +3,10 @@ micronaut:
     name: Evergore Protocol Parser
   server:
     thread-selection: IO
+    netty:
+      responses:
+        file:
+          cache-seconds: 0
   executors:
     io:
       type: fixed
