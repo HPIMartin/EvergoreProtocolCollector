@@ -345,9 +345,11 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
   runs it when a step says the collection runs, through the same runnable the scheduler would
   call. The step asserts exactly one job ran; Micronaut's health monitor, the only other
   fixed-delay job, is switched off in this context (`micronaut.health.monitor.enabled`).
-  A daily collection can be fired on a thread of its own (`RunningService.startTheDailyCollectionInTheBackground`);
-  a step that says a daily collection starts (and runs until a step finishes it) fires it that way and
-  joins it (`RunningService.awaitTheDailyCollectionInTheBackground`) when a step finishes it.
+  A daily collection can be fired on a thread of its own:
+  - `RunningService.startTheDailyCollectionInTheBackground` fires it on that thread;
+  - a step that says a daily collection starts (and runs until a step finishes it) fires it that way;
+  - a step that finishes it joins it (`RunningService.awaitTheDailyCollectionInTheBackground`);
+  - the join rethrows what the collection failed with, an `Error` included.
 - **A collection started by hand runs on `TrackedCollections`**, which replaces the `collections`
   executor in the acceptance context:
   - it runs each collection inside the fault window of `LedgerFaults` as the daily one does;

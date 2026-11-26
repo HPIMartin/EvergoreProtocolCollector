@@ -186,8 +186,12 @@ public class RunningService {
 			throw new IllegalStateException("Interrupted while the daily collection ran", e);
 		}
 		dailyCollection = null;
-		if (dailyCollectionFailure.get() instanceof RuntimeException failure) {
-			throw failure;
+		Throwable failure = dailyCollectionFailure.get();
+		if (failure instanceof RuntimeException runtimeFailure) {
+			throw runtimeFailure;
+		}
+		if (failure instanceof Error error) {
+			throw error;
 		}
 	}
 
