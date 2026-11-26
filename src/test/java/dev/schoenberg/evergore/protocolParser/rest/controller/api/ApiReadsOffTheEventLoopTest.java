@@ -72,10 +72,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ApiReadsOffTheEventLoopTest {
 	private static final Path WORKING_DB = Paths.get("build/tmp/apiReadsOffTheEventLoop/apiReadsOffTheEventLoop.sqlite");
 	private static final String AVATAR = "Aurora";
-	private static final String PASSWORD = "Sommer-2026!";
-	private static final String CHANGED_PASSWORD = "Winter-2026!";
+	private static final String CHOICE = "Sommer-2026!";
+	private static final String CHANGED_CHOICE = "Winter-2026!";
 	private static final String ISSUED_AVATAR = "Boreas";
-	private static final String ISSUED_PASSWORD = "Issued-2026!";
+	private static final String ISSUED_WORD = "Issued-2026!";
 	private static final String BANK_ROUTE = "/api/v1/avatars/" + AVATAR + "/bank";
 	private static final int HANG_GUARD_MILLIS = 30_000;
 
@@ -165,7 +165,7 @@ class ApiReadsOffTheEventLoopTest {
 
 	@Test
 	void checksTheIssuedPasswordHashesTheNewOneAndWritesBothOnAPlatformThreadThatIsNoEventLoop() {
-		String body = "{\"name\":\"" + ISSUED_AVATAR + "\",\"issuedPassword\":\"" + ISSUED_PASSWORD + "\",\"newPassword\":\"" + PASSWORD + "\"}";
+		String body = "{\"name\":\"" + ISSUED_AVATAR + "\",\"issuedPassword\":\"" + ISSUED_WORD + "\",\"newPassword\":\"" + CHOICE + "\"}";
 
 		int status = new RawHttpClient(server.getPort()).statusOfRequest(postRequest("/api/v1/login/new-password", body));
 
@@ -176,7 +176,7 @@ class ApiReadsOffTheEventLoopTest {
 
 	@Test
 	void checksTheCurrentPasswordHashesTheNewOneAndWritesItOnAPlatformThreadThatIsNoEventLoop() {
-		String body = "{\"currentPassword\":\"" + PASSWORD + "\",\"newPassword\":\"" + CHANGED_PASSWORD + "\"}";
+		String body = "{\"currentPassword\":\"" + CHOICE + "\",\"newPassword\":\"" + CHANGED_CHOICE + "\"}";
 		String request = postRequest("/api/v1/password", body)
 				.replace("Content-Type: application/json", "Content-Type: application/json\r\nCookie: " + LoginCookie.memberHeaderFor(server, AVATAR));
 
@@ -206,7 +206,7 @@ class ApiReadsOffTheEventLoopTest {
 	}
 
 	private static String loginRequest() {
-		return postRequest("/api/v1/login", "{\"name\":\"" + AVATAR + "\",\"password\":\"" + PASSWORD + "\"}");
+		return postRequest("/api/v1/login", "{\"name\":\"" + AVATAR + "\",\"password\":\"" + CHOICE + "\"}");
 	}
 
 	private static String postRequest(String path, String body) {
@@ -245,8 +245,8 @@ class ApiReadsOffTheEventLoopTest {
 	AccountRepository accountRepository() {
 		return new AccountRepository() {
 			private final List<Account> accounts = List
-					.of(new Account(AVATAR, "witnessed:" + PASSWORD, PasswordState.CHOSEN, Role.MEMBER, Optional.empty()),
-							new Account(ISSUED_AVATAR, "witnessed:" + ISSUED_PASSWORD, PasswordState.ISSUED, Role.MEMBER, Optional.empty()));
+					.of(new Account(AVATAR, "witnessed:" + CHOICE, PasswordState.CHOSEN, Role.MEMBER, Optional.empty()),
+							new Account(ISSUED_AVATAR, "witnessed:" + ISSUED_WORD, PasswordState.ISSUED, Role.MEMBER, Optional.empty()));
 
 			@Override
 			public Optional<Account> findByNameKey(String nameKey) {
@@ -287,7 +287,7 @@ class ApiReadsOffTheEventLoopTest {
 		return new PasswordHasher() {
 			@Override
 			public String hash(String clear) {
-				if (witnessEveryHash || clear.equals(PASSWORD) || clear.equals(CHANGED_PASSWORD)) {
+				if (witnessEveryHash || clear.equals(CHOICE) || clear.equals(CHANGED_CHOICE)) {
 					witnessLoginWork("hash");
 				}
 				return "witnessed:" + clear;
