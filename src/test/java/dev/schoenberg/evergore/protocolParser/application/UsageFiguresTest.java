@@ -21,6 +21,7 @@ class UsageFiguresTest {
 	private static final Instant SAME_BERLIN_TIME_THIRTY_DAYS_BACK = Instant.parse("2026-03-06T11:00:00Z");
 	private static final Instant ALL_THE_TIME = Instant.EPOCH;
 	private static final long LOST_SINCE_THE_START = 3;
+	private static final UsageCounts NOTHING = new UsageCounts(0, 0, 0, 0, Optional.empty());
 
 	private final InMemoryAccounts accounts = new InMemoryAccounts(new ArrayList<>());
 	private final CannedUsageReader records = new CannedUsageReader();
@@ -35,7 +36,7 @@ class UsageFiguresTest {
 		UsageReport report = tested.report();
 
 		assertThat(report.lastThirtyDays().accounts())
-				.containsExactly(new AccountUsage("Ärger", UsageCounts.NONE), new AccountUsage("Aurora", UsageCounts.NONE), new AccountUsage("Zephyr", UsageCounts.NONE));
+				.containsExactly(new AccountUsage("Ärger", NOTHING), new AccountUsage("Aurora", NOTHING), new AccountUsage("Zephyr", NOTHING));
 		assertThat(report.allTheTime().accounts()).isEqualTo(report.lastThirtyDays().accounts());
 	}
 
