@@ -194,7 +194,9 @@
   - a read waits until the release: a second thread asks and the test waits for it to be asked;
   - only the reads asked before the release wait;
   - a held read of an unreachable game throws after the release;
-  - awaiting an answer nobody holds is refused.
+  - awaiting an answer nobody holds is refused;
+  - the 120-second bound of a held read is a hang guard under a recorded wall-clock exception (decision 2026-11-26);
+  - the bound never decides a verdict.
 
 - `GuildCollectionTest`:
   - a successful cycle records `lastSuccessfulScrape` and `lastSuccessfulRecompute`;
@@ -292,9 +294,11 @@ What a scenario runs against (`dev.schoenberg.evergore.protocolParser.acceptance
     shows:` (or `storage`) replaces that page with its text line for line, lines no entry can hold
     included; a movement recorded into a page shown as text fails the step. `the game cannot be
     reached` makes the read throw, as a failed sign-in does.
-  - The game can be slow to answer: `holdTheNextAnswer()` makes a read wait until `release()`;
-    `awaitAsked()` returns once a read waits, so a step knows the collection is running without a
-    sleep; a held read that finds the game unreachable throws after the release.
+  - The game can be slow to answer: `holdTheNextAnswer()` makes a read wait until `release()`.
+    - `awaitAsked()` returns once a read waits, so a step knows the collection is running without a
+      sleep.
+    - A held read that finds the game unreachable throws after the release.
+    - A held read nobody releases fails after 120 seconds.
   - A ledger table under `Given` (`the guild bank ledger holds:`) writes its rows into the
     protocol and stores them through the real `EvergoreDataExtractor` at once: "the ledger holds"
     means the stored ledger, whether or not a collection follows. A later collection reads the
@@ -1313,8 +1317,9 @@ of the Gradle command are load-bearing:
 - **A test for an injected seam asserts that the seam was driven**, not only the outcome it enables:
   count the fake's calls, read the fake clock. If the assertion would still pass with the production
   collaborator wired in, the test is fake-green.
-- **A test the author excepted to wait on real time says so in its inventory row:** "waits on the
-  wall clock, by author decision", with the reason.
+- **A test the author excepted to wait on real time says so in its entry in this file** (its
+  inventory row, or its case in the list below the table): "waits on the wall clock, by author
+  decision", with the reason.
   - Why: handbook §6 allows the exception only by decision.
 - **A tool, a guard or an on-demand check resolves a rule through the production class that holds
   it**, never through a copy.

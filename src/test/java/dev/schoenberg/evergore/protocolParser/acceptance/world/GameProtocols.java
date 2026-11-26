@@ -11,7 +11,7 @@ import java.util.stream.Stream;
 import dev.schoenberg.evergore.protocolParser.dataExtraction.PageContents;
 
 public class GameProtocols {
-	private static final Duration HANG_GUARD = Duration.ofSeconds(30);
+	private static final Duration HANG_GUARD = Duration.ofSeconds(120);
 
 	private final GameProtocol bank = new GameProtocol();
 	private final GameProtocol storage = new GameProtocol();

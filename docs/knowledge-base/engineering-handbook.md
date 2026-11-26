@@ -482,13 +482,13 @@ feature work, through the `/bdd-catch-up` skill (author decision 2026-11-23):
     of hanging.
   - Timeout/retry is mitigation, not fix; never "stabilise" a flake by bumping one
     ([testing.md](testing.md), boot-signal seam).
-  - **Exception: a test that must wait on real elapsed time** (the suite's instance:
-    `ReadWaitsOutAWritersLockTest`).
+  - **Exception: a test that must wait on real elapsed time** (the suite's two instances:
+    `ReadWaitsOutAWritersLockTest`, and the hang guard of the held answer in `GameProtocols`).
     - The plan's test list names it, and the author decides it before red.
     - A dated decision row in [`open-questions.md`](../open-questions.md) records it, and so does
-      its inventory row in [testing.md](testing.md).
+      its entry in [testing.md](testing.md).
     - One exception may cover a class of such waits the project names, recorded once the same
-      way: one decision row and one inventory row.
+      way: one decision row and one entry in testing.md.
     - Its stated reason is its only licence.
     - A hang guard, a bounded wait that only stops a run that would otherwise hang, stands only
       inside such an exception and never decides the verdict.
