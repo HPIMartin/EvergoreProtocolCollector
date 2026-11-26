@@ -190,15 +190,15 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     - the port takes a batch of records, written in one `SqliteDatabase` transaction: a record the
       table refuses stores none of its batch;
     - the same adapter implements the read port `application/UsageRecordReader`, which the writer
-      never needs: the count of each account's records of each kind from a moment on, grouped in
-      SQL; and each account's days of use in a zone, every kind but the notice understood
-      (`UsageKind.uses()`) making a day:
-      - SQL has no zone rules, so the query reads the distinct quarters of an hour each account
-        used, and Java names their days in the zone;
+      never needs:
+      - the count of each account's records of each kind from a moment on, grouped in SQL;
+      - each account's days of use in a zone, every kind but the notice understood
+        (`UsageKind.uses()`) making a day: SQL has no zone rules, so the query reads the distinct
+        quarters of an hour each account used, and Java names their days in the zone;
       - every zone offset in use today, and every change of one, falls on a quarter of an hour,
         so a quarter lies in one day, and the rows grow with the time, not with the use;
-    - and over all the time: each account's latest use, of the same kinds, and the moment of the
-      first record of any kind.
+      - over all the time, each account's latest use, of the same kinds, and the moment of the
+        first record of any kind.
 - **Business logic (framework-free):** ports `BankRepository` and `StorageRepository` (each the
   generic `base/LedgerRepository` over its entry record, declaring nothing of its own),
   `MetaInformationRepository` · records `BankEntry`, `StorageEntry`, `MetaInformation` ·
@@ -250,8 +250,9 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - `FaviconController` serves the favicon;
   - `LoginPageController` serves the login page's own bundle at `/login`;
   - `SpaHistoryFallbackController` serves the SPA shell for unknown navigation paths;
-  - `SpaNavigations` tells a navigation, a `GET` that wants HTML of a path `SpaNavigationPaths`
-    gives the SPA, for this fallback, the access check's redirect and the page load;
+  - `SpaNavigations` tells whether a request is a navigation (a `GET` that wants HTML of a path
+    `SpaNavigationPaths` gives the SPA), for this fallback, the access check's redirect and the
+    page load;
   - the filter `RequestAuditLogFilter` writes one `info` line per request;
   - the filter `RateLimitFilter` throttles: a request with a login in the pots of IPs and accounts
     `LoginPots` holds, any other request per IP in the buckets `AnonymousBuckets` holds;
@@ -456,16 +457,16 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
     request's login once its answer is there: a navigation (`SpaNavigations`) answered with 200,
     the SPA shell of an unknown path included, or with 304, a page the browser shows from its cache
     after asking.
-- **The usage figures:** `application/UsageFigures` reads the port `UsageRecordReader` and lists
-  every account (`AccountRepository`) in German order (`GermanOrder.NAMES`) with its
-  `UsageCounts`, for the last 30 days (from the same Berlin time 30 calendar days back, so the
-  days of use can touch 31 Berlin days: the start day counts once part of it lies in the window;
-  author decision 2026-11-26) and for all the time (`UsageReport`, `UsageWindow`): the days of use count Berlin days in the window,
-  and the latest use is over all the time in both; the guild row adds up the accounts, counts
-  the days any member used the app and names their latest use, the admin key in none of it; the
-  admin key (`AdminKey.NAME`) has a row of its own in each window; the report adds the Berlin day
-  of the first record and the queue's count of records lost since the start (port
-  `LostUsageRecords`).
+- **The usage figures:** `application/UsageFigures` reads the port `UsageRecordReader`:
+  - it lists every account (`AccountRepository`) in German order (`GermanOrder.NAMES`) with its
+    `UsageCounts`, for the last 30 days and for all the time (`UsageReport`, `UsageWindow`; the
+    windows and what each count holds: build-run-deploy.md, "HTTP endpoints",
+    `GET /api/v1/admin/usage`);
+  - the guild row adds up the accounts, counts the days any member used the app and names their
+    latest use, the admin key in none of it;
+  - the admin key (`AdminKey.NAME`) has a row of its own in each window;
+  - the report adds the Berlin day of the first record and the queue's count of records lost
+    since the start (port `LostUsageRecords`).
 - **Cross-cutting:** `Logger` (own interface) + `helper/logger/Slf4jLogger` ·
   `helper/exceptionWrapper/*` (`silentThrow`) · `helper/fileLoader/*` (disc→resource→fallback) ·
   `helper/config/Configuration`.

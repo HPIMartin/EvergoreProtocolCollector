@@ -264,10 +264,12 @@ Five top-level folders under `frontend/src/`:
   - The switch „Zeitraum“ (`switch-usage-window`) starts on „Letzte 30 Tage“; „Alles“ shows the
     other window of the same answer, so switching asks nothing.
   - „Letzte 30 Tage“ reaches back to the same Berlin time 30 days ago, so its days of use can
-    count 31 Berlin days (architecture.md, "The usage figures").
+    count 31 Berlin days (build-run-deploy.md, "HTTP endpoints").
   - Above the switch stands „Aufgezeichnet seit <Tag>“ or „Noch keine Aufzeichnung.“
-    (`usage-recorded-since`), and „Seit dem Start verloren: n“ (`usage-lost`) only while n > 0;
-    both are `p`s, since they are facts the admin page reads out like the status's.
+    (`usage-recorded-since`).
+  - Between that line and the switch stands „Seit dem Start verloren: n“ (`usage-lost`), only
+    while n > 0.
+  - Both are `p`s, since they are facts the admin page reads out like the status's.
   - Its load has the six outcomes of every view (below) apart from the page's own, so a refused
     or failed usage leaves the status and the accounts standing.
   - „noch nie“ stands for no latest use; a latest use is in the page's timestamp format.
