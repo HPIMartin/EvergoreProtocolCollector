@@ -152,6 +152,32 @@ against the project's files in `<wt>`.
 - Stack material comes in through the pairs below and step 4.
 - Leave out `docs/knowledge-base/permission-probe-record.md` as a whole: the payload's copy holds
   the template's own runs. The list of project-specific docs below says which part merges.
+- **Paths the template renamed** walk as one path across the rename. Each entry names the old and
+  the new path, for a skill its old and new command, and the version that renamed it:
+  - `.claude/skills/continue/` became `.claude/skills/resume-work/`, the command `/continue`
+    became `/resume-work`, in 5.1.
+  - An entry counts where its version is greater than N and not greater than M, compared as in
+    step 1.
+  - Each file under the old path pairs with the file of the same name under the new path: the old
+    one in `<filtered>/baseline/` and in `<wt>`, the new one in `<filtered>/incoming/`.
+  - Where `<wt>` holds the old path and not the new one: `git -C <wt> mv <old path> <new path>`,
+    then walk each pair by the table below, with the baseline's file under the old name and the
+    project's file `<wt>/` plus the new name. The project's adaptations come through the merge.
+  - Where `<wt>` holds the new path, or neither: show the author what each copy holds, with your
+    recommendation, and move nothing.
+  - Neither path walks again on its own.
+  - After the walk, `git -C <wt> grep -n -F -e <old path> -e <old command> -- ':!.template/'`
+    lists each line that still names the old path or the old command.
+    - In Git Bash on a Windows host run it with `MSYS_NO_PATHCONV=1`.
+      - Why: without it the old command, an argument that starts with `/`, reaches git as a
+        Windows path and matches nothing.
+    - A line the incoming payload holds at the same path (`<filtered>/incoming/<path>`) stays
+      as written, and so does a dated row (`docs/open-questions.md`,
+      `docs/process-learnings.md`, the dated sections of the probe record).
+    - Show each other line to the author with a proposed change.
+    - Named limit: a mention by the bare name, such as a settings rule `Skill(continue)` or
+      "the continue skill" in prose, is not found; read the project's own skills, agents and
+      settings for it.
 
 For every other path `<path>` classify and act; the baseline's and the incoming file are those
 under `<filtered>`, the project's is `<wt>/<path>`:
