@@ -66,8 +66,10 @@ class GameProtocolsTest {
 	}
 
 	private static void awaitWaitingOrDone(Thread thread) {
-		while (thread.getState() != Thread.State.TIMED_WAITING && thread.getState() != Thread.State.TERMINATED) {
+		Thread.State state = thread.getState();
+		while (state != Thread.State.WAITING && state != Thread.State.TIMED_WAITING && state != Thread.State.TERMINATED) {
 			Thread.onSpinWait();
+			state = thread.getState();
 		}
 	}
 }

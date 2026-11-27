@@ -438,9 +438,16 @@ class CollectionsTest {
 
 	private static void startAndAwaitBlockedOnOrDone(Thread thread, Object lockOwner) {
 		thread.start();
-		while (thread.getState() != Thread.State.TERMINATED && !isBlockedOn(lockOwner, thread)) {
+		while (!isTerminatedOrHeld(thread)) {
 			Thread.onSpinWait();
 		}
+		boolean doneOrBlockedOnTheOwner = thread.getState() == Thread.State.TERMINATED || isBlockedOn(lockOwner, thread);
+		assertThat(doneOrBlockedOnTheOwner).isTrue();
+	}
+
+	private static boolean isTerminatedOrHeld(Thread thread) {
+		Thread.State state = thread.getState();
+		return state == Thread.State.TERMINATED || state == Thread.State.BLOCKED || state == Thread.State.WAITING;
 	}
 
 	private static boolean isBlockedOn(Object lockOwner, Thread thread) {

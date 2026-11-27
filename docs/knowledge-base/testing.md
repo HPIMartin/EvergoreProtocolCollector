@@ -177,7 +177,8 @@
   - a start by hand that comes between the check and the mark of the daily collection is refused;
   - a daily collection that comes between the check and the mark of a start by hand is skipped;
   - the second thread starts from the clock's reading inside the owner's lock;
-  - the test waits until that thread is blocked on that lock, with no timeout.
+  - the test waits until that thread is blocked on that lock, with no timeout;
+  - where the lock has moved to another object, that wait fails an assertion instead of spinning forever.
   - a start by hand that the executor refuses frees the owner;
   - such a start rethrows the refusal, also for an executor that was shut down;
   - such a start logs `Collection started by hand failed.` with the refusal before the refusal is rethrown;
@@ -199,7 +200,7 @@
 - `GameProtocolsTest`:
   - a read waits until the release, asked from a second thread;
   - the test waits for that thread to ask before it reads its answer;
-  - the test waits for that thread to be parked in the hold before it reads its answer;
+  - the test waits for that thread to be parked in the hold, timed or not, before it reads its answer;
   - only the reads asked before the release wait;
   - a held read of an unreachable game throws after the release;
   - awaiting an answer nobody holds is refused;
