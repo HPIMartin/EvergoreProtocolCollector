@@ -484,7 +484,8 @@ feature work, through the `/bdd-catch-up` skill (author decision 2026-11-23):
     ([testing.md](testing.md), boot-signal seam).
   - **Exception: a test that must wait on real elapsed time** (the suite's two instances:
     `ReadWaitsOutAWritersLockTest`, and the hang guard of the held answer in `GameProtocols`).
-    - The plan's test list names it, and the author decides it before red.
+    - The plan's test list names it, or a repair brings it;
+    - the author decides it before its red.
     - A dated decision row in [`open-questions.md`](../open-questions.md) records it, and so does
       its entry in [testing.md](testing.md).
     - One exception may cover a class of such waits the project names, recorded once the same
