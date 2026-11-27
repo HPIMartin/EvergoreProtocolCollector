@@ -739,8 +739,8 @@ feature work, through the `/bdd-catch-up` skill (author decision 2026-11-23):
   - WIP legitimately fails the hooks; this is the one sanctioned non-emergency bypass.
   - The no-secrets rule is unchanged: eyeball the diff first.
   - It is a checkpoint, not history.
-  - `/continue` resolves it before any new work: it finishes or reworks the work, then replaces the
-    commit through the normal commit protocol.
+  - `/resume-work` resolves it before any new work: it finishes or reworks the work, then replaces
+    the commit through the normal commit protocol.
   - Reset-free rewrite recipe → multi-agent playbook.
   - It never survives to the review gateway or a push.
   - It is parked on the strand's branch, never on `main`.
@@ -833,6 +833,10 @@ worktrees (own directory + HEAD + index) make parallel work safe.
     above; why and which seat sets it: [dev-environment.md](dev-environment.md), "Worktrees on a
     volume").
   <!-- /MODULE volumes -->
+  <!-- MODULE agent-seat+volumes -->
+  - With the agent-seat module the seat's image sets it empty (dev-environment.md, "The agent
+    image").
+  <!-- /MODULE agent-seat+volumes -->
   - Where Claude Code puts an `Agent` subagent's `isolation: "worktree"` checkout, and why strands
     avoid it: [multi-agent-playbook.md](multi-agent-playbook.md), "One track".
 - **`main` follows `origin/main` on every machine** (author decision 2026-10-04): `origin/main`
@@ -845,10 +849,10 @@ worktrees (own directory + HEAD + index) make parallel work safe.
     - Why a script: the checks are many and exact, and a sync that skips one lets a stand-in decide
       what is synced and landed.
     - Its `landing_model` line reads `hub` ("Landing models" below).
-  - **Fetch at fixed points:** at the start of every session (`/continue`, `/plan-next`), before a
-    strand is cut and before the gateway's rebase the fetch is the sync's own; before every review
-    panel and before every landing it is `git fetch origin`; fetching is allowed at any other time
-    too, since it moves no local branch.
+  - **Fetch at fixed points:** at the start of every session (`/resume-work`, `/plan-next`),
+    before a strand is cut and before the gateway's rebase the fetch is the sync's own; before
+    every review panel and before every landing it is `git fetch origin`; fetching is allowed at
+    any other time too, since it moves no local branch.
     - A subagent does not fetch: the session that spawned it did.
     <!-- MODULE agent-seat -->
     - On the agent seat every fetch is `git fetch --prune origin`, the script's too, which also
@@ -1011,7 +1015,7 @@ worktrees (own directory + HEAD + index) make parallel work safe.
     - The devcontainer's `postCreateCommand` sets it; an older checkout runs
       `git config push.default nothing` once ([build-run-deploy.md](build-run-deploy.md), "Git
       hooks (local enforcement)").
-    - `/continue` checks it at session start.
+    - `/resume-work` checks it at session start.
     - No checkout configures `remote.origin.push`, which git would use first.
     - A `-c push.default=<value>` on the command line overrides the setting for that one command
       (`git -c push.default=current push origin`).

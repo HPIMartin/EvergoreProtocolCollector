@@ -39,7 +39,7 @@
 
 | Risk | L | I | Countermeasure |
 |------|---|---|----------------|
-| Long hobby pauses lose context between sessions | H | M | `/pause` parks state as `[wip]` and updates the backlog status; `/continue` reorients from repo and git; the KB carries the knowledge |
+| Long hobby pauses lose context between sessions | H | M | `/pause` parks state as `[wip]` and updates the backlog status; `/resume-work` reorients from repo and git; the KB carries the knowledge |
 | Fake-green tests or hallucinated APIs pass a solo review | M | H | An independent falsifier panel and reviewer gate, escalated for risky domains ([multi-agent-playbook.md](knowledge-base/multi-agent-playbook.md)) |
 | KB drift misleads KB-first agents | M | M | Rotating doc-reviewer sweep at every gate, which reports false text; the committed citation guard |
 | The planned history rewrite (after backlog F1) breaks clones and dangles commit-hash references in durable docs | H | L | The author rewrites history only after announcing it and after durable docs swap their commit hashes for symbol references (backlog F1) |

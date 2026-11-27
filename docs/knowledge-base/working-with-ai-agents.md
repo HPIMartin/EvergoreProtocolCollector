@@ -66,6 +66,22 @@ cross-session memory.
   playbook's roles table.
 - The author approves the commit plan and is the only one who moves `origin/main` (handbook §7).
 
+## Naming a skill
+
+- **A skill's name, its folder under `.claude/skills/`, is no built-in command, alias or bundled
+  skill of Claude Code.**
+  - Why: in a local terminal session a project skill replaces a built-in command but not its
+    aliases (Claude Code docs, skills, "Resolve skills that share a name"), so its slash command
+    can start something else; on Claude Code 2.1.330 `/continue` is an alias of `/resume`.
+- Check a new name against the commands reference
+  (<https://code.claude.com/docs/en/commands.md>), read with the version in use
+  (`claude --version`), and the `/` menu of a session, and record the check with that version as
+  a decision row.
+- A two-word, hyphenated name (`plan-next`, `resume-work`) keeps clear of the one-word names
+  Claude Code mostly uses.
+- Where a later version of Claude Code takes a skill's name, rename the skill; every place that
+  names it follows in the same commit.
+
 ## Context & token hygiene
 
 Every token in context is re-read on every turn, and after a pause the whole context is re-written
@@ -187,7 +203,7 @@ command) inside guardrails. Two files:
     - Write them plainly: `git --no-pager log` is not a form that pass knows (row 62).
       - Why: without a terminal git pages nothing anyway (documented).
     - The reads around the sync are such reads: `git merge-base --is-ancestor` of the cleanup
-      and `/continue`'s `git config --get` of `core.hooksPath`, `push.default` and
+      and `/resume-work`'s `git config --get` of `core.hooksPath`, `push.default` and
       `remote.origin.push` ran (row 58; probe record, S4, S5, S7).
     - The sync's own checks run inside `hooks/sync-main` (handbook §7, "`main` follows
       `origin/main`"), so no rule sees them.

@@ -978,6 +978,9 @@ A scenario gate's reports, held so a check can tell which features each agent re
   ([dev-environment.md](dev-environment.md), "Several sessions on one machine").
 - **Bash stdout** may not surface on the Windows host: redirect to a file
   (`./verify all > out.txt 2>&1`) and `Read` it; in-container, Bash is normal.
+  - A brief names such a file by an absolute POSIX path (`/e/tmp/out.txt`).
+    - Why: Git Bash reads each backslash of `E:\tmp\out.txt` as an escape and writes a file
+      `E:tmpout.txt` into the working directory.
 - Permission-blocked commands + reset-free rewrite: see the FAIL-loop section. Prefer Read/Grep/Glob.
 - **A refused command is no obstacle to get around:** working-with-ai-agents.md, "Refusals and
   limits", which says when a rewrite or another route is right and when the step is skipped and

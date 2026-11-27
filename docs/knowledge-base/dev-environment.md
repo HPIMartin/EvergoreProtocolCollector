@@ -421,6 +421,23 @@ home.
   starts `dockerd` and configures it (storage driver, log rotation, subnets, DNS, build-cache
   limit); that configuration is the machine's, never the repository's. `vscode` reaches the daemon
   through the `docker` group.
+- **The agent machine starts the agent container with an init as its first process**, compose's
+  `init: true` (the Compose file reference) or `docker run --init` (Docker's `docker run`
+  reference; author decision 2026-11-27).
+  - Until the agent machine's init step is done (backlog H22), the running agent container has
+    none.
+  - Why: the image's command, `sleep infinity`, never collects a finished child.
+  - On git `2.56.1` each `git commit` leaves such a child when git's automatic maintenance
+    detaches, its default.
+  - The finished children pile up until no new process starts in the container.
+  - Measured on Docker Engine `29.9.2` with git `2.56.1`, without and with `docker run --init`
+    (the template's probe record,
+    [`.template/baseline/docs/knowledge-base/permission-probe-record.md`](../../.template/baseline/docs/knowledge-base/permission-probe-record.md),
+    "Seat-start probe of 2026-11-26").
+  - A container's init is set when it is created (derived: `--init` is an option of `docker run`
+    and `docker create`, not of `docker restart`).
+    - So a seat started without one is created anew with it.
+    - A restart only clears the finished children; they pile up again.
 - **The inner daemon shares the agent container's filesystem and network:** a bind-mount source is a
   path inside the agent container, and a published port answers on its `localhost` (measured by the
   author: `selenium/standalone-firefox` with `-p 4444:4444` ready on `localhost:4444`).
@@ -635,7 +652,7 @@ home.
   in a throwaway container from the current agent image, against the machine's own Docker daemon.
 - **On the PC it runs from the devcontainer** through `docker-outside-of-docker`:
   - `.devcontainer/agent/build --tag epc-agent:test`, then `docker image inspect epc-agent:test`
-    for the labels and `claude --version` in the image;
+    for the labels and `Config.Env`, and `claude --version` in the image;
   - what that proves of a `.devcontainer/` change: "The devcontainer (`.devcontainer/`)", above.
 - **`self-test`** proves the three scripts and the `Dockerfile` with every outside command stubbed,
   without network or Docker ([build-run-deploy.md](build-run-deploy.md), "Git hooks (local
@@ -656,7 +673,8 @@ home.
     the system git configuration, the group and the mount points;
   - `install-claude-code`: the pinned version asked for, the refusal of another, and the refusal
     of a malformed `version` line;
-  - the `Dockerfile`: the blanked label, the two scripts with their users, and its end;
+  - the `Dockerfile`: the blanked label, `AGENT_WORKTREES` set empty where `devcontainer.json`
+    sets it, the two scripts with their users, and its end;
   - it needs `git` and `ssh-keygen`; without one it exits 2 before any case, with a line opening
     `agent image self-test: `;
   - its case for a tag with a letter outside ASCII runs under a UTF-8 locale that `locale -a`

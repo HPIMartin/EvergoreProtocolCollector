@@ -39,7 +39,7 @@ contribution metrics, automating a hand-maintained Google Sheet.
 | 07 | [git-state.md](git-state.md) | Git conventions; **git is the source of truth for history** (docs don't duplicate it); what GitHub enforces and whom it binds |
 | 08 | [glossary.md](glossary.md) | German ↔ English domain glossary (the domain is German) |
 | 09 | [engineering-handbook.md](engineering-handbook.md) | **How code looks & how we develop**: clean code, SOLID, hexagonal, TDD, BDD, commits, DoD |
-| 10 | [working-with-ai-agents.md](working-with-ai-agents.md) | The AI-assisted workflow: memory layers, session playbook, sub-agents, asking style |
+| 10 | [working-with-ai-agents.md](working-with-ai-agents.md) | The AI-assisted workflow: memory layers, session playbook, sub-agents, skill names, asking style |
 | 11 | [multi-agent-playbook.md](multi-agent-playbook.md) | The agent team: pipeline, roles, invocation |
 | 12 | [dev-environment.md](dev-environment.md) | Fully-virtualized dev: the devcontainer, the in-container rule, where agents run, Docker on the agent seat, the agent image, JDK single-source & upgrade |
 | 13 | [agent-entry-template.md](agent-entry-template.md) | Per-tool session-bootstrap template: SHARED rules + PROJECT CHOICES + TOOL-SPECIFIC skeleton + template version |
@@ -159,7 +159,7 @@ contribution metrics, automating a hand-maintained Google Sheet.
   - A row that a session on the PC files carries a seat marker after its bold title.
     - `(seat: agent)` where the agent seat can take the row as a strand of its own from `main`.
     - `(seat: PC)` where the row needs the PC.
-    - `/plan-next` and `/continue` read the marker on the seat.
+    - `/plan-next` and `/resume-work` read the marker on the seat.
   <!-- /MODULE agent-seat -->
   - A deferred row stays.
     - Its title starts with **Parked**, without a date.
