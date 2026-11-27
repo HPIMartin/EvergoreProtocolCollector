@@ -180,6 +180,7 @@
   - the test waits until that thread is blocked on that lock, with no timeout.
   - a start by hand that the executor refuses frees the owner;
   - such a start rethrows the refusal, also for an executor that was shut down;
+  - such a start logs `Collection started by hand failed.` with the refusal before the refusal is rethrown;
   - such a start counts as no start;
   - an `Error` of the executor frees the owner too;
   - the next start after it is accepted.

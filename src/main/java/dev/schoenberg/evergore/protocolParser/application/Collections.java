@@ -53,6 +53,7 @@ public class Collections {
 			background.execute(this::runStartedByHand);
 		} catch (RuntimeException | Error e) {
 			abandonStart();
+			logger.error("Collection started by hand failed.", e);
 			throw e;
 		}
 	}

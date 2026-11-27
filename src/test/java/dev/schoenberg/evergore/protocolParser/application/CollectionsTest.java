@@ -405,6 +405,20 @@ class CollectionsTest {
 	}
 
 	@Test
+	void logsTheFailureOfAStartByHandTheExecutorRefusesBeforeItRethrows() {
+		RejectedExecutionException refused = new RejectedExecutionException("shut down");
+		Collections refusing = new Collections(collection, task -> {
+			throw refused;
+		}, clock, logger);
+
+		Throwable thrown = catchThrowable(refusing::startByHand);
+
+		assertThat(thrown).isSameAs(refused);
+		assertThat(logger.errorMessages()).containsExactly("Collection started by hand failed.");
+		assertThat(logger.errorThrowables()).containsExactly(refused);
+	}
+
+	@Test
 	void freesTheCollectionAndRethrowsWhenTheExecutorThrowsAnErrorAtAStartByHand() {
 		OutOfMemoryError exhausted = new OutOfMemoryError("unable to create native thread");
 		AtomicBoolean fail = new AtomicBoolean(true);

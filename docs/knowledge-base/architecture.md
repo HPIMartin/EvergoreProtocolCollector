@@ -81,6 +81,8 @@ Password write path:    POST /api/v1/password  (behind a login) ▶ PasswordCont
   - A start by hand that the executor refuses is taken back:
     - nothing runs;
     - the start counts as none.
+  - The refusal of the executor is logged as `Collection started by hand failed.`, as a failed run is.
+  - That failure line follows the line `Collection started by hand.`.
   - The refusal of the executor is rethrown to the caller.
   - A daily collection that falls due while one runs is skipped with a log line and not made up.
   - The schema belongs to Flyway: `SqliteDatabase.open` runs the versioned migrations in
