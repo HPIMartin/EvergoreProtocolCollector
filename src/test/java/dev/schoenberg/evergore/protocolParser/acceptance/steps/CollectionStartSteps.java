@@ -237,7 +237,10 @@ public class CollectionStartSteps {
 
 	@Then("the admin page reads no {string}")
 	public void theAdminPageReadsNo(String text) {
-		assertThat(shownOn(browser).messages()).noneMatch(message -> message != null && message.contains(text));
+		AdminPage page = shownOn(browser);
+
+		assertLoaded(page);
+		assertThat(page.messages()).noneMatch(message -> message != null && message.contains(text));
 	}
 
 	@Then("the page opened before still reads {string}")
