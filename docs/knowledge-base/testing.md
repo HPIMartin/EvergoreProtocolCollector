@@ -183,6 +183,9 @@
   - such a start counts as no start.
   - `state()` names the running start and no next start while a collection runs, and the next start and no running start once it
     ended within the hour.
+  - `state()` reads the two as one state while another thread ends the collection;
+  - the test lets that thread start from the read of the running start;
+  - the test waits until that thread is blocked on the owner's lock, with no timeout.
 - `CollectionControllerTest`:
   - `POST /api/v1/admin/collection` answers 202 and starts one collection;
   - only the admin role starts one: no login 401, a member's login 403, then the admin's 202 with one start in all;

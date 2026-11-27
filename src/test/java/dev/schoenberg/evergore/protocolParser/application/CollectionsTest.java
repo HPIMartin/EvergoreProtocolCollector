@@ -343,6 +343,25 @@ class CollectionsTest {
 	}
 
 	@Test
+	void readsTheRunningStartAndTheNextStartAsOneStateWhileAnotherThreadEndsTheCollection() {
+		Thread ending = new Thread(background::runHeldTasks);
+		Collections endedWhileRead = new Collections(collection, background, clock, logger) {
+			@Override
+			public Optional<Instant> runningSince() {
+				Optional<Instant> read = super.runningSince();
+				startAndAwaitBlockedOnOrDone(ending, this);
+				return read;
+			}
+		};
+		endedWhileRead.startByHand();
+
+		CollectionState state = endedWhileRead.state();
+		joined(ending);
+
+		assertThat(state).isEqualTo(new CollectionState(Optional.of(START), Optional.empty()));
+	}
+
+	@Test
 	void freesTheCollectionAndRethrowsWhenTheExecutorRefusesAStartByHand() {
 		RejectedExecutionException refused = new RejectedExecutionException("shut down");
 		Collections refusing = new Collections(collection, task -> {
