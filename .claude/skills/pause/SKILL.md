@@ -1,11 +1,11 @@
 ---
-description: Checkpoint the current state to docs and park WIP as a [wip] commit so a later /continue resumes cleanly. Runs autonomously and fast; signals subagents instead of killing them. Never pushes.
+description: Checkpoint the current state to docs and park WIP as a [wip] commit so a later /resume-work resumes cleanly. Runs autonomously and fast; signals subagents instead of killing them. Never pushes.
 argument-hint: [optional: a note about what you were doing]
 ---
 
 You are pausing work on the Evergore Protocol Collector. Save state so a fresh session can resume
-cleanly via /continue. Be quick and safe: assume little budget remains. Pause fast: do not wait for
-running subagent tasks to complete, but never abort them either.
+cleanly via /resume-work. Be quick and safe: assume little budget remains. Pause fast: do not wait
+for running subagent tasks to complete, but never abort them either.
 
 1. Signal running subagents FIRST (so they wind down while you checkpoint):
    - Send every running subagent (implementer / falsifier / reviewer / ...) a message (SendMessage):
@@ -59,4 +59,4 @@ running subagent tasks to complete, but never abort them either.
 Optional note from the author: $ARGUMENTS
 
 End with a 3–5 line "resume from here" summary (what's done, what's parked as `[wip]` on which
-branch/worktree, the exact next step) so /continue (or you, later) can pick it up.
+branch/worktree, the exact next step) so /resume-work (or you, later) can pick it up.

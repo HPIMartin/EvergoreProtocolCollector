@@ -6,10 +6,10 @@ argument-hint: [optional: a scope, e.g. "only the valuation items"; "harvest" tr
 You are re-deriving the plan for the Evergore Protocol Collector. CLAUDE.md is auto-loaded every
 session; its rules and KB pointers apply without re-reading them here.
 
-**What this is for.** `/continue` executes the next action the docs already name. This skill asks the
-question in front of that one: **is that next action still right?** Use it when events may have
-overtaken the plan, which is the normal case after a feature lands, a decision changes what earlier
-items mean, or a release approaches.
+**What this is for.** `/resume-work` executes the next action the docs already name. This skill
+asks the question in front of that one: **is that next action still right?** Use it when events
+may have overtaken the plan, which is the normal case after a feature lands, a decision changes
+what earlier items mean, or a release approaches.
 
 **Rules for this run**
 
@@ -33,8 +33,8 @@ items mean, or a release approaches.
 
 ## 1. Orient
 
-- sync the primary checkout's `main` with `sh hooks/sync-main`, as `/continue` does, so the checks
-  below see what landed and what other machines pushed
+- sync the primary checkout's `main` with `sh hooks/sync-main`, as `/resume-work` does, so the
+  checks below see what landed and what other machines pushed
   - a non-zero exit is reported with its lines (at a stop they name both SHAs) and resolved by
     nothing
 - `docs/knowledge-base/README.md` (the map; then only the KB docs your findings actually touch)

@@ -1,5 +1,5 @@
 ---
-description: Orient from the persisted state and continue the next step (works in a fresh context)
+description: Orient from the persisted state and resume the next step (works in a fresh context)
 argument-hint: [optional: a specific focus, e.g. a backlog item or "finish the storage WIP"]
 ---
 
