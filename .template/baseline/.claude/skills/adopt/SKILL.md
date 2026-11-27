@@ -998,4 +998,4 @@ Where the java-gradle preset is applied, per its README:
     then switches back to that branch, runs `git merge --ff-only <tip>` and deletes the strand
     with `git branch -d`.
 - Point the author at the first session: `/bdd-catch-up` where task 0 was chosen, otherwise
-  `/continue`.
+  `/resume-work`.

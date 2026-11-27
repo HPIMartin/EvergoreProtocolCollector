@@ -41,7 +41,8 @@ docs/
   agents/                          implementer, falsifier-scenario, falsifier-stakeholder,
                                    falsifier-domain, falsifier-robustness,
                                    falsifier-frontend (UI surface only), doc-reviewer, reviewer
-  skills/                          adopt, pause, continue, plan-next, bdd-catch-up, template-upgrade
+  skills/                          adopt, pause, resume-work, plan-next, bdd-catch-up,
+                                   template-upgrade
                                    (adopt/ also holds the module filter, its manifest and
                                    self-test, and the skeletons /adopt creates docs from)
 env/                               dev-environment variants; pick ONE at adoption, then delete
@@ -404,7 +405,8 @@ Everything else an adopter must rewrite is marked with a `> **ADAPT:** ...` bloc
 - `.claude/settings.json` carries a rule set of its own for the root, naming `/worktrees`
   literally (working-with-ai-agents.md, "Permissions & autonomy").
 - With the guard module, `agent/session-check` holds `/worktrees` as its `volume_root` value: in a
-  session without `AGENT_WORKTREES` its report says the guard approves nothing under that root.
+  session where `AGENT_WORKTREES` is unset or empty its report says the guard approves nothing
+  under that root.
 <!-- /MODULE volumes -->
 
 <!-- MODULE agent-seat -->

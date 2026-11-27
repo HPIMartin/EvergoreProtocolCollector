@@ -1,5 +1,5 @@
 ---
-description: Orient from the persisted state and continue the next step (works in a fresh context)
+description: Orient from the persisted state and resume the next step (works in a fresh context)
 argument-hint: [optional: a specific focus, e.g. a backlog item ID or "finish the parked WIP"]
 ---
 
@@ -25,7 +25,8 @@ rules and KB pointers apply without re-reading it here.
      (`.claude/skills/plan-next/SKILL.md`, "the docs' size" and its ADAPT note)
 
 2. Determine the ACTUAL state from git, not just the docs (the tree may have moved on):
-   - `git status` and `git log --oneline -15` (if Bash stdout isn't surfaced, redirect to a file and Read it).
+   - `git status` and `git log --oneline -15` (if Bash stdout isn't surfaced, redirect to a file
+     and Read it).
 <!-- MODULE guard -->
      With the guard module a command that names git writes only into the guard's output target: run
      `id -u`, then `mkdir -p /tmp/claude-<uid>` (no git named, so the rules decide), then
@@ -56,9 +57,10 @@ rules and KB pointers apply without re-reading it here.
      - One whose tip `origin/main` holds has landed: remove it with
        `agent/push --delete <branch>`.
    <!-- /MODULE agent-seat -->
-   - A tip commit starting with `[wip]` is parked pause work: resolve it FIRST (finish or rework it),
-     then replace it with a properly gated commit (one confirmed message; rewrite via the reset-free
-     recipe in the playbook). A `[wip]` commit never reaches the review gateway or a push (handbook §7).
+   - A tip commit starting with `[wip]` is parked pause work: resolve it FIRST (finish or rework
+     it), then replace it with a properly gated commit (one confirmed message; rewrite via the
+     reset-free recipe in the playbook). A `[wip]` commit never reaches the review gateway or a push
+     (handbook §7).
    - Reconcile with the backlog's "Current status". If they disagree, trust the working tree + git
      and say so (then offer to update the doc).
    <!-- MODULE agent-seat -->
@@ -71,8 +73,8 @@ rules and KB pointers apply without re-reading it here.
    before doing the work.
 
 4. Work to the project standards (they live in the KB, not here): **BDD first, then TDD** → handbook
-   §5/§4 (a feature with observable behavior needs its author-confirmed `.feature`, committed `@wip`,
-   before any production code; check whether the parked work already has one and whether its
+   §5/§4 (a feature with observable behavior needs its author-confirmed `.feature`, committed
+   `@wip`, before any production code; check whether the parked work already has one and whether its
    scenarios are still `@wip` or already armed, `./verify bdd` tells); clean code, architecture
    rules, the pinned dev environment → handbook §1 to §3 + dev-environment.md; commit protocol
    (every change on its own branch, one-line messages a human review confirms, who may push)
@@ -84,5 +86,5 @@ Optional focus from the author: $ARGUMENTS
 First, reply with a 3 to 5 line status summary (where we are; what's committed vs in progress; the
 read set's size and growth, and each figure over its threshold). Then:
 if the focus above or the backlog's "▶ next action" is precise and unambiguous, start right away;
-the author approved it when it was written down. Only when it is ambiguous, stale, or an author-level
-decision, propose the next step as multiple-choice options and wait for the go.
+the author approved it when it was written down. Only when it is ambiguous, stale, or an
+author-level decision, propose the next step as multiple-choice options and wait for the go.

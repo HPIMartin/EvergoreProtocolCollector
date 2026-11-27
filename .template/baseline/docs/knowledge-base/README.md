@@ -47,7 +47,7 @@ re-scanning the whole codebase**.
 | 06 | [git-state.md](git-state.md) | Git conventions & the rule that **git is the source of truth** for history (docs don't duplicate it) |
 | 07 | [glossary.md](glossary.md) | Domain glossary (skeleton: fill in domain terms, especially where the domain language differs from English) |
 | 08 | [engineering-handbook.md](engineering-handbook.md) | **How the code should look & how we develop**: clean code, SOLID, architecture rules, TDD, BDD, commits, Definition of Done |
-| 09 | [working-with-ai-agents.md](working-with-ai-agents.md) | The **AI-assisted workflow**: memory layers, session playbook, sub-agents, asking style |
+| 09 | [working-with-ai-agents.md](working-with-ai-agents.md) | The **AI-assisted workflow**: memory layers, session playbook, sub-agents, skill names, asking style |
 | 10 | [multi-agent-playbook.md](multi-agent-playbook.md) | The **agent team**: Planner (you+me) · Implementer · Falsifier panel · Doc reviewer · Reviewer. Pipeline, roles, how to invoke |
 | 11 | [dev-environment.md](dev-environment.md) | **The pinned dev environment**: the devcontainer and native-toolchain variants, the environment rule for agents, the toolchain's pins & upgrade procedure |
 | 12 | [agent-entry-template.md](agent-entry-template.md) | **Per-tool session-bootstrap template**: the SHARED rules + TOOL-SPECIFIC skeleton each tool's entry file (e.g. `CLAUDE.md`) is built from, plus the template version |
@@ -206,7 +206,7 @@ GitLab issues and its wiki, or equivalents; recorded at adoption in open-questio
     title: `(seat: <name>)`.
     - It names the agent seat where the seat can take the row as a strand of its own from `main`.
     - It names the supervised machine where the row needs that machine.
-    - `/plan-next` and `/continue` read the marker on the seat.
+    - `/plan-next` and `/resume-work` read the marker on the seat.
 
     > **ADAPT:** put in the project's names for the agent seat and the supervised machine.
   <!-- /MODULE agent-seat -->

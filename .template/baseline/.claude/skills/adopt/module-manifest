@@ -60,6 +60,7 @@ trace guard .claude/settings.json agent/session-check
 trace volumes env/devcontainer/.devcontainer/devcontainer.json /worktrees
 trace volumes env/devcontainer/.devcontainer/devcontainer.json AGENT_WORKTREES
 trace volumes env/devcontainer/.devcontainer/devcontainer.json gc.worktreePruneExpire
+trace volumes env/devcontainer/.devcontainer/agent/Dockerfile AGENT_WORKTREES
 trace agent-seat .claude/settings.json fetch --prune origin)
 installs env/devcontainer/.devcontainer/ .devcontainer/
 installs env/native/.tool-versions .tool-versions

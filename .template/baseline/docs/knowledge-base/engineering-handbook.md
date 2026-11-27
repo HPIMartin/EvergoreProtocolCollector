@@ -843,10 +843,10 @@ scenarios before any feature work, through the `/bdd-catch-up` skill:
   work as ONE local commit `[wip] <one-line state>` via `git commit --no-verify` (WIP legitimately
   fails the hooks; this is the one sanctioned non-emergency bypass, and the no-secrets rule applies
   unchanged, so the diff is eyeballed before parking). A `[wip]` commit is a checkpoint, not history:
-  `/continue` ([`.claude/skills/continue/`](../../.claude/skills/continue/SKILL.md)) resolves it
-  first (finish or rework, then replace it through the normal confirmed-message protocol; reset-free
-  rewrite recipe → [multi-agent-playbook.md](multi-agent-playbook.md)). It never survives to the
-  review gateway or a push.
+  `/resume-work` ([`.claude/skills/resume-work/`](../../.claude/skills/resume-work/SKILL.md))
+  resolves it first (finish or rework, then replace it through the normal confirmed-message
+  protocol; reset-free rewrite recipe → [multi-agent-playbook.md](multi-agent-playbook.md)). It
+  never survives to the review gateway or a push.
   - It is parked on the strand's branch, never on `main`.
   - Work sitting in the primary checkout first moves to a new `claude/<topic>` branch
     (`git switch -c`); after the parking commit the checkout returns to `main`.
@@ -861,9 +861,11 @@ scenarios before any feature work, through the `/bdd-catch-up` skill:
       - Why: a reviewed commit can be reverted.
       - A project file a template upgrade removes stays the author's call (`/template-upgrade`).
       - The old `.template/baseline/` an upgrade replaces is its strand's own to retire.
-    - **An empty directory a removal leaves behind goes with `rmdir`**, which refuses a directory
-      that is not empty, so the safety sits in the command (what it meets:
-      working-with-ai-agents.md, "Autonomy within guardrails").
+    - **What a removal leaves behind, an empty directory included, goes to the author** as an exact
+      command.
+      - Why: a managed policy may deny `rmdir` as well as `rm`, and a managed deny outranks every
+        project allow (working-with-ai-agents.md, "Managed settings"); a rest that is not empty,
+        such as one a `git worktree remove` cannot delete for want of permission, needs `rm` anyway.
     - **A copy of production data a strand works on stays under its worktree's own `build/`**
       (ADAPT: the stack's build output directory, which `.gitignore` covers), never in `/tmp` or a
       session scratchpad, so it goes with the worktree.
@@ -932,7 +934,7 @@ is its own directory + HEAD + index. That, not the commit count, is what makes p
 - **The worktree root holds every worktree an agent creates:** strand, walk, lens and run worktrees
   alike.
   - The root is `$AGENT_WORKTREES` where the environment sets it, else
-    `<project root>/.claude/worktrees/`.
+    `<project root>/.claude/worktrees/`; an empty value counts as unset.
   - The variable names an absolute directory outside every checkout.
     - Why: `.gitignore` covers the default alone; anywhere else inside a checkout, a worktree is
       that checkout's untracked content.
@@ -945,6 +947,10 @@ is its own directory + HEAD + index. That, not the commit count, is what makes p
   - With the volumes module the devcontainer sets the variable to `/worktrees`, a named volume
     (dev-environment.md, "Worktrees on a volume").
   <!-- /MODULE volumes -->
+  <!-- MODULE agent-seat+volumes -->
+  - With the agent-seat module the seat's image sets it empty (dev-environment.md, "The agent
+    image").
+  <!-- /MODULE agent-seat+volumes -->
 
   > **ADAPT:** the environment the sessions run in sets the variable (the devcontainer's
   > `containerEnv`, a shell profile); left unset, the root is the default.
@@ -956,7 +962,7 @@ is its own directory + HEAD + index. That, not the commit count, is what makes p
     - Why a script: the checks are many and exact, and a sync that skips one lets a stand-in
       decide what is synced and landed.
     - Its `landing_model` ADAPT line names the project's landing model ("Landing models" below).
-  - **Fetch at fixed points:** at session start (`/continue`, `/plan-next`), before a strand is
+  - **Fetch at fixed points:** at session start (`/resume-work`, `/plan-next`), before a strand is
     cut and before the gateway's rebase the fetch is the sync's own; before each panel round and
     before each landing it is `git fetch origin`.
     - A subagent does not fetch: the session that spawned it did.
@@ -1015,7 +1021,7 @@ is its own directory + HEAD + index. That, not the commit count, is what makes p
     - The devcontainer's `postCreateCommand` sets it.
     - A native or older checkout sets it once (build-run-deploy.md, "Git hooks (local
       enforcement)").
-    - `/continue` checks it at session start.
+    - `/resume-work` checks it at session start.
     - No checkout configures `remote.origin.push`, which git would use first.
 
   > **ADAPT:** a project without `origin` drops the fetch, the sync and its stops, and

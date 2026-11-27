@@ -14,7 +14,6 @@
 			"Bash(git config push.default nothing)",
 			"Bash(git fetch origin)",
 			"Bash(git fetch --prune origin)",
-			"Bash(rmdir:*)",
 			"Bash(./verify:*)",
 			"Bash(/workspaces/{{PROJECT_NAME}}/.claude/worktrees/*/verify*)",
 			"Bash(/workspaces/{{PROJECT_NAME}}/.claude/worktrees/*/gate/dossier-check*)",

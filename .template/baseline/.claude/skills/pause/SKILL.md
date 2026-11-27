@@ -1,11 +1,11 @@
 ---
-description: Checkpoint the current state to docs and park WIP as a [wip] commit so a later /continue resumes cleanly. Runs autonomously and fast; signals subagents instead of killing them. Never pushes.
+description: Checkpoint the current state to docs and park WIP as a [wip] commit so a later /resume-work resumes cleanly. Runs autonomously and fast; signals subagents instead of killing them. Never pushes.
 argument-hint: [optional: a note about what you were doing]
 ---
 
 You are pausing work on {{PROJECT_NAME}}. Save state so a fresh session can resume cleanly via
-/continue. Be quick and safe; assume little budget remains. Pause fast: do not wait for running
-subagent tasks to complete, but never abort them either.
+/resume-work. Be quick and safe; assume little budget remains. Pause fast: do not wait for
+running subagent tasks to complete, but never abort them either.
 
 1. Signal running subagents FIRST (so they wind down while you checkpoint):
    - Send every running subagent (implementer / falsifier / reviewer / ...) a message (SendMessage):
@@ -45,12 +45,13 @@ subagent tasks to complete, but never abort them either.
    handbook §7). Work sitting in the primary checkout, this pause note included, first moves to a
    new `claude/<topic>` branch (`git switch -c`); after the parking commit the checkout returns to
    `main`. The bypass skips the secret scan too, so glance over the diff for secrets or
-   personal/host data before parking. A `[wip]` commit is a checkpoint, not history: /continue
-   replaces it through the normal commit gateway; it never reaches the review gateway or a push.
+   personal/host data before parking. A `[wip]` commit is a checkpoint, not history:
+   /resume-work replaces it through the normal commit gateway; it never reaches the review gateway
+   or a push.
 
 5. Never `git push`. Never discard the working tree (`git reset --hard`, `rm -rf`).
 
 Optional note from the author: $ARGUMENTS
 
 End with a 3–5 line "resume from here" summary (what's done, what's parked as `[wip]` on which
-branch/worktree, the exact next step) so /continue (or you, later) can pick it up.
+branch/worktree, the exact next step) so /resume-work (or you, later) can pick it up.

@@ -422,7 +422,7 @@ commits=$(in_worktree log --reverse --format='%H %s' "$base..$tip") || {
 while read -r commit subject; do
 	[ -n "$commit" ] || continue
 	case "$subject" in
-		'[wip]'*) refuse parked "'$subject' is a [wip] parking commit, which never lands: resume it with /continue and re-commit the work (handbook §7)" ;;
+		'[wip]'*) refuse parked "'$subject' is a [wip] parking commit, which never lands: resume it with /resume-work and re-commit the work (handbook §7)" ;;
 	esac
 done <<COMMITS
 $commits

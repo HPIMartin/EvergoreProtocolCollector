@@ -83,6 +83,22 @@ frontmatter and the playbook's roles table) defined in `.claude/agents/` and des
 **[multi-agent-playbook.md](multi-agent-playbook.md)**. The author approves the commit plan; who
 lands and who may push: handbook §7.
 
+## Naming a skill
+
+- **A skill's name, its folder under `.claude/skills/`, is no built-in command, alias or bundled
+  skill of Claude Code.**
+  - Why: in a local terminal session a project skill replaces a built-in command but not its
+    aliases (Claude Code docs, skills, "Resolve skills that share a name"), so its slash command
+    can start something else; on Claude Code 2.1.330 `/continue` is an alias of `/resume`.
+- Check a new name against the commands reference
+  (<https://code.claude.com/docs/en/commands.md>), read with the version in use
+  (`claude --version`), and the `/` menu of a session, and record the check with that version as
+  a decision row.
+- A two-word, hyphenated name (`plan-next`, `resume-work`) keeps clear of the one-word names
+  Claude Code mostly uses.
+- Where a later version of Claude Code takes a skill's name, rename the skill; every place that
+  names it follows in the same commit.
+
 ## Context & token hygiene
 
 Long sessions dominate cost: every token that enters the context is re-read on **every** subsequent
@@ -211,8 +227,8 @@ clobbered: prune when the session is idle, or edit the file yourself.)
     (probe record, rows 52 to 61, 63 to 65). Write them plainly: `git --no-pager log` is not a
     form that pass knows (row 62), and without a terminal git pages nothing anyway (documented).
     - The reads around the sync are such reads: `git merge-base --is-ancestor` of the hub
-      models' cleanup and `/continue`'s `git config --get` of `core.hooksPath`, `push.default` and
-      `remote.origin.push` ran (row 58; probe record, S4, S5, S7).
+      models' cleanup and `/resume-work`'s `git config --get` of `core.hooksPath`,
+      `push.default` and `remote.origin.push` ran (row 58; probe record, S4, S5, S7).
     - The sync's own checks run inside `hooks/sync-main` (handbook §7, "`main` follows
       `origin/main`"), so no rule sees them. `git for-each-ref` has no allow: its plain forms
       run by that read-only pass (probe record: on 2.1.319, TV1; on 2.1.325, TS4, TV3, TW3),
@@ -854,13 +870,10 @@ clobbered: prune when the session is idle, or edit the file yourself.)
       `git read-tree -u --reset` and `git checkout-index -f` match no rule and meet the classifier,
       or a prompt outside auto mode (probe record, "Rule probe of 2026-11-14: deletion and push
       spellings", R1 to R4; the two git forms derived: no allow names them).
-    - `Bash(rm:*)` does not match `rmdir`; without an allow, `rmdir` meets the harness's own path
-      check, a prompt or in auto mode the classifier (probe record, row 8 and S9; auto mode
-      documented, below).
-      - Under `Bash(rmdir:*)` it runs in both modes, and on a directory that is not empty it
-        removes nothing (probe record, S9, S10), so the allow can discard nothing.
-      - Whether the allow also passes the path check for a directory outside the working
-        directories is not probed.
+    - `Bash(rm:*)` does not match `rmdir`; `rmdir`, which no allow names, meets the harness's own
+      path check, a prompt or in auto mode the classifier (probe record, row 8 and S9; auto mode
+      documented, below); the cleanup hands what a removal leaves behind to the author
+      (handbook §7).
     - A `git -C` form goes past the twins and meets the classifier, or a prompt outside auto mode,
       when:
       - a global option leads (`git --no-pager -C <path> push`; probe record, CN1);
@@ -1022,6 +1035,11 @@ clobbered: prune when the session is idle, or edit the file yourself.)
 - **Managed settings sit above the project.** Claude Code's managed settings are the top layer:
   their `deny` and auto-mode rules hold in every session that receives them, and no project rule
   loosens them (documented).
+  - A project allow that a managed deny covers in full never fires (derived: no project rule
+    loosens a managed one).
+    - The cleanup runs no `rmdir`, so a policy that denies it leaves the cleanup whole
+      (handbook §7).
+    - The example policy below denies `rm`, not `rmdir`.
   - With `allowManagedPermissionRulesOnly` set, every user, project and local `allow`, `ask` and
     `deny` rule is ignored (documented), so the managed policy then has to carry the whole floor.
   - After any policy change, a harmless command the floor must stop (`rm` of a path that does not
@@ -1178,9 +1196,8 @@ clobbered: prune when the session is idle, or edit the file yourself.)
       that still match").
     - It stays when it names the project's own loop: `./verify`, `sh hooks/*`, the git commands
       the TDD loop writes with (`git add`, `git commit`), the hook activation
-      `git config core.hooksPath hooks`, the fetch `git fetch origin`,
-      `git config push.default nothing` and the cleanup's `rmdir`; the sync runs under
-      `sh hooks/*`.
+      `git config core.hooksPath hooks`, the fetch `git fetch origin` and
+      `git config push.default nothing`; the sync runs under `sh hooks/*`.
       <!-- MODULE agent-seat -->
       - With the agent-seat module the seat's `git fetch --prune origin` belongs to that loop
         too.
@@ -1212,8 +1229,10 @@ clobbered: prune when the session is idle, or edit the file yourself.)
 
 - **Autonomous cleanup, inside the same floor.** The agent removes the scaffolding it created
   itself (which commands, and when: multi-agent-playbook.md, "Landing a branch"; handbook §7).
-  - That is git-native or `rmdir`, on purpose: `git branch -d` refuses a branch that is not
-    merged and `rmdir` a directory that is not empty, so the safety sits in the command.
+  - That is git-native, on purpose: `git branch -d` refuses a branch that is not merged, so the
+    safety sits in the command.
+  - What a removal leaves behind, an empty directory included, goes to the author as an exact
+    command (handbook §7).
   - `rm` and `git branch -D` stay on the deny floor ("Autonomy within guardrails").
   - **Undoable before final:** of two steps that reach the goal, the agent takes the one that can
     be undone.

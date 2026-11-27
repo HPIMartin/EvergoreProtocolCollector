@@ -395,11 +395,12 @@ lands through the gateway; no commit is made on `main`
   nothing less. Who may push: handbook §7.
 - **Clean up landed strands immediately, without asking:** at the cleanup point of the project's
   landing model (handbook §7, "Landing models"), `git worktree remove <path>` and
-  `git branch -d <branch>`, then `git worktree prune`, and `rmdir` a directory the removal left
-  behind empty. This is the agent's own scaffolding and the agent owns it (handbook §7); the commits
-  live on in `main`, the branch label and worktree are pure redundancy, and the reflog still holds
-  deleted tips for a while. The safety is in the command, not in judgment: `git branch -d` refuses
-  a branch that is not fully merged, and `git branch -D` stays denied. Never reach for `rm` here.
+  `git branch -d <branch>`, then `git worktree prune`. The worktree and the branch are the agent's
+  own scaffolding and the agent owns them (handbook §7); the commits live on in `main`, the branch
+  label and worktree are pure redundancy, and the reflog still holds deleted tips for a while. The
+  safety is in the command, not in judgment: `git branch -d` refuses a branch that is not fully
+  merged, and `git branch -D` stays denied. Never reach for `rm` here: what the removal leaves
+  behind, an empty directory included, goes to the author as an exact command.
   <!-- MODULE agent-seat -->
   - On the seat, once `origin/main` holds the tip, the worktree, the branch and its copy on
     `origin` go (handbook §7, "Landing models").
@@ -926,7 +927,11 @@ A scenario gate's reports, held so a check can tell which features each agent re
 - Run **focused** tests during micro-steps (`./verify focus <path>`), the full `./verify all` before
   the gate, with the cache disabled and the executed-not-cached check of handbook §6.
 
-> **ADAPT:** add machine-specific quirks agents must know (example: a host where Bash stdout is not surfaced, so agents redirect output to a file, `./verify all > out.txt 2>&1`, and `Read` it).
+> **ADAPT:** add machine-specific quirks agents must know (example: a host where Bash stdout is not
+> surfaced, so agents redirect output to a file, `./verify all > out.txt 2>&1`, and `Read` it;
+> example: on a Windows host whose Bash is Git Bash, a brief names such a file by an absolute POSIX
+> path, `/e/tmp/out.txt`, since Bash reads each backslash of `E:\tmp\out.txt` as an escape and
+> writes a file `E:tmpout.txt` into the working directory).
 >
 > **ADAPT:** name the probe location and its two tasks for your stack (example, Gradle: a gitignored
 > `src/probe/java` source set on the test classpath, `./gradlew probe` to run it and a committed

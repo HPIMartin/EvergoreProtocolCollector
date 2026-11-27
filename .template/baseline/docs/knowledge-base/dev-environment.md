@@ -353,8 +353,8 @@ Sessions in parallel worktrees share one machine: its CPU, memory, disk and `/tm
 > local network.
 
 - **A commit the seat has not pushed lives only in its container.**
-- **The seat leaves `AGENT_WORKTREES` unset**, so its worktree root is the default of handbook §7,
-  "The worktree root".
+- **The seat's `AGENT_WORKTREES` is unset, or empty with the volumes module** ("The agent image",
+  below), so its worktree root is the default of handbook §7, "The worktree root".
 - **Auto mode on the seat is the seat machine's user settings**, as every `autoMode` rule is
   ([working-with-ai-agents.md](working-with-ai-agents.md), "Where auto-mode rules live").
 - **A planned session runs on the seat unless its work must run on a supervised machine.**
@@ -449,6 +449,17 @@ Sessions in parallel worktrees share one machine: its CPU, memory, disk and `/tm
 - **The seat machine starts and configures `dockerd`** (storage driver, log rotation, address
   pools, DNS, build-cache limit), never the repository.
   - The agent image installs Docker Engine and starts no daemon ("The agent image", below).
+- **The seat machine starts the seat container with an init as its first process**, such as
+  `docker run --init` (Docker's `docker run` reference) or compose's `init: true` (the Compose
+  file reference).
+  - Why: the image's command, `sleep infinity`, never collects a finished child, and each
+    `git commit` leaves one when git's automatic maintenance detaches, its default; the zombies
+    pile up until no new process starts in the container
+    ([permission-probe-record.md](permission-probe-record.md), "Seat-start probe of
+    2026-11-26").
+  - A container's init is set when it is created (derived: `--init` is an option of `docker run`
+    and `docker create`, not of `docker restart`): a seat started without one is created anew
+    with it; a restart only clears the zombies until they pile up again.
 - **`vscode` reaches the daemon through the `docker` group.**
 - **The inner daemon shares the seat container's filesystem and network.**
   - A bind-mount source is a path inside the seat container.
@@ -470,24 +481,44 @@ toolchain.
   - It inherits every layer of that image: the base image, the features and the layers of the
     devcontainer's `Dockerfile`, with the acceptance module its `firefox-esr` layer.
   - It blanks the inherited `devcontainer.metadata` label to `[]` (below).
+  - With the volumes module it sets `AGENT_WORKTREES` empty ("What the blank label does not
+    undo", below).
   - It runs `provision` as root, then `install-claude-code` as `vscode`, each bind-mounted for its
     step only, with `~/.local/bin` on the `PATH`.
   - It sets `DISABLE_AUTOUPDATER=1`, so Claude Code does not update itself at run time and the
     seat runs the pinned version.
   - It ends as `vscode` in `/workspaces` with `CMD ["sleep", "infinity"]` and no entrypoint of its
-    own, so a plain `docker run` stays alive for a look inside.
+    own, so a plain `docker run` stays alive for a look inside; the seat's start adds the init
+    ("Docker on the agent seat", above).
 - **Why the label is blank:** the devcontainers CLI writes the devcontainer's configuration into
   that label, and a devcontainer tool that starts the image applies it (the Dev Container
   specification, "Image Metadata").
   - For the template's devcontainer it holds the `.claude-home` bind mount, `CLAUDE_CONFIG_DIR`,
     the `postCreateCommand` and the editor customizations, beside the base image's and each
     feature's entries.
-  - With the volumes module it also holds the named volume on `/worktrees` and `AGENT_WORKTREES`,
-    which the seat leaves unset (above).
+  - With the volumes module it also holds the named volume on `/worktrees` and `AGENT_WORKTREES`.
   - A feature that mounts the host's Docker socket, such as `docker-outside-of-docker`, adds that
     mount to it.
   - With the label blank no devcontainer tool applies any of them: what the seat container mounts
-    and sets is the seat machine's.
+    is the seat machine's.
+- **What the blank label does not undo:** the devcontainers CLI also writes the `containerEnv`
+  entries and each feature's environment into the devcontainer image as `ENV`, and the agent
+  image inherits them ([permission-probe-record.md](permission-probe-record.md), "Agent-image
+  probe of 2026-11-24").
+  - Docker cannot remove an inherited variable, only set it anew (Dockerfile reference, `ENV`).
+  - The features' variables, `PATH` and the toolchains' homes, are the toolchain the seat runs.
+  - `CLAUDE_CONFIG_DIR` names `/home/vscode/.claude`, Claude Code's default folder (Claude Code's
+    settings documentation) and the seat's mount point for it, so it stays.
+    - Why not empty: how Claude Code reads an empty value is not documented and not probed.
+  - With the volumes module `AGENT_WORKTREES=/worktrees` would make `/worktrees` the seat's
+    worktree root, where the seat mounts no volume, so the agent `Dockerfile` sets it empty; an
+    empty value counts as unset ([engineering-handbook.md](engineering-handbook.md) §7, "The
+    worktree root").
+
+> **ADAPT:** a `containerEnv` entry of your own reaches the seat image too: set it anew in the
+> agent `Dockerfile` where the seat must not have it, and add the line to the `Dockerfile` case of
+> `.devcontainer/agent/self-test`.
+
 - **`provision`**, as root:
   - refuses before any call unless `/etc/os-release` names `ID=debian` and the codename of its
     `debian_release` line, a missing file included;
@@ -638,7 +669,8 @@ toolchain.
     the system git configuration, the group and the mount points;
   - `install-claude-code`: the pinned version asked for, the refusal of another, and the refusal
     of a malformed `version` line;
-  - the `Dockerfile`: the blanked label, the two scripts with their users, and its end.
+  - the `Dockerfile`: the blanked label, `AGENT_WORKTREES` set empty where `devcontainer.json`
+    sets it, the two scripts with their users, and its end.
   - It needs `git` and `ssh-keygen`; without one it exits 2 before any case, with a line opening
     `agent image self-test: `.
   - Its case for a tag with a letter outside ASCII runs under a UTF-8 locale that `locale -a`
@@ -651,7 +683,7 @@ toolchain.
   - `pre-commit` runs it ([build-run-deploy.md](build-run-deploy.md), "Git hooks (local
     enforcement)").
   - It builds no image: a real build is checked by hand, with `docker image inspect <tag>` for the
-    labels and `claude --version` in the image.
+    labels and `Config.Env`, and `claude --version` in the image.
 <!-- /MODULE agent-seat -->
 
 ## Toolchain version (upgrade procedure)

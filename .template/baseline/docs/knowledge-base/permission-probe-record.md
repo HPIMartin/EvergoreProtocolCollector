@@ -959,3 +959,60 @@ Not shown here: a Windows host, where the harness offers the PowerShell tool wit
 variable; the root limit of the `sudo` deny (`env sudo …`, a script that calls `sudo`), since
 no row ran `sudo`; the rule probe's whole list and the workflow probe on 2.1.325; a session
 without the organization's instructions and its managed policy.
+<!-- MODULE agent-seat -->
+
+## Agent-image probe of 2026-11-24: the environment the image inherits
+
+- Docker Desktop on a Windows host, linux/amd64, no registry login; the runner as on 2026-11-15
+  (Node 22, the Docker CLI from Docker's repository, git), on the host's socket, from a full clone
+  of a bundle with no `origin`.
+- The pins as shipped: Claude Code `2.1.325`, devcontainers CLI `0.90.0`; every module kept.
+- `env/devcontainer/.devcontainer/agent/build --tag <probe tag>` from the clone's root; the probe
+  image was removed afterwards, and the image list equalled the one before the build.
+
+| # | Tree | Check | Outcome |
+|---|---|---|---|
+| E1 | 5.1 without the agent `Dockerfile`'s `ENV AGENT_WORKTREES=""` | `Config.Env` of the built image | `PATH`, `LANG`, the python and node features' `NVM_DIR`, `NVM_SYMLINK_CURRENT`, `PYTHON_PATH`, `PIPX_HOME`, `PIPX_BIN_DIR`, then `AGENT_WORKTREES=/worktrees`, `CLAUDE_CONFIG_DIR=/home/vscode/.claude`, `DISABLE_AUTOUPDATER=1` |
+| E2 | as E1 | `devcontainer.metadata` | `[]` |
+| E3 | as E1 | the environment in a container of the image | `AGENT_WORKTREES=/worktrees`, `CLAUDE_CONFIG_DIR=/home/vscode/.claude`, `2.1.325 (Claude Code)` |
+| E4 | 5.1 with that line | `Config.Env` of the built image | as E1, but `AGENT_WORKTREES=` |
+| E5 | as E4 | `devcontainer.metadata` and the revision label | `[]`; the built commit's full hash |
+| E6 | as E4 | the environment in a container of the image | `AGENT_WORKTREES=` (set, empty), `CLAUDE_CONFIG_DIR=/home/vscode/.claude`, `2.1.325 (Claude Code)` |
+
+- E1 and E3 show the `containerEnv` entries and the features' environment in the image despite
+  the blank label; E4 and E6 show the agent `Dockerfile`'s line empty it (dev-environment.md,
+  "The agent image").
+
+## Seat-start probe of 2026-11-26: the first process and `git`'s detached children
+
+- Docker Desktop on a Windows host, Docker Engine `29.9.2`, linux/amd64.
+- The devcontainers base image `bookworm` (digest `sha256:06701e75787b…`) started with the agent
+  image's command, `sleep infinity`, once without and once with `docker run --init`; git `2.56.1`.
+- In each, as `vscode` through `docker exec`, in one new repository, three steps, each followed by
+  a five-second wait and a count of the zombies with their parent:
+  - A: three commits;
+  - B: three commits with `-c maintenance.autoDetach=false`;
+  - C: `git -c gc.auto=1 -c gc.autoDetach=true gc --auto` alone.
+- Not run: the agent image itself, compose's `init: true`, a user-namespace runtime such as
+  Sysbox.
+
+| # | Start | Check | Outcome |
+|---|---|---|---|
+| Z1 | without `--init` | the first process | `sleep` |
+| Z2 | as Z1 | zombies after A | 3, each `[git] <defunct>`, parent PID 1 |
+| Z3 | as Z1 | zombies after B | still 3: B added none |
+| Z4 | as Z1 | zombies after C | still 3: C added none (exit 0; the record does not show that `gc` ran or detached) |
+| Z5 | with `--init` | the first process | `docker-init` |
+| Z6 | as Z5 | zombies after A, B and C | 0 each time |
+
+- Z2 and Z3: each commit leaves one zombie when git's automatic maintenance detaches, which is
+  the default (git-config, `maintenance.autoDetach`), and none when it does not; the detached
+  child ends as a child of the first process, and `sleep` never collects it.
+- The standing probe container `t51-probe`, started without an init, ran out of room:
+  - on 2026-11-25 `docker exec` was refused ("resource temporarily unavailable") at 31,811 PIDs
+    by `docker stats`, which counts threads too; which limit was reached is not shown;
+  - after a restart and three probe runs it held 26,930 processes by `ps -e` on 2026-11-26,
+    26,869 of them `git` zombies;
+  - after `docker restart` the planner's session counted 4 processes, an observation with no
+    record file (dev-environment.md, "Docker on the agent seat").
+<!-- /MODULE agent-seat -->
