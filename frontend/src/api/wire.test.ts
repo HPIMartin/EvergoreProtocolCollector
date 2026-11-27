@@ -771,6 +771,13 @@ describe('the admin status wire shape', () => {
     expect(reading).toThrow(MalformedResponse)
   })
 
+  it('refuses a body without the moment the running collection started', () => {
+    const reading = () =>
+      adminStatusFrom({ ...adminStatusBody, collectionRunningSince: undefined })
+
+    expect(reading).toThrow(MalformedResponse)
+  })
+
   it('refuses a body whose unknown item names are not strings', () => {
     const reading = () =>
       adminStatusFrom({ ...adminStatusBody, unknownItemNames: [1] })
