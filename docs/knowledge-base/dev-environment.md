@@ -424,8 +424,6 @@ home.
 - **The agent machine starts the agent container with an init as its first process**, compose's
   `init: true` (the Compose file reference) or `docker run --init` (Docker's `docker run`
   reference; author decision 2026-11-27).
-  - Until the agent machine's init step is done (backlog H22), the running agent container has
-    none.
   - Why: the image's command, `sleep infinity`, never collects a finished child.
   - On git `2.56.1` each `git commit` leaves such a child when git's automatic maintenance
     detaches, its default.
