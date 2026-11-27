@@ -258,14 +258,22 @@ git config core.hooksPath hooks
     - Probed: a listed source file under such a path, with a comment, passes the comment scan.
     - A listed source file under such a path, with a debug print, passes the smell scan too.
     - Probed: a shell script without an extension under such a path is refused as unreadable.
-  - A file counts as **production source** when it starts with one of `production_trees`, starts
-    with none of `test_trees` and matches none of `test_name_re`.
+  - A file is a **test source** when it starts with one of `test_trees` (`src/test/`, `tests/`,
+    `test/`), or starts with one of `test_file_trees` (`frontend/src/`) and matches `test_file_re`
+    (`*.test.ts`, `*.test.tsx`); a file name alone makes no test anywhere else.
+    - Why: a name that marks a test made a `FooTest.java` or a `LatencyTest/` folder in production,
+      or a `smoke_test.sh` in `scripts/` or `deploy/`, exempt from the quoted password scan.
+    - Cost: a frontend test helper that is no `*.test.ts(x)` file (`__tests__/render.tsx`,
+      `test-utils/x.ts`, `*.spec.ts`) counts as production source, so it cannot carry a password
+      literal or a token assignment.
+    - Cost: a test class outside `test_trees` (the probe tree `src/probe/`) is no test source.
+  - A file counts as **production source** when it starts with one of `production_trees` and is no
+    test source.
   - The rules that bind production code only (the hard-coded-token scan and `production_smell_re`,
     shipped with the C# null-forgiving operator) key off exactly that.
     - A test may therefore carry a non-secret test token where production source may not.
-    - The quoted credential literal is scanned outside a test source (`test_trees` and
-      `test_name_re`), not in production source alone; the unquoted value of a config file stays
-      scanned in a test source too.
+    - The quoted credential literal is scanned outside a test source, not in production source
+      alone; the unquoted value of a config file stays scanned in a test source too.
     - A test may therefore carry a test password where production source and config may not.
     - A test may therefore override the compiler's nullability answer where production source may
       not.

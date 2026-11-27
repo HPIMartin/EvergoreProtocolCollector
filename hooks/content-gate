@@ -63,12 +63,15 @@ comment_exempt_dirs="$comment_exempt_dirs land/"
 # A file without an extension whose first line runs one of these shells is scanned as a shell script.
 shell_shebang_re='^#![[:space:]]*([^[:space:]]*/)?(env[[:space:]]+)?(sh|bash|dash|zsh)([[:space:]]|$)'
 
-# > **ADAPT:** where production source lives and what marks a test. A file is production source when
-# > it starts with one of `production_trees`, starts with none of `test_trees` and matches none of
-# > `test_name_re`; the rules that only bind production code key off exactly that.
+# > **ADAPT:** where production source lives and what marks a test. A file is a test source when it
+# > starts with one of `test_trees`, or starts with one of `test_file_trees` and matches
+# > `test_file_re`; a name alone makes no test anywhere else. A file is production source when it
+# > starts with one of `production_trees` and is no test source; the rules that only bind production
+# > code key off exactly that. An empty `test_file_trees` means: nowhere.
 production_trees='src/main/ frontend/src/'
 test_trees='src/test/ tests/ test/'
-test_name_re='(^|/)[^/]*Tests?/|\.test\.|_test\.|(^|/)test_[^/]*\.py$|Tests?\.(java|kt|cs|cpp|cc|ts|tsx)$'
+test_file_trees='frontend/src/'
+test_file_re='\.test\.tsx?$'
 
 # > **ADAPT:** path prefixes whose stdout *is* the interface (a CLI adapter, a code generator) and
 # > which therefore keep their debug-print exemption. Empty means: nowhere.
@@ -127,7 +130,7 @@ starts_with_any() {
 
 is_test_source() {
 	if starts_with_any "$1" $test_trees; then return 0; fi
-	if printf '%s' "$1" | grep -qE "$test_name_re"; then return 0; fi
+	if starts_with_any "$1" $test_file_trees && printf '%s' "$1" | grep -qE "$test_file_re"; then return 0; fi
 	return 1
 }
 

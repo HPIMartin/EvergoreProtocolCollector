@@ -248,6 +248,8 @@ This project's configuration and legs on top of the shipped suite:
   - A test source is exempt from the quoted credential scan, so a test may carry a test password;
     the unquoted password value of a test's `.properties` or `.yml` file is still refused, and a
     quoted one in a test config file is not scanned (named limit, `hooks/README.md`).
+  - What counts as a test source is defined in [`hooks/README.md`](../../hooks/README.md), at the
+    production-source bullets.
 - **`commit-msg`:** the ticket-key leg is off (`ticket_key_re` empty); the project has no ticket
   system ([open-questions.md](../open-questions.md)).
 - **`sync-main`:** `landing_model` is `hub`.

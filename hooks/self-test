@@ -750,6 +750,41 @@ write_file src/main/java/dev/x/TestData.java 'class TestData {' '	static final S
 if refuses "Add the test data class"; then r=0; else r=1; fi
 check "a password literal in a production class that only looks like a test class leaves no commit behind" "$r"
 
+new_repo maintestclasspassword
+write_file src/main/java/dev/x/FooTest.java 'class FooTest {' '	static final String PASSWORD = "Sommer-2026!";' '}'
+if refuses "Add the foo test class"; then r=0; else r=1; fi
+check "a password literal in a class named like a test under the main tree leaves no commit behind" "$r"
+
+new_repo maintestdirpassword
+write_file src/main/java/dev/x/LatencyTest/X.java 'class X {' '	static final String PASSWORD = "Sommer-2026!";' '}'
+if refuses "Add the latency class"; then r=0; else r=1; fi
+check "a password literal under a folder named like a test under the main tree leaves no commit behind" "$r"
+
+new_repo frontendtestdirpassword
+write_file frontend/src/LatencyTest/x.ts "const PASSWORD = 'Sommer-2026!'"
+if refuses "Add the latency module"; then r=0; else r=1; fi
+check "a password literal in a frontend folder named like a test leaves no commit behind" "$r"
+
+new_repo frontendtestxpassword
+write_file frontend/src/a/X.test.tsx "const PASSWORD = 'Sommer-2026!'"
+if accepts "Add the component test"; then r=0; else r=1; fi
+check "a frontend test file ending in .test.tsx may hard-code a password literal" "$r"
+
+new_repo frontendtestsdirpassword
+write_file frontend/src/a/__tests__/h.ts "const PASSWORD = 'Sommer-2026!'"
+if refuses "Add the test helper" 'possible secret or personal/host data'; then r=0; else r=1; fi
+check "a password literal in a frontend helper that is no test file leaves no commit behind" "$r"
+
+new_repo scriptstestnamepassword
+write_file scripts/smoke_test.sh 'PASSWORD="Sommer-2026!"'
+if refuses "Add the smoke script" 'possible secret or personal/host data'; then r=0; else r=1; fi
+check "a password literal in a script named like a test outside every test tree leaves no commit behind" "$r"
+
+new_repo deploytestdirpassword
+write_file deploy/LatencyTest/x.sh 'PASSWORD="Sommer-2026!"'
+if refuses "Add the latency script" 'possible secret or personal/host data'; then r=0; else r=1; fi
+check "a password literal under a folder named like a test outside every test tree leaves no commit behind" "$r"
+
 new_repo printallow_default
 write_file cli/main.py 'def run():' '	print("x")'
 if refuses "Add the cli entry point"; then r=0; else r=1; fi
