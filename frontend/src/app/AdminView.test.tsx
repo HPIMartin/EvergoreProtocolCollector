@@ -1277,6 +1277,32 @@ describe('starting a collection from the admin page', () => {
     })
   })
 
+  it.each([
+    ['403', new Forbidden(), 'Diese Seite ist dem Admin vorbehalten.'],
+    ['401', new Unauthorized(), 'Weiter zur Anmeldung…'],
+  ])(
+    'replaces the page when the status read after an accepted start is refused with %s',
+    async (_status, refusal, message) => {
+      let reads = 0
+      const api: ProtocolApi = {
+        ...apiStarting([NO_FACTS], () => Promise.resolve()).api,
+        adminStatus: () =>
+          ++reads === 1 ? Promise.resolve(NO_FACTS) : Promise.reject(refusal),
+      }
+      render(
+        <LoginNavigation.Provider value={() => undefined}>
+          <AdminView api={api} onFollow={() => undefined} />
+        </LoginNavigation.Provider>,
+      )
+      await act(async () => undefined)
+
+      await clickStart()
+
+      const messages = shownMessages()
+      expect(messages).toEqual([message])
+    },
+  )
+
   it('says the start failed and keeps the button when the service fails otherwise', async () => {
     const starting = apiStarting([NO_FACTS], () =>
       Promise.reject(new RequestFailed(500)),
