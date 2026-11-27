@@ -1292,6 +1292,42 @@ describe('starting a collection from the admin page', () => {
       shown: { state: null, button: 'Jetzt sammeln' },
     })
   })
+
+  it('offers the button enabled again after a start that fails', async () => {
+    const starting = apiStarting([NO_FACTS], () =>
+      Promise.reject(new RequestFailed(500)),
+    )
+    await adminViewWith(starting.api)
+
+    await clickStart()
+
+    const disabled = screen
+      .getByTestId('start-collection')
+      .hasAttribute('disabled')
+    expect(disabled).toBe(false)
+  })
+
+  it('clears the failure notice when the next start is asked for', async () => {
+    const answers = [
+      () => Promise.reject(new RequestFailed(500)),
+      () => Promise.resolve(),
+    ]
+    const starting = apiStarting(
+      [NO_FACTS, RUNNING_SINCE_13_00],
+      () => answers.shift()?.() ?? unused(),
+    )
+    await adminViewWith(starting.api)
+    await clickStart()
+
+    await clickStart()
+
+    const notice = shownNotice()
+    const shown = shownCollection()
+    expect({ notice, shown }).toEqual({
+      notice: null,
+      shown: { state: 'Sammlung läuft seit 02.01.2026 13:00', button: null },
+    })
+  })
 })
 
 function shownCollection(): {
