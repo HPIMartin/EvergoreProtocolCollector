@@ -1,7 +1,9 @@
 ARG BASE=base-image-required-pass-build-arg-base
 FROM ${BASE}
 LABEL devcontainer.metadata="[]"
+# MODULE volumes
 ENV AGENT_WORKTREES=""
+# /MODULE volumes
 
 USER root
 RUN --mount=type=bind,source=provision,target=/tmp/provision sh /tmp/provision

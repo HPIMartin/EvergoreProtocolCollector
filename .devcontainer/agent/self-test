@@ -828,12 +828,16 @@ for each_layout in template adopted; do
 	build_cases
 done
 
-r=0
-[ "$(grep -v '^[[:space:]]*$' "$agent_dir/Dockerfile")" = "$(printf '%s\n' \
+dockerfile_lines=$(printf '%s\n' \
 	'ARG BASE=base-image-required-pass-build-arg-base' \
 	'FROM ${BASE}' \
-	'LABEL devcontainer.metadata="[]"' \
-	'ENV AGENT_WORKTREES=""' \
+	'LABEL devcontainer.metadata="[]"')
+if grep -q '"AGENT_WORKTREES"' "$agent_dir/../devcontainer.json"; then
+	dockerfile_lines=$(printf '%s\n' "$dockerfile_lines" 'ENV AGENT_WORKTREES=""')
+fi
+r=0
+[ "$(grep -v -e '^[[:space:]]*$' -e '^# /\{0,1\}MODULE ' "$agent_dir/Dockerfile")" = "$(printf '%s\n' \
+	"$dockerfile_lines" \
 	'USER root' \
 	'RUN --mount=type=bind,source=provision,target=/tmp/provision sh /tmp/provision' \
 	'USER vscode' \
@@ -842,7 +846,7 @@ r=0
 	'RUN --mount=type=bind,source=install-claude-code,target=/tmp/install-claude-code sh /tmp/install-claude-code' \
 	'WORKDIR /workspaces' \
 	'CMD ["sleep", "infinity"]')" ] || r=1
-check 'the Dockerfile is exactly the blanked devcontainer metadata, an empty AGENT_WORKTREES, provision as root, install-claude-code as vscode with ~/.local/bin on PATH and the auto-updater off, /workspaces and sleep infinity' "$r"
+check 'the Dockerfile, its fence lines aside, is exactly the blanked devcontainer metadata, where the devcontainer sets AGENT_WORKTREES that variable blanked, provision as root, install-claude-code as vscode with ~/.local/bin on PATH and the auto-updater off, /workspaces and sleep infinity' "$r"
 
 docker_fingerprint=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 
