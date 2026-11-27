@@ -180,7 +180,9 @@
   - the test waits until that thread is blocked on that lock, with no timeout.
   - a start by hand that the executor refuses frees the owner;
   - such a start rethrows the refusal, also for an executor that was shut down;
-  - such a start counts as no start.
+  - such a start counts as no start;
+  - an `Error` of the executor frees the owner too;
+  - the next start after it is accepted.
   - `state()` names the running start and no next start while a collection runs, and the next start and no running start once it
     ended within the hour.
   - `state()` reads the two as one state while another thread ends the collection;

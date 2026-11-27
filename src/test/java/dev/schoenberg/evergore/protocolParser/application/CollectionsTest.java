@@ -404,6 +404,24 @@ class CollectionsTest {
 		assertThat(onShutDownExecutor.runningSince()).isEmpty();
 	}
 
+	@Test
+	void freesTheCollectionAndRethrowsWhenTheExecutorThrowsAnErrorAtAStartByHand() {
+		OutOfMemoryError exhausted = new OutOfMemoryError("unable to create native thread");
+		AtomicBoolean fail = new AtomicBoolean(true);
+		Collections failingOnce = new Collections(collection, task -> {
+			if (fail.getAndSet(false)) {
+				throw exhausted;
+			}
+			background.execute(task);
+		}, clock, logger);
+		Throwable thrown = catchThrowable(failingOnce::startByHand);
+
+		StartOutcome again = failingOnce.startByHand();
+
+		assertThat(thrown).isSameAs(exhausted);
+		assertThat(again).isEqualTo(new StartOutcome.Started());
+	}
+
 	private static void startAndAwaitBlockedOnOrDone(Thread thread, Object lockOwner) {
 		thread.start();
 		while (thread.getState() != Thread.State.TERMINATED && !isBlockedOn(lockOwner, thread)) {
