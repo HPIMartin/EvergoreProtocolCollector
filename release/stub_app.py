@@ -1,5 +1,6 @@
 import json
 import os
+import secrets
 import signal
 import sqlite3
 import subprocess
@@ -17,6 +18,9 @@ STARTED = time.time()
 SIDE = os.path.basename(os.getcwd())
 TOKEN = os.environ["EVERGORE_SECURITY_API_TOKEN"]
 STORED = read_exact_sums("database/temp.sqlite")
+LOGS_IN = SIDE in os.environ.get("STUB_LOGIN_SIDES", "").split(",")
+ADMIN_KEY = secrets.token_urlsafe(32) if LOGS_IN else None
+SESSION = secrets.token_urlsafe(16)
 
 
 def recompute_shows():
@@ -73,20 +77,46 @@ def ledger_of(member, kind):
     return []
 
 
+def record_request(path):
+    with open("stub-requests.log", "a", encoding="utf-8") as requests:
+        requests.write(f"{time.time()} {path}\n")
+
+
+def announce_the_admin_key():
+    if LOGS_IN:
+        sys.stdout.write(
+            "\x1b[36m08:00:00.000\x1b[0m [main] INFO  d.s.e.p.Logger - "
+            f"Console admin key, valid until the next restart: {ADMIN_KEY}\x1b[0m\n"
+        )
+        sys.stdout.flush()
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        record_request(parsed.path)
+        body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+        if not LOGS_IN or parsed.path != "/api/v1/login":
+            return self.reply(404, {"error": "unknown"})
+        login = json.loads(body)
+        if os.environ.get("STUB_LOGIN_REFUSED") or login != {"name": "admin", "password": ADMIN_KEY}:
+            return self.reply(401, {"refusal": "wrong-name-or-password"})
+        return self.reply(200, {"step": "logged-in", "next": "/"}, f"epc_session={SESSION}; Max-Age=604800; Path=/; HttpOnly")
 
     def do_GET(self):
         if os.environ.get("STUB_HANG"):
             time.sleep(300)
         parsed = urlparse(self.path)
         query = parse_qs(parsed.query)
-        with open("stub-requests.log", "a", encoding="utf-8") as requests:
-            requests.write(f"{time.time()} {parsed.path}\n")
+        record_request(parsed.path)
+        if LOGS_IN and self.headers.get("Cookie") != f"epc_session={SESSION}":
+            return self.reply(401, {})
         if parsed.path == "/api/v1/admin/status":
-            return self.reply(200, admin_status())
-        if query.get("token") != [TOKEN]:
+            return self.reply(int(os.environ.get("STUB_STATUS_CODE", "200")), admin_status())
+        if not LOGS_IN and query.get("token") != [TOKEN]:
             return self.reply(401, {"error": "token"})
         parts = [unquote(part) for part in parsed.path.split("/")[3:]]
         if parts == ["avatars"]:
@@ -96,10 +126,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, page_of(ledger_of(parts[1], parts[2]), query))
         return self.reply(404, {"error": "unknown"})
 
-    def reply(self, status, payload):
+    def reply(self, status, payload, cookie=None):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
+        if cookie:
+            self.send_header("Set-Cookie", cookie)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -127,6 +159,7 @@ def record_start(port):
         "env": environment,
         "argv": sys.argv,
         "started": STARTED,
+        "adminKey": ADMIN_KEY,
     }
     with open("stub-record.json", "w", encoding="utf-8") as target:
         json.dump(record, target)
@@ -149,6 +182,7 @@ def main():
     port = int(os.environ["MICRONAUT_SERVER_PORT"])
     if os.environ.get("STUB_IGNORE_TERM"):
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    announce_the_admin_key()
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     record_recompute_instants()
     exit_after = os.environ.get("STUB_EXIT_AFTER")

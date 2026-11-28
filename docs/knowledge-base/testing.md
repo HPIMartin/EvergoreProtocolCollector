@@ -670,6 +670,26 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
     or `DATASOURCES_*` variable, in any letter case and under any locale;
   - with a throwaway token and credentials per run, which travel in the environment, never in a
     command's arguments;
+  - each asked the way its release reads (decision 2026-10-15):
+    - a side whose own log, `app.log` in its directory, announces the console admin key
+      (`Console admin key, valid until the next restart: <key>`, 0.5.0 on) is asked through a
+      login:
+      - the helper reads the key off that log itself;
+      - it takes only a key that stands whole, 43 Base64url characters;
+        - Why: a half-written announcement holds no key yet;
+      - it logs in as `admin` with it (`POST /api/v1/login`);
+      - it logs in once per wait and once per fetch;
+      - it sends the session cookie;
+    - a side whose log announces no key (0.4.0, the way back) is asked with `?token=`;
+    - a token answered 401 once the log announces the key logs in and asks again;
+      - Why: a key announced between the look at the log and the request is not read as a
+        refusal;
+    - a refused login ends the run at once;
+    - a login answered without the session cookie is a refused login too;
+    - the run names a refused login with its status;
+    - the run names the missing cookie too;
+    - the key stands in no command line, no output and no file of the comparison;
+    - only the side's own `app.log` holds the key;
   - the script's own requests bypass any proxy the environment names.
 - **The run:**
   - The scheduled job fails to scrape with the throwaway credentials and recomputes anyway.
@@ -677,7 +697,14 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
     `RELEASE_COMPARE_TIMEOUT` per side (default 900 s), asking every `RELEASE_COMPARE_POLL`
     (default 5 s).
   - A side that reports only `lastRecomputeFailure`, or that stops running, ends the run at once.
-  - So does the other side stopping while the driver awaits the first.
+  - An admin status answered with an HTTP error ends the run at once (a 401, 403, 404 or 500, or a
+    429 still refused after its retries);
+    - Why: no recompute still pending answers with an HTTP error, so waiting would only reach the
+      timeout.
+    - The run names that status.
+  - The other side stopping while the driver awaits the first ends the run at once too.
+  - A side that does not answer yet (a refused connection, a socket timeout, a malformed body) is
+    asked again.
   - Every request has a socket timeout, so a side that accepts and never answers cannot hold it.
   - The wait and the fetch each pace a side to 25 requests per 10 s (the limit is 30).
   - After a 429 the script waits 65 s and retries, at most 3 times.
@@ -733,7 +760,8 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
       timeout, poll or grace;
     - a script outside a git worktree, reached through a link, or whose helper does not run;
     - a side of a previous run still alive, named by its process group.
-  - `3`: a side showed no successful recompute in time, stopped running, could not be fetched or
+  - `3`: a side showed no successful recompute in time, answered its admin status with an HTTP
+    error, refused the login with the console admin key, stopped running, could not be fetched or
     could not be stopped (its process group is named).
   - `4`: the comparison itself crashed (a malformed capture, a copy without `metaInformation`).
   - Both sides are gone after every exit path, a hangup and a second interrupt included.
@@ -742,6 +770,9 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
 - **The script's own proof:**
   - `sh release/self-test` runs the unit tests and the driver tests on a stub distribution, with
     synthetic data only.
+  - The stub answers as a 0.5.0 side, with the key in its log and a login, where
+    `STUB_LOGIN_SIDES` names it.
+  - The stub answers as a 0.4.0 side, with the token, otherwise.
   - It takes about a minute.
   - Interrupting it with INT, TERM or HUP, also twice, still stops every side its tests started.
   - It fails when it finds no test.

@@ -3,13 +3,15 @@ import json
 import math
 import os
 import sys
+import urllib.error
 from collections import Counter
 
 from candidate_rules import GUILD_FIGURES, guild_figures, member_figures
 from exact_sums import read_exact_sums, read_recompute_instants
 from process_group import is_alive, members_of, stop_group
 from report import Report
-from side_fetch import PAGE_SIZE, Pacer, fetch_side, http_get_json, wait_for_recompute
+from side_access import SideAccess
+from side_fetch import PAGE_SIZE, LoginRefused, Pacer, fetch_side, wait_for_recompute
 from shown_figures import differences, exact_differences, text_of
 
 TOKEN_VARIABLE = "EVERGORE_SECURITY_API_TOKEN"
@@ -274,6 +276,7 @@ def _parser():
     wait.add_argument("--poll", type=float, required=True)
     wait.add_argument("--pid", type=int, required=True)
     wait.add_argument("--other-pid", type=int)
+    wait.add_argument("--log")
     wait.set_defaults(command=_wait)
 
     alive = commands.add_parser("alive")
@@ -283,6 +286,7 @@ def _parser():
     fetch = commands.add_parser("fetch")
     fetch.add_argument("--base-url", required=True)
     fetch.add_argument("--out", required=True)
+    fetch.add_argument("--log")
     fetch.set_defaults(command=_fetch)
 
     occupied = commands.add_parser("occupied")
@@ -304,13 +308,23 @@ def _parser():
 
 
 def _wait(arguments, environ, out):
-    get_json = http_get_json(arguments.base_url, environ.get(TOKEN_VARIABLE, ""), Pacer())
-    recomputed = wait_for_recompute(
-        lambda: get_json("/api/v1/admin/status", {}),
-        arguments.timeout,
-        arguments.poll,
-        alive=lambda: is_alive(arguments.pid) and _other_alive(arguments),
-    )
+    access = SideAccess(arguments.base_url, environ.get(TOKEN_VARIABLE, ""), arguments.log, Pacer())
+    try:
+        recomputed = wait_for_recompute(
+            lambda: access.get_json("/api/v1/admin/status", {}),
+            arguments.timeout,
+            arguments.poll,
+            alive=lambda: is_alive(arguments.pid) and _other_alive(arguments),
+        )
+    except urllib.error.HTTPError as refusal:
+        out.write(
+            f"The side at {arguments.base_url} answered its admin status with HTTP {refusal.code}, "
+            "which no recompute still pending answers, so the wait ends.\n"
+        )
+        return 1
+    except LoginRefused as refusal:
+        out.write(_refused_login(arguments, refusal))
+        return 1
     if not recomputed and not is_alive(arguments.pid):
         out.write(f"The side at {arguments.base_url} is not running.\n")
     elif not recomputed and not _other_alive(arguments):
@@ -321,6 +335,10 @@ def _wait(arguments, environ, out):
             f"within {arguments.timeout} seconds or before a failure.\n"
         )
     return 0 if recomputed else 1
+
+
+def _refused_login(arguments, refusal):
+    return f"The side at {arguments.base_url} refused the login with the console admin key from its log: {refusal}.\n"
 
 
 def _other_alive(arguments):
@@ -340,7 +358,12 @@ def _fetch(arguments, environ, out):
     if not token:
         out.write(f"{TOKEN_VARIABLE} is not set in the environment.\n")
         return 2
-    fetched = fetch_side(http_get_json(arguments.base_url, token, Pacer()), PAGE_SIZE)
+    access = SideAccess(arguments.base_url, token, arguments.log, Pacer())
+    try:
+        fetched = fetch_side(access.get_json, PAGE_SIZE)
+    except LoginRefused as refusal:
+        out.write(_refused_login(arguments, refusal))
+        return 1
     with open(arguments.out, "w", encoding="utf-8") as target:
         json.dump(fetched, target, ensure_ascii=False)
     return 0

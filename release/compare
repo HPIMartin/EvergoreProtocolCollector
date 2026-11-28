@@ -156,11 +156,11 @@ start_side() {
 }
 
 fetch_side() {
-	helper python3 -B "$here/compare_sides.py" fetch --base-url "http://127.0.0.1:$2" --out "$work/$1.json"
+	helper python3 -B "$here/compare_sides.py" fetch --base-url "http://127.0.0.1:$2" --out "$work/$1.json" --log "$work/$1/app.log"
 }
 
 wait_for_side() {
-	helper python3 -B "$here/compare_sides.py" wait --base-url "http://127.0.0.1:$1" --timeout "$timeout" --poll "$poll" --pid "$2" --other-pid "$3"
+	helper python3 -B "$here/compare_sides.py" wait --base-url "http://127.0.0.1:$2" --timeout "$timeout" --poll "$poll" --pid "$3" --other-pid "$4" --log "$work/$1/app.log"
 }
 
 require_alive() {
@@ -199,8 +199,8 @@ printf '%s\n' "$candidate_pid" >>"$work/groups"
 require_alive running "$running_pid"
 require_alive candidate "$candidate_pid"
 
-wait_for_side "$running_port" "$running_pid" "$candidate_pid" || exit 3
-wait_for_side "$candidate_port" "$candidate_pid" "$running_pid" || exit 3
+wait_for_side running "$running_port" "$running_pid" "$candidate_pid" || exit 3
+wait_for_side candidate "$candidate_port" "$candidate_pid" "$running_pid" || exit 3
 
 require_alive running "$running_pid"
 require_alive candidate "$candidate_pid"

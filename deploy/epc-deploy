@@ -122,6 +122,7 @@ docker_remote=docker
 [ -z "$use_sudo" ] || docker_remote="sudo docker"
 health_timeout=${EPC_DEPLOY_HEALTH_TIMEOUT:-900}
 health_interval=${EPC_DEPLOY_HEALTH_INTERVAL:-10}
+curl_seconds=30
 database_path="$database_dir/$database_file"
 ownership_remedy="give the directory and the database to the runtime user and to the group of $ssh_user, never to everyone: sudo chown 1200:<the group of $ssh_user> '$database_dir' '$database_path', sudo chmod 770 '$database_dir', sudo chmod 660 '$database_path'"
 
@@ -390,12 +391,12 @@ replace_container() {
 verify_service() {
 	step "Verify the service"
 	if [ "$dry_run" -eq 1 ]; then
-		printf '   would poll http://localhost:%s/health until UP, then check /, the token and the 401\n' "$host_port"
+		printf '   would poll http://localhost:%s/health until UP, then check the 401, and / and the api with the login of the console admin key, or with the token where the log announces no key\n' "$host_port"
 		return 0
 	fi
 	waited=0
 	while :; do
-		health=$(remote "curl -s http://localhost:$host_port/health" 2>/dev/null) || health=
+		health=$(remote "curl -s --max-time $curl_seconds http://localhost:$host_port/health" 2>/dev/null) || health=
 		top_level_health=${health%%\"details\"*}
 		case $top_level_health in
 			*'"status":"UP"'*) break ;;
@@ -408,14 +409,64 @@ verify_service() {
 	done
 	note "health UP after ${waited}s"
 
-	root_code=$(remote "curl -s -o /dev/null -w '%{http_code}' http://localhost:$host_port/")
-	[ "$root_code" = 200 ] || fail_after_replacement "/ answered $root_code"
-	unauthorised_code=$(remote "curl -s -o /dev/null -w '%{http_code}' http://localhost:$host_port/api/v1/avatars")
-	[ "$unauthorised_code" = 401 ] || fail_after_replacement "/api/v1/avatars without a token answered $unauthorised_code instead of 401"
-	curl_config=$(printf 'url = "http://localhost:%s/api/v1/avatars?token=%s"\nsilent\noutput = "/dev/null"\nwrite-out = "%%{http_code}"\n' "$host_port" "$api_token" | remote_temp_file)
+	unauthorised_code=$(remote "curl -s --max-time $curl_seconds -o /dev/null -w '%{http_code}' http://localhost:$host_port/api/v1/avatars")
+	[ "$unauthorised_code" = 401 ] || fail_after_replacement "/api/v1/avatars without a login or a token answered $unauthorised_code instead of 401"
+	login_check=$(print_login_check | remote_temp_file)
+	[ -n "$login_check" ] || fail_after_replacement "could not place the login check on $host"
+	login_codes=$(remote "sh '$login_check' '$host_port' '$container' '$docker_remote' '$curl_seconds'; status=\$?; rm -f '$login_check'; exit \$status") || fail_after_replacement "the login check could not run on $host"
+	case $login_codes in
+		no-key) verify_with_the_token ;;
+		unreadable-log) fail_after_replacement "the log of $container could not be read, so it is not known whether this release announces a console admin key" ;;
+		[0-9][0-9][0-9]' '[0-9][0-9][0-9]' '[0-9][0-9][0-9]) verify_with_the_login $login_codes ;;
+		*) fail_after_replacement "the login check answered '$login_codes'" ;;
+	esac
+}
+
+print_login_check() {
+	cat <<'LOGIN_CHECK'
+set -u
+umask 077
+port=$1
+container=$2
+docker_command=$3
+seconds=$4
+log=$($docker_command logs "$container" 2>&1) || {
+	printf 'unreadable-log'
+	exit 0
+}
+key=$(printf '%s\n' "$log" | sed -n 's/.*Console admin key, valid until the next restart: \([A-Za-z0-9_-]\{43\}\)\([^A-Za-z0-9_-].*\)\{0,1\}$/\1/p' | tail -n 1)
+if [ -z "$key" ]; then
+	printf 'no-key'
+	exit 0
+fi
+directory=$(mktemp -d) || {
+	printf 'no-directory'
+	exit 0
+}
+trap 'rm -rf "$directory"' EXIT
+trap 'rm -rf "$directory"; exit 1' HUP INT TERM PIPE
+printf 'url = "http://localhost:%s/api/v1/login"\nsilent\nmax-time = %s\noutput = "/dev/null"\nwrite-out = "%%{http_code}"\nheader = "Content-Type: application/json"\ndata = "{\\"name\\":\\"admin\\",\\"password\\":\\"%s\\"}"\ncookie-jar = "%s/jar"\n' "$port" "$seconds" "$key" "$directory" > "$directory/login"
+login=$(curl -K "$directory/login")
+root=$(curl -s --max-time "$seconds" -o /dev/null -w '%{http_code}' -b "$directory/jar" "http://localhost:$port/")
+api=$(curl -s --max-time "$seconds" -o /dev/null -w '%{http_code}' -b "$directory/jar" "http://localhost:$port/api/v1/avatars")
+printf '%s %s %s' "$login" "$root" "$api"
+LOGIN_CHECK
+}
+
+verify_with_the_login() {
+	[ "$1" = 200 ] || fail_after_replacement "the service refused the login with the console admin key from its log: HTTP $1"
+	[ "$2" = 200 ] || fail_after_replacement "/ with the login answered $2"
+	[ "$3" = 200 ] || fail_after_replacement "/api/v1/avatars with the login answered $3"
+	note "login with the console admin key 200, / 200 and the api 200 with it, no login 401"
+}
+
+verify_with_the_token() {
+	root_code=$(remote "curl -s --max-time $curl_seconds -o /dev/null -w '%{http_code}' http://localhost:$host_port/")
+	[ "$root_code" = 200 ] || fail_after_replacement "/ answered $root_code, and the log announces no console admin key, so the token was checked"
+	curl_config=$(printf 'url = "http://localhost:%s/api/v1/avatars?token=%s"\nsilent\nmax-time = %s\noutput = "/dev/null"\nwrite-out = "%%{http_code}"\n' "$host_port" "$api_token" "$curl_seconds" | remote_temp_file)
 	authorised_code=$(remote "curl -K '$curl_config'; rm -f '$curl_config'")
-	[ "$authorised_code" = 200 ] || fail_after_replacement "/api/v1/avatars with the token answered $authorised_code"
-	note "/ 200, token 200, no token 401"
+	[ "$authorised_code" = 200 ] || fail_after_replacement "/api/v1/avatars with the token answered $authorised_code, and the log announces no console admin key, so the token was checked"
+	note "no console admin key in the log: / 200, token 200, no token 401"
 }
 
 fail_after_replacement() {

@@ -34,22 +34,68 @@ class Pacer:
 DIRECT = urllib.request.build_opener(urllib.request.ProxyHandler({})).open
 
 
+LOGIN_PATH = "/api/v1/login"
+ADMIN_NAME = "admin"
+SESSION_COOKIE = "epc_session"
+
+
+class LoginRefused(Exception):
+    def __init__(self, code, detail=""):
+        super().__init__(f"HTTP {code}{detail}")
+        self.code = code
+
+
+def log_in(base_url, key, pacer, opener=DIRECT, sleep=time.sleep):
+    body = json.dumps({"name": ADMIN_NAME, "password": key}).encode("utf-8")
+    request = urllib.request.Request(
+        f"{base_url}{LOGIN_PATH}", data=body, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    try:
+        with _paced(lambda: opener(request, timeout=SOCKET_TIMEOUT_SECONDS), pacer, sleep) as response:
+            cookies = response.headers.get_all("Set-Cookie") or []
+            status = response.status
+    except urllib.error.HTTPError as refusal:
+        raise LoginRefused(refusal.code) from None
+    for cookie in cookies:
+        pair = cookie.split(";", 1)[0].strip()
+        if pair.startswith(f"{SESSION_COOKIE}="):
+            return pair
+    raise LoginRefused(status, " without a session cookie")
+
+
+def http_get_json_logged_in(base_url, cookie, pacer, opener=DIRECT, sleep=time.sleep):
+    def get_json(path, query):
+        address = f"{base_url}{path}?{urlencode(query)}" if query else f"{base_url}{path}"
+        request = urllib.request.Request(address, headers={"Cookie": cookie})
+        return _json_of(lambda: opener(request, timeout=SOCKET_TIMEOUT_SECONDS), pacer, sleep)
+
+    return get_json
+
+
 def http_get_json(base_url, token, pacer, opener=DIRECT, sleep=time.sleep):
     def get_json(path, query):
         url = f"{base_url}{path}?{urlencode({**query, 'token': token})}"
-        refusals = 0
-        while True:
-            pacer.wait()
-            try:
-                with opener(url, timeout=SOCKET_TIMEOUT_SECONDS) as response:
-                    return json.loads(response.read().decode("utf-8"))
-            except urllib.error.HTTPError as error:
-                if error.code != 429 or refusals == REFUSALS_RETRIED:
-                    raise
-                refusals += 1
-                sleep(BLOCK_SECONDS)
+        return _json_of(lambda: opener(url, timeout=SOCKET_TIMEOUT_SECONDS), pacer, sleep)
 
     return get_json
+
+
+def _json_of(open_once, pacer, sleep):
+    with _paced(open_once, pacer, sleep) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def _paced(open_once, pacer, sleep):
+    refusals = 0
+    while True:
+        pacer.wait()
+        try:
+            return open_once()
+        except urllib.error.HTTPError as error:
+            if error.code != 429 or refusals == REFUSALS_RETRIED:
+                raise
+            refusals += 1
+            sleep(BLOCK_SECONDS)
 
 
 def fetch_side(get_json, size=PAGE_SIZE):
@@ -88,6 +134,8 @@ def wait_for_recompute(get_status, timeout, poll, clock=time.monotonic, sleep=ti
             return False
         try:
             status = get_status()
+        except urllib.error.HTTPError:
+            raise
         except (OSError, ValueError, http.client.HTTPException):
             status = {}
         if not isinstance(status, dict):

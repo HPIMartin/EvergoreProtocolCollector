@@ -37,6 +37,9 @@ case ${1:-} in
 	save) printf 'fake-image-stream\n'; exit 0 ;;
 	load) cat >/dev/null; printf 'Loaded image: %s\n' "$target"; exit 0 ;;
 	rm) exit 0 ;;
+	logs)
+		[ -z "${EPC_STUB_CONTAINER_LOG:-}" ] || printf '%s\n' "$EPC_STUB_CONTAINER_LOG"
+		exit "${EPC_STUB_LOGS_STATUS:-0}" ;;
 	tag)
 		[ "${EPC_STUB_TAG_STATUS:-0}" -eq 0 ] || exit "$EPC_STUB_TAG_STATUS"
 		printf '%s' "$2" > "$EPC_STUB_STATE/tagged-$(sanitise "$target")"
@@ -155,8 +158,54 @@ set -e
 line="curl"
 for argument in "$@"; do line="$line $argument"; done
 printf '%s\n' "$line" >> "$EPC_STUB_JOURNAL"
+config=
+previous=
+for argument in "$@"; do
+	if [ "$previous" = -K ]; then config=$argument; fi
+	previous=$argument
+done
 case " $* " in
-	*" -K "*) printf '%s' "${EPC_STUB_TOKEN_CODE:-200}" ;;
+	*" -K "*)
+		cat "$config" >> "$EPC_STUB_STATE/configs"
+		[ "$(stat -c %a "$config")" = 600 ] || printf '%s\n' "$config" >> "$EPC_STUB_STATE/loose-configs"
+		if grep -qF '/api/v1/login' "$config"; then
+			printf '%s\n' "$config" > "$EPC_STUB_STATE/login-config"
+			if [ -n "${EPC_STUB_SIGNAL_THE_CHECK:-}" ]; then
+				script=$(sed -n "s/^remote sh '\([^']*\)'.*/\1/p" "$EPC_STUB_JOURNAL" | tail -n 1)
+				pid=$PPID
+				while [ "$pid" -gt 1 ]; do
+					if tr '\0' ' ' < "/proc/$pid/cmdline" | grep -q "^sh $script "; then kill -"$EPC_STUB_SIGNAL_THE_CHECK" "$pid"; fi
+					pid=$(sed -n 's/^PPid:[[:space:]]*//p' "/proc/$pid/status" 2>/dev/null) || pid=0
+				done
+				sleep 1
+			fi
+			jar=$(sed -n 's/^cookie-jar = "\(.*\)"$/\1/p' "$config")
+			if [ "$EPC_STUB_LOGIN_CODE" != 200 ]; then
+				printf '%s' "$EPC_STUB_LOGIN_CODE"
+			elif grep -qF "\\\"name\\\":\\\"admin\\\",\\\"password\\\":\\\"$EPC_STUB_ADMIN_KEY\\\"" "$config"; then
+				printf 'epc_session\tlogged-in\n' > "$jar"
+				printf '200'
+			else
+				printf '401'
+			fi
+		else
+			printf '%s' "${EPC_STUB_TOKEN_CODE:-200}"
+		fi ;;
+	*" -b "*)
+		jar=
+		previous=
+		for argument in "$@"; do
+			if [ "$previous" = -b ]; then jar=$argument; fi
+			previous=$argument
+		done
+		if [ ! -s "$jar" ]; then
+			printf '401'
+		else
+			case " $* " in
+				*/api/v1/avatars*) printf '%s' "$EPC_STUB_LOGIN_API_CODE" ;;
+				*) printf '%s' "$EPC_STUB_LOGIN_ROOT_CODE" ;;
+			esac
+		fi ;;
 	*/health*) printf '%s' "$EPC_STUB_HEALTH" ;;
 	*/api/v1/avatars*) printf '%s' "${EPC_STUB_UNAUTH_CODE:-401}" ;;
 	*) printf '%s' "${EPC_STUB_ROOT_CODE:-200}" ;;
@@ -204,7 +253,7 @@ if [ -n "${EPC_STUB_SUDO_REFUSAL:-}" ]; then
 fi
 EPC_STUB_SIDE=remote
 export EPC_STUB_SIDE
-exec sh -c "$2"
+exec env --default-signal=PIPE sh -c "$2"
 SSH_STUB
 
 cat > "$stub_bin/cp" <<'CP_STUB'
@@ -219,7 +268,13 @@ cat > "$stub_bin/wc" <<'WC_STUB'
 exec /usr/bin/wc "$@"
 WC_STUB
 
-chmod +x "$stub_bin/docker" "$stub_bin/curl" "$stub_bin/git" "$stub_bin/fake-ssh" "$stub_bin/cp" "$stub_bin/wc"
+cat > "$stub_bin/mktemp" <<'MKTEMP_STUB'
+#!/bin/sh
+[ -z "${EPC_STUB_MKTEMP_D_FAILS:-}" ] || [ "${1:-}" != -d ] || exit 1
+exec /usr/bin/mktemp "$@"
+MKTEMP_STUB
+
+chmod +x "$stub_bin/docker" "$stub_bin/curl" "$stub_bin/git" "$stub_bin/fake-ssh" "$stub_bin/cp" "$stub_bin/wc" "$stub_bin/mktemp"
 
 host_name=example.invalid
 ssh_account=deployer
@@ -232,6 +287,14 @@ EVERGORE_SECURITY_API_TOKEN=self-test-only-not-a-real-value
 EVERGORE_CREDENTIALS_USERNAME=self-test-only-login
 EVERGORE_CREDENTIALS_PASSWORD=self-test-only-passphrase
 export EVERGORE_SECURITY_API_TOKEN EVERGORE_CREDENTIALS_USERNAME EVERGORE_CREDENTIALS_PASSWORD
+
+EPC_STUB_ADMIN_KEY=SelfTestOnly_NotAKey-0123456789abcdefghijkl
+export EPC_STUB_ADMIN_KEY
+announced_log="$(printf '\033[36m10:00:00.000\033[0m [main] INFO  d.s.e.p.Logger - Console admin key, valid until the next restart: %s\033[0m' "$EPC_STUB_ADMIN_KEY")"
+
+earlier_announced_log="$(printf '\033[36m09:00:00.000\033[0m [main] INFO  d.s.e.p.Logger - Console admin key, valid until the next restart: %s\033[0m' "EarlierStartOnly_NotAKey-0123456789abcdefgh")"
+
+long_token_announced_log="$(printf '\033[36m10:00:00.000\033[0m [main] INFO  d.s.e.p.Logger - Console admin key, valid until the next restart: %s\033[0m' "ALongTokenOfSixtyCharacters_0123456789abcdefghijklmnopqrstuv")"
 
 EPC_DEPLOY_SSH="$stub_bin/fake-ssh"
 EPC_DEPLOY_HEALTH_INTERVAL=1
@@ -279,6 +342,15 @@ new_case() {
 	EPC_STUB_TOKEN_CODE=200
 	EPC_STUB_UNAUTH_CODE=401
 	EPC_STUB_ROOT_CODE=200
+	EPC_STUB_CONTAINER_LOG=
+	EPC_STUB_LOGIN_CODE=200
+	EPC_STUB_LOGIN_ROOT_CODE=200
+	EPC_STUB_LOGIN_API_CODE=200
+	EPC_STUB_LOGS_STATUS=0
+	EPC_STUB_MKTEMP_D_FAILS=
+	EPC_STUB_SIGNAL_THE_CHECK=
+	export EPC_STUB_CONTAINER_LOG EPC_STUB_LOGIN_CODE EPC_STUB_LOGIN_ROOT_CODE EPC_STUB_LOGIN_API_CODE EPC_STUB_LOGS_STATUS \
+		EPC_STUB_MKTEMP_D_FAILS EPC_STUB_SIGNAL_THE_CHECK
 	EPC_STUB_REVISION=1234567890abcdef1234567890abcdef12345678
 	EPC_STUB_LOCAL_LAYERS='["sha256:layerone","sha256:layertwo"]'
 	EPC_STUB_REMOTE_LAYERS=$EPC_STUB_LOCAL_LAYERS
@@ -374,6 +446,120 @@ check "the database is copied only after the stop and the empty ps, not before" 
 if printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; fi
 check "the run ends by printing the rollback command that undoes it" "$r"
 
+login_release() {
+	EPC_STUB_CONTAINER_LOG=$announced_log
+	EPC_STUB_TOKEN_CODE=401
+	EPC_STUB_ROOT_CODE=401
+}
+
+new_case
+login_release
+run_deploy
+if [ "$status" -eq 0 ]; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a release that announces the console admin key passes its check through the login with that key" "$r"
+if grep -qF -- "$EPC_STUB_ADMIN_KEY" "$journal"; then r=1; else r=0; fi
+check "the console admin key reaches no command line the remote sees" "$r"
+if printf '%s' "$output" | grep -qF -- "$EPC_STUB_ADMIN_KEY"; then r=1; else r=0; fi
+check "the console admin key reaches no output either" "$r"
+login_config=$(cat "$state_dir/login-config" 2>/dev/null || true)
+if [ -n "$login_config" ] && [ ! -e "$login_config" ] && [ ! -e "$(dirname -- "$login_config")" ]; then r=0; else r=1; fi
+check "the files holding the key and the login do not linger on the remote host" "$r"
+
+new_case
+login_release
+EPC_STUB_LOGIN_CODE=401
+run_deploy
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "refused the login with the console admin key from its log: HTTP 401"; then r=0; else r=1; fi
+check "a login the service refuses fails the deploy and is named as a refused login" "$r"
+if printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; fi
+check "and prints the way back" "$r"
+
+new_case
+login_release
+EPC_STUB_LOGIN_API_CODE=403
+run_deploy
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "/api/v1/avatars with the login answered 403"; then r=0; else r=1; fi
+check "an api that refuses the login of the console admin key fails the deploy" "$r"
+
+new_case
+login_release
+EPC_STUB_LOGIN_ROOT_CODE=500
+run_deploy
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "/ with the login answered 500"; then r=0; else r=1; fi
+check "a page that fails under the login of the console admin key fails the deploy" "$r"
+
+new_case
+login_release
+EPC_STUB_LOGS_STATUS=1
+run_deploy
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "the log of $container_name could not be read" && printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a container log that cannot be read fails the deploy as unreadable, not as a log that announces no key, and prints the way back" "$r"
+
+new_case
+login_release
+EPC_STUB_LOGIN_CODE=
+run_deploy
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "the login check answered '" && ! printf '%s' "$output" | grep -qF 'parameter not set' && printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a login check that answers in no shape the deploy knows fails the deploy as that answer and prints the way back" "$r"
+
+new_case
+login_release
+EPC_STUB_MKTEMP_D_FAILS=1
+run_deploy
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "the login check answered 'no-directory'" && printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a login check that can make no temporary directory fails the deploy as that answer and prints the way back" "$r"
+
+new_case
+login_release
+EPC_STUB_SIGNAL_THE_CHECK=TERM
+run_deploy
+login_config=$(cat "$state_dir/login-config" 2>/dev/null || true)
+if [ "$status" -ne 0 ] && [ -n "$login_config" ] && [ ! -e "$(dirname -- "$login_config")" ]; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a login check ended by a termination signal leaves no directory holding the key behind" "$r"
+
+new_case
+login_release
+EPC_STUB_SIGNAL_THE_CHECK=PIPE
+run_deploy
+login_config=$(cat "$state_dir/login-config" 2>/dev/null || true)
+if [ "$status" -ne 0 ] && [ -n "$login_config" ] && [ ! -e "$(dirname -- "$login_config")" ]; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a login check ended by a broken pipe leaves no directory holding the key behind" "$r"
+
+every_curl_is_bounded() {
+	[ "$(grep -c '^url = ' "$state_dir/configs")" -gt 0 ] &&
+		[ "$(grep -c '^url = ' "$state_dir/configs")" -eq "$(grep -c '^max-time = ' "$state_dir/configs")" ] &&
+		! grep '^curl ' "$journal" | grep -v ' -K ' | grep -qv -- '--max-time '
+}
+
+new_case
+login_release
+run_deploy
+if every_curl_is_bounded; then r=0; else r=1; fi
+check "every curl of the check through the login is bounded in time" "$r"
+
+new_case
+run_deploy
+if every_curl_is_bounded; then r=0; else r=1; fi
+check "every curl of the check through the token is bounded in time" "$r"
+
+new_case
+login_release
+EPC_STUB_CONTAINER_LOG="$(printf '%s\n%s\n%s' "$earlier_announced_log" '10:00:00.000 [main] INFO  Starting again' "$announced_log")"
+run_deploy
+if [ "$status" -eq 0 ]; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a container log that announced a key before a restart is logged in with the key of its last announcement" "$r"
+
+new_case
+login_release
+run_deploy
+if [ ! -e "$state_dir/loose-configs" ]; then r=0; else r=1; fi
+check "every curl config of the check is readable by its owner alone" "$r"
+
+new_case
+EPC_STUB_CONTAINER_LOG=$long_token_announced_log
+run_deploy
+if [ "$status" -eq 0 ] && [ ! -e "$state_dir/login-config" ]; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a container log whose announcement carries more than a key holds no key, so the check asks with the token and runs no login" "$r"
 new_case
 EPC_STUB_PROBE_TRUNCATE=1
 run_deploy

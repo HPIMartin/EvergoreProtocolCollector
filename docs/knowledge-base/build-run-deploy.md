@@ -591,10 +591,32 @@ EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDENTIALS_PASSWORD=… \
   --database-dir <the directory mounted at /database> --image evergore-protocol-collector:<version>
 ```
 
-- **Until the release tooling speaks the login (F24) the script is stale on it:** it still demands
-  `EVERGORE_SECURITY_API_TOKEN` (any non-blank value) before it reaches a machine, passes the
-  guild's old token and checks the API with `?token=`, which 0.5.0 no longer reads, so its step 6
-  fails on 0.5.0.
+- **The check after the start (step 6) speaks both releases:**
+  - `/api/v1/avatars` without a login or a token answers 401 on both;
+  - the check then reads the console admin key off the container's log (`docker logs`) on the
+    host:
+    - where the log announces one (0.5.0 on):
+      - it takes only a key that stands whole, 43 Base64url characters;
+        - Why: a half-written announcement holds no key yet;
+      - a half-written key takes the no-key path;
+      - it logs in with it as `admin`;
+      - it checks `/` and `/api/v1/avatars` with that login, each for 200;
+    - where it announces none (0.4.0, the way back), it checks `/` and
+      `/api/v1/avatars?token=` for 200;
+    - where `docker logs` fails, the log is unreadable, not a log without a key: the deploy fails;
+      - the failure names the unreadable log;
+  - an answer in none of `no-key`, `unreadable-log` or three HTTP codes fails the deploy;
+  - the failure names that answer;
+  - a check that can make no temporary directory writes nothing;
+  - the check answers `no-directory` in that case;
+  - the key travels only through a pipe, a variable of the host's shell and a 0600 curl config;
+  - the check removes the directory that holds the curl config when it ends and on a hangup, an
+    interrupt, a termination or a broken pipe;
+  - every curl of the check ends after 30 seconds;
+  - the key reaches no command line and no output of the deploy;
+  - a refused login fails the deploy;
+  - the failure names a refused login with its status;
+  - the failure prints the way back like every other failure after the replacement.
 
 - **Nothing machine-specific is committed:** host, ssh user, container name, mount directory, image
   tag and the three secrets are parameters or environment variables, and a missing one stops the run
@@ -651,10 +673,14 @@ EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDENTIALS_PASSWORD=… \
   - A first command that fails after ssh signed in is reported as such, with its exit status.
     - ssh's own failures exit 255; a refused sudo ticket does not.
 - **The parameters live in `deploy.local.env`** (gitignored by `*.local.*`, mode 600 because it
-  holds the password): every `EPC_DEPLOY_*` variable from the usage text, plus
-  `EVERGORE_SECURITY_API_TOKEN`, any non-blank value, which the script demands until the release
-  tooling speaks the login (F24); the game login stays in `credentials.local.env`. Export both
-  into the environment and the script needs no option but `--image`.
+  holds the password):
+  - every `EPC_DEPLOY_*` variable from the usage text;
+  - `EVERGORE_SECURITY_API_TOKEN`, any non-blank value, which the script demands;
+    - a 0.4.0 container, the way back, does not boot without it;
+    - the check of a 0.4.0 container uses it;
+    - 0.5.0 ignores it;
+  - the game login stays in `credentials.local.env`;
+  - export both files into the environment and the script needs no option but `--image`.
 - **The image build runs the whole `check`, so any test that reads repository files outside `src/`
   needs them in the build context.** `KbCitationGuardTest` reads `docs/knowledge-base`; the
   Dockerfile copies it and `.dockerignore` lets exactly that directory through. Without it the image
