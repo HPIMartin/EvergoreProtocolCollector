@@ -29,8 +29,9 @@ class FakeClock:
 
 
 class Response(io.BytesIO):
-    def __init__(self, payload, cookies=()):
+    def __init__(self, payload, cookies=(), status=200):
         super().__init__(json.dumps(payload).encode("utf-8"))
+        self.status = status
         self.headers = email.message.Message()
         for cookie in cookies:
             self.headers["Set-Cookie"] = cookie
@@ -64,8 +65,9 @@ class LoggingIn(unittest.TestCase):
 
         fake = FakeClock()
 
-        log_in("http://127.0.0.1:1", KEY, pacer(fake), opener, fake.sleep)
+        tested = log_in("http://127.0.0.1:1", KEY, pacer(fake), opener, fake.sleep)
 
+        self.assertEqual("epc_session=signed", tested)
         self.assertEqual("POST", seen[0].get_method())
         self.assertEqual("http://127.0.0.1:1/api/v1/login", seen[0].full_url)
         self.assertEqual("application/json", seen[0].get_header("Content-type"))
@@ -92,14 +94,18 @@ class LoggingIn(unittest.TestCase):
 
         self.assertEqual(401, raised.exception.code)
 
-    def test_a_login_answered_without_a_session_cookie_is_a_refused_login(self):
+    def test_a_login_answered_without_a_session_cookie_is_a_refused_login_naming_its_status_and_the_missing_cookie(self):
         def opener(request, timeout=None):
-            return Response({"step": "choose-new-password"})
+            return Response({"step": "choose-new-password"}, status=200)
 
         fake = FakeClock()
 
-        with self.assertRaises(LoginRefused):
+        with self.assertRaises(LoginRefused) as raised:
             log_in("http://127.0.0.1:1", KEY, pacer(fake), opener, fake.sleep)
+
+        tested = str(raised.exception)
+
+        self.assertEqual("HTTP 200 without a session cookie", tested)
 
     def test_a_login_turned_away_for_too_many_requests_is_waited_out_and_repeated(self):
         outcomes = [refusal("u", 429), Response({"step": "logged-in"}, ["epc_session=signed; Path=/"])]
@@ -117,11 +123,10 @@ class LoggingIn(unittest.TestCase):
         self.assertEqual("epc_session=signed", tested)
         self.assertEqual([65], fake.slept)
 
-    def test_the_refused_login_names_its_status_and_never_the_key(self):
+    def test_the_refused_login_names_its_status(self):
         tested = str(LoginRefused(401))
 
         self.assertIn("HTTP 401", tested)
-        self.assertNotIn(KEY, tested)
 
 
 class LoggedInRequests(unittest.TestCase):

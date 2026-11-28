@@ -40,8 +40,8 @@ SESSION_COOKIE = "epc_session"
 
 
 class LoginRefused(Exception):
-    def __init__(self, code):
-        super().__init__(f"HTTP {code}")
+    def __init__(self, code, detail=""):
+        super().__init__(f"HTTP {code}{detail}")
         self.code = code
 
 
@@ -53,14 +53,14 @@ def log_in(base_url, key, pacer, opener=DIRECT, sleep=time.sleep):
     try:
         with _paced(lambda: opener(request, timeout=SOCKET_TIMEOUT_SECONDS), pacer, sleep) as response:
             cookies = response.headers.get_all("Set-Cookie") or []
-            status = getattr(response, "status", 200)
+            status = response.status
     except urllib.error.HTTPError as refusal:
         raise LoginRefused(refusal.code) from None
     for cookie in cookies:
         pair = cookie.split(";", 1)[0].strip()
         if pair.startswith(f"{SESSION_COOKIE}="):
             return pair
-    raise LoginRefused(status)
+    raise LoginRefused(status, " without a session cookie")
 
 
 def http_get_json_logged_in(base_url, cookie, pacer, opener=DIRECT, sleep=time.sleep):

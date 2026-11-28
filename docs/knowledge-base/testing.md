@@ -685,7 +685,9 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
       - Why: a key announced between the look at the log and the request is not read as a
         refusal;
     - a refused login ends the run at once;
+    - a login answered without the session cookie is a refused login too;
     - the run names a refused login with its status;
+    - the run names the missing cookie too;
     - the key stands in no command line, no output and no file of the comparison;
     - only the side's own `app.log` holds the key;
   - the script's own requests bypass any proxy the environment names.
