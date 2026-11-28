@@ -670,6 +670,22 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
     or `DATASOURCES_*` variable, in any letter case and under any locale;
   - with a throwaway token and credentials per run, which travel in the environment, never in a
     command's arguments;
+  - each asked the way its release reads (decision 2026-10-15):
+    - a side whose own log, `app.log` in its directory, announces the console admin key
+      (`Console admin key, valid until the next restart: <key>`, 0.5.0 on) is asked through a
+      login:
+      - the helper reads the key off that log itself;
+      - it logs in as `admin` with it (`POST /api/v1/login`);
+      - it logs in once per wait and once per fetch;
+      - it sends the session cookie;
+    - a side whose log announces no key (0.4.0, the way back) is asked with `?token=`;
+    - a token answered 401 once the log announces the key logs in and asks again;
+      - Why: a key announced between the look at the log and the request is not read as a
+        refusal;
+    - a refused login ends the run at once;
+    - the run names a refused login with its status;
+    - the key stands in no command line, no output and no file of the comparison;
+    - only the side's own `app.log` holds the key;
   - the script's own requests bypass any proxy the environment names.
 - **The run:**
   - The scheduled job fails to scrape with the throwaway credentials and recomputes anyway.
@@ -741,8 +757,8 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
     - a script outside a git worktree, reached through a link, or whose helper does not run;
     - a side of a previous run still alive, named by its process group.
   - `3`: a side showed no successful recompute in time, answered its admin status with an HTTP
-    error, stopped running, could not be fetched or could not be stopped (its process group is
-    named).
+    error, refused the login with the console admin key, stopped running, could not be fetched or
+    could not be stopped (its process group is named).
   - `4`: the comparison itself crashed (a malformed capture, a copy without `metaInformation`).
   - Both sides are gone after every exit path, a hangup and a second interrupt included.
   - INT, TERM, HUP, QUIT, USR1, USR2 or ALRM ends the run with 128 plus its number once both sides
@@ -750,6 +766,9 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
 - **The script's own proof:**
   - `sh release/self-test` runs the unit tests and the driver tests on a stub distribution, with
     synthetic data only.
+  - The stub answers as a 0.5.0 side, with the key in its log and a login, where
+    `STUB_LOGIN_SIDES` names it.
+  - The stub answers as a 0.4.0 side, with the token, otherwise.
   - It takes about a minute.
   - Interrupting it with INT, TERM or HUP, also twice, still stops every side its tests started.
   - It fails when it finds no test.

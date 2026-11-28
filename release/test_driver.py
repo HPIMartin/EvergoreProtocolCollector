@@ -743,6 +743,61 @@ class SecretsInFlight(unittest.TestCase):
                     self.assertNotIn(record["env"][name], line, f"{side} {name} in a command line")
 
 
+class ASideThatLogsIn(unittest.TestCase):
+    def setUp(self):
+        self.layout = Layout(self)
+
+    def test_a_candidate_that_announces_the_console_admin_key_is_compared_through_its_login(self):
+        tested = self.layout.run(STUB_LOGIN_SIDES="candidate")
+
+        self.assertEqual(0, tested.returncode, tested.stdout + tested.stderr)
+        self.assertIn("PASS", tested.stdout)
+        self.assertIn("/api/v1/login", [path for _, path in self.layout.requests("candidate")])
+        self.assertNotIn("/api/v1/login", [path for _, path in self.layout.requests("running")])
+
+    def test_a_refused_login_ends_the_run_at_once_and_is_named_as_a_refused_login(self):
+        began = time.monotonic()
+
+        tested = self.layout.run(STUB_LOGIN_SIDES="candidate", STUB_LOGIN_REFUSED="1", RELEASE_COMPARE_TIMEOUT="30")
+
+        self.assertLess(time.monotonic() - began, 15)
+        self.assertEqual(3, tested.returncode, tested.stdout + tested.stderr)
+        self.assertIn("refused the login with the console admin key", tested.stdout + tested.stderr)
+        self.assertIn("HTTP 401", tested.stdout + tested.stderr)
+        self.layout.assert_no_process_left(self)
+
+    def test_the_console_admin_key_shows_in_no_output_and_no_file_of_the_comparison(self):
+        tested = self.layout.run(STUB_LOGIN_SIDES="candidate")
+
+        self.assertEqual(0, tested.returncode, tested.stdout + tested.stderr)
+        key = self.layout.record("candidate")["adminKey"]
+        self.assertNotIn(key, tested.stdout + tested.stderr)
+        side_logs = {self.layout.work / side / "app.log" for side in ("running", "candidate")}
+        for path in self.layout.work.rglob("*"):
+            if path.is_file() and path not in side_logs and not path.name.startswith("stub-"):
+                self.assertNotIn(key.encode("utf-8"), path.read_bytes(), str(path))
+
+    def test_no_process_of_a_run_carries_the_console_admin_key_in_its_command_line(self):
+        driver = self.layout.start(STUB_LOGIN_SIDES="candidate", STUB_RECOMPUTE_AFTER="1.5")
+        observed = []
+        while driver.poll() is None:
+            groups = [driver.pid]
+            for side in ("running", "candidate"):
+                try:
+                    groups.append(self.layout.record(side)["pid"])
+                except (OSError, ValueError):
+                    continue
+            observed.extend(command_lines_of(groups))
+            time.sleep(0.02)
+        driver.communicate()
+
+        self.assertEqual(0, driver.returncode)
+        self.assertTrue(observed)
+        key = self.layout.record("candidate")["adminKey"]
+        for line in observed:
+            self.assertNotIn(key, line)
+
+
 class RecomputeInThisRun(unittest.TestCase):
     def setUp(self):
         self.layout = Layout(self)
