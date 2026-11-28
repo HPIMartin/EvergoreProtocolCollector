@@ -166,6 +166,7 @@ for argument in "$@"; do
 done
 case " $* " in
 	*" -K "*)
+		cat "$config" >> "$EPC_STUB_STATE/configs"
 		if grep -qF '/api/v1/login' "$config"; then
 			printf '%s\n' "$config" > "$EPC_STUB_STATE/login-config"
 			if [ -n "${EPC_STUB_SIGNAL_THE_CHECK:-}" ]; then
@@ -518,6 +519,23 @@ run_deploy
 login_config=$(cat "$state_dir/login-config" 2>/dev/null || true)
 if [ "$status" -ne 0 ] && [ -n "$login_config" ] && [ ! -e "$(dirname -- "$login_config")" ]; then r=0; else r=1; printf '%s\n' "$output"; fi
 check "a login check ended by a broken pipe leaves no directory holding the key behind" "$r"
+
+every_curl_is_bounded() {
+	[ "$(grep -c '^url = ' "$state_dir/configs")" -gt 0 ] &&
+		[ "$(grep -c '^url = ' "$state_dir/configs")" -eq "$(grep -c '^max-time = ' "$state_dir/configs")" ] &&
+		! grep '^curl ' "$journal" | grep -v ' -K ' | grep -qv -- '--max-time '
+}
+
+new_case
+login_release
+run_deploy
+if every_curl_is_bounded; then r=0; else r=1; fi
+check "every curl of the check through the login is bounded in time" "$r"
+
+new_case
+run_deploy
+if every_curl_is_bounded; then r=0; else r=1; fi
+check "every curl of the check through the token is bounded in time" "$r"
 new_case
 EPC_STUB_PROBE_TRUNCATE=1
 run_deploy

@@ -609,6 +609,7 @@ EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDENTIALS_PASSWORD=… \
   - the key travels only through a pipe, a variable of the host's shell and a 0600 curl config;
   - the check removes the directory that holds the curl config when it ends and on a hangup, an
     interrupt, a termination or a broken pipe;
+  - every curl of the check ends after 30 seconds;
   - the key reaches no command line and no output of the deploy;
   - a refused login fails the deploy;
   - the failure names a refused login with its status;
