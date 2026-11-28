@@ -39,7 +39,7 @@ case ${1:-} in
 	rm) exit 0 ;;
 	logs)
 		[ -z "${EPC_STUB_CONTAINER_LOG:-}" ] || printf '%s\n' "$EPC_STUB_CONTAINER_LOG"
-		exit 0 ;;
+		exit "${EPC_STUB_LOGS_STATUS:-0}" ;;
 	tag)
 		[ "${EPC_STUB_TAG_STATUS:-0}" -eq 0 ] || exit "$EPC_STUB_TAG_STATUS"
 		printf '%s' "$2" > "$EPC_STUB_STATE/tagged-$(sanitise "$target")"
@@ -325,7 +325,8 @@ new_case() {
 	EPC_STUB_LOGIN_CODE=200
 	EPC_STUB_LOGIN_ROOT_CODE=200
 	EPC_STUB_LOGIN_API_CODE=200
-	export EPC_STUB_CONTAINER_LOG EPC_STUB_LOGIN_CODE EPC_STUB_LOGIN_ROOT_CODE EPC_STUB_LOGIN_API_CODE
+	EPC_STUB_LOGS_STATUS=0
+	export EPC_STUB_CONTAINER_LOG EPC_STUB_LOGIN_CODE EPC_STUB_LOGIN_ROOT_CODE EPC_STUB_LOGIN_API_CODE EPC_STUB_LOGS_STATUS
 	EPC_STUB_REVISION=1234567890abcdef1234567890abcdef12345678
 	EPC_STUB_LOCAL_LAYERS='["sha256:layerone","sha256:layertwo"]'
 	EPC_STUB_REMOTE_LAYERS=$EPC_STUB_LOCAL_LAYERS
@@ -462,6 +463,13 @@ EPC_STUB_LOGIN_ROOT_CODE=500
 run_deploy
 if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "/ with the login answered 500"; then r=0; else r=1; fi
 check "a page that fails under the login of the console admin key fails the deploy" "$r"
+
+new_case
+login_release
+EPC_STUB_LOGS_STATUS=1
+run_deploy
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "the log of $container_name could not be read" && printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a container log that cannot be read fails the deploy as unreadable, not as a log that announces no key, and prints the way back" "$r"
 
 new_case
 EPC_STUB_PROBE_TRUNCATE=1

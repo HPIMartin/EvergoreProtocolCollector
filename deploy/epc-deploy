@@ -413,11 +413,11 @@ verify_service() {
 	login_check=$(print_login_check | remote_temp_file)
 	[ -n "$login_check" ] || fail_after_replacement "could not place the login check on $host"
 	login_codes=$(remote "sh '$login_check' '$host_port' '$container' '$docker_remote'; status=\$?; rm -f '$login_check'; exit \$status") || fail_after_replacement "the login check could not run on $host"
-	if [ "$login_codes" = no-key ]; then
-		verify_with_the_token
-	else
-		verify_with_the_login $login_codes
-	fi
+	case $login_codes in
+		no-key) verify_with_the_token ;;
+		unreadable-log) fail_after_replacement "the log of $container could not be read, so it is not known whether this release announces a console admin key" ;;
+		*) verify_with_the_login $login_codes ;;
+	esac
 }
 
 print_login_check() {
@@ -427,7 +427,11 @@ umask 077
 port=$1
 container=$2
 docker_command=$3
-key=$($docker_command logs "$container" 2>&1 | sed -n 's/.*Console admin key, valid until the next restart: \([A-Za-z0-9_-]*\).*/\1/p' | tail -n 1)
+log=$($docker_command logs "$container" 2>&1) || {
+	printf 'unreadable-log'
+	exit 0
+}
+key=$(printf '%s\n' "$log" | sed -n 's/.*Console admin key, valid until the next restart: \([A-Za-z0-9_-]*\).*/\1/p' | tail -n 1)
 if [ -z "$key" ]; then
 	printf 'no-key'
 	exit 0
