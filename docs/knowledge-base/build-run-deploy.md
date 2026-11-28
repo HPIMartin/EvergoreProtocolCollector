@@ -596,6 +596,9 @@ EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDENTIALS_PASSWORD=… \
   - the check then reads the console admin key off the container's log (`docker logs`) on the
     host:
     - where the log announces one (0.5.0 on):
+      - it takes only a key that stands whole, 43 Base64url characters;
+        - Why: a half-written announcement holds no key yet;
+      - a half-written key takes the no-key path;
       - it logs in with it as `admin`;
       - it checks `/` and `/api/v1/avatars` with that login, each for 200;
     - where it announces none (0.4.0, the way back), it checks `/` and

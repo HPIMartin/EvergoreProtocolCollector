@@ -434,7 +434,7 @@ log=$($docker_command logs "$container" 2>&1) || {
 	printf 'unreadable-log'
 	exit 0
 }
-key=$(printf '%s\n' "$log" | sed -n 's/.*Console admin key, valid until the next restart: \([A-Za-z0-9_-]*\).*/\1/p' | tail -n 1)
+key=$(printf '%s\n' "$log" | sed -n 's/.*Console admin key, valid until the next restart: \([A-Za-z0-9_-]\{43\}\)\([^A-Za-z0-9_-].*\)\{0,1\}$/\1/p' | tail -n 1)
 if [ -z "$key" ]; then
 	printf 'no-key'
 	exit 0

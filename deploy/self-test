@@ -288,11 +288,13 @@ EVERGORE_CREDENTIALS_USERNAME=self-test-only-login
 EVERGORE_CREDENTIALS_PASSWORD=self-test-only-passphrase
 export EVERGORE_SECURITY_API_TOKEN EVERGORE_CREDENTIALS_USERNAME EVERGORE_CREDENTIALS_PASSWORD
 
-EPC_STUB_ADMIN_KEY=SelfTestOnly_NotAKey-0123456789abcdefghijk
+EPC_STUB_ADMIN_KEY=SelfTestOnly_NotAKey-0123456789abcdefghijkl
 export EPC_STUB_ADMIN_KEY
 announced_log="$(printf '\033[36m10:00:00.000\033[0m [main] INFO  d.s.e.p.Logger - Console admin key, valid until the next restart: %s\033[0m' "$EPC_STUB_ADMIN_KEY")"
 
-earlier_announced_log="$(printf '\033[36m09:00:00.000\033[0m [main] INFO  d.s.e.p.Logger - Console admin key, valid until the next restart: %s\033[0m' "EarlierStartOnly_NotAKey-0123456789abcdefg")"
+earlier_announced_log="$(printf '\033[36m09:00:00.000\033[0m [main] INFO  d.s.e.p.Logger - Console admin key, valid until the next restart: %s\033[0m' "EarlierStartOnly_NotAKey-0123456789abcdefgh")"
+
+long_token_announced_log="$(printf '\033[36m10:00:00.000\033[0m [main] INFO  d.s.e.p.Logger - Console admin key, valid until the next restart: %s\033[0m' "ALongTokenOfSixtyCharacters_0123456789abcdefghijklmnopqrstuv")"
 
 EPC_DEPLOY_SSH="$stub_bin/fake-ssh"
 EPC_DEPLOY_HEALTH_INTERVAL=1
@@ -552,6 +554,12 @@ login_release
 run_deploy
 if [ ! -e "$state_dir/loose-configs" ]; then r=0; else r=1; fi
 check "every curl config of the check is readable by its owner alone" "$r"
+
+new_case
+EPC_STUB_CONTAINER_LOG=$long_token_announced_log
+run_deploy
+if [ "$status" -eq 0 ] && [ ! -e "$state_dir/login-config" ]; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a container log whose announcement carries more than a key holds no key, so the check asks with the token and runs no login" "$r"
 new_case
 EPC_STUB_PROBE_TRUNCATE=1
 run_deploy
