@@ -257,7 +257,13 @@ cat > "$stub_bin/wc" <<'WC_STUB'
 exec /usr/bin/wc "$@"
 WC_STUB
 
-chmod +x "$stub_bin/docker" "$stub_bin/curl" "$stub_bin/git" "$stub_bin/fake-ssh" "$stub_bin/cp" "$stub_bin/wc"
+cat > "$stub_bin/mktemp" <<'MKTEMP_STUB'
+#!/bin/sh
+[ -z "${EPC_STUB_MKTEMP_D_FAILS:-}" ] || [ "${1:-}" != -d ] || exit 1
+exec /usr/bin/mktemp "$@"
+MKTEMP_STUB
+
+chmod +x "$stub_bin/docker" "$stub_bin/curl" "$stub_bin/git" "$stub_bin/fake-ssh" "$stub_bin/cp" "$stub_bin/wc" "$stub_bin/mktemp"
 
 host_name=example.invalid
 ssh_account=deployer
@@ -326,7 +332,9 @@ new_case() {
 	EPC_STUB_LOGIN_ROOT_CODE=200
 	EPC_STUB_LOGIN_API_CODE=200
 	EPC_STUB_LOGS_STATUS=0
-	export EPC_STUB_CONTAINER_LOG EPC_STUB_LOGIN_CODE EPC_STUB_LOGIN_ROOT_CODE EPC_STUB_LOGIN_API_CODE EPC_STUB_LOGS_STATUS
+	EPC_STUB_MKTEMP_D_FAILS=
+	export EPC_STUB_CONTAINER_LOG EPC_STUB_LOGIN_CODE EPC_STUB_LOGIN_ROOT_CODE EPC_STUB_LOGIN_API_CODE EPC_STUB_LOGS_STATUS \
+		EPC_STUB_MKTEMP_D_FAILS
 	EPC_STUB_REVISION=1234567890abcdef1234567890abcdef12345678
 	EPC_STUB_LOCAL_LAYERS='["sha256:layerone","sha256:layertwo"]'
 	EPC_STUB_REMOTE_LAYERS=$EPC_STUB_LOCAL_LAYERS
@@ -478,6 +486,12 @@ run_deploy
 if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "the login check answered '" && ! printf '%s' "$output" | grep -qF 'parameter not set' && printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; printf '%s\n' "$output"; fi
 check "a login check that answers in no shape the deploy knows fails the deploy as that answer and prints the way back" "$r"
 
+new_case
+login_release
+EPC_STUB_MKTEMP_D_FAILS=1
+run_deploy
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "the login check answered 'no-directory'" && printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a login check that can make no temporary directory fails the deploy as that answer and prints the way back" "$r"
 new_case
 EPC_STUB_PROBE_TRUNCATE=1
 run_deploy

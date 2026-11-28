@@ -437,7 +437,10 @@ if [ -z "$key" ]; then
 	printf 'no-key'
 	exit 0
 fi
-directory=$(mktemp -d)
+directory=$(mktemp -d) || {
+	printf 'no-directory'
+	exit 0
+}
 trap 'rm -rf "$directory"' EXIT
 printf 'url = "http://localhost:%s/api/v1/login"\nsilent\noutput = "/dev/null"\nwrite-out = "%%{http_code}"\nheader = "Content-Type: application/json"\ndata = "{\\"name\\":\\"admin\\",\\"password\\":\\"%s\\"}"\ncookie-jar = "%s/jar"\n' "$port" "$key" "$directory" > "$directory/login"
 login=$(curl -K "$directory/login")
