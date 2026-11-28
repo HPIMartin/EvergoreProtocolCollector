@@ -168,6 +168,15 @@ case " $* " in
 	*" -K "*)
 		if grep -qF '/api/v1/login' "$config"; then
 			printf '%s\n' "$config" > "$EPC_STUB_STATE/login-config"
+			if [ -n "${EPC_STUB_SIGNAL_THE_CHECK:-}" ]; then
+				script=$(sed -n "s/^remote sh '\([^']*\)'.*/\1/p" "$EPC_STUB_JOURNAL" | tail -n 1)
+				pid=$PPID
+				while [ "$pid" -gt 1 ]; do
+					if tr '\0' ' ' < "/proc/$pid/cmdline" | grep -q "^sh $script "; then kill -"$EPC_STUB_SIGNAL_THE_CHECK" "$pid"; fi
+					pid=$(sed -n 's/^PPid:[[:space:]]*//p' "/proc/$pid/status" 2>/dev/null) || pid=0
+				done
+				sleep 1
+			fi
 			jar=$(sed -n 's/^cookie-jar = "\(.*\)"$/\1/p' "$config")
 			if [ "$EPC_STUB_LOGIN_CODE" != 200 ]; then
 				printf '%s' "$EPC_STUB_LOGIN_CODE"
@@ -242,7 +251,7 @@ if [ -n "${EPC_STUB_SUDO_REFUSAL:-}" ]; then
 fi
 EPC_STUB_SIDE=remote
 export EPC_STUB_SIDE
-exec sh -c "$2"
+exec env --default-signal=PIPE sh -c "$2"
 SSH_STUB
 
 cat > "$stub_bin/cp" <<'CP_STUB'
@@ -333,8 +342,9 @@ new_case() {
 	EPC_STUB_LOGIN_API_CODE=200
 	EPC_STUB_LOGS_STATUS=0
 	EPC_STUB_MKTEMP_D_FAILS=
+	EPC_STUB_SIGNAL_THE_CHECK=
 	export EPC_STUB_CONTAINER_LOG EPC_STUB_LOGIN_CODE EPC_STUB_LOGIN_ROOT_CODE EPC_STUB_LOGIN_API_CODE EPC_STUB_LOGS_STATUS \
-		EPC_STUB_MKTEMP_D_FAILS
+		EPC_STUB_MKTEMP_D_FAILS EPC_STUB_SIGNAL_THE_CHECK
 	EPC_STUB_REVISION=1234567890abcdef1234567890abcdef12345678
 	EPC_STUB_LOCAL_LAYERS='["sha256:layerone","sha256:layertwo"]'
 	EPC_STUB_REMOTE_LAYERS=$EPC_STUB_LOCAL_LAYERS
@@ -492,6 +502,22 @@ EPC_STUB_MKTEMP_D_FAILS=1
 run_deploy
 if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "the login check answered 'no-directory'" && printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; printf '%s\n' "$output"; fi
 check "a login check that can make no temporary directory fails the deploy as that answer and prints the way back" "$r"
+
+new_case
+login_release
+EPC_STUB_SIGNAL_THE_CHECK=TERM
+run_deploy
+login_config=$(cat "$state_dir/login-config" 2>/dev/null || true)
+if [ "$status" -ne 0 ] && [ -n "$login_config" ] && [ ! -e "$(dirname -- "$login_config")" ]; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a login check ended by a termination signal leaves no directory holding the key behind" "$r"
+
+new_case
+login_release
+EPC_STUB_SIGNAL_THE_CHECK=PIPE
+run_deploy
+login_config=$(cat "$state_dir/login-config" 2>/dev/null || true)
+if [ "$status" -ne 0 ] && [ -n "$login_config" ] && [ ! -e "$(dirname -- "$login_config")" ]; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a login check ended by a broken pipe leaves no directory holding the key behind" "$r"
 new_case
 EPC_STUB_PROBE_TRUNCATE=1
 run_deploy

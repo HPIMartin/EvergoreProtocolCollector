@@ -607,7 +607,8 @@ EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDENTIALS_PASSWORD=… \
   - a check that can make no temporary directory writes nothing;
   - the check answers `no-directory` in that case;
   - the key travels only through a pipe, a variable of the host's shell and a 0600 curl config;
-  - the check removes the directory that holds the curl config;
+  - the check removes the directory that holds the curl config when it ends and on a hangup, an
+    interrupt, a termination or a broken pipe;
   - the key reaches no command line and no output of the deploy;
   - a refused login fails the deploy;
   - the failure names a refused login with its status;
