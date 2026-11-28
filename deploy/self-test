@@ -167,6 +167,7 @@ done
 case " $* " in
 	*" -K "*)
 		cat "$config" >> "$EPC_STUB_STATE/configs"
+		[ "$(stat -c %a "$config")" = 600 ] || printf '%s\n' "$config" >> "$EPC_STUB_STATE/loose-configs"
 		if grep -qF '/api/v1/login' "$config"; then
 			printf '%s\n' "$config" > "$EPC_STUB_STATE/login-config"
 			if [ -n "${EPC_STUB_SIGNAL_THE_CHECK:-}" ]; then
@@ -290,6 +291,8 @@ export EVERGORE_SECURITY_API_TOKEN EVERGORE_CREDENTIALS_USERNAME EVERGORE_CREDEN
 EPC_STUB_ADMIN_KEY=SelfTestOnly_NotAKey-0123456789abcdefghijk
 export EPC_STUB_ADMIN_KEY
 announced_log="$(printf '\033[36m10:00:00.000\033[0m [main] INFO  d.s.e.p.Logger - Console admin key, valid until the next restart: %s\033[0m' "$EPC_STUB_ADMIN_KEY")"
+
+earlier_announced_log="$(printf '\033[36m09:00:00.000\033[0m [main] INFO  d.s.e.p.Logger - Console admin key, valid until the next restart: %s\033[0m' "EarlierStartOnly_NotAKey-0123456789abcdefg")"
 
 EPC_DEPLOY_SSH="$stub_bin/fake-ssh"
 EPC_DEPLOY_HEALTH_INTERVAL=1
@@ -536,6 +539,19 @@ new_case
 run_deploy
 if every_curl_is_bounded; then r=0; else r=1; fi
 check "every curl of the check through the token is bounded in time" "$r"
+
+new_case
+login_release
+EPC_STUB_CONTAINER_LOG="$(printf '%s\n%s\n%s' "$earlier_announced_log" '10:00:00.000 [main] INFO  Starting again' "$announced_log")"
+run_deploy
+if [ "$status" -eq 0 ]; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a container log that announced a key before a restart is logged in with the key of its last announcement" "$r"
+
+new_case
+login_release
+run_deploy
+if [ ! -e "$state_dir/loose-configs" ]; then r=0; else r=1; fi
+check "every curl config of the check is readable by its owner alone" "$r"
 new_case
 EPC_STUB_PROBE_TRUNCATE=1
 run_deploy
