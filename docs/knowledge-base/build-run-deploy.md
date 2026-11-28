@@ -602,6 +602,8 @@ EVERGORE_CREDENTIALS_USERNAME=… EVERGORE_CREDENTIALS_PASSWORD=… \
       `/api/v1/avatars?token=` for 200;
     - where `docker logs` fails, the log is unreadable, not a log without a key: the deploy fails;
       - the failure names the unreadable log;
+  - an answer in none of `no-key`, `unreadable-log` or three HTTP codes fails the deploy;
+  - the failure names that answer;
   - the key travels only through a pipe, a variable of the host's shell and a 0600 curl config;
   - the check removes the directory that holds the curl config;
   - the key reaches no command line and no output of the deploy;

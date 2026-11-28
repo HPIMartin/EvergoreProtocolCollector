@@ -472,6 +472,13 @@ if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "the log of $containe
 check "a container log that cannot be read fails the deploy as unreadable, not as a log that announces no key, and prints the way back" "$r"
 
 new_case
+login_release
+EPC_STUB_LOGIN_CODE=
+run_deploy
+if [ "$status" -ne 0 ] && printf '%s' "$output" | grep -qF "the login check answered '" && ! printf '%s' "$output" | grep -qF 'parameter not set' && printf '%s' "$output" | grep -qF "rollback --host $host_name"; then r=0; else r=1; printf '%s\n' "$output"; fi
+check "a login check that answers in no shape the deploy knows fails the deploy as that answer and prints the way back" "$r"
+
+new_case
 EPC_STUB_PROBE_TRUNCATE=1
 run_deploy
 if [ ! -s "$database_dir/temp.sqlite" ]; then r=0; else r=1; fi

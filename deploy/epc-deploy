@@ -416,7 +416,8 @@ verify_service() {
 	case $login_codes in
 		no-key) verify_with_the_token ;;
 		unreadable-log) fail_after_replacement "the log of $container could not be read, so it is not known whether this release announces a console admin key" ;;
-		*) verify_with_the_login $login_codes ;;
+		[0-9][0-9][0-9]' '[0-9][0-9][0-9]' '[0-9][0-9][0-9]) verify_with_the_login $login_codes ;;
+		*) fail_after_replacement "the login check answered '$login_codes'" ;;
 	esac
 }
 
