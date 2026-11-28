@@ -11,6 +11,7 @@ from side_fetch import LoginRefused, Pacer, http_get_json_logged_in, log_in
 from temp_directories import temp_directory
 
 KEY = "k3y-Of_43-characters-AAAAAAAAAAAAAAAAAAAAAA"
+OLD_KEY = "0ld-Of_43-characters-BBBBBBBBBBBBBBBBBBBBBB"
 ANNOUNCED = (
     "\x1b[36m08:00:01.123\x1b[0m \x1b[90m[main]\x1b[0m \x1b[34mINFO \x1b[0m \x1b[35md.s.e.p.Logger\x1b[0m - "
     f"Console admin key, valid until the next restart: {KEY}\n"
@@ -123,6 +124,18 @@ class LoggingIn(unittest.TestCase):
         self.assertEqual("epc_session=signed", tested)
         self.assertEqual([65], fake.slept)
 
+    def test_a_login_turned_away_for_too_many_requests_four_times_is_a_refused_login_after_three_waits(self):
+        def opener(request, timeout=None):
+            raise refusal(request.full_url, 429)
+
+        fake = FakeClock()
+
+        with self.assertRaises(LoginRefused) as raised:
+            log_in("http://127.0.0.1:1", KEY, pacer(fake), opener, fake.sleep)
+
+        self.assertEqual(429, raised.exception.code)
+        self.assertEqual([65, 65, 65], fake.slept)
+
     def test_the_refused_login_names_its_status(self):
         tested = str(LoginRefused(401))
 
@@ -167,6 +180,21 @@ class TheKeyInTheLog(unittest.TestCase):
 
         self.assertIsNone(tested)
 
+    def test_the_last_of_two_announcements_is_the_key(self):
+        earlier = ANNOUNCED.replace(KEY, OLD_KEY)
+
+        tested = admin_key_in(self.log(earlier + "starting\n" + ANNOUNCED))
+
+        self.assertEqual(KEY, tested)
+
+    def test_a_log_holding_bytes_that_are_no_utf8_before_the_announcement_still_holds_the_key(self):
+        path = temp_directory(self) / "app.log"
+        path.write_bytes(b"\xff\xfe\x80 junk\n" + ANNOUNCED.encode("utf-8"))
+
+        tested = admin_key_in(path)
+
+        self.assertEqual(KEY, tested)
+
     def test_a_log_without_the_announcement_holds_no_key(self):
         tested = admin_key_in(self.log("Startup completed in 2000ms\n"))
 
@@ -184,15 +212,18 @@ class TheKeyInTheLog(unittest.TestCase):
 
 
 class Side:
-    def __init__(self, cookie_code=200, token_code=200):
+    def __init__(self, cookie_code=200, token_code=200, login_code=200):
         self.requests = []
         self.cookie_code = cookie_code
         self.token_code = token_code
+        self.login_code = login_code
 
     def open(self, request, timeout=None):
         self.requests.append(request)
         url = url_of(request)
         if urlparse(url).path == "/api/v1/login":
+            if self.login_code != 200:
+                raise refusal(url, self.login_code)
             return Response({"step": "logged-in"}, ["epc_session=signed; Path=/"])
         if isinstance(request, urllib.request.Request) and request.get_header("Cookie"):
             if self.cookie_code != 200:
@@ -207,8 +238,8 @@ class Side:
 
 
 class SideAnnouncingTheKeyAsTheTokenIsAsked(Side):
-    def __init__(self):
-        super().__init__(token_code=401)
+    def __init__(self, login_code=200):
+        super().__init__(token_code=401, login_code=login_code)
         self.log = None
 
     def open(self, request, timeout=None):
@@ -252,6 +283,15 @@ class ChoosingTheAccess(unittest.TestCase):
 
         self.assertEqual({"by": "login"}, result)
         self.assertEqual(1, len(side.logins()))
+
+    def test_a_token_refused_once_the_key_is_announced_and_a_login_refused_raises_the_refused_login(self):
+        side = SideAnnouncingTheKeyAsTheTokenIsAsked(login_code=401)
+        tested, side.log = self.access(side, "starting\n")
+
+        with self.assertRaises(LoginRefused) as raised:
+            tested.get_json("/api/v1/admin/status", {})
+
+        self.assertEqual(401, raised.exception.code)
 
     def test_a_token_refused_while_the_log_announces_no_key_raises_that_refusal(self):
         side = Side(token_code=401)
