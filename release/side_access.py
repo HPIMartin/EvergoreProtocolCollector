@@ -4,7 +4,7 @@ import urllib.error
 
 from side_fetch import DIRECT, http_get_json, http_get_json_logged_in, log_in
 
-ANNOUNCEMENT = re.compile(r"Console admin key, valid until the next restart: ([A-Za-z0-9_-]+)")
+ANNOUNCEMENT = re.compile(r"Console admin key, valid until the next restart: ([A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])")
 UNAUTHORIZED = 401
 
 

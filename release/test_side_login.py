@@ -155,6 +155,13 @@ class TheKeyInTheLog(unittest.TestCase):
 
         self.assertEqual(KEY, tested)
 
+    def test_a_log_ending_in_a_half_written_announcement_holds_no_key(self):
+        half_written = ANNOUNCED[: ANNOUNCED.index(KEY) + len(KEY) // 2]
+
+        tested = admin_key_in(self.log("starting\n" + half_written))
+
+        self.assertIsNone(tested)
+
     def test_a_log_without_the_announcement_holds_no_key(self):
         tested = admin_key_in(self.log("Startup completed in 2000ms\n"))
 

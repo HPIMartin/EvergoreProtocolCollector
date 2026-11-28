@@ -675,6 +675,8 @@ The comparison is **scripted** (decision 2026-10-10) and **value-wise, not byte-
       (`Console admin key, valid until the next restart: <key>`, 0.5.0 on) is asked through a
       login:
       - the helper reads the key off that log itself;
+      - it takes only a key that stands whole, 43 Base64url characters;
+        - Why: a half-written announcement holds no key yet;
       - it logs in as `admin` with it (`POST /api/v1/login`);
       - it logs in once per wait and once per fetch;
       - it sends the session cookie;
