@@ -402,6 +402,18 @@ class Waiting(unittest.TestCase):
         self.assertNotIn("PASS", tested.stdout)
         self.layout.assert_no_process_left(self)
 
+    def test_an_admin_status_answered_with_an_error_status_ends_the_run_at_once_naming_that_status(self):
+        for code in ("401", "404", "500"):
+            with self.subTest(code=code):
+                began = time.monotonic()
+
+                tested = self.layout.run(STUB_STATUS_CODE=code, RELEASE_COMPARE_TIMEOUT="30")
+
+                self.assertLess(time.monotonic() - began, 15)
+                self.assertEqual(3, tested.returncode, tested.stdout + tested.stderr)
+                self.assertIn(f"HTTP {code}", tested.stdout + tested.stderr)
+                self.layout.assert_no_process_left(self)
+
     def test_a_driver_that_is_terminated_while_waiting_stops_both_sides(self):
         driver = self.layout.start(RELEASE_COMPARE_TIMEOUT="60", STUB_RECOMPUTE_AFTER="never")
         deadline = time.monotonic() + 20

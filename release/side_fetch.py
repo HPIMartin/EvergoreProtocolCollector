@@ -88,6 +88,8 @@ def wait_for_recompute(get_status, timeout, poll, clock=time.monotonic, sleep=ti
             return False
         try:
             status = get_status()
+        except urllib.error.HTTPError:
+            raise
         except (OSError, ValueError, http.client.HTTPException):
             status = {}
         if not isinstance(status, dict):

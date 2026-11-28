@@ -3,6 +3,7 @@ import json
 import math
 import os
 import sys
+import urllib.error
 from collections import Counter
 
 from candidate_rules import GUILD_FIGURES, guild_figures, member_figures
@@ -305,12 +306,19 @@ def _parser():
 
 def _wait(arguments, environ, out):
     get_json = http_get_json(arguments.base_url, environ.get(TOKEN_VARIABLE, ""), Pacer())
-    recomputed = wait_for_recompute(
-        lambda: get_json("/api/v1/admin/status", {}),
-        arguments.timeout,
-        arguments.poll,
-        alive=lambda: is_alive(arguments.pid) and _other_alive(arguments),
-    )
+    try:
+        recomputed = wait_for_recompute(
+            lambda: get_json("/api/v1/admin/status", {}),
+            arguments.timeout,
+            arguments.poll,
+            alive=lambda: is_alive(arguments.pid) and _other_alive(arguments),
+        )
+    except urllib.error.HTTPError as refusal:
+        out.write(
+            f"The side at {arguments.base_url} answered its admin status with HTTP {refusal.code}, "
+            "which no recompute still pending answers, so the wait ends.\n"
+        )
+        return 1
     if not recomputed and not is_alive(arguments.pid):
         out.write(f"The side at {arguments.base_url} is not running.\n")
     elif not recomputed and not _other_alive(arguments):

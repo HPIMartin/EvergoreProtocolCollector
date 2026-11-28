@@ -299,6 +299,20 @@ class WaitingForTheRecompute(unittest.TestCase):
         self.assertFalse(tested)
         self.assertEqual([5, 5, 5, 5], fake.slept)
 
+    def test_an_answer_with_an_error_status_ends_the_wait_at_once_and_carries_that_status(self):
+        for code in (401, 404, 500):
+            with self.subTest(code=code):
+                fake = FakeClock()
+
+                def status():
+                    raise urllib.error.HTTPError("u", code, "refused", {}, io.BytesIO(b""))
+
+                with self.assertRaises(urllib.error.HTTPError) as raised:
+                    wait_for_recompute(status, 100, 5, fake.clock, fake.sleep)
+
+                self.assertEqual(code, raised.exception.code)
+                self.assertEqual([], fake.slept)
+
 
 if __name__ == "__main__":
     unittest.main()

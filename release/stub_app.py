@@ -85,7 +85,7 @@ class Handler(BaseHTTPRequestHandler):
         with open("stub-requests.log", "a", encoding="utf-8") as requests:
             requests.write(f"{time.time()} {parsed.path}\n")
         if parsed.path == "/api/v1/admin/status":
-            return self.reply(200, admin_status())
+            return self.reply(int(os.environ.get("STUB_STATUS_CODE", "200")), admin_status())
         if query.get("token") != [TOKEN]:
             return self.reply(401, {"error": "token"})
         parts = [unquote(part) for part in parsed.path.split("/")[3:]]
